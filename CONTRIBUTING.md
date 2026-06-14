@@ -17,10 +17,13 @@ python3 scripts/check_pins.py
 Developer tools are installed from the transitive lock:
 
 ```bash
-python3 -m pip install -r requirements-dev.txt
-python3 -m pip install --no-deps -e .
-python3 -m ruff check .
-python3 -m mypy src
+python3.14 -m venv .venv
+source .venv/bin/activate
+python -m pip install pip==26.1.2
+python -m pip install -r requirements-dev.txt
+python -m pip install --no-deps -e .
+python -m ruff check .
+python -m mypy src
 ```
 
 ## Security Review Expectations

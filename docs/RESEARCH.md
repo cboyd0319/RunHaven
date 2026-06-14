@@ -115,6 +115,40 @@ Python development transitive lock is recorded in
 [`../requirements-dev.txt`](../requirements-dev.txt). The enforced pin policy
 lives in [`../scripts/check_pins.py`](../scripts/check_pins.py).
 
+## Documentation Research Sources
+
+README and agent-instruction guidance reviewed on 2026-06-14:
+
+- GitHub Docs, repository README guidance:
+  <https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes>
+- GitHub Docs, repository best practices:
+  <https://docs.github.com/en/repositories/creating-and-managing-repositories/best-practices-for-repositories>
+- Open Source Guides, starting a project:
+  <https://opensource.guide/starting-a-project/>
+- Make a README:
+  <https://www.makeareadme.com/>
+- AGENTS.md open format:
+  <https://agents.md/>
+- OpenAI Codex `AGENTS.md` guidance:
+  <https://developers.openai.com/codex/guides/agents-md>
+- GitHub Blog, `AGENTS.md` lessons from open repositories:
+  <https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/>
+
+High-usage open-source README references reviewed on 2026-06-14:
+
+- Kubernetes:
+  <https://raw.githubusercontent.com/kubernetes/kubernetes/master/README.md>
+- Visual Studio Code:
+  <https://raw.githubusercontent.com/microsoft/vscode/main/README.md>
+- React:
+  <https://raw.githubusercontent.com/facebook/react/main/README.md>
+- Terraform:
+  <https://raw.githubusercontent.com/hashicorp/terraform/main/README.md>
+- Homebrew:
+  <https://raw.githubusercontent.com/Homebrew/brew/master/README.md>
+- Rust:
+  <https://raw.githubusercontent.com/rust-lang/rust/master/README.md>
+
 ## User-Supplied Secondary References
 
 These sources informed threat-modeling and UX/security framing. Treat them as
