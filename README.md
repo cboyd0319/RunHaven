@@ -27,9 +27,9 @@ anything runs.
 
 ## Status
 
-Early foundation. RunHaven is usable for local testing and image builds. A
-provider-egress smoke harness now proves the host allowlist proxy pattern, but
-provider egress is not wired into normal agent runs yet.
+Early foundation. RunHaven is usable for local testing and image builds.
+Provider egress mode now runs agents on an internal Apple `container` network
+through a host-side allowlist proxy.
 
 Use `runhaven plan` before `runhaven run`. Treat internet-enabled runs as
 unrestricted egress inside whatever Apple `container` and your host network
@@ -38,8 +38,9 @@ allow.
 RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
 supported runtimes or contributor verification targets for this project.
 
-`--network provider` is reserved for provider egress allowlisting and still
-fails closed for normal runs until the proved proxy pattern is integrated.
+Use `--network provider` to restrict normal agent runs to the bundled provider
+host allowlist plus any explicit `--provider-host HOST` additions. A listed
+host permits that host and its subdomains.
 
 ## What It Protects By Default
 
@@ -61,8 +62,8 @@ Useful opt-in controls:
 
 - `--read-only-workspace` for review-only work
 - `--network internal` for local-only commands
-- `--network provider` to fail closed until reviewed provider allowlisting is
-  implemented
+- `--network provider` for provider allowlisting through a runtime proxy
+- `--provider-host HOST` to add an explicit HTTPS host to provider mode
 - `--ssh` for SSH agent forwarding without mounting `~/.ssh`
 - `--env NAME` for passing a single host environment variable by name
 - `--tty never` for non-interactive automation
@@ -76,8 +77,9 @@ Useful opt-in controls:
 This is not a complete data-loss or exfiltration solution.
 
 - Internet mode does not yet restrict outbound domains.
-- The provider egress proxy has a live smoke harness, but it is not a normal
-  `runhaven run` mode yet.
+- Provider mode uses conservative host allowlists; login, telemetry, or
+  provider-side feature paths may need additional reviewed `--provider-host`
+  entries.
 - The selected agent can still read files inside the mounted workspace and its
   isolated agent home volume.
 - If a credential is available inside the agent home volume or passed with
@@ -144,8 +146,9 @@ runhaven run claude
 ## Plan Before Run
 
 `runhaven plan` is the trust checkpoint. It prints the workspace, the isolated
-state volume, preflight setup, network mode, and exact Apple `container run`
-command.
+state volume, preflight setup, network mode, and Apple `container run` command.
+For provider mode, RunHaven injects proxy environment variables at runtime
+after discovering the internal-network gateway.
 
 Example shape:
 
@@ -207,14 +210,20 @@ Local-only command:
 runhaven run shell --network internal -- python -m unittest discover -s tests
 ```
 
-Reserved provider-only mode:
+Provider-only mode:
 
 ```bash
 runhaven plan claude --network provider
+runhaven run claude --network provider
 ```
 
-This exits with a clear error until RunHaven has a verified enforcement
-mechanism wired into normal agent runs.
+Bundled profiles include conservative provider hosts. A listed host permits
+that host and its subdomains. For custom images or extra provider endpoints,
+add reviewed hosts explicitly:
+
+```bash
+runhaven run shell --network provider --provider-host api.example.com
+```
 
 Pass a token by variable name only:
 

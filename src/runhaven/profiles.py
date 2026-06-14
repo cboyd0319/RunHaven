@@ -13,6 +13,7 @@ class AgentProfile:
     command: tuple[str, ...]
     home_env: Mapping[str, str] = field(default_factory=dict)
     image_context: str | None = None
+    provider_hosts: tuple[str, ...] = ()
 
     def env(self) -> Mapping[str, str]:
         return MappingProxyType(dict(self.home_env))
@@ -27,6 +28,7 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
             command=("claude",),
             home_env={"CLAUDE_CONFIG_DIR": "/home/agent/.claude"},
             image_context="claude",
+            provider_hosts=("api.anthropic.com",),
         ),
         "codex": AgentProfile(
             name="codex",
@@ -35,6 +37,7 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
             command=("codex", "--sandbox", "workspace-write", "--ask-for-approval", "on-request"),
             home_env={"CODEX_HOME": "/home/agent/.codex"},
             image_context="codex",
+            provider_hosts=("api.openai.com",),
         ),
         "gemini": AgentProfile(
             name="gemini",
@@ -42,6 +45,7 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
             image="runhaven/gemini:0.1.0",
             command=("gemini",),
             image_context="gemini",
+            provider_hosts=("generativelanguage.googleapis.com",),
         ),
         "antigravity": AgentProfile(
             name="antigravity",
@@ -57,6 +61,7 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
             command=("copilot",),
             home_env={"COPILOT_HOME": "/home/agent/.copilot"},
             image_context="copilot",
+            provider_hosts=("api.githubcopilot.com",),
         ),
         "shell": AgentProfile(
             name="shell",

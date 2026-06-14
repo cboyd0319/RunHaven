@@ -11,12 +11,12 @@
 
 ## Phase 2: Network Boundary
 
-- reserved provider network mode that fails closed until normal run integration lands
+- provider network mode integrated into normal `runhaven run`
 - live smoke harness for host allowlist proxy on an internal network
 - provider-specific egress profiles
 - local proxy option for model credentials
-- clear offline, provider-only, and package-install network modes
-- tests for generated firewall or proxy configuration
+- clear offline and package-install network modes
+- broader provider endpoint profiles for auth and optional feature paths
 
 ## Phase 3: Beginner Install Flow
 

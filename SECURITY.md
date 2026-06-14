@@ -29,12 +29,13 @@ The default wrapper boundary is:
 - sensitive host paths and root agent execution rejected unless explicitly
   overridden
 
-Network egress allowlisting is not fully enforced by this repo yet. The
-`internal` network mode uses Apple `container network create --internal`, which
-is useful for local-only work but does not let cloud AI CLIs reach their model
-providers. Internet-enabled agent runs should be treated as able to reach any
-destination permitted by Apple `container` and the host network.
+The default `internet` network mode remains unrestricted egress and should be
+treated as able to reach any destination permitted by Apple `container` and the
+host network. The `internal` network mode uses Apple `container network create
+--internal` for local-only work.
 
-`--network provider` is reserved for future provider egress allowlisting and
-fails closed for normal runs until RunHaven integrates the verified proxy
-pattern into `runhaven run`.
+`--network provider` runs the agent on an internal network and injects a
+host-side CONNECT proxy that permits bundled provider hosts plus their
+subdomains, along with explicit `--provider-host HOST` additions. IP literal
+proxy targets are rejected, and direct guest egress remains blocked by the
+internal network.

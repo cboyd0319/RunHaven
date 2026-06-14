@@ -7,12 +7,15 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TextIO
 
 from .doctor import collect_checks
+from .egress import EgressPolicy, ThreadedAllowlistProxy
 from .images import build_image_plan
 from .plans import SUPPORTED_NETWORK_MODES, AgentRunPlan, RunOptions, build_run_plan
 from .profiles import PROFILES, get_profile
@@ -130,9 +133,15 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
         default="internet",
         help=(
             "internet uses unrestricted default networking; internal creates a host-only "
-            "network; provider fails closed for normal runs until the verified proxy "
-            "lifecycle is integrated"
+            "network; provider routes through a runtime allowlist proxy"
         ),
+    )
+    parser.add_argument(
+        "--provider-host",
+        action="append",
+        default=[],
+        metavar="HOST",
+        help="additional HTTPS host allowed by --network provider",
     )
     parser.add_argument(
         "--read-only-workspace",
@@ -199,6 +208,8 @@ def run_agent(args: argparse.Namespace) -> int:
 
     require_container_cli()
     with acquire_state_lock(plan.state_volume):
+        if plan.network_mode == "provider":
+            return run_provider_agent(plan)
         for command in plan.preflight:
             run_preflight(command)
         return subprocess.call(plan.command)
@@ -248,6 +259,7 @@ def make_run_plan(args: argparse.Namespace) -> AgentRunPlan:
             tty=tty,
             allow_sensitive_workspace=args.allow_sensitive_workspace,
             allow_root_user=args.allow_root_user,
+            provider_hosts=tuple(args.provider_host),
         )
     )
 
@@ -257,6 +269,9 @@ def print_run_plan(plan: AgentRunPlan) -> None:
     print(f"State volume: {plan.state_volume}")
     print(f"Network: {plan.network_name or 'default internet network'}")
     print(f"Egress: {plan.egress_summary}")
+    if plan.network_mode == "provider":
+        print(f"Provider hosts: {', '.join(plan.provider_allowed_hosts)}")
+        print("Provider proxy: RunHaven injects proxy environment variables at runtime.")
     if plan.preflight:
         print("Preflight:")
         for command in plan.shell_preflight():
@@ -273,6 +288,118 @@ def run_preflight(command: tuple[str, ...]) -> None:
     result = subprocess.run(command, check=False)
     if result.returncode != 0:
         raise SystemExit(result.returncode)
+
+
+@dataclass(frozen=True)
+class InternalNetworkInfo:
+    ipv4_gateway: str
+    ipv4_subnet: str
+
+
+def run_provider_agent(plan: AgentRunPlan) -> int:
+    if not plan.network_name:
+        raise ValueError("provider network plan is missing an internal network")
+    if not plan.provider_allowed_hosts:
+        raise ValueError("provider network plan is missing provider hosts")
+
+    provider_network_created = False
+    proxy: ThreadedAllowlistProxy | None = None
+    thread: threading.Thread | None = None
+    try:
+        for command in plan.preflight:
+            run_preflight(command)
+            if command[:4] == ("container", "network", "create", "--internal"):
+                provider_network_created = (
+                    provider_network_created or command[-1] == plan.network_name
+                )
+
+        network_info = inspect_internal_network(plan.network_name)
+        policy = EgressPolicy(plan.provider_allowed_hosts)
+        proxy = create_provider_proxy(policy, network_info)
+        worker = threading.Thread(target=proxy.serve_forever, daemon=True)
+        worker.start()
+        thread = worker
+        proxy_url = f"http://{network_info.ipv4_gateway}:{proxy.server_address[1]}"
+        return subprocess.call(with_provider_proxy_environment(plan, proxy_url))
+    finally:
+        if proxy is not None:
+            if thread is not None:
+                proxy.shutdown()
+            proxy.server_close()
+        if thread is not None:
+            thread.join(timeout=5)
+        if provider_network_created:
+            delete_container_network(plan.network_name)
+
+
+def with_provider_proxy_environment(plan: AgentRunPlan, proxy_url: str) -> tuple[str, ...]:
+    image_index = plan.command.index(plan.image)
+    proxy_environment = (
+        ("HTTPS_PROXY", proxy_url),
+        ("HTTP_PROXY", proxy_url),
+        ("ALL_PROXY", proxy_url),
+        ("https_proxy", proxy_url),
+        ("http_proxy", proxy_url),
+        ("all_proxy", proxy_url),
+        ("NO_PROXY", "localhost,127.0.0.1,::1"),
+        ("no_proxy", "localhost,127.0.0.1,::1"),
+    )
+    injected: list[str] = []
+    for name, value in proxy_environment:
+        injected.extend(("--env", f"{name}={value}"))
+    return (*plan.command[:image_index], *injected, *plan.command[image_index:])
+
+
+def create_provider_proxy(
+    policy: EgressPolicy,
+    network_info: InternalNetworkInfo,
+) -> ThreadedAllowlistProxy:
+    try:
+        return ThreadedAllowlistProxy(
+            (network_info.ipv4_gateway, 0),
+            policy,
+            allowed_client_subnets=(network_info.ipv4_subnet,),
+        )
+    except OSError:
+        return ThreadedAllowlistProxy(
+            ("0.0.0.0", 0),
+            policy,
+            allowed_client_subnets=(network_info.ipv4_subnet,),
+        )
+
+
+def inspect_internal_network(name: str) -> InternalNetworkInfo:
+    result = subprocess.run(
+        ("container", "network", "inspect", name),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise SystemExit(result.returncode)
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"could not inspect provider network {name!r}") from exc
+    if not isinstance(payload, list) or not payload or not isinstance(payload[0], dict):
+        raise ValueError(f"could not inspect provider network {name!r}")
+
+    item = payload[0]
+    configuration = item.get("configuration")
+    if not isinstance(configuration, dict) or configuration.get("mode") != "hostOnly":
+        raise ValueError(f"provider network {name!r} is not host-only")
+    status = item.get("status")
+    if not isinstance(status, dict):
+        raise ValueError(f"provider network {name!r} is missing status")
+    gateway = status.get("ipv4Gateway")
+    subnet = status.get("ipv4Subnet")
+    if not isinstance(gateway, str) or not isinstance(subnet, str):
+        raise ValueError(f"provider network {name!r} is missing IPv4 gateway or subnet")
+    return InternalNetworkInfo(ipv4_gateway=gateway, ipv4_subnet=subnet)
+
+
+def delete_container_network(name: str) -> None:
+    subprocess.run(("container", "network", "delete", name), check=False)
 
 
 def ensure_internal_network(name: str) -> None:

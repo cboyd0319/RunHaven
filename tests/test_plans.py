@@ -60,6 +60,32 @@ class RunPlanTests(unittest.TestCase):
         self.assertEqual(plan.network_mode, "internal")
         self.assertIn("host-only", plan.egress_summary)
 
+    def test_provider_network_adds_internal_network_and_allowlist_hosts(self) -> None:
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            plan = build_run_plan(
+                RunOptions(profile=get_profile("codex"), workspace=workspace, network="provider")
+            )
+
+        self.assertEqual(plan.network_mode, "provider")
+        self.assertIsNotNone(plan.network_name)
+        self.assertIn("--network", plan.command)
+        self.assertIn(plan.network_name, plan.command)
+        self.assertIn("api.openai.com", plan.provider_allowed_hosts)
+        self.assertIn("provider allowlist", plan.egress_summary)
+        self.assertNotIn("HTTPS_PROXY", plan.command)
+
+    def test_provider_network_requires_allowed_hosts(self) -> None:
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "provider hosts"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("shell"),
+                        workspace=Path(directory),
+                        network="provider",
+                    )
+                )
+
     def test_root_user_requires_explicit_unsafe_override(self) -> None:
         with TemporaryDirectory() as directory:
             workspace = Path(directory)
@@ -210,14 +236,15 @@ class RunPlanTests(unittest.TestCase):
                     )
                 )
 
-    def test_provider_network_mode_fails_closed_until_enforced(self) -> None:
+    def test_provider_network_rejects_ip_literal_allowed_hosts(self) -> None:
         with TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(ValueError, "provider egress allowlisting"):
+            with self.assertRaisesRegex(ValueError, "IP literals"):
                 build_run_plan(
                     RunOptions(
                         profile=get_profile("shell"),
                         workspace=Path(directory),
                         network="provider",
+                        provider_hosts=("1.1.1.1",),
                     )
                 )
 

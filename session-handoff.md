@@ -4,9 +4,9 @@ Last Updated: 2026-06-14
 
 ## Current Objective
 
-Prove provider egress enforcement with a host allowlist proxy on an internal
-Apple `container` network while keeping normal `--network provider` runs
-fail-closed.
+Integrate provider egress enforcement into normal `runhaven run --network
+provider` through a host allowlist proxy on an internal Apple `container`
+network.
 
 ## Files
 
@@ -134,6 +134,22 @@ fail-closed.
   `python -m ruff check src/runhaven/cli.py tests/test_cli.py`,
   `python -m mypy src`, and `git diff --check` passed after the provider
   wording cleanup.
+- `PYTHONPATH=src python3.14 -m unittest tests.test_plans tests.test_cli tests.test_egress`
+  ran 47 tests and passed after provider lifecycle integration.
+- `python -m ruff check src tests scripts` and
+  `python -m mypy src scripts` passed after provider lifecycle integration.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed after provider lifecycle
+  integration, including compileall, 59 unit tests, pin checks, ruff, mypy, and
+  build.
+- `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 59 tests and
+  passed after provider lifecycle integration.
+- Live `runhaven run shell --network provider --provider-host example.com`
+  smoke passed with allowed proxied HTTPS and denied proxied host, proxied IP
+  literal, direct DNS, and direct IP paths; follow-up checks found no leftover
+  provider network or test state volume.
+- Local Apple `container-machine.md` and `container-system-config.md` docs from
+  the sibling Apple container checkout were reviewed and did not change the
+  provider proxy design.
 - `magick identify docs/assets/logo.png` reported PNG 512x512.
 - No-ignore old-name text scan across working tree files outside `.git`
   returned no matches.
@@ -154,11 +170,14 @@ fail-closed.
   `src/runhaven/egress.py`.
 - `scripts/provider_egress_smoke.py` proves the proxy pattern with a temporary
   internal Apple `container` network.
-- `--network provider` is still reserved and fails closed until RunHaven
-  integrates the verified provider egress proxy lifecycle into normal runs.
-- `runhaven plan` now prints explicit egress status for the selected network.
-- `runhaven run --help` now uses the same provider-mode wording as the docs:
-  fail closed for normal runs until the verified proxy lifecycle is integrated.
+- `runhaven plan` now prints explicit egress status, provider hosts, and the
+  runtime proxy injection note for provider mode.
+- `runhaven run --network provider` now creates a managed internal network,
+  inspects its gateway and subnet, starts the host-side allowlist proxy,
+  injects proxy environment variables, runs the agent, and deletes the managed
+  provider network in cleanup.
+- Bundled provider host allowlists exist for Claude, Codex, Gemini, and
+  Copilot. `--provider-host HOST` adds reviewed extra hosts for provider mode.
 
 ## Next Session
 
@@ -166,8 +185,8 @@ fail-closed.
 2. Check `git status --short --branch`.
 3. Use `docs/harness/verification-matrix.md` to choose checks for the requested
    change.
-4. Continue by integrating the smoke-proven proxy lifecycle into
-   `runhaven run --network provider`.
+4. Continue by broadening and verifying bundled provider endpoint profiles for
+   authentication, telemetry, and optional provider feature paths.
 5. Ask for explicit approval before renaming the hosted GitHub repository or
    changing other credentialed vendor state.
 6. Preserve the macOS 26+ only runtime and contributor-verification contract.

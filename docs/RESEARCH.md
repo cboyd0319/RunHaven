@@ -196,19 +196,33 @@ Observed command surface:
   `egress`, `allowlist`, `allow-list`, `allow list`, `denylist`, `blocklist`,
   `firewall`, `packet filter`, `proxy`, or `domain allow`.
 
-Conclusion: RunHaven must not treat DNS selection as egress enforcement. The
-reserved `--network provider` mode should fail closed until RunHaven implements
-and proves an enforcement mechanism such as a reviewed proxy, DNS filter plus
-packet controls, or another Apple `container`-compatible boundary.
+Conclusion: RunHaven must not treat DNS selection as egress enforcement.
+Provider egress needs an explicit enforcement mechanism such as a reviewed
+proxy, DNS filter plus packet controls, or another Apple `container`-compatible
+boundary.
 
 Follow-up verification on 2026-06-14 proved the reviewed proxy pattern with
 live Apple `container` smokes. A container on an internal network can reach a
 host-side proxy through the guest's default gateway. The smoke harness starts a
-CONNECT proxy with exact provider-domain allowlisting, restricts accepted
-clients to the internal-network subnet when it cannot bind directly to the
-gateway address, blocks IP literal CONNECT targets, and verifies allowed
-proxied HTTPS, denied proxied host, denied proxied IP literal, denied direct
-DNS egress, and denied direct IP egress.
+CONNECT proxy with provider host allowlisting, restricts accepted clients to the
+internal-network subnet when it cannot bind directly to the gateway address,
+blocks IP literal CONNECT targets, and verifies allowed proxied HTTPS, denied
+proxied host, denied proxied IP literal, denied direct DNS egress, and denied
+direct IP egress.
+
+Follow-up implementation on 2026-06-14 integrated the reviewed proxy lifecycle
+into `runhaven run --network provider`. The CLI now creates a managed internal
+network, inspects its IPv4 gateway and subnet, starts the host-side CONNECT
+proxy, injects proxy environment variables, and deletes the managed provider
+network after the run. A live runtime smoke verified allowed proxied HTTPS and
+blocked denied proxied host, proxied IP literal, direct DNS, and direct IP
+paths.
+
+The local `container-machine.md` docs reinforce that `container machine` is not
+the right beginner-safe boundary for RunHaven because it automatically maps the
+host username and home directory into the Linux environment. The local
+`container-system-config.md` docs expose default resource, DNS, registry,
+kernel, vminit, and subnet settings, but no domain egress allowlist control.
 
 ## Current Product Conclusions
 
@@ -222,9 +236,8 @@ DNS egress, and denied direct IP egress.
 - Use non-root bundled images, read-only root filesystems, dropped Linux
   capabilities, and per-project named home volumes.
 - Use `--read-only-workspace` for review-only tasks.
-- Treat internet-enabled runs as unrestricted egress until provider-specific
-  allowlisting is implemented.
-- Keep `--network provider` fail-closed for normal runs until the smoke-proven
-  proxy lifecycle is integrated into `runhaven run`.
+- Treat default internet mode as unrestricted egress.
+- Use `--network provider` when model-provider traffic should be constrained
+  to bundled provider hosts plus reviewed `--provider-host` additions.
 - Keep package, image, runtime, and CI pins current stable and exact. For apt,
   use timestamped Debian snapshots plus exact package versions.

@@ -104,15 +104,24 @@ runhaven run shell --network internal -- python -m unittest discover -s tests
 agent CLIs usually need internet access for model traffic, so this mode is most
 useful for local commands and custom images.
 
-## Reserved Provider Network
+## Provider Network
 
 ```bash
 runhaven plan claude --network provider
+runhaven run claude --network provider
 ```
 
-`provider` is reserved for provider egress allowlisting and fails closed for
-normal runs. It does not generate a container command until RunHaven integrates
-the verified proxy lifecycle into `runhaven run`.
+`provider` creates a managed internal Apple `container` network and routes the
+agent through RunHaven's host-side allowlist CONNECT proxy. Bundled profiles
+include conservative provider hosts. Add reviewed extra hosts explicitly:
+
+```bash
+runhaven run shell --network provider --provider-host api.example.com
+```
+
+Run `runhaven plan` first. Provider plans show the managed provider network and
+allowed hosts; the exact proxy URL is injected by `runhaven run` after the
+internal-network gateway is inspected.
 
 ## Provider Egress Smoke
 
@@ -129,7 +138,8 @@ PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py \
 The smoke creates a temporary internal Apple `container` network and starts a
 host-side allowlist CONNECT proxy. It passes only when the allowed proxied HTTPS
 path succeeds and denied proxied host, proxied IP literal, direct DNS, and
-direct IP paths fail.
+direct IP paths fail. Normal provider runs use the same proxy enforcement
+pattern through `runhaven run --network provider`.
 
 ## Private Git
 

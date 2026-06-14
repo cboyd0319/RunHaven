@@ -69,22 +69,25 @@ workflows that do not need a model-provider connection from inside the guest.
 When reusing an existing network name, `runhaven` checks Apple `container`
 network inspection output and requires `configuration.mode` to be `hostOnly`.
 
-`provider` is reserved for provider egress allowlisting. It still fails closed
-for normal agent runs until the proxy lifecycle is integrated into `runhaven
-run`.
+`provider` creates a managed internal Apple `container` network, inspects that
+network for its IPv4 gateway and subnet, starts a host-side CONNECT proxy, and
+injects proxy environment variables into the agent run. The proxy allows only
+the bundled provider hosts for the selected profile, their subdomains, and
+explicit `--provider-host HOST` additions.
 
-The proved enforcement pattern is:
+The enforcement pattern is:
 
-- run the agent on a temporary internal Apple `container` network
-- discover the guest's default gateway on that network
-- run a host-side CONNECT proxy with an exact provider-domain allowlist
+- run the agent on a managed internal Apple `container` network
+- inspect the network's host gateway and subnet
+- run a host-side CONNECT proxy with a reviewed provider host allowlist
 - expose the proxy to the guest through the internal-network gateway
 - reject clients outside the internal-network subnet when gateway-specific
   binding is not available
 - block IP literal CONNECT targets at the proxy
+- delete the managed provider network after the run
 
-`scripts/provider_egress_smoke.py` proves the pattern with live Apple
-`container` smokes: allowed proxied HTTPS succeeds, denied proxied host fails,
-proxied IP literal fails, direct DNS egress fails, and direct IP egress fails.
-Until that lifecycle is wired into normal `runhaven run`, internet-enabled runs
-can reach whatever the host and Apple container runtime allow.
+`scripts/provider_egress_smoke.py` proves the lower-level proxy pattern with
+live Apple `container` smokes. The `runhaven run --network provider` runtime
+path is also smoke-tested with allowed proxied HTTPS plus denied proxied host,
+proxied IP literal, direct DNS, and direct IP paths. Internet mode remains
+unrestricted egress.

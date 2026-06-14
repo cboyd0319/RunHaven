@@ -4,9 +4,9 @@ Last Updated: 2026-06-14
 
 ## Current Objective
 
-Prove provider egress enforcement with a host allowlist proxy on an internal
-Apple `container` network while keeping normal `--network provider` runs
-fail-closed.
+Integrate provider egress enforcement into normal `runhaven run --network
+provider` through a host allowlist proxy on an internal Apple `container`
+network.
 
 ## Current State
 
@@ -69,27 +69,33 @@ fail-closed.
   settings, and host-only networks, but no reviewed domain egress allowlist
   surface was found in rendered docs, generated JSON, local CLI help, or the
   pinned command reference.
-- `runhaven plan` now prints explicit egress status for the selected network.
-- `--network provider` is reserved and fails closed until RunHaven integrates
-  the verified provider egress proxy lifecycle into normal runs.
+- `runhaven plan` now prints explicit egress status for the selected network,
+  provider hosts, and the runtime proxy injection note for provider mode.
 - A standard-library CONNECT allowlist proxy now exists in `src/runhaven/egress.py`.
 - `scripts/provider_egress_smoke.py` proves the proxy pattern with a temporary
   internal Apple `container` network.
 - Live smokes passed for the default public host and for `api.openai.com`:
   allowed proxied HTTPS succeeded, while denied proxied host, proxied IP
   literal, direct DNS, and direct IP paths failed.
-- `--network provider` still fails closed for normal runs because the proxy
-  lifecycle is not yet integrated into `runhaven run`.
-- CLI help and roadmap wording now match that state: provider mode is
-  smoke-proven but unavailable for normal runs until lifecycle integration
-  lands.
+- `runhaven run --network provider` now creates a managed internal network,
+  inspects its gateway and subnet, starts the host-side allowlist proxy, injects
+  proxy environment variables, runs the agent, and deletes the managed provider
+  network in cleanup.
+- Bundled provider host allowlists now exist for Claude, Codex, Gemini, and
+  Copilot. `--provider-host HOST` adds reviewed extra hosts for provider mode.
+- A live normal-run smoke passed for `runhaven run shell --network provider
+  --provider-host example.com`: allowed proxied HTTPS succeeded, while denied
+  proxied host, proxied IP literal, direct DNS, and direct IP paths failed.
+- `container machine` remains out of scope for the default product boundary
+  because Apple's docs say it maps the host username and home directory into the
+  Linux environment.
 
 ## Recommended Next Step
 
-Integrate the smoke-proven proxy lifecycle into `runhaven run --network
-provider`: start the proxy, attach the agent to an internal network, inject
-proxy environment variables, clean up the network, and keep clear failure
-messages for non-technical users.
+Broaden and verify bundled provider endpoint profiles for authentication,
+telemetry, and optional provider feature paths. Keep additions explicit and
+evidence-backed so provider mode remains understandable for non-technical
+users.
 
 ## Verification Evidence
 
@@ -207,3 +213,19 @@ messages for non-technical users.
   `python -m ruff check src/runhaven/cli.py tests/test_cli.py`,
   `python -m mypy src`, and `git diff --check` passed after the provider
   wording cleanup.
+- 2026-06-14: `PYTHONPATH=src python3.14 -m unittest tests.test_plans tests.test_cli tests.test_egress`
+  ran 47 tests and passed after provider lifecycle integration.
+- 2026-06-14: `python -m ruff check src tests scripts` and
+  `python -m mypy src scripts` passed after provider lifecycle integration.
+- 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after
+  provider lifecycle integration, including compileall, 59 unit tests,
+  pin checks, ruff, mypy, and build.
+- 2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests`
+  ran 59 tests and passed after provider lifecycle integration.
+- 2026-06-14: live `runhaven run shell --network provider --provider-host example.com`
+  smoke passed with allowed proxied HTTPS and denied proxied host, proxied IP
+  literal, direct DNS, and direct IP paths; follow-up checks found no leftover
+  provider network or test state volume.
+- 2026-06-14: reviewed local Apple `container-machine.md` and
+  `container-system-config.md` docs from the sibling Apple container checkout;
+  they did not change the provider proxy design.

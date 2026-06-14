@@ -105,14 +105,14 @@
       "area": "security",
       "title": "Provider egress allowlisting",
       "user_visible_behavior": "Internet-enabled agent runs can be restricted to reviewed provider and package endpoints instead of unrestricted egress.",
-      "status": "active",
+      "status": "passing",
       "dependencies": [
         "repo-harness-operating-layer",
         "runtime-hardening-macos-only-boundary"
       ],
       "verification": [
         "Threat model updated",
-        "Reserved provider network mode fails closed until enforcement exists",
+        "Provider network mode is integrated into normal runs",
         "Smoke harness proves host allowlist proxy on an internal Apple container network",
         "Provider allowlist behavior tested",
         "Runtime smoke proves denied and allowed network paths",
@@ -134,9 +134,11 @@
         "2026-06-14: `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8` passed with allowed proxied HTTPS and denied proxied host, proxied IP literal, direct DNS, and direct IP paths.",
         "2026-06-14: `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8 --allowed-host api.openai.com --allowed-url https://api.openai.com/ --denied-host example.com` passed.",
         "2026-06-14: HarnessForge audit was intentionally skipped for the provider egress proxy smoke pass by user instruction because the sibling HarnessForge repo is being worked on.",
-        "2026-06-14: focused CLI tests, ruff, mypy, and diff check passed after aligning CLI help and roadmap wording with the provider proxy state."
+        "2026-06-14: focused CLI tests, ruff, mypy, and diff check passed after aligning CLI help and roadmap wording with the provider proxy state.",
+        "2026-06-14: provider lifecycle integration tests passed for plan construction, runtime proxy injection, provider network cleanup, and proxy env override order.",
+        "2026-06-14: live `runhaven run shell --network provider --provider-host example.com` smoke passed with allowed proxied HTTPS and denied proxied host, proxied IP literal, direct DNS, and direct IP paths; follow-up checks found no leftover provider network or test state volume."
       ],
-      "notes": "Current internet mode remains unrestricted egress and is documented as a known limitation. The current active slice proves the proxy enforcement pattern, but `--network provider` remains fail-closed until the proxy lifecycle is integrated into normal runs."
+      "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider host lists are conservative and may need reviewed `--provider-host` additions for login, telemetry, or optional feature paths."
     },
     {
       "id": "repo-logo",

@@ -9,15 +9,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from .egress import is_ip_literal, normalize_host
 from .profiles import AgentProfile
 
 NetworkMode = Literal["internet", "internal", "provider"]
 SUPPORTED_NETWORK_MODES = ("internet", "internal", "provider")
-PROVIDER_EGRESS_UNIMPLEMENTED = (
-    "provider egress allowlisting is not available for normal runs yet. "
-    "Use --network internet for unrestricted egress, or --network internal for local-only runs."
-)
-
 _ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _IMAGE_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$")
 _CPUS_RE = re.compile(r"^[1-9][0-9]*(?:\.[0-9]+)?$")
@@ -54,6 +50,7 @@ class RunOptions:
     tty: bool = True
     allow_sensitive_workspace: bool = False
     allow_root_user: bool = False
+    provider_hosts: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -65,6 +62,8 @@ class AgentRunPlan:
     network_name: str | None
     network_mode: NetworkMode
     egress_summary: str
+    image: str
+    provider_allowed_hosts: tuple[str, ...] = ()
 
     def shell_command(self) -> str:
         return shlex.join(self.command)
@@ -90,6 +89,7 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
     validate_resource_options(options.cpus, options.memory, options.user)
     if uses_root_identity(options.user) and not options.allow_root_user:
         raise ValueError("root user or group requires --allow-root-user")
+    provider_allowed_hosts = provider_hosts_for_options(options)
 
     project_id = project_identifier(workspace)
     state_volume = safe_resource_name(f"runhaven-{options.profile.name}-{project_id}-home")
@@ -174,6 +174,12 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         active_network = network_name
         preflight.append(("container", "network", "create", "--internal", network_name))
         command.extend(("--network", network_name))
+    elif options.network == "provider":
+        active_network = safe_resource_name(
+            f"runhaven-{options.profile.name}-{project_id}-provider"
+        )
+        preflight.append(("container", "network", "create", "--internal", active_network))
+        command.extend(("--network", active_network))
 
     if options.ssh:
         command.append("--ssh")
@@ -192,8 +198,35 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         state_volume=state_volume,
         network_name=active_network,
         network_mode=options.network,
-        egress_summary=network_egress_summary(options.network),
+        egress_summary=network_egress_summary(options.network, provider_allowed_hosts),
+        image=image,
+        provider_allowed_hosts=provider_allowed_hosts,
     )
+
+
+def provider_hosts_for_options(options: RunOptions) -> tuple[str, ...]:
+    if options.network != "provider":
+        return ()
+    hosts = normalize_provider_hosts((*options.profile.provider_hosts, *options.provider_hosts))
+    if not hosts:
+        raise ValueError(
+            "provider hosts are required for --network provider. "
+            "Use a bundled provider profile or pass --provider-host HOST."
+        )
+    return hosts
+
+
+def normalize_provider_hosts(hosts: Sequence[str]) -> tuple[str, ...]:
+    normalized_hosts: list[str] = []
+    seen: set[str] = set()
+    for host in hosts:
+        normalized = normalize_host(host)
+        if is_ip_literal(normalized):
+            raise ValueError("provider hosts cannot be IP literals")
+        if normalized not in seen:
+            normalized_hosts.append(normalized)
+            seen.add(normalized)
+    return tuple(normalized_hosts)
 
 
 def validate_env_name(name: str) -> None:
@@ -271,16 +304,18 @@ def validate_resource_options(cpus: str, memory: str, user: str) -> None:
 def validate_network_mode(network: str) -> None:
     if network not in SUPPORTED_NETWORK_MODES:
         raise ValueError(f"invalid network mode: {network!r}")
-    if network == "provider":
-        raise ValueError(PROVIDER_EGRESS_UNIMPLEMENTED)
 
 
-def network_egress_summary(network: NetworkMode) -> str:
+def network_egress_summary(
+    network: NetworkMode,
+    provider_allowed_hosts: Sequence[str] = (),
+) -> str:
     if network == "internet":
         return "unrestricted internet egress; domain allowlisting is not enforced"
     if network == "internal":
         return "host-only internal network; internet egress disabled"
-    return "provider egress allowlisting is proven only by the smoke harness, not normal runs"
+    hosts = ", ".join(provider_allowed_hosts)
+    return f"provider allowlist egress through runtime proxy: {hosts}"
 
 
 def uses_root_identity(user: str) -> bool:

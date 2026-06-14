@@ -55,17 +55,20 @@ understandable for non-technical users.
 
 ## What This Does Not Solve Yet
 
-Network egress allowlisting is not complete for normal agent runs. The
-`internal` network mode is local-only, but hosted AI agents need model-provider
-access. The current internet mode should be treated as unrestricted egress
-within the host's network policy.
+The default `internet` network mode should still be treated as unrestricted
+egress within the host's network policy. Use `internal` for local-only runs.
 
-`--network provider` is reserved for provider allowlisting and still fails
-closed for normal runs. A live smoke harness now proves a host-side allowlist
-proxy pattern on an internal Apple `container` network, including allowed
-provider-shaped egress, denied host egress, proxied IP literal denial, direct
-DNS denial, and direct IP denial. RunHaven will not claim normal provider mode
-until that proxy lifecycle is integrated into `runhaven run`.
+`--network provider` is now the constrained egress path for normal agent runs.
+It runs the agent on an internal Apple `container` network, starts a host-side
+CONNECT proxy, injects proxy environment variables at runtime, and deletes the
+managed provider network after the run. The proxy permits the bundled provider
+hosts for the selected profile plus explicit `--provider-host HOST` additions,
+rejects IP literal proxy targets, and relies on the internal network to block
+direct guest egress.
+
+Provider host allowlists are intentionally conservative. Authentication,
+telemetry, or optional provider feature paths may fail until an additional host
+is reviewed and passed with `--provider-host`.
 
 The selected agent still controls what it reads inside `/workspace` and
 `/home/agent`. If the agent has model credentials inside its project volume and
