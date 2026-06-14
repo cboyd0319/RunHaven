@@ -1,0 +1,22 @@
+FROM debian:trixie-slim@sha256:4e401d95de7083948053197a9c3913343cd06b706bf15eb6a0c3ccd26f436a0e
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+COPY common/debian.sources /etc/apt/sources.list.d/debian.sources
+COPY common/apt-snapshot.conf /etc/apt/apt.conf.d/99snapshot
+COPY common/debian-packages.txt /tmp/debian-packages.txt
+COPY common/create-agent-user.sh /usr/local/sbin/create-agent-user
+
+RUN apt-get update \
+    && xargs -a /tmp/debian-packages.txt apt-get install -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/debian-packages.txt
+
+RUN /bin/sh /usr/local/sbin/create-agent-user \
+    && rm /usr/local/sbin/create-agent-user
+
+ENV HOME=/home/agent
+ENV PATH=/home/agent/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+WORKDIR /workspace
+USER agent
+CMD ["/bin/bash"]

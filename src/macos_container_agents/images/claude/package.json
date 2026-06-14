@@ -1,0 +1,10 @@
+{
+  "name": "mca-claude-image",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/claude-code": "2.1.177"
+  },
+  "allowScripts": {
+    "@anthropic-ai/claude-code@2.1.177": true
+  }
+}

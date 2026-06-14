@@ -1,0 +1,32 @@
+FROM debian:trixie-slim@sha256:4e401d95de7083948053197a9c3913343cd06b706bf15eb6a0c3ccd26f436a0e
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG ANTIGRAVITY_CLI_VERSION=1.0.8
+ARG ANTIGRAVITY_CLI_URL=https://storage.googleapis.com/antigravity-public/antigravity-cli/1.0.8-5963827121094656/linux-arm/cli_linux_arm64.tar.gz
+ARG ANTIGRAVITY_CLI_SHA512=982b344defd2e63b08d4a9ef608a770aba3a92e9a4118d318e0082f29743457e8a16aaf1c00f7c3ade75c2d07aef5a8fa5da660e408cb199b47a8778b31228a0
+
+COPY common/debian.sources /etc/apt/sources.list.d/debian.sources
+COPY common/apt-snapshot.conf /etc/apt/apt.conf.d/99snapshot
+COPY common/debian-packages.txt /tmp/debian-packages.txt
+COPY common/create-agent-user.sh /usr/local/sbin/create-agent-user
+
+RUN apt-get update \
+    && xargs -a /tmp/debian-packages.txt apt-get install -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* /tmp/debian-packages.txt
+
+RUN curl -fsSL "${ANTIGRAVITY_CLI_URL}" -o /tmp/antigravity-cli.tar.gz \
+    && echo "${ANTIGRAVITY_CLI_SHA512}  /tmp/antigravity-cli.tar.gz" | sha512sum -c - \
+    && tar -xzf /tmp/antigravity-cli.tar.gz -C /usr/local/bin antigravity \
+    && mv /usr/local/bin/antigravity /usr/local/bin/agy \
+    && chmod 0755 /usr/local/bin/agy \
+    && rm /tmp/antigravity-cli.tar.gz
+
+RUN /bin/sh /usr/local/sbin/create-agent-user \
+    && rm /usr/local/sbin/create-agent-user
+
+ENV HOME=/home/agent
+ENV PATH=/home/agent/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+WORKDIR /workspace
+USER agent
+CMD ["agy"]

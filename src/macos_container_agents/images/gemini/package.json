@@ -1,0 +1,11 @@
+{
+  "name": "mca-gemini-image",
+  "private": true,
+  "dependencies": {
+    "@google/gemini-cli": "0.46.0"
+  },
+  "allowScripts": {
+    "@github/keytar@7.10.6": true,
+    "node-pty@1.1.0": true
+  }
+}

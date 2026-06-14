@@ -1,0 +1,7 @@
+{
+  "name": "mca-copilot-image",
+  "private": true,
+  "dependencies": {
+    "@github/copilot": "1.0.62"
+  }
+}

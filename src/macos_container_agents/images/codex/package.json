@@ -1,0 +1,7 @@
+{
+  "name": "mca-codex-image",
+  "private": true,
+  "dependencies": {
+    "@openai/codex": "0.139.0"
+  }
+}
