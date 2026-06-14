@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
 
+from .plans import validate_image_reference
 from .profiles import AgentProfile
 
 
@@ -30,6 +31,7 @@ def build_image_plan(profile: AgentProfile, *, tag: str | None = None) -> ImageB
         raise ValueError(f"missing bundled Containerfile for agent {profile.name!r}")
 
     image_tag = tag or profile.image
+    validate_image_reference(image_tag, "image tag")
     command = (
         "container",
         "build",

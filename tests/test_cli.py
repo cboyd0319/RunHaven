@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -63,7 +64,11 @@ class CliTests(unittest.TestCase):
 
     def test_existing_internal_network_is_reused(self) -> None:
         with patch("runhaven.cli.subprocess.run") as run:
-            run.return_value = Mock(returncode=0)
+            run.return_value = Mock(
+                returncode=0,
+                stdout=json.dumps([{"configuration": {"mode": "hostOnly"}}]),
+                stderr="",
+            )
 
             ensure_internal_network("runhaven-project-internal")
 
@@ -73,9 +78,20 @@ class CliTests(unittest.TestCase):
             ("container", "network", "inspect", "runhaven-project-internal"),
         )
 
+    def test_existing_non_internal_network_is_rejected(self) -> None:
+        with patch("runhaven.cli.subprocess.run") as run:
+            run.return_value = Mock(
+                returncode=0,
+                stdout=json.dumps([{"configuration": {"mode": "nat"}}]),
+                stderr="",
+            )
+
+            with self.assertRaisesRegex(ValueError, "not host-only"):
+                ensure_internal_network("runhaven-project-internal")
+
     def test_missing_internal_network_is_created(self) -> None:
         with patch("runhaven.cli.subprocess.run") as run:
-            run.side_effect = [Mock(returncode=1), Mock(returncode=0)]
+            run.side_effect = [Mock(returncode=1, stdout="", stderr=""), Mock(returncode=0)]
 
             ensure_internal_network("runhaven-project-internal")
 
@@ -83,6 +99,69 @@ class CliTests(unittest.TestCase):
         self.assertEqual(
             run.call_args_list[1].args[0],
             ("container", "network", "create", "--internal", "runhaven-project-internal"),
+        )
+
+    def test_plan_tty_always_adds_tty_flag(self) -> None:
+        with TemporaryDirectory() as directory:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = main(["plan", "shell", "--workspace", directory, "--tty", "always"])
+
+        self.assertEqual(code, 0)
+        self.assertIn("--tty", output.getvalue())
+
+    def test_state_list_filters_runhaven_volumes(self) -> None:
+        output = io.StringIO()
+        with (
+            redirect_stdout(output),
+            patch("runhaven.cli.require_container_cli"),
+            patch("runhaven.cli.subprocess.run") as run,
+        ):
+            run.return_value = Mock(
+                returncode=0,
+                stdout="runhaven-claude-abc-home\nother-volume\nrunhaven-shell-def-home\n",
+                stderr="",
+            )
+
+            code = main(["state", "list"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("runhaven-claude-abc-home", text)
+        self.assertIn("runhaven-shell-def-home", text)
+        self.assertNotIn("other-volume", text)
+
+    def test_state_prune_requires_yes(self) -> None:
+        output = io.StringIO()
+        with (
+            redirect_stdout(output),
+            patch("runhaven.cli.require_container_cli"),
+            patch("runhaven.cli.subprocess.run") as run,
+        ):
+            run.return_value = Mock(returncode=0, stdout="runhaven-shell-def-home\n", stderr="")
+
+            code = main(["state", "prune"])
+
+        self.assertEqual(code, 2)
+        self.assertIn("--yes", output.getvalue())
+        run.assert_called_once()
+
+    def test_state_prune_deletes_runhaven_volumes_with_yes(self) -> None:
+        with (
+            patch("runhaven.cli.require_container_cli"),
+            patch("runhaven.cli.subprocess.run") as run,
+        ):
+            run.side_effect = [
+                Mock(returncode=0, stdout="runhaven-shell-def-home\n", stderr=""),
+                Mock(returncode=0, stdout="", stderr=""),
+            ]
+
+            code = main(["state", "prune", "--yes"])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            run.call_args_list[1].args[0],
+            ("container", "volume", "delete", "runhaven-shell-def-home"),
         )
 
     def test_state_lock_rejects_concurrent_same_volume(self) -> None:

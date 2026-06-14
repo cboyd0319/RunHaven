@@ -3,7 +3,7 @@
 ## Supported Scope
 
 This project targets macOS 26+ on Apple silicon with Python 3.13+ and Apple
-`container` 1.x.
+`container` 1.x. Windows and Linux are not supported.
 
 ## Reporting
 
@@ -26,6 +26,8 @@ The default wrapper boundary is:
 - no raw SSH key mount
 - no host environment passthrough unless requested with `--env`
 - Linux capabilities dropped with `--cap-drop ALL`
+- sensitive host paths and root agent execution rejected unless explicitly
+  overridden
 
 Network egress allowlisting is not fully enforced by this repo yet. The
 `internal` network mode uses Apple `container network create --internal`, which

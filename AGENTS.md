@@ -21,19 +21,13 @@ in `docs/harness/`.
 
 Use the smallest reliable command for the change.
 
-Verification route: use `./init.sh` or `.\init.ps1` for full harness
-verification, and use the focused commands below for smaller changes.
+Verification route: use `./init.sh` for full macOS harness verification, and
+use the focused commands below for smaller changes.
 
-Full local verification on macOS or Linux:
+Full local verification on macOS 26+:
 
 ```bash
 ./init.sh
-```
-
-Full local verification on Windows import/docs surfaces:
-
-```powershell
-.\init.ps1
 ```
 
 Focused checks:
@@ -46,7 +40,7 @@ python3 -m ruff check .
 python3 -m mypy src
 python3 -m build
 REPO_HARNESS_CREATOR=../repo-harness-creator
-PYTHONPATH="${REPO_HARNESS_CREATOR}/src" python3 -m repo_harness_creator audit --target . --min-score 85
+PYTHONPATH="${REPO_HARNESS_CREATOR}/src" python3 -m harnessforge audit --target . --min-score 85
 ```
 
 Use `runhaven doctor` and Apple `container` runtime smokes when changes affect the

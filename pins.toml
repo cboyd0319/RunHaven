@@ -2,13 +2,12 @@
 
 [python]
 minimum_supported = "3.13"
-minimum_tested = "3.13.13"
+minimum_tested = "3.13.14"
 current_stable = "3.14.6"
 pip = "26.1.2"
 setuptools = "82.0.1"
 build = "1.5.0"
 mypy = "2.1.0"
-pytest = "9.1.0"
 ruff = "0.15.17"
 
 [github_runners]

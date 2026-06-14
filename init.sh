@@ -4,6 +4,23 @@ set -euo pipefail
 echo "== Harness verification for RunHaven =="
 echo "Detected stack: python"
 
+if [ "$(uname -s)" != "Darwin" ]; then
+  echo "RunHaven verification requires macOS 26+."
+  exit 1
+fi
+
+MACOS_VERSION="$(sw_vers -productVersion)"
+MACOS_MAJOR="${MACOS_VERSION%%.*}"
+if [ "$MACOS_MAJOR" -lt 26 ]; then
+  echo "RunHaven verification requires macOS 26+; found ${MACOS_VERSION}."
+  exit 1
+fi
+
+if [ "$(uname -m)" != "arm64" ]; then
+  echo "RunHaven verification requires Apple silicon."
+  exit 1
+fi
+
 PYTHON_BIN="${PYTHON:-}"
 if [ -z "$PYTHON_BIN" ]; then
   if command -v python3 >/dev/null 2>&1; then

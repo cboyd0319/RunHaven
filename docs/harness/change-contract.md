@@ -44,5 +44,5 @@ How can this change be reverted or disabled?
 ## Platform Impact
 
 Record whether the change affects Python 3.13+, macOS 26+ runtime behavior,
-Apple silicon, Apple `container` 1.0.0, Windows 11 contributor checks, Ubuntu
-22.04+ CI checks, or other Linux import/docs checks.
+Apple silicon, Apple `container` 1.0.0, macOS-only CI, or unsupported-platform
+guardrails.

@@ -6,6 +6,9 @@ Users are trusting this project with personal machines, personal files, and
 developer credentials. Security-sensitive behavior must fail closed when it
 cannot verify a boundary. Do not hide risk behind friendly wording.
 
+RunHaven only supports macOS 26+ on Apple silicon. Do not add Windows or Linux
+runtime or contributor-verification surfaces.
+
 ## Local Checks
 
 Full local harness verification:

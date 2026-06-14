@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import argparse
-import importlib
+import fcntl
+import json
 import os
 import shutil
 import subprocess
@@ -9,7 +10,7 @@ import sys
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, TextIO
+from typing import TextIO
 
 from .doctor import collect_checks
 from .images import build_image_plan
@@ -35,6 +36,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_agent(args)
         if args.command == "image":
             return image_command(args)
+        if args.command == "state":
+            return state_command(args)
     except ValueError as exc:
         parser.exit(2, f"runhaven: {exc}\n")
     except KeyboardInterrupt:
@@ -76,6 +79,12 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser_.add_argument("--tag", help="override the image tag")
     build_parser_.add_argument("--dry-run", action="store_true", help="print the build command")
 
+    state_parser = subcommands.add_parser("state", help="inspect or remove RunHaven state volumes")
+    state_subcommands = state_parser.add_subparsers(dest="state_command", required=True)
+    state_subcommands.add_parser("list", help="list RunHaven agent home volumes")
+    prune_parser = state_subcommands.add_parser("prune", help="remove RunHaven agent home volumes")
+    prune_parser.add_argument("--yes", action="store_true", help="delete listed volumes")
+
     return parser
 
 
@@ -90,6 +99,17 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--image", help="override the profile image")
     parser.add_argument("--cpus", default="4", help="virtual CPUs for the container")
     parser.add_argument("--memory", default="4g", help="memory limit for the container")
+    parser.add_argument(
+        "--tty",
+        choices=("auto", "always", "never"),
+        default="auto",
+        help="allocate a container TTY; auto follows the current terminal",
+    )
+    parser.add_argument(
+        "--no-interactive",
+        action="store_true",
+        help="do not keep container standard input open",
+    )
     parser.add_argument(
         "--network",
         choices=("internet", "internal"),
@@ -117,6 +137,16 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
         "--user",
         default="agent",
         help="container user to run as; bundled images provide the non-root agent user",
+    )
+    parser.add_argument(
+        "--allow-sensitive-workspace",
+        action="store_true",
+        help="allow mounting broad or credential-bearing host paths",
+    )
+    parser.add_argument(
+        "--allow-root-user",
+        action="store_true",
+        help="allow running the agent process as root inside the container",
     )
 
 
@@ -168,8 +198,19 @@ def image_command(args: argparse.Namespace) -> int:
     return subprocess.call(plan.command)
 
 
+def state_command(args: argparse.Namespace) -> int:
+    if args.state_command == "list":
+        return state_list()
+    if args.state_command == "prune":
+        return state_prune(confirm=args.yes)
+    raise ValueError(f"unknown state command: {args.state_command}")
+
+
 def make_run_plan(args: argparse.Namespace) -> AgentRunPlan:
     profile = get_profile(args.agent)
+    tty = args.tty == "always" or (
+        args.tty == "auto" and sys.stdin.isatty() and sys.stdout.isatty()
+    )
     return build_run_plan(
         RunOptions(
             profile=profile,
@@ -183,6 +224,10 @@ def make_run_plan(args: argparse.Namespace) -> AgentRunPlan:
             ssh=args.ssh,
             env=tuple(args.env),
             user=args.user,
+            interactive=not args.no_interactive,
+            tty=tty,
+            allow_sensitive_workspace=args.allow_sensitive_workspace,
+            allow_root_user=args.allow_root_user,
         )
     )
 
@@ -213,24 +258,91 @@ def ensure_internal_network(name: str) -> None:
     existing = subprocess.run(
         ("container", "network", "inspect", name),
         check=False,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
     )
     if existing.returncode == 0:
-        return
+        mode = inspect_network_mode(existing.stdout)
+        if mode == "hostOnly":
+            return
+        raise ValueError(
+            f"existing container network {name!r} is {mode or 'unknown'}, not host-only"
+        )
 
     created = subprocess.run(("container", "network", "create", "--internal", name), check=False)
     if created.returncode != 0:
         raise SystemExit(created.returncode)
 
 
+def inspect_network_mode(output: str) -> str | None:
+    try:
+        payload = json.loads(output)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, list) or not payload:
+        return None
+    first = payload[0]
+    if not isinstance(first, dict):
+        return None
+    configuration = first.get("configuration")
+    if not isinstance(configuration, dict):
+        return None
+    mode = configuration.get("mode")
+    return mode if isinstance(mode, str) else None
+
+
+def state_list() -> int:
+    require_container_cli()
+    volumes = list_state_volumes()
+    if not volumes:
+        print("No RunHaven state volumes found.")
+        return 0
+    for volume in volumes:
+        print(volume)
+    return 0
+
+
+def state_prune(*, confirm: bool) -> int:
+    require_container_cli()
+    volumes = list_state_volumes()
+    if not volumes:
+        print("No RunHaven state volumes found.")
+        return 0
+    if not confirm:
+        for volume in volumes:
+            print(volume)
+        print("Rerun with --yes to delete these volumes.")
+        return 2
+    for volume in volumes:
+        result = subprocess.run(("container", "volume", "delete", volume), check=False)
+        if result.returncode != 0:
+            return result.returncode
+    return 0
+
+
+def list_state_volumes() -> tuple[str, ...]:
+    result = subprocess.run(
+        ("container", "volume", "list", "--quiet"),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise SystemExit(result.returncode)
+    return tuple(
+        line.strip()
+        for line in result.stdout.splitlines()
+        if line.strip().startswith("runhaven-") and line.strip().endswith("-home")
+    )
+
+
 @contextmanager
 def acquire_state_lock(state_volume: str) -> Iterator[None]:
     path = state_lock_path(state_volume)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.touch(exist_ok=True)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    path.touch(mode=0o600, exist_ok=True)
+    path.chmod(0o600)
     with path.open("r+", encoding="utf-8") as lock_file:
-        prepare_lock_file(lock_file)
         try:
             lock_state_file(lock_file)
         except BlockingIOError as exc:
@@ -248,59 +360,20 @@ def acquire_state_lock(state_volume: str) -> Iterator[None]:
             unlock_state_file(lock_file)
 
 
-def prepare_lock_file(lock_file: TextIO) -> None:
-    if not is_windows():
-        return
-    lock_file.seek(0)
-    if lock_file.read(1):
-        lock_file.seek(0)
-        return
-    lock_file.write("\0")
-    lock_file.flush()
-    lock_file.seek(0)
-
-
 def lock_state_file(lock_file: TextIO) -> None:
-    if is_windows():
-        msvcrt = lock_module("msvcrt")
-        try:
-            msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
-        except OSError as exc:
-            raise BlockingIOError from exc
-        return
-
-    fcntl = lock_module("fcntl")
     fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
 
 def unlock_state_file(lock_file: TextIO) -> None:
-    if is_windows():
-        msvcrt = lock_module("msvcrt")
-        lock_file.seek(0)
-        msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
-        return
-
-    fcntl = lock_module("fcntl")
     fcntl.flock(lock_file, fcntl.LOCK_UN)
-
-
-def lock_module(name: str) -> Any:
-    return importlib.import_module(name)
-
-
-def is_windows() -> bool:
-    return sys.platform == "win32"
 
 
 def state_lock_path(state_volume: str) -> Path:
     override = os.environ.get("RUNHAVEN_CACHE_HOME")
     if override:
         cache_root = Path(override)
-    elif sys.platform == "darwin":
-        cache_root = Path.home() / "Library" / "Caches" / "runhaven"
     else:
-        cache_root = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
-        cache_root = cache_root / "runhaven"
+        cache_root = Path.home() / "Library" / "Caches" / "runhaven"
     return cache_root / "locks" / f"{state_volume}.lock"
 
 

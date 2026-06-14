@@ -4,17 +4,12 @@
   "generatedFor": "RunHaven",
   "detectedStack": "python",
   "supportedPlatforms": {
-    "productRuntime": {
+    "macosOnly": {
       "python": "3.13+",
       "macOS": "26+",
       "architecture": "Apple silicon",
-      "appleContainer": "1.0.0"
-    },
-    "contributorVerification": {
-      "macOS": "26+ for Apple container runtime checks",
-      "Windows 11": "import, docs, and command-construction checks only",
-      "Ubuntu 22.04": "CI import, docs, and command-construction checks only",
-      "note": "Generic harness audits look for macOS 15, Windows 11, and Ubuntu 22.04 language, but this product runtime is macOS 26+ only."
+      "appleContainer": "1.0.0",
+      "note": "RunHaven does not support Windows or Linux runtime or contributor verification targets."
     }
   },
   "requiredFiles": [
@@ -23,7 +18,6 @@
     "progress.md",
     "session-handoff.md",
     "init.sh",
-    "init.ps1",
     "docs/assets/logo.png",
     "docs/harness/README.md",
     "docs/harness/change-contract.md",

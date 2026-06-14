@@ -11,13 +11,12 @@ permissions:
 
 jobs:
   test:
-    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Python ${{ matrix.python-version }} on macOS 26
+    runs-on: macos-26
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-26]
-        python-version: ["3.13.13", "3.14.6"]
+        python-version: ["3.13.14", "3.14.6"]
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3

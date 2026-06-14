@@ -20,7 +20,7 @@ unsafe to rely on without repair.
 
 | Layer | Boundary Status | Verification | Notes |
 | --- | --- | --- | --- |
-| Repo harness | Documented | `repo-harness audit --target .` | Keep root instructions short and detail in `docs/harness/` |
+| Repo harness | Documented | `PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target .` | Keep root instructions short and detail in `docs/harness/` |
 
 ## Harness Simplification
 

@@ -11,8 +11,8 @@ silently merge, rotate secrets, change cloud costs, or rewrite user-owned files.
 1. Fetch curated source metadata from `research-sources.json` if this project
    uses scheduled research refresh.
 2. Update a compact research inbox and source ledger.
-3. Run `repo-harness update --target . --apply` for missing safe artifacts only.
-4. Run pin checks, tests, and `repo-harness audit --target .`.
+3. Run `PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge update --target . --apply` for missing safe artifacts only.
+4. Run pin checks, tests, and `PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target .`.
 5. Open a pull request when files changed.
 6. Require human review before merge.
 

@@ -14,6 +14,10 @@ from .profiles import AgentProfile
 NetworkMode = Literal["internet", "internal"]
 
 _ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_IMAGE_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$")
+_CPUS_RE = re.compile(r"^[1-9][0-9]*(?:\.[0-9]+)?$")
+_MEMORY_RE = re.compile(r"^[1-9][0-9]*(?:[KMGTPkmgmtp])?$")
+_USER_RE = re.compile(r"^(?:[A-Za-z_][A-Za-z0-9_.-]*|[0-9]+)(?::[0-9]+)?$")
 _SAFE_NAME_RE = re.compile(r"[^a-z0-9_.-]+")
 DEFAULT_ENV_PASSTHROUGH = ("TERM", "COLORTERM", "LANG", "LC_ALL", "NO_COLOR")
 CONTAINER_PATH = (
@@ -41,6 +45,10 @@ class RunOptions:
     ssh: bool = False
     env: tuple[str, ...] = ()
     user: str = "agent"
+    interactive: bool = True
+    tty: bool = True
+    allow_sensitive_workspace: bool = False
+    allow_root_user: bool = False
 
 
 @dataclass(frozen=True)
@@ -64,14 +72,19 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         raise ValueError(f"workspace does not exist: {workspace}")
     if not workspace.is_dir():
         raise ValueError(f"workspace is not a directory: {workspace}")
+    validate_workspace(workspace, allow_sensitive=options.allow_sensitive_workspace)
 
     for name in options.env:
         validate_env_name(name)
+    validate_resource_options(options.cpus, options.memory, options.user)
+    if is_root_user(options.user) and not options.allow_root_user:
+        raise ValueError("root user requires --allow-root-user")
 
     project_id = project_identifier(workspace)
     state_volume = safe_resource_name(f"runhaven-{options.profile.name}-{project_id}-home")
     network_name = safe_resource_name(f"runhaven-{project_id}-internal")
     image = options.image or options.profile.image
+    validate_image_reference(image, "image")
 
     command: list[str] = [
         "container",
@@ -100,6 +113,10 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         "--env",
         f"PATH={CONTAINER_PATH}",
     ]
+    if options.interactive:
+        command.append("--interactive")
+    if options.tty:
+        command.append("--tty")
 
     for name in DEFAULT_ENV_PASSTHROUGH:
         if name in os.environ:
@@ -171,6 +188,66 @@ def validate_env_name(name: str) -> None:
         raise ValueError("pass only environment variable names, not NAME=value pairs")
     if not _ENV_NAME_RE.match(name):
         raise ValueError(f"invalid environment variable name: {name!r}")
+
+
+def validate_workspace(workspace: Path, *, allow_sensitive: bool) -> None:
+    if "," in str(workspace):
+        raise ValueError("workspace paths containing a comma cannot be mounted safely")
+    if allow_sensitive:
+        return
+
+    root_paths, secret_paths = sensitive_workspace_paths()
+    for path in root_paths:
+        if workspace == path:
+            raise ValueError(
+                f"sensitive workspace requires --allow-sensitive-workspace: {workspace}"
+            )
+    for path in secret_paths:
+        if workspace == path or workspace in path.parents or path in workspace.parents:
+            raise ValueError(
+                f"sensitive workspace requires --allow-sensitive-workspace: {workspace}"
+            )
+
+
+def sensitive_workspace_paths() -> tuple[tuple[Path, ...], tuple[Path, ...]]:
+    home = Path.home().resolve()
+    root_paths = (Path("/").resolve(), Path("/Users").resolve(), home)
+    secret_paths = (
+        home / ".ssh",
+        home / ".aws",
+        home / ".azure",
+        home / ".config" / "gcloud",
+        home / ".docker",
+        home / ".gnupg",
+        home / ".kube",
+        home / "Library" / "Application Support" / "Google" / "Chrome",
+        home / "Library" / "Application Support" / "Firefox",
+        home / "Library" / "Keychains",
+    )
+    return root_paths, tuple(path.resolve() for path in secret_paths)
+
+
+def validate_resource_options(cpus: str, memory: str, user: str) -> None:
+    if not _CPUS_RE.match(cpus):
+        raise ValueError(f"invalid cpus value: {cpus!r}")
+    if not _MEMORY_RE.match(memory):
+        raise ValueError(f"invalid memory value: {memory!r}")
+    if not _USER_RE.match(user):
+        raise ValueError(f"invalid user value: {user!r}")
+
+
+def is_root_user(user: str) -> bool:
+    name = user.split(":", maxsplit=1)[0]
+    return name in {"0", "root"}
+
+
+def validate_image_reference(value: str, label: str) -> None:
+    if not value or value.startswith("-"):
+        raise ValueError(f"invalid {label}: {value!r}")
+    if "," in value or any(character.isspace() for character in value):
+        raise ValueError(f"invalid {label}: {value!r}")
+    if "://" in value or not _IMAGE_REF_RE.match(value):
+        raise ValueError(f"invalid {label}: {value!r}")
 
 
 def bind_mount(source: Path, target: str, *, read_only: bool) -> str:

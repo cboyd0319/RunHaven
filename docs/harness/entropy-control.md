@@ -8,7 +8,7 @@ files do not.
 Run at least before releases, large refactors, and after repeated agent errors:
 
 ```bash
-repo-harness audit --target .
+PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target .
 ```
 
 ## Correction Loop

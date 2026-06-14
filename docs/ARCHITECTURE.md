@@ -24,6 +24,8 @@ and unrelated repositories.
 - no host secret mount
 - explicit environment passthrough only
 - optional SSH agent forwarding with Apple `container --ssh`
+- interactive TTY allocation when requested or attached to a terminal
+- explicit unsafe overrides for sensitive workspaces and root agent execution
 
 Before a non-root bundled agent starts, `runhaven` prepares the per-project home
 volume in a short-lived root container so `/home/agent` is writable by UID/GID
@@ -64,6 +66,8 @@ network access to run. It uses Apple container's default network.
 `internal` creates a per-project `container network create --internal` network
 and runs the agent there. Use it for local-only analysis, offline tests, or
 workflows that do not need a model-provider connection from inside the guest.
+When reusing an existing network name, `runhaven` checks Apple `container`
+network inspection output and requires `configuration.mode` to be `hostOnly`.
 
 Domain egress allowlisting is a required future boundary. Until it lands,
 internet-enabled runs can reach whatever the host and Apple container runtime

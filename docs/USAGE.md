@@ -2,6 +2,9 @@
 
 ## Install for Development
 
+RunHaven development and runtime verification require macOS 26+ on Apple
+silicon. Windows and Linux are not supported.
+
 ```bash
 python3.14 -m venv .venv
 source .venv/bin/activate
@@ -66,6 +69,9 @@ runhaven run claude
 already using the same isolated home volume, `runhaven` fails before starting Apple
 `container` and tells you to wait or use a different workspace/profile.
 
+RunHaven allocates an interactive TTY when attached to a terminal. Use
+`--tty never` for non-interactive automation.
+
 Pass a host environment variable by name only:
 
 ```bash
@@ -90,7 +96,7 @@ workspace.
 ## Local-Only Network
 
 ```bash
-runhaven run shell --network internal -- pytest
+runhaven run shell --network internal -- python -m unittest discover -s tests
 ```
 
 `internal` creates a host-only Apple container network before the run. Hosted AI
@@ -105,3 +111,13 @@ runhaven run claude --ssh
 
 This forwards the macOS SSH agent socket using Apple `container --ssh`. It does
 not mount `~/.ssh`.
+
+## State Volumes
+
+```bash
+runhaven state list
+runhaven state prune --yes
+```
+
+`state list` shows RunHaven agent home volumes. `state prune --yes` deletes
+those isolated agent home volumes and does not touch workspace files.

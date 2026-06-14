@@ -26,7 +26,7 @@ Do not add unreviewed secondary links here. Put candidates in
 
 - Keep the root instruction file short.
 - Put durable detail in `docs/harness/`.
-- Generate both POSIX and PowerShell entrypoints.
+- Generate a macOS POSIX entrypoint only.
 - Preserve existing files unless forced.
 - Track feature behavior, verification, status, and evidence in
   `feature_list.json`.

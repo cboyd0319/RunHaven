@@ -34,6 +34,9 @@ Use `runhaven plan` before `runhaven run`. Treat internet-enabled runs as
 unrestricted egress inside whatever Apple `container` and your host network
 allow.
 
+RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
+supported runtimes or contributor verification targets for this project.
+
 ## What It Protects By Default
 
 `runhaven` generates Apple `container` commands with these defaults:
@@ -56,6 +59,11 @@ Useful opt-in controls:
 - `--network internal` for local-only commands
 - `--ssh` for SSH agent forwarding without mounting `~/.ssh`
 - `--env NAME` for passing a single host environment variable by name
+- `--tty never` for non-interactive automation
+- `--allow-sensitive-workspace` only when you intentionally want to mount a
+  broad or credential-bearing host path
+- `--allow-root-user` only when you intentionally want the agent process to run
+  as root inside the container
 
 ## What It Does Not Solve Yet
 
@@ -79,8 +87,11 @@ for the full boundary.
 - Python 3.13+
 - Apple [`container`](https://github.com/apple/container) 1.0.0
 
-The recommended Python runtime is 3.14.6. CI also tests Python 3.13.13 as the
+The recommended Python runtime is 3.14.6. CI also tests Python 3.13.14 as the
 minimum supported maintenance release.
+
+RunHaven does not support Windows or Linux. Use a macOS 26+ Apple silicon host
+for development, verification, image builds, and runtime checks.
 
 This repo intentionally pins Apple `container` 1.0.0. If Apple ships a newer
 runtime, `runhaven doctor` should fail until the repo updates and verifies the new
@@ -184,7 +195,7 @@ runhaven run claude --ssh
 Local-only command:
 
 ```bash
-runhaven run shell --network internal -- pytest
+runhaven run shell --network internal -- python -m unittest discover -s tests
 ```
 
 Pass a token by variable name only:
@@ -195,6 +206,13 @@ runhaven run codex --env OPENAI_API_KEY
 
 `runhaven` rejects `NAME=value` so secrets do not get copied into shell history or
 dry-run output.
+
+List or remove isolated agent home volumes:
+
+```bash
+runhaven state list
+runhaven state prune --yes
+```
 
 ## Troubleshooting
 

@@ -20,6 +20,8 @@ class RunPlanTests(unittest.TestCase):
         joined = plan.shell_command()
 
         self.assertEqual(command[:2], ["container", "run"])
+        self.assertIn("--interactive", command)
+        self.assertIn("--tty", command)
         self.assertIn("--read-only", command)
         self.assertIn("--cap-drop", command)
         self.assertIn("ALL", command)
@@ -53,11 +55,28 @@ class RunPlanTests(unittest.TestCase):
         self.assertIn("--network", plan.command)
         self.assertIn(plan.network_name, plan.command)
 
-    def test_custom_user_skips_agent_home_chown(self) -> None:
+    def test_root_user_requires_explicit_unsafe_override(self) -> None:
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            with self.assertRaisesRegex(ValueError, "root user"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("shell"),
+                        workspace=workspace,
+                        user="root",
+                    )
+                )
+
+    def test_allowed_root_user_skips_agent_home_chown(self) -> None:
         with TemporaryDirectory() as directory:
             workspace = Path(directory)
             plan = build_run_plan(
-                RunOptions(profile=get_profile("shell"), workspace=workspace, user="root")
+                RunOptions(
+                    profile=get_profile("shell"),
+                    workspace=workspace,
+                    user="root",
+                    allow_root_user=True,
+                )
             )
 
         self.assertEqual(plan.preflight, ())
@@ -99,6 +118,58 @@ class RunPlanTests(unittest.TestCase):
     def test_rejects_env_values(self) -> None:
         with self.assertRaisesRegex(ValueError, "variable names"):
             validate_env_name("AWS_SECRET_ACCESS_KEY=value")
+
+    def test_rejects_sensitive_workspace_without_override(self) -> None:
+        with self.assertRaisesRegex(ValueError, "sensitive workspace"):
+            build_run_plan(RunOptions(profile=get_profile("shell"), workspace=Path.home()))
+
+    def test_allows_sensitive_workspace_with_explicit_override(self) -> None:
+        plan = build_run_plan(
+            RunOptions(
+                profile=get_profile("shell"),
+                workspace=Path.home(),
+                allow_sensitive_workspace=True,
+            )
+        )
+
+        self.assertEqual(plan.workspace, Path.home().resolve())
+
+    def test_rejects_comma_in_workspace_path(self) -> None:
+        with TemporaryDirectory(prefix="runhaven,comma.") as directory:
+            with self.assertRaisesRegex(ValueError, "comma"):
+                build_run_plan(RunOptions(profile=get_profile("shell"), workspace=Path(directory)))
+
+    def test_rejects_unsafe_image_reference(self) -> None:
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "image"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("shell"),
+                        workspace=Path(directory),
+                        image="--cap-add",
+                    )
+                )
+
+    def test_rejects_invalid_resource_values(self) -> None:
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            with self.assertRaisesRegex(ValueError, "cpus"):
+                build_run_plan(
+                    RunOptions(profile=get_profile("shell"), workspace=workspace, cpus="many")
+                )
+            with self.assertRaisesRegex(ValueError, "memory"):
+                build_run_plan(
+                    RunOptions(profile=get_profile("shell"), workspace=workspace, memory="large")
+                )
+
+    def test_no_tty_option_disables_tty_flag(self) -> None:
+        with TemporaryDirectory() as directory:
+            plan = build_run_plan(
+                RunOptions(profile=get_profile("shell"), workspace=Path(directory), tty=False)
+            )
+
+        self.assertIn("--interactive", plan.command)
+        self.assertNotIn("--tty", plan.command)
 
     def test_agent_args_override_profile_command(self) -> None:
         with TemporaryDirectory() as directory:

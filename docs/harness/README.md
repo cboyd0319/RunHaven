@@ -9,10 +9,8 @@ in repo files instead of hidden in chat history.
 Product runtime contract: macOS 26+ on Apple silicon, Python 3.13+, and Apple
 `container` 1.0.0.
 
-Contributor verification contract: Python import, docs, pin, and
-command-construction checks should remain reviewable on Windows 11 and Ubuntu
-22.04+ where Apple `container` runtime checks are unavailable. This does not
-change the product runtime floor.
+Contributor verification contract: all local and CI verification runs on macOS
+26+. Windows and Linux are not supported targets for this project.
 
 ## Purpose
 
@@ -25,7 +23,7 @@ checks, and leave evidence for the next session.
 | Domain | Artifact | Purpose |
 | --- | --- | --- |
 | Instructions | `AGENTS.md` | Startup path, invariants, definition of done |
-| Tools | `init.sh`, `init.ps1` | Local verification entrypoints for POSIX and Windows |
+| Tools | `init.sh` | Local macOS verification entrypoint |
 | Environment | package/runtime manifests, `component-inventory.md`, `dependency-change-policy.md` | Versions, dependency managers, setup facts, project boundaries, and pin policy |
 | State | `feature_list.json`, `progress.md`, `evidence-log.md` | Current objective, feature status, and evidence |
 | Feedback | `verification-matrix.md`, `evaluator-rubric.md`, local checks | Deterministic signals before claiming completion |
@@ -51,12 +49,12 @@ use remote CI to confirm reviewed changes rather than as a trial-and-error loop.
 Use repo-harness-creator for regular structural checks:
 
 ```bash
-repo-harness audit --target .
-repo-harness update --target .
+PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target .
+PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge update --target .
 ```
 
-Run `repo-harness update --target . --apply` only when you want safe missing-file
-corrections. Existing files are preserved unless `--force` is passed.
+Run the update command with `--apply` only when you want safe missing-file
+corrections. Existing files are preserved unless a force option is passed.
 
 ## When To Add Harness
 

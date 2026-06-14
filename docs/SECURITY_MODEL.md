@@ -39,6 +39,9 @@ Sensitive:
 - uses a non-root user in bundled images
 - does not mount `~/.ssh`, `~/.aws`, `~/.config`, or the macOS home directory
 - does not pass host environment variables unless named with `--env`
+- rejects broad or credential-bearing workspace paths unless
+  `--allow-sensitive-workspace` is passed
+- rejects root agent execution unless `--allow-root-user` is passed
 - shows the exact command with `runhaven plan`
 
 For bundled non-root images, `runhaven` runs a short volume-preparation preflight
@@ -74,3 +77,5 @@ Use this order:
 4. Use `--env NAME` only when a headless run needs a token.
 5. Use `--read-only-workspace` for review and audit tasks.
 6. Use `--ssh` only when private Git access is required.
+7. Use `--allow-sensitive-workspace` or `--allow-root-user` only when the
+   security tradeoff is intentional.

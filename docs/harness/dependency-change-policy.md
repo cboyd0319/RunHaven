@@ -6,7 +6,7 @@ Status: live
 
 Default to the latest stable or supported release. Do not guess. Verify the
 current date and a current primary source before changing package, CLI, vendor
-API, workflow action, Python, Node, npm, PowerShell, or security-tool versions.
+API, workflow action, Python, Node, npm, or security-tool versions.
 
 Use exact pins for direct package dependencies and immutable commit SHAs for
 external GitHub Actions. If the newest stable release has a known reachable
@@ -30,8 +30,8 @@ Record:
 - Pin or lockfile update.
 - Focused test, build, audit, or smoke command.
 - Python 3.13+ and macOS 26+ runtime impact.
-- Windows 11 and Ubuntu 22.04+ contributor-check impact when the change affects
-  importability, docs, CI, scripts, or command construction.
+- macOS 26+ contributor-check impact. Do not add Windows or Linux dependency,
+  CI, script, or command-construction surfaces.
 
 ## GitHub Actions
 

@@ -87,14 +87,13 @@ Local reference harness:
 ## Package And Image Sources
 
 - Python source releases, current stable 3.14.6 on 2026-06-14 and latest 3.13
-  maintenance release 3.13.13:
+  maintenance release 3.13.14:
   <https://www.python.org/downloads/source/>
 - PyPI JSON API for Python package versions:
   <https://pypi.org/pypi/pip/json>,
   <https://pypi.org/pypi/setuptools/json>,
   <https://pypi.org/pypi/build/json>,
   <https://pypi.org/pypi/mypy/json>,
-  <https://pypi.org/pypi/pytest/json>,
   <https://pypi.org/pypi/ruff/json>
 - npm registry records checked with `npm view` for:
   `@anthropic-ai/claude-code`, `@openai/codex`,
