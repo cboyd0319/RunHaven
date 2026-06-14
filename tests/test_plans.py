@@ -42,6 +42,8 @@ class RunPlanTests(unittest.TestCase):
         self.assertIn("chown 1000:1000 /home/agent", plan.shell_preflight()[1])
         self.assertIn("mkdir -p /home/agent/.claude", plan.shell_preflight()[1])
         self.assertIsNone(plan.network_name)
+        self.assertEqual(plan.network_mode, "internet")
+        self.assertIn("unrestricted internet", plan.egress_summary)
 
     def test_internal_network_adds_preflight_and_network_flag(self) -> None:
         with TemporaryDirectory() as directory:
@@ -55,6 +57,8 @@ class RunPlanTests(unittest.TestCase):
         self.assertIsNotNone(plan.network_name)
         self.assertIn("--network", plan.command)
         self.assertIn(plan.network_name, plan.command)
+        self.assertEqual(plan.network_mode, "internal")
+        self.assertIn("host-only", plan.egress_summary)
 
     def test_root_user_requires_explicit_unsafe_override(self) -> None:
         with TemporaryDirectory() as directory:
@@ -203,6 +207,17 @@ class RunPlanTests(unittest.TestCase):
                         profile=get_profile("shell"),
                         workspace=Path(directory),
                         network="provider-only",
+                    )
+                )
+
+    def test_provider_network_mode_fails_closed_until_enforced(self) -> None:
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "provider egress allowlisting"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("shell"),
+                        workspace=Path(directory),
+                        network="provider",
                     )
                 )
 

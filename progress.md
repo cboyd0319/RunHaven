@@ -4,8 +4,8 @@ Last Updated: 2026-06-14
 
 ## Current Objective
 
-Harden RunHaven command construction, state handling, and macOS-only support
-boundaries after a whole-repo audit.
+Reserve provider egress mode without claiming allowlisting is enforced, and
+record verified Apple `container` networking evidence.
 
 ## Current State
 
@@ -58,11 +58,22 @@ boundaries after a whole-repo audit.
 - Pin policy now records the RunHaven package/image version in `pins.toml`,
   checks package and image version consistency from that ledger, and rejects
   non-macOS GitHub runner pins.
+- Apple DocC documentation was rendered with Playwright and cross-checked
+  through generated DocC JSON endpoints because the raw HTML page is a
+  JavaScript shell.
+- Apple `container` 1.0.0 exposes NAT networking, DNS selection, subnet
+  settings, and host-only networks, but no reviewed domain egress allowlist
+  surface was found in rendered docs, generated JSON, local CLI help, or the
+  pinned command reference.
+- `runhaven plan` now prints explicit egress status for the selected network.
+- `--network provider` is reserved and fails closed until RunHaven has a
+  verified provider egress enforcement mechanism.
 
 ## Recommended Next Step
 
-Continue to provider egress allowlisting. Keep the current macOS 26+ only
-runtime and verification boundary intact.
+Design the actual provider egress enforcement mechanism and prove allowed and
+denied paths with live Apple `container` runtime smokes. Keep the current
+macOS 26+ only runtime and verification boundary intact.
 
 ## Verification Evidence
 
@@ -135,3 +146,21 @@ runtime and verification boundary intact.
 - 2026-06-14: `python3 -m json.tool feature_list.json`, `git diff --check`,
   generated-artifact checks, and stale-reference scans passed after the second
   follow-up hardening pass.
+- 2026-06-14: rendered Apple DocC networking docs with Playwright and checked
+  generated DocC JSON endpoints for `ContainerNetworkService`.
+- 2026-06-14: `PYTHONPATH=src python3.14 -m unittest tests.test_plans.RunPlanTests.test_provider_network_mode_fails_closed_until_enforced tests.test_cli.CliTests.test_provider_network_mode_fails_closed_with_clear_message tests.test_cli.CliTests.test_plan_prints_dry_run_command`
+  ran 3 focused tests and passed.
+- 2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider`
+  exited 2 with the fail-closed provider egress message.
+- 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh`
+  passed after the provider egress preparation pass; the unit suite ran 49
+  tests.
+- 2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests`
+  ran 49 tests and passed after the provider egress preparation pass.
+- 2026-06-14: `PYTHONPATH=src python3.14 -m runhaven doctor` passed on
+  macOS 26.5.1 arm64 with Apple `container` 1.0.0.
+- 2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+  reported 100/100 after the provider egress preparation pass.
+- 2026-06-14: `git diff --check` and
+  `python3 -m json.tool feature_list.json` passed after the provider egress
+  preparation pass.

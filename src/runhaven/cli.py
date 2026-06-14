@@ -14,7 +14,7 @@ from typing import TextIO
 
 from .doctor import collect_checks
 from .images import build_image_plan
-from .plans import AgentRunPlan, RunOptions, build_run_plan
+from .plans import SUPPORTED_NETWORK_MODES, AgentRunPlan, RunOptions, build_run_plan
 from .profiles import PROFILES, get_profile
 
 
@@ -126,9 +126,12 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--network",
-        choices=("internet", "internal"),
+        choices=SUPPORTED_NETWORK_MODES,
         default="internet",
-        help="internet uses the default network; internal creates a host-only network",
+        help=(
+            "internet uses unrestricted default networking; internal creates a host-only "
+            "network; provider is reserved and fails closed until allowlisting is enforced"
+        ),
     )
     parser.add_argument(
         "--read-only-workspace",
@@ -252,6 +255,7 @@ def print_run_plan(plan: AgentRunPlan) -> None:
     print(f"Workspace: {plan.workspace}")
     print(f"State volume: {plan.state_volume}")
     print(f"Network: {plan.network_name or 'default internet network'}")
+    print(f"Egress: {plan.egress_summary}")
     if plan.preflight:
         print("Preflight:")
         for command in plan.shell_preflight():

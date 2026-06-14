@@ -60,6 +60,11 @@ local-only, but hosted AI agents need model-provider access. The current
 internet mode should be treated as unrestricted egress within the host's
 network policy.
 
+`--network provider` is reserved for future provider allowlisting and fails
+closed today. It is not a hidden allowlist; RunHaven will not claim provider
+egress enforcement until code, tests, and live Apple `container` smokes prove
+allowed and denied network paths.
+
 The selected agent still controls what it reads inside `/workspace` and
 `/home/agent`. If the agent has model credentials inside its project volume and
 internet access, malicious repository content may still try to exfiltrate those

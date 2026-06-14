@@ -15,6 +15,7 @@ Use this for compact current evidence. Keep raw logs out of this file.
 | 2026-06-14 | Follow-up hardening pass | focused unit tests, full unit suite, and pin check | passed | Added root group rejection, parser help cwd safety, dynamic image template pin discovery, and run/doctor edge-case coverage. |
 | 2026-06-14 | Cleanup pass | stale-reference scan, pin check, JSON validation, diff check, and HarnessForge audit | passed | Removed stale local paths, stale local-venv evidence, and old HarnessForge predecessor references from tracked docs. |
 | 2026-06-14 | Second follow-up hardening pass | sandboxed Antigravity audit, `PYTHON=<temporary-venv-python> ./init.sh`, Python 3.13 unit suite, help/plan/doctor smokes, HarnessForge audit, cleanup scans | passed | Added fail-closed network mode validation, leading-zero root identity rejection, sensitive macOS system path blocking, doctor remedies, agent-argument help, and macOS-only pin-ledger enforcement. |
+| 2026-06-14 | Provider egress preparation | Playwright-rendered Apple DocC review, generated DocC JSON review, focused fail-closed tests, `PYTHON=<temporary-venv-python> ./init.sh`, Python 3.13 unit suite, doctor smoke, and HarnessForge audit | passed | Added reserved `--network provider` mode that fails closed, explicit plan egress status, and docs stating internet mode remains unrestricted until enforcement is proven. |
 
 Rules:
 

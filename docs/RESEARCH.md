@@ -152,6 +152,43 @@ changing code.
 - <https://www.truefoundry.com/blog/claude-code-sandboxing>
 - <https://www.stackhawk.com/blog/developers-guide-to-writing-secure-code-with-claude-code/>
 
+## Apple Container Egress Research
+
+Reviewed on 2026-06-14 for Apple `container` 1.0.0:
+
+- User supplied Apple documentation entrypoint:
+  <https://apple.github.io/container/documentation/>
+- Rendered Apple DocC pages with Playwright and checked generated DocC JSON:
+  <https://apple.github.io/container/data/documentation/containernetworkservice/networkmode.json>,
+  <https://apple.github.io/container/data/documentation/containernetworkservice/networkmode/nat.json>,
+  and
+  <https://apple.github.io/container/data/documentation/containernetworkservice/networkconfiguration.json>.
+- Official Apple `container` 1.0.0 command reference:
+  <https://github.com/apple/container/blob/1.0.0/docs/command-reference.md>
+- Local installed CLI:
+  `container run --help`, `container network --help`, and
+  `container network create --help`.
+- Local sibling source/docs:
+  `../apple-container/docs/command-reference.md`.
+
+Observed command surface:
+
+- `container run` supports DNS selection with `--dns`, DNS-related options,
+  `--network`, and `--no-dns`.
+- `container network create` supports `--internal` for host-only networks plus
+  labels, plugin options, plugin selection, and subnet settings.
+- Apple's generated `ContainerNetworkService` docs expose `NetworkMode.nat`,
+  where host NAT lets containers reach external services, and
+  `NetworkConfiguration` fields for `id`, `mode`, and `subnet`.
+- No domain allowlist or egress allowlist flag was found in the pinned command
+  reference, rendered DocC pages, generated DocC JSON, local CLI help, or
+  local docs search.
+
+Conclusion: RunHaven must not treat DNS selection as egress enforcement. The
+reserved `--network provider` mode should fail closed until RunHaven implements
+and proves an enforcement mechanism such as a reviewed proxy, DNS filter plus
+packet controls, or another Apple `container`-compatible boundary.
+
 ## Current Product Conclusions
 
 - Use task-scoped `container run` instead of `container machine` for beginner
@@ -166,5 +203,7 @@ changing code.
 - Use `--read-only-workspace` for review-only tasks.
 - Treat internet-enabled runs as unrestricted egress until provider-specific
   allowlisting is implemented.
+- Keep `--network provider` fail-closed until code, tests, and live Apple
+  `container` smokes prove allowed and denied network paths.
 - Keep package, image, runtime, and CI pins current stable and exact. For apt,
   use timestamped Debian snapshots plus exact package versions.

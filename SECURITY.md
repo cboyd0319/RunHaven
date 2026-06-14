@@ -34,3 +34,6 @@ Network egress allowlisting is not fully enforced by this repo yet. The
 is useful for local-only work but does not let cloud AI CLIs reach their model
 providers. Internet-enabled agent runs should be treated as able to reach any
 destination permitted by Apple `container` and the host network.
+
+`--network provider` is reserved for future provider egress allowlisting and
+fails closed until RunHaven has a verified enforcement mechanism.

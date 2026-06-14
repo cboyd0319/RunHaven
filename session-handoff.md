@@ -4,14 +4,20 @@ Last Updated: 2026-06-14
 
 ## Current Objective
 
-Harden RunHaven after whole-repo audit findings and keep the project clearly
-macOS 26+ only.
+Reserve provider egress mode without claiming allowlisting is enforced, and
+record verified Apple `container` networking evidence.
 
 ## Files
 
 - `AGENTS.md`
 - `.github/copilot-instructions.md`
+- `README.md`
 - `SECURITY.md`
+- `docs/ARCHITECTURE.md`
+- `docs/RESEARCH.md`
+- `docs/ROADMAP.md`
+- `docs/SECURITY_MODEL.md`
+- `docs/USAGE.md`
 - `feature_list.json`
 - `progress.md`
 - `session-handoff.md`
@@ -84,6 +90,22 @@ macOS 26+ only.
 - `python3 -m json.tool feature_list.json`, `git diff --check`,
   generated-artifact checks, and stale-reference scans passed after the second
   follow-up hardening pass.
+- Rendered Apple DocC networking docs with Playwright and checked generated
+  DocC JSON endpoints for `ContainerNetworkService`.
+- `PYTHONPATH=src python3.14 -m unittest tests.test_plans.RunPlanTests.test_provider_network_mode_fails_closed_until_enforced tests.test_cli.CliTests.test_provider_network_mode_fails_closed_with_clear_message tests.test_cli.CliTests.test_plan_prints_dry_run_command`
+  ran 3 focused tests and passed.
+- `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider`
+  exited 2 with the fail-closed provider egress message.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed after the provider egress
+  preparation pass; the unit suite ran 49 tests.
+- `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 49 tests and
+  passed after the provider egress preparation pass.
+- `PYTHONPATH=src python3.14 -m runhaven doctor` passed on macOS 26.5.1 arm64
+  with Apple `container` 1.0.0.
+- `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+  reported 100/100 after the provider egress preparation pass.
+- `git diff --check` and `python3 -m json.tool feature_list.json` passed after
+  the provider egress preparation pass.
 - `magick identify docs/assets/logo.png` reported PNG 512x512.
 - No-ignore old-name text scan across working tree files outside `.git`
   returned no matches.
@@ -94,6 +116,12 @@ macOS 26+ only.
 - Ignored local `.venv*` directories were removed after verification because
   generated activation scripts and editable-install metadata encoded stale
   checkout paths.
+- Apple DocC documentation was rendered with Playwright and cross-checked
+  through generated DocC JSON endpoints because the raw HTML page is a
+  JavaScript shell.
+- `--network provider` is now reserved and fails closed until RunHaven has a
+  verified provider egress enforcement mechanism.
+- `runhaven plan` now prints explicit egress status for the selected network.
 
 ## Next Session
 
@@ -101,6 +129,8 @@ macOS 26+ only.
 2. Check `git status --short --branch`.
 3. Use `docs/harness/verification-matrix.md` to choose checks for the requested
    change.
-4. Ask for explicit approval before renaming the hosted GitHub repository or
+4. Continue provider egress design only after choosing an enforcement mechanism
+   that can prove both allowed and denied paths with Apple `container` smokes.
+5. Ask for explicit approval before renaming the hosted GitHub repository or
    changing other credentialed vendor state.
-5. Preserve the macOS 26+ only runtime and contributor-verification contract.
+6. Preserve the macOS 26+ only runtime and contributor-verification contract.

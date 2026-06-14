@@ -18,7 +18,7 @@ security wins and the tool must explain the safe next step.
 | Agent state volume | `runhaven` CLI | Per-project/profile state is locked during a run so concurrent agents cannot attach the same named volume. |
 | Generated paths | Project maintainers | Generated paths must remain inside the repository after symlink resolution. Unsafe path inputs are rejected. |
 | Secrets and credentials | Project maintainers | Do not print, store, transform, or transmit secrets unless the task explicitly requires a reviewed secret-handling path. Prefer `--env NAME` over inline values. |
-| Network calls | Project maintainers | Prefer local verification. Internet-enabled agent runs are unrestricted egress until provider allowlisting lands. |
+| Network calls | Project maintainers | Prefer local verification. Internet-enabled agent runs are unrestricted egress until provider allowlisting lands. Reserved provider mode must fail closed until enforcement is proven. |
 | Cost-incurring systems | Project maintainers | Cloud, model, or paid API changes require explicit human approval and rollback notes. |
 | Agent tool approvals | Project maintainers | Grant tools by least privilege. Do not widen mounts, network, credentials, or host access because an agent requests it without a reviewed task reason. |
 

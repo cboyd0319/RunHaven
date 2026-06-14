@@ -43,6 +43,7 @@ class CliTests(unittest.TestCase):
         self.assertIn("State volume:", text)
         self.assertIn("container run", text)
         self.assertIn("/bin/bash -lc pwd", text)
+        self.assertIn("Egress: unrestricted internet", text)
 
     def test_image_build_dry_run_uses_bundled_containerfile(self) -> None:
         output = io.StringIO()
@@ -82,6 +83,19 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(error.exception.code, 0)
         self.assertIn("Use -- before flags meant for the agent", output.getvalue())
+        self.assertIn("provider", output.getvalue())
+
+    def test_provider_network_mode_fails_closed_with_clear_message(self) -> None:
+        with TemporaryDirectory() as directory:
+            error_output = io.StringIO()
+            with redirect_stdout(io.StringIO()), patch("sys.stderr", error_output):
+                with self.assertRaises(SystemExit) as error:
+                    main(["plan", "shell", "--workspace", directory, "--network", "provider"])
+
+        self.assertEqual(error.exception.code, 2)
+        text = error_output.getvalue()
+        self.assertIn("provider egress allowlisting is not implemented", text)
+        self.assertIn("not enforced", text)
 
     def test_doctor_prints_remedy_for_failed_checks(self) -> None:
         output = io.StringIO()

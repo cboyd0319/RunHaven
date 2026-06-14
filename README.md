@@ -37,6 +37,9 @@ allow.
 RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
 supported runtimes or contributor verification targets for this project.
 
+`--network provider` is reserved for future provider egress allowlisting and
+fails closed today because domain allowlisting is not implemented or enforced.
+
 ## What It Protects By Default
 
 `runhaven` generates Apple `container` commands with these defaults:
@@ -57,6 +60,8 @@ Useful opt-in controls:
 
 - `--read-only-workspace` for review-only work
 - `--network internal` for local-only commands
+- `--network provider` to fail closed until reviewed provider allowlisting is
+  implemented
 - `--ssh` for SSH agent forwarding without mounting `~/.ssh`
 - `--env NAME` for passing a single host environment variable by name
 - `--tty never` for non-interactive automation
@@ -145,6 +150,7 @@ Example shape:
 Workspace: selected project directory
 State volume: runhaven-claude-...-home
 Network: default internet network
+Egress: unrestricted internet egress; domain allowlisting is not enforced
 Preflight:
   container network create --internal runhaven-volume-prep-internal
   container run ... --no-dns --network runhaven-volume-prep-internal ...
@@ -197,6 +203,15 @@ Local-only command:
 ```bash
 runhaven run shell --network internal -- python -m unittest discover -s tests
 ```
+
+Reserved provider-only mode:
+
+```bash
+runhaven plan claude --network provider
+```
+
+This exits with a clear error until RunHaven has a verified enforcement
+mechanism for provider egress allowlisting.
 
 Pass a token by variable name only:
 

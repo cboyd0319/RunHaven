@@ -56,6 +56,7 @@ The plan prints:
 - the mounted workspace
 - the per-project state volume
 - the selected network mode
+- the egress status for that network mode
 - any preflight command
 - the exact `container run` command
 
@@ -102,6 +103,16 @@ runhaven run shell --network internal -- python -m unittest discover -s tests
 `internal` creates a host-only Apple container network before the run. Hosted AI
 agent CLIs usually need internet access for model traffic, so this mode is most
 useful for local commands and custom images.
+
+## Reserved Provider Network
+
+```bash
+runhaven plan claude --network provider
+```
+
+`provider` is reserved for future provider egress allowlisting and fails closed
+today. It does not generate a container command because RunHaven does not yet
+have verified domain-level egress enforcement.
 
 ## Private Git
 

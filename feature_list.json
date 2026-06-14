@@ -105,19 +105,28 @@
       "area": "security",
       "title": "Provider egress allowlisting",
       "user_visible_behavior": "Internet-enabled agent runs can be restricted to reviewed provider and package endpoints instead of unrestricted egress.",
-      "status": "planned",
+      "status": "active",
       "dependencies": [
         "repo-harness-operating-layer",
         "runtime-hardening-macos-only-boundary"
       ],
       "verification": [
         "Threat model updated",
+        "Reserved provider network mode fails closed until enforcement exists",
         "Provider allowlist behavior tested",
         "Runtime smoke proves denied and allowed network paths",
         "Docs state exact limitations"
       ],
-      "evidence": [],
-      "notes": "Current internet mode remains unrestricted egress and is documented as a known limitation."
+      "evidence": [
+        "2026-06-14: Rendered Apple DocC networking docs with Playwright and checked generated DocC JSON endpoints for `ContainerNetworkService`.",
+        "2026-06-14: Local Apple `container` 1.0.0 CLI help and command reference expose DNS selection, NAT networking, and host-only networks, but no domain egress allowlist flag.",
+        "2026-06-14: Added reserved `--network provider` mode that fails closed until provider egress enforcement exists.",
+        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed with 49 tests, pin check, ruff, mypy, and build.",
+        "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 49 tests and passed.",
+        "2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100.",
+        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider` exited 2 with a fail-closed provider egress message."
+      ],
+      "notes": "Current internet mode remains unrestricted egress and is documented as a known limitation. The current active slice is fail-closed preparation, not completed provider allowlisting."
     },
     {
       "id": "repo-logo",

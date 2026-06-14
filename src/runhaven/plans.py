@@ -11,7 +11,12 @@ from typing import Literal
 
 from .profiles import AgentProfile
 
-NetworkMode = Literal["internet", "internal"]
+NetworkMode = Literal["internet", "internal", "provider"]
+SUPPORTED_NETWORK_MODES = ("internet", "internal", "provider")
+PROVIDER_EGRESS_UNIMPLEMENTED = (
+    "provider egress allowlisting is not implemented and not enforced yet. "
+    "Use --network internet for unrestricted egress, or --network internal for local-only runs."
+)
 
 _ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _IMAGE_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$")
@@ -58,6 +63,8 @@ class AgentRunPlan:
     workspace: Path
     state_volume: str
     network_name: str | None
+    network_mode: NetworkMode
+    egress_summary: str
 
     def shell_command(self) -> str:
         return shlex.join(self.command)
@@ -184,6 +191,8 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         workspace=workspace,
         state_volume=state_volume,
         network_name=active_network,
+        network_mode=options.network,
+        egress_summary=network_egress_summary(options.network),
     )
 
 
@@ -260,8 +269,18 @@ def validate_resource_options(cpus: str, memory: str, user: str) -> None:
 
 
 def validate_network_mode(network: str) -> None:
-    if network not in {"internet", "internal"}:
+    if network not in SUPPORTED_NETWORK_MODES:
         raise ValueError(f"invalid network mode: {network!r}")
+    if network == "provider":
+        raise ValueError(PROVIDER_EGRESS_UNIMPLEMENTED)
+
+
+def network_egress_summary(network: NetworkMode) -> str:
+    if network == "internet":
+        return "unrestricted internet egress; domain allowlisting is not enforced"
+    if network == "internal":
+        return "host-only internal network; internet egress disabled"
+    return "provider egress allowlisting is not implemented and not enforced"
 
 
 def uses_root_identity(user: str) -> bool:

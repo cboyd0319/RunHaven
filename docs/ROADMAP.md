@@ -11,6 +11,7 @@
 
 ## Phase 2: Network Boundary
 
+- reserved provider network mode that fails closed until enforcement exists
 - provider-specific egress profiles
 - local proxy option for model credentials
 - clear offline, provider-only, and package-install network modes

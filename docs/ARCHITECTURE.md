@@ -69,6 +69,12 @@ workflows that do not need a model-provider connection from inside the guest.
 When reusing an existing network name, `runhaven` checks Apple `container`
 network inspection output and requires `configuration.mode` to be `hostOnly`.
 
-Domain egress allowlisting is a required future boundary. Until it lands,
+`provider` is reserved for future provider egress allowlisting. It fails closed
+today and does not produce a `container run` command because Apple `container`
+1.0.0 exposes DNS selection and host-only networks, not a reviewed domain
+allowlist that RunHaven can safely generate.
+
+Domain egress allowlisting remains a required future boundary. Until an
+enforcement mechanism lands and is proven by live runtime smokes,
 internet-enabled runs can reach whatever the host and Apple container runtime
 allow.
