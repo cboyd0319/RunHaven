@@ -130,6 +130,10 @@ fail-closed.
   after the provider egress proxy smoke pass.
 - HarnessForge audit was intentionally skipped for this pass by user
   instruction because the sibling HarnessForge repo is being worked on.
+- `PYTHONPATH=src python3.14 -m unittest tests.test_cli`,
+  `python -m ruff check src/runhaven/cli.py tests/test_cli.py`,
+  `python -m mypy src`, and `git diff --check` passed after the provider
+  wording cleanup.
 - `magick identify docs/assets/logo.png` reported PNG 512x512.
 - No-ignore old-name text scan across working tree files outside `.git`
   returned no matches.
@@ -153,6 +157,8 @@ fail-closed.
 - `--network provider` is still reserved and fails closed until RunHaven
   integrates the verified provider egress proxy lifecycle into normal runs.
 - `runhaven plan` now prints explicit egress status for the selected network.
+- `runhaven run --help` now uses the same provider-mode wording as the docs:
+  fail closed for normal runs until the verified proxy lifecycle is integrated.
 
 ## Next Session
 

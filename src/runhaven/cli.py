@@ -130,7 +130,8 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
         default="internet",
         help=(
             "internet uses unrestricted default networking; internal creates a host-only "
-            "network; provider is reserved and fails closed until allowlisting is enforced"
+            "network; provider fails closed for normal runs until the verified proxy "
+            "lifecycle is integrated"
         ),
     )
     parser.add_argument(

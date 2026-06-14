@@ -11,7 +11,7 @@
 
 ## Phase 2: Network Boundary
 
-- reserved provider network mode that fails closed until enforcement exists
+- reserved provider network mode that fails closed until normal run integration lands
 - live smoke harness for host allowlist proxy on an internal network
 - provider-specific egress profiles
 - local proxy option for model credentials

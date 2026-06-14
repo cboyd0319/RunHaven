@@ -84,6 +84,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 0)
         self.assertIn("Use -- before flags meant for the agent", output.getvalue())
         self.assertIn("provider", output.getvalue())
+        self.assertIn("normal runs", output.getvalue())
 
     def test_provider_network_mode_fails_closed_with_clear_message(self) -> None:
         with TemporaryDirectory() as directory:

@@ -133,7 +133,8 @@
         "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 56 tests and passed after the provider egress proxy smoke pass.",
         "2026-06-14: `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8` passed with allowed proxied HTTPS and denied proxied host, proxied IP literal, direct DNS, and direct IP paths.",
         "2026-06-14: `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8 --allowed-host api.openai.com --allowed-url https://api.openai.com/ --denied-host example.com` passed.",
-        "2026-06-14: HarnessForge audit was intentionally skipped for the provider egress proxy smoke pass by user instruction because the sibling HarnessForge repo is being worked on."
+        "2026-06-14: HarnessForge audit was intentionally skipped for the provider egress proxy smoke pass by user instruction because the sibling HarnessForge repo is being worked on.",
+        "2026-06-14: focused CLI tests, ruff, mypy, and diff check passed after aligning CLI help and roadmap wording with the provider proxy state."
       ],
       "notes": "Current internet mode remains unrestricted egress and is documented as a known limitation. The current active slice proves the proxy enforcement pattern, but `--network provider` remains fail-closed until the proxy lifecycle is integrated into normal runs."
     },

@@ -80,6 +80,9 @@ fail-closed.
   literal, direct DNS, and direct IP paths failed.
 - `--network provider` still fails closed for normal runs because the proxy
   lifecycle is not yet integrated into `runhaven run`.
+- CLI help and roadmap wording now match that state: provider mode is
+  smoke-proven but unavailable for normal runs until lifecycle integration
+  lands.
 
 ## Recommended Next Step
 
@@ -200,3 +203,7 @@ messages for non-technical users.
   `git diff --check` passed after the provider egress proxy smoke pass.
 - 2026-06-14: HarnessForge audit was intentionally skipped for this pass by
   user instruction because the sibling HarnessForge repo is being worked on.
+- 2026-06-14: `PYTHONPATH=src python3.14 -m unittest tests.test_cli`,
+  `python -m ruff check src/runhaven/cli.py tests/test_cli.py`,
+  `python -m mypy src`, and `git diff --check` passed after the provider
+  wording cleanup.
