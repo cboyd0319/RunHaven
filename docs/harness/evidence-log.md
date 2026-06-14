@@ -20,6 +20,7 @@ Use this for compact current evidence. Keep raw logs out of this file.
 | 2026-06-14 | Provider wording cleanup | focused CLI tests, ruff, mypy, and diff check | passed | Aligned CLI help and roadmap wording with the smoke-proven but not yet normal-run-integrated provider proxy state. |
 | 2026-06-14 | Provider runtime integration | focused lifecycle tests, `PYTHON=<temporary-venv-python> ./init.sh`, Python 3.13 unit suite, and live `runhaven run shell --network provider --provider-host example.com` smoke | passed | Integrated the proxy lifecycle into normal provider runs. The live run allowed proxied HTTPS and denied proxied host, proxied IP literal, direct DNS, and direct IP paths; cleanup left no provider network or test state volume. |
 | 2026-06-14 | Provider host guard cleanup | focused planner and CLI tests, `PYTHON=<temporary-venv-python> ./init.sh`, Python 3.13 unit suite, ruff, and mypy | passed | Rejected single-label provider hosts such as `com` so explicit provider additions must be fully qualified. Docs now state that a listed host permits that host and its subdomains. |
+| 2026-06-14 | Supplemental Apple container source review | direct web source review and Antigravity research pass | passed | Reviewed Apple Open Source, DeepWiki, Wikipedia, The Register, HowToUseLinux, Apidog, and Suraj Deshmukh references. Added durable research notes and reinforced that RunHaven should avoid `container machine` home-mount defaults. |
 
 Rules:
 

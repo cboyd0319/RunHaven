@@ -4,8 +4,8 @@ Last Updated: 2026-06-14
 
 ## Current Objective
 
-Harden provider-host additions and documentation after integrating provider
-egress enforcement into normal `runhaven run --network provider`.
+Ingest supplemental Apple `container` references and preserve the RunHaven
+security boundary decisions they affect.
 
 ## Files
 
@@ -156,6 +156,8 @@ egress enforcement into normal `runhaven run --network provider`.
 - `PYTHON=<temporary-venv-python> ./init.sh` and
   `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 60 tests
   and passed after the provider-host guard cleanup.
+- Directly reviewed user-supplied supplemental Apple `container` sources and
+  ran an Antigravity research pass over the same source list.
 - `magick identify docs/assets/logo.png` reported PNG 512x512.
 - No-ignore old-name text scan across working tree files outside `.git`
   returned no matches.
@@ -188,6 +190,10 @@ egress enforcement into normal `runhaven run --network provider`.
 - Provider host additions reject IP literals and single-label hosts, so entries
   like `com` cannot accidentally allow broad suffixes. A listed host permits
   that host and its subdomains.
+- Supplemental Apple `container` source review is recorded in
+  `docs/RESEARCH.md`. It reinforced the current `container run` boundary and
+  the decision not to use `container machine` defaults for beginner-safe agent
+  runs.
 
 ## Next Session
 

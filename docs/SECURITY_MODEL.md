@@ -53,6 +53,19 @@ uses a dedicated internal network.
 concurrent attachment of the same named volume and keeps the failure mode
 understandable for non-technical users.
 
+## Why Not Container Machine
+
+RunHaven uses task-scoped `container run` commands instead of Apple's persistent
+`container machine` workflow. The machine workflow is useful for Linux
+development environments, but it is the wrong beginner-safe default for AI
+coding agents because it can map the host user and home directory into the
+guest. Secondary hands-on reporting also notes that the safer machine option is
+to disable that home mount.
+
+RunHaven's default boundary is narrower: mount one selected workspace, attach
+one project-scoped agent home volume, and never mount the macOS home directory
+or raw credential folders by default.
+
 ## What This Does Not Solve Yet
 
 The default `internet` network mode should still be treated as unrestricted

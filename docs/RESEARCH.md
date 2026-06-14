@@ -224,6 +224,65 @@ host username and home directory into the Linux environment. The local
 `container-system-config.md` docs expose default resource, DNS, registry,
 kernel, vminit, and subnet settings, but no domain egress allowlist control.
 
+## Supplemental Apple Container References
+
+Reviewed on 2026-06-14 after user supplied additional sources. Treat Apple
+published material as primary. Treat wiki, news, tutorial, and generated-index
+sources as secondary context unless the same claim is verified in Apple docs,
+the installed CLI, or the Apple source tree.
+
+- Apple Open Source project page:
+  <https://opensource.apple.com/projects/container/>
+  - Primary source. Defines `container` as a Swift tool for creating and
+    running Linux containers with lightweight VMs on Apple silicon.
+  - States that `container` uses Apple's open source `containerization` package
+    and prioritizes security, privacy, and performance.
+- DeepWiki generated overview for `apple/container`:
+  <https://deepwiki.com/apple/container/1-overview>
+  - Secondary generated index over the Apple source tree. Useful for navigation
+    to source-backed topics such as the CLI, `container-apiserver`, image
+    helpers, networking, DNS, and machine runtime.
+  - Do not treat DeepWiki summaries as authoritative for pins or product claims
+    without checking Apple source, Apple docs, or live CLI behavior.
+- Wikipedia overview:
+  <https://en.wikipedia.org/wiki/Apple_container>
+  - Secondary background. Summarizes the one-VM-per-container architecture and
+    contrasts it with shared-VM desktop container tools.
+  - Notes ecosystem limitations such as Docker Compose and DevContainer gaps;
+    verify current status before making roadmap or support claims.
+- The Register hands-on article:
+  <https://www.theregister.com/devops/2026/06/11/apple-gives-mac-devs-a-wsl-ish-thing-to-call-their-own/5254153>
+  - Secondary hands-on source. Reinforces that `container machine` is a
+    persistent Linux VM workflow, closer to WSL than RunHaven's task-scoped
+    agent runs.
+  - Reports that `container machine` defaults can mount the macOS home directory
+    read-write and that `--home-mount none` is the safer mode. This matches
+    RunHaven's decision to avoid `container machine` for beginner-safe agent
+    workloads.
+  - Reports that memory retained by a container machine may require restarting
+    the VM to release back to the host. This is noted as `container machine`
+    context only, not a verified `runhaven run` behavior.
+- HowToUseLinux article:
+  <https://www.howtouselinux.com/post/apple-built-a-new-container-tool-for-macos-heres-why-it-actually-matters>
+  - Secondary technical article. Repeats the isolated lightweight VM model,
+    `vminitd`, `vmnet`, XPC, and Keychain integration themes.
+  - Mentions macOS 15 limitations and macOS 26 as the full-feature target.
+    RunHaven remains intentionally stricter: macOS 26+ only.
+- Apidog tutorial:
+  <https://apidog.com/blog/apple-container-open-source-docker-alternative/>
+  - Secondary tutorial. Describes `container-apiserver`, per-container runtime
+    helpers, Virtualization.framework, `vmnet`, Keychain, unified logging, and
+    OCI registry workflows.
+  - Useful for onboarding language, not authoritative for security boundaries.
+- Suraj Deshmukh tutorial:
+  <https://suraj.io/post/2026/using-osx-containerization/>
+  - Secondary hands-on tutorial. Notes host-to-container networking can be
+    affected by macOS Local Network privacy prompts and that both the client app
+    and `container-runtime-linux` may need Local Network permission.
+  - Documents embedded DNS setup and direct private-network access from the Mac.
+    These are useful troubleshooting candidates if RunHaven later exposes
+    port-publishing or host-to-guest workflows. They are not egress controls.
+
 ## Current Product Conclusions
 
 - Use task-scoped `container run` instead of `container machine` for beginner

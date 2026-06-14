@@ -4,8 +4,8 @@ Last Updated: 2026-06-14
 
 ## Current Objective
 
-Harden provider-host additions and documentation after integrating provider
-egress enforcement into normal `runhaven run --network provider`.
+Ingest supplemental Apple `container` references and preserve the RunHaven
+security boundary decisions they affect.
 
 ## Current State
 
@@ -92,6 +92,12 @@ egress enforcement into normal `runhaven run --network provider`.
 - `container machine` remains out of scope for the default product boundary
   because Apple's docs say it maps the host username and home directory into the
   Linux environment.
+- Supplemental Apple `container` sources supplied by the user were reviewed and
+  recorded in `docs/RESEARCH.md`: Apple Open Source, DeepWiki, Wikipedia, The
+  Register, HowToUseLinux, Apidog, and Suraj Deshmukh.
+- The new source review reinforced current RunHaven decisions: macOS 26+ only,
+  task-scoped `container run`, no `container machine` default, no host home
+  mount, and no DNS-as-egress-control claim.
 
 ## Recommended Next Step
 
@@ -239,3 +245,5 @@ non-technical users.
 - 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and
   `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 60 tests
   and passed after the provider-host guard cleanup.
+- 2026-06-14: directly reviewed user-supplied supplemental Apple `container`
+  sources and ran an Antigravity research pass over the same source list.
