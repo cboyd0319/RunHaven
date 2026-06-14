@@ -36,4 +36,5 @@ providers. Internet-enabled agent runs should be treated as able to reach any
 destination permitted by Apple `container` and the host network.
 
 `--network provider` is reserved for future provider egress allowlisting and
-fails closed until RunHaven has a verified enforcement mechanism.
+fails closed for normal runs until RunHaven integrates the verified proxy
+pattern into `runhaven run`.

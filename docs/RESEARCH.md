@@ -201,6 +201,15 @@ reserved `--network provider` mode should fail closed until RunHaven implements
 and proves an enforcement mechanism such as a reviewed proxy, DNS filter plus
 packet controls, or another Apple `container`-compatible boundary.
 
+Follow-up verification on 2026-06-14 proved the reviewed proxy pattern with
+live Apple `container` smokes. A container on an internal network can reach a
+host-side proxy through the guest's default gateway. The smoke harness starts a
+CONNECT proxy with exact provider-domain allowlisting, restricts accepted
+clients to the internal-network subnet when it cannot bind directly to the
+gateway address, blocks IP literal CONNECT targets, and verifies allowed
+proxied HTTPS, denied proxied host, denied proxied IP literal, denied direct
+DNS egress, and denied direct IP egress.
+
 ## Current Product Conclusions
 
 - Use task-scoped `container run` instead of `container machine` for beginner
@@ -215,7 +224,7 @@ packet controls, or another Apple `container`-compatible boundary.
 - Use `--read-only-workspace` for review-only tasks.
 - Treat internet-enabled runs as unrestricted egress until provider-specific
   allowlisting is implemented.
-- Keep `--network provider` fail-closed until code, tests, and live Apple
-  `container` smokes prove allowed and denied network paths.
+- Keep `--network provider` fail-closed for normal runs until the smoke-proven
+  proxy lifecycle is integrated into `runhaven run`.
 - Keep package, image, runtime, and CI pins current stable and exact. For apt,
   use timestamped Debian snapshots plus exact package versions.

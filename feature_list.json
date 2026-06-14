@@ -113,6 +113,7 @@
       "verification": [
         "Threat model updated",
         "Reserved provider network mode fails closed until enforcement exists",
+        "Smoke harness proves host allowlist proxy on an internal Apple container network",
         "Provider allowlist behavior tested",
         "Runtime smoke proves denied and allowed network paths",
         "Docs state exact limitations"
@@ -126,9 +127,15 @@
         "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 49 tests and passed.",
         "2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100.",
         "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider` exited 2 with a fail-closed provider egress message.",
-        "2026-06-14: `python3 -m json.tool feature_list.json`, `python3 scripts/check_pins.py`, `git diff --check`, local absolute-path leak scan, and `PYTHONPATH=<temporary-HarnessForge-copy>/src python3.14 -m harnessforge audit --target . --min-score 85` passed after the complete DocC snapshot evidence update."
+        "2026-06-14: `python3 -m json.tool feature_list.json`, `python3 scripts/check_pins.py`, `git diff --check`, local absolute-path leak scan, and `PYTHONPATH=<temporary-HarnessForge-copy>/src python3.14 -m harnessforge audit --target . --min-score 85` passed after the complete DocC snapshot evidence update.",
+        "2026-06-14: added a standard-library CONNECT allowlist proxy and `scripts/provider_egress_smoke.py`.",
+        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after the provider egress proxy smoke pass; the unit suite ran 56 tests.",
+        "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 56 tests and passed after the provider egress proxy smoke pass.",
+        "2026-06-14: `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8` passed with allowed proxied HTTPS and denied proxied host, proxied IP literal, direct DNS, and direct IP paths.",
+        "2026-06-14: `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8 --allowed-host api.openai.com --allowed-url https://api.openai.com/ --denied-host example.com` passed.",
+        "2026-06-14: HarnessForge audit was intentionally skipped for the provider egress proxy smoke pass by user instruction because the sibling HarnessForge repo is being worked on."
       ],
-      "notes": "Current internet mode remains unrestricted egress and is documented as a known limitation. The current active slice is fail-closed preparation, not completed provider allowlisting."
+      "notes": "Current internet mode remains unrestricted egress and is documented as a known limitation. The current active slice proves the proxy enforcement pattern, but `--network provider` remains fail-closed until the proxy lifecycle is integrated into normal runs."
     },
     {
       "id": "repo-logo",

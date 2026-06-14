@@ -8,7 +8,8 @@ inventory, not permission to mutate nested projects.
 ## Detected Components
 
 - Root Python package: `pyproject.toml`, `src/runhaven/`,
-  `tests/`, `scripts/check_pins.py`.
+  `tests/`, `scripts/check_pins.py`, and
+  `scripts/provider_egress_smoke.py`.
 - Bundled image templates:
   `src/runhaven/images/base/`,
   `src/runhaven/images/claude/`,

@@ -69,12 +69,22 @@ workflows that do not need a model-provider connection from inside the guest.
 When reusing an existing network name, `runhaven` checks Apple `container`
 network inspection output and requires `configuration.mode` to be `hostOnly`.
 
-`provider` is reserved for future provider egress allowlisting. It fails closed
-today and does not produce a `container run` command because Apple `container`
-1.0.0 exposes DNS selection and host-only networks, not a reviewed domain
-allowlist that RunHaven can safely generate.
+`provider` is reserved for provider egress allowlisting. It still fails closed
+for normal agent runs until the proxy lifecycle is integrated into `runhaven
+run`.
 
-Domain egress allowlisting remains a required future boundary. Until an
-enforcement mechanism lands and is proven by live runtime smokes,
-internet-enabled runs can reach whatever the host and Apple container runtime
-allow.
+The proved enforcement pattern is:
+
+- run the agent on a temporary internal Apple `container` network
+- discover the guest's default gateway on that network
+- run a host-side CONNECT proxy with an exact provider-domain allowlist
+- expose the proxy to the guest through the internal-network gateway
+- reject clients outside the internal-network subnet when gateway-specific
+  binding is not available
+- block IP literal CONNECT targets at the proxy
+
+`scripts/provider_egress_smoke.py` proves the pattern with live Apple
+`container` smokes: allowed proxied HTTPS succeeds, denied proxied host fails,
+proxied IP literal fails, direct DNS egress fails, and direct IP egress fails.
+Until that lifecycle is wired into normal `runhaven run`, internet-enabled runs
+can reach whatever the host and Apple container runtime allow.

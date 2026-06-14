@@ -94,8 +94,8 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(error.exception.code, 2)
         text = error_output.getvalue()
-        self.assertIn("provider egress allowlisting is not implemented", text)
-        self.assertIn("not enforced", text)
+        self.assertIn("provider egress allowlisting is not available", text)
+        self.assertIn("normal runs", text)
 
     def test_doctor_prints_remedy_for_failed_checks(self) -> None:
         output = io.StringIO()

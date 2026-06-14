@@ -14,7 +14,7 @@ from .profiles import AgentProfile
 NetworkMode = Literal["internet", "internal", "provider"]
 SUPPORTED_NETWORK_MODES = ("internet", "internal", "provider")
 PROVIDER_EGRESS_UNIMPLEMENTED = (
-    "provider egress allowlisting is not implemented and not enforced yet. "
+    "provider egress allowlisting is not available for normal runs yet. "
     "Use --network internet for unrestricted egress, or --network internal for local-only runs."
 )
 
@@ -280,7 +280,7 @@ def network_egress_summary(network: NetworkMode) -> str:
         return "unrestricted internet egress; domain allowlisting is not enforced"
     if network == "internal":
         return "host-only internal network; internet egress disabled"
-    return "provider egress allowlisting is not implemented and not enforced"
+    return "provider egress allowlisting is proven only by the smoke harness, not normal runs"
 
 
 def uses_root_identity(user: str) -> bool:

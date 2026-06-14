@@ -27,8 +27,9 @@ anything runs.
 
 ## Status
 
-Early foundation. RunHaven is usable for local testing and image builds, but
-network egress allowlisting is not complete yet.
+Early foundation. RunHaven is usable for local testing and image builds. A
+provider-egress smoke harness now proves the host allowlist proxy pattern, but
+provider egress is not wired into normal agent runs yet.
 
 Use `runhaven plan` before `runhaven run`. Treat internet-enabled runs as
 unrestricted egress inside whatever Apple `container` and your host network
@@ -37,8 +38,8 @@ allow.
 RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
 supported runtimes or contributor verification targets for this project.
 
-`--network provider` is reserved for future provider egress allowlisting and
-fails closed today because domain allowlisting is not implemented or enforced.
+`--network provider` is reserved for provider egress allowlisting and still
+fails closed for normal runs until the proved proxy pattern is integrated.
 
 ## What It Protects By Default
 
@@ -75,6 +76,8 @@ Useful opt-in controls:
 This is not a complete data-loss or exfiltration solution.
 
 - Internet mode does not yet restrict outbound domains.
+- The provider egress proxy has a live smoke harness, but it is not a normal
+  `runhaven run` mode yet.
 - The selected agent can still read files inside the mounted workspace and its
   isolated agent home volume.
 - If a credential is available inside the agent home volume or passed with
@@ -211,7 +214,7 @@ runhaven plan claude --network provider
 ```
 
 This exits with a clear error until RunHaven has a verified enforcement
-mechanism for provider egress allowlisting.
+mechanism wired into normal agent runs.
 
 Pass a token by variable name only:
 

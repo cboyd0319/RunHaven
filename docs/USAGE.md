@@ -110,9 +110,26 @@ useful for local commands and custom images.
 runhaven plan claude --network provider
 ```
 
-`provider` is reserved for future provider egress allowlisting and fails closed
-today. It does not generate a container command because RunHaven does not yet
-have verified domain-level egress enforcement.
+`provider` is reserved for provider egress allowlisting and fails closed for
+normal runs. It does not generate a container command until RunHaven integrates
+the verified proxy lifecycle into `runhaven run`.
+
+## Provider Egress Smoke
+
+Build the base image and run the live smoke on macOS 26+:
+
+```bash
+runhaven image build shell
+PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py \
+  --allowed-host api.openai.com \
+  --allowed-url https://api.openai.com/ \
+  --denied-host example.com
+```
+
+The smoke creates a temporary internal Apple `container` network and starts a
+host-side allowlist CONNECT proxy. It passes only when the allowed proxied HTTPS
+path succeeds and denied proxied host, proxied IP literal, direct DNS, and
+direct IP paths fail.
 
 ## Private Git
 

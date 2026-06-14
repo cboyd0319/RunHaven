@@ -4,8 +4,9 @@ Last Updated: 2026-06-14
 
 ## Current Objective
 
-Reserve provider egress mode without claiming allowlisting is enforced, and
-record verified Apple `container` networking evidence.
+Prove provider egress enforcement with a host allowlist proxy on an internal
+Apple `container` network while keeping normal `--network provider` runs
+fail-closed.
 
 ## Files
 
@@ -26,6 +27,7 @@ record verified Apple `container` networking evidence.
 - `pyproject.toml`
 - `src/runhaven/`
 - `scripts/check_pins.py`
+- `scripts/provider_egress_smoke.py`
 - `tests/`
 - `docs/HARNESS_EVALUATION.md`
 - `docs/assets/logo.png`
@@ -113,6 +115,21 @@ record verified Apple `container` networking evidence.
   `git diff --check`, local absolute-path leak scan, and
   `PYTHONPATH=<temporary-HarnessForge-copy>/src python3.14 -m harnessforge audit --target . --min-score 85`
   passed after the complete DocC snapshot evidence update.
+- `PYTHONPATH=src python3.14 -m unittest tests.test_egress` ran 7 tests and
+  passed after adding the allowlist proxy.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed after the provider egress
+  proxy smoke pass; the unit suite ran 56 tests.
+- `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 56 tests and
+  passed after the provider egress proxy smoke pass.
+- `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8`
+  passed with allowed proxied HTTPS and denied proxied host, proxied IP
+  literal, direct DNS, and direct IP paths.
+- `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8 --allowed-host api.openai.com --allowed-url https://api.openai.com/ --denied-host example.com`
+  passed with the same allowed and denied path checks.
+- `python3.14 -m json.tool feature_list.json` and `git diff --check` passed
+  after the provider egress proxy smoke pass.
+- HarnessForge audit was intentionally skipped for this pass by user
+  instruction because the sibling HarnessForge repo is being worked on.
 - `magick identify docs/assets/logo.png` reported PNG 512x512.
 - No-ignore old-name text scan across working tree files outside `.git`
   returned no matches.
@@ -129,8 +146,12 @@ record verified Apple `container` networking evidence.
 - The complete user-supplied DocC snapshot was reviewed: 1,022 rendered
   Markdown pages plus raw DocC JSON, zero fetch failures, and no exact hits for
   egress or allowlist control terms.
-- `--network provider` is now reserved and fails closed until RunHaven has a
-  verified provider egress enforcement mechanism.
+- A standard-library CONNECT allowlist proxy now exists in
+  `src/runhaven/egress.py`.
+- `scripts/provider_egress_smoke.py` proves the proxy pattern with a temporary
+  internal Apple `container` network.
+- `--network provider` is still reserved and fails closed until RunHaven
+  integrates the verified provider egress proxy lifecycle into normal runs.
 - `runhaven plan` now prints explicit egress status for the selected network.
 
 ## Next Session
@@ -139,8 +160,8 @@ record verified Apple `container` networking evidence.
 2. Check `git status --short --branch`.
 3. Use `docs/harness/verification-matrix.md` to choose checks for the requested
    change.
-4. Continue provider egress design only after choosing an enforcement mechanism
-   that can prove both allowed and denied paths with Apple `container` smokes.
+4. Continue by integrating the smoke-proven proxy lifecycle into
+   `runhaven run --network provider`.
 5. Ask for explicit approval before renaming the hosted GitHub repository or
    changing other credentialed vendor state.
 6. Preserve the macOS 26+ only runtime and contributor-verification contract.

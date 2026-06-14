@@ -4,8 +4,9 @@ Last Updated: 2026-06-14
 
 ## Current Objective
 
-Reserve provider egress mode without claiming allowlisting is enforced, and
-record verified Apple `container` networking evidence.
+Prove provider egress enforcement with a host allowlist proxy on an internal
+Apple `container` network while keeping normal `--network provider` runs
+fail-closed.
 
 ## Current State
 
@@ -69,14 +70,23 @@ record verified Apple `container` networking evidence.
   surface was found in rendered docs, generated JSON, local CLI help, or the
   pinned command reference.
 - `runhaven plan` now prints explicit egress status for the selected network.
-- `--network provider` is reserved and fails closed until RunHaven has a
-  verified provider egress enforcement mechanism.
+- `--network provider` is reserved and fails closed until RunHaven integrates
+  the verified provider egress proxy lifecycle into normal runs.
+- A standard-library CONNECT allowlist proxy now exists in `src/runhaven/egress.py`.
+- `scripts/provider_egress_smoke.py` proves the proxy pattern with a temporary
+  internal Apple `container` network.
+- Live smokes passed for the default public host and for `api.openai.com`:
+  allowed proxied HTTPS succeeded, while denied proxied host, proxied IP
+  literal, direct DNS, and direct IP paths failed.
+- `--network provider` still fails closed for normal runs because the proxy
+  lifecycle is not yet integrated into `runhaven run`.
 
 ## Recommended Next Step
 
-Design the actual provider egress enforcement mechanism and prove allowed and
-denied paths with live Apple `container` runtime smokes. Keep the current
-macOS 26+ only runtime and verification boundary intact.
+Integrate the smoke-proven proxy lifecycle into `runhaven run --network
+provider`: start the proxy, attach the agent to an internal network, inject
+proxy environment variables, clean up the network, and keep clear failure
+messages for non-technical users.
 
 ## Verification Evidence
 
@@ -175,3 +185,18 @@ macOS 26+ only runtime and verification boundary intact.
   leak scan, and
   `PYTHONPATH=<temporary-HarnessForge-copy>/src python3.14 -m harnessforge audit --target . --min-score 85`
   passed after the complete DocC snapshot evidence update.
+- 2026-06-14: `PYTHONPATH=src python3.14 -m unittest tests.test_egress`
+  ran 7 tests and passed after adding the allowlist proxy.
+- 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after the
+  provider egress proxy smoke pass; the unit suite ran 56 tests.
+- 2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests`
+  ran 56 tests and passed after the provider egress proxy smoke pass.
+- 2026-06-14: `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8`
+  passed with allowed proxied HTTPS and denied proxied host, proxied IP
+  literal, direct DNS, and direct IP paths.
+- 2026-06-14: `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8 --allowed-host api.openai.com --allowed-url https://api.openai.com/ --denied-host example.com`
+  passed with the same allowed and denied path checks.
+- 2026-06-14: `python3.14 -m json.tool feature_list.json` and
+  `git diff --check` passed after the provider egress proxy smoke pass.
+- 2026-06-14: HarnessForge audit was intentionally skipped for this pass by
+  user instruction because the sibling HarnessForge repo is being worked on.
