@@ -39,8 +39,8 @@ python3 scripts/check_pins.py
 python3 -m ruff check .
 python3 -m mypy src
 python3 -m build
-REPO_HARNESS_CREATOR=../repo-harness-creator
-PYTHONPATH="${REPO_HARNESS_CREATOR}/src" python3 -m harnessforge audit --target . --min-score 85
+HARNESSFORGE=../HarnessForge
+PYTHONPATH="${HARNESSFORGE}/src" python3 -m harnessforge audit --target . --min-score 85
 ```
 
 Use `runhaven doctor` and Apple `container` runtime smokes when changes affect the

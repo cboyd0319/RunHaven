@@ -4,7 +4,7 @@ Use the smallest check set that can catch likely regressions for the change.
 
 | Change Type | Required Checks |
 | --- | --- |
-| Harness docs or templates | `PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target .` and inspect generated diff |
+| Harness docs or templates | `PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target .` and inspect generated diff |
 | README, AGENTS, or docs-only changes | `python3 scripts/check_pins.py`, `git diff --check`, local Markdown link check |
 | Python code | `python3 -m compileall src tests scripts`, `PYTHONPATH=src python3 -m unittest discover -s tests`, `python3 -m ruff check .`, `python3 -m mypy src` |
 | Packaging | Python code checks plus `python3 -m build` |

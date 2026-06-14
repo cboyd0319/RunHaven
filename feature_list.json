@@ -37,8 +37,8 @@
         "2026-06-14: old-name filename scan across working tree files outside `.git` returned no matches",
         "2026-06-14: `PYTHONPATH=src python3 -m unittest discover -s tests` passed",
         "2026-06-14: `python3 scripts/check_pins.py` passed",
-                "2026-06-14: temporary external venv installed pinned dev requirements; ruff, mypy, build, wheel install, and `runhaven agents` passed",
-                "2026-06-14: `PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction"
+        "2026-06-14: temporary external venv installed pinned dev requirements; ruff, mypy, build, wheel install, and `runhaven agents` passed",
+        "2026-06-14: `PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction"
       ],
       "notes": "GitHub repository remote rename is a separate credentialed vendor change and requires explicit approval before execution."
     },
@@ -57,56 +57,55 @@
         "Harness audit passes the configured threshold"
       ],
       "evidence": [
-        "2026-06-14: `PYTHON=.venv314/bin/python ./init.sh` passed",
+        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed",
         "2026-06-14: non-macOS verification entrypoint was removed when the project was clarified as macOS-only",
-                "2026-06-14: `PYTHON=.venv314/bin/python ./init.sh` passed",
-                "2026-06-14: `PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction"
-            ],
-            "notes": "This feature addresses the audit bottleneck reported before harness adoption."
-        },
-        {
-            "id": "runtime-hardening-macos-only-boundary",
-            "priority": 3,
-            "area": "security",
-            "title": "Runtime hardening and macOS-only boundary",
-            "user_visible_behavior": "RunHaven rejects unsafe command inputs by default, exposes explicit unsafe overrides, manages RunHaven state volumes, and only supports macOS 26+ verification.",
-            "status": "passing",
-            "dependencies": [
-                "repo-harness-operating-layer"
-            ],
-            "verification": [
-                "Unsafe image references, resource values, workspaces, root users, and root groups are rejected by tests",
-                "TTY and interactive behavior are controllable from the CLI",
-                "RunHaven state listing and prune behavior are tested",
-                "macOS-only entrypoints and CI are enforced",
-                "Full local verification and harness audit pass"
-            ],
-            "evidence": [
-                "2026-06-14: `PYTHONPATH=src python3.14 -m unittest discover -s tests` ran 34 tests and passed",
-                "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 34 tests and passed",
-                "2026-06-14: `python -m ruff check .` passed in a temporary hardening venv",
-                "2026-06-14: `python -m mypy src scripts` passed in a temporary hardening venv",
-                "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed",
-                "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven doctor` passed on macOS 26.5.1 arm64 with Apple container 1.0.0",
-                "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven state list` passed",
-                "2026-06-14: `PYTHONPATH=src python3.14 -c 'from runhaven.cli import ensure_internal_network; ensure_internal_network(\"runhaven-smoke-20260614-hardening-internal\")'` passed and the temporary network was deleted",
-                "2026-06-14: `PYTHONPATH=src python3.14 -m unittest discover -s tests` ran 39 tests and passed after the follow-up hardening pass",
-                "2026-06-14: `python3.14 scripts/check_pins.py` passed after dynamic image template discovery was added",
-                "2026-06-14: harness audit reported 100/100 after the macOS-only correction"
-            ],
-            "notes": "Runtime and contributor verification are macOS 26+ only."
-        },
-        {
-            "id": "provider-egress-allowlisting",
-            "priority": 4,
-            "area": "security",
-            "title": "Provider egress allowlisting",
-            "user_visible_behavior": "Internet-enabled agent runs can be restricted to reviewed provider and package endpoints instead of unrestricted egress.",
-            "status": "planned",
-            "dependencies": [
-                "repo-harness-operating-layer",
-                "runtime-hardening-macos-only-boundary"
-            ],
+        "2026-06-14: `PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction"
+      ],
+      "notes": "This feature addresses the audit bottleneck reported before harness adoption."
+    },
+    {
+      "id": "runtime-hardening-macos-only-boundary",
+      "priority": 3,
+      "area": "security",
+      "title": "Runtime hardening and macOS-only boundary",
+      "user_visible_behavior": "RunHaven rejects unsafe command inputs by default, exposes explicit unsafe overrides, manages RunHaven state volumes, and only supports macOS 26+ verification.",
+      "status": "passing",
+      "dependencies": [
+        "repo-harness-operating-layer"
+      ],
+      "verification": [
+        "Unsafe image references, resource values, workspaces, root users, and root groups are rejected by tests",
+        "TTY and interactive behavior are controllable from the CLI",
+        "RunHaven state listing and prune behavior are tested",
+        "macOS-only entrypoints and CI are enforced",
+        "Full local verification and harness audit pass"
+      ],
+      "evidence": [
+        "2026-06-14: `PYTHONPATH=src python3.14 -m unittest discover -s tests` ran 34 tests and passed",
+        "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 34 tests and passed",
+        "2026-06-14: `python -m ruff check .` passed in a temporary hardening venv",
+        "2026-06-14: `python -m mypy src scripts` passed in a temporary hardening venv",
+        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed",
+        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven doctor` passed on macOS 26.5.1 arm64 with Apple container 1.0.0",
+        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven state list` passed",
+        "2026-06-14: `PYTHONPATH=src python3.14 -c 'from runhaven.cli import ensure_internal_network; ensure_internal_network(\"runhaven-smoke-20260614-hardening-internal\")'` passed and the temporary network was deleted",
+        "2026-06-14: `PYTHONPATH=src python3.14 -m unittest discover -s tests` ran 39 tests and passed after the follow-up hardening pass",
+        "2026-06-14: `python3.14 scripts/check_pins.py` passed after dynamic image template discovery was added",
+        "2026-06-14: harness audit reported 100/100 after the macOS-only correction"
+      ],
+      "notes": "Runtime and contributor verification are macOS 26+ only."
+    },
+    {
+      "id": "provider-egress-allowlisting",
+      "priority": 4,
+      "area": "security",
+      "title": "Provider egress allowlisting",
+      "user_visible_behavior": "Internet-enabled agent runs can be restricted to reviewed provider and package endpoints instead of unrestricted egress.",
+      "status": "planned",
+      "dependencies": [
+        "repo-harness-operating-layer",
+        "runtime-hardening-macos-only-boundary"
+      ],
       "verification": [
         "Threat model updated",
         "Provider allowlist behavior tested",
@@ -116,9 +115,9 @@
       "evidence": [],
       "notes": "Current internet mode remains unrestricted egress and is documented as a known limitation."
     },
-        {
-            "id": "repo-logo",
-            "priority": 5,
+    {
+      "id": "repo-logo",
+      "priority": 5,
       "area": "documentation",
       "title": "Project logo integration",
       "user_visible_behavior": "The project README displays the maintained repository logo from a tracked asset path.",
@@ -135,7 +134,7 @@
       "evidence": [
         "2026-06-14: `magick identify docs/assets/logo.png` reported PNG 512x512",
         "2026-06-14: visual inspection passed via local image viewer",
-                "2026-06-14: latest harness audit reported 100/100 with the logo in the manifest"
+        "2026-06-14: latest harness audit reported 100/100 with the logo in the manifest"
       ],
       "notes": "The source download image was normalized to a stripped 512x512 PNG; the original file was not modified."
     }

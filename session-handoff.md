@@ -40,7 +40,7 @@ macOS 26+ only.
   passed.
 - `python -m build` in a temporary hardening venv passed.
 - `PYTHON=<temporary-venv-python> ./init.sh` passed.
-- `PYTHONPATH=../repo-harness-creator/src python3.14 -m harnessforge audit --target . --min-score 85`
+- `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
   passed with 100/100.
 - `PYTHONPATH=src python3.14 -m runhaven plan shell --tty always -- /bin/true`
   passed and emitted a run command with `--interactive --tty`.
@@ -59,8 +59,14 @@ macOS 26+ only.
   hardening pass.
 - `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 39 tests and
   passed after the follow-up hardening pass.
-- `PYTHONPATH=../repo-harness-creator/src python3.14 -m harnessforge audit --target . --min-score 85`
+- `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100 after the follow-up hardening pass.
+- Cleanup pass removed stale local paths, stale local-venv evidence, and old
+  HarnessForge predecessor references from tracked docs.
+- `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+  reported 100/100 after the cleanup pass.
+- `python3.14 scripts/check_pins.py`, `git diff --check`, and
+  `python3 -m json.tool feature_list.json` passed after the cleanup pass.
 - `magick identify docs/assets/logo.png` reported PNG 512x512.
 - No-ignore old-name text scan across working tree files outside `.git`
   returned no matches.

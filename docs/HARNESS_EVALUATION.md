@@ -4,7 +4,7 @@ Evaluated: 2026-06-14
 
 Target: RunHaven
 
-Evaluator: `repo-harness-creator` structural audit plus manual review of root
+Evaluator: `HarnessForge` structural audit plus manual review of root
 instructions, state files, local verification entrypoints, harness docs,
 security boundaries, pinning policy, research ledger, CI, source entry points,
 and tests.
@@ -51,7 +51,7 @@ representative agent-workload evaluation.
 ## Verification Evidence
 
 ```bash
-PYTHON=.venv314/bin/python ./init.sh
+PYTHON=<temporary-venv-python> ./init.sh
 ```
 
 Result: passed.
@@ -66,7 +66,7 @@ Covered:
 - `python -m build`
 
 ```bash
-PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target . --min-score 85
+PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target . --min-score 85
 ```
 
 Result: passed with 100/100.

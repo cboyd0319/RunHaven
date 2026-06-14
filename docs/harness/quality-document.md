@@ -10,8 +10,8 @@ the repo over time.
 
 | Domain | Grade | Verification Status | Agent Legibility | Key Gaps |
 | --- | --- | --- | --- | --- |
-| Harness | B | Initial checks present | Clear startup path | Replace placeholder state with project-specific evidence |
-| Supply chain | B | Pin policy present | Dependency rules are explicit | Add project-specific lockfile or pin checks where applicable |
+| Harness | A | Harness audit passes | Clear startup path | Keep evidence current after major changes |
+| Supply chain | B | Pin policy present | Dependency rules are explicit | Add runtime image smoke checks before release |
 
 Grades: A is strong, B is usable with known gaps, C needs targeted cleanup, D is
 unsafe to rely on without repair.
@@ -20,7 +20,7 @@ unsafe to rely on without repair.
 
 | Layer | Boundary Status | Verification | Notes |
 | --- | --- | --- | --- |
-| Repo harness | Documented | `PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target .` | Keep root instructions short and detail in `docs/harness/` |
+| Repo harness | Documented | `PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target .` | Keep root instructions short and detail in `docs/harness/` |
 
 ## Harness Simplification
 

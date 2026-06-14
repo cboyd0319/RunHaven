@@ -46,11 +46,11 @@ use remote CI to confirm reviewed changes rather than as a trial-and-error loop.
 
 ## Assessment And Updates
 
-Use repo-harness-creator for regular structural checks:
+Use HarnessForge for regular structural checks:
 
 ```bash
-PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target .
-PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge update --target .
+PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target .
+PYTHONPATH=../HarnessForge/src python3 -m harnessforge update --target .
 ```
 
 Run the update command with `--apply` only when you want safe missing-file

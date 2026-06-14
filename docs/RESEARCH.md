@@ -12,14 +12,8 @@ boundary, or agent behavior changes.
   <https://github.com/apple/container/releases/tag/1.0.0>
 - GitHub release API for Apple `container` 1.0.0:
   <https://api.github.com/repos/apple/container/releases/latest>
-- Local Apple `container` repo:
-  `/Users/c/Documents/GitHub/apple-container`
-- Local Apple command reference:
-  `/Users/c/Documents/GitHub/apple-container/docs/command-reference.md`
-- Local Apple technical overview:
-  `/Users/c/Documents/GitHub/apple-container/docs/technical-overview.md`
-- Local Apple system config docs:
-  `/Users/c/Documents/GitHub/apple-container/docs/container-system-config.md`
+- Local Apple `container` checkout and bundled docs were consulted. The
+  machine-specific checkout path is intentionally omitted from this ledger.
 
 Observed runtime evidence on 2026-06-14:
 
@@ -41,19 +35,19 @@ Important distinction:
 
 - Runtime pins follow the installed, signed Apple `container` 1.0.0 release and
   live CLI output.
-- The local `/Users/c/Documents/GitHub/apple-container` checkout was observed at
-  `c8b4fd73a1b1696a1c6533e4de85bdedfa8fc5fc`
-  (`1.0.0-4-gc8b4fd7`) on 2026-06-14, which is newer than the installed
-  release commit. Do not update runtime pins from that local checkout unless the
-  installed runtime is also updated and verified.
+- The local Apple `container` checkout was observed at
+  `c8b4fd73a1b1696a1c6533e4de85bdedfa8fc5fc` (`1.0.0-4-gc8b4fd7`) on
+  2026-06-14, which is newer than the installed release commit. Do not update
+  runtime pins from that local checkout unless the installed runtime is also
+  updated and verified.
 - The local checkout also references `containerization` `0.33.4`; the installed
   runtime reports `ghcr.io/apple/containerization/vminit:0.33.3`. The installed
   runtime is authoritative for this repo's current pins.
 
 ## Agent Runtime Sources
 
-- Claude Code dev container reference:
-  `/Users/c/Downloads/devcontainer.md`
+- Local copy of the Claude Code dev container reference was consulted. The
+  machine-specific download path is intentionally omitted from this ledger.
 - Claude Code memory and `CLAUDE.md` import docs:
   <https://docs.anthropic.com/en/docs/claude-code/memory>
 - Claude Code sandbox environments:
@@ -79,10 +73,9 @@ Important distinction:
 
 Local reference harness:
 
-- `/Users/c/Documents/GitHub/pi-harness`
-- `/Users/c/Documents/GitHub/pi-harness/AGENTS.md`
-- `/Users/c/Documents/GitHub/pi-harness/scripts/check-pinned-deps.mjs`
-- `/Users/c/Documents/GitHub/pi-harness/packages/coding-agent/README.md`
+- A local reference harness repo was consulted for instruction, pin-check, and
+  package layout patterns. Machine-specific paths are intentionally omitted
+  from this ledger.
 
 ## Package And Image Sources
 

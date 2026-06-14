@@ -70,7 +70,7 @@ runtime and verification boundary intact.
   passed.
 - 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh`
   passed.
-- 2026-06-14: `PYTHONPATH=../repo-harness-creator/src python3.14 -m harnessforge audit --target . --min-score 85`
+- 2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100.
 - 2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --tty always -- /bin/true`
   passed and emitted a run command with `--interactive --tty`.
@@ -100,5 +100,11 @@ runtime and verification boundary intact.
   follow-up hardening pass.
 - 2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests`
   ran 39 tests and passed after the follow-up hardening pass.
-- 2026-06-14: `PYTHONPATH=../repo-harness-creator/src python3.14 -m harnessforge audit --target . --min-score 85`
+- 2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100 after the follow-up hardening pass.
+- 2026-06-14: cleanup pass removed stale local paths, stale local-venv
+  evidence, and old HarnessForge predecessor references from tracked docs.
+- 2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+  reported 100/100 after the cleanup pass.
+- 2026-06-14: `python3.14 scripts/check_pins.py`, `git diff --check`, and
+  `python3 -m json.tool feature_list.json` passed after the cleanup pass.
