@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from runhaven.plans import RunOptions, build_run_plan, validate_env_name
 from runhaven.profiles import get_profile
@@ -79,6 +80,20 @@ class RunPlanTests(unittest.TestCase):
                     )
                 )
 
+    def test_root_identity_with_leading_zero_requires_explicit_unsafe_override(self) -> None:
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            for user in ("00", "agent:00"):
+                with self.subTest(user=user):
+                    with self.assertRaisesRegex(ValueError, "root user or group"):
+                        build_run_plan(
+                            RunOptions(
+                                profile=get_profile("shell"),
+                                workspace=workspace,
+                                user=user,
+                            )
+                        )
+
     def test_allowed_root_user_skips_agent_home_chown(self) -> None:
         with TemporaryDirectory() as directory:
             workspace = Path(directory)
@@ -151,6 +166,12 @@ class RunPlanTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "comma"):
                 build_run_plan(RunOptions(profile=get_profile("shell"), workspace=Path(directory)))
 
+    def test_rejects_sensitive_system_workspace_without_override(self) -> None:
+        for workspace in (Path("/System"), Path("/Library"), Path("/etc")):
+            with self.subTest(workspace=workspace):
+                with self.assertRaisesRegex(ValueError, "sensitive workspace"):
+                    build_run_plan(RunOptions(profile=get_profile("shell"), workspace=workspace))
+
     def test_rejects_unsafe_image_reference(self) -> None:
         with TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "image"):
@@ -173,6 +194,24 @@ class RunPlanTests(unittest.TestCase):
                 build_run_plan(
                     RunOptions(profile=get_profile("shell"), workspace=workspace, memory="large")
                 )
+
+    def test_rejects_invalid_network_mode(self) -> None:
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "network mode"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("shell"),
+                        workspace=Path(directory),
+                        network="provider-only",
+                    )
+                )
+
+    def test_workspace_resolution_errors_are_user_errors(self) -> None:
+        with (
+            patch("runhaven.plans.Path.resolve", side_effect=FileNotFoundError("missing cwd")),
+            self.assertRaisesRegex(ValueError, "could not resolve workspace path"),
+        ):
+            build_run_plan(RunOptions(profile=get_profile("shell"), workspace=Path(".")))
 
     def test_no_tty_option_disables_tty_flag(self) -> None:
         with TemporaryDirectory() as directory:

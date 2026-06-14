@@ -14,6 +14,7 @@ from runhaven.cli import (
     main,
     state_lock_path,
 )
+from runhaven.doctor import Check
 
 
 class CliTests(unittest.TestCase):
@@ -73,6 +74,30 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(error.exception.code, 0)
         self.assertIn("Run AI coding agents", output.getvalue())
+
+    def test_run_help_explains_agent_argument_separator(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output), self.assertRaises(SystemExit) as error:
+            main(["run", "--help"])
+
+        self.assertEqual(error.exception.code, 0)
+        self.assertIn("Use -- before flags meant for the agent", output.getvalue())
+
+    def test_doctor_prints_remedy_for_failed_checks(self) -> None:
+        output = io.StringIO()
+        with (
+            redirect_stdout(output),
+            patch(
+                "runhaven.cli.collect_checks",
+                return_value=(Check("Apple container CLI", False, "not found", "Install it."),),
+            ),
+        ):
+            code = main(["doctor"])
+
+        self.assertEqual(code, 1)
+        text = output.getvalue()
+        self.assertIn("fail Apple container CLI", text)
+        self.assertIn("fix: Install it.", text)
 
     def test_existing_internal_network_is_reused(self) -> None:
         with patch("runhaven.cli.subprocess.run") as run:

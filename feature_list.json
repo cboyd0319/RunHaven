@@ -74,7 +74,7 @@
         "repo-harness-operating-layer"
       ],
       "verification": [
-        "Unsafe image references, resource values, workspaces, root users, and root groups are rejected by tests",
+        "Unsafe image references, resource values, network modes, workspaces, root users, and root groups are rejected by tests",
         "TTY and interactive behavior are controllable from the CLI",
         "RunHaven state listing and prune behavior are tested",
         "macOS-only entrypoints and CI are enforced",
@@ -91,7 +91,11 @@
         "2026-06-14: `PYTHONPATH=src python3.14 -c 'from runhaven.cli import ensure_internal_network; ensure_internal_network(\"runhaven-smoke-20260614-hardening-internal\")'` passed and the temporary network was deleted",
         "2026-06-14: `PYTHONPATH=src python3.14 -m unittest discover -s tests` ran 39 tests and passed after the follow-up hardening pass",
         "2026-06-14: `python3.14 scripts/check_pins.py` passed after dynamic image template discovery was added",
-        "2026-06-14: harness audit reported 100/100 after the macOS-only correction"
+        "2026-06-14: harness audit reported 100/100 after the macOS-only correction",
+        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after the second follow-up hardening pass; the unit suite ran 47 tests",
+        "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 47 tests and passed after the second follow-up hardening pass",
+        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven run --help`, `PYTHONPATH=src python3.14 -m runhaven plan shell --network internal --tty never -- /bin/true`, and `PYTHONPATH=src python3.14 -m runhaven doctor` passed after the second follow-up hardening pass",
+        "2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100 after the second follow-up hardening pass"
       ],
       "notes": "Runtime and contributor verification are macOS 26+ only."
     },

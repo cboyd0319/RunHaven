@@ -46,6 +46,18 @@ boundaries after a whole-repo audit.
   npm-backed package directories dynamically.
 - Added tests for `runhaven run`, doctor command error paths, root group
   rejection, and help behavior with an unavailable current directory.
+- Second follow-up hardening now rejects invalid programmatic network modes
+  instead of silently using internet mode.
+- Root user detection now treats leading-zero numeric identities such as `00`
+  and `agent:00` as root.
+- Sensitive macOS system paths such as `/System`, `/Library`, and `/etc` now
+  require `--allow-sensitive-workspace`.
+- `runhaven doctor` now prints concise remediation for failed checks.
+- `runhaven plan` and `runhaven run` help now explain the `--` separator for
+  agent flags.
+- Pin policy now records the RunHaven package/image version in `pins.toml`,
+  checks package and image version consistency from that ledger, and rejects
+  non-macOS GitHub runner pins.
 
 ## Recommended Next Step
 
@@ -108,3 +120,18 @@ runtime and verification boundary intact.
   reported 100/100 after the cleanup pass.
 - 2026-06-14: `python3.14 scripts/check_pins.py`, `git diff --check`, and
   `python3 -m json.tool feature_list.json` passed after the cleanup pass.
+- 2026-06-14: sandboxed Antigravity read-only audit identified additional
+  concrete hardening, pin-ledger, and CLI UX findings.
+- 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after the
+  second follow-up hardening pass; the unit suite ran 47 tests.
+- 2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests`
+  ran 47 tests and passed after the second follow-up hardening pass.
+- 2026-06-14: `PYTHONPATH=src python3.14 -m runhaven run --help`,
+  `PYTHONPATH=src python3.14 -m runhaven plan shell --network internal --tty never -- /bin/true`,
+  and `PYTHONPATH=src python3.14 -m runhaven doctor` passed after the second
+  follow-up hardening pass.
+- 2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+  reported 100/100 after the second follow-up hardening pass.
+- 2026-06-14: `python3 -m json.tool feature_list.json`, `git diff --check`,
+  generated-artifact checks, and stale-reference scans passed after the second
+  follow-up hardening pass.

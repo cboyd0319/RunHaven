@@ -14,6 +14,7 @@ Use this for compact current evidence. Keep raw logs out of this file.
 | 2026-06-14 | Runtime hardening and macOS-only boundary | unit tests, static checks, build, `./init.sh`, harness audit, `runhaven doctor`, `runhaven state list`, internal-network smoke, and `runhaven plan` smoke | passed | Command validation, unsafe overrides, TTY controls, state commands, host-only internal network creation, and macOS 26+ only verification are covered. |
 | 2026-06-14 | Follow-up hardening pass | focused unit tests, full unit suite, and pin check | passed | Added root group rejection, parser help cwd safety, dynamic image template pin discovery, and run/doctor edge-case coverage. |
 | 2026-06-14 | Cleanup pass | stale-reference scan, pin check, JSON validation, diff check, and HarnessForge audit | passed | Removed stale local paths, stale local-venv evidence, and old HarnessForge predecessor references from tracked docs. |
+| 2026-06-14 | Second follow-up hardening pass | sandboxed Antigravity audit, `PYTHON=<temporary-venv-python> ./init.sh`, Python 3.13 unit suite, help/plan/doctor smokes, HarnessForge audit, cleanup scans | passed | Added fail-closed network mode validation, leading-zero root identity rejection, sensitive macOS system path blocking, doctor remedies, agent-argument help, and macOS-only pin-ledger enforcement. |
 
 Rules:
 

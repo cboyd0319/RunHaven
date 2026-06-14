@@ -67,12 +67,16 @@ class AgentRunPlan:
 
 
 def build_run_plan(options: RunOptions) -> AgentRunPlan:
-    workspace = options.workspace.expanduser().resolve()
+    try:
+        workspace = options.workspace.expanduser().resolve()
+    except OSError as exc:
+        raise ValueError(f"could not resolve workspace path: {exc}") from exc
     if not workspace.exists():
         raise ValueError(f"workspace does not exist: {workspace}")
     if not workspace.is_dir():
         raise ValueError(f"workspace is not a directory: {workspace}")
     validate_workspace(workspace, allow_sensitive=options.allow_sensitive_workspace)
+    validate_network_mode(options.network)
 
     for name in options.env:
         validate_env_name(name)
@@ -211,8 +215,27 @@ def validate_workspace(workspace: Path, *, allow_sensitive: bool) -> None:
 
 def sensitive_workspace_paths() -> tuple[tuple[Path, ...], tuple[Path, ...]]:
     home = Path.home().resolve()
-    root_paths = (Path("/").resolve(), Path("/Users").resolve(), home)
+    root_paths = tuple(
+        path.resolve()
+        for path in (
+            Path("/"),
+            Path("/Users"),
+            Path("/private"),
+            Path("/var"),
+            home,
+        )
+    )
     secret_paths = (
+        Path("/Applications"),
+        Path("/Library"),
+        Path("/System"),
+        Path("/etc"),
+        Path("/private/etc"),
+        Path("/private/var/audit"),
+        Path("/private/var/db"),
+        Path("/private/var/log"),
+        Path("/private/var/root"),
+        Path("/private/var/run"),
         home / ".ssh",
         home / ".aws",
         home / ".azure",
@@ -236,9 +259,19 @@ def validate_resource_options(cpus: str, memory: str, user: str) -> None:
         raise ValueError(f"invalid user value: {user!r}")
 
 
+def validate_network_mode(network: str) -> None:
+    if network not in {"internet", "internal"}:
+        raise ValueError(f"invalid network mode: {network!r}")
+
+
 def uses_root_identity(user: str) -> bool:
     parts = user.split(":", maxsplit=1)
-    return parts[0] in {"0", "root"} or (len(parts) == 2 and parts[1] == "0")
+    for part in parts:
+        if part == "root":
+            return True
+        if part.isdigit() and int(part) == 0:
+            return True
+    return False
 
 
 def validate_image_reference(value: str, label: str) -> None:

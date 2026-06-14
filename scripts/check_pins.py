@@ -13,6 +13,7 @@ FIXED_TEXT_FILES = (
     ".github/workflows/ci.yml",
     "pyproject.toml",
     "requirements-dev.txt",
+    "src/runhaven/__init__.py",
     "src/runhaven/profiles.py",
     "src/runhaven/plans.py",
     "src/runhaven/doctor.py",
@@ -52,6 +53,7 @@ LOOSE_DEP_RE = re.compile(r'"[^"]*(?:>=|~=|\*).*"')
 def main() -> int:
     failures: list[str] = []
     pins = load_pins()
+    failures.extend(check_pin_ledger(pins))
 
     for relative in TEXT_FILES:
         path = ROOT / relative
@@ -87,10 +89,12 @@ def main() -> int:
             failures.extend(check_requirements_against_ledger(relative, text, pins))
         if relative == "pyproject.toml":
             failures.extend(check_pyproject_against_ledger(relative, text, pins))
+        if relative == "src/runhaven/__init__.py":
+            failures.extend(check_init_against_ledger(relative, text, pins))
         if relative == ".github/workflows/ci.yml":
             failures.extend(check_ci_against_ledger(relative, text, pins))
         if relative == "src/runhaven/profiles.py":
-            failures.extend(check_profiles_against_ledger(relative, text))
+            failures.extend(check_profiles_against_ledger(relative, text, pins))
         if relative == "src/runhaven/plans.py":
             failures.extend(check_run_plan_against_ledger(relative, text, pins))
         if relative == "src/runhaven/doctor.py":
@@ -122,6 +126,15 @@ def load_pins() -> dict[str, Any]:
     return tomllib.loads((ROOT / "pins.toml").read_text(encoding="utf-8"))
 
 
+def check_pin_ledger(pins: dict[str, Any]) -> list[str]:
+    failures: list[str] = []
+    runner_names = set(pins["github_runners"])
+    if runner_names != {"macos"}:
+        found = ", ".join(sorted(str(name) for name in runner_names)) or "none"
+        failures.append(f"pins.toml: GitHub runner pins must be macOS-only; found {found}")
+    return failures
+
+
 def check_apt_install_block(relative: str, text: str) -> list[str]:
     failures: list[str] = []
     lines = text.splitlines()
@@ -151,7 +164,11 @@ def check_pyproject_against_ledger(
 ) -> list[str]:
     failures: list[str] = []
     pyproject = tomllib.loads(text)
+    runhaven_pins = pins["runhaven"]
     python_pins = pins["python"]
+
+    if pyproject["project"]["version"] != runhaven_pins["version"]:
+        failures.append(f"{relative}: project version does not match pins.toml")
 
     build_requires = pyproject["build-system"]["requires"]
     expected_setuptools = f"setuptools=={python_pins['setuptools']}"
@@ -166,6 +183,13 @@ def check_pyproject_against_ledger(
     if any(requirement.startswith("pytest") for requirement in dev):
         failures.append(f"{relative}: pytest is not used by the unittest suite")
     return failures
+
+
+def check_init_against_ledger(relative: str, text: str, pins: dict[str, Any]) -> list[str]:
+    version = pins["runhaven"]["version"]
+    if f'__version__ = "{version}"' not in text:
+        return [f"{relative}: __version__ does not match pins.toml"]
+    return []
 
 
 def check_requirements_against_ledger(
@@ -219,15 +243,16 @@ def check_ci_against_ledger(relative: str, text: str, pins: dict[str, Any]) -> l
     return failures
 
 
-def check_profiles_against_ledger(relative: str, text: str) -> list[str]:
+def check_profiles_against_ledger(relative: str, text: str, pins: dict[str, Any]) -> list[str]:
     failures: list[str] = []
+    version = pins["runhaven"]["version"]
     for image in (
-        "runhaven/claude:0.1.0",
-        "runhaven/codex:0.1.0",
-        "runhaven/gemini:0.1.0",
-        "runhaven/antigravity:0.1.0",
-        "runhaven/copilot:0.1.0",
-        "runhaven/base:0.1.0",
+        f"runhaven/claude:{version}",
+        f"runhaven/codex:{version}",
+        f"runhaven/gemini:{version}",
+        f"runhaven/antigravity:{version}",
+        f"runhaven/copilot:{version}",
+        f"runhaven/base:{version}",
     ):
         if image not in text:
             failures.append(f"{relative}: missing pinned image {image}")

@@ -1,5 +1,8 @@
 # Current stable pins verified on 2026-06-14.
 
+[runhaven]
+version = "0.1.0"
+
 [python]
 minimum_supported = "3.13"
 minimum_tested = "3.13.14"
@@ -11,7 +14,6 @@ mypy = "2.1.0"
 ruff = "0.15.17"
 
 [github_runners]
-ubuntu = "ubuntu-24.04"
 macos = "macos-26"
 
 [github_actions]

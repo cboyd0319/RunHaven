@@ -11,10 +11,12 @@ macOS 26+ only.
 
 - `AGENTS.md`
 - `.github/copilot-instructions.md`
+- `SECURITY.md`
 - `feature_list.json`
 - `progress.md`
 - `session-handoff.md`
 - `init.sh`
+- `pins.toml`
 - `pyproject.toml`
 - `src/runhaven/`
 - `scripts/check_pins.py`
@@ -67,6 +69,21 @@ macOS 26+ only.
   reported 100/100 after the cleanup pass.
 - `python3.14 scripts/check_pins.py`, `git diff --check`, and
   `python3 -m json.tool feature_list.json` passed after the cleanup pass.
+- Sandboxed Antigravity read-only audit identified additional hardening,
+  pin-ledger, and CLI UX findings after the cleanup pass.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed after the second follow-up
+  hardening pass; the unit suite ran 47 tests.
+- `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 47 tests and
+  passed after the second follow-up hardening pass.
+- `PYTHONPATH=src python3.14 -m runhaven run --help`,
+  `PYTHONPATH=src python3.14 -m runhaven plan shell --network internal --tty never -- /bin/true`,
+  and `PYTHONPATH=src python3.14 -m runhaven doctor` passed after the second
+  follow-up hardening pass.
+- `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+  reported 100/100 after the second follow-up hardening pass.
+- `python3 -m json.tool feature_list.json`, `git diff --check`,
+  generated-artifact checks, and stale-reference scans passed after the second
+  follow-up hardening pass.
 - `magick identify docs/assets/logo.png` reported PNG 512x512.
 - No-ignore old-name text scan across working tree files outside `.git`
   returned no matches.

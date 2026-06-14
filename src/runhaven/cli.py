@@ -57,10 +57,24 @@ def build_parser() -> argparse.ArgumentParser:
     subcommands.add_parser("agents", help="list bundled agent profiles")
     subcommands.add_parser("doctor", help="check local runtime prerequisites")
 
-    plan_parser = subcommands.add_parser("plan", help="print the Apple container run plan")
+    agent_args_epilog = (
+        "Use -- before flags meant for the agent, for example:\n"
+        "  runhaven run claude -- --version"
+    )
+    plan_parser = subcommands.add_parser(
+        "plan",
+        help="print the Apple container run plan",
+        epilog=agent_args_epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     add_run_arguments(plan_parser)
 
-    run_parser = subcommands.add_parser("run", help="run an agent through Apple container")
+    run_parser = subcommands.add_parser(
+        "run",
+        help="run an agent through Apple container",
+        epilog=agent_args_epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     add_run_arguments(run_parser)
     run_parser.add_argument(
         "--dry-run",
@@ -162,6 +176,8 @@ def doctor() -> int:
     for check in checks:
         status = "ok" if check.ok else "fail"
         print(f"{status:4} {check.name}: {check.detail}")
+        if not check.ok and check.remedy:
+            print(f"     fix: {check.remedy}")
     return 0 if all(check.ok for check in checks) else 1
 
 
