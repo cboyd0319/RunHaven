@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-06-14",
+  "policy": "Keep this list small and reviewed. Promote only sources that directly affect harness operation, security, verification, or documentation.",
+  "sources": [
+    {
+      "id": "openai-harness-engineering",
+      "url": "https://openai.com/index/harness-engineering/",
+      "category": "agent-harness-practice",
+      "reviewed": "2026-06-14",
+      "use": "Supports keeping repository knowledge as the system of record and using a concise AGENTS.md as a map."
+    },
+    {
+      "id": "walkinglabs-course",
+      "url": "https://walkinglabs.github.io/learn-harness-engineering/en/",
+      "category": "harness-training",
+      "reviewed": "2026-06-14",
+      "use": "Supports the generated harness file contract and restartable operating loop."
+    },
+    {
+      "id": "github-actions-secure-use",
+      "url": "https://docs.github.com/en/actions/reference/security/secure-use",
+      "category": "supply-chain-security",
+      "reviewed": "2026-06-14",
+      "use": "Supports GitHub Actions pinning and workflow security rules."
+    },
+    {
+      "id": "agents-md",
+      "url": "https://agents.md/",
+      "category": "instruction-format",
+      "reviewed": "2026-06-14",
+      "use": "Supports root AGENTS.md as the shared agent instruction surface."
+    },
+    {
+      "id": "repo-research-ledger",
+      "path": "../RESEARCH.md",
+      "category": "project-source-ledger",
+      "reviewed": "2026-06-14",
+      "use": "Canonical source record for runtime, package, security, and documentation decisions."
+    }
+  ]
+}

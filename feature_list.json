@@ -1,0 +1,59 @@
+{
+  "$schema": "docs/harness/feature-list.schema.json",
+  "project": "macos-container-agents",
+  "last_updated": "2026-06-14",
+  "rules": {
+    "single_active_feature": true,
+    "passing_requires_evidence": true,
+    "do_not_skip_verification": true
+  },
+  "status_legend": {
+    "not_started": "Work has not begun.",
+    "planned": "Planned but not active.",
+    "active": "The one feature currently being worked.",
+    "blocked": "Progress is stopped by a documented blocker.",
+    "passing": "Verification passed and evidence is recorded."
+  },
+  "features": [
+    {
+      "id": "repo-harness-operating-layer",
+      "priority": 1,
+      "area": "harness",
+      "title": "Repository harness operating layer",
+      "user_visible_behavior": "A new agent can start from repo files, choose one scoped objective, run verification, and leave a clean handoff without relying on chat history.",
+      "status": "passing",
+      "dependencies": [],
+      "verification": [
+        "Root instructions route to state, startup, verification, and done criteria",
+        "POSIX and PowerShell verification entrypoints run the full local check set",
+        "Harness docs include manifest, component inventory, verification matrix, evidence log, security map, and lifecycle files",
+        "Harness audit passes the configured threshold"
+      ],
+      "evidence": [
+        "2026-06-14: `PYTHON=.venv314/bin/python ./init.sh` passed",
+        "2026-06-14: `PYTHON=.venv314/bin/python pwsh -NoProfile -File ./init.ps1` passed",
+        "2026-06-14: `repo_harness_creator audit --target . --min-score 85` reported 100/100"
+      ],
+      "notes": "This feature addresses the audit bottleneck reported before harness adoption."
+    },
+    {
+      "id": "provider-egress-allowlisting",
+      "priority": 2,
+      "area": "security",
+      "title": "Provider egress allowlisting",
+      "user_visible_behavior": "Internet-enabled agent runs can be restricted to reviewed provider and package endpoints instead of unrestricted egress.",
+      "status": "planned",
+      "dependencies": [
+        "repo-harness-operating-layer"
+      ],
+      "verification": [
+        "Threat model updated",
+        "Provider allowlist behavior tested",
+        "Runtime smoke proves denied and allowed network paths",
+        "Docs state exact limitations"
+      ],
+      "evidence": [],
+      "notes": "Current internet mode remains unrestricted egress and is documented as a known limitation."
+    }
+  ]
+}

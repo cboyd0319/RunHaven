@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-06-14",
+  "labels": [
+    "Local only",
+    "External AI optional",
+    "External AI required",
+    "Sensitive",
+    "Public-data only"
+  ],
+  "dataCategories": [
+    "workspace files",
+    "agent home state",
+    "environment variable names",
+    "SSH agent socket",
+    "package metadata",
+    "runtime source records"
+  ],
+  "features": [
+    {
+      "id": "run-plan-generation",
+      "name": "Apple container run-plan generation",
+      "labels": [
+        "Local only",
+        "Sensitive"
+      ],
+      "dataCategories": [
+        "workspace files",
+        "agent home state"
+      ],
+      "defaultDataFlow": "Local command construction only. The plan prints paths, mount targets, network mode, and environment variable names but not secret values.",
+      "externalAi": {
+        "allowed": false,
+        "required": false,
+        "fallback": "Use local unit tests and `mca plan` review."
+      },
+      "sensitivityNote": "Mount, user, network, and env handling affect host-file and credential exposure."
+    },
+    {
+      "id": "explicit-env-passthrough",
+      "name": "Explicit environment passthrough",
+      "labels": [
+        "Local only",
+        "Sensitive"
+      ],
+      "dataCategories": [
+        "environment variable names"
+      ],
+      "defaultDataFlow": "Only variable names are accepted with `--env NAME`; inline values are rejected.",
+      "externalAi": {
+        "allowed": false,
+        "required": false,
+        "fallback": "Use local validation tests."
+      },
+      "sensitivityNote": "Environment variables may reference provider credentials even when values are not printed."
+    },
+    {
+      "id": "ssh-agent-forwarding",
+      "name": "SSH agent forwarding",
+      "labels": [
+        "Local only",
+        "Sensitive"
+      ],
+      "dataCategories": [
+        "SSH agent socket"
+      ],
+      "defaultDataFlow": "Apple `container --ssh` forwards the agent socket without mounting raw SSH keys.",
+      "externalAi": {
+        "allowed": false,
+        "required": false,
+        "fallback": "Use local plan review and runtime smoke checks."
+      },
+      "sensitivityNote": "Forwarded SSH agent access can authorize private Git operations."
+    },
+    {
+      "id": "image-builds",
+      "name": "Bundled agent image builds",
+      "labels": [
+        "External AI optional",
+        "Sensitive"
+      ],
+      "dataCategories": [
+        "package metadata",
+        "runtime source records"
+      ],
+      "defaultDataFlow": "Image builds fetch exact-pinned OS, npm, and binary artifacts from reviewed sources.",
+      "externalAi": {
+        "allowed": true,
+        "required": false,
+        "fallback": "Use registry APIs, lockfiles, checksums, and local build logs."
+      },
+      "sensitivityNote": "Image builds are supply-chain sensitive and require pin-policy verification."
+    }
+  ]
+}

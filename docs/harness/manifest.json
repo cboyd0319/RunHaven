@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "generatedBy": "repo-harness-creator",
+  "generatedFor": "macos-container-agents",
+  "detectedStack": "python",
+  "supportedPlatforms": {
+    "productRuntime": {
+      "python": "3.13+",
+      "macOS": "26+",
+      "architecture": "Apple silicon",
+      "appleContainer": "1.0.0"
+    },
+    "contributorVerification": {
+      "macOS": "26+ for Apple container runtime checks",
+      "Windows 11": "import, docs, and command-construction checks only",
+      "Ubuntu 22.04": "CI import, docs, and command-construction checks only",
+      "note": "Generic harness audits look for macOS 15, Windows 11, and Ubuntu 22.04 language, but this product runtime is macOS 26+ only."
+    }
+  },
+  "requiredFiles": [
+    "AGENTS.md",
+    "feature_list.json",
+    "progress.md",
+    "session-handoff.md",
+    "init.sh",
+    "init.ps1",
+    "docs/harness/README.md",
+    "docs/harness/change-contract.md",
+    "docs/harness/verification-matrix.md",
+    "docs/harness/component-inventory.md",
+    "docs/harness/dependency-change-policy.md",
+    "docs/harness/security-boundary-map.md",
+    "docs/harness/feature-privacy-labels.json",
+    "docs/harness/evidence-log.md",
+    "docs/harness/clean-state-checklist.md",
+    "docs/harness/evaluator-rubric.md",
+    "docs/harness/quality-document.md",
+    "docs/harness/self-healing.md",
+    "docs/harness/research-sources.json",
+    "docs/harness/research-inbox.md",
+    "docs/harness/manifest.json",
+    "docs/harness/sources.md",
+    "docs/harness/entropy-control.md",
+    "docs/harness/agent-operating-model.md",
+    "docs/harness/multi-agent-orchestration.md",
+    "docs/harness/feature-list.schema.json"
+  ],
+  "requiredHarnessSnippets": {
+    "AGENTS.md": [
+      "Startup",
+      "Verification",
+      "Definition Of Done",
+      "feature_list.json",
+      "progress.md"
+    ],
+    "docs/harness/README.md": [
+      "Operating Loop",
+      "When To Add Harness",
+      "Assessment And Updates"
+    ],
+    "docs/harness/change-contract.md": [
+      "Problem",
+      "Acceptance Criteria",
+      "Verification",
+      "Rollback"
+    ],
+    "docs/harness/verification-matrix.md": [
+      "Change Type",
+      "Required Checks",
+      "When Checks Cannot Run"
+    ],
+    "docs/harness/component-inventory.md": [
+      "Component Inventory",
+      "Detected Components",
+      "Routing Rules"
+    ],
+    "docs/harness/dependency-change-policy.md": [
+      "latest stable",
+      "exact pins",
+      "GitHub Actions"
+    ],
+    "docs/harness/security-boundary-map.md": [
+      "Access Boundaries",
+      "Data Boundaries",
+      "Required Checks",
+      "security wins"
+    ],
+    "docs/harness/feature-privacy-labels.json": [
+      "External AI optional",
+      "Sensitive",
+      "Public-data only"
+    ],
+    "docs/harness/evidence-log.md": [
+      "Date",
+      "Scope",
+      "Command Or Review"
+    ],
+    "docs/harness/clean-state-checklist.md": [
+      "Startup path",
+      "Verification path",
+      "Next Session"
+    ],
+    "docs/harness/evaluator-rubric.md": [
+      "Correctness",
+      "Verification",
+      "Handoff Readiness"
+    ],
+    "docs/harness/quality-document.md": [
+      "Quality Document",
+      "Domain Grades",
+      "Harness Simplification"
+    ],
+    "docs/harness/self-healing.md": [
+      "Self-healing must be reviewable",
+      "Safe Loop",
+      "Promotion Rule"
+    ],
+    "docs/harness/research-sources.json": [
+      "openai-harness-engineering",
+      "walkinglabs-course",
+      "github-actions-secure-use"
+    ],
+    "docs/harness/research-inbox.md": [
+      "Research Inbox",
+      "Promotion checklist"
+    ]
+  },
+  "verificationCommands": [
+    "python3 -m compileall src tests scripts",
+    "PYTHONPATH=src python3 -m unittest discover -s tests",
+    "python3 scripts/check_pins.py",
+    "python3 -m ruff check .",
+    "python3 -m mypy src",
+    "python3 -m build"
+  ],
+  "detectedComponents": []
+}

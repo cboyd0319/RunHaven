@@ -222,7 +222,13 @@ PYTHONPATH=src python -m unittest discover -s tests
 python scripts/check_pins.py
 ```
 
-Optional checks:
+Full local harness verification:
+
+```bash
+./init.sh
+```
+
+Optional individual checks:
 
 ```bash
 python -m ruff check .

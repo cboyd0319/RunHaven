@@ -8,6 +8,14 @@ cannot verify a boundary. Do not hide risk behind friendly wording.
 
 ## Local Checks
 
+Full local harness verification:
+
+```bash
+./init.sh
+```
+
+Focused checks:
+
 ```bash
 python3 -m compileall src tests
 PYTHONPATH=src python3 -m unittest discover -s tests
