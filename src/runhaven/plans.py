@@ -77,8 +77,8 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
     for name in options.env:
         validate_env_name(name)
     validate_resource_options(options.cpus, options.memory, options.user)
-    if is_root_user(options.user) and not options.allow_root_user:
-        raise ValueError("root user requires --allow-root-user")
+    if uses_root_identity(options.user) and not options.allow_root_user:
+        raise ValueError("root user or group requires --allow-root-user")
 
     project_id = project_identifier(workspace)
     state_volume = safe_resource_name(f"runhaven-{options.profile.name}-{project_id}-home")
@@ -236,9 +236,9 @@ def validate_resource_options(cpus: str, memory: str, user: str) -> None:
         raise ValueError(f"invalid user value: {user!r}")
 
 
-def is_root_user(user: str) -> bool:
-    name = user.split(":", maxsplit=1)[0]
-    return name in {"0", "root"}
+def uses_root_identity(user: str) -> bool:
+    parts = user.split(":", maxsplit=1)
+    return parts[0] in {"0", "root"} or (len(parts) == 2 and parts[1] == "0")
 
 
 def validate_image_reference(value: str, label: str) -> None:

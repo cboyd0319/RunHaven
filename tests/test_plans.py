@@ -67,6 +67,18 @@ class RunPlanTests(unittest.TestCase):
                     )
                 )
 
+    def test_root_group_requires_explicit_unsafe_override(self) -> None:
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            with self.assertRaisesRegex(ValueError, "root user or group"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("shell"),
+                        workspace=workspace,
+                        user="agent:0",
+                    )
+                )
+
     def test_allowed_root_user_skips_agent_home_chown(self) -> None:
         with TemporaryDirectory() as directory:
             workspace = Path(directory)

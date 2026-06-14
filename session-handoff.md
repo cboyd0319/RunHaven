@@ -51,6 +51,16 @@ macOS 26+ only.
 - `PYTHONPATH=src python3.14 -c 'from runhaven.cli import ensure_internal_network; ensure_internal_network("runhaven-smoke-20260614-hardening-internal")'`
   passed, and `container network delete runhaven-smoke-20260614-hardening-internal`
   removed the temporary network.
+- `PYTHONPATH=src python3.14 -m unittest discover -s tests`
+  ran 39 tests and passed after the follow-up hardening pass.
+- `python3.14 scripts/check_pins.py` passed after dynamic image template
+  discovery was added.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed after the follow-up
+  hardening pass.
+- `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 39 tests and
+  passed after the follow-up hardening pass.
+- `PYTHONPATH=../repo-harness-creator/src python3.14 -m harnessforge audit --target . --min-score 85`
+  reported 100/100 after the follow-up hardening pass.
 - `magick identify docs/assets/logo.png` reported PNG 512x512.
 - No-ignore old-name text scan across working tree files outside `.git`
   returned no matches.

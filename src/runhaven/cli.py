@@ -93,7 +93,7 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--workspace",
         type=Path,
-        default=Path.cwd(),
+        default=Path("."),
         help="host project directory to mount at /workspace",
     )
     parser.add_argument("--image", help="override the profile image")

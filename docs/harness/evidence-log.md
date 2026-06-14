@@ -12,6 +12,7 @@ Use this for compact current evidence. Keep raw logs out of this file.
 | 2026-06-14 | Harness audit | `PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target . --min-score 85` | passed | Current score is 100/100 after removing non-macOS verification surfaces. |
 | 2026-06-14 | RunHaven rename | source checks, temporary-venv static checks, build, wheel smoke, no-ignore old-name scan, harness audit | passed | Package, module, command, image tags, docs, tests, and harness state use RunHaven/`runhaven`; ignored local virtualenvs were removed because they encoded stale checkout paths. |
 | 2026-06-14 | Runtime hardening and macOS-only boundary | unit tests, static checks, build, `./init.sh`, harness audit, `runhaven doctor`, `runhaven state list`, internal-network smoke, and `runhaven plan` smoke | passed | Command validation, unsafe overrides, TTY controls, state commands, host-only internal network creation, and macOS 26+ only verification are covered. |
+| 2026-06-14 | Follow-up hardening pass | focused unit tests, full unit suite, and pin check | passed | Added root group rejection, parser help cwd safety, dynamic image template pin discovery, and run/doctor edge-case coverage. |
 
 Rules:
 

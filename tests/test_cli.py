@@ -62,6 +62,18 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(error.exception.code, 2)
 
+    def test_help_does_not_resolve_current_directory(self) -> None:
+        output = io.StringIO()
+        with (
+            redirect_stdout(output),
+            patch("runhaven.cli.Path.cwd", side_effect=FileNotFoundError),
+            self.assertRaises(SystemExit) as error,
+        ):
+            main(["--help"])
+
+        self.assertEqual(error.exception.code, 0)
+        self.assertIn("Run AI coding agents", output.getvalue())
+
     def test_existing_internal_network_is_reused(self) -> None:
         with patch("runhaven.cli.subprocess.run") as run:
             run.return_value = Mock(
@@ -163,6 +175,35 @@ class CliTests(unittest.TestCase):
             run.call_args_list[1].args[0],
             ("container", "volume", "delete", "runhaven-shell-def-home"),
         )
+
+    def test_run_executes_preflight_and_container_command(self) -> None:
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory) / "workspace"
+            cache = Path(directory) / "cache"
+            workspace.mkdir()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": str(cache)}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.run_preflight") as preflight,
+                patch("runhaven.cli.subprocess.call", return_value=7) as call,
+            ):
+                code = main(
+                    [
+                        "run",
+                        "shell",
+                        "--workspace",
+                        str(workspace),
+                        "--tty",
+                        "never",
+                        "--",
+                        "/bin/true",
+                    ]
+                )
+
+        self.assertEqual(code, 7)
+        self.assertEqual(preflight.call_count, 2)
+        call.assert_called_once()
+        self.assertEqual(call.call_args.args[0][-1], "/bin/true")
 
     def test_state_lock_rejects_concurrent_same_volume(self) -> None:
         with TemporaryDirectory() as directory:

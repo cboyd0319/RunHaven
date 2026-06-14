@@ -7,34 +7,36 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+IMAGES_ROOT = ROOT / "src/runhaven/images"
 
-TEXT_FILES = (
+FIXED_TEXT_FILES = (
     ".github/workflows/ci.yml",
     "pyproject.toml",
     "requirements-dev.txt",
     "src/runhaven/profiles.py",
     "src/runhaven/plans.py",
     "src/runhaven/doctor.py",
-    "src/runhaven/images/base/Containerfile",
-    "src/runhaven/images/claude/Containerfile",
-    "src/runhaven/images/codex/Containerfile",
-    "src/runhaven/images/gemini/Containerfile",
-    "src/runhaven/images/antigravity/Containerfile",
-    "src/runhaven/images/copilot/Containerfile",
     "src/runhaven/images/common/debian-packages.txt",
     "src/runhaven/images/common/debian.sources",
     "src/runhaven/images/common/create-agent-user.sh",
-    "src/runhaven/images/claude/package.json",
-    "src/runhaven/images/codex/package.json",
-    "src/runhaven/images/gemini/package.json",
-    "src/runhaven/images/copilot/package.json",
 )
 
-NPM_PACKAGE_DIRS = (
-    "src/runhaven/images/claude",
-    "src/runhaven/images/codex",
-    "src/runhaven/images/gemini",
-    "src/runhaven/images/copilot",
+TEXT_FILES = (
+    *FIXED_TEXT_FILES,
+    *(
+        path.relative_to(ROOT).as_posix()
+        for path in sorted(IMAGES_ROOT.glob("*/Containerfile"))
+    ),
+    *(
+        path.relative_to(ROOT).as_posix()
+        for path in sorted(IMAGES_ROOT.glob("*/package.json"))
+    ),
+)
+
+NPM_PACKAGE_DIRS = tuple(
+    path.relative_to(ROOT).as_posix()
+    for path in sorted(IMAGES_ROOT.iterdir())
+    if path.is_dir() and (path / "package.json").exists()
 )
 
 GITHUB_ACTION_RE = re.compile(r"uses:\s*[\w./-]+@([^\s#]+)")
@@ -392,6 +394,8 @@ def check_npm_package(relative: str, pins: dict[str, Any]) -> list[str]:
             pins["agent_cli_integrity"]["copilot_cli"],
         ),
     }
+    if relative not in agent_versions:
+        return [f"{relative}: missing agent package pins.toml ledger entry"]
     root_name, root_version, root_integrity = agent_versions[relative]
 
     for section in ("dependencies", "devDependencies", "optionalDependencies"):

@@ -38,6 +38,14 @@ boundaries after a whole-repo audit.
   home volumes.
 - Dev dependencies now match the `unittest` suite and no longer include pytest.
 - `scripts/check_pins.py` now enforces `pins.toml` against source files.
+- Follow-up hardening now rejects root group identities such as `agent:0`
+  unless `--allow-root-user` is explicit.
+- CLI help no longer resolves the current working directory during parser
+  construction.
+- `scripts/check_pins.py` now discovers image template `Containerfile` and
+  npm-backed package directories dynamically.
+- Added tests for `runhaven run`, doctor command error paths, root group
+  rejection, and help behavior with an unavailable current directory.
 
 ## Recommended Next Step
 
@@ -84,3 +92,13 @@ runtime and verification boundary intact.
 - 2026-06-14: `python3 scripts/check_pins.py` passed.
 - 2026-06-14: temporary external venv installed pinned dev requirements; ruff,
   mypy, build, wheel install, and `runhaven agents` passed.
+- 2026-06-14: `PYTHONPATH=src python3.14 -m unittest discover -s tests`
+  ran 39 tests and passed after the follow-up hardening pass.
+- 2026-06-14: `python3.14 scripts/check_pins.py` passed after dynamic image
+  template discovery was added.
+- 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after the
+  follow-up hardening pass.
+- 2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests`
+  ran 39 tests and passed after the follow-up hardening pass.
+- 2026-06-14: `PYTHONPATH=../repo-harness-creator/src python3.14 -m harnessforge audit --target . --min-score 85`
+  reported 100/100 after the follow-up hardening pass.
