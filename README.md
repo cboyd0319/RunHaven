@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/logo.png" alt="macos-container-agents logo" width="180">
+</p>
+
 # macos-container-agents
 
 [![CI](https://github.com/cboyd0319/macos-container-agents/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cboyd0319/macos-container-agents/actions/workflows/ci.yml)
@@ -35,13 +39,13 @@ egress inside whatever Apple `container` and your host network allow.
 `mca` generates Apple `container` commands with these defaults:
 
 - one selected project mounted at `/workspace`
-- one per-project agent home volume mounted at `/home/agent`
+- one per-project agent home volume mounted at the container agent home path
 - no macOS home directory mount
 - no raw SSH key mount
 - no host cloud credential mount
 - no arbitrary host environment passthrough
 - read-only container root filesystem
-- temporary `/tmp`
+- temporary container scratch directory
 - dropped Linux capabilities
 - non-root `agent` user in bundled images
 - explicit command preview with `mca plan`
@@ -58,7 +62,8 @@ Useful opt-in controls:
 This is not a complete data-loss or exfiltration solution.
 
 - Internet mode does not yet restrict outbound domains.
-- The selected agent can still read files inside `/workspace` and `/home/agent`.
+- The selected agent can still read files inside the mounted workspace and its
+  isolated agent home volume.
 - If a credential is available inside the agent home volume or passed with
   `--env NAME`, malicious repository content may try to misuse it.
 - Agent-native approval systems are useful, but they are not a replacement for
@@ -125,14 +130,14 @@ volume, preflight setup, network mode, and exact Apple `container run` command.
 Example shape:
 
 ```text
-Workspace: /Users/me/code/my-project
+Workspace: selected project directory
 State volume: mca-claude-...-home
 Network: default internet network
 Preflight:
   container network create --internal mca-volume-prep-internal
   container run ... --no-dns --network mca-volume-prep-internal ...
 Run:
-  container run --rm --init --read-only --tmpfs /tmp --cap-drop ALL ...
+  container run --rm --init --read-only --tmpfs <container-temp> --cap-drop ALL ...
 ```
 
 If the plan shows a mount, environment variable, or network mode you do not

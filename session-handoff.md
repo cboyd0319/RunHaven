@@ -15,6 +15,7 @@ Harness adoption is complete for the structural audit reported on 2026-06-14.
 - `init.sh`
 - `init.ps1`
 - `docs/HARNESS_EVALUATION.md`
+- `docs/assets/logo.png`
 - `docs/harness/`
 
 ## Blockers
@@ -26,6 +27,9 @@ Harness adoption is complete for the structural audit reported on 2026-06-14.
 - `PYTHON=.venv314/bin/python ./init.sh` passed.
 - `PYTHON=.venv314/bin/python pwsh -NoProfile -File ./init.ps1` passed.
 - `PYTHONPATH=../repo-harness-creator/src python3 -m repo_harness_creator audit --target . --min-score 85` passed with 100/100.
+- `magick identify docs/assets/logo.png` reported PNG 512x512.
+- Latest repo-harness-creator audit passed with 100/100 after logo, release
+  control, and agent threat-boundary updates.
 
 ## Next Session
 

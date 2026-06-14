@@ -8,6 +8,8 @@ Use this for compact current evidence. Keep raw logs out of this file.
 | 2026-06-14 | Harness audit | `repo_harness_creator audit --target . --min-score 85` | passed | Reported 100/100 after AGENTS and manifest alignment. |
 | 2026-06-14 | POSIX entrypoint | `PYTHON=.venv314/bin/python ./init.sh` | passed | Ran compileall, 17 unit tests, pin policy, ruff, mypy, and build. |
 | 2026-06-14 | PowerShell entrypoint | `PYTHON=.venv314/bin/python pwsh -NoProfile -File ./init.ps1` | passed | Verified PowerShell `PYTHONPATH` handling and the same full check set. |
+| 2026-06-14 | Project logo | `magick identify docs/assets/logo.png` plus visual inspection | passed | Tracked logo asset is a stripped 512x512 PNG used by `README.md`. |
+| 2026-06-14 | Harness audit | `PYTHONPATH=../repo-harness-creator/src python3 -m repo_harness_creator audit --target . --min-score 85` | passed | Reported 100/100 after logo, release control, and agent threat-boundary updates. |
 
 Rules:
 

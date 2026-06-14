@@ -24,6 +24,7 @@
     "session-handoff.md",
     "init.sh",
     "init.ps1",
+    "docs/assets/logo.png",
     "docs/harness/README.md",
     "docs/harness/change-contract.md",
     "docs/harness/verification-matrix.md",
@@ -35,6 +36,7 @@
     "docs/harness/clean-state-checklist.md",
     "docs/harness/evaluator-rubric.md",
     "docs/harness/quality-document.md",
+    "docs/harness/release-controls.md",
     "docs/harness/self-healing.md",
     "docs/harness/research-sources.json",
     "docs/harness/research-inbox.md",
@@ -109,6 +111,12 @@
       "Quality Document",
       "Domain Grades",
       "Harness Simplification"
+    ],
+    "docs/harness/release-controls.md": [
+      "Release Controls",
+      "SBOM",
+      "provenance",
+      "Rollback"
     ],
     "docs/harness/self-healing.md": [
       "Self-healing must be reviewable",

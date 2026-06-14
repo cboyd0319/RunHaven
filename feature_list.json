@@ -32,7 +32,8 @@
       "evidence": [
         "2026-06-14: `PYTHON=.venv314/bin/python ./init.sh` passed",
         "2026-06-14: `PYTHON=.venv314/bin/python pwsh -NoProfile -File ./init.ps1` passed",
-        "2026-06-14: `repo_harness_creator audit --target . --min-score 85` reported 100/100"
+        "2026-06-14: `repo_harness_creator audit --target . --min-score 85` reported 100/100",
+        "2026-06-14: latest repo-harness-creator audit reported 100/100 after release control and agent threat-boundary updates"
       ],
       "notes": "This feature addresses the audit bottleneck reported before harness adoption."
     },
@@ -54,6 +55,29 @@
       ],
       "evidence": [],
       "notes": "Current internet mode remains unrestricted egress and is documented as a known limitation."
+    },
+    {
+      "id": "repo-logo",
+      "priority": 3,
+      "area": "documentation",
+      "title": "Project logo integration",
+      "user_visible_behavior": "The project README displays the maintained repository logo from a tracked asset path.",
+      "status": "passing",
+      "dependencies": [
+        "repo-harness-operating-layer"
+      ],
+      "verification": [
+        "Logo asset is stored under `docs/assets/`",
+        "README references the logo with alt text",
+        "Harness manifest requires the logo asset",
+        "Image dimensions and format are verified"
+      ],
+      "evidence": [
+        "2026-06-14: `magick identify docs/assets/logo.png` reported PNG 512x512",
+        "2026-06-14: visual inspection passed via local image viewer",
+        "2026-06-14: latest repo-harness-creator audit reported 100/100 with the logo in the manifest"
+      ],
+      "notes": "The source download image was normalized to a stripped 512x512 PNG; the original file was not modified."
     }
   ]
 }

@@ -21,6 +21,7 @@ inventory, not permission to mutate nested projects.
   `session-handoff.md`, `init.sh`, `init.ps1`, and `docs/harness/`.
 - Human documentation: `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, and
   `docs/`.
+- Project assets: `docs/assets/logo.png`.
 
 ## Routing Rules
 

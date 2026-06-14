@@ -16,6 +16,8 @@ bottleneck reported for `macos-container-agents`.
 - `AGENTS.md` now includes Startup, Verification, Definition Of Done, state
   file routing, and End of Session instructions.
 - `docs/HARNESS_EVALUATION.md` records the before and after audit result.
+- `docs/assets/logo.png` is now the tracked project logo and is displayed by
+  `README.md`.
 
 ## Recommended Next Step
 
@@ -30,3 +32,6 @@ provider egress allowlisting, which is tracked as planned in
   passed.
 - 2026-06-14: `repo_harness_creator audit --target . --min-score 85` reported
   100/100.
+- 2026-06-14: `magick identify docs/assets/logo.png` reported PNG 512x512.
+- 2026-06-14: latest repo-harness-creator audit reported 100/100 after logo,
+  release control, and agent threat-boundary updates.
