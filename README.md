@@ -1,10 +1,9 @@
 <p align="center">
-  <img src="docs/assets/logo.png" alt="macos-container-agents logo" width="180">
+  <img src="docs/assets/logo.png" alt="RunHaven logo" width="180">
 </p>
 
-# macos-container-agents
+# RunHaven
 
-[![CI](https://github.com/cboyd0319/macos-container-agents/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cboyd0319/macos-container-agents/actions/workflows/ci.yml)
 ![Python 3.13+](https://img.shields.io/badge/python-3.13%2B-blue)
 ![macOS 26+](https://img.shields.io/badge/macOS-26%2B-black)
 ![Apple container 1.0.0](https://img.shields.io/badge/apple%20container-1.0.0-555)
@@ -28,15 +27,16 @@ anything runs.
 
 ## Status
 
-Early foundation. The CLI is usable for local testing and image builds, but
+Early foundation. RunHaven is usable for local testing and image builds, but
 network egress allowlisting is not complete yet.
 
-Use `mca plan` before `mca run`. Treat internet-enabled runs as unrestricted
-egress inside whatever Apple `container` and your host network allow.
+Use `runhaven plan` before `runhaven run`. Treat internet-enabled runs as
+unrestricted egress inside whatever Apple `container` and your host network
+allow.
 
 ## What It Protects By Default
 
-`mca` generates Apple `container` commands with these defaults:
+`runhaven` generates Apple `container` commands with these defaults:
 
 - one selected project mounted at `/workspace`
 - one per-project agent home volume mounted at the container agent home path
@@ -48,7 +48,7 @@ egress inside whatever Apple `container` and your host network allow.
 - temporary container scratch directory
 - dropped Linux capabilities
 - non-root `agent` user in bundled images
-- explicit command preview with `mca plan`
+- explicit command preview with `runhaven plan`
 
 Useful opt-in controls:
 
@@ -83,7 +83,7 @@ The recommended Python runtime is 3.14.6. CI also tests Python 3.13.13 as the
 minimum supported maintenance release.
 
 This repo intentionally pins Apple `container` 1.0.0. If Apple ships a newer
-runtime, `mca doctor` should fail until the repo updates and verifies the new
+runtime, `runhaven doctor` should fail until the repo updates and verifies the new
 runtime pin.
 
 ## Quick Start
@@ -106,36 +106,37 @@ python -m pip install --no-deps -e .
 Check the Mac before running an agent:
 
 ```bash
-mca doctor
+runhaven doctor
 ```
 
 Build and preview a bundled agent image:
 
 ```bash
-mca image build claude
-mca plan claude
+runhaven image build claude
+runhaven plan claude
 ```
 
 Run the agent from the project directory you want it to work on:
 
 ```bash
-mca run claude
+runhaven run claude
 ```
 
 ## Plan Before Run
 
-`mca plan` is the trust checkpoint. It prints the workspace, the isolated state
-volume, preflight setup, network mode, and exact Apple `container run` command.
+`runhaven plan` is the trust checkpoint. It prints the workspace, the isolated
+state volume, preflight setup, network mode, and exact Apple `container run`
+command.
 
 Example shape:
 
 ```text
 Workspace: selected project directory
-State volume: mca-claude-...-home
+State volume: runhaven-claude-...-home
 Network: default internet network
 Preflight:
-  container network create --internal mca-volume-prep-internal
-  container run ... --no-dns --network mca-volume-prep-internal ...
+  container network create --internal runhaven-volume-prep-internal
+  container run ... --no-dns --network runhaven-volume-prep-internal ...
 Run:
   container run --rm --init --read-only --tmpfs <container-temp> --cap-drop ALL ...
 ```
@@ -146,24 +147,24 @@ expect, stop before running it.
 ## Supported Agents
 
 ```bash
-mca agents
+runhaven agents
 ```
 
 Bundled profiles:
 
 | Profile | Default image | Use case |
 | --- | --- | --- |
-| `claude` | `mca/claude:0.1.0` | Claude Code with isolated project state |
-| `codex` | `mca/codex:0.1.0` | Codex CLI with its own workspace sandbox enabled |
-| `gemini` | `mca/gemini:0.1.0` | Gemini CLI with project-scoped home state |
-| `antigravity` | `mca/antigravity:0.1.0` | Antigravity CLI in the same container boundary |
-| `copilot` | `mca/copilot:0.1.0` | GitHub Copilot CLI with isolated state |
-| `shell` | `mca/base:0.1.0` | Generic shell profile for custom agent images |
+| `claude` | `runhaven/claude:0.1.0` | Claude Code with isolated project state |
+| `codex` | `runhaven/codex:0.1.0` | Codex CLI with its own workspace sandbox enabled |
+| `gemini` | `runhaven/gemini:0.1.0` | Gemini CLI with project-scoped home state |
+| `antigravity` | `runhaven/antigravity:0.1.0` | Antigravity CLI in the same container boundary |
+| `copilot` | `runhaven/copilot:0.1.0` | GitHub Copilot CLI with isolated state |
+| `shell` | `runhaven/base:0.1.0` | Generic shell profile for custom agent images |
 
 Use `shell` for another agent image:
 
 ```bash
-mca plan shell --image my-agent:2026.06.14 -- my-agent --help
+runhaven plan shell --image my-agent:2026.06.14 -- my-agent --help
 ```
 
 ## Common Workflows
@@ -171,28 +172,28 @@ mca plan shell --image my-agent:2026.06.14 -- my-agent --help
 Read-only review:
 
 ```bash
-mca run codex --read-only-workspace
+runhaven run codex --read-only-workspace
 ```
 
 Private Git access without mounting raw SSH keys:
 
 ```bash
-mca run claude --ssh
+runhaven run claude --ssh
 ```
 
 Local-only command:
 
 ```bash
-mca run shell --network internal -- pytest
+runhaven run shell --network internal -- pytest
 ```
 
 Pass a token by variable name only:
 
 ```bash
-mca run codex --env OPENAI_API_KEY
+runhaven run codex --env OPENAI_API_KEY
 ```
 
-`mca` rejects `NAME=value` so secrets do not get copied into shell history or
+`runhaven` rejects `NAME=value` so secrets do not get copied into shell history or
 dry-run output.
 
 ## Troubleshooting
@@ -200,14 +201,14 @@ dry-run output.
 Run this first:
 
 ```bash
-mca doctor
+runhaven doctor
 ```
 
 If a run fails, collect these commands before opening an issue:
 
 ```bash
-mca doctor
-mca plan <agent>
+runhaven doctor
+runhaven plan <agent>
 container system status
 ```
 

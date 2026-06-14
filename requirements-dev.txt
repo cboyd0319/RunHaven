@@ -3,7 +3,7 @@
 ast-serialize==0.5.0
     # via mypy
 build==1.5.0
-    # via macos-container-agents (pyproject.toml)
+    # via runhaven (pyproject.toml)
 colorama==0.4.6 ; os_name == 'nt' or sys_platform == 'win32'
     # via
     #   build
@@ -13,7 +13,7 @@ iniconfig==2.3.0
 librt==0.11.0 ; platform_python_implementation != 'PyPy'
     # via mypy
 mypy==2.1.0
-    # via macos-container-agents (pyproject.toml)
+    # via runhaven (pyproject.toml)
 mypy-extensions==1.1.0
     # via mypy
 packaging==26.2
@@ -29,8 +29,8 @@ pygments==2.20.0
 pyproject-hooks==1.2.0
     # via build
 pytest==9.1.0
-    # via macos-container-agents (pyproject.toml)
+    # via runhaven (pyproject.toml)
 ruff==0.15.17
-    # via macos-container-agents (pyproject.toml)
+    # via runhaven (pyproject.toml)
 typing-extensions==4.15.0
     # via mypy

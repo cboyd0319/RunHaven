@@ -1,6 +1,6 @@
 # Agent Operating Model
 
-Agents working in macos-container-agents should behave like maintainers with a narrow
+Agents working in RunHaven should behave like maintainers with a narrow
 task, explicit evidence, and a clean handoff.
 
 ## Start

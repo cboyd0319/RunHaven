@@ -1,6 +1,6 @@
 {
   "$schema": "docs/harness/feature-list.schema.json",
-  "project": "macos-container-agents",
+  "project": "RunHaven",
   "last_updated": "2026-06-14",
   "rules": {
     "single_active_feature": true,
@@ -16,8 +16,35 @@
   },
   "features": [
     {
-      "id": "repo-harness-operating-layer",
+      "id": "runhaven-project-rename",
       "priority": 1,
+      "area": "identity",
+      "title": "RunHaven project rename",
+      "user_visible_behavior": "The repo, installable package, CLI command, image tags, runtime resource names, docs, and harness metadata consistently use the RunHaven name.",
+      "status": "passing",
+      "dependencies": [
+        "repo-harness-operating-layer"
+      ],
+      "verification": [
+        "Old project, module, and CLI names are absent from tracked text",
+        "Python package imports use `runhaven`",
+        "Console command is `runhaven`",
+        "Tests and package build pass",
+        "Harness audit passes"
+      ],
+      "evidence": [
+        "2026-06-14: no-ignore old-name text scan across working tree files outside `.git` returned no matches",
+        "2026-06-14: old-name filename scan across working tree files outside `.git` returned no matches",
+        "2026-06-14: `PYTHONPATH=src python3 -m unittest discover -s tests` passed",
+        "2026-06-14: `python3 scripts/check_pins.py` passed",
+        "2026-06-14: temporary external venv installed pinned dev requirements; ruff, mypy, build, wheel install, and `runhaven agents` passed",
+        "2026-06-14: `PYTHONPATH=../repo-harness-creator/src python3 -m harnessforge audit --target . --min-score 85` reported 100/100"
+      ],
+      "notes": "GitHub repository remote rename is a separate credentialed vendor change and requires explicit approval before execution."
+    },
+    {
+      "id": "repo-harness-operating-layer",
+      "priority": 2,
       "area": "harness",
       "title": "Repository harness operating layer",
       "user_visible_behavior": "A new agent can start from repo files, choose one scoped objective, run verification, and leave a clean handoff without relying on chat history.",
@@ -39,7 +66,7 @@
     },
     {
       "id": "provider-egress-allowlisting",
-      "priority": 2,
+      "priority": 3,
       "area": "security",
       "title": "Provider egress allowlisting",
       "user_visible_behavior": "Internet-enabled agent runs can be restricted to reviewed provider and package endpoints instead of unrestricted egress.",
@@ -58,7 +85,7 @@
     },
     {
       "id": "repo-logo",
-      "priority": 3,
+      "priority": 4,
       "area": "documentation",
       "title": "Project logo integration",
       "user_visible_behavior": "The project README displays the maintained repository logo from a tracked asset path.",

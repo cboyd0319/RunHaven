@@ -1,5 +1,5 @@
 {
-  "name": "mca-codex-image",
+  "name": "runhaven-codex-image",
   "private": true,
   "dependencies": {
     "@openai/codex": "0.139.0"

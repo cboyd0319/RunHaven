@@ -2,7 +2,7 @@
 
 Evaluated: 2026-06-14
 
-Target: `macos-container-agents`
+Target: RunHaven
 
 Evaluator: `repo-harness-creator` structural audit plus manual review of root
 instructions, state files, local verification entrypoints, harness docs,

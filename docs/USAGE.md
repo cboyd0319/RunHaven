@@ -17,7 +17,7 @@ commit the exact new version.
 ## Check the Mac
 
 ```bash
-mca doctor
+runhaven doctor
 ```
 
 `doctor` checks Python, macOS, Apple silicon, the pinned Apple `container`
@@ -28,24 +28,24 @@ pin.
 ## Build an Agent Image
 
 ```bash
-mca image build claude
-mca image build codex
-mca image build gemini
-mca image build antigravity
-mca image build copilot
+runhaven image build claude
+runhaven image build codex
+runhaven image build gemini
+runhaven image build antigravity
+runhaven image build copilot
 ```
 
 Dry-run first if you want to inspect the exact build command:
 
 ```bash
-mca image build claude --dry-run
+runhaven image build claude --dry-run
 ```
 
 ## Preview a Run
 
 ```bash
 cd /path/to/project
-mca plan claude
+runhaven plan claude
 ```
 
 The plan prints:
@@ -59,29 +59,29 @@ The plan prints:
 ## Run an Agent
 
 ```bash
-mca run claude
+runhaven run claude
 ```
 
-`mca` allows one active run per project/profile state volume. If another run is
-already using the same isolated home volume, `mca` fails before starting Apple
+`runhaven` allows one active run per project/profile state volume. If another run is
+already using the same isolated home volume, `runhaven` fails before starting Apple
 `container` and tells you to wait or use a different workspace/profile.
 
 Pass a host environment variable by name only:
 
 ```bash
-mca run claude --env ANTHROPIC_API_KEY
-mca run codex --env OPENAI_API_KEY
-mca run gemini --env GEMINI_API_KEY
-mca run copilot --env COPILOT_GITHUB_TOKEN
+runhaven run claude --env ANTHROPIC_API_KEY
+runhaven run codex --env OPENAI_API_KEY
+runhaven run gemini --env GEMINI_API_KEY
+runhaven run copilot --env COPILOT_GITHUB_TOKEN
 ```
 
-`mca` intentionally rejects `NAME=value` so secrets do not get copied into shell
+`runhaven` intentionally rejects `NAME=value` so secrets do not get copied into shell
 history or dry-run output.
 
 ## Read-Only Review
 
 ```bash
-mca run codex --read-only-workspace
+runhaven run codex --read-only-workspace
 ```
 
 This lets an agent inspect the project without writing to the mounted
@@ -90,7 +90,7 @@ workspace.
 ## Local-Only Network
 
 ```bash
-mca run shell --network internal -- pytest
+runhaven run shell --network internal -- pytest
 ```
 
 `internal` creates a host-only Apple container network before the run. Hosted AI
@@ -100,7 +100,7 @@ useful for local commands and custom images.
 ## Private Git
 
 ```bash
-mca run claude --ssh
+runhaven run claude --ssh
 ```
 
 This forwards the macOS SSH agent socket using Apple `container --ssh`. It does

@@ -6,7 +6,7 @@ COPY common/debian.sources /etc/apt/sources.list.d/debian.sources
 COPY common/apt-snapshot.conf /etc/apt/apt.conf.d/99snapshot
 COPY common/debian-packages.txt /tmp/debian-packages.txt
 COPY common/create-agent-user.sh /usr/local/sbin/create-agent-user
-COPY claude/package.json claude/package-lock.json /opt/mca-agent/
+COPY copilot/package.json copilot/package-lock.json /opt/runhaven-agent/
 
 RUN apt-get update \
     && xargs -a /tmp/debian-packages.txt apt-get install -y --no-install-recommends \
@@ -15,18 +15,18 @@ RUN apt-get update \
 RUN npm install -g npm@11.17.0 --no-audit --no-fund --ignore-scripts --allow-git=none --allow-file=none --allow-directory=none \
     && npm cache clean --force
 
-WORKDIR /opt/mca-agent
+WORKDIR /opt/runhaven-agent
 RUN npm ci --omit=dev --no-audit --no-fund --strict-allow-scripts=true --allow-git=none --allow-file=none --allow-directory=none \
-    && for binary in /opt/mca-agent/node_modules/.bin/*; do ln -sf "${binary}" "/usr/local/bin/$(basename "${binary}")"; done \
+    && for binary in /opt/runhaven-agent/node_modules/.bin/*; do ln -sf "${binary}" "/usr/local/bin/$(basename "${binary}")"; done \
     && npm cache clean --force
 
 RUN /bin/sh /usr/local/sbin/create-agent-user \
     && rm /usr/local/sbin/create-agent-user
 
 ENV HOME=/home/agent
-ENV PATH=/opt/mca-agent/node_modules/.bin:/home/agent/.local/bin:/usr/local/bin:/usr/bin:/bin
-ENV CLAUDE_CONFIG_DIR=/home/agent/.claude
+ENV PATH=/opt/runhaven-agent/node_modules/.bin:/home/agent/.local/bin:/usr/local/bin:/usr/bin:/bin
+ENV COPILOT_HOME=/home/agent/.copilot
 
 WORKDIR /workspace
 USER agent
-CMD ["claude"]
+CMD ["copilot"]

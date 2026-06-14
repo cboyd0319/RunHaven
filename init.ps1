@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-Write-Host '== Harness verification for macos-container-agents =='
+Write-Host '== Harness verification for RunHaven =='
 Write-Host 'Detected stack: python'
 
 $PythonBin = if ($env:PYTHON) {

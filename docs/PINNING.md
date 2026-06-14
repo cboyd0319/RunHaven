@@ -12,7 +12,7 @@ hard-pinned.
 - GitHub Actions use immutable commit SHAs, with the release tag in a comment.
 - Container base images use versioned tags plus `sha256` digests.
 - Debian packages installed in images use exact package versions in
-  `src/macos_container_agents/images/common/debian-packages.txt`, including the
+  `src/runhaven/images/common/debian-packages.txt`, including the
   observed install closure for the base image.
 - Debian apt sources use timestamped `snapshot.debian.org` URIs so exact
   package pins do not depend on moving mirrors.

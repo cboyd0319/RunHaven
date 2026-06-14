@@ -23,7 +23,7 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
         "claude": AgentProfile(
             name="claude",
             description="Claude Code with state isolated under /home/agent/.claude.",
-            image="mca/claude:0.1.0",
+            image="runhaven/claude:0.1.0",
             command=("claude",),
             home_env={"CLAUDE_CONFIG_DIR": "/home/agent/.claude"},
             image_context="claude",
@@ -31,7 +31,7 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
         "codex": AgentProfile(
             name="codex",
             description="OpenAI Codex CLI with workspace-write sandboxing inside the container.",
-            image="mca/codex:0.1.0",
+            image="runhaven/codex:0.1.0",
             command=("codex", "--sandbox", "workspace-write", "--ask-for-approval", "on-request"),
             home_env={"CODEX_HOME": "/home/agent/.codex"},
             image_context="codex",
@@ -39,21 +39,21 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
         "gemini": AgentProfile(
             name="gemini",
             description="Gemini CLI with project-scoped home state.",
-            image="mca/gemini:0.1.0",
+            image="runhaven/gemini:0.1.0",
             command=("gemini",),
             image_context="gemini",
         ),
         "antigravity": AgentProfile(
             name="antigravity",
             description="Google Antigravity CLI with project-scoped home state.",
-            image="mca/antigravity:0.1.0",
+            image="runhaven/antigravity:0.1.0",
             command=("agy",),
             image_context="antigravity",
         ),
         "copilot": AgentProfile(
             name="copilot",
             description="GitHub Copilot CLI with COPILOT_HOME isolated per project.",
-            image="mca/copilot:0.1.0",
+            image="runhaven/copilot:0.1.0",
             command=("copilot",),
             home_env={"COPILOT_HOME": "/home/agent/.copilot"},
             image_context="copilot",
@@ -61,7 +61,7 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
         "shell": AgentProfile(
             name="shell",
             description="Generic shell profile for custom agent images.",
-            image="mca/base:0.1.0",
+            image="runhaven/base:0.1.0",
             command=("/bin/bash",),
             image_context="base",
         ),

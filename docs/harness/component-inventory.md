@@ -7,16 +7,16 @@ inventory, not permission to mutate nested projects.
 
 ## Detected Components
 
-- Root Python package: `pyproject.toml`, `src/macos_container_agents/`,
+- Root Python package: `pyproject.toml`, `src/runhaven/`,
   `tests/`, `scripts/check_pins.py`.
 - Bundled image templates:
-  `src/macos_container_agents/images/base/`,
-  `src/macos_container_agents/images/claude/`,
-  `src/macos_container_agents/images/codex/`,
-  `src/macos_container_agents/images/gemini/`,
-  `src/macos_container_agents/images/antigravity/`,
-  `src/macos_container_agents/images/copilot/`, and
-  `src/macos_container_agents/images/common/`.
+  `src/runhaven/images/base/`,
+  `src/runhaven/images/claude/`,
+  `src/runhaven/images/codex/`,
+  `src/runhaven/images/gemini/`,
+  `src/runhaven/images/antigravity/`,
+  `src/runhaven/images/copilot/`, and
+  `src/runhaven/images/common/`.
 - Harness operating layer: `feature_list.json`, `progress.md`,
   `session-handoff.md`, `init.sh`, `init.ps1`, and `docs/harness/`.
 - Human documentation: `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, and

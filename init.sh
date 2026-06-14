@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "== Harness verification for macos-container-agents =="
+echo "== Harness verification for RunHaven =="
 echo "Detected stack: python"
 
 PYTHON_BIN="${PYTHON:-}"

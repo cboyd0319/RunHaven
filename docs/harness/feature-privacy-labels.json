@@ -32,7 +32,7 @@
       "externalAi": {
         "allowed": false,
         "required": false,
-        "fallback": "Use local unit tests and `mca plan` review."
+        "fallback": "Use local unit tests and `runhaven plan` review."
       },
       "sensitivityNote": "Mount, user, network, and env handling affect host-file and credential exposure."
     },

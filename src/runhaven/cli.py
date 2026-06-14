@@ -36,9 +36,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "image":
             return image_command(args)
     except ValueError as exc:
-        parser.exit(2, f"mca: {exc}\n")
+        parser.exit(2, f"runhaven: {exc}\n")
     except KeyboardInterrupt:
-        parser.exit(130, "mca: interrupted\n")
+        parser.exit(130, "runhaven: interrupted\n")
 
     parser.print_help()
     return 2
@@ -46,7 +46,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="mca",
+        prog="runhaven",
         description="Run AI coding agents inside Apple container on macOS.",
     )
     subcommands = parser.add_subparsers(dest="command")
@@ -293,14 +293,14 @@ def is_windows() -> bool:
 
 
 def state_lock_path(state_volume: str) -> Path:
-    override = os.environ.get("MCA_CACHE_HOME")
+    override = os.environ.get("RUNHAVEN_CACHE_HOME")
     if override:
         cache_root = Path(override)
     elif sys.platform == "darwin":
-        cache_root = Path.home() / "Library" / "Caches" / "macos-container-agents"
+        cache_root = Path.home() / "Library" / "Caches" / "runhaven"
     else:
         cache_root = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
-        cache_root = cache_root / "macos-container-agents"
+        cache_root = cache_root / "runhaven"
     return cache_root / "locks" / f"{state_volume}.lock"
 
 

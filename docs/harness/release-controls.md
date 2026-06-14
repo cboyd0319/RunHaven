@@ -8,7 +8,7 @@ machines. A release cannot rely on chat history or unstated local setup.
 ## Required Gates
 
 - Run `./init.sh` and the harness audit before release.
-- Run `mca doctor` and focused Apple `container` smoke checks for any runtime
+- Run `runhaven doctor` and focused Apple `container` smoke checks for any runtime
   boundary change.
 - Verify package, image, GitHub Action, Debian, npm, Python, and Apple
   `container` pins from primary sources before changing release artifacts.

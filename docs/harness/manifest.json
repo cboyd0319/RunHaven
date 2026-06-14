@@ -1,7 +1,7 @@
 {
   "version": 1,
   "generatedBy": "repo-harness-creator",
-  "generatedFor": "macos-container-agents",
+  "generatedFor": "RunHaven",
   "detectedStack": "python",
   "supportedPlatforms": {
     "productRuntime": {

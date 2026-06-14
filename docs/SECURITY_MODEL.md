@@ -30,7 +30,7 @@ Sensitive:
 
 ## Default Protections
 
-`mca` protects against accidental broad local access by default:
+`runhaven` protects against accidental broad local access by default:
 
 - mounts only the selected workspace
 - isolates agent home state in a project-specific named volume
@@ -39,14 +39,14 @@ Sensitive:
 - uses a non-root user in bundled images
 - does not mount `~/.ssh`, `~/.aws`, `~/.config`, or the macOS home directory
 - does not pass host environment variables unless named with `--env`
-- shows the exact command with `mca plan`
+- shows the exact command with `runhaven plan`
 
-For bundled non-root images, `mca` runs a short volume-preparation preflight
+For bundled non-root images, `runhaven` runs a short volume-preparation preflight
 before the agent starts. That preflight mounts only the project-scoped
 `/home/agent` volume, sets ownership for UID/GID 1000, runs without DNS, and
 uses a dedicated internal network.
 
-`mca` also serializes access to each project/profile home volume. This avoids
+`runhaven` also serializes access to each project/profile home volume. This avoids
 concurrent attachment of the same named volume and keeps the failure mode
 understandable for non-technical users.
 
@@ -67,7 +67,7 @@ replacement for the outer container boundary.
 
 Use this order:
 
-1. Run `mca plan`.
+1. Run `runhaven plan`.
 2. Build or select a known image.
 3. Run without `--env` first and authenticate inside the isolated agent home
    volume when possible.

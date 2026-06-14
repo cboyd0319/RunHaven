@@ -1,5 +1,5 @@
 {
-  "name": "mca-copilot-image",
+  "name": "runhaven-copilot-image",
   "private": true,
   "dependencies": {
     "@github/copilot": "1.0.62"

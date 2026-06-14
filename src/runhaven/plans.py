@@ -17,7 +17,7 @@ _ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _SAFE_NAME_RE = re.compile(r"[^a-z0-9_.-]+")
 DEFAULT_ENV_PASSTHROUGH = ("TERM", "COLORTERM", "LANG", "LC_ALL", "NO_COLOR")
 CONTAINER_PATH = (
-    "/opt/mca-agent/node_modules/.bin:"
+    "/opt/runhaven-agent/node_modules/.bin:"
     "/home/agent/.local/bin:"
     "/usr/local/bin:/usr/bin:/bin"
 )
@@ -25,7 +25,7 @@ VOLUME_PREP_IMAGE = (
     "debian:trixie-slim@"
     "sha256:4e401d95de7083948053197a9c3913343cd06b706bf15eb6a0c3ccd26f436a0e"
 )
-VOLUME_PREP_NETWORK = "mca-volume-prep-internal"
+VOLUME_PREP_NETWORK = "runhaven-volume-prep-internal"
 
 
 @dataclass(frozen=True)
@@ -69,8 +69,8 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         validate_env_name(name)
 
     project_id = project_identifier(workspace)
-    state_volume = safe_resource_name(f"mca-{options.profile.name}-{project_id}-home")
-    network_name = safe_resource_name(f"mca-{project_id}-internal")
+    state_volume = safe_resource_name(f"runhaven-{options.profile.name}-{project_id}-home")
+    network_name = safe_resource_name(f"runhaven-{project_id}-internal")
     image = options.image or options.profile.image
 
     command: list[str] = [
@@ -201,7 +201,7 @@ def project_identifier(workspace: Path) -> str:
 
 def safe_resource_name(value: str) -> str:
     normalized = _SAFE_NAME_RE.sub("-", value.lower()).strip("-")
-    return normalized[:63] or "mca"
+    return normalized[:63] or "runhaven"
 
 
 def strip_remainder_separator(args: Sequence[str]) -> tuple[str, ...]:

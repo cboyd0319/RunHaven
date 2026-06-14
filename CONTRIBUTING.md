@@ -36,7 +36,7 @@ python -m mypy src
 
 ## Security Review Expectations
 
-- Show the exact `container` command with `mca plan` before changing runtime
+- Show the exact `container` command with `runhaven plan` before changing runtime
   behavior.
 - Keep dependencies current stable and hard-pinned. Updating a package means
   changing the exact version or digest in source control.

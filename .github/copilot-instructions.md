@@ -1,4 +1,4 @@
-# macos-container-agents Copilot Instructions
+# RunHaven Copilot Instructions
 
 Use [../AGENTS.md](../AGENTS.md) as the source of truth for repo guidance.
 

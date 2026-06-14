@@ -2,7 +2,7 @@
 
 ## Project overview
 
-macos-container-agents is a Python 3.13+ CLI for running AI coding agents inside
+RunHaven is a Python 3.13+ CLI for running AI coding agents inside
 Apple `container` on macOS 26+.
 
 Startup path:
@@ -49,7 +49,7 @@ REPO_HARNESS_CREATOR=../repo-harness-creator
 PYTHONPATH="${REPO_HARNESS_CREATOR}/src" python3 -m repo_harness_creator audit --target . --min-score 85
 ```
 
-Use `mca doctor` and Apple `container` runtime smokes when changes affect the
+Use `runhaven doctor` and Apple `container` runtime smokes when changes affect the
 actual macOS container boundary, image templates, agent profiles, or install
 flow.
 

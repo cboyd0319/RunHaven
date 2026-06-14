@@ -2,7 +2,7 @@
 
 Status: live
 
-This directory is the operating layer for agent-assisted work in macos-container-agents.
+This directory is the operating layer for agent-assisted work in RunHaven.
 It keeps instructions, state, verification, scope, and lifecycle handoff visible
 in repo files instead of hidden in chat history.
 

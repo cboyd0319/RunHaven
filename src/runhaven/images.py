@@ -23,7 +23,7 @@ def build_image_plan(profile: AgentProfile, *, tag: str | None = None) -> ImageB
     if profile.image_context is None:
         raise ValueError(f"agent {profile.name!r} does not have a bundled image template")
 
-    context = files("macos_container_agents").joinpath("images")
+    context = files("runhaven").joinpath("images")
     context_path = Path(str(context))
     containerfile = context_path / profile.image_context / "Containerfile"
     if not containerfile.exists():

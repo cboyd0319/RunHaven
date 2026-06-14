@@ -9,7 +9,7 @@ Use the smallest check set that can catch likely regressions for the change.
 | Python code | `python3 -m compileall src tests scripts`, `PYTHONPATH=src python3 -m unittest discover -s tests`, `python3 -m ruff check .`, `python3 -m mypy src` |
 | Packaging | Python code checks plus `python3 -m build` |
 | CLI command construction | Python code checks plus focused tests in `tests/test_plans.py` or `tests/test_cli.py` |
-| Apple container runtime boundary | Python code checks plus `mca doctor`, `mca plan`, and a focused `mca run shell` smoke |
+| Apple container runtime boundary | Python code checks plus `runhaven doctor`, `runhaven plan`, and a focused `runhaven run shell` smoke |
 | Image templates | Pin check, image build for changed profile, and version smoke for affected agent |
 | Node or web code | package manager `test`, `lint`, `typecheck`, or `build` scripts when present |
 | Go code | `go test ./...` |

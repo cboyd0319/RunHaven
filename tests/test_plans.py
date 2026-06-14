@@ -4,8 +4,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from macos_container_agents.plans import RunOptions, build_run_plan, validate_env_name
-from macos_container_agents.profiles import get_profile
+from runhaven.plans import RunOptions, build_run_plan, validate_env_name
+from runhaven.profiles import get_profile
 
 
 class RunPlanTests(unittest.TestCase):
@@ -26,16 +26,16 @@ class RunPlanTests(unittest.TestCase):
         self.assertIn("type=volume", joined)
         self.assertIn("target=/home/agent", joined)
         self.assertIn("target=/workspace", joined)
-        self.assertIn("PATH=/opt/mca-agent/node_modules/.bin", joined)
+        self.assertIn("PATH=/opt/runhaven-agent/node_modules/.bin", joined)
         self.assertNotIn(str(Path.home()), joined)
         self.assertNotIn("ANTHROPIC_API_KEY", command)
         self.assertEqual(len(plan.preflight), 2)
         self.assertEqual(
             plan.preflight[0],
-            ("container", "network", "create", "--internal", "mca-volume-prep-internal"),
+            ("container", "network", "create", "--internal", "runhaven-volume-prep-internal"),
         )
         self.assertIn("--network", plan.preflight[1])
-        self.assertIn("mca-volume-prep-internal", plan.preflight[1])
+        self.assertIn("runhaven-volume-prep-internal", plan.preflight[1])
         self.assertIn("chown 1000:1000 /home/agent", plan.shell_preflight()[1])
         self.assertIn("mkdir -p /home/agent/.claude", plan.shell_preflight()[1])
         self.assertIsNone(plan.network_name)
