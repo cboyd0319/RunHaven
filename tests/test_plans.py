@@ -248,6 +248,18 @@ class RunPlanTests(unittest.TestCase):
                     )
                 )
 
+    def test_provider_network_rejects_single_label_allowed_hosts(self) -> None:
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "fully qualified"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("shell"),
+                        workspace=Path(directory),
+                        network="provider",
+                        provider_hosts=("com",),
+                    )
+                )
+
     def test_workspace_resolution_errors_are_user_errors(self) -> None:
         with (
             patch("runhaven.plans.Path.resolve", side_effect=FileNotFoundError("missing cwd")),

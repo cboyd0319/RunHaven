@@ -4,9 +4,8 @@ Last Updated: 2026-06-14
 
 ## Current Objective
 
-Integrate provider egress enforcement into normal `runhaven run --network
-provider` through a host allowlist proxy on an internal Apple `container`
-network.
+Harden provider-host additions and documentation after integrating provider
+egress enforcement into normal `runhaven run --network provider`.
 
 ## Current State
 
@@ -82,7 +81,11 @@ network.
   proxy environment variables, runs the agent, and deletes the managed provider
   network in cleanup.
 - Bundled provider host allowlists now exist for Claude, Codex, Gemini, and
-  Copilot. `--provider-host HOST` adds reviewed extra hosts for provider mode.
+  Copilot. `--provider-host HOST` adds reviewed fully qualified extra hosts for
+  provider mode.
+- Provider host additions reject IP literals and single-label hosts, so entries
+  like `com` cannot accidentally allow broad suffixes. A listed host permits
+  that host and its subdomains.
 - A live normal-run smoke passed for `runhaven run shell --network provider
   --provider-host example.com`: allowed proxied HTTPS succeeded, while denied
   proxied host, proxied IP literal, direct DNS, and direct IP paths failed.
@@ -93,9 +96,9 @@ network.
 ## Recommended Next Step
 
 Broaden and verify bundled provider endpoint profiles for authentication,
-telemetry, and optional provider feature paths. Keep additions explicit and
-evidence-backed so provider mode remains understandable for non-technical
-users.
+telemetry, and optional provider feature paths. Keep additions fully qualified,
+explicit, and evidence-backed so provider mode remains understandable for
+non-technical users.
 
 ## Verification Evidence
 
@@ -176,7 +179,8 @@ users.
 - 2026-06-14: `PYTHONPATH=src python3.14 -m unittest tests.test_plans.RunPlanTests.test_provider_network_mode_fails_closed_until_enforced tests.test_cli.CliTests.test_provider_network_mode_fails_closed_with_clear_message tests.test_cli.CliTests.test_plan_prints_dry_run_command`
   ran 3 focused tests and passed.
 - 2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider`
-  exited 2 with the fail-closed provider egress message.
+  exited 2 with the fail-closed provider egress message during the
+  reserved-mode stage.
 - 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh`
   passed after the provider egress preparation pass; the unit suite ran 49
   tests.
@@ -229,3 +233,9 @@ users.
 - 2026-06-14: reviewed local Apple `container-machine.md` and
   `container-system-config.md` docs from the sibling Apple container checkout;
   they did not change the provider proxy design.
+- 2026-06-14: `PYTHONPATH=src python3.14 -m unittest tests.test_plans.RunPlanTests.test_provider_network_rejects_single_label_allowed_hosts tests.test_plans tests.test_cli`,
+  `python -m ruff check src/runhaven/cli.py src/runhaven/plans.py tests/test_plans.py tests/test_cli.py`,
+  and `python -m mypy src` passed after rejecting single-label provider hosts.
+- 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and
+  `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 60 tests
+  and passed after the provider-host guard cleanup.

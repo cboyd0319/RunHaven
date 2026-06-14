@@ -62,13 +62,14 @@ egress within the host's network policy. Use `internal` for local-only runs.
 It runs the agent on an internal Apple `container` network, starts a host-side
 CONNECT proxy, injects proxy environment variables at runtime, and deletes the
 managed provider network after the run. The proxy permits the bundled provider
-hosts for the selected profile plus explicit `--provider-host HOST` additions,
-rejects IP literal proxy targets, and relies on the internal network to block
-direct guest egress.
+hosts for the selected profile, their subdomains, and explicit fully qualified
+`--provider-host HOST` additions. It rejects IP literal proxy targets and
+single-label provider hosts, and relies on the internal network to block direct
+guest egress.
 
 Provider host allowlists are intentionally conservative. Authentication,
-telemetry, or optional provider feature paths may fail until an additional host
-is reviewed and passed with `--provider-host`.
+telemetry, or optional provider feature paths may fail until an additional
+fully qualified host is reviewed and passed with `--provider-host`.
 
 The selected agent still controls what it reads inside `/workspace` and
 `/home/agent`. If the agent has model credentials inside its project volume and

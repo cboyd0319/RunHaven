@@ -223,6 +223,8 @@ def normalize_provider_hosts(hosts: Sequence[str]) -> tuple[str, ...]:
         normalized = normalize_host(host)
         if is_ip_literal(normalized):
             raise ValueError("provider hosts cannot be IP literals")
+        if "." not in normalized:
+            raise ValueError("provider hosts must be fully qualified domain names")
         if normalized not in seen:
             normalized_hosts.append(normalized)
             seen.add(normalized)

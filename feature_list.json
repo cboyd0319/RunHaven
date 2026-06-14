@@ -122,11 +122,11 @@
         "2026-06-14: Rendered Apple DocC networking docs with Playwright and checked generated DocC JSON endpoints for `ContainerNetworkService`.",
         "2026-06-14: Reviewed the complete user-supplied DocC snapshot: 1,022 rendered Markdown pages plus raw DocC JSON, zero fetch failures, and no exact hits for egress or allowlist control terms.",
         "2026-06-14: Local Apple `container` 1.0.0 CLI help and command reference expose DNS selection, NAT networking, and host-only networks, but no domain egress allowlist flag.",
-        "2026-06-14: Added reserved `--network provider` mode that fails closed until provider egress enforcement exists.",
+        "2026-06-14: Added reserved `--network provider` mode that failed closed at that stage until provider egress enforcement existed.",
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed with 49 tests, pin check, ruff, mypy, and build.",
         "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 49 tests and passed.",
         "2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100.",
-        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider` exited 2 with a fail-closed provider egress message.",
+        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider` exited 2 with a fail-closed provider egress message during the reserved-mode stage.",
         "2026-06-14: `python3 -m json.tool feature_list.json`, `python3 scripts/check_pins.py`, `git diff --check`, local absolute-path leak scan, and `PYTHONPATH=<temporary-HarnessForge-copy>/src python3.14 -m harnessforge audit --target . --min-score 85` passed after the complete DocC snapshot evidence update.",
         "2026-06-14: added a standard-library CONNECT allowlist proxy and `scripts/provider_egress_smoke.py`.",
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after the provider egress proxy smoke pass; the unit suite ran 56 tests.",
@@ -136,9 +136,11 @@
         "2026-06-14: HarnessForge audit was intentionally skipped for the provider egress proxy smoke pass by user instruction because the sibling HarnessForge repo is being worked on.",
         "2026-06-14: focused CLI tests, ruff, mypy, and diff check passed after aligning CLI help and roadmap wording with the provider proxy state.",
         "2026-06-14: provider lifecycle integration tests passed for plan construction, runtime proxy injection, provider network cleanup, and proxy env override order.",
-        "2026-06-14: live `runhaven run shell --network provider --provider-host example.com` smoke passed with allowed proxied HTTPS and denied proxied host, proxied IP literal, direct DNS, and direct IP paths; follow-up checks found no leftover provider network or test state volume."
+        "2026-06-14: live `runhaven run shell --network provider --provider-host example.com` smoke passed with allowed proxied HTTPS and denied proxied host, proxied IP literal, direct DNS, and direct IP paths; follow-up checks found no leftover provider network or test state volume.",
+        "2026-06-14: focused planner and CLI tests, ruff, and mypy passed after rejecting single-label provider hosts and documenting host-plus-subdomain semantics.",
+        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 60 tests and passed after the provider-host guard cleanup."
       ],
-      "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider host lists are conservative and may need reviewed `--provider-host` additions for login, telemetry, or optional feature paths."
+      "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider host lists are conservative and may need reviewed fully qualified `--provider-host` additions for login, telemetry, or optional feature paths."
     },
     {
       "id": "repo-logo",

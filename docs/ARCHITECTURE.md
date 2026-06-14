@@ -73,7 +73,7 @@ network inspection output and requires `configuration.mode` to be `hostOnly`.
 network for its IPv4 gateway and subnet, starts a host-side CONNECT proxy, and
 injects proxy environment variables into the agent run. The proxy allows only
 the bundled provider hosts for the selected profile, their subdomains, and
-explicit `--provider-host HOST` additions.
+explicit fully qualified `--provider-host HOST` additions.
 
 The enforcement pattern is:
 

@@ -238,6 +238,7 @@ kernel, vminit, and subnet settings, but no domain egress allowlist control.
 - Use `--read-only-workspace` for review-only tasks.
 - Treat default internet mode as unrestricted egress.
 - Use `--network provider` when model-provider traffic should be constrained
-  to bundled provider hosts plus reviewed `--provider-host` additions.
+  to bundled provider hosts plus reviewed fully qualified `--provider-host`
+  additions.
 - Keep package, image, runtime, and CI pins current stable and exact. For apt,
   use timestamped Debian snapshots plus exact package versions.

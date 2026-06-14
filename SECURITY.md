@@ -36,6 +36,6 @@ host network. The `internal` network mode uses Apple `container network create
 
 `--network provider` runs the agent on an internal network and injects a
 host-side CONNECT proxy that permits bundled provider hosts plus their
-subdomains, along with explicit `--provider-host HOST` additions. IP literal
-proxy targets are rejected, and direct guest egress remains blocked by the
-internal network.
+subdomains, along with explicit fully qualified `--provider-host HOST`
+additions. IP literal proxy targets and single-label provider hosts are
+rejected, and direct guest egress remains blocked by the internal network.

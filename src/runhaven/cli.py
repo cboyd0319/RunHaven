@@ -141,7 +141,7 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
         action="append",
         default=[],
         metavar="HOST",
-        help="additional HTTPS host allowed by --network provider",
+        help="additional fully qualified HTTPS host allowed by --network provider",
     )
     parser.add_argument(
         "--read-only-workspace",

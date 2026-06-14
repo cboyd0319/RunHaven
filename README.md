@@ -39,8 +39,8 @@ RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
 supported runtimes or contributor verification targets for this project.
 
 Use `--network provider` to restrict normal agent runs to the bundled provider
-host allowlist plus any explicit `--provider-host HOST` additions. A listed
-host permits that host and its subdomains.
+host allowlist plus any explicit fully qualified `--provider-host HOST`
+additions. A listed host permits that host and its subdomains.
 
 ## What It Protects By Default
 
@@ -63,7 +63,8 @@ Useful opt-in controls:
 - `--read-only-workspace` for review-only work
 - `--network internal` for local-only commands
 - `--network provider` for provider allowlisting through a runtime proxy
-- `--provider-host HOST` to add an explicit HTTPS host to provider mode
+- `--provider-host HOST` to add an explicit fully qualified HTTPS host to
+  provider mode
 - `--ssh` for SSH agent forwarding without mounting `~/.ssh`
 - `--env NAME` for passing a single host environment variable by name
 - `--tty never` for non-interactive automation
@@ -78,8 +79,8 @@ This is not a complete data-loss or exfiltration solution.
 
 - Internet mode does not yet restrict outbound domains.
 - Provider mode uses conservative host allowlists; login, telemetry, or
-  provider-side feature paths may need additional reviewed `--provider-host`
-  entries.
+  provider-side feature paths may need additional reviewed fully qualified
+  `--provider-host` entries.
 - The selected agent can still read files inside the mounted workspace and its
   isolated agent home volume.
 - If a credential is available inside the agent home volume or passed with
@@ -219,7 +220,7 @@ runhaven run claude --network provider
 
 Bundled profiles include conservative provider hosts. A listed host permits
 that host and its subdomains. For custom images or extra provider endpoints,
-add reviewed hosts explicitly:
+add reviewed fully qualified hosts explicitly:
 
 ```bash
 runhaven run shell --network provider --provider-host api.example.com

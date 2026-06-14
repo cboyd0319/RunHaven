@@ -113,7 +113,8 @@ runhaven run claude --network provider
 
 `provider` creates a managed internal Apple `container` network and routes the
 agent through RunHaven's host-side allowlist CONNECT proxy. Bundled profiles
-include conservative provider hosts. Add reviewed extra hosts explicitly:
+include conservative provider hosts. A listed host permits that host and its
+subdomains. Add reviewed fully qualified extra hosts explicitly:
 
 ```bash
 runhaven run shell --network provider --provider-host api.example.com
