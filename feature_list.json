@@ -210,7 +210,7 @@
       "priority": 6,
       "area": "usability",
       "title": "Secret-free run observability",
-      "user_visible_behavior": "`runhaven runs list` and `runhaven runs show RUN_ID` show recent actual agent runs with provider policy, auth broker, and cleanup summaries without exposing commands or secrets.",
+      "user_visible_behavior": "`runhaven runs list`, `runhaven runs show RUN_ID`, and `runhaven runs log RUN_ID` show recent actual agent runs with provider policy, auth broker, and cleanup details without exposing commands or secrets.",
       "status": "passing",
       "dependencies": [
         "provider-egress-allowlisting",
@@ -222,14 +222,17 @@
         "Run records summarize provider policy, auth broker, and cleanup outcomes",
         "`runhaven runs list` shows recent run summaries",
         "`runhaven runs show RUN_ID` prints text and JSON for one run",
+        "`runhaven runs log RUN_ID` joins the run record with matching provider policy and auth broker entries",
         "Run records omit command lines, agent arguments, environment variable names, environment values, request bodies, and token values"
       ],
       "evidence": [
         "2026-06-15: Focused run-observability CLI tests passed for standard run logging, provider/auth/cleanup summaries, `runs list`, and `runs show --json`.",
         "2026-06-15: CLI suite, ruff, and mypy passed after adding the run ledger.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 104 unit tests, pin check, ruff, mypy, and build."
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 104 unit tests, pin check, ruff, mypy, and build.",
+        "2026-06-15: Focused `runs log` CLI tests passed for joined text and JSON output without secrets.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 106 unit tests, pin check, ruff, mypy, and build after adding `runs log`."
       ],
-      "notes": "`runs list/show` are the first run dashboard slice. Future `runs log/diff/attach/stop` commands remain planned."
+      "notes": "`runs list/show/log` are the first run dashboard slices. Future `runs diff/attach/stop` commands remain planned."
     },
     {
       "id": "repo-logo",

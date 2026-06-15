@@ -143,6 +143,12 @@ def build_parser() -> argparse.ArgumentParser:
     runs_show_parser = runs_subcommands.add_parser("show", help="show one RunHaven run record")
     runs_show_parser.add_argument("run_id", help="run id to show")
     runs_show_parser.add_argument("--json", action="store_true", help="print JSON output")
+    runs_log_parser = runs_subcommands.add_parser(
+        "log",
+        help="show one run with related provider and auth events",
+    )
+    runs_log_parser.add_argument("run_id", help="run id to show")
+    runs_log_parser.add_argument("--json", action="store_true", help="print JSON output")
 
     egress_parser = subcommands.add_parser("egress", help="inspect provider egress policy logs")
     egress_subcommands = egress_parser.add_subparsers(dest="egress_command", required=True)
@@ -360,6 +366,8 @@ def runs_command(args: argparse.Namespace) -> int:
         return runs_list(limit=args.limit, json_output=args.json)
     if args.runs_command == "show":
         return runs_show(args.run_id, json_output=args.json)
+    if args.runs_command == "log":
+        return runs_log(args.run_id, json_output=args.json)
     raise ValueError(f"unknown runs command: {args.runs_command}")
 
 
@@ -825,11 +833,62 @@ def runs_show(run_id: str, *, json_output: bool) -> int:
     return 0
 
 
+def runs_log(run_id: str, *, json_output: bool) -> int:
+    record = find_run_record(run_id)
+    provider_entries = log_entries_for_run(read_egress_policy_log(limit=0), run_id)
+    auth_entries = log_entries_for_run(read_auth_broker_log(limit=0), run_id)
+    payload = {
+        "run": record,
+        "provider_policy": provider_entries,
+        "auth_broker": auth_entries,
+    }
+    if json_output:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    runs_show(run_id, json_output=False)
+    print("Provider policy decisions:")
+    if provider_entries:
+        for entry in provider_entries:
+            host = entry.get("host", "<unknown>")
+            port = entry.get("port", "?")
+            matched_rule = entry.get("matched_rule") or "-"
+            print(
+                f"  - {entry.get('timestamp', '<unknown>')}  "
+                f"{entry.get('decision', 'unknown')}  {host}:{port}  "
+                f"count={entry.get('count', 1)}  "
+                f"reason={entry.get('reason', 'unknown')}  rule={matched_rule}"
+            )
+    else:
+        print("  none")
+
+    print("Auth broker decisions:")
+    if auth_entries:
+        for entry in auth_entries:
+            upstream_status = entry.get("upstream_status")
+            status = upstream_status if upstream_status is not None else "-"
+            print(
+                f"  - {entry.get('timestamp', '<unknown>')}  "
+                f"{entry.get('broker', 'unknown')}  "
+                f"{entry.get('decision', 'unknown')}  "
+                f"{entry.get('method', '-')} {entry.get('path', '-')}  "
+                f"status={status}  count={entry.get('count', 1)}  "
+                f"reason={entry.get('reason', 'unknown')}"
+            )
+    else:
+        print("  none")
+    return 0
+
+
 def find_run_record(run_id: str) -> dict[str, Any]:
     for record in reversed(read_run_records(limit=0)):
         if record.get("run_id") == run_id:
             return record
     raise ValueError(f"run record not found: {run_id}")
+
+
+def log_entries_for_run(entries: Sequence[dict[str, Any]], run_id: str) -> list[dict[str, Any]]:
+    return [entry for entry in entries if entry.get("run_id") == run_id]
 
 
 def read_run_records(*, limit: int) -> list[dict[str, Any]]:

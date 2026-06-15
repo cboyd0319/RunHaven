@@ -255,7 +255,9 @@ secrets:
 ```bash
 runhaven runs list --limit 20
 runhaven runs show <run-id>
+runhaven runs log <run-id>
 runhaven runs show <run-id> --json
+runhaven runs log <run-id> --json
 ```
 
 Broker a Codex API key without placing the raw value in the guest:

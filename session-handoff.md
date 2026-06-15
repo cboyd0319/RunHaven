@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add secret-free run observability with `runhaven runs list/show`.
+Add secret-free joined run logs with `runhaven runs log RUN_ID`.
 
 ## Files
 
@@ -50,6 +50,19 @@ Add secret-free run observability with `runhaven runs list/show`.
 
 ## Verification Evidence
 
+- `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_log_prints_joined_secret_free_run_events tests.test_cli.CliTests.test_runs_log_json_is_secret_free`
+  first failed because `runs log` was not a valid subcommand, then passed after
+  joining run, provider policy, and auth broker entries by run id.
+- `PYTHONPATH=src python3 -m unittest tests.test_cli` ran 40 tests and passed
+  after adding `runhaven runs log`.
+- `uvx --from ruff==0.15.17 ruff check src/runhaven/cli.py tests/test_cli.py`
+  and `uvx --from mypy==2.1.0 mypy src/runhaven/cli.py` passed after adding
+  `runhaven runs log`.
+- Manual reader smoke passed for
+  `RUNHAVEN_CACHE_HOME=<temporary-dir> PYTHONPATH=src python3 -m runhaven runs log manual-run`
+  and `RUNHAVEN_CACHE_HOME=<temporary-dir> PYTHONPATH=src python3 -m runhaven runs log manual-run --json`.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 106 unit
+  tests, pin check, ruff, mypy, and build after adding `runhaven runs log`.
 - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_standard_run_writes_secret_free_run_record tests.test_cli.CliTests.test_provider_run_writes_run_record_with_policy_auth_and_cleanup_summary tests.test_cli.CliTests.test_runs_list_prints_recent_records tests.test_cli.CliTests.test_runs_show_json_is_secret_free`
   first failed because `runs` and `runs.jsonl` did not exist, then passed after
   adding the run ledger.
@@ -450,6 +463,9 @@ Add secret-free run observability with `runhaven runs list/show`.
   return code, provider policy summary, auth broker summary, and cleanup
   outcome. Records omit command lines, agent arguments, environment variable
   names, environment values, request bodies, and token values.
+- `runhaven runs log RUN_ID` now joins the selected run record with matching
+  `egress-policy.jsonl` and `auth-broker.jsonl` entries for the same run id.
+  Text and JSON output remain secret-free.
 - `docs/AUTH_BROKER.md` records the Codex prototype status, remaining
   design-only provider status, provider auth notes, non-goals, and acceptance
   criteria for future broker expansion.
@@ -493,8 +509,8 @@ Add secret-free run observability with `runhaven runs list/show`.
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
 5. Run `scripts/codex_broker_smoke.py --require-api-key` with a disposable
-   OpenAI API key when available, then add `runhaven runs log RUN_ID` or
-   `runhaven runs diff RUN_ID` for deeper post-run review without exposing
+   OpenAI API key when available, then add git-aware change capture for future
+   `runhaven runs diff RUN_ID` without storing command lines, prompts, or
    secrets.
 6. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into

@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add secret-free run observability with `runhaven runs list/show`.
+Add secret-free joined run logs with `runhaven runs log RUN_ID`.
 
 ## Current State
 
@@ -198,6 +198,9 @@ Add secret-free run observability with `runhaven runs list/show`.
 - `runhaven runs list` and `runhaven runs show RUN_ID` now display run id,
   profile, workspace, network mode, return code, provider policy summary, auth
   broker summary, and cleanup outcome.
+- `runhaven runs log RUN_ID` and `runhaven runs log RUN_ID --json` now join the
+  selected run record with matching provider policy and auth broker entries for
+  the same run id.
 - Run records omit command lines, agent arguments, environment variable names,
   environment values, request bodies, and token values.
 - Empty provider allowlist behavior is now covered at both the planner and
@@ -217,12 +220,25 @@ Add secret-free run observability with `runhaven runs list/show`.
 ## Recommended Next Step
 
 Run the optional Codex broker smoke with a disposable OpenAI API key when one is
-available, then add the next run-observability slice: `runhaven runs log RUN_ID`
-or `runhaven runs diff RUN_ID` for deeper post-run review without exposing
-secrets.
+available, then add git-aware change capture for future `runhaven runs diff
+RUN_ID` without storing command lines, prompts, or secrets.
 
 ## Verification Evidence
 
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_log_prints_joined_secret_free_run_events tests.test_cli.CliTests.test_runs_log_json_is_secret_free`
+  first failed because `runs log` was not a valid subcommand, then passed after
+  joining run, provider policy, and auth broker entries by run id.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli` ran 40 tests
+  and passed after adding `runhaven runs log`.
+- 2026-06-15: `uvx --from ruff==0.15.17 ruff check src/runhaven/cli.py tests/test_cli.py`
+  and `uvx --from mypy==2.1.0 mypy src/runhaven/cli.py` passed after adding
+  `runhaven runs log`.
+- 2026-06-15: Manual reader smoke passed for
+  `RUNHAVEN_CACHE_HOME=<temporary-dir> PYTHONPATH=src python3 -m runhaven runs log manual-run`
+  and `RUNHAVEN_CACHE_HOME=<temporary-dir> PYTHONPATH=src python3 -m runhaven runs log manual-run --json`.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 106 unit tests, pin check, ruff, mypy, and build after adding
+  `runhaven runs log`.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_standard_run_writes_secret_free_run_record tests.test_cli.CliTests.test_provider_run_writes_run_record_with_policy_auth_and_cleanup_summary tests.test_cli.CliTests.test_runs_list_prints_recent_records tests.test_cli.CliTests.test_runs_show_json_is_secret_free`
   first failed because `runs` and `runs.jsonl` did not exist, then passed after
   adding the run ledger.

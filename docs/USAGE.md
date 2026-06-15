@@ -191,14 +191,17 @@ After an actual agent run, inspect the secret-free run ledger:
 ```bash
 runhaven runs list --limit 20
 runhaven runs show <run-id>
+runhaven runs log <run-id>
 runhaven runs show <run-id> --json
+runhaven runs log <run-id> --json
 ```
 
 Run records are stored under RunHaven's cache directory in `runs.jsonl`. They
 include run id, profile, workspace, network mode, return code, provider policy
 summary, auth broker summary, and cleanup outcome. They do not include command
 lines, agent arguments, environment variable names, environment values, request
-bodies, or token values.
+bodies, or token values. `runs log` joins the run record with matching
+provider policy and auth broker entries for the same run id.
 
 ## Provider Egress Smoke
 
