@@ -118,6 +118,9 @@ repo and link to primary sources instead.
 - 2026-06-15: Continued the pre-release modularization pass by splitting the
   900-line `tests/test_cli_active_commands.py` into focused CLI test files for
   active listing, attach/logs-follow, status, and stop/kill.
+- 2026-06-15: Continued the pre-release modularization pass by splitting the
+  663-line `tests/test_cli_run_history.py` into focused CLI test files for
+  run list/show, run diff, and joined run logs.
 - 2026-06-15: Reviewed "Development On Apple Silicon with Apple Container
   Machine" and recorded UX backlog items in
   `docs/harness/ux-research-ideas.md`: explain why RunHaven avoids

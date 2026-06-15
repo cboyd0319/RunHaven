@@ -7,12 +7,11 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the active-command CLI test split:
+Measured on 2026-06-15 after the run-history CLI test split:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
 | `src/runhaven/cli.py` | 767 | Still owns parser, command routing, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
-| `tests/test_cli_run_history.py` | 663 | Owns `runs list/show/diff/log` CLI coverage. |
 | `tests/test_cli_provider_runtime.py` | 622 | Owns provider runtime, Codex broker run, and internal-network CLI coverage. |
 | `src/runhaven/run_history.py` | 604 | Owns run-record persistence, git metadata capture, and `runs list/show/log/diff`. |
 | `src/runhaven/active_commands.py` | 569 | Owns active-run command handlers, sanitized status output, attach/log-follow command construction, stop/kill, and repair. |
@@ -25,10 +24,13 @@ Measured on 2026-06-15 after the active-command CLI test split:
 | `tests/test_cli_active_attach_logs.py` | 369 | Owns active attach and logs-follow coverage. |
 | `tests/test_cli_standard_run.py` | 304 | Owns standard run record and active-marker lifecycle coverage. |
 | `tests/test_cli_diagnostics.py` | 273 | Owns `auth`, `egress log`, and `why host` CLI coverage. |
+| `tests/test_cli_runs_log.py` | 269 | Owns `runs log` text and JSON coverage. |
 | `src/runhaven/diagnostic_commands.py` | 249 | Owns `auth status/explain/log`, `egress log`, `why host`, and diagnostic log readers. |
+| `tests/test_cli_runs_diff.py` | 233 | Owns `runs diff` git validation and output coverage. |
 | `tests/test_cli_active_status.py` | 233 | Owns active status coverage. |
 | `tests/test_cli.py` | 228 | Owns core CLI, setup, doctor, and plan smoke coverage. |
 | `tests/test_cli_active_stop_kill.py` | 216 | Owns active stop and kill coverage. |
+| `tests/test_cli_runs_list_show.py` | 195 | Owns `runs list` and `runs show` coverage. |
 | `tests/test_cli_active_list.py` | 133 | Owns active-run list coverage. |
 | `tests/cli_test_helpers.py` | 107 | Shared git, run-record, and active-marker helpers for split CLI tests. |
 | `tests/test_cli_state.py` | 80 | Owns state list, prune, and state lock coverage. |
@@ -110,7 +112,8 @@ auth output, provider policy log output, `why host` provider matching, and
 - `tests/test_cli_active_commands.py`: active listing, attach, logs-follow,
   status, stop, and kill coverage.
 - `tests/test_cli_active_repair.py`: stale active-marker repair coverage.
-- `tests/test_cli_run_history.py`: `runs list/show/diff/log` coverage.
+- `tests/test_cli_runs_list_show.py`, `tests/test_cli_runs_diff.py`, and
+  `tests/test_cli_runs_log.py`: `runs list/show/diff/log` coverage.
 - `tests/test_cli_diagnostics.py`: `auth`, `egress log`, and `why host`
   diagnostic coverage.
 - `tests/test_cli_state.py`: state list, prune, and state lock coverage.
@@ -134,12 +137,24 @@ tests and the same production patch targets.
 This removes the 900-line active-command CLI test file while preserving the
 existing 33 active-command tests and the same production patch targets.
 
+## Run-History CLI Test Split Completed
+
+- `tests/test_cli_runs_list_show.py`: `runs list` text output,
+  `runs show --json`, and git summary coverage.
+- `tests/test_cli_runs_diff.py`: committed, dirty, untracked, mixed, and
+  fail-closed `runs diff` coverage.
+- `tests/test_cli_runs_log.py`: joined secret-free `runs log` text and JSON
+  coverage.
+
+This removes the 663-line run-history CLI test file while preserving the
+existing 12 run-history tests and the same production patch targets.
+
 ## Recommended Sequence
 
-1. Split `tests/test_cli_run_history.py` or `tests/test_cli_provider_runtime.py`
-   further if the next cleanup pass stays focused on large test files. Good
-   seams are run list/show, run diff/log, provider proxy lifecycle, Codex broker
-   run integration, and internal-network commands.
+1. Split `tests/test_cli_provider_runtime.py` further if the next cleanup pass
+   stays focused on large test files. Good seams are provider proxy lifecycle,
+   Codex broker run integration, provider run record and policy log coverage,
+   and internal-network commands.
 
 2. Review `scripts/check_pins.py`, `src/runhaven/auth_broker.py`, and
    `src/runhaven/provider_runtime.py` for complexity-only refactors. Keep them
