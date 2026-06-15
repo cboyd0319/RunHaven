@@ -62,6 +62,7 @@ from .run_history import (
     runs_show,
     write_run_record,
 )
+from .session_state import validate_session_name, volume_matches_session
 from .setup_guide import print_checks, print_setup_guide
 from .worktree_lifecycle import (
     runs_worktree_discard,
@@ -210,9 +211,11 @@ def image_command(args: argparse.Namespace) -> int:
 
 def state_command(args: argparse.Namespace) -> int:
     if args.state_command == "list":
-        return state_list()
+        return state_list(session=args.session)
     if args.state_command == "prune":
-        return state_prune(confirm=args.yes)
+        return state_prune(confirm=args.yes, session=args.session)
+    if args.state_command == "reset":
+        return state_reset(args)
     raise ValueError(f"unknown state command: {args.state_command}")
 
 
@@ -349,6 +352,7 @@ def make_run_plan(
             memory=args.memory,
             network=args.network,
             workspace_scope=args.workspace_scope,
+            session=args.session,
             read_only_workspace=args.read_only_workspace,
             ssh=args.ssh,
             env=tuple(args.env),
@@ -373,6 +377,7 @@ def print_run_plan(plan: AgentRunPlan) -> None:
     if plan.worktree is not None:
         print(f"Worktree: {plan.worktree.worktree_root}")
         print(f"Worktree branch: {plan.worktree.branch}")
+    print(f"Session: {plan.session}")
     print(f"State volume: {plan.state_volume}")
     print(f"Network: {plan.network_name or 'default internet network'}")
     print(f"Egress: {plan.egress_summary}")
@@ -443,22 +448,32 @@ def ensure_internal_network(name: str) -> None:
     provider_runtime.ensure_internal_network(name)
 
 
-def state_list() -> int:
+def state_list(*, session: str | None = None) -> int:
+    if session is not None:
+        validate_session_name(session)
     require_container_cli()
-    volumes = list_state_volumes()
+    volumes = list_state_volumes(session=session)
     if not volumes:
-        print("No RunHaven state volumes found.")
+        if session:
+            print(f"No RunHaven state volumes found for session {session}.")
+        else:
+            print("No RunHaven state volumes found.")
         return 0
     for volume in volumes:
         print(volume)
     return 0
 
 
-def state_prune(*, confirm: bool) -> int:
+def state_prune(*, confirm: bool, session: str | None = None) -> int:
+    if session is not None:
+        validate_session_name(session)
     require_container_cli()
-    volumes = list_state_volumes()
+    volumes = list_state_volumes(session=session)
     if not volumes:
-        print("No RunHaven state volumes found.")
+        if session:
+            print(f"No RunHaven state volumes found for session {session}.")
+        else:
+            print("No RunHaven state volumes found.")
         return 0
     if not confirm:
         for volume in volumes:
@@ -472,7 +487,33 @@ def state_prune(*, confirm: bool) -> int:
     return 0
 
 
-def list_state_volumes() -> tuple[str, ...]:
+def state_reset(args: argparse.Namespace) -> int:
+    profile = get_profile(args.agent)
+    plan = build_run_plan(
+        RunOptions(
+            profile=profile,
+            workspace=args.workspace,
+            workspace_scope=args.workspace_scope,
+            session=args.session,
+            allow_sensitive_workspace=args.allow_sensitive_workspace,
+            interactive=False,
+            tty=False,
+        )
+    )
+    if not args.yes:
+        print(f"State volume: {plan.state_volume}")
+        print(f"Session: {plan.session}")
+        print("Rerun with --yes to delete this volume.")
+        return 2
+
+    require_container_cli()
+    result = subprocess.run(("container", "volume", "delete", plan.state_volume), check=False)
+    if result.returncode == 0:
+        print(f"Deleted state volume: {plan.state_volume}")
+    return result.returncode
+
+
+def list_state_volumes(*, session: str | None = None) -> tuple[str, ...]:
     result = subprocess.run(
         ("container", "volume", "list", "--quiet"),
         check=False,
@@ -484,7 +525,7 @@ def list_state_volumes() -> tuple[str, ...]:
     return tuple(
         line.strip()
         for line in result.stdout.splitlines()
-        if line.strip().startswith("runhaven-") and line.strip().endswith("-home")
+        if volume_matches_session(line.strip(), session)
     )
 
 

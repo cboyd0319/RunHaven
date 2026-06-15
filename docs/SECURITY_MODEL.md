@@ -33,7 +33,7 @@ Sensitive:
 `runhaven` protects against accidental broad local access by default:
 
 - mounts only the selected workspace
-- isolates agent home state in a project-specific named volume
+- isolates agent home state in a project/profile/session named volume
 - runs a read-only root filesystem
 - drops Linux capabilities
 - uses a non-root user in bundled images
@@ -49,9 +49,12 @@ before the agent starts. That preflight mounts only the project-scoped
 `/home/agent` volume, sets ownership for UID/GID 1000, runs without DNS, and
 uses a dedicated internal network.
 
-`runhaven` also serializes access to each project/profile home volume. This avoids
-concurrent attachment of the same named volume and keeps the failure mode
-understandable for non-technical users.
+`runhaven` also serializes access to each project/profile/session home volume.
+This avoids concurrent attachment of the same named volume and keeps the
+failure mode understandable for non-technical users. Named sessions selected
+with `--session NAME` reuse only the isolated `/home/agent` volume; they do not
+widen workspace mounts or host credential access. `state reset` and
+session-filtered `state prune` delete RunHaven-managed home volumes only.
 
 ## Why Not Container Machine
 

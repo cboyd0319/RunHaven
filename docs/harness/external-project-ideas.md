@@ -118,7 +118,8 @@ Relevant ideas:
 RunHaven direction:
 
 - Add warm reusable project sessions as a product goal, while preserving
-  explicit workspace and mount scope.
+  explicit workspace and mount scope. Implemented 2026-06-15 with
+  `--session`, `state reset`, and session-filtered list/prune commands.
 - Treat state volumes and run records as user-visible session concepts instead
   of hidden implementation detail.
 
@@ -376,6 +377,7 @@ RunHaven direction:
    disabled unless explicitly approved.
 8. Extension/MCP boundary model: default off, explicit allowlists, scoped roots,
    timeouts, health checks, and no project-local weakening.
-9. Warm reusable project sessions with explicit reset/prune UX.
+9. Warm reusable project sessions with explicit reset/prune UX. Implemented
+   2026-06-15.
 10. Source-backed docs drift checks for platform support, profiles, network
     modes, provider endpoints, and image templates.

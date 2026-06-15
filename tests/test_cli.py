@@ -41,6 +41,17 @@ class CliCoreTests(unittest.TestCase):
         self.assertIn("/bin/bash -lc pwd", text)
         self.assertIn("Egress: unrestricted internet", text)
 
+    def test_plan_prints_named_session(self) -> None:
+        with TemporaryDirectory() as directory:
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = main(["plan", "shell", "--workspace", directory, "--session", "review"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Session: review", text)
+        self.assertIn("-s-review-", text)
+
     def test_plan_git_root_workspace_scope_expands_and_prints_note(self) -> None:
         with TemporaryDirectory() as directory:
             repo = Path(directory)

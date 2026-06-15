@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add project check suggestions for worktree review.
+Add warm reusable project sessions with reset and prune UX.
 
 ## Current State
 
@@ -39,6 +39,12 @@ Add project check suggestions for worktree review.
 - Internal network reuse now verifies Apple `container` reports `hostOnly`.
 - `runhaven state list` and `runhaven state prune --yes` manage isolated agent
   home volumes.
+- `runhaven plan` and `runhaven run` now accept `--session NAME` to select a
+  reusable named project/profile home volume without changing the workspace
+  mount. Active markers and run records include the selected session and state
+  volume. `runhaven state reset AGENT --session NAME --yes`, `state list
+  --session NAME`, and `state prune --session NAME --yes` provide explicit
+  cleanup paths for named sessions.
 - Dev dependencies now match the `unittest` suite and no longer include pytest.
 - `scripts/check_pins.py` now enforces `pins.toml` against source files.
 - Follow-up hardening now rejects root group identities such as `agent:0`
@@ -408,8 +414,9 @@ Add project check suggestions for worktree review.
 ## Recommended Next Step
 
 Run the optional Codex broker smoke with a disposable OpenAI API key when one
-is available. Next product slice: design warm reusable project sessions with
-explicit reset and prune UX.
+is available. Next product slice: add image and managed-network repair UX so
+users can recover stale local runtime resources without guessing Apple
+`container` commands.
 
 ## Verification Evidence
 
@@ -1336,3 +1343,24 @@ explicit reset and prune UX.
   41 Markdown files, `git diff --check`,
   `PYTHONPATH=src python3 -m runhaven runs recover --help`, and
   `PYTHON=<temporary-venv-python> ./init.sh`.
+- 2026-06-15: Warm reusable session red/green focused tests passed for
+  deterministic named-session planning, invalid session rejection,
+  secret-free active/run-record session metadata, `state list --session`,
+  `state prune --session`, exact `state reset`, and reset confirmation
+  behavior.
+- 2026-06-15: Focused warm session verification passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli tests.test_plans tests.test_cli_state tests.test_cli_standard_run`
+  with 71 tests, `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check` on touched Python and test files, and
+  `uvx --from mypy==2.1.0 mypy src`.
+- 2026-06-15: Full warm reusable session verification passed:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src:tests python3 -m unittest discover -s tests` with 183
+  tests, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  41 Markdown files, `git diff --check`,
+  `PYTHONPATH=src python3 -m runhaven run --help`,
+  `PYTHONPATH=src python3 -m runhaven state reset --help`,
+  `PYTHONPATH=src python3 -m runhaven plan shell --session review --tty never -- /bin/true`,
+  and `PYTHON=<temporary-venv-python> ./init.sh`.

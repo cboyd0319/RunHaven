@@ -22,6 +22,7 @@ def write_active_run_record(plan: AgentRunPlan, *, run_id: str, started_at: str)
         "status": "running",
         "container_name": plan.container_name,
         "state_volume": plan.state_volume,
+        "session": plan.session,
         "network_name": plan.network_name,
         "host_pid": os.getpid(),
     }

@@ -61,6 +61,7 @@ The plan prints:
 
 - the mounted workspace
 - the workspace scope choice
+- the selected project session
 - the per-project state volume
 - the selected network mode
 - the egress status for that network mode
@@ -73,9 +74,10 @@ The plan prints:
 runhaven run claude
 ```
 
-`runhaven` allows one active run per project/profile state volume. If another run is
-already using the same isolated home volume, `runhaven` fails before starting Apple
-`container` and tells you to wait or use a different workspace/profile.
+`runhaven` allows one active run per project/profile/session state volume. If
+another run is already using the same isolated home volume, `runhaven` fails
+before starting Apple `container` and tells you to wait or use a different
+workspace, profile, or session.
 When a run starts, RunHaven prints a run id to stderr. From another terminal,
 use that id to request a graceful stop. If the id scrolls away, list active
 runs first. To inspect or intervene while the run is active, attach from
@@ -465,12 +467,31 @@ runhaven run claude --ssh
 This forwards the macOS SSH agent socket using Apple `container --ssh`. It does
 not mount `~/.ssh`.
 
-## State Volumes
+## Reusable Sessions And State Volumes
 
 ```bash
+runhaven run claude --session review
+runhaven plan claude --session review
 runhaven state list
+runhaven state list --session review
+runhaven state reset claude --session review --yes
+runhaven state prune --session review --yes
 runhaven state prune --yes
 ```
 
-`state list` shows RunHaven agent home volumes. `state prune --yes` deletes
-those isolated agent home volumes and does not touch workspace files.
+The default session is the existing per-project/profile isolated home volume.
+`--session NAME` selects a named reusable home volume for the same
+project/profile. Use lowercase letters, numbers, dots, underscores, or dashes;
+`default` is reserved for the implicit default session.
+
+Named sessions are useful when you want one warm agent environment for review,
+another for dependency work, or a disposable scratch state without changing the
+workspace mount. Sessions do not widen filesystem access; they only choose the
+RunHaven-managed `/home/agent` volume.
+
+`state list` shows RunHaven agent home volumes. `state list --session NAME` and
+`state prune --session NAME --yes` filter named-session volumes. `state reset
+AGENT --workspace PATH --session NAME --yes` recomputes the exact
+project/profile/session volume and deletes only that volume. Omit `--session`
+to reset the default project/profile volume. These commands do not touch
+workspace files.

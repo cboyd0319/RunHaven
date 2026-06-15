@@ -120,6 +120,64 @@ class CliStandardRunTests(unittest.TestCase):
             self.assertEqual(len(active_payloads), 1)
             self.assertEqual(list((cache / "active-runs").glob("*.json")), [])
 
+    def test_named_session_is_recorded_without_command_or_secret_values(self) -> None:
+        with TemporaryDirectory() as directory:
+            cache = Path(directory) / "cache"
+            workspace = Path(directory) / "workspace"
+            workspace.mkdir()
+            active_payloads: list[dict[str, object]] = []
+
+            def fake_container_run(command: tuple[str, ...]) -> int:
+                active_files = list((cache / "active-runs").glob("*.json"))
+                self.assertEqual(len(active_files), 1)
+                payload = json.loads(active_files[0].read_text(encoding="utf-8"))
+                active_payloads.append(payload)
+                self.assertEqual(payload["session"], "review")
+                self.assertIn("-s-review-", str(payload["state_volume"]))
+                self.assertTrue(any(str(payload["state_volume"]) in part for part in command))
+                return 0
+
+            with (
+                patch.dict(
+                    "os.environ",
+                    {
+                        "RUNHAVEN_CACHE_HOME": str(cache),
+                        "OPENAI_API_KEY": "fake-openai-api-key-value",
+                    },
+                    clear=True,
+                ),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.run_preflight"),
+                patch("runhaven.cli.subprocess.call", side_effect=fake_container_run),
+            ):
+                code = main(
+                    [
+                        "run",
+                        "shell",
+                        "--workspace",
+                        str(workspace),
+                        "--session",
+                        "review",
+                        "--tty",
+                        "never",
+                        "--",
+                        "/bin/true",
+                    ]
+                )
+
+            records = [
+                json.loads(line)
+                for line in (cache / "runs.jsonl").read_text(encoding="utf-8").splitlines()
+            ]
+
+        self.assertEqual(code, 0)
+        self.assertEqual(active_payloads[0]["session"], "review")
+        self.assertEqual(records[0]["session"], "review")
+        self.assertIn("-s-review-", records[0]["state_volume"])
+        serialized = json.dumps(records)
+        self.assertNotIn("/bin/true", serialized)
+        self.assertNotIn("fake-openai-api-key-value", serialized)
+
     def test_standard_run_records_stopped_status_when_stop_requested(self) -> None:
         with TemporaryDirectory() as directory:
             cache = Path(directory) / "cache"

@@ -78,6 +78,8 @@ setup. See [Usage](docs/USAGE.md) for command-level workflows.
   status, preflight setup, and Apple `container run` command before execution.
 - `runhaven run` mounts one selected workspace and one isolated per-project
   agent home volume.
+- `--session NAME` selects a reusable named project/profile home volume, with
+  explicit reset and prune commands.
 - Bundled images run as a non-root `agent` user with a read-only root
   filesystem, temporary scratch space, and dropped Linux capabilities.
 - `--workspace-scope current|git-root` keeps the default mount narrow and makes
@@ -128,6 +130,7 @@ runhaven plan shell --image my-agent:2026.06.14 -- my-agent --help
 | Build a bundled image | `runhaven image build claude` |
 | Preview a run | `runhaven plan claude` |
 | Run an agent | `runhaven run claude` |
+| Run with a named session | `runhaven run claude --session review` |
 | Read-only review | `runhaven run codex --read-only-workspace` |
 | Provider-restricted run | `runhaven run claude --network provider` |
 | Local-only command | `runhaven run shell --network internal -- python -m unittest discover -s tests` |
@@ -141,6 +144,7 @@ runhaven plan shell --image my-agent:2026.06.14 -- my-agent --help
 | Provider policy log | `runhaven egress log --limit 20` |
 | Auth broker status | `runhaven auth status` |
 | Isolated state volumes | `runhaven state list` |
+| Reset one session | `runhaven state reset claude --session review --yes` |
 
 ## Documentation
 

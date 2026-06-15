@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add project check suggestions for worktree review.
+Add warm reusable project sessions with reset and prune UX.
 
 ## Files
 
@@ -40,6 +40,7 @@ Add project check suggestions for worktree review.
 - `src/runhaven/provider_runtime.py`
 - `src/runhaven/project_checks.py`
 - `src/runhaven/run_history.py`
+- `src/runhaven/session_state.py`
 - `src/runhaven/worktree_lifecycle.py`
 - `src/runhaven/worktrees.py`
 - `scripts/check_pins.py`
@@ -298,6 +299,27 @@ Add project check suggestions for worktree review.
   41 Markdown files, `git diff --check`,
   `PYTHONPATH=src python3 -m runhaven runs recover --help`, and
   `PYTHON=<temporary-venv-python> ./init.sh`.
+- Warm reusable session red/green focused tests passed for deterministic
+  named-session planning, invalid session rejection, secret-free
+  active/run-record session metadata, `state list --session`,
+  `state prune --session`, exact `state reset`, and reset confirmation
+  behavior.
+- Focused warm session verification passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli tests.test_plans tests.test_cli_state tests.test_cli_standard_run`
+  with 71 tests, `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check` on touched Python and test files, and
+  `uvx --from mypy==2.1.0 mypy src`.
+- Full warm reusable session verification passed:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src:tests python3 -m unittest discover -s tests` with 183
+  tests, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  41 Markdown files, `git diff --check`,
+  `PYTHONPATH=src python3 -m runhaven run --help`,
+  `PYTHONPATH=src python3 -m runhaven state reset --help`,
+  `PYTHONPATH=src python3 -m runhaven plan shell --session review --tty never -- /bin/true`,
+  and `PYTHON=<temporary-venv-python> ./init.sh`.
 - Focused CLI test split checks passed: `python3 -m compileall tests`,
   `uvx --from ruff==0.15.17 ruff check` on the split CLI test files, and
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`
@@ -1243,6 +1265,12 @@ Add project check suggestions for worktree review.
   commands against the recorded worktree workspace. The recovery JSON output
   includes the same suggestions for automation. Suggestions are advisory and
   are not run automatically.
+- `runhaven plan` and `runhaven run` now accept `--session NAME` to select a
+  reusable named project/profile home volume without changing the workspace
+  mount. Active markers and run records include the selected session and state
+  volume. `runhaven state reset AGENT --session NAME --yes`, `state list
+  --session NAME`, and `state prune --session NAME --yes` provide explicit
+  cleanup paths for named sessions.
 
 ## Next Session
 
@@ -1255,7 +1283,8 @@ Add project check suggestions for worktree review.
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
 5. Run the Codex broker smoke with a disposable OpenAI API key when available.
-6. Design warm reusable project sessions with explicit reset and prune UX.
+6. Add image and managed-network repair UX so users can recover stale local
+   runtime resources without guessing Apple `container` commands.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

@@ -12,7 +12,8 @@ supported runtimes or contributor verification targets.
 RunHaven generates Apple `container` commands with these defaults:
 
 - one selected project mounted at `/workspace`
-- one per-project agent home volume mounted at the container agent home path
+- one per-project/profile/session agent home volume mounted at the container
+  agent home path
 - no macOS home directory mount
 - no raw SSH key mount
 - no host cloud credential mount
@@ -146,16 +147,23 @@ the agent process printed during the run.
 
 ## State Management
 
-Each project/profile gets an isolated agent home volume. List and prune those
-volumes with:
+Each project/profile gets an isolated default agent home volume. Use
+`--session NAME` to choose a named reusable project/profile home volume:
 
 ```bash
+runhaven run claude --session review
 runhaven state list
+runhaven state list --session review
+runhaven state reset claude --session review --yes
+runhaven state prune --session review --yes
 runhaven state prune --yes
 ```
 
-`state prune --yes` deletes RunHaven agent home volumes. It does not touch
-workspace files.
+Session names use lowercase letters, numbers, dots, underscores, or dashes;
+`default` is reserved for the implicit default session. `state reset` deletes
+one planned project/profile/session home volume. `state prune --session NAME
+--yes` deletes matching named-session volumes. `state prune --yes` deletes
+RunHaven agent home volumes. These commands do not touch workspace files.
 
 ## Current Limits
 

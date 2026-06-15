@@ -121,6 +121,10 @@ repo and link to primary sources instead.
   test/lint scripts and Python `tests/` as internal-network shell commands
   against the recorded worktree; `runs recover --json` includes the same
   advisory suggestions.
+- 2026-06-15: Implemented warm reusable project sessions from the UX backlog.
+  `plan` and `run` accept `--session NAME`, active and completed run records
+  include the session and state volume, and `state reset`, `state list
+  --session`, and `state prune --session` provide explicit cleanup paths.
 - 2026-06-15: Added a pre-release backlog item to consider a major large-file
   refactor and modularization pass, especially around the CLI and broad test
   modules, before release.

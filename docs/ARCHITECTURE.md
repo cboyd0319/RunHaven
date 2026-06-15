@@ -16,7 +16,7 @@ and unrelated repositories.
 `runhaven run` generates this shape:
 
 - host workspace mounted at `/workspace`
-- per-project named volume mounted at `/home/agent`
+- per-project/profile/session named volume mounted at `/home/agent`
 - read-only root filesystem
 - tmpfs at `/tmp`
 - non-root `agent` user in bundled images
@@ -33,10 +33,12 @@ volume in a short-lived root container so `/home/agent` is writable by UID/GID
 filesystem, disables DNS, and attaches to a dedicated internal network.
 
 Because Apple container named volumes cannot be attached to two running
-containers at the same time, `runhaven run` holds a host-side lock for the selected
-state volume until the run exits. Concurrent runs for the same workspace/profile
-fail early with a clear message instead of surfacing a low-level VM storage
-error.
+containers at the same time, `runhaven run` holds a host-side lock for the
+selected state volume until the run exits. Concurrent runs for the same
+workspace/profile/session fail early with a clear message instead of surfacing
+a low-level VM storage error. The implicit default session preserves existing
+per-project/profile volume names. `--session NAME` selects a deterministic
+named-session volume for the same project and profile.
 
 ## Profiles
 
@@ -109,8 +111,9 @@ Internet mode remains unrestricted egress.
 Actual `runhaven run` executions append one JSON object to `runs.jsonl` under
 the RunHaven cache root. While a run is active, RunHaven also writes a
 temporary secret-free marker under `active-runs/` with run id, profile,
-workspace, network mode, state volume, host pid, and the RunHaven-owned
-container name. `runhaven runs active` lists current active markers.
+workspace, network mode, session, state volume, host pid, and the
+RunHaven-owned container name. `runhaven runs active` lists current active
+markers.
 `runhaven runs status RUN_ID` reads one marker, calls Apple `container inspect`
 for the named container, and prints only curated state, image, resource, and
 network fields.
@@ -129,9 +132,10 @@ Apple inspect output or marker contents. The marker is removed when the run
 finishes.
 `runhaven runs list`, `runhaven runs show RUN_ID`, and `runhaven runs log
 RUN_ID` read the completed-run ledger. Records include run id,
-timestamps, profile, workspace, network mode, return code, provider policy
-summary, auth broker summary, cleanup outcome, and git change metadata when the
-workspace is inside a git repository. Git metadata records repo root, before
+timestamps, profile, workspace, session, state volume, network mode, return
+code, provider policy summary, auth broker summary, cleanup outcome, and git
+change metadata when the workspace is inside a git repository. Git metadata
+records repo root, before
 and after `HEAD`, dirty state, changed file count, and a capped list of
 relative paths scoped to the selected workspace. Worktree runs also record the
 source repo, RunHaven-owned worktree path, branch, base `HEAD`, mounted

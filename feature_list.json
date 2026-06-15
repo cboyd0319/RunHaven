@@ -123,6 +123,33 @@
       "notes": "The default remains `current` to avoid surprising mount broadening. Use `git-root` only when the agent needs the full repository at `/workspace`."
     },
     {
+      "id": "warm-reusable-project-sessions",
+      "priority": 5,
+      "area": "usability",
+      "title": "Warm reusable project sessions",
+      "user_visible_behavior": "`runhaven plan` and `runhaven run` accept `--session NAME` to reuse a named project/profile agent home volume, while `state reset`, `state list --session`, and `state prune --session` provide explicit cleanup paths.",
+      "status": "passing",
+      "dependencies": [
+        "runtime-hardening-macos-only-boundary",
+        "run-observability"
+      ],
+      "verification": [
+        "`--session NAME` selects a deterministic project/profile/session state volume without changing the workspace mount",
+        "Invalid session names fail before command construction",
+        "Active run markers and completed run records include session and state volume metadata without command lines or secrets",
+        "`state list --session NAME` lists only matching named-session volumes",
+        "`state prune --session NAME --yes` deletes only matching named-session volumes",
+        "`state reset AGENT --workspace PATH --session NAME --yes` deletes exactly the planned project/profile/session volume",
+        "`state reset` without `--yes` prints the planned volume and does not delete it"
+      ],
+      "evidence": [
+        "2026-06-15: Red/green focused tests passed for named session planning, invalid session rejection, secret-free run-record session metadata, session-filtered state listing and pruning, and exact `state reset` confirmation behavior.",
+        "2026-06-15: Focused core, planner, state, and standard-run suites passed with 71 tests; compileall, focused ruff, and mypy also passed.",
+        "2026-06-15: Full verification passed with compileall, 183 unit tests, pin check, ruff, mypy, build, JSON validation, Markdown link check, `runhaven run --help`, `runhaven state reset --help`, `runhaven plan shell --session review`, `git diff --check`, and `PYTHON=<temporary-venv-python> ./init.sh` after adding warm reusable sessions."
+      ],
+      "notes": "The implicit default session preserves existing per-project/profile volume names. Named sessions reuse only the isolated `/home/agent` volume and do not widen workspace mounts or host credential access. `default` is reserved for the implicit session."
+    },
+    {
       "id": "provider-egress-allowlisting",
       "priority": 4,
       "area": "security",

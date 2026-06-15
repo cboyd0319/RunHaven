@@ -12,6 +12,7 @@ from typing import Literal
 from .egress import is_ip_literal, normalize_host
 from .git_metadata import git_repo_root
 from .profiles import AgentProfile
+from .session_state import SESSION_DEFAULT, state_volume_name, validate_session_name
 from .validators import validate_run_id
 
 NetworkMode = Literal["internet", "internal", "provider"]
@@ -58,6 +59,7 @@ class RunOptions:
     memory: str = "4g"
     network: NetworkMode = "internet"
     workspace_scope: WorkspaceScope = "current"
+    session: str | None = None
     read_only_workspace: bool = False
     ssh: bool = False
     env: tuple[str, ...] = ()
@@ -78,6 +80,7 @@ class AgentRunPlan:
     preflight: tuple[tuple[str, ...], ...]
     workspace: Path
     state_volume: str
+    session: str
     container_name: str
     profile_name: str
     workspace_scope: WorkspaceScope
@@ -129,9 +132,10 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
     if uses_root_identity(options.user) and not options.allow_root_user:
         raise ValueError("root user or group requires --allow-root-user")
     provider_allowed_hosts = provider_hosts_for_options(options)
+    session = normalize_session(options.session)
 
     project_id = project_identifier(workspace)
-    state_volume = safe_resource_name(f"runhaven-{options.profile.name}-{project_id}-home")
+    state_volume = state_volume_name(options.profile.name, project_id, options.session)
     container_name = safe_resource_name(f"runhaven-{options.profile.name}-{project_id}-run")
     network_name = safe_resource_name(f"runhaven-{project_id}-internal")
     image = options.image or options.profile.image
@@ -240,6 +244,7 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         preflight=tuple(preflight),
         workspace=workspace,
         state_volume=state_volume,
+        session=session,
         container_name=container_name,
         profile_name=options.profile.name,
         workspace_scope=options.workspace_scope,
@@ -397,6 +402,12 @@ def validate_network_mode(network: str) -> None:
 def validate_workspace_scope(scope: str) -> None:
     if scope not in SUPPORTED_WORKSPACE_SCOPES:
         raise ValueError(f"invalid workspace scope: {scope!r}")
+
+
+def normalize_session(session: str | None) -> str:
+    if session is None:
+        return SESSION_DEFAULT
+    return validate_session_name(session)
 
 
 def network_egress_summary(

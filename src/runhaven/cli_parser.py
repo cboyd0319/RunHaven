@@ -71,9 +71,41 @@ def build_parser() -> argparse.ArgumentParser:
 
     state_parser = subcommands.add_parser("state", help="inspect or remove RunHaven state volumes")
     state_subcommands = state_parser.add_subparsers(dest="state_command", required=True)
-    state_subcommands.add_parser("list", help="list RunHaven agent home volumes")
+    state_list_parser = state_subcommands.add_parser(
+        "list",
+        help="list RunHaven agent home volumes",
+    )
+    state_list_parser.add_argument("--session", help="only list volumes for this named session")
     prune_parser = state_subcommands.add_parser("prune", help="remove RunHaven agent home volumes")
+    prune_parser.add_argument("--session", help="only prune volumes for this named session")
     prune_parser.add_argument("--yes", action="store_true", help="delete listed volumes")
+    reset_parser = state_subcommands.add_parser(
+        "reset",
+        help="delete one planned project/profile/session state volume",
+    )
+    reset_parser.add_argument("agent", choices=sorted(PROFILES), help="agent profile to reset")
+    reset_parser.add_argument(
+        "--workspace",
+        type=Path,
+        default=Path("."),
+        help="host project directory whose state volume should be reset",
+    )
+    reset_parser.add_argument(
+        "--workspace-scope",
+        choices=SUPPORTED_WORKSPACE_SCOPES,
+        default="current",
+        help=(
+            "current resets the selected directory state; git-root explicitly expands "
+            "to the containing git repository root"
+        ),
+    )
+    reset_parser.add_argument("--session", help="named session to reset")
+    reset_parser.add_argument(
+        "--allow-sensitive-workspace",
+        action="store_true",
+        help="allow resolving broad or credential-bearing host paths for reset targeting",
+    )
+    reset_parser.add_argument("--yes", action="store_true", help="delete the planned volume")
 
     runs_parser = subcommands.add_parser("runs", help="inspect RunHaven run history")
     runs_subcommands = runs_parser.add_subparsers(dest="runs_command", required=True)
@@ -264,6 +296,10 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
             "current mounts the selected directory; git-root explicitly expands "
             "to the containing git repository root"
         ),
+    )
+    parser.add_argument(
+        "--session",
+        help="named reusable project session for the agent home volume",
     )
     parser.add_argument("--image", help="override the profile image")
     parser.add_argument("--cpus", default="4", help="virtual CPUs for the container")

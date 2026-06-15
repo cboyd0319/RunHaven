@@ -16,9 +16,14 @@ RunHaven already has useful safety UX:
 - `runhaven doctor` checks host prerequisites.
 - `runhaven plan` shows workspace, state volume, network mode, egress status,
   preflight, and the Apple `container run` command.
+- `runhaven plan` and `runhaven run` support named reusable project sessions
+  with `--session NAME`.
 - `runhaven run --network provider` reports blocked provider hosts after a run.
 - `runhaven state list` and `runhaven state prune --yes` expose isolated agent
   home volumes.
+- `runhaven state reset`, `state list --session NAME`, and
+  `state prune --session NAME --yes` provide explicit cleanup paths for warm
+  named sessions.
 - The README explains the default boundary and warns that internet mode is
   unrestricted.
 

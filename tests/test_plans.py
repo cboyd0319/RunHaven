@@ -67,6 +67,50 @@ class RunPlanTests(unittest.TestCase):
         self.assertEqual(plan.network_mode, "internal")
         self.assertIn("host-only", plan.egress_summary)
 
+    def test_named_session_uses_deterministic_project_state_volume(self) -> None:
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            first = build_run_plan(
+                RunOptions(
+                    profile=get_profile("claude"),
+                    workspace=workspace,
+                    session="review",
+                )
+            )
+            second = build_run_plan(
+                RunOptions(
+                    profile=get_profile("claude"),
+                    workspace=workspace,
+                    session="review",
+                )
+            )
+            other = build_run_plan(
+                RunOptions(
+                    profile=get_profile("claude"),
+                    workspace=workspace,
+                    session="dependencies",
+                )
+            )
+
+        self.assertEqual(first.session, "review")
+        self.assertEqual(first.state_volume, second.state_volume)
+        self.assertNotEqual(first.state_volume, other.state_volume)
+        self.assertTrue(first.state_volume.startswith("runhaven-claude-"))
+        self.assertIn("-s-review-", first.state_volume)
+        self.assertTrue(first.state_volume.endswith("-home"))
+        self.assertIn(first.state_volume, first.shell_command())
+
+    def test_invalid_session_name_is_rejected(self) -> None:
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "invalid session name"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("shell"),
+                        workspace=Path(directory),
+                        session="../shared",
+                    )
+                )
+
     def test_current_workspace_scope_keeps_subdirectory_inside_git_repo(self) -> None:
         with TemporaryDirectory() as directory:
             repo = Path(directory)

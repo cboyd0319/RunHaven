@@ -49,6 +49,8 @@ def write_run_record(
         "profile": plan.profile_name,
         "workspace": str(plan.workspace),
         "workspace_scope": plan.workspace_scope,
+        "state_volume": plan.state_volume,
+        "session": plan.session,
         "network": plan.network_mode,
         "status": status or ("succeeded" if return_code == 0 else "failed"),
         "return_code": return_code,
@@ -140,6 +142,10 @@ def runs_show(run_id: str, *, json_output: bool) -> int:
     print(f"Workspace: {record.get('workspace', 'unknown')}")
     if record.get("workspace_scope"):
         print(f"Workspace scope: {record.get('workspace_scope')}")
+    if record.get("session"):
+        print(f"Session: {record.get('session')}")
+    if record.get("state_volume"):
+        print(f"State volume: {record.get('state_volume')}")
     worktree = record.get("worktree")
     if isinstance(worktree, dict):
         print(f"Worktree: {worktree.get('worktree_root', 'unknown')}")

@@ -29,6 +29,7 @@ ACTIVE_RUN_PUBLIC_FIELDS = (
     "status",
     "container_name",
     "state_volume",
+    "session",
     "network_name",
     "host_pid",
     "stop_requested_at",

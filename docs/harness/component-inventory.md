@@ -15,7 +15,7 @@ inventory, not permission to mutate nested projects.
   `src/runhaven/diagnostic_commands.py`, `src/runhaven/git_metadata.py`,
   `src/runhaven/project_checks.py`, `src/runhaven/provider_observability.py`,
   `src/runhaven/provider_runtime.py`,
-  `src/runhaven/run_history.py`,
+  `src/runhaven/run_history.py`, `src/runhaven/session_state.py`,
   `src/runhaven/setup_guide.py`, `src/runhaven/validators.py`,
   `src/runhaven/worktree_lifecycle.py`, `src/runhaven/worktrees.py`,
   `tests/`, `scripts/check_pins.py`, `scripts/npm_pin_policy.py`, and
