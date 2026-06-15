@@ -60,3 +60,7 @@ repo and link to primary sources instead.
   `runhaven auth status` and `runhaven auth explain AGENT` read static profile
   metadata only, with JSON output available for future automation. No
   credential store or environment value is read.
+- 2026-06-15: Implemented empty-allowlist regression coverage for network
+  policy modes. Internet mode stays explicitly unrestricted, internal mode
+  stays local-only, provider mode fails closed without provider hosts, and the
+  proxy policy rejects empty allowlists directly.

@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement host-side auth broker boundary diagnostics from the mined backlog.
+Add empty-allowlist regression coverage for network policy modes.
 
 ## Current State
 
@@ -170,17 +170,48 @@ Implement host-side auth broker boundary diagnostics from the mined backlog.
   provider auth notes, non-goals, and future acceptance criteria.
 - `docs/RESEARCH.md` now records the current provider auth references used for
   this broker boundary.
+- Empty provider allowlist behavior is now covered at both the planner and
+  proxy-policy layers.
+- `internet` mode is regression-tested as no provider allowlist and
+  unrestricted internet egress.
+- `internal` mode is regression-tested as no provider allowlist and internet
+  egress disabled.
+- `provider` mode is regression-tested as fail-closed when the selected
+  profile and explicit `--provider-host` values produce an empty allowlist.
+- Profiles without bundled provider hosts, such as `shell` and `antigravity`,
+  are regression-tested so they require an explicit fully qualified
+  `--provider-host` before provider mode can plan.
+- `EgressPolicy` is regression-tested so an empty allowlist cannot become an
+  allow-all policy.
 
 ## Recommended Next Step
 
 Build the first real host-side broker prototype for Codex behind explicit user
-opt-in, or add empty-allowlist regression tests for every network policy mode
-before expanding broker behavior. Keep broad hosts such as `github.com` and
-`api.github.com` explicit until RunHaven can restrict them by path or brokered
-credentials without mounting provider secrets into the guest.
+opt-in. Keep broad hosts such as `github.com` and `api.github.com` explicit
+until RunHaven can restrict them by path or brokered credentials without
+mounting provider secrets into the guest.
 
 ## Verification Evidence
 
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_plans tests.test_egress`
+  ran 39 focused planner and egress tests and passed after adding
+  empty-allowlist regression coverage.
+- 2026-06-15: `uvx --from ruff==0.15.17 ruff check tests/test_plans.py tests/test_egress.py`
+  passed after adding empty-allowlist regression coverage.
+- 2026-06-15: `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 84 tests,
+  `python3 scripts/check_pins.py`, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, and
+  `python3 -m json.tool feature_list.json` passed after empty-allowlist
+  regression coverage.
+- 2026-06-15: `git diff --check`, local Markdown link check, and
+  platform-boundary text scan passed after empty-allowlist regression coverage.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 84 unit tests, pin check, ruff, mypy, and build after
+  empty-allowlist regression coverage.
+- 2026-06-15: Generated build and cache artifacts were removed; cleanup scan
+  found no `build`, `dist`, `src/runhaven.egg-info`, Python cache, ruff cache,
+  or mypy cache directories after empty-allowlist regression coverage.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_auth_status_does_not_print_secret_values tests.test_cli.CliTests.test_auth_explain_prints_profile_boundary tests.test_cli.CliTests.test_auth_explain_json_is_static_and_secret_free`
   ran 3 focused auth CLI tests and passed.
 - 2026-06-15: `PYTHONPATH=src python3 -m runhaven auth status` and

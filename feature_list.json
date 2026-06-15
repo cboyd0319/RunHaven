@@ -123,7 +123,8 @@
                 "Host allowlist decisions can be explained before rerun",
                 "Provider endpoint matrix backs bundled hosts and known explicit-review hosts",
                 "Blocked-host review groups run id, rule, count, reason, and suggested next action",
-                "Live smoke harness can test bundled provider hosts for a selected profile"
+                "Live smoke harness can test bundled provider hosts for a selected profile",
+                "Empty allowlist behavior is regression-tested for internet, internal, provider, and proxy policy paths"
       ],
       "evidence": [
         "2026-06-14: Rendered Apple DocC networking docs with Playwright and checked generated DocC JSON endpoints for `ContainerNetworkService`.",
@@ -164,7 +165,9 @@
                 "2026-06-15: provider egress smoke harness added `--agent AGENT` profile-host mode.",
                 "2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 76 tests and passed after grouped blocked-host review and smoke profile support.",
                 "2026-06-15: `python3 -m compileall src tests scripts`, `uvx --from ruff==0.15.17 ruff check .`, `uvx --from mypy==2.1.0 mypy src scripts/provider_egress_smoke.py`, `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`, and `git diff --check` passed.",
-                "2026-06-15: `PYTHONPATH=src python3 scripts/provider_egress_smoke.py --agent codex --timeout 8 --denied-host example.com` passed with proxied `api.openai.com` and `chatgpt.com` allowed, denied host and proxied IP literal blocked, and direct DNS/IP paths blocked."
+                "2026-06-15: `PYTHONPATH=src python3 scripts/provider_egress_smoke.py --agent codex --timeout 8 --denied-host example.com` passed with proxied `api.openai.com` and `chatgpt.com` allowed, denied host and proxied IP literal blocked, and direct DNS/IP paths blocked.",
+                "2026-06-15: Added empty-allowlist regression coverage for internet, internal, provider, and `EgressPolicy` paths; focused planner and egress tests passed.",
+                "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 84 unit tests, pin check, ruff, mypy, and build after empty-allowlist regression coverage."
             ],
             "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider hosts now come from the reviewed provider endpoint matrix. Broad path-sensitive, telemetry, update, reporting, and weakly sourced hosts remain explicit `--provider-host` review items. Provider policy decisions are logged for review, and blocked provider targets are grouped after runs with run id, counts, reasons, matched rules, and suggested next actions."
         },

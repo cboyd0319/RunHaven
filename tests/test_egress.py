@@ -13,6 +13,10 @@ from runhaven.egress import (
 
 
 class EgressPolicyTests(unittest.TestCase):
+    def test_policy_rejects_empty_allowlist(self) -> None:
+        with self.assertRaisesRegex(ValueError, "at least one allowed host"):
+            EgressPolicy(allowed_hosts=())
+
     def test_policy_allows_exact_hosts_and_subdomains(self) -> None:
         policy = EgressPolicy(allowed_hosts=("api.example.com",))
 

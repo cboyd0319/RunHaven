@@ -61,6 +61,37 @@ class RunPlanTests(unittest.TestCase):
         self.assertEqual(plan.network_mode, "internal")
         self.assertIn("host-only", plan.egress_summary)
 
+    def test_internet_network_has_no_provider_allowlist(self) -> None:
+        with TemporaryDirectory() as directory:
+            plan = build_run_plan(
+                RunOptions(profile=get_profile("shell"), workspace=Path(directory))
+            )
+
+        self.assertEqual(plan.network_mode, "internet")
+        self.assertIsNone(plan.network_name)
+        self.assertEqual(plan.provider_allowed_hosts, ())
+        self.assertNotIn("--network", plan.command)
+        self.assertIn("unrestricted internet", plan.egress_summary)
+        self.assertIn("allowlisting is not enforced", plan.egress_summary)
+
+    def test_internal_network_has_no_provider_allowlist_and_disables_internet(self) -> None:
+        with TemporaryDirectory() as directory:
+            plan = build_run_plan(
+                RunOptions(
+                    profile=get_profile("shell"),
+                    workspace=Path(directory),
+                    network="internal",
+                )
+            )
+
+        self.assertEqual(plan.network_mode, "internal")
+        self.assertIsNotNone(plan.network_name)
+        self.assertEqual(plan.provider_allowed_hosts, ())
+        self.assertIn("--network", plan.command)
+        self.assertIn(plan.network_name, plan.command)
+        self.assertIn("internet egress disabled", plan.egress_summary)
+        self.assertNotIn("provider allowlist", plan.egress_summary)
+
     def test_provider_network_adds_internal_network_and_allowlist_hosts(self) -> None:
         with TemporaryDirectory() as directory:
             workspace = Path(directory)
@@ -84,14 +115,60 @@ class RunPlanTests(unittest.TestCase):
 
     def test_provider_network_requires_allowed_hosts(self) -> None:
         with TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(ValueError, "provider hosts"):
-                build_run_plan(
-                    RunOptions(
-                        profile=get_profile("shell"),
-                        workspace=Path(directory),
-                        network="provider",
-                    )
+            for profile_name in ("antigravity", "shell"):
+                with self.subTest(profile=profile_name):
+                    with self.assertRaisesRegex(ValueError, "provider hosts"):
+                        build_run_plan(
+                            RunOptions(
+                                profile=get_profile(profile_name),
+                                workspace=Path(directory),
+                                network="provider",
+                            )
+                        )
+
+    def test_provider_network_allows_empty_profile_with_explicit_host(self) -> None:
+        with TemporaryDirectory() as directory:
+            plan = build_run_plan(
+                RunOptions(
+                    profile=get_profile("shell"),
+                    workspace=Path(directory),
+                    network="provider",
+                    provider_hosts=("api.example.com",),
                 )
+            )
+
+        self.assertEqual(plan.network_mode, "provider")
+        self.assertEqual(plan.provider_allowed_hosts, ("api.example.com",))
+        self.assertIn("provider allowlist", plan.egress_summary)
+
+    def test_empty_provider_allowlist_behavior_is_explicit_for_each_network_mode(self) -> None:
+        with TemporaryDirectory() as directory:
+            workspace = Path(directory)
+            cases = {
+                "internet": "unrestricted internet",
+                "internal": "internet egress disabled",
+            }
+            for network, summary in cases.items():
+                with self.subTest(network=network):
+                    plan = build_run_plan(
+                        RunOptions(
+                            profile=get_profile("shell"),
+                            workspace=workspace,
+                            network=network,
+                        )
+                    )
+                    self.assertEqual(plan.provider_allowed_hosts, ())
+                    self.assertIn(summary, plan.egress_summary)
+
+            with self.subTest(network="provider"):
+                with self.assertRaisesRegex(ValueError, "provider hosts are required"):
+                    build_run_plan(
+                        RunOptions(
+                            profile=get_profile("shell"),
+                            workspace=workspace,
+                            network="provider",
+                        )
+                    )
 
     def test_root_user_requires_explicit_unsafe_override(self) -> None:
         with TemporaryDirectory() as directory:

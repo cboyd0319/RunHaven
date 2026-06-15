@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement host-side auth broker boundary diagnostics from the mined backlog.
+Add empty-allowlist regression coverage for network policy modes.
 
 ## Files
 
@@ -31,6 +31,8 @@ Implement host-side auth broker boundary diagnostics from the mined backlog.
 - `scripts/check_pins.py`
 - `scripts/provider_egress_smoke.py`
 - `tests/`
+- `tests/test_egress.py`
+- `tests/test_plans.py`
 - `tests/test_provider_egress_smoke.py`
 - `docs/HARNESS_EVALUATION.md`
 - `docs/assets/logo.png`
@@ -45,6 +47,25 @@ Implement host-side auth broker boundary diagnostics from the mined backlog.
 
 ## Verification Evidence
 
+- `PYTHONPATH=src python3 -m unittest tests.test_plans tests.test_egress`
+  ran 39 focused planner and egress tests and passed after adding
+  empty-allowlist regression coverage.
+- `uvx --from ruff==0.15.17 ruff check tests/test_plans.py tests/test_egress.py`
+  passed after adding empty-allowlist regression coverage.
+- `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 84 tests,
+  `python3 scripts/check_pins.py`, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, and
+  `python3 -m json.tool feature_list.json` passed after empty-allowlist
+  regression coverage.
+- `git diff --check`, local Markdown link check, and platform-boundary text
+  scan passed after empty-allowlist regression coverage.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 84 unit
+  tests, pin check, ruff, mypy, and build after empty-allowlist regression
+  coverage.
+- Generated build and cache artifacts were removed; cleanup scan found no
+  `build`, `dist`, `src/runhaven.egg-info`, Python cache, ruff cache, or mypy
+  cache directories after empty-allowlist regression coverage.
 - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_auth_status_does_not_print_secret_values tests.test_cli.CliTests.test_auth_explain_prints_profile_boundary tests.test_cli.CliTests.test_auth_explain_json_is_static_and_secret_free`
   ran 3 focused auth CLI tests and passed.
 - `PYTHONPATH=src python3 -m runhaven auth status` and
@@ -359,6 +380,11 @@ Implement host-side auth broker boundary diagnostics from the mined backlog.
   values.
 - `docs/AUTH_BROKER.md` records the design-only broker boundary, provider auth
   notes, non-goals, and acceptance criteria for any future real broker.
+- Empty provider allowlist behavior is now covered at both the planner and
+  proxy-policy layers. Internet mode stays explicitly unrestricted, internal
+  mode stays local-only with internet egress disabled, provider mode fails
+  closed when the allowlist is empty, and `EgressPolicy` rejects empty
+  allowlists directly.
 - Supplemental Apple `container` source review is recorded in
   `docs/RESEARCH.md`. It reinforced the current `container run` boundary and
   the decision not to use `container machine` defaults for beginner-safe agent
@@ -394,8 +420,7 @@ Implement host-side auth broker boundary diagnostics from the mined backlog.
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
 5. Build the first real host-side broker prototype for Codex behind explicit
-   user opt-in, or add empty-allowlist regression tests for every network
-   policy mode before expanding broker behavior.
+   user opt-in.
 6. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.
