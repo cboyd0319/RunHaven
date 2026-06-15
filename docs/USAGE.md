@@ -528,7 +528,7 @@ runhaven run claude --ssh
 ```
 
 This forwards the macOS SSH agent socket using Apple `container --ssh`. It does
-not mount `~/.ssh`.
+not mount the host SSH key directory.
 
 ## Reusable Sessions And State Volumes
 
@@ -550,7 +550,7 @@ project/profile. Use lowercase letters, numbers, dots, underscores, or dashes;
 Named sessions are useful when you want one warm agent environment for review,
 another for dependency work, or a disposable scratch state without changing the
 workspace mount. Sessions do not widen filesystem access; they only choose the
-RunHaven-managed `/home/agent` volume.
+RunHaven-managed agent home volume inside the container.
 
 `state list` shows RunHaven agent home volumes. `state list --session NAME` and
 `state prune --session NAME --yes` filter named-session volumes. `state reset

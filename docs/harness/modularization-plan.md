@@ -7,44 +7,60 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the warm reusable sessions slice:
+Measured on 2026-06-15 after the image doctor source-metadata slice and docs
+accuracy pass:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
-| `src/runhaven/cli.py` | 580 | Owns command dispatch, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
+| `src/runhaven/cli.py` | 605 | Owns command dispatch, standard run flow, state commands, image/network dispatch, and thin provider-runtime compatibility wrappers. |
+| `tests/test_plans.py` | 533 | Owns run-plan validation, workspace scope, network mode, provider host, broker, and session planning coverage. |
 | `tests/test_cli_standard_run.py` | 509 | Owns standard run record, active-marker lifecycle, session metadata, and worktree-run setup coverage. |
 | `src/runhaven/plans.py` | 483 | Cohesive planner and validation module. |
 | `tests/test_cli_worktree_lifecycle.py` | 445 | Owns `runs keep`, `runs recover`, `runs merge`, and `runs discard` worktree lifecycle coverage. |
 | `src/runhaven/worktree_lifecycle.py` | 431 | Owns worktree run-record validation, keep/recover output, merge application, and discard cleanup. |
+| `src/runhaven/cli_parser.py` | 411 | Owns argparse construction for all RunHaven CLI commands. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `tests/test_cli_active_repair.py` | 401 | Owns active-run stale-marker repair coverage; reviewed as cohesive after helper cleanup. |
 | `src/runhaven/run_history.py` | 399 | Owns run-record persistence, provider/auth summaries, and `runs list/show/log/diff` output. |
 | `scripts/check_pins.py` | 380 | Owns text target discovery, pin ledger orchestration, Python/dev deps, CI, Containerfile, and Debian package/source checks. |
 | `src/runhaven/provider_runtime.py` | 379 | Owns provider run lifecycle, proxy/broker startup, active marker cleanup, internal network inspection, and runtime command injection. |
+| `src/runhaven/image_commands.py` | 375 | Owns image build, rebuild, doctor, source-digest labeling, stale detection, and state-volume review. |
 | `src/runhaven/auth_broker.py` | 374 | Owns the live Codex API-key broker proxy, upstream forwarding, request validation, and broker decision aggregation. |
-| `src/runhaven/cli_parser.py` | 373 | Owns argparse construction for all RunHaven CLI commands. |
 | `tests/test_cli_active_attach_logs.py` | 369 | Owns active attach and logs-follow coverage. |
+| `scripts/provider_egress_smoke.py` | 360 | Owns live provider proxy smoke setup, allowed/denied path checks, and profile host smoke coverage. |
 | `tests/test_cli_provider_codex_broker.py` | 359 | Owns Codex API-key broker run, auth log, no-request, run-record, and missing-env coverage. |
 | `src/runhaven/active_commands.py` | 343 | Owns active-run listing, attach/log-follow, sanitized status output, stop, and kill. |
+| `src/runhaven/provider_endpoints.py` | 296 | Owns the structured bundled, candidate, optional, and build-time provider endpoint ledger. |
+| `tests/test_cli.py` | 279 | Owns core CLI, setup, doctor, and plan smoke coverage. |
+| `tests/test_cli_image.py` | 277 | Owns image build, rebuild, image doctor, source metadata, and state-volume review coverage. |
 | `tests/test_cli_diagnostics.py` | 273 | Owns `auth`, `egress log`, and `why host` CLI coverage. |
 | `tests/test_cli_runs_log.py` | 269 | Owns `runs log` text and JSON coverage. |
 | `src/runhaven/diagnostic_commands.py` | 249 | Owns `auth status/explain/log`, `egress log`, `why host`, and diagnostic log readers. |
+| `tests/test_egress.py` | 245 | Owns provider proxy allow/deny, DNS guard, and empty-allowlist policy coverage. |
 | `src/runhaven/active_repair.py` | 243 | Owns stale active-marker repair, JSON payloads, and inspect-missing validation. |
 | `tests/test_cli_provider_proxy.py` | 242 | Owns provider plan, proxy injection, blocked-host summary, and policy-log coverage. |
 | `src/runhaven/git_metadata.py` | 235 | Owns git discovery, status parsing, run git summary construction, and live diff helpers. |
 | `tests/test_cli_runs_diff.py` | 233 | Owns `runs diff` git validation and output coverage. |
 | `tests/test_cli_active_status.py` | 233 | Owns active status coverage. |
-| `tests/test_cli.py` | 268 | Owns core CLI, setup, doctor, and plan smoke coverage. |
 | `tests/test_cli_active_stop_kill.py` | 216 | Owns active stop and kill coverage. |
+| `tests/test_cli_state.py` | 208 | Owns state list, prune, reset, session filtering, and state lock coverage. |
 | `tests/test_cli_runs_list_show.py` | 195 | Owns `runs list` and `runs show` coverage. |
 | `src/runhaven/auth_profiles.py` | 183 | Owns static auth broker profile metadata and status output data. |
+| `scripts/codex_broker_smoke.py` | 170 | Owns optional live Codex broker smoke behavior with disposable-key gating. |
+| `src/runhaven/worktrees.py` | 151 | Owns RunHaven-owned branch/worktree creation, cleanup, and validation helpers. |
+| `tests/test_auth_broker.py` | 140 | Owns Codex broker request, subnet, method/path, logging, and upstream behavior. |
+| `src/runhaven/doctor.py` | 139 | Owns host prerequisite checks. |
+| `src/runhaven/active_records.py` | 138 | Owns active-run marker persistence and status updates. |
 | `src/runhaven/provider_observability.py` | 137 | Owns provider policy log writes, auth broker log writes, blocked-host review text, and UTC timestamps. |
 | `tests/test_cli_active_list.py` | 133 | Owns active-run list coverage. |
+| `src/runhaven/project_checks.py` | 122 | Owns advisory project-check detection for worktree review flows. |
+| `tests/test_codex_broker_smoke.py` | 121 | Owns optional Codex broker smoke skip, missing-key, and command behavior. |
+| `tests/test_cli_network.py` | 118 | Owns RunHaven-managed network list and prune CLI coverage. |
 | `scripts/npm_pin_policy.py` | 108 | Owns package.json and package-lock pin policy checks. |
 | `tests/cli_test_helpers.py` | 107 | Shared git, run-record, and active-marker helpers for split CLI tests. |
-| `tests/test_cli_state.py` | 208 | Owns state list, prune, reset, session filtering, and state lock coverage. |
-| `src/runhaven/session_state.py` | 49 | Owns named session validation, state-volume naming, and volume filtering. |
-| `tests/test_cli_provider_internal_network.py` | 52 | Owns existing, rejected, and newly created internal-network coverage. |
+| `src/runhaven/images.py` | 100 | Owns bundled image profile paths, template source hashing, and expected image metadata. |
+| `src/runhaven/setup_guide.py` | 94 | Owns guided setup output. |
+| `src/runhaven/network_commands.py` | 86 | Owns managed-network list and prune command behavior. |
 
 ## First Extraction Completed
 
@@ -122,7 +138,9 @@ auth output, provider policy log output, `why host` provider matching, and
   broker run, and internal-network CLI coverage.
 - `tests/test_cli_standard_run.py`: standard run record and active-marker
   lifecycle coverage.
-- `tests/test_cli_active_commands.py`: active listing, attach, logs-follow,
+- `tests/test_cli_active_list.py`, `tests/test_cli_active_attach_logs.py`,
+  `tests/test_cli_active_status.py`, and
+  `tests/test_cli_active_stop_kill.py`: active listing, attach, logs-follow,
   status, stop, and kill coverage.
 - `tests/test_cli_active_repair.py`: stale active-marker repair coverage.
 - `tests/test_cli_runs_list_show.py`, `tests/test_cli_runs_diff.py`, and

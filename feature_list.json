@@ -147,7 +147,7 @@
         "2026-06-15: Focused core, planner, state, and standard-run suites passed with 71 tests; compileall, focused ruff, and mypy also passed.",
         "2026-06-15: Full verification passed with compileall, 183 unit tests, pin check, ruff, mypy, build, JSON validation, Markdown link check, `runhaven run --help`, `runhaven state reset --help`, `runhaven plan shell --session review`, `git diff --check`, and `PYTHON=<temporary-venv-python> ./init.sh` after adding warm reusable sessions."
       ],
-      "notes": "The implicit default session preserves existing per-project/profile volume names. Named sessions reuse only the isolated `/home/agent` volume and do not widen workspace mounts or host credential access. `default` is reserved for the implicit session."
+      "notes": "The implicit default session preserves existing per-project/profile volume names. Named sessions reuse only the isolated agent home volume inside the container and do not widen workspace mounts or host credential access. `default` is reserved for the implicit session."
     },
     {
       "id": "provider-egress-allowlisting",

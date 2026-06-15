@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add image doctor and preflight recovery diagnostics.
+Refresh repository documentation accuracy and handoff state.
 
 ## Files
 
@@ -78,6 +78,10 @@ Add image doctor and preflight recovery diagnostics.
 - `docs/HARNESS_EVALUATION.md`
 - `docs/assets/logo.png`
 - `docs/harness/`
+- `docs/harness/component-inventory.md`
+- `docs/harness/evidence-log.md`
+- `docs/harness/modularization-plan.md`
+- `docs/harness/security-boundary-map.md`
 - `docs/harness/source-mined-ideas.md`
 - `docs/harness/external-project-ideas.md`
 - `docs/harness/ux-research-ideas.md`
@@ -174,8 +178,8 @@ Add image doctor and preflight recovery diagnostics.
 - First modularization extraction moved setup guide output, active-run marker
   persistence, cache path helpers, and shared validators out of
   `src/runhaven/cli.py`. `src/runhaven/cli.py` measured 2,440 lines after
-  extraction, down from 2,685 before the slice; `tests/test_cli.py` remains
-  3,515 lines and is still a major pre-release split target.
+  extraction, down from 2,685 before the slice; `tests/test_cli.py` was still
+  3,515 lines at that point and remained a major pre-release split target.
 - Second modularization extraction moved run-record persistence, git metadata
   capture, `runs list/show/log/diff`, and run-record readers into
   `src/runhaven/run_history.py`. `src/runhaven/cli.py` measured 1,874 lines
@@ -200,15 +204,14 @@ Add image doctor and preflight recovery diagnostics.
   standard runs, active commands, active repair, run history, diagnostics, and
   state. `tests/test_cli.py` measured 228 lines after extraction, down from
   3,515 lines.
-- Seventh modularization extraction split the 33 active-command CLI tests in
-  `tests/test_cli_active_commands.py` into focused files for active listing,
-  attach/logs-follow, status, and stop/kill.
-- Eighth modularization extraction split the 12 run-history CLI tests in
-  `tests/test_cli_run_history.py` into focused files for run list/show, run
-  diff, and joined run logs.
-- Ninth modularization extraction split the 12 provider-runtime CLI tests in
-  `tests/test_cli_provider_runtime.py` into focused files for provider proxy
-  behavior, Codex broker behavior, and internal-network handling.
+- Seventh modularization extraction split the former active-command CLI test
+  surface into focused files for active listing, attach/logs-follow, status,
+  and stop/kill.
+- Eighth modularization extraction split the former run-history CLI test
+  surface into focused files for run list/show, run diff, and joined run logs.
+- Ninth modularization extraction split the former provider-runtime CLI test
+  surface into focused files for provider proxy behavior, Codex broker
+  behavior, and internal-network handling.
 - Tenth modularization extraction moved git discovery, status parsing, run
   metadata summaries, and live diff helpers from
   `src/runhaven/run_history.py` into `src/runhaven/git_metadata.py`.
@@ -358,6 +361,11 @@ Add image doctor and preflight recovery diagnostics.
   `PYTHONPATH=src python3 -m runhaven image doctor shell`, and
   `PYTHONPATH=src python3 -m runhaven image build shell --dry-run` also
   passed.
+- Repository documentation accuracy refresh passed stale-reference scans,
+  `python3 -m json.tool feature_list.json`, `python3 scripts/check_pins.py`,
+  local Markdown link check, platform wording scan, HarnessForge audit at
+  100/100, `git diff --check`, and `PYTHON=<temporary-venv-python> ./init.sh`
+  with compileall, 195 unit tests, pin check, ruff, mypy, and build.
 - Focused CLI test split checks passed: `python3 -m compileall tests`,
   `uvx --from ruff==0.15.17 ruff check` on the split CLI test files, and
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`
@@ -1321,6 +1329,12 @@ Add image doctor and preflight recovery diagnostics.
   network names. `runhaven network prune` previews those names and
   `runhaven network prune --yes` deletes only RunHaven-managed
   volume-preparation, internal, and provider network names.
+- Repository documentation was rechecked against the current CLI surface and
+  macOS 26+ only product boundary. The main README, installation, usage,
+  capability, architecture, and security docs remain aligned with the current
+  commands. Harness state docs now reflect the docs-refresh objective, current
+  component inventory, current modularization line-count snapshot, and roadmap
+  status semantics.
 
 ## Next Session
 

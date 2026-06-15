@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add image doctor and preflight recovery diagnostics.
+Refresh repository documentation accuracy and handoff state.
 
 ## Current State
 
@@ -53,6 +53,12 @@ Add image doctor and preflight recovery diagnostics.
   source-digest labels when present, uses timestamp fallback for older
   unlabeled images, and reports inactive RunHaven state volumes for the
   selected profile without mutating local resources.
+- Repository docs were rechecked against the current CLI surface and hard
+  product boundary. The main user docs remain aligned with macOS 26+ only
+  support, Apple `container` 1.0.0, provider egress behavior, worktree
+  lifecycle commands, sessions, image doctor, managed-network cleanup, and
+  secret-free observability. Harness state docs were refreshed for the current
+  objective, component inventory, roadmap status, and modularization snapshot.
 - `runhaven network list` now lists only RunHaven-managed Apple `container`
   network names. `runhaven network prune` previews those networks and
   `runhaven network prune --yes` deletes only RunHaven-managed
@@ -216,19 +222,16 @@ Add image doctor and preflight recovery diagnostics.
 - The sixth behavior-preserving modularization extraction split the 90 CLI
   tests in `tests/test_cli.py` into focused files for core/setup, provider
   runtime, standard runs, active commands, active repair, run history,
-  diagnostics, and state. `tests/test_cli.py` now measures 228 lines, down from
-  3,515 lines; the largest split CLI test file is
-  `tests/test_cli_active_commands.py` at 900 lines.
-- The seventh behavior-preserving modularization extraction split the 33
-  active-command CLI tests in `tests/test_cli_active_commands.py` into focused
-  files for active listing, attach/logs-follow, status, and stop/kill.
-- The eighth behavior-preserving modularization extraction split the 12
-  run-history CLI tests in `tests/test_cli_run_history.py` into focused files
-  for run list/show, run diff, and joined run logs.
-- The ninth behavior-preserving modularization extraction split the 12
-  provider-runtime CLI tests in `tests/test_cli_provider_runtime.py` into
-  focused files for provider proxy behavior, Codex broker behavior, and
-  internal-network handling.
+  diagnostics, and state.
+- The seventh behavior-preserving modularization extraction split the former
+  active-command CLI test surface into focused files for active listing,
+  attach/logs-follow, status, and stop/kill.
+- The eighth behavior-preserving modularization extraction split the former
+  run-history CLI test surface into focused files for run list/show, run diff,
+  and joined run logs.
+- The ninth behavior-preserving modularization extraction split the former
+  provider-runtime CLI test surface into focused files for provider proxy
+  behavior, Codex broker behavior, and internal-network handling.
 - The tenth behavior-preserving modularization extraction moved git discovery,
   status parsing, run metadata summaries, and live diff helpers from
   `src/runhaven/run_history.py` into `src/runhaven/git_metadata.py`.
@@ -777,8 +780,8 @@ workspace, or continue with the next mined UX improvement from
 - 2026-06-15: First modularization extraction moved setup guide output,
   active-run marker persistence, cache path helpers, and shared validators out
   of `src/runhaven/cli.py`. `src/runhaven/cli.py` measured 2,440 lines after
-  extraction, down from 2,685 before the slice; `tests/test_cli.py` remains
-  3,515 lines and is still a major pre-release split target.
+  extraction, down from 2,685 before the slice; `tests/test_cli.py` was still
+  3,515 lines at that point and remained a major pre-release split target.
 - 2026-06-15: Focused setup and active-record CLI tests passed after the first
   modularization extraction:
   `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_setup_prints_workspace_and_credential_guidance tests.test_cli.CliTests.test_standard_run_writes_and_removes_active_run_marker tests.test_cli.CliTests.test_runs_active_prints_active_run_markers tests.test_cli.CliTests.test_runs_repair_removes_marker_when_container_is_missing`.
@@ -1409,3 +1412,9 @@ workspace, or continue with the next mined UX improvement from
   `PYTHONPATH=src python3 -m runhaven image doctor shell`, and
   `PYTHONPATH=src python3 -m runhaven image build shell --dry-run` also
   passed.
+- 2026-06-15: Repository documentation accuracy refresh passed
+  stale-reference scans, `python3 -m json.tool feature_list.json`,
+  `python3 scripts/check_pins.py`, local Markdown link check, platform wording
+  scan, HarnessForge audit at 100/100, `git diff --check`, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 195 unit tests,
+  pin check, ruff, mypy, and build.

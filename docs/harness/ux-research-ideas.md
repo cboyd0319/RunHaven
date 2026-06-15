@@ -236,7 +236,7 @@ Command shapes:
 
 ```bash
 runhaven why host api.example.com
-runhaven why workspace /Users/me/.ssh
+runhaven why workspace PATH
 runhaven why network provider
 runhaven why state claude
 ```
