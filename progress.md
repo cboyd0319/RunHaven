@@ -197,6 +197,9 @@ Start pre-release large-file modularization.
   diagnostics, and state. `tests/test_cli.py` now measures 228 lines, down from
   3,515 lines; the largest split CLI test file is
   `tests/test_cli_active_commands.py` at 900 lines.
+- The seventh behavior-preserving modularization extraction split the 33
+  active-command CLI tests in `tests/test_cli_active_commands.py` into focused
+  files for active listing, attach/logs-follow, status, and stop/kill.
 - `src/runhaven/auth_broker.py` now records per-profile auth broker metadata
   and implements the first Codex API-key broker prototype.
 - `runhaven run codex --network provider --codex-api-key-broker-env NAME` reads
@@ -331,12 +334,12 @@ Start pre-release large-file modularization.
 
 ## Recommended Next Step
 
-Continue the cleanup pass by either splitting `tests/test_cli_active_commands.py`
-along active listing, attach/logs-follow, status, stop/kill, and ownership
-refusal seams, or reviewing `scripts/check_pins.py`,
-`src/runhaven/auth_broker.py`, and `src/runhaven/provider_runtime.py` for
-complexity-only refactors. Run the optional Codex broker smoke with a
-disposable OpenAI API key when one is available.
+Continue the cleanup pass by either splitting `tests/test_cli_run_history.py`
+or `tests/test_cli_provider_runtime.py` further, or reviewing
+`scripts/check_pins.py`, `src/runhaven/auth_broker.py`, and
+`src/runhaven/provider_runtime.py` for complexity-only refactors. Run the
+optional Codex broker smoke with a disposable OpenAI API key when one is
+available.
 
 ## Verification Evidence
 
@@ -352,6 +355,20 @@ disposable OpenAI API key when one is available.
   split CLI test files, and
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'` with
   90 tests.
+- 2026-06-15: Focused active-command CLI test split checks passed:
+  `python3 -m compileall` on the active-command CLI test files,
+  `uvx --from ruff==0.15.17 ruff check` on those files, and
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_active*.py'`
+  with 33 tests.
+- 2026-06-15: Full verification passed after the active-command CLI test split:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, generated artifact cleanup
+  scan, platform wording scan, and `PYTHON=<temporary-venv-python> ./init.sh`
+  with compileall, 156 unit tests, pin check, ruff, mypy, and build.
 - 2026-06-15: Full verification passed after the CLI test split:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
