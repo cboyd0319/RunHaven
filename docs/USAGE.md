@@ -124,6 +124,10 @@ Run `runhaven plan` first. Provider plans show the managed provider network and
 allowed hosts; the exact proxy URL is injected by `runhaven run` after the
 internal-network gateway is inspected.
 
+If a provider run tries to reach a host outside the allowlist, RunHaven prints a
+blocked-host summary after the agent exits. Review each blocked hostname before
+adding it with `--provider-host`; IP literal targets cannot be allowed.
+
 ## Provider Egress Smoke
 
 Build the base image and run the live smoke on macOS 26+:

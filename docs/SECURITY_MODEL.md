@@ -78,7 +78,8 @@ managed provider network after the run. The proxy permits the bundled provider
 hosts for the selected profile, their subdomains, and explicit fully qualified
 `--provider-host HOST` additions. It rejects IP literal proxy targets and
 single-label provider hosts, and relies on the internal network to block direct
-guest egress.
+guest egress. Blocked proxy targets are summarized after provider runs so users
+can review missing endpoints without weakening the default policy.
 
 Provider host allowlists are intentionally conservative. Authentication,
 telemetry, or optional provider feature paths may fail until an additional

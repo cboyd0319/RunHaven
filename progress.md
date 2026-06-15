@@ -4,8 +4,7 @@ Last Updated: 2026-06-14
 
 ## Current Objective
 
-Ingest supplemental Apple `container` references and preserve the RunHaven
-security boundary decisions they affect.
+Surface provider-mode blocked hosts without weakening the egress boundary.
 
 ## Current State
 
@@ -86,6 +85,9 @@ security boundary decisions they affect.
 - Provider host additions reject IP literals and single-label hosts, so entries
   like `com` cannot accidentally allow broad suffixes. A listed host permits
   that host and its subdomains.
+- Provider mode now records blocked CONNECT host/port pairs in memory, caps the
+  list, and prints a stderr summary after the run with review guidance for
+  fully qualified host additions.
 - A live normal-run smoke passed for `runhaven run shell --network provider
   --provider-host example.com`: allowed proxied HTTPS succeeded, while denied
   proxied host, proxied IP literal, direct DNS, and direct IP paths failed.
@@ -101,10 +103,9 @@ security boundary decisions they affect.
 
 ## Recommended Next Step
 
-Broaden and verify bundled provider endpoint profiles for authentication,
-telemetry, and optional provider feature paths. Keep additions fully qualified,
-explicit, and evidence-backed so provider mode remains understandable for
-non-technical users.
+Build the provider endpoint matrix for authentication, telemetry, and optional
+feature paths. Keep additions fully qualified, explicit, and evidence-backed,
+then update bundled profiles only after live or source-backed verification.
 
 ## Verification Evidence
 
@@ -247,3 +248,14 @@ non-technical users.
   and passed after the provider-host guard cleanup.
 - 2026-06-14: directly reviewed user-supplied supplemental Apple `container`
   sources and ran an Antigravity research pass over the same source list.
+- 2026-06-14: `PYTHONPATH=src python3.14 -m unittest tests.test_egress tests.test_cli tests.test_plans`
+  ran 51 tests and passed after adding provider blocked-host diagnostics.
+- 2026-06-14: `python -m ruff check src/runhaven/cli.py src/runhaven/egress.py tests/test_cli.py tests/test_egress.py`
+  and `python -m mypy src` passed after adding provider blocked-host
+  diagnostics.
+- 2026-06-14: live `runhaven run shell --network provider --provider-host example.com`
+  diagnostic smoke reported denied `iana.org:443`; follow-up cleanup removed
+  the test state volume and found no leftover provider network.
+- 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and
+  `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 63 tests
+  and passed after provider blocked-host diagnostics.

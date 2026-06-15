@@ -5,7 +5,11 @@ import threading
 import unittest
 from contextlib import closing
 
-from runhaven.egress import EgressPolicy, ThreadedAllowlistProxy
+from runhaven.egress import (
+    MAX_DENIED_CONNECT_TARGETS,
+    EgressPolicy,
+    ThreadedAllowlistProxy,
+)
 
 
 class EgressPolicyTests(unittest.TestCase):
@@ -38,6 +42,35 @@ class AllowlistProxyTests(unittest.TestCase):
             )
 
         self.assertIn(b"403 Forbidden", response)
+
+    def test_proxy_records_disallowed_connect_targets(self) -> None:
+        with running_proxy(EgressPolicy(allowed_hosts=("allowed.test",))) as proxy:
+            proxy_request(
+                proxy,
+                b"CONNECT denied.test:443 HTTP/1.1\r\nHost: denied.test:443\r\n\r\n",
+            )
+            proxy_request(
+                proxy,
+                b"CONNECT denied.test:443 HTTP/1.1\r\nHost: denied.test:443\r\n\r\n",
+            )
+            proxy_request(
+                proxy,
+                b"CONNECT other.test:443 HTTP/1.1\r\nHost: other.test:443\r\n\r\n",
+            )
+
+            denied_targets = proxy.denied_connect_targets()
+
+        self.assertEqual(denied_targets, (("denied.test", 443), ("other.test", 443)))
+
+    def test_proxy_caps_recorded_disallowed_connect_targets(self) -> None:
+        with running_proxy(EgressPolicy(allowed_hosts=("allowed.test",))) as proxy:
+            for index in range(MAX_DENIED_CONNECT_TARGETS + 2):
+                proxy.record_denied_connect_target(f"denied-{index}.test", 443)
+
+            denied_targets = proxy.denied_connect_targets()
+
+        self.assertEqual(len(denied_targets), MAX_DENIED_CONNECT_TARGETS)
+        self.assertEqual(denied_targets[-1], (f"denied-{MAX_DENIED_CONNECT_TARGETS - 1}.test", 443))
 
     def test_proxy_rejects_plain_http_requests(self) -> None:
         with running_proxy(EgressPolicy(allowed_hosts=("allowed.test",))) as proxy:

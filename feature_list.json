@@ -116,7 +116,8 @@
         "Smoke harness proves host allowlist proxy on an internal Apple container network",
         "Provider allowlist behavior tested",
         "Runtime smoke proves denied and allowed network paths",
-        "Docs state exact limitations"
+        "Docs state exact limitations",
+        "Blocked provider hosts are surfaced to the user"
       ],
       "evidence": [
         "2026-06-14: Rendered Apple DocC networking docs with Playwright and checked generated DocC JSON endpoints for `ContainerNetworkService`.",
@@ -138,9 +139,12 @@
         "2026-06-14: provider lifecycle integration tests passed for plan construction, runtime proxy injection, provider network cleanup, and proxy env override order.",
         "2026-06-14: live `runhaven run shell --network provider --provider-host example.com` smoke passed with allowed proxied HTTPS and denied proxied host, proxied IP literal, direct DNS, and direct IP paths; follow-up checks found no leftover provider network or test state volume.",
         "2026-06-14: focused planner and CLI tests, ruff, and mypy passed after rejecting single-label provider hosts and documenting host-plus-subdomain semantics.",
-        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 60 tests and passed after the provider-host guard cleanup."
+        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 60 tests and passed after the provider-host guard cleanup.",
+        "2026-06-14: focused egress, CLI, and plan tests passed after adding blocked-host diagnostics for provider runs.",
+        "2026-06-14: live `runhaven run shell --network provider --provider-host example.com` diagnostic smoke reported denied `iana.org:443`; follow-up cleanup removed the test state volume and found no leftover provider network.",
+        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 63 tests and passed after provider blocked-host diagnostics."
       ],
-      "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider host lists are conservative and may need reviewed fully qualified `--provider-host` additions for login, telemetry, or optional feature paths."
+      "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider host lists are conservative and may need reviewed fully qualified `--provider-host` additions for login, telemetry, or optional feature paths. Blocked provider targets are reported after runs."
     },
     {
       "id": "repo-logo",

@@ -4,12 +4,14 @@ import ipaddress
 import select
 import socket
 import socketserver
+import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import cast
 
 MAX_HEADER_BYTES = 64 * 1024
 RELAY_BUFFER_BYTES = 64 * 1024
+MAX_DENIED_CONNECT_TARGETS = 50
 
 
 @dataclass(frozen=True)
@@ -61,6 +63,9 @@ class ThreadedAllowlistProxy(socketserver.ThreadingTCPServer):
         self.allowed_client_networks = tuple(
             ipaddress.ip_network(subnet, strict=False) for subnet in allowed_client_subnets
         )
+        self._denied_connect_targets: list[tuple[str, int]] = []
+        self._denied_connect_target_set: set[tuple[str, int]] = set()
+        self._denied_connect_targets_lock = threading.Lock()
         super().__init__(server_address, AllowlistProxyHandler)
 
     def allows_client(self, address: str) -> bool:
@@ -71,6 +76,19 @@ class ThreadedAllowlistProxy(socketserver.ThreadingTCPServer):
         except ValueError:
             return False
         return any(client_address in network for network in self.allowed_client_networks)
+
+    def record_denied_connect_target(self, host: str, port: int) -> None:
+        target = (host, port)
+        with self._denied_connect_targets_lock:
+            if target not in self._denied_connect_target_set:
+                if len(self._denied_connect_targets) >= MAX_DENIED_CONNECT_TARGETS:
+                    return
+                self._denied_connect_targets.append(target)
+                self._denied_connect_target_set.add(target)
+
+    def denied_connect_targets(self) -> tuple[tuple[str, int], ...]:
+        with self._denied_connect_targets_lock:
+            return tuple(self._denied_connect_targets)
 
 
 class AllowlistProxyHandler(socketserver.StreamRequestHandler):
@@ -104,6 +122,7 @@ class AllowlistProxyHandler(socketserver.StreamRequestHandler):
             self.send_response(400, "Bad Request")
             return
         if not server.policy.allows(host, port):
+            server.record_denied_connect_target(host, port)
             self.send_response(403, "Forbidden")
             return
 

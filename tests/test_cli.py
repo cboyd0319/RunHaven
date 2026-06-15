@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import json
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import Mock, patch
@@ -102,6 +102,7 @@ class CliTests(unittest.TestCase):
         with TemporaryDirectory() as directory:
             fake_proxy = Mock()
             fake_proxy.server_address = ("0.0.0.0", 49321)
+            fake_proxy.denied_connect_targets.return_value = ()
             thread = Mock()
             network_info = Mock(ipv4_gateway="192.168.130.1", ipv4_subnet="192.168.130.0/24")
             with (
@@ -157,6 +158,53 @@ class CliTests(unittest.TestCase):
         ]
         self.assertEqual(https_proxy_values[-1], "HTTPS_PROXY=http://192.168.130.1:49321")
         self.assertEqual(command[-1], "/bin/true")
+
+    def test_provider_run_prints_blocked_host_summary(self) -> None:
+        with TemporaryDirectory() as directory:
+            fake_proxy = Mock()
+            fake_proxy.server_address = ("0.0.0.0", 49321)
+            fake_proxy.denied_connect_targets.return_value = (
+                ("blocked.example.com", 443),
+                ("1.1.1.1", 443),
+            )
+            thread = Mock()
+            network_info = Mock(ipv4_gateway="192.168.130.1", ipv4_subnet="192.168.130.0/24")
+            error_output = io.StringIO()
+            with (
+                redirect_stderr(error_output),
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.run_preflight"),
+                patch("runhaven.cli.inspect_internal_network", return_value=network_info),
+                patch("runhaven.cli.create_provider_proxy", return_value=fake_proxy),
+                patch("runhaven.cli.threading.Thread", return_value=thread),
+                patch("runhaven.cli.delete_container_network"),
+                patch("runhaven.cli.subprocess.call", return_value=0),
+            ):
+                code = main(
+                    [
+                        "run",
+                        "shell",
+                        "--workspace",
+                        directory,
+                        "--network",
+                        "provider",
+                        "--provider-host",
+                        "example.com",
+                        "--tty",
+                        "never",
+                        "--",
+                        "/bin/true",
+                    ]
+                )
+
+        self.assertEqual(code, 0)
+        text = error_output.getvalue()
+        self.assertIn("RunHaven provider proxy blocked", text)
+        self.assertIn("blocked.example.com:443", text)
+        self.assertIn("--provider-host blocked.example.com", text)
+        self.assertIn("1.1.1.1:443", text)
+        self.assertIn("IP literal targets cannot be allowed", text)
 
     def test_doctor_prints_remedy_for_failed_checks(self) -> None:
         output = io.StringIO()

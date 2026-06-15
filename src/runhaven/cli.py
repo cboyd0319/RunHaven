@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TextIO
 
 from .doctor import collect_checks
-from .egress import EgressPolicy, ThreadedAllowlistProxy
+from .egress import EgressPolicy, ThreadedAllowlistProxy, is_ip_literal
 from .images import build_image_plan
 from .plans import SUPPORTED_NETWORK_MODES, AgentRunPlan, RunOptions, build_run_plan
 from .profiles import PROFILES, get_profile
@@ -320,7 +320,9 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
         worker.start()
         thread = worker
         proxy_url = f"http://{network_info.ipv4_gateway}:{proxy.server_address[1]}"
-        return subprocess.call(with_provider_proxy_environment(plan, proxy_url))
+        return_code = subprocess.call(with_provider_proxy_environment(plan, proxy_url))
+        print_provider_denials(proxy.denied_connect_targets())
+        return return_code
     finally:
         if proxy is not None:
             if thread is not None:
@@ -348,6 +350,21 @@ def with_provider_proxy_environment(plan: AgentRunPlan, proxy_url: str) -> tuple
     for name, value in proxy_environment:
         injected.extend(("--env", f"{name}={value}"))
     return (*plan.command[:image_index], *injected, *plan.command[image_index:])
+
+
+def print_provider_denials(denied_targets: tuple[tuple[str, int], ...]) -> None:
+    if not denied_targets:
+        return
+    count = len(denied_targets)
+    plural = "target" if count == 1 else "targets"
+    print(f"RunHaven provider proxy blocked {count} CONNECT {plural}:", file=sys.stderr)
+    for host, port in denied_targets:
+        target = f"{host}:{port}"
+        if is_ip_literal(host):
+            note = "IP literal targets cannot be allowed"
+        else:
+            note = f"review before rerunning with --provider-host {host}"
+        print(f"  - {target} ({note})", file=sys.stderr)
 
 
 def create_provider_proxy(

@@ -4,8 +4,7 @@ Last Updated: 2026-06-14
 
 ## Current Objective
 
-Ingest supplemental Apple `container` references and preserve the RunHaven
-security boundary decisions they affect.
+Surface provider-mode blocked hosts without weakening the egress boundary.
 
 ## Files
 
@@ -158,6 +157,17 @@ security boundary decisions they affect.
   and passed after the provider-host guard cleanup.
 - Directly reviewed user-supplied supplemental Apple `container` sources and
   ran an Antigravity research pass over the same source list.
+- `PYTHONPATH=src python3.14 -m unittest tests.test_egress tests.test_cli tests.test_plans`
+  ran 51 tests and passed after adding provider blocked-host diagnostics.
+- `python -m ruff check src/runhaven/cli.py src/runhaven/egress.py tests/test_cli.py tests/test_egress.py`
+  and `python -m mypy src` passed after adding provider blocked-host
+  diagnostics.
+- Live `runhaven run shell --network provider --provider-host example.com`
+  diagnostic smoke reported denied `iana.org:443`; follow-up cleanup removed
+  the test state volume and found no leftover provider network.
+- `PYTHON=<temporary-venv-python> ./init.sh` and
+  `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 63 tests
+  and passed after provider blocked-host diagnostics.
 - `magick identify docs/assets/logo.png` reported PNG 512x512.
 - No-ignore old-name text scan across working tree files outside `.git`
   returned no matches.
@@ -190,6 +200,9 @@ security boundary decisions they affect.
 - Provider host additions reject IP literals and single-label hosts, so entries
   like `com` cannot accidentally allow broad suffixes. A listed host permits
   that host and its subdomains.
+- Provider mode records blocked CONNECT host/port pairs in memory, caps the
+  list, and prints a stderr summary after the run with review guidance for
+  fully qualified host additions.
 - Supplemental Apple `container` source review is recorded in
   `docs/RESEARCH.md`. It reinforced the current `container run` boundary and
   the decision not to use `container machine` defaults for beginner-safe agent
@@ -201,8 +214,8 @@ security boundary decisions they affect.
 2. Check `git status --short --branch`.
 3. Use `docs/harness/verification-matrix.md` to choose checks for the requested
    change.
-4. Continue by broadening and verifying bundled provider endpoint profiles for
-   authentication, telemetry, and optional provider feature paths.
+4. Continue by building the provider endpoint matrix for authentication,
+   telemetry, and optional provider feature paths.
 5. Ask for explicit approval before renaming the hosted GitHub repository or
    changing other credentialed vendor state.
 6. Preserve the macOS 26+ only runtime and contributor-verification contract.
