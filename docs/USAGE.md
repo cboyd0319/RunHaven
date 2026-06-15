@@ -1,21 +1,12 @@
 # Usage
 
-## Install for Development
+## Before You Start
+
+Install RunHaven and Apple `container` first:
+[Installation](INSTALLATION.md).
 
 RunHaven development and runtime verification require macOS 26+ on Apple
 silicon. Windows and Linux are not supported.
-
-```bash
-python3.14 -m venv .venv
-source .venv/bin/activate
-python -m pip install pip==26.1.2
-python -m pip install -r requirements-dev.txt
-python -m pip install --no-deps -e .
-```
-
-Development tools are exact-pinned in `pyproject.toml` and
-`requirements-dev.txt`. When updating them, use the current stable release and
-commit the exact new version.
 
 ## Guided Setup
 

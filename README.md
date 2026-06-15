@@ -9,111 +9,35 @@
 ![Apple container 1.0.0](https://img.shields.io/badge/apple%20container-1.0.0-555)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Run Claude Code, Codex, Gemini, Antigravity, Copilot, or a custom AI agent
-inside Apple `container` with beginner-safe local defaults.
+Run AI coding agents inside Apple `container` on macOS 26+ with a narrow,
+previewable local boundary.
 
-This repo is for people who should not need to understand containers,
-sandboxing, SSH agents, or credential leakage before using an AI coding agent on
-their Mac. The default path mounts one project, gives the agent one isolated
-home volume, avoids host secrets, and shows the exact container command before
-anything runs.
+RunHaven is for people who should not need to understand containers,
+sandboxing, SSH agents, or credential leakage before using Claude Code, Codex,
+Gemini, Antigravity, Copilot, or a custom agent on their Mac. It mounts one
+selected project, gives the agent one isolated home volume, avoids host
+secrets, and shows the exact Apple `container` command before anything runs.
 
-[Quick start](#quick-start) |
-[Supported agents](#supported-agents) |
+[Installation](docs/INSTALLATION.md) |
+[Capabilities](docs/CAPABILITIES.md) |
+[Usage](docs/USAGE.md) |
 [Security model](docs/SECURITY_MODEL.md) |
-[Troubleshooting](#troubleshooting) |
-[Development](#development) |
+[Architecture](docs/ARCHITECTURE.md) |
 [Research](docs/RESEARCH.md)
 
 ## Status
 
-Early foundation. RunHaven is usable for local testing and image builds.
-Provider egress mode now runs agents on an internal Apple `container` network
-through a host-side allowlist proxy.
-
-Use `runhaven plan` before `runhaven run`. Treat internet-enabled runs as
-unrestricted egress inside whatever Apple `container` and your host network
-allow.
+Early foundation. RunHaven is usable for local testing, image builds, and
+provider-restricted agent runs.
 
 RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
-supported runtimes or contributor verification targets for this project.
+supported runtimes or contributor verification targets.
 
-Use `--network provider` to restrict normal agent runs to the bundled provider
-host allowlist plus any explicit fully qualified `--provider-host HOST`
-additions. A listed host permits that host and its subdomains. The provider
-proxy resolves allowed hosts before connecting and rejects non-public resolved
-addresses.
-
-## What It Protects By Default
-
-`runhaven` generates Apple `container` commands with these defaults:
-
-- one selected project mounted at `/workspace`
-- one per-project agent home volume mounted at the container agent home path
-- no macOS home directory mount
-- no raw SSH key mount
-- no host cloud credential mount
-- no arbitrary host environment passthrough
-- read-only container root filesystem
-- temporary container scratch directory
-- dropped Linux capabilities
-- non-root `agent` user in bundled images
-- explicit command preview with `runhaven plan`
-
-Useful opt-in controls:
-
-- `--read-only-workspace` for review-only work
-- `--network internal` for local-only commands
-- `--network provider` for provider allowlisting through a runtime proxy
-- `--provider-host HOST` to add an explicit fully qualified HTTPS host to
-  provider mode
-- `--ssh` for SSH agent forwarding without mounting `~/.ssh`
-- `--env NAME` for passing a single host environment variable by name
-- `--tty never` for non-interactive automation
-- `--allow-sensitive-workspace` only when you intentionally want to mount a
-  broad or credential-bearing host path
-- `--allow-root-user` only when you intentionally want the agent process to run
-  as root inside the container
-
-## What It Does Not Solve Yet
-
-This is not a complete data-loss or exfiltration solution.
-
-- Internet mode does not yet restrict outbound domains.
-- Provider mode uses conservative host allowlists; login, telemetry, or
-  provider-side feature paths may need additional reviewed fully qualified
-  `--provider-host` entries. Blocked hosts are grouped after provider runs with
-  counts, denial reasons, run id, and suggested next actions, then recorded in
-  the provider egress policy log.
-- The selected agent can still read files inside the mounted workspace and its
-  isolated agent home volume.
-- If a credential is available inside the agent home volume or passed with
-  `--env NAME`, malicious repository content may try to misuse it.
-- Host-side auth brokering has an opt-in Codex API-key prototype. Other agent
-  auth brokers remain design-only. `runhaven auth status` and `runhaven auth
-  explain AGENT` explain the boundary without reading or printing secrets.
-- Agent-native approval systems are useful, but they are not a replacement for
-  the outer container boundary.
-
-See [Security model](docs/SECURITY_MODEL.md) and [Security policy](SECURITY.md)
-for the full boundary.
-
-## Requirements
-
-- macOS 26+
-- Apple silicon
-- Python 3.13+
-- Apple [`container`](https://github.com/apple/container) 1.0.0
-
-The recommended Python runtime is 3.14.6. CI also tests Python 3.13.14 as the
-minimum supported maintenance release.
-
-RunHaven does not support Windows or Linux. Use a macOS 26+ Apple silicon host
-for development, verification, image builds, and runtime checks.
-
-This repo intentionally pins Apple `container` 1.0.0. If Apple ships a newer
-runtime, `runhaven doctor` should fail until the repo updates and verifies the new
-runtime pin.
+Use `runhaven plan` before `runhaven run`. Treat the default internet network
+as unrestricted egress inside whatever Apple `container` and your host network
+allow. Use `--network provider` when a run should be restricted to the bundled
+provider host allowlist plus any reviewed fully qualified `--provider-host`
+entries.
 
 ## Quick Start
 
@@ -123,7 +47,7 @@ Install and start Apple `container` first:
 container system start
 ```
 
-Install this repo in a local virtual environment:
+Install RunHaven from this checkout:
 
 ```bash
 python3.14 -m venv .venv
@@ -132,86 +56,51 @@ python -m pip install pip==26.1.2
 python -m pip install --no-deps -e .
 ```
 
-Run the non-mutating guided setup before running an agent:
+Run the non-mutating setup guide, build an image, inspect the plan, then run
+from the project directory you want the agent to work on:
 
 ```bash
 runhaven setup
-```
-
-`setup` runs the same prerequisite checks as `doctor`, prints exact fixes when
-the host is not ready, and shows the image build, plan, and run commands for
-the selected agent without installing, starting, building, or mounting
-anything. It also explains when to use local-only, provider-only, package
-install, or unrestricted internet network modes, and how to choose a workspace
-without mounting host credential paths. Use `runhaven setup --agent codex` to
-prepare a different profile.
-
-Build and preview a bundled agent image:
-
-```bash
 runhaven image build claude
 runhaven plan claude
-```
-
-Run the agent from the project directory you want it to work on:
-
-```bash
 runhaven run claude
 ```
 
 Use the smallest project directory the agent needs. RunHaven mounts that
-directory at `/workspace`, not your whole home directory. Do not run from your
-home directory, a cloud sync root, or a credential folder unless you
-intentionally want that broader scope.
+directory at `/workspace`, not your whole home directory.
 
-When you run from a subdirectory inside a git repository, RunHaven keeps the
-current directory as the workspace by default and notes the containing git
-root in `runhaven plan`. Use `--workspace-scope git-root` only when you
-intentionally want the full repository mounted at `/workspace`.
+See [Installation](docs/INSTALLATION.md) for requirements and development
+setup. See [Usage](docs/USAGE.md) for command-level workflows.
 
-For a clean git repository, `runhaven run AGENT --worktree` creates a
-RunHaven-owned branch and git worktree under RunHaven's cache directory, then
-mounts that worktree at `/workspace`. The source checkout is left untouched
-while the agent works. RunHaven keeps the worktree after the run and records
-the branch, path, and exact review, merge, and discard git commands in the run
-record. Use `runhaven run AGENT --worktree --dry-run` to preview the source
-repo and base commit without creating anything.
+## Core Capabilities
 
-## Plan Before Run
+- `runhaven plan` prints the workspace, state volume, network mode, egress
+  status, preflight setup, and Apple `container run` command before execution.
+- `runhaven run` mounts one selected workspace and one isolated per-project
+  agent home volume.
+- Bundled images run as a non-root `agent` user with a read-only root
+  filesystem, temporary scratch space, and dropped Linux capabilities.
+- `--workspace-scope current|git-root` keeps the default mount narrow and makes
+  repository-root expansion explicit.
+- `--worktree` runs agents in a RunHaven-owned git worktree so the source
+  checkout stays untouched.
+- `--network internal` supports local-only commands.
+- `--network provider` routes normal agent runs through a host-side provider
+  host allowlist proxy on an internal Apple `container` network.
+- `--ssh` forwards the macOS SSH agent without mounting raw SSH keys.
+- `--env NAME` passes one reviewed host environment variable by name; `NAME=value`
+  is rejected.
+- `runhaven runs ...`, `runhaven egress log`, and `runhaven auth ...` expose
+  secret-free run, provider policy, and auth broker diagnostics.
 
-`runhaven plan` is the trust checkpoint. It prints the workspace, the isolated
-state volume, preflight setup, network mode, and Apple `container run` command.
-For provider mode, RunHaven injects proxy environment variables at runtime
-after discovering the internal-network gateway.
-
-Example shape:
-
-```text
-Workspace: selected project directory
-Workspace scope: current
-State volume: runhaven-claude-...-home
-Network: default internet network
-Egress: unrestricted internet egress; domain allowlisting is not enforced
-Preflight:
-  container network create --internal runhaven-volume-prep-internal
-  container run ... --no-dns --network runhaven-volume-prep-internal ...
-Run:
-  container run --rm --init --read-only --tmpfs <container-temp> --cap-drop ALL ...
-```
-
-Worktree runs allocate their branch and worktree path at runtime, so preview
-them with `runhaven run AGENT --worktree --dry-run` rather than `plan`.
-
-If the plan shows a mount, environment variable, or network mode you do not
-expect, stop before running it.
+See [Capabilities](docs/CAPABILITIES.md) for the full feature and limitation
+overview.
 
 ## Supported Agents
 
 ```bash
 runhaven agents
 ```
-
-Bundled profiles:
 
 | Profile | Default image | Use case |
 | --- | --- | --- |
@@ -228,180 +117,53 @@ Use `shell` for another agent image:
 runhaven plan shell --image my-agent:2026.06.14 -- my-agent --help
 ```
 
-## Common Workflows
+## Common Commands
 
-Read-only review:
+| Goal | Command |
+| --- | --- |
+| Guided first-run check | `runhaven setup` |
+| Host prerequisite check | `runhaven doctor` |
+| Build a bundled image | `runhaven image build claude` |
+| Preview a run | `runhaven plan claude` |
+| Run an agent | `runhaven run claude` |
+| Read-only review | `runhaven run codex --read-only-workspace` |
+| Provider-restricted run | `runhaven run claude --network provider` |
+| Local-only command | `runhaven run shell --network internal -- python -m unittest discover -s tests` |
+| Worktree-isolated run | `runhaven run claude --worktree` |
+| Recent runs | `runhaven runs list --limit 20` |
+| Provider policy log | `runhaven egress log --limit 20` |
+| Auth broker status | `runhaven auth status` |
+| Isolated state volumes | `runhaven state list` |
 
-```bash
-runhaven run codex --read-only-workspace
-```
+## Documentation
 
-Private Git access without mounting raw SSH keys:
-
-```bash
-runhaven run claude --ssh
-```
-
-RunHaven does not mount raw SSH keys, browser profiles, cloud credential
-folders, or provider login caches by default. Use `--ssh` for SSH agent
-forwarding and `--env NAME` only for a reviewed variable the agent really
-needs.
-
-Local-only command:
-
-```bash
-runhaven run shell --network internal -- python -m unittest discover -s tests
-```
-
-Provider-only mode:
-
-```bash
-runhaven plan claude --network provider
-runhaven run claude --network provider
-```
-
-Bundled profiles include conservative provider hosts. A listed host permits
-that host and its subdomains. See the reviewed
-[provider endpoint matrix](docs/PROVIDER_ENDPOINTS.md) before adding custom
-image hosts or extra provider endpoints. Add reviewed fully qualified hosts
-explicitly:
-
-```bash
-runhaven run shell --network provider --provider-host api.example.com
-```
-
-Package install or unrestricted internet:
-
-```bash
-runhaven plan claude
-runhaven run claude
-```
-
-Default internet mode is intentionally broad. Use it for package managers,
-dependency updates, and other work that needs registry or CDN access, then
-review the plan before running.
-
-Before adding a host, ask RunHaven why it would or would not be allowed:
-
-```bash
-runhaven why host api.openai.com --agent codex
-runhaven why host api.example.com
-```
-
-After a provider run, inspect recent allowed and denied CONNECT decisions:
-
-```bash
-runhaven egress log --limit 20
-runhaven egress log --json
-```
-
-Inspect recent agent runs without exposing command lines, agent arguments, or
-secrets:
-
-```bash
-runhaven runs list --limit 20
-runhaven runs show <run-id>
-runhaven runs log <run-id>
-runhaven runs diff <run-id>
-runhaven runs active
-runhaven runs status <run-id>
-runhaven runs attach <run-id>
-runhaven runs logs-follow <run-id>
-runhaven runs stop <run-id>
-runhaven runs kill <run-id>
-runhaven runs repair <run-id>
-runhaven runs repair --all
-runhaven runs repair <run-id> --json
-runhaven runs repair --all --json
-runhaven runs show <run-id> --json
-runhaven runs log <run-id> --json
-runhaven runs active --json
-runhaven runs status <run-id> --json
-```
-
-Run history includes a git change summary when the workspace is in a git repo:
-before and after `HEAD`, dirty state, changed file count, and a capped list of
-relative paths. It does not store diffs, file contents, prompts, commands, or
-secret values. `runs diff` uses that metadata to print a live git diff only
-after the recorded repo root, head, and path set still match the workspace.
-Active runs print their run id at start. If that id scrolls away, `runs active`
-lists currently active markers. `runs status` shows sanitized live Apple
-`container inspect` state for the named RunHaven container. `runs attach` opens
-a guarded `container exec` shell. `runs logs-follow` follows recent Apple
-`container logs` output. `runs stop` uses the id to request a graceful Apple
-`container stop`; `runs kill` sends Apple `container kill` for explicit
-hard-stop recovery. `runs repair` removes a stale active marker only after
-Apple `container inspect` reports the recorded container is not found. Use
-`runs repair --all` to review all active markers and remove only those
-confirmed stale. `--json` prints the same repair results and counts without
-raw Apple inspect output or marker contents.
-
-Broker a Codex API key without placing the raw value in the guest:
-
-```bash
-runhaven run codex --network provider --codex-api-key-broker-env OPENAI_API_KEY
-```
-
-Or pass a token by variable name only when you deliberately want that value
-inside the guest:
-
-```bash
-runhaven run codex --env OPENAI_API_KEY
-```
-
-`runhaven` rejects `NAME=value` so secrets do not get copied into shell history or
-dry-run output.
-
-Inspect the auth broker boundary:
-
-```bash
-runhaven auth status
-runhaven auth explain codex
-runhaven auth log --limit 20
-```
-
-These commands do not read credential stores or environment values. The auth log
-records broker decisions without request bodies, token values, or environment
-variable names.
-
-List or remove isolated agent home volumes:
-
-```bash
-runhaven state list
-runhaven state prune --yes
-```
-
-## Troubleshooting
-
-Run this first:
-
-```bash
-runhaven setup
-```
-
-If a run fails, collect these commands before opening an issue:
-
-```bash
-runhaven setup
-runhaven doctor
-runhaven plan <agent>
-container system status
-```
-
-Do not paste secret values, API keys, SSH keys, or private repository contents
-into issues.
+- [Installation](docs/INSTALLATION.md): requirements, local install, first run,
+  and verification.
+- [Capabilities](docs/CAPABILITIES.md): feature overview, defaults, limits, and
+  network modes.
+- [Usage](docs/USAGE.md): command-level workflows and examples.
+- [Security model](docs/SECURITY_MODEL.md): trust boundary, safe defaults, and
+  current risks.
+- [Provider endpoints](docs/PROVIDER_ENDPOINTS.md): reviewed provider host
+  matrix.
+- [Auth broker](docs/AUTH_BROKER.md): Codex API-key broker prototype and
+  future broker criteria.
+- [Architecture](docs/ARCHITECTURE.md): runtime pattern, profiles, networking,
+  records, and broker model.
+- [Pinning policy](docs/PINNING.md): exact dependency and image pin rules.
+- [Roadmap](docs/ROADMAP.md): planned product and codebase work.
+- [Contributing](CONTRIBUTING.md): local checks and review expectations.
+- [Security policy](SECURITY.md): supported security reporting scope.
 
 ## Development
 
+Use the smallest relevant check for a change:
+
 ```bash
-python3.14 -m venv .venv
-source .venv/bin/activate
-python -m pip install pip==26.1.2
-python -m pip install -r requirements-dev.txt
-python -m pip install --no-deps -e .
 python -m compileall src tests scripts
 PYTHONPATH=src python -m unittest discover -s tests
 python scripts/check_pins.py
+git diff --check
 ```
 
 Full local harness verification:
@@ -410,35 +172,10 @@ Full local harness verification:
 ./init.sh
 ```
 
-Optional individual checks:
-
-```bash
-python -m ruff check .
-python -m mypy src
-python -m build
-```
-
-## Pinning Rule
-
-All package, image, tool, and CI action dependencies must use the current stable
-release and be hard-pinned. Do not commit floating version ranges, mutable
-`latest` tags, major-only GitHub Action refs, unversioned installer scripts, or
-unpinned package installs.
-
-Current pins are recorded in [pins.toml](pins.toml). The source ledger is
-[docs/RESEARCH.md](docs/RESEARCH.md).
-
-## Documentation
-
-- [Usage](docs/USAGE.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Security model](docs/SECURITY_MODEL.md)
-- [Auth broker](docs/AUTH_BROKER.md)
-- [Pinning policy](docs/PINNING.md)
-- [Research and source ledger](docs/RESEARCH.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
+Docs-only changes should use the docs checks from
+[the verification matrix](docs/harness/verification-matrix.md). Runtime,
+security boundary, image, or install-flow changes need focused tests plus the
+relevant Apple `container` smokes.
 
 ## License
 

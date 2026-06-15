@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Start pre-release large-file modularization.
+Refactor README into focused documentation.
 
 ## Files
 
@@ -19,6 +19,8 @@ Start pre-release large-file modularization.
 - `docs/ROADMAP.md`
 - `docs/SECURITY_MODEL.md`
 - `docs/USAGE.md`
+- `docs/INSTALLATION.md`
+- `docs/CAPABILITIES.md`
 - `feature_list.json`
 - `progress.md`
 - `session-handoff.md`
@@ -218,6 +220,12 @@ Start pre-release large-file modularization.
   `PYTHONPATH=src python3 -m unittest` with 11 selected `egress log`,
   `auth log`, `auth status`, `auth explain`, `why host`, and
   `runs log --json` tests.
+- README documentation split checks passed: `git diff --check`,
+  `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`,
+  local Markdown link check across 41 Markdown files, and platform wording
+  scan. `README.md` is now a concise entry point; setup detail moved to
+  `docs/INSTALLATION.md`, capability and limitation detail moved to
+  `docs/CAPABILITIES.md`, and command workflows remain in `docs/USAGE.md`.
 - Focused CLI test split checks passed: `python3 -m compileall tests`,
   `uvx --from ruff==0.15.17 ruff check` on the split CLI test files, and
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`

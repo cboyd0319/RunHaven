@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Start pre-release large-file modularization.
+Refactor README into focused documentation.
 
 ## Current State
 
@@ -26,6 +26,10 @@ Start pre-release large-file modularization.
 - `docs/HARNESS_EVALUATION.md` records the before and after audit result.
 - `docs/assets/logo.png` is now the tracked project logo and is displayed by
   `README.md`.
+- `README.md` is now a concise project entry point instead of the full user
+  manual. Detailed setup and capability material moved into
+  `docs/INSTALLATION.md` and `docs/CAPABILITIES.md`, while command workflows
+  remain in `docs/USAGE.md`.
 - RunHaven is now documented and checked as macOS 26+ only. Windows and Linux
   runtime or contributor-verification targets are intentionally unsupported.
 - The non-macOS verification entrypoint was removed.
@@ -1235,3 +1239,7 @@ with a disposable OpenAI API key when one is available.
 - 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
   compileall, 76 unit tests, pin check, ruff, mypy, and build after grouped
   blocked-host review and provider-profile smoke support.
+- 2026-06-15: README documentation split checks passed:
+  `git diff --check`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  41 Markdown files, and platform wording scan.
