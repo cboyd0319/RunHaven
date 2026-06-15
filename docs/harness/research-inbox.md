@@ -164,3 +164,7 @@ repo and link to primary sources instead.
 - 2026-06-15: Continued pre-release modularization by extracting
   `src/runhaven/auth_profiles.py` from `src/runhaven/auth_broker.py` for static
   auth broker profile metadata.
+- 2026-06-15: Continued pre-release modularization by extracting
+  `src/runhaven/provider_observability.py` from
+  `src/runhaven/provider_runtime.py` for provider policy logs, auth broker log
+  writes, and blocked-host review text.

@@ -33,6 +33,7 @@ Start pre-release large-file modularization.
 - `src/runhaven/diagnostic_commands.py`
 - `src/runhaven/git_metadata.py`
 - `src/runhaven/provider_endpoints.py`
+- `src/runhaven/provider_observability.py`
 - `src/runhaven/provider_runtime.py`
 - `src/runhaven/run_history.py`
 - `scripts/check_pins.py`
@@ -273,6 +274,23 @@ Start pre-release large-file modularization.
   with 18 tests, and JSON smokes for `runhaven auth status` plus
   `runhaven auth explain codex`.
 - Full verification passed after the auth-profile extraction:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, platform wording scan, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
+  pin check, ruff, mypy, and build.
+- Focused provider-observability extraction checks passed:
+  `python3 -m compileall src/runhaven/cli.py src/runhaven/provider_runtime.py src/runhaven/provider_observability.py`,
+  `uvx --from ruff==0.15.17 ruff check` on those files,
+  `uvx --from mypy==2.1.0 mypy` on those files,
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_provider*.py'`
+  with 12 tests, and
+  `PYTHONPATH=src python3 -m unittest tests.test_cli_diagnostics tests.test_cli_runs_log`
+  with 12 tests.
+- Full verification passed after the provider-observability extraction:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
   `python3 scripts/check_pins.py`,
@@ -1037,6 +1055,9 @@ Start pre-release large-file modularization.
   package-lock policy checks into `scripts/npm_pin_policy.py`.
 - The thirteenth behavior-preserving extraction moved static auth broker
   profile metadata into `src/runhaven/auth_profiles.py`.
+- The fourteenth behavior-preserving extraction moved provider policy logs,
+  auth broker log writes, and blocked-host review text into
+  `src/runhaven/provider_observability.py`.
 
 ## Next Session
 
@@ -1048,9 +1069,9 @@ Start pre-release large-file modularization.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Continue large-file cleanup by reviewing `src/runhaven/provider_runtime.py`
-   for complexity-only refactors. Keep cohesive files intact if a split would
-   only move code.
+5. Continue large-file cleanup by reviewing `src/runhaven/cli.py` for any
+   remaining complexity-only parser or dispatch split. Keep cohesive files
+   intact if a split would only move code.
 6. Run the Codex broker smoke with a disposable OpenAI API key when available.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into

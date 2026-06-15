@@ -224,6 +224,12 @@ Start pre-release large-file modularization.
   auth broker profile metadata from `src/runhaven/auth_broker.py` into
   `src/runhaven/auth_profiles.py`. `src/runhaven/auth_broker.py` now measures
   374 lines, down from 520 lines.
+- The fourteenth behavior-preserving modularization extraction moved provider
+  policy log writes, auth broker log writes, blocked-host review text, denial
+  next-action text, and UTC timestamp formatting from
+  `src/runhaven/provider_runtime.py` into
+  `src/runhaven/provider_observability.py`. `src/runhaven/provider_runtime.py`
+  now measures 379 lines, down from 501 lines.
 - `src/runhaven/auth_profiles.py` now records per-profile auth broker metadata,
   and `src/runhaven/auth_broker.py` implements the first Codex API-key broker
   prototype.
@@ -359,10 +365,10 @@ Start pre-release large-file modularization.
 
 ## Recommended Next Step
 
-Continue the cleanup pass by reviewing `src/runhaven/provider_runtime.py` for
-complexity-only refactors. Keep cohesive files intact if a split would only
-move code. Run the optional Codex broker smoke with a disposable OpenAI API key
-when one is available.
+Continue the cleanup pass by reviewing `src/runhaven/cli.py` for any remaining
+complexity-only parser or dispatch split. Keep cohesive files intact if a split
+would only move code. Run the optional Codex broker smoke with a disposable
+OpenAI API key when one is available.
 
 ## Verification Evidence
 
@@ -433,6 +439,23 @@ when one is available.
   `runhaven auth explain codex`.
 - 2026-06-15: Full verification passed after the auth-profile extraction:
   `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, platform wording scan, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
+  pin check, ruff, mypy, and build.
+- 2026-06-15: Focused provider-observability extraction checks passed:
+  `python3 -m compileall src/runhaven/cli.py src/runhaven/provider_runtime.py src/runhaven/provider_observability.py`,
+  `uvx --from ruff==0.15.17 ruff check` on those files,
+  `uvx --from mypy==2.1.0 mypy` on those files,
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_provider*.py'`
+  with 12 tests, and
+  `PYTHONPATH=src python3 -m unittest tests.test_cli_diagnostics tests.test_cli_runs_log`
+  with 12 tests.
+- 2026-06-15: Full verification passed after the provider-observability
+  extraction: `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
   `python3 scripts/check_pins.py`,
   `uvx --from ruff==0.15.17 ruff check .`,

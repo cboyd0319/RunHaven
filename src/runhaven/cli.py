@@ -54,6 +54,7 @@ from .plans import (
     build_run_plan,
 )
 from .profiles import PROFILES, get_profile
+from .provider_observability import utc_timestamp
 from .run_history import (
     runs_diff,
     runs_list,
@@ -435,7 +436,7 @@ def run_agent(args: argparse.Namespace) -> int:
             run_preflight(command)
         run_id = uuid.uuid4().hex
         git_before = capture_git_snapshot(plan.workspace)
-        started_at = provider_runtime.utc_timestamp()
+        started_at = utc_timestamp()
         print(f"Run id: {run_id}", file=sys.stderr)
         write_active_run_record(plan, run_id=run_id, started_at=started_at)
         try:
@@ -443,7 +444,7 @@ def run_agent(args: argparse.Namespace) -> int:
         finally:
             terminal_status = active_run_terminal_status(run_id)
             remove_active_run_record(run_id)
-        finished_at = provider_runtime.utc_timestamp()
+        finished_at = utc_timestamp()
         git = summarize_git_change(git_before, capture_git_snapshot(plan.workspace))
         write_run_record(
             plan,
