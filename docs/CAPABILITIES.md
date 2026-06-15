@@ -118,6 +118,7 @@ or dry-run output.
 RunHaven includes explicit cleanup paths for local resources it owns:
 
 ```bash
+runhaven image doctor
 runhaven image rebuild claude
 runhaven state list
 runhaven state reset claude --session review --yes
@@ -126,11 +127,12 @@ runhaven network list
 runhaven network prune --yes
 ```
 
-`image rebuild` rebuilds the bundled image from the pinned local template.
-`state` commands manage RunHaven agent home volumes. `network` commands list or
-delete only RunHaven-managed Apple `container` network names, including
-volume-preparation, internal, and provider networks. None of these commands
-delete workspace files.
+`image doctor` is a read-only check for missing local bundled image tags and
+prints rebuild, network, and state recovery hints. `image rebuild` rebuilds the
+bundled image from the pinned local template. `state` commands manage RunHaven
+agent home volumes. `network` commands list or delete only RunHaven-managed
+Apple `container` network names, including volume-preparation, internal, and
+provider networks. None of these commands delete workspace files.
 
 ## Run Observability And Recovery
 

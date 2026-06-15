@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add image and managed-network repair UX.
+Add image doctor and preflight recovery diagnostics.
 
 ## Current State
 
@@ -48,6 +48,9 @@ Add image and managed-network repair UX.
 - `runhaven image rebuild AGENT` now rebuilds a bundled image through the same
   pinned build plan as `image build`, with clearer repair intent for stale or
   missing local images.
+- `runhaven image doctor [AGENT]` now checks local Apple `container` image
+  metadata for missing bundled RunHaven image tags and prints rebuild, network,
+  and state recovery guidance without mutating local resources.
 - `runhaven network list` now lists only RunHaven-managed Apple `container`
   network names. `runhaven network prune` previews those networks and
   `runhaven network prune --yes` deletes only RunHaven-managed
@@ -421,10 +424,9 @@ Add image and managed-network repair UX.
 ## Recommended Next Step
 
 Run the optional Codex broker smoke with a disposable OpenAI API key when one
-is available. Next product slice: add `runhaven image doctor` and interrupted
-preflight diagnostics so RunHaven can identify missing or stale bundled images
-and explain rebuild or cleanup steps before users guess Apple `container`
-commands.
+is available. Next product slice: add stale-image metadata comparison and
+deeper interrupted-preflight state inspection so `runhaven image doctor` can
+distinguish missing tags from stale builds or partial setup leftovers.
 
 ## Verification Evidence
 
@@ -1382,3 +1384,14 @@ commands.
   `PYTHONPATH=src python3 -m runhaven network prune`,
   `python3 -m json.tool feature_list.json`, local Markdown link check, and
   `git diff --check` also passed.
+- 2026-06-15: Image doctor red/green focused tests first failed because
+  `runhaven image doctor` was not a valid subcommand, then passed after adding
+  the read-only command.
+- 2026-06-15: Full image doctor verification passed:
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 191 unit tests,
+  pin check, ruff, mypy, and build; focused adjacent tests, touched-file
+  compileall, touched-file ruff, touched-source mypy,
+  `PYTHONPATH=src python3 -m runhaven image doctor --help`,
+  `PYTHONPATH=src python3 -m runhaven image doctor shell`,
+  `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`,
+  local Markdown link check, and `git diff --check` also passed.

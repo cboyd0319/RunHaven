@@ -46,6 +46,7 @@ from .egress import (
     ThreadedAllowlistProxy,
 )
 from .git_metadata import capture_git_snapshot, summarize_git_change
+from .image_commands import image_doctor
 from .images import build_image_plan
 from .network_commands import network_list, network_prune
 from .plans import (
@@ -199,6 +200,12 @@ def run_agent(args: argparse.Namespace) -> int:
 
 
 def image_command(args: argparse.Namespace) -> int:
+    if args.image_command == "doctor":
+        return image_doctor(
+            args.agent,
+            require_container=require_container_cli,
+            run_container=subprocess.run,
+        )
     if args.image_command not in {"build", "rebuild"}:
         raise ValueError(f"unknown image command: {args.image_command}")
 

@@ -62,6 +62,19 @@ runhaven image rebuild claude --dry-run
 as `image build`; it does not delete workspaces, state volumes, or other local
 images.
 
+Check local bundled image availability without changing local resources:
+
+```bash
+runhaven image doctor
+runhaven image doctor claude
+```
+
+`image doctor` reads `container image list --format json`, checks for the
+expected bundled RunHaven image tags, and exits nonzero when a selected image
+is missing. It prints rebuild, network, and state recovery commands, but it
+does not build images, delete resources, mount workspaces, read credentials, or
+reset state.
+
 ## Preview a Run
 
 ```bash
@@ -339,6 +352,13 @@ workspace, host, port, decision, reason, matched rule, count, and run id.
 
 ## Recover Local Resources
 
+Diagnose bundled images before rebuilding:
+
+```bash
+runhaven image doctor
+runhaven image doctor claude
+```
+
 Rebuild a stale or missing bundled image:
 
 ```bash
@@ -362,6 +382,8 @@ runhaven network prune --yes
 volume-preparation network, per-project internal networks, and per-run provider
 networks. It does not delete Apple-managed networks, the default network,
 arbitrary user-created networks, workspaces, images, or state volumes.
+`image doctor` is read-only and only reports missing local bundled image tags
+plus copyable recovery commands.
 
 ## Run History
 

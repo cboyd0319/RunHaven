@@ -59,6 +59,10 @@ session-filtered `state prune` delete RunHaven-managed home volumes only.
 Apple `container` network names and do not delete arbitrary Apple-managed or
 user-created networks.
 
+`image doctor` is read-only. It lists local Apple `container` image metadata,
+checks for expected bundled RunHaven image tags, and does not build images,
+delete resources, mount workspaces, read credentials, or reset state.
+
 ## Why Not Container Machine
 
 RunHaven uses task-scoped `container run` commands instead of Apple's persistent

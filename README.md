@@ -129,6 +129,7 @@ runhaven plan shell --image my-agent:2026.06.14 -- my-agent --help
 | Host prerequisite check | `runhaven doctor` |
 | Build a bundled image | `runhaven image build claude` |
 | Rebuild a bundled image | `runhaven image rebuild claude` |
+| Diagnose bundled images | `runhaven image doctor` |
 | Preview a run | `runhaven plan claude` |
 | Run an agent | `runhaven run claude` |
 | Run with a named session | `runhaven run claude --session review` |

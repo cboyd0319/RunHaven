@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add image and managed-network repair UX.
+Add image doctor and preflight recovery diagnostics.
 
 ## Files
 
@@ -35,6 +35,7 @@ Add image and managed-network repair UX.
 - `src/runhaven/cli_parser.py`
 - `src/runhaven/diagnostic_commands.py`
 - `src/runhaven/git_metadata.py`
+- `src/runhaven/image_commands.py`
 - `src/runhaven/network_commands.py`
 - `src/runhaven/provider_endpoints.py`
 - `src/runhaven/provider_observability.py`
@@ -57,6 +58,7 @@ Add image and managed-network repair UX.
 - `tests/test_cli_active_status.py`
 - `tests/test_cli_active_stop_kill.py`
 - `tests/test_cli_diagnostics.py`
+- `tests/test_cli_image.py`
 - `tests/test_cli_network.py`
 - `tests/test_cli_provider_codex_broker.py`
 - `tests/test_cli_provider_internal_network.py`
@@ -332,6 +334,17 @@ Add image and managed-network repair UX.
   `PYTHONPATH=src python3 -m runhaven network prune`,
   `python3 -m json.tool feature_list.json`, local Markdown link check, and
   `git diff --check` also passed.
+- Image doctor red/green focused tests first failed because `runhaven image
+  doctor` was not a valid subcommand, then passed after adding the read-only
+  command.
+- Full image doctor verification passed:
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 191 unit tests,
+  pin check, ruff, mypy, and build; focused adjacent tests, touched-file
+  compileall, touched-file ruff, touched-source mypy,
+  `PYTHONPATH=src python3 -m runhaven image doctor --help`,
+  `PYTHONPATH=src python3 -m runhaven image doctor shell`,
+  `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`,
+  local Markdown link check, and `git diff --check` also passed.
 - Focused CLI test split checks passed: `python3 -m compileall tests`,
   `uvx --from ruff==0.15.17 ruff check` on the split CLI test files, and
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`
@@ -1286,6 +1299,9 @@ Add image and managed-network repair UX.
 - `runhaven image rebuild AGENT` rebuilds a bundled image through the same
   pinned build plan as `image build`, with clearer repair intent for stale or
   missing local images.
+- `runhaven image doctor [AGENT]` checks local Apple `container` image
+  metadata for missing bundled RunHaven image tags and prints rebuild, network,
+  and state recovery guidance without mutating local resources.
 - `runhaven network list` lists only RunHaven-managed Apple `container`
   network names. `runhaven network prune` previews those names and
   `runhaven network prune --yes` deletes only RunHaven-managed
@@ -1302,9 +1318,9 @@ Add image and managed-network repair UX.
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
 5. Run the Codex broker smoke with a disposable OpenAI API key when available.
-6. Add `runhaven image doctor` and interrupted preflight diagnostics so
-   RunHaven can identify missing or stale bundled images and explain rebuild
-   or cleanup steps before users guess Apple `container` commands.
+6. Add stale-image metadata comparison and deeper interrupted-preflight state
+   inspection so `runhaven image doctor` can distinguish missing tags from
+   stale builds or partial setup leftovers.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

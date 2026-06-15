@@ -415,8 +415,33 @@
       "notes": "`image rebuild` is intentionally an alias for the pinned bundled image build plan, not a health diagnosis command. Network pruning is limited to RunHaven-managed name shapes and requires explicit confirmation."
     },
     {
-      "id": "repo-logo",
+      "id": "image-doctor-preflight-diagnostics",
       "priority": 9,
+      "area": "usability",
+      "title": "Image doctor and preflight recovery diagnostics",
+      "user_visible_behavior": "`runhaven image doctor [AGENT]` checks local Apple container image metadata for bundled profile tags and prints rebuild, network, and state-recovery guidance without mutating local resources.",
+      "status": "passing",
+      "dependencies": [
+        "image-network-repair-ux",
+        "guided-first-run-setup"
+      ],
+      "verification": [
+        "`runhaven image doctor AGENT` lists whether the bundled image tag is present",
+        "`runhaven image doctor` checks all bundled profiles and exits nonzero when any selected image is missing",
+        "The command reads Apple `container image list --format json` and does not build, delete, mount, or reset resources",
+        "Invalid Apple image-list JSON fails closed with a CLI usage error",
+        "User docs state that the command is read-only and do not claim stale-image content validation"
+      ],
+      "evidence": [
+        "2026-06-15: Focused image doctor tests first failed because `runhaven image doctor` was not a valid subcommand, then passed after adding the read-only command.",
+        "2026-06-15: Focused image doctor checks passed with adjacent CLI tests, compileall for touched files, ruff on touched files, and mypy on touched source files.",
+        "2026-06-15: Full image doctor verification passed: `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 191 unit tests, pin check, ruff, mypy, and build. Manual `image doctor --help` and `image doctor shell` smokes, JSON validation, Markdown link check, and `git diff --check` also passed."
+      ],
+      "notes": "`image doctor` detects missing local image tags and prints copyable recovery commands. It does not yet compare image content or build timestamps against pin metadata."
+    },
+    {
+      "id": "repo-logo",
+      "priority": 10,
       "area": "documentation",
       "title": "Project logo integration",
       "user_visible_behavior": "The project README displays the maintained repository logo from a tracked asset path.",

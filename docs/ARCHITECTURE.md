@@ -113,6 +113,13 @@ volume-preparation network, per-project internal networks, and per-run provider
 networks. It does not delete the Apple default network, Apple-managed runtime
 networks, arbitrary user networks, images, volumes, or workspace files.
 
+Image diagnostics are read-only. `runhaven image doctor [AGENT]` reads
+`container image list --format json`, extracts image names from
+`configuration.name` and descriptor annotation values, accepts both RunHaven
+tags and `docker.io/`-prefixed tags, and returns nonzero when a selected
+bundled profile image is absent. It prints repair guidance, but it does not
+build images, delete resources, mount workspaces, or reset state.
+
 ## Run Records
 
 Actual `runhaven run` executions append one JSON object to `runs.jsonl` under

@@ -67,6 +67,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="rebuild a bundled agent image",
     )
     add_image_build_arguments(rebuild_parser)
+    image_doctor_parser = image_subcommands.add_parser(
+        "doctor",
+        help="diagnose bundled agent image availability",
+    )
+    image_doctor_parser.add_argument(
+        "agent",
+        nargs="?",
+        choices=sorted(PROFILES),
+        help="agent image to diagnose; defaults to all bundled agents",
+    )
 
     network_parser = subcommands.add_parser(
         "network",

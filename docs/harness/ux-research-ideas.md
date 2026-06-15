@@ -321,6 +321,8 @@ recorded RunHaven worktree and branch.
 Current command shapes:
 
 ```bash
+runhaven image doctor
+runhaven image doctor claude
 runhaven image rebuild claude
 runhaven state list
 runhaven state reset claude --session review --yes
@@ -329,12 +331,15 @@ runhaven network list
 runhaven network prune --yes
 ```
 
-Current state: `runhaven image rebuild` reuses the pinned bundled image build
-plan with clearer repair intent. `state` commands list, reset, and prune
-RunHaven-owned agent home volumes. `network` commands list and prune only
-RunHaven-managed Apple `container` networks after explicit confirmation. Future
-work can add `image doctor` and deeper interrupted-preflight diagnosis, but the
-current commands avoid deleting workspace files.
+Current state: `runhaven image doctor` checks local Apple `container` image
+metadata for missing bundled image tags and prints rebuild, network, and state
+recovery guidance without mutating resources. `runhaven image rebuild` reuses
+the pinned bundled image build plan with clearer repair intent. `state`
+commands list, reset, and prune RunHaven-owned agent home volumes. `network`
+commands list and prune only RunHaven-managed Apple `container` networks after
+explicit confirmation. Future work can add stale-image metadata comparison and
+deeper interrupted-preflight state inspection, but the current commands avoid
+deleting workspace files.
 
 ### Credential UX
 
