@@ -99,6 +99,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="show live git diff for one RunHaven run",
     )
     runs_diff_parser.add_argument("run_id", help="run id to diff")
+    runs_merge_parser = runs_subcommands.add_parser(
+        "merge",
+        help="merge a RunHaven worktree run back into the source checkout",
+    )
+    runs_merge_parser.add_argument("run_id", help="worktree run id to merge")
+    runs_keep_parser = runs_subcommands.add_parser(
+        "keep",
+        help="keep a RunHaven worktree run for manual review",
+    )
+    runs_keep_parser.add_argument("run_id", help="worktree run id to keep")
+    runs_discard_parser = runs_subcommands.add_parser(
+        "discard",
+        help="discard a RunHaven worktree run and delete its branch",
+    )
+    runs_discard_parser.add_argument("run_id", help="worktree run id to discard")
     runs_active_parser = runs_subcommands.add_parser(
         "active",
         help="show currently active RunHaven runs",

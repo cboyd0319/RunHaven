@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Refactor README into focused documentation.
+Add worktree lifecycle commands.
 
 ## Files
 
@@ -39,6 +39,7 @@ Refactor README into focused documentation.
 - `src/runhaven/provider_observability.py`
 - `src/runhaven/provider_runtime.py`
 - `src/runhaven/run_history.py`
+- `src/runhaven/worktree_lifecycle.py`
 - `scripts/check_pins.py`
 - `scripts/npm_pin_policy.py`
 - `scripts/codex_broker_smoke.py`
@@ -60,6 +61,7 @@ Refactor README into focused documentation.
 - `tests/test_cli_runs_log.py`
 - `tests/test_cli_standard_run.py`
 - `tests/test_cli_state.py`
+- `tests/test_cli_worktree_lifecycle.py`
 - `tests/test_codex_broker_smoke.py`
 - `tests/test_egress.py`
 - `tests/test_plans.py`
@@ -226,6 +228,19 @@ Refactor README into focused documentation.
   scan. `README.md` is now a concise entry point; setup detail moved to
   `docs/INSTALLATION.md`, capability and limitation detail moved to
   `docs/CAPABILITIES.md`, and command workflows remain in `docs/USAGE.md`.
+- Worktree lifecycle red/green focused tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle`
+  covered `runs keep`, dirty and committed `runs merge`, stale-source merge
+  refusal, explicit `runs discard`, and non-worktree refusal. Adjacent
+  run-history and worktree tests also passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle tests.test_cli_standard_run tests.test_cli_runs_diff tests.test_cli_runs_list_show`.
+- Full worktree lifecycle verification passed: `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src:tests python3 -m unittest discover -s tests` with 169
+  tests, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  41 Markdown files, platform wording scan, `PYTHONPATH=src python3 -m runhaven runs --help`,
+  `git diff --check`, and `PYTHON=<temporary-venv-python> ./init.sh`.
 - Focused CLI test split checks passed: `python3 -m compileall tests`,
   `uvx --from ruff==0.15.17 ruff check` on the split CLI test files, and
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`
@@ -1147,6 +1162,15 @@ Refactor README into focused documentation.
   creates a RunHaven-owned branch and git worktree, mounts the worktree for the
   agent, keeps the worktree after the run, and records exact recovery commands.
   Dirty source repositories fail before worktree creation.
+- `runhaven runs keep RUN_ID`, `runhaven runs merge RUN_ID`, and
+  `runhaven runs discard RUN_ID` landed for worktree review flows. Keep
+  validates and prints review actions without mutating state. Merge validates
+  the recorded source repository, RunHaven-owned branch, worktree path,
+  worktree branch, and base `HEAD`; refuses dirty or moved source checkouts;
+  applies committed, dirty, and untracked worktree changes back to the source
+  checkout; and cleans up the worktree and branch after success. Discard
+  removes only the recorded RunHaven worktree and branch without touching the
+  source checkout.
 
 ## Next Session
 
@@ -1158,9 +1182,9 @@ Refactor README into focused documentation.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Continue the product backlog with `runs merge`, `runs keep`, and
-   `runs discard` for worktree review flows.
-6. Run the Codex broker smoke with a disposable OpenAI API key when available.
+5. Run the Codex broker smoke with a disposable OpenAI API key when available.
+6. Continue worktree polish with failed-merge conflict guidance after the first
+   guarded lifecycle commands settle.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

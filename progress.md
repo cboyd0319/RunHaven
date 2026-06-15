@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Refactor README into focused documentation.
+Add worktree lifecycle commands.
 
 ## Current State
 
@@ -249,6 +249,13 @@ Refactor README into focused documentation.
   worktree for clean source repositories, mounts that worktree for the agent,
   keeps it after the run, and records exact recovery commands in the run
   record. Dirty source repositories fail before worktree creation.
+- `runhaven runs keep RUN_ID`, `runhaven runs merge RUN_ID`, and
+  `runhaven runs discard RUN_ID` now provide guarded worktree lifecycle
+  actions. They validate the recorded RunHaven-owned source repository,
+  worktree, branch, and base metadata before acting. Merge refuses dirty or
+  moved source checkouts, applies committed, dirty, and untracked worktree
+  changes back to the source checkout, then removes the worktree and branch.
+  Discard removes only the recorded RunHaven worktree and branch.
 - `src/runhaven/auth_profiles.py` now records per-profile auth broker metadata,
   and `src/runhaven/auth_broker.py` implements the first Codex API-key broker
   prototype.
@@ -384,9 +391,9 @@ Refactor README into focused documentation.
 
 ## Recommended Next Step
 
-Continue the product backlog with `runs merge`, `runs keep`, and
-`runs discard` for worktree review flows. Run the optional Codex broker smoke
-with a disposable OpenAI API key when one is available.
+Run the optional Codex broker smoke with a disposable OpenAI API key when one
+is available. Continue worktree polish with conflict-recovery guidance only
+after the first guarded lifecycle commands have settled.
 
 ## Verification Evidence
 
@@ -1243,3 +1250,17 @@ with a disposable OpenAI API key when one is available.
   `git diff --check`, `python3 scripts/check_pins.py`,
   `python3 -m json.tool feature_list.json`, local Markdown link check across
   41 Markdown files, and platform wording scan.
+- 2026-06-15: Worktree lifecycle red/green focused tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle`
+  covered `runs keep`, dirty and committed `runs merge`, stale-source merge
+  refusal, explicit `runs discard`, and non-worktree refusal. Adjacent
+  run-history and worktree tests passed with
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle tests.test_cli_standard_run tests.test_cli_runs_diff tests.test_cli_runs_list_show`.
+- 2026-06-15: Full worktree lifecycle verification passed:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src:tests python3 -m unittest discover -s tests` with 169
+  tests, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  41 Markdown files, platform wording scan, `PYTHONPATH=src python3 -m runhaven runs --help`,
+  `git diff --check`, and `PYTHON=<temporary-venv-python> ./init.sh`.

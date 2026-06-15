@@ -198,8 +198,8 @@
       "id": "worktree-run-isolation",
       "priority": 5,
       "area": "safety",
-      "title": "Git worktree run isolation",
-      "user_visible_behavior": "`runhaven run AGENT --worktree` creates a RunHaven-owned branch and git worktree for a clean source repository, mounts that worktree for the agent run, leaves the source checkout untouched, and records recovery commands.",
+      "title": "Git worktree run isolation and lifecycle",
+      "user_visible_behavior": "`runhaven run AGENT --worktree` creates a RunHaven-owned branch and git worktree for a clean source repository, mounts that worktree for the agent run, leaves the source checkout untouched, and `runs keep`, `runs merge`, and `runs discard` provide guarded review lifecycle actions.",
       "status": "passing",
       "dependencies": [
         "workspace-scope-selection",
@@ -210,13 +210,18 @@
         "`runhaven run AGENT --worktree` refuses dirty source repositories before creating a worktree",
         "Worktree runs mount the RunHaven-owned worktree instead of the source checkout",
         "Run records include worktree source, branch, base `HEAD`, mounted workspace, and exact recovery commands",
-        "The source checkout remains unchanged by the container-mounted worktree"
+        "The source checkout remains unchanged by the container-mounted worktree",
+        "`runs keep RUN_ID` validates the recorded worktree and prints review actions without mutating state",
+        "`runs merge RUN_ID` validates the source repository, RunHaven branch, worktree path, worktree branch, and base `HEAD` before applying worktree changes and cleaning up",
+        "`runs discard RUN_ID` removes only the recorded RunHaven worktree and branch without changing the source checkout"
       ],
       "evidence": [
         "2026-06-15: Focused standard-run tests passed for worktree dry-run preview, isolated worktree mount and run-record recovery metadata, dirty-source refusal, and source checkout preservation.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 163 unit tests, pin check, ruff, mypy, and build after adding worktree run isolation. Manual `runhaven run shell --worktree --dry-run` smoke passed without creating a worktree."
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 163 unit tests, pin check, ruff, mypy, and build after adding worktree run isolation. Manual `runhaven run shell --worktree --dry-run` smoke passed without creating a worktree.",
+        "2026-06-15: Focused worktree lifecycle tests passed for `runs keep`, dirty and committed `runs merge`, stale-source merge refusal, explicit `runs discard`, and non-worktree refusal.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 169 unit tests, pin check, ruff, mypy, and build after adding worktree lifecycle commands."
       ],
-      "notes": "`runs merge`, `runs keep`, and `runs discard` convenience commands are not implemented yet; the run record currently provides exact git commands for review, merge, worktree removal, and branch deletion."
+      "notes": "`runs merge` intentionally refuses when the source checkout is dirty or no longer at the recorded base commit. Failed merge steps leave the RunHaven worktree and branch intact for manual recovery."
     },
     {
       "id": "auth-broker-boundary",

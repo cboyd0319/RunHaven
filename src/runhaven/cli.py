@@ -63,6 +63,11 @@ from .run_history import (
     write_run_record,
 )
 from .setup_guide import print_checks, print_setup_guide
+from .worktree_lifecycle import (
+    runs_worktree_discard,
+    runs_worktree_keep,
+    runs_worktree_merge,
+)
 from .worktrees import create_worktree_for_run, preview_worktree
 
 
@@ -224,6 +229,12 @@ def runs_command(args: argparse.Namespace) -> int:
         )
     if args.runs_command == "diff":
         return runs_diff(args.run_id)
+    if args.runs_command == "merge":
+        return runs_worktree_merge(args.run_id)
+    if args.runs_command == "keep":
+        return runs_worktree_keep(args.run_id)
+    if args.runs_command == "discard":
+        return runs_worktree_discard(args.run_id)
     if args.runs_command == "active":
         return runs_active(json_output=args.json)
     if args.runs_command == "status":

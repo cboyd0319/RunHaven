@@ -7,11 +7,11 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the active-repair test cleanup:
+Measured on 2026-06-15 after the worktree lifecycle command slice:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
-| `src/runhaven/cli.py` | 472 | Owns command dispatch, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
+| `src/runhaven/cli.py` | 536 | Owns command dispatch, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `src/runhaven/plans.py` | 403 | Cohesive planner and validation module. |
 | `tests/test_cli_active_repair.py` | 401 | Owns active-run stale-marker repair coverage; reviewed as cohesive after helper cleanup. |
@@ -23,12 +23,14 @@ Measured on 2026-06-15 after the active-repair test cleanup:
 | `tests/test_cli_provider_codex_broker.py` | 359 | Owns Codex API-key broker run, auth log, no-request, run-record, and missing-env coverage. |
 | `src/runhaven/active_commands.py` | 342 | Owns active-run listing, attach/log-follow, sanitized status output, stop, and kill. |
 | `tests/test_cli_standard_run.py` | 304 | Owns standard run record and active-marker lifecycle coverage. |
-| `src/runhaven/cli_parser.py` | 302 | Owns argparse construction for all RunHaven CLI commands. |
+| `src/runhaven/cli_parser.py` | 331 | Owns argparse construction for all RunHaven CLI commands. |
+| `src/runhaven/worktree_lifecycle.py` | 291 | Owns worktree run-record validation, keep output, merge application, and discard cleanup. |
 | `tests/test_cli_diagnostics.py` | 273 | Owns `auth`, `egress log`, and `why host` CLI coverage. |
 | `tests/test_cli_runs_log.py` | 269 | Owns `runs log` text and JSON coverage. |
 | `src/runhaven/diagnostic_commands.py` | 249 | Owns `auth status/explain/log`, `egress log`, `why host`, and diagnostic log readers. |
 | `src/runhaven/active_repair.py` | 243 | Owns stale active-marker repair, JSON payloads, and inspect-missing validation. |
 | `tests/test_cli_provider_proxy.py` | 242 | Owns provider plan, proxy injection, blocked-host summary, and policy-log coverage. |
+| `tests/test_cli_worktree_lifecycle.py` | 242 | Owns `runs keep`, `runs merge`, and `runs discard` worktree lifecycle coverage. |
 | `src/runhaven/git_metadata.py` | 235 | Owns git discovery, status parsing, run git summary construction, and live diff helpers. |
 | `tests/test_cli_runs_diff.py` | 233 | Owns `runs diff` git validation and output coverage. |
 | `tests/test_cli_active_status.py` | 233 | Owns active status coverage. |

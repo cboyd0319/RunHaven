@@ -60,11 +60,11 @@
 
 ## Phase 5: Isolation And Recovery
 
-- worktree merge, keep, discard, and conflict-recovery flows
+- worktree conflict-recovery polish after failed or manual merges
 - run records with `runs list`, `runs show`, `runs log`, `runs diff`,
-  `runs active`, `runs status`, `runs attach`, `runs logs-follow`,
-  `runs stop`, `runs kill`, `runs repair`, `runs repair --all`, and git
-  change metadata
+  `runs keep`, `runs merge`, `runs discard`, `runs active`, `runs status`,
+  `runs attach`, `runs logs-follow`, `runs stop`, `runs kill`, `runs repair`,
+  `runs repair --all`, and git change metadata
 - structured blocked-host and cleanup event records
 - stable JSON output for read-only, run-status, and repair-summary commands
 - warm reusable project sessions with explicit reset and prune UX

@@ -77,9 +77,13 @@ mounts that worktree at `/workspace`. The source checkout is left untouched.
 RunHaven keeps the worktree after the run and records exact review, merge, and
 discard commands in the run record.
 
-Current convenience commands such as `runs merge`, `runs keep`, and
-`runs discard` are not implemented yet. Use the recovery commands recorded in
-`runhaven runs show RUN_ID --json`.
+`runhaven runs keep RUN_ID` validates the recorded RunHaven-owned worktree and
+prints review commands without mutating anything. `runhaven runs merge RUN_ID`
+validates the source repository, branch, worktree path, and base commit before
+bringing committed, dirty, and untracked worktree changes back to the source
+checkout and then cleaning up the RunHaven worktree and branch. `runhaven runs
+discard RUN_ID` validates the same ownership boundary, then removes the
+recorded worktree and branch without touching the source checkout.
 
 ## Credential Handling
 
@@ -106,6 +110,9 @@ RunHaven records secret-free run metadata under its cache directory:
 - `runhaven runs show RUN_ID`
 - `runhaven runs log RUN_ID`
 - `runhaven runs diff RUN_ID`
+- `runhaven runs keep RUN_ID`
+- `runhaven runs merge RUN_ID`
+- `runhaven runs discard RUN_ID`
 - `runhaven runs active`
 - `runhaven runs status RUN_ID`
 - `runhaven runs attach RUN_ID`

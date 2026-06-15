@@ -299,8 +299,11 @@ UX requirements:
 
 Current state: `runhaven run AGENT --worktree` creates a RunHaven-owned branch
 and git worktree for clean source repositories, keeps it after the run, and
-records exact recovery commands. `runs merge`, `runs keep`, and `runs discard`
-remain backlog items.
+records exact recovery commands. `runs keep`, `runs merge`, and
+`runs discard` now provide the first guarded review lifecycle: keep validates
+and prints review paths, merge validates the source/worktree/branch boundary
+before applying changes back to the source checkout, and discard removes only
+the recorded RunHaven worktree and branch.
 
 ### Image Repair And State Repair
 

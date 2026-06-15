@@ -101,8 +101,13 @@ repo and link to primary sources instead.
 - 2026-06-15: Implemented the first worktree isolation slice from the promoted
   backlog. `runhaven run AGENT --worktree` now creates a RunHaven-owned branch
   and git worktree for clean source repositories, mounts that worktree for the
-  agent, and records exact recovery commands; `runs merge`, `runs keep`, and
-  `runs discard` remain backlog items.
+  agent, and records exact recovery commands.
+- 2026-06-15: Implemented worktree lifecycle commands from the promoted
+  backlog. `runhaven runs keep RUN_ID` validates and prints review paths,
+  `runhaven runs merge RUN_ID` validates the recorded source/worktree/branch
+  boundary before applying committed, dirty, and untracked changes back to the
+  source checkout, and `runhaven runs discard RUN_ID` removes the recorded
+  RunHaven worktree and branch without touching the source checkout.
 - 2026-06-15: Added a pre-release backlog item to consider a major large-file
   refactor and modularization pass, especially around the CLI and broad test
   modules, before release.
