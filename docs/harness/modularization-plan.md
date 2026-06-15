@@ -7,18 +7,18 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the NPM pin-policy extraction:
+Measured on 2026-06-15 after the auth-profile extraction:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
 | `src/runhaven/cli.py` | 766 | Still owns parser, command routing, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
-| `src/runhaven/auth_broker.py` | 520 | Cohesive enough for now. |
 | `src/runhaven/provider_runtime.py` | 501 | Owns provider run lifecycle, proxy/broker startup, policy/auth decision logging, active marker cleanup, and internal network inspection. |
 | `tests/test_cli_active_repair.py` | 452 | Owns active-run stale-marker repair coverage. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `src/runhaven/plans.py` | 403 | Cohesive planner and validation module. |
 | `src/runhaven/run_history.py` | 383 | Owns run-record persistence, provider/auth summaries, and `runs list/show/log/diff` output. |
 | `scripts/check_pins.py` | 380 | Owns text target discovery, pin ledger orchestration, Python/dev deps, CI, Containerfile, and Debian package/source checks. |
+| `src/runhaven/auth_broker.py` | 374 | Owns the live Codex API-key broker proxy, upstream forwarding, request validation, and broker decision aggregation. |
 | `tests/test_cli_active_attach_logs.py` | 369 | Owns active attach and logs-follow coverage. |
 | `tests/test_cli_provider_codex_broker.py` | 359 | Owns Codex API-key broker run, auth log, no-request, run-record, and missing-env coverage. |
 | `src/runhaven/active_commands.py` | 342 | Owns active-run listing, attach/log-follow, sanitized status output, stop, and kill. |
@@ -34,6 +34,7 @@ Measured on 2026-06-15 after the NPM pin-policy extraction:
 | `tests/test_cli.py` | 228 | Owns core CLI, setup, doctor, and plan smoke coverage. |
 | `tests/test_cli_active_stop_kill.py` | 216 | Owns active stop and kill coverage. |
 | `tests/test_cli_runs_list_show.py` | 195 | Owns `runs list` and `runs show` coverage. |
+| `src/runhaven/auth_profiles.py` | 183 | Owns static auth broker profile metadata and status output data. |
 | `tests/test_cli_active_list.py` | 133 | Owns active-run list coverage. |
 | `scripts/npm_pin_policy.py` | 108 | Owns package.json and package-lock pin policy checks. |
 | `tests/cli_test_helpers.py` | 107 | Shared git, run-record, and active-marker helpers for split CLI tests. |
@@ -206,12 +207,26 @@ fail-closed repair behavior, and active-command test coverage.
 This keeps `python3 scripts/check_pins.py` as the pin-policy entrypoint while
 moving package-lock-specific checks into a focused helper module.
 
+## Auth-Profile Extraction Completed
+
+- `src/runhaven/auth_profiles.py`: auth broker status constants, static
+  per-profile metadata, JSON serialization, and profile lookup helpers.
+- `src/runhaven/auth_broker.py`: live Codex API-key broker proxy, upstream
+  forwarding, request validation, placeholder token constants, and broker
+  decision aggregation. It re-exports the previous profile symbols to preserve
+  the internal import surface.
+- `src/runhaven/diagnostic_commands.py`: reads auth profile metadata directly
+  from `auth_profiles.py` so read-only diagnostics do not import the live
+  broker server implementation.
+
+This removes static auth profile data from the live broker module while
+preserving existing auth status and Codex broker behavior.
+
 ## Recommended Sequence
 
-1. Review `src/runhaven/auth_broker.py` and
-   `src/runhaven/provider_runtime.py` for the same kind of complexity-only
-   refactor. The next pass should be willing to stop at "no split needed" if
-   the modules are cohesive.
+1. Review `src/runhaven/provider_runtime.py` for the same kind of
+   complexity-only refactor. The next pass should be willing to stop at "no
+   split needed" if the module is cohesive.
 
 2. Consider splitting `tests/test_cli_active_repair.py` only if test
    readability becomes a blocker. The test file is large but currently maps to

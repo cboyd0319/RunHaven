@@ -161,3 +161,6 @@ repo and link to primary sources instead.
 - 2026-06-15: Continued pre-release modularization by extracting
   `scripts/npm_pin_policy.py` from `scripts/check_pins.py` for NPM package and
   package-lock policy checks.
+- 2026-06-15: Continued pre-release modularization by extracting
+  `src/runhaven/auth_profiles.py` from `src/runhaven/auth_broker.py` for static
+  auth broker profile metadata.

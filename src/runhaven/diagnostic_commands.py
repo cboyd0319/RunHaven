@@ -4,7 +4,7 @@ import json
 from collections.abc import Sequence
 from typing import Any
 
-from .auth_broker import (
+from .auth_profiles import (
     AUTH_BROKER_RUNTIME,
     AUTH_BROKER_STATUS,
     auth_broker_profiles,

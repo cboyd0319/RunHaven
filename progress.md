@@ -220,8 +220,13 @@ Start pre-release large-file modularization.
   and package-lock pin policy from `scripts/check_pins.py` into
   `scripts/npm_pin_policy.py`. `scripts/check_pins.py` now measures 380 lines,
   down from 497 lines.
-- `src/runhaven/auth_broker.py` now records per-profile auth broker metadata
-  and implements the first Codex API-key broker prototype.
+- The thirteenth behavior-preserving modularization extraction moved static
+  auth broker profile metadata from `src/runhaven/auth_broker.py` into
+  `src/runhaven/auth_profiles.py`. `src/runhaven/auth_broker.py` now measures
+  374 lines, down from 520 lines.
+- `src/runhaven/auth_profiles.py` now records per-profile auth broker metadata,
+  and `src/runhaven/auth_broker.py` implements the first Codex API-key broker
+  prototype.
 - `runhaven run codex --network provider --codex-api-key-broker-env NAME` reads
   the named host environment variable only during real runs, starts a
   subnet-restricted host broker on the Apple `container` provider network, and
@@ -354,10 +359,10 @@ Start pre-release large-file modularization.
 
 ## Recommended Next Step
 
-Continue the cleanup pass by reviewing `src/runhaven/auth_broker.py` and
-`src/runhaven/provider_runtime.py` for complexity-only refactors. Keep
-cohesive files intact if a split would only move code. Run the optional Codex
-broker smoke with a disposable OpenAI API key when one is available.
+Continue the cleanup pass by reviewing `src/runhaven/provider_runtime.py` for
+complexity-only refactors. Keep cohesive files intact if a split would only
+move code. Run the optional Codex broker smoke with a disposable OpenAI API key
+when one is available.
 
 ## Verification Evidence
 
@@ -417,6 +422,22 @@ broker smoke with a disposable OpenAI API key when one is available.
   `uvx --from mypy==2.1.0 mypy scripts/check_pins.py scripts/npm_pin_policy.py`,
   `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
   local link check, platform wording scan, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
+  pin check, ruff, mypy, and build.
+- 2026-06-15: Focused auth-profile extraction checks passed:
+  `python3 -m compileall src/runhaven/auth_broker.py src/runhaven/auth_profiles.py src/runhaven/diagnostic_commands.py`,
+  `uvx --from ruff==0.15.17 ruff check` on those files,
+  `uvx --from mypy==2.1.0 mypy` on those files,
+  `PYTHONPATH=src python3 -m unittest tests.test_auth_broker tests.test_cli_diagnostics tests.test_cli_provider_codex_broker`
+  with 18 tests, and JSON smokes for `runhaven auth status` plus
+  `runhaven auth explain codex`.
+- 2026-06-15: Full verification passed after the auth-profile extraction:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, platform wording scan, and
   `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
   pin check, ruff, mypy, and build.
 - 2026-06-15: Full verification passed after the active-repair extraction:

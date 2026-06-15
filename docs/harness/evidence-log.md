@@ -57,6 +57,7 @@ Use this for compact current evidence. Keep raw logs out of this file.
 | 2026-06-15 | Git-metadata extraction | structural review, focused CLI tests, compileall, ruff, mypy, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `src/runhaven/git_metadata.py` for git discovery, status parsing, run git summaries, and live diff helpers; `src/runhaven/run_history.py` is now 383 lines. |
 | 2026-06-15 | Active-repair extraction | structural review, focused active-command CLI tests, compileall, ruff, mypy, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `src/runhaven/active_repair.py` for stale-marker repair, JSON payloads, exit-code rules, and inspect-missing validation; `src/runhaven/active_commands.py` is now 342 lines. |
 | 2026-06-15 | NPM pin-policy extraction | structural review, focused pin-policy checks, compileall, ruff, mypy, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `scripts/npm_pin_policy.py` for package.json and package-lock policy; `scripts/check_pins.py` is now 380 lines and remains the entrypoint. |
+| 2026-06-15 | Auth-profile extraction | structural review, focused auth broker and diagnostic checks, compileall, ruff, mypy, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `src/runhaven/auth_profiles.py` for static auth broker profile metadata; `src/runhaven/auth_broker.py` is now 374 lines. |
 
 Rules:
 
