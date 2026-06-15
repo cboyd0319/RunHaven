@@ -19,13 +19,14 @@
 - DNS resolution and unsafe-address rejection inside the provider CONNECT proxy
 - provider proxy policy logs for allowed and denied CONNECT decisions
 - first `runhaven why host ...` diagnostic for provider-host decisions
-- empty-allowlist regression tests for every network policy mode
-- host-side provider credential broker design tied to endpoint allowlists
 - grouped blocked-host review with rule, count, run id, and suggested next
   action
+- provider-profile smoke support for bundled source-backed hosts
+- empty-allowlist regression tests for every network policy mode
+- host-side provider credential broker design tied to endpoint allowlists
 - local proxy option for model credentials
 - clear offline and package-install network modes
-- live provider profile smokes for auth and optional feature paths
+- live provider auth-flow smokes for optional feature paths
 - path-aware provider policy for broad hosts such as `github.com`
 
 ## Phase 3: Beginner Install Flow

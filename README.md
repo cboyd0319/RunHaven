@@ -82,8 +82,9 @@ This is not a complete data-loss or exfiltration solution.
 - Internet mode does not yet restrict outbound domains.
 - Provider mode uses conservative host allowlists; login, telemetry, or
   provider-side feature paths may need additional reviewed fully qualified
-  `--provider-host` entries. Blocked hosts are summarized after provider runs
-  and recorded in the provider egress policy log.
+  `--provider-host` entries. Blocked hosts are grouped after provider runs with
+  counts, denial reasons, run id, and suggested next actions, then recorded in
+  the provider egress policy log.
 - The selected agent can still read files inside the mounted workspace and its
   isolated agent home volume.
 - If a credential is available inside the agent home volume or passed with

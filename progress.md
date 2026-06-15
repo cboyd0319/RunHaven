@@ -4,8 +4,8 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement the provider endpoint matrix and source-backed provider profile
-updates from the mined backlog.
+Implement grouped blocked-host review and provider-profile smoke support from
+the mined backlog.
 
 ## Current State
 
@@ -110,6 +110,13 @@ updates from the mined backlog.
   been identified.
 - `runhaven why host ...` now surfaces known explicit-review endpoints, such as
   Copilot `api.github.com`, with the reason they are not bundled.
+- Provider runs now print grouped blocked-host reviews with run id, count,
+  denial reason, matched rule, and suggested next action.
+- `runhaven egress log` now includes the run id in text output, matching the
+  JSONL log field.
+- `scripts/provider_egress_smoke.py --agent AGENT` now checks all bundled
+  provider hosts for a selected profile through the same host-side proxy
+  pattern, without requiring provider credentials.
 - A live normal-run smoke passed for `runhaven run shell --network provider
   --provider-host example.com`: allowed proxied HTTPS succeeded, while denied
   proxied host, proxied IP literal, direct DNS, and direct IP paths failed.
@@ -155,10 +162,10 @@ updates from the mined backlog.
 
 ## Recommended Next Step
 
-Add grouped blocked-host review with run id, rule, count, and suggested next
-action, then add live provider profile smokes for the source-backed defaults.
-Keep broad path-sensitive hosts such as `github.com` explicit until RunHaven
-has path-aware policy or a credential broker.
+Add path-aware provider policy design for broad hosts such as `github.com` and
+`api.github.com`, or start the host-side credential broker design. Keep those
+hosts explicit until RunHaven can restrict them by path or proxy credentials
+without mounting provider secrets into the guest.
 
 ## Verification Evidence
 
@@ -396,3 +403,24 @@ has path-aware policy or a credential broker.
 - 2026-06-15: `python3 -m json.tool feature_list.json`, `git diff --check`,
   `python3 scripts/check_pins.py`, focused CLI/plan tests, and targeted local
   Markdown link checks passed after final harness-state updates.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_provider_egress_smoke tests.test_cli`
+  ran 30 focused tests and passed after grouped blocked-host review and
+  provider-profile smoke support.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 76
+  tests and passed.
+- 2026-06-15: `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src scripts/provider_egress_smoke.py`,
+  `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`,
+  and `git diff --check` passed.
+- 2026-06-15: `container --version` and `container system status` confirmed
+  Apple `container` 1.0.0 was running before the live smoke.
+- 2026-06-15: `PYTHONPATH=src python3 scripts/provider_egress_smoke.py --agent codex --timeout 8 --denied-host example.com`
+  passed. Proxied HTTPS reached `api.openai.com` and `chatgpt.com`; denied
+  host and proxied IP literal were blocked; direct DNS and direct IP paths were
+  blocked.
+- 2026-06-15: cleanup scan found no leftover `runhaven-egress-smoke` or
+  provider network after the live smoke.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 76 unit tests, pin check, ruff, mypy, and build after grouped
+  blocked-host review and provider-profile smoke support.

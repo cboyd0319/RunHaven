@@ -90,11 +90,14 @@ The enforcement pattern is:
 - resolve allowed hosts before connecting and reject non-public resolved
   addresses
 - aggregate allowed and denied proxy policy decisions for the run
+- group blocked targets with run id, reason, count, rule, and suggested next
+  action after the run
 - append provider policy decisions to the RunHaven cache log after the run
 - delete the managed provider network after the run
 
 `scripts/provider_egress_smoke.py` proves the lower-level proxy pattern with
-live Apple `container` smokes. The `runhaven run --network provider` runtime
-path is also smoke-tested with allowed proxied HTTPS plus denied proxied host,
-proxied IP literal, direct DNS, and direct IP paths. Internet mode remains
-unrestricted egress.
+live Apple `container` smokes. It can test a single allowed host or all bundled
+hosts for a provider profile with `--agent AGENT`. The `runhaven run --network
+provider` runtime path is also smoke-tested with allowed proxied HTTPS plus
+denied proxied host, proxied IP literal, direct DNS, and direct IP paths.
+Internet mode remains unrestricted egress.

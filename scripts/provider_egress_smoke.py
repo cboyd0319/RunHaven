@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from urllib.parse import urlparse
 
 from runhaven.egress import EgressPolicy, ThreadedAllowlistProxy
+from runhaven.profiles import PROFILES, get_profile
 
 DEFAULT_IMAGE = "runhaven/base:0.1.0"
 DEFAULT_ALLOWED_HOST = "example.com"
@@ -53,9 +54,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_IMAGE,
         help="container image with curl and python3",
     )
-    parser.add_argument("--allowed-host", default=DEFAULT_ALLOWED_HOST)
+    parser.add_argument(
+        "--agent",
+        choices=sorted(PROFILES),
+        help="use the bundled provider hosts for an agent profile",
+    )
+    parser.add_argument(
+        "--allowed-host",
+        action="append",
+        default=[],
+        help="allowed HTTPS host; can be repeated",
+    )
     parser.add_argument("--denied-host", default=DEFAULT_DENIED_HOST)
-    parser.add_argument("--allowed-url", help="HTTPS URL on the allowed host")
+    parser.add_argument(
+        "--allowed-url",
+        action="append",
+        default=[],
+        help="HTTPS URL on an allowed host; can be repeated",
+    )
     parser.add_argument("--direct-ip-url", default=DEFAULT_DIRECT_IP_URL)
     parser.add_argument("--timeout", type=int, default=8)
     parser.add_argument("--network-name", help="override the temporary internal network name")
@@ -67,30 +83,29 @@ def run_smoke(args: argparse.Namespace) -> None:
         raise SmokeFailure("provider egress smoke requires macOS")
 
     network_name = args.network_name or f"runhaven-egress-smoke-{uuid.uuid4().hex[:12]}"
-    allowed_url = args.allowed_url or f"https://{args.allowed_host}/"
-    allowed_host = url_host(allowed_url)
-    if allowed_host != args.allowed_host:
-        raise SmokeFailure("--allowed-url host must match --allowed-host")
+    allowed_hosts = allowed_hosts_for_args(args)
+    allowed_urls = allowed_urls_for_args(args, allowed_hosts)
 
     run_checked(("container", "network", "create", "--internal", network_name), args.timeout)
     try:
         gateway = discover_gateway(network_name, args.image, args.timeout)
         print(f"PASS discovered internal-network gateway {gateway}")
 
-        policy = EgressPolicy(allowed_hosts=(args.allowed_host,))
+        policy = EgressPolicy(allowed_hosts=allowed_hosts)
         proxy, bind_note = create_proxy(gateway, policy, args.timeout)
         thread = threading.Thread(target=proxy.serve_forever, daemon=True)
         thread.start()
         try:
             proxy_url = f"http://{gateway}:{proxy.server_address[1]}"
             print(f"PASS started allowlist proxy on {proxy_url} ({bind_note})")
-            assert_allowed_proxy_path(
-                network_name,
-                args.image,
-                proxy_url,
-                allowed_url,
-                args.timeout,
-            )
+            for allowed_url in allowed_urls:
+                assert_allowed_proxy_path(
+                    network_name,
+                    args.image,
+                    proxy_url,
+                    allowed_url,
+                    args.timeout,
+                )
             assert_blocked_proxy_path(
                 network_name,
                 args.image,
@@ -110,7 +125,7 @@ def run_smoke(args: argparse.Namespace) -> None:
             assert_direct_path_blocked(
                 network_name,
                 args.image,
-                allowed_url,
+                allowed_urls[0],
                 "direct DNS path",
                 args.timeout,
             )
@@ -127,6 +142,43 @@ def run_smoke(args: argparse.Namespace) -> None:
             thread.join(timeout=args.timeout)
     finally:
         run_command(("container", "network", "delete", network_name), args.timeout)
+
+
+def allowed_hosts_for_args(args: argparse.Namespace) -> tuple[str, ...]:
+    hosts: list[str] = []
+    if args.agent:
+        hosts.extend(get_profile(args.agent).provider_hosts)
+    hosts.extend(args.allowed_host)
+    if args.agent and not hosts:
+        raise SmokeFailure(f"profile {args.agent!r} has no bundled provider hosts")
+    if not hosts:
+        hosts.append(DEFAULT_ALLOWED_HOST)
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for host in hosts:
+        if host not in seen:
+            deduped.append(host)
+            seen.add(host)
+    if not deduped:
+        raise SmokeFailure("selected profile has no bundled provider hosts")
+    return tuple(deduped)
+
+
+def allowed_urls_for_args(
+    args: argparse.Namespace,
+    allowed_hosts: tuple[str, ...],
+) -> tuple[str, ...]:
+    if not args.allowed_url:
+        return tuple(f"https://{host}/" for host in allowed_hosts)
+    if len(args.allowed_url) != len(allowed_hosts):
+        raise SmokeFailure("--allowed-url count must match the allowed host count")
+    urls: list[str] = []
+    for url in args.allowed_url:
+        host = url_host(url)
+        if host not in allowed_hosts:
+            raise SmokeFailure("--allowed-url host must match an allowed host")
+        urls.append(url)
+    return tuple(urls)
 
 
 def create_proxy(

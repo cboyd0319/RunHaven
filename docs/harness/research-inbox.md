@@ -52,3 +52,7 @@ repo and link to primary sources instead.
   Source-backed defaults now include Claude auth hosts, Codex ChatGPT auth, and
   Copilot-specific routing hosts. Broad path-sensitive, telemetry, update, and
   weakly sourced hosts remain explicit review items.
+- 2026-06-15: Implemented grouped blocked-host review and profile-host smoke
+  support. Provider run summaries now include run id, reason, count, rule, and
+  suggested next action; `scripts/provider_egress_smoke.py --agent AGENT`
+  validates bundled provider hosts without credentials.

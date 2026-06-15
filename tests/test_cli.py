@@ -117,7 +117,9 @@ class CliTests(unittest.TestCase):
             )
             thread = Mock()
             network_info = Mock(ipv4_gateway="192.168.130.1", ipv4_subnet="192.168.130.0/24")
+            error_output = io.StringIO()
             with (
+                redirect_stderr(error_output),
                 patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
                 patch("runhaven.cli.require_container_cli"),
                 patch("runhaven.cli.run_preflight") as preflight,
@@ -186,6 +188,14 @@ class CliTests(unittest.TestCase):
                     decision="denied",
                     reason="not-in-allowlist",
                     matched_rule="",
+                    count=3,
+                ),
+                ProxyDecision(
+                    host="1.1.1.1",
+                    port=443,
+                    decision="denied",
+                    reason="ip-literal",
+                    matched_rule="",
                     count=1,
                 ),
             )
@@ -223,10 +233,15 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         text = error_output.getvalue()
         self.assertIn("RunHaven provider proxy blocked", text)
+        self.assertIn("4 CONNECT requests across 2 target(s)", text)
+        self.assertIn("Run id:", text)
         self.assertIn("blocked.example.com:443", text)
-        self.assertIn("--provider-host blocked.example.com", text)
+        self.assertIn("count=3", text)
+        self.assertIn("reason=not-in-allowlist", text)
+        self.assertIn("runhaven why host blocked.example.com --agent shell", text)
         self.assertIn("1.1.1.1:443", text)
         self.assertIn("IP literal targets cannot be allowed", text)
+        self.assertIn("runhaven egress log --limit 20", text)
 
     def test_provider_run_writes_policy_log(self) -> None:
         with TemporaryDirectory() as directory:
@@ -253,7 +268,9 @@ class CliTests(unittest.TestCase):
             )
             thread = Mock()
             network_info = Mock(ipv4_gateway="192.168.130.1", ipv4_subnet="192.168.130.0/24")
+            error_output = io.StringIO()
             with (
+                redirect_stderr(error_output),
                 patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
                 patch("runhaven.cli.require_container_cli"),
                 patch("runhaven.cli.run_preflight"),
@@ -286,6 +303,8 @@ class CliTests(unittest.TestCase):
                 for line in (Path(directory) / "egress-policy.jsonl").read_text().splitlines()
             ]
             self.assertEqual(len(entries), 2)
+            self.assertEqual(entries[0]["run_id"], entries[1]["run_id"])
+            self.assertEqual(len(entries[0]["run_id"]), 32)
             self.assertEqual(entries[0]["decision"], "allowed")
             self.assertEqual(entries[0]["host"], "api.example.com")
             self.assertEqual(entries[0]["count"], 2)
@@ -303,6 +322,7 @@ class CliTests(unittest.TestCase):
                                 "timestamp": "2026-06-15T00:00:00Z",
                                 "profile": "shell",
                                 "workspace": directory,
+                                "run_id": "run-allowed",
                                 "network": "provider",
                                 "host": "api.example.com",
                                 "port": 443,
@@ -317,6 +337,7 @@ class CliTests(unittest.TestCase):
                                 "timestamp": "2026-06-15T00:00:01Z",
                                 "profile": "shell",
                                 "workspace": directory,
+                                "run_id": "run-denied",
                                 "network": "provider",
                                 "host": "blocked.example.com",
                                 "port": 443,
@@ -339,6 +360,7 @@ class CliTests(unittest.TestCase):
         text = output.getvalue()
         self.assertIn("blocked.example.com:443", text)
         self.assertIn("denied", text)
+        self.assertIn("run=run-denied", text)
         self.assertNotIn("api.example.com", text)
 
     def test_why_host_explains_ip_literal_rejection(self) -> None:

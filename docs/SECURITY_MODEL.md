@@ -81,8 +81,9 @@ single-label provider hosts. Before opening an upstream connection, the proxy
 resolves the destination and rejects non-public resolved addresses such as
 loopback, private, link-local, multicast, or otherwise local-only addresses.
 It relies on the internal network to block direct guest egress. Blocked proxy
-targets are summarized after provider runs so users can review missing
-endpoints without weakening the default policy.
+targets are grouped after provider runs with run id, count, denial reason,
+matched rule, and suggested next action so users can review missing endpoints
+without weakening the default policy.
 
 Provider runs also append allowed and denied CONNECT policy decisions to a
 RunHaven cache log. `runhaven egress log` shows recent decisions, including the

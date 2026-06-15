@@ -4,8 +4,8 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement the provider endpoint matrix and source-backed provider profile
-updates from the mined backlog.
+Implement grouped blocked-host review and provider-profile smoke support from
+the mined backlog.
 
 ## Files
 
@@ -30,6 +30,7 @@ updates from the mined backlog.
 - `scripts/check_pins.py`
 - `scripts/provider_egress_smoke.py`
 - `tests/`
+- `tests/test_provider_egress_smoke.py`
 - `docs/HARNESS_EVALUATION.md`
 - `docs/assets/logo.png`
 - `docs/harness/`
@@ -122,6 +123,27 @@ updates from the mined backlog.
 - `python3 -m json.tool feature_list.json`, `git diff --check`,
   `python3 scripts/check_pins.py`, focused CLI/plan tests, and targeted local
   Markdown link checks passed after final harness-state updates.
+- `PYTHONPATH=src python3 -m unittest tests.test_provider_egress_smoke tests.test_cli`
+  ran 30 focused tests and passed after grouped blocked-host review and
+  provider-profile smoke support.
+- `PYTHONPATH=src python3 -m unittest discover -s tests` ran 76 tests and
+  passed.
+- `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src scripts/provider_egress_smoke.py`,
+  `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`,
+  and `git diff --check` passed.
+- `container --version` and `container system status` confirmed Apple
+  `container` 1.0.0 was running before the live smoke.
+- `PYTHONPATH=src python3 scripts/provider_egress_smoke.py --agent codex --timeout 8 --denied-host example.com`
+  passed. Proxied HTTPS reached `api.openai.com` and `chatgpt.com`; denied
+  host and proxied IP literal were blocked; direct DNS and direct IP paths were
+  blocked.
+- Cleanup scan found no leftover `runhaven-egress-smoke` or provider network
+  after the live smoke.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 76 unit
+  tests, pin check, ruff, mypy, and build after grouped blocked-host review and
+  provider-profile smoke support.
 - `PYTHONPATH=src python3.14 -m unittest discover -s tests`
   ran 34 tests and passed.
 - `PYTHONPATH=src python3.13 -m unittest discover -s tests`
@@ -307,6 +329,13 @@ updates from the mined backlog.
   been identified.
 - `runhaven why host ...` now surfaces known explicit-review endpoints and the
   reason they are not bundled.
+- Provider runs now print grouped blocked-host reviews with run id, count,
+  denial reason, matched rule, and suggested next action.
+- `runhaven egress log` now includes the run id in text output, matching the
+  JSONL log field.
+- `scripts/provider_egress_smoke.py --agent AGENT` now checks all bundled
+  provider hosts for a selected profile through the same host-side proxy
+  pattern, without requiring provider credentials.
 - Supplemental Apple `container` source review is recorded in
   `docs/RESEARCH.md`. It reinforced the current `container run` boundary and
   the decision not to use `container machine` defaults for beginner-safe agent
@@ -341,11 +370,10 @@ updates from the mined backlog.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Add grouped blocked-host review with run id, rule, count, and suggested next
-   action, then add live provider profile smokes for the source-backed
-   defaults.
-6. Keep broad path-sensitive hosts such as `github.com` explicit until
-   RunHaven has path-aware policy or a credential broker.
+5. Add path-aware provider policy design for broad hosts such as `github.com`
+   and `api.github.com`, or start the host-side credential broker design.
+6. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
+   path or proxy credentials without mounting provider secrets into the guest.
 7. Ask for explicit approval before renaming the hosted GitHub repository or
    changing other credentialed vendor state.
 8. Preserve the macOS 26+ only runtime and contributor-verification contract.

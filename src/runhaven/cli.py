@@ -374,8 +374,10 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
         thread = worker
         proxy_url = f"http://{network_info.ipv4_gateway}:{proxy.server_address[1]}"
         return_code = subprocess.call(with_provider_proxy_environment(plan, proxy_url))
-        write_provider_policy_log(plan, proxy.policy_decisions())
-        print_provider_denials(proxy.denied_connect_targets())
+        decisions = proxy.policy_decisions()
+        run_id = uuid.uuid4().hex
+        write_provider_policy_log(plan, decisions, run_id=run_id)
+        print_provider_blocked_host_review(plan, decisions, run_id=run_id)
         return return_code
     finally:
         if proxy is not None:
@@ -406,28 +408,69 @@ def with_provider_proxy_environment(plan: AgentRunPlan, proxy_url: str) -> tuple
     return (*plan.command[:image_index], *injected, *plan.command[image_index:])
 
 
-def print_provider_denials(denied_targets: tuple[tuple[str, int], ...]) -> None:
-    if not denied_targets:
+def print_provider_blocked_host_review(
+    plan: AgentRunPlan,
+    decisions: Sequence[ProxyDecision],
+    *,
+    run_id: str,
+) -> None:
+    denials = tuple(decision for decision in decisions if decision.decision == "denied")
+    if not denials:
         return
-    count = len(denied_targets)
-    plural = "target" if count == 1 else "targets"
-    print(f"RunHaven provider proxy blocked {count} CONNECT {plural}:", file=sys.stderr)
-    for host, port in denied_targets:
-        target = f"{host}:{port}"
-        if is_ip_literal(host):
-            note = "IP literal targets cannot be allowed"
-        else:
-            note = f"review before rerunning with --provider-host {host}"
-        print(f"  - {target} ({note})", file=sys.stderr)
+    total = sum(decision.count for decision in denials)
+    plural = "request" if total == 1 else "requests"
+    print(
+        f"RunHaven provider proxy blocked {total} CONNECT {plural} "
+        f"across {len(denials)} target(s).",
+        file=sys.stderr,
+    )
+    print(f"Run id: {run_id}", file=sys.stderr)
+    print("Review:", file=sys.stderr)
+    for decision in denials:
+        target = f"{decision.host}:{decision.port}"
+        matched_rule = decision.matched_rule or "-"
+        print(
+            f"  - {target}  count={decision.count}  reason={decision.reason}  "
+            f"rule={matched_rule}",
+            file=sys.stderr,
+        )
+        print(
+            f"    Next action: {provider_denial_next_action(plan, decision)}",
+            file=sys.stderr,
+        )
+    print("Recent policy log: runhaven egress log --limit 20", file=sys.stderr)
 
 
-def write_provider_policy_log(plan: AgentRunPlan, decisions: Sequence[ProxyDecision]) -> None:
+def provider_denial_next_action(plan: AgentRunPlan, decision: ProxyDecision) -> str:
+    host = decision.host
+    if is_ip_literal(host):
+        return "IP literal targets cannot be allowed; use a reviewed provider hostname."
+    if decision.reason == "port-not-allowed":
+        return "provider mode only allows HTTPS CONNECT on port 443."
+    if decision.reason == "unsafe-resolved-address":
+        return "do not add an override; the allowed host resolved to a non-public address."
+    if decision.reason == "dns-resolution-failed":
+        return "check DNS or provider availability before changing the allowlist."
+    explanation = f"runhaven why host {host} --agent {plan.profile_name}"
+    if match_provider_endpoints(host, profile=plan.profile_name):
+        return (
+            f"{explanation}; rerun with --provider-host {host} only if the documented "
+            "purpose matches."
+        )
+    return f"{explanation}; add --provider-host {host} only after source review."
+
+
+def write_provider_policy_log(
+    plan: AgentRunPlan,
+    decisions: Sequence[ProxyDecision],
+    *,
+    run_id: str,
+) -> None:
     if not decisions:
         return
     log_path = egress_policy_log_path()
     log_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
-    run_id = uuid.uuid4().hex
     with log_path.open("a", encoding="utf-8") as log_file:
         for decision in decisions:
             payload = {
@@ -463,10 +506,12 @@ def egress_log(*, limit: int, json_output: bool) -> int:
         reason = entry.get("reason", "unknown")
         count = entry.get("count", 1)
         profile = entry.get("profile", "unknown")
+        run_id = entry.get("run_id", "-")
         matched_rule = entry.get("matched_rule") or "-"
         print(
             f"{entry.get('timestamp', '<unknown>')}  {profile}  {decision}  "
-            f"{host}:{port}  count={count}  reason={reason}  rule={matched_rule}"
+            f"{host}:{port}  count={count}  reason={reason}  rule={matched_rule}  "
+            f"run={run_id}"
         )
     return 0
 

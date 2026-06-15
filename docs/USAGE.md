@@ -129,8 +129,10 @@ allowed hosts; the exact proxy URL is injected by `runhaven run` after the
 internal-network gateway is inspected.
 
 If a provider run tries to reach a host outside the allowlist, RunHaven prints a
-blocked-host summary after the agent exits. Review each blocked hostname before
-adding it with `--provider-host`; IP literal targets cannot be allowed.
+grouped blocked-host review after the agent exits. The review includes the run
+id, host, port, count, denial reason, matched rule, and suggested next action.
+Review each blocked hostname before adding it with `--provider-host`; IP
+literal targets cannot be allowed.
 
 Explain a host before adding it:
 
@@ -162,11 +164,19 @@ PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py \
   --denied-host example.com
 ```
 
+Run the same smoke against the bundled hosts for a provider profile:
+
+```bash
+PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --agent codex
+```
+
 The smoke creates a temporary internal Apple `container` network and starts a
 host-side allowlist CONNECT proxy. It passes only when the allowed proxied HTTPS
-path succeeds and denied proxied host, proxied IP literal, direct DNS, and
-direct IP paths fail. Normal provider runs use the same proxy enforcement
-pattern through `runhaven run --network provider`.
+path or paths succeed and denied proxied host, proxied IP literal, direct DNS,
+and direct IP paths fail. Profile smoke mode proves that bundled provider hosts
+are reachable through the proxy without requiring provider credentials. Normal
+provider runs use the same proxy enforcement pattern through
+`runhaven run --network provider`.
 
 ## Private Git
 
