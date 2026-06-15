@@ -231,7 +231,7 @@ def runs_command(args: argparse.Namespace) -> int:
     if args.runs_command == "diff":
         return runs_diff(args.run_id)
     if args.runs_command == "recover":
-        return runs_worktree_recover(args.run_id)
+        return runs_worktree_recover(args.run_id, json_output=args.json)
     if args.runs_command == "merge":
         return runs_worktree_merge(args.run_id)
     if args.runs_command == "keep":

@@ -112,6 +112,10 @@ repo and link to primary sources instead.
   worktree review backlog. The command validates the recorded RunHaven-owned
   worktree, prints source and worktree status, and gives numbered manual
   recovery steps without mutating source or worktree files.
+- 2026-06-15: Implemented `runhaven runs recover RUN_ID --json` and clearer
+  dirty-source choices before worktree creation. Recovery JSON exposes the
+  same read-only source/worktree state, commands, and next-step labels for
+  automation or UI work without parsing prose.
 - 2026-06-15: Added a pre-release backlog item to consider a major large-file
   refactor and modularization pass, especially around the CLI and broad test
   modules, before release.

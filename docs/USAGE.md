@@ -201,6 +201,9 @@ runhaven run claude --worktree
 ```
 
 `--worktree` requires a clean source git worktree with a committed `HEAD`.
+When the source checkout is dirty, RunHaven refuses before creating a worktree
+and prints choices to commit or stash first, run without `--worktree`, or start
+from a separate clean clone or git worktree. For a clean source checkout,
 RunHaven creates a branch named `runhaven/<agent>/<run-id>` and a git worktree
 under its cache directory, then mounts that worktree at `/workspace`. If you
 started from a subdirectory with the default `--workspace-scope current`,
@@ -218,6 +221,7 @@ After review, choose an explicit lifecycle action:
 runhaven runs diff <run-id>
 runhaven runs keep <run-id>
 runhaven runs recover <run-id>
+runhaven runs recover <run-id> --json
 runhaven runs merge <run-id>
 runhaven runs discard <run-id>
 ```
@@ -237,8 +241,9 @@ review, retry, keep, and discard commands for recovery.
 
 `runs recover` verifies the same recorded worktree and branch, then prints the
 source and worktree `git status --short` output plus a numbered manual recovery
-sequence. It is read-only and does not merge, delete, commit, stash, or change
-files.
+sequence. Use `--json` to print the same recovery state, status lines,
+commands, and next-step labels for automation or a future UI. It is read-only
+and does not merge, delete, commit, stash, or change files.
 
 `runs discard` verifies the same RunHaven-owned worktree and branch, then
 removes the recorded worktree and deletes the recorded branch without touching
@@ -325,6 +330,7 @@ runhaven runs log <run-id>
 runhaven runs diff <run-id>
 runhaven runs keep <run-id>
 runhaven runs recover <run-id>
+runhaven runs recover <run-id> --json
 runhaven runs merge <run-id>
 runhaven runs discard <run-id>
 runhaven runs active
@@ -363,12 +369,13 @@ truncated, or the current dirty path set differs from the run record. For dirty
 working-tree diffs, RunHaven warns that it verified the recorded `HEAD` and
 path set, not the exact file contents since the run.
 
-`runs keep`, `runs recover`, `runs merge`, and `runs discard` work only for completed
-`--worktree` run records. They validate the recorded source repository,
-RunHaven-owned branch, worktree path, and worktree branch before acting.
-`runs merge` refuses if the source checkout is dirty or has moved away from
-the run's base commit. `runs recover` is the read-only command for source and
-worktree status plus manual conflict-resolution steps. `runs discard` is the
+`runs keep`, `runs recover`, `runs merge`, and `runs discard` work only for
+completed `--worktree` run records. They validate the recorded source
+repository, RunHaven-owned branch, worktree path, and worktree branch before
+acting. `runs merge` refuses if the source checkout is dirty or has moved away
+from the run's base commit. `runs recover` is the read-only command for source
+and worktree status plus manual conflict-resolution steps. The JSON variant
+exposes that recovery state without prose parsing. `runs discard` is the
 explicit command for deleting a RunHaven worktree that still contains unmerged
 work.
 

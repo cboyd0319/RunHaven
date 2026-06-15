@@ -114,8 +114,11 @@ def ensure_clean_source_repo(repo_root: Path) -> None:
         raise ValueError(f"could not inspect source git worktree{reason_text}")
     if snapshot.get("dirty") is True:
         raise ValueError(
-            "--worktree requires a clean source git worktree. Commit or stash "
-            "existing changes before starting an isolated worktree run."
+            "--worktree requires a clean source git worktree.\n"
+            "Options:\n"
+            "1. Commit or stash source changes, then retry with --worktree.\n"
+            "2. Run without --worktree to use the source checkout directly.\n"
+            "3. Start from a clean clone or git worktree if you want isolation."
         )
 
 

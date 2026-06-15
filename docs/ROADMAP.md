@@ -60,13 +60,13 @@
 
 ## Phase 5: Isolation And Recovery
 
-- structured worktree recovery JSON output for automation
 - run records with `runs list`, `runs show`, `runs log`, `runs diff`,
   `runs keep`, `runs recover`, `runs merge`, `runs discard`, `runs active`,
   `runs status`, `runs attach`, `runs logs-follow`, `runs stop`,
   `runs kill`, `runs repair`, `runs repair --all`, and git change metadata
 - structured blocked-host and cleanup event records
 - stable JSON output for read-only, run-status, and repair-summary commands
+- project test and lint command suggestions for safer post-run review
 - warm reusable project sessions with explicit reset and prune UX
 - image, state, and managed-network repair commands
 - provider auth broker run records that never print secrets

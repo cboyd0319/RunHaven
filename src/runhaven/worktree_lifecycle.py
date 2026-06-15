@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import json
 import os
 import shlex
 import shutil
 import subprocess
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from .git_metadata import capture_git_snapshot, parse_git_status_entries, safe_repo_path
 from .run_history import find_run_record
@@ -37,33 +40,84 @@ def runs_worktree_keep(run_id: str) -> int:
     return 0
 
 
-def runs_worktree_recover(run_id: str) -> int:
+def runs_worktree_recover(run_id: str, *, json_output: bool = False) -> int:
     lifecycle = load_worktree_lifecycle(run_id)
     verify_lifecycle(lifecycle)
+    payload = worktree_recovery_payload(lifecycle)
 
+    if json_output:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    commands = cast(dict[str, str], payload["commands"])
+    next_steps = cast(list[str], payload["next_steps"])
+    source_status = cast(list[str], payload["source_status"])
+    worktree_status = cast(list[str], payload["worktree_status"])
     print(f"Manual recovery for worktree run {run_id}")
-    print(f"Source repo: {lifecycle.source_repo_root}")
-    print(f"Worktree: {lifecycle.worktree_root}")
-    print(f"Mounted workspace: {lifecycle.mounted_workspace}")
-    print(f"Branch: {lifecycle.branch}")
-    print(f"Base HEAD: {lifecycle.base_head}")
-    print(f"Source HEAD: {git_stdout(lifecycle.source_repo_root, 'rev-parse', 'HEAD')}")
-    print(f"Worktree HEAD: {git_stdout(lifecycle.worktree_root, 'rev-parse', 'HEAD')}")
-    print_status("Source status", git_status_lines(lifecycle.source_repo_root))
-    print_status("Worktree status", git_status_lines(lifecycle.worktree_root))
+    print(f"Source repo: {payload['source_repo_root']}")
+    print(f"Worktree: {payload['worktree_root']}")
+    print(f"Mounted workspace: {payload['mounted_workspace']}")
+    print(f"Branch: {payload['branch']}")
+    print(f"Base HEAD: {payload['base_head']}")
+    print(f"Source HEAD: {payload['source_head']}")
+    print(f"Worktree HEAD: {payload['worktree_head']}")
+    print_status("Source status", source_status)
+    print_status("Worktree status", worktree_status)
 
+    print("Manual recovery steps:")
+    print(f"1. {next_steps[0]}: {commands['diff']}")
+    print(f"2. {next_steps[1]}: {commands['source_status']}")
+    print("   Commit, stash, or remove source-local changes before retrying.")
+    print(f"3. {next_steps[2]}: {commands['worktree_status']}")
+    print("   Resolve conflicts or commit finished work in the worktree if needed.")
+    print(f"4. {next_steps[3]}: {commands['merge']}")
+    print(f"5. {next_steps[4]}: {commands['keep']}")
+    print(f"6. {next_steps[5]}: {commands['discard']}")
+    return 0
+
+
+def worktree_recovery_payload(lifecycle: WorktreeLifecycle) -> dict[str, object]:
+    return {
+        "run_id": lifecycle.run_id,
+        "source_repo_root": str(lifecycle.source_repo_root),
+        "worktree_root": str(lifecycle.worktree_root),
+        "mounted_workspace": str(lifecycle.mounted_workspace),
+        "branch": lifecycle.branch,
+        "base_head": lifecycle.base_head,
+        "source_head": git_stdout(lifecycle.source_repo_root, "rev-parse", "HEAD"),
+        "worktree_head": git_stdout(lifecycle.worktree_root, "rev-parse", "HEAD"),
+        "source_status": list(git_status_lines(lifecycle.source_repo_root)),
+        "worktree_status": list(git_status_lines(lifecycle.worktree_root)),
+        "commands": worktree_recovery_commands(lifecycle),
+        "next_steps": worktree_recovery_next_steps(),
+    }
+
+
+def worktree_recovery_commands(lifecycle: WorktreeLifecycle) -> dict[str, str]:
     source = shlex.quote(str(lifecycle.source_repo_root))
     worktree = shlex.quote(str(lifecycle.worktree_root))
-    print("Manual recovery steps:")
-    print(f"1. Review recorded changes: runhaven runs diff {run_id}")
-    print(f"2. Inspect the source checkout: git -C {source} status --short")
-    print("   Commit, stash, or remove source-local changes before retrying.")
-    print(f"3. Inspect the worktree: git -C {worktree} status --short")
-    print("   Resolve conflicts or commit finished work in the worktree if needed.")
-    print(f"4. Retry guarded merge: runhaven runs merge {run_id}")
-    print(f"5. Keep for manual review: runhaven runs keep {run_id}")
-    print(f"6. Discard only after review: runhaven runs discard {run_id}")
-    return 0
+    run_id = lifecycle.run_id
+    return {
+        "diff": f"runhaven runs diff {run_id}",
+        "recover": f"runhaven runs recover {run_id}",
+        "recover_json": f"runhaven runs recover {run_id} --json",
+        "source_status": f"git -C {source} status --short",
+        "worktree_status": f"git -C {worktree} status --short",
+        "merge": f"runhaven runs merge {run_id}",
+        "keep": f"runhaven runs keep {run_id}",
+        "discard": f"runhaven runs discard {run_id}",
+    }
+
+
+def worktree_recovery_next_steps() -> list[str]:
+    return [
+        "Review recorded changes",
+        "Inspect the source checkout",
+        "Inspect the worktree",
+        "Retry guarded merge",
+        "Keep for manual review",
+        "Discard only after review",
+    ]
 
 
 def runs_worktree_merge(run_id: str) -> int:
@@ -323,7 +377,7 @@ def git_status_lines(cwd: Path) -> tuple[str, ...]:
     return tuple(line for line in text.splitlines() if line)
 
 
-def print_status(title: str, lines: tuple[str, ...]) -> None:
+def print_status(title: str, lines: Sequence[str]) -> None:
     print(f"{title}:")
     if not lines:
         print("  clean")

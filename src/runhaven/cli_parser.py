@@ -104,6 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="print manual recovery steps for a RunHaven worktree run",
     )
     runs_recover_parser.add_argument("run_id", help="worktree run id to recover")
+    runs_recover_parser.add_argument("--json", action="store_true", help="print JSON output")
     runs_merge_parser = runs_subcommands.add_parser(
         "merge",
         help="merge a RunHaven worktree run back into the source checkout",

@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import json
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -415,10 +415,12 @@ class CliStandardRunTests(unittest.TestCase):
             repo.mkdir()
             init_git_repo(repo)
             (repo / "dirty.txt").write_text("dirty\n", encoding="utf-8")
+            error_output = io.StringIO()
 
             with (
                 patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": str(cache)}, clear=False),
                 patch("runhaven.cli.require_container_cli"),
+                redirect_stderr(error_output),
                 self.assertRaises(SystemExit) as error,
             ):
                 main(
@@ -436,6 +438,12 @@ class CliStandardRunTests(unittest.TestCase):
                 )
 
         self.assertEqual(error.exception.code, 2)
+        text = error_output.getvalue()
+        self.assertIn("--worktree requires a clean source git worktree", text)
+        self.assertIn("Options:", text)
+        self.assertIn("Commit or stash source changes, then retry with --worktree", text)
+        self.assertIn("Run without --worktree to use the source checkout directly", text)
+        self.assertIn("Start from a clean clone or git worktree if you want isolation", text)
         self.assertFalse((cache / "worktrees").exists())
 
 

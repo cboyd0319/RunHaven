@@ -132,6 +132,7 @@ runhaven plan shell --image my-agent:2026.06.14 -- my-agent --help
 | Worktree-isolated run | `runhaven run claude --worktree` |
 | Merge worktree run | `runhaven runs merge <run-id>` |
 | Recover worktree run | `runhaven runs recover <run-id>` |
+| Recover worktree run as JSON | `runhaven runs recover <run-id> --json` |
 | Keep worktree run | `runhaven runs keep <run-id>` |
 | Discard worktree run | `runhaven runs discard <run-id>` |
 | Recent runs | `runhaven runs list --limit 20` |

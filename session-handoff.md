@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add worktree manual recovery command.
+Add worktree recovery JSON output and dirty-source guidance.
 
 ## Files
 
@@ -40,6 +40,7 @@ Add worktree manual recovery command.
 - `src/runhaven/provider_runtime.py`
 - `src/runhaven/run_history.py`
 - `src/runhaven/worktree_lifecycle.py`
+- `src/runhaven/worktrees.py`
 - `scripts/check_pins.py`
 - `scripts/npm_pin_policy.py`
 - `scripts/codex_broker_smoke.py`
@@ -265,6 +266,21 @@ Add worktree manual recovery command.
   `python3 -m json.tool feature_list.json`, local Markdown link check across
   41 Markdown files, `git diff --check`,
   `PYTHONPATH=src python3 -m runhaven runs --help`, and
+  `PYTHON=<temporary-venv-python> ./init.sh`.
+- Worktree recovery JSON and dirty-source guidance red/green tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle.CliWorktreeLifecycleTests.test_runs_recover_prints_json_without_cleanup`
+  and
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_standard_run.CliStandardRunTests.test_worktree_run_refuses_dirty_source_before_creating_worktree`.
+- Adjacent worktree and run-history tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle tests.test_cli_standard_run tests.test_cli_runs_diff tests.test_cli_runs_list_show`.
+- Full worktree recovery JSON and dirty-source guidance verification passed:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src:tests python3 -m unittest discover -s tests` with 172
+  tests, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  45 Markdown links, `git diff --check`,
+  `PYTHONPATH=src python3 -m runhaven runs recover --help`, and
   `PYTHON=<temporary-venv-python> ./init.sh`.
 - Focused CLI test split checks passed: `python3 -m compileall tests`,
   `uvx --from ruff==0.15.17 ruff check` on the split CLI test files, and
@@ -1186,7 +1202,9 @@ Add worktree manual recovery command.
 - `runhaven run AGENT --worktree` landed for clean source repositories. It
   creates a RunHaven-owned branch and git worktree, mounts the worktree for the
   agent, keeps the worktree after the run, and records exact recovery commands.
-  Dirty source repositories fail before worktree creation.
+  Dirty source repositories fail before worktree creation and print choices to
+  commit or stash, run without `--worktree`, or start from a clean clone or
+  git worktree.
 - `runhaven runs keep RUN_ID`, `runhaven runs recover RUN_ID`,
   `runhaven runs merge RUN_ID`, and `runhaven runs discard RUN_ID` landed
   for worktree review flows. Keep validates and prints review actions without
@@ -1200,6 +1218,9 @@ Add worktree manual recovery command.
 - Failed pre-cleanup `runhaven runs merge RUN_ID` attempts now print source
   repo, worktree, branch, review, recover, retry, keep, and discard commands
   without deleting the recorded worktree.
+- `runhaven runs recover RUN_ID --json` prints the same read-only recovery
+  state, status lines, commands, and next-step labels for automation or UI
+  work without parsing prose.
 
 ## Next Session
 
@@ -1212,8 +1233,8 @@ Add worktree manual recovery command.
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
 5. Run the Codex broker smoke with a disposable OpenAI API key when available.
-6. Add structured JSON output for worktree recovery when automation or a UI
-   needs the same guidance without parsing text.
+6. Add project test and lint command suggestions so users have an easier
+   post-run review path after a worktree agent run.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

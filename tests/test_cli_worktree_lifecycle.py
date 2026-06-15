@@ -177,6 +177,49 @@ class CliWorktreeLifecycleTests(unittest.TestCase):
             self.assertTrue(worktree_root.exists())
             self.assertTrue(branch_exists(repo, branch))
 
+    def test_runs_recover_prints_json_without_cleanup(self) -> None:
+        with TemporaryDirectory() as directory:
+            repo, cache, record = self.create_dirty_worktree_run(Path(directory))
+            worktree = record["worktree"]
+            worktree_root = Path(worktree["worktree_root"])
+            branch = worktree["branch"]
+            (repo / "source-local.txt").write_text("local source change\n", encoding="utf-8")
+            output = io.StringIO()
+
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": str(cache)}, clear=False),
+                redirect_stdout(output),
+            ):
+                code = main(["runs", "recover", record["run_id"], "--json"])
+
+            payload = json.loads(output.getvalue())
+            source_head = run_git(repo, "rev-parse", "HEAD")
+            worktree_head = run_git(worktree_root, "rev-parse", "HEAD")
+
+            self.assertEqual(code, 0)
+            self.assertEqual(payload["run_id"], record["run_id"])
+            self.assertEqual(payload["source_repo_root"], str(repo.resolve()))
+            self.assertEqual(payload["worktree_root"], str(worktree_root))
+            self.assertEqual(payload["mounted_workspace"], worktree["mounted_workspace"])
+            self.assertEqual(payload["branch"], branch)
+            self.assertEqual(payload["base_head"], worktree["base_head"])
+            self.assertEqual(payload["source_head"], source_head)
+            self.assertEqual(payload["worktree_head"], worktree_head)
+            self.assertIn("?? source-local.txt", payload["source_status"])
+            self.assertIn(" M tracked.txt", payload["worktree_status"])
+            self.assertIn("?? created.txt", payload["worktree_status"])
+            self.assertEqual(
+                payload["commands"]["recover"],
+                f"runhaven runs recover {record['run_id']}",
+            )
+            self.assertEqual(
+                payload["commands"]["merge"],
+                f"runhaven runs merge {record['run_id']}",
+            )
+            self.assertIn("Retry guarded merge", " ".join(payload["next_steps"]))
+            self.assertTrue(worktree_root.exists())
+            self.assertTrue(branch_exists(repo, branch))
+
     def test_runs_discard_removes_worktree_without_touching_source(self) -> None:
         with TemporaryDirectory() as directory:
             repo, cache, record = self.create_dirty_worktree_run(Path(directory))

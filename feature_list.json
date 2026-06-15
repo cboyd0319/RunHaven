@@ -199,7 +199,7 @@
       "priority": 5,
       "area": "safety",
       "title": "Git worktree run isolation and lifecycle",
-      "user_visible_behavior": "`runhaven run AGENT --worktree` creates a RunHaven-owned branch and git worktree for a clean source repository, mounts that worktree for the agent run, leaves the source checkout untouched, and `runs keep`, `runs recover`, `runs merge`, and `runs discard` provide guarded review lifecycle actions.",
+      "user_visible_behavior": "`runhaven run AGENT --worktree` creates a RunHaven-owned branch and git worktree for a clean source repository, mounts that worktree for the agent run, leaves the source checkout untouched, and `runs keep`, `runs recover`, `runs recover --json`, `runs merge`, and `runs discard` provide guarded review lifecycle actions.",
       "status": "passing",
       "dependencies": [
         "workspace-scope-selection",
@@ -207,12 +207,13 @@
       ],
       "verification": [
         "`runhaven run AGENT --worktree --dry-run` previews source workspace, source repo, and base `HEAD` without creating a worktree",
-        "`runhaven run AGENT --worktree` refuses dirty source repositories before creating a worktree",
+        "`runhaven run AGENT --worktree` refuses dirty source repositories before creating a worktree and prints safe next choices",
         "Worktree runs mount the RunHaven-owned worktree instead of the source checkout",
         "Run records include worktree source, branch, base `HEAD`, mounted workspace, and exact recovery commands",
         "The source checkout remains unchanged by the container-mounted worktree",
         "`runs keep RUN_ID` validates the recorded worktree and prints review actions without mutating state",
         "`runs recover RUN_ID` validates the recorded worktree and prints source/worktree status plus manual recovery steps without mutating state",
+        "`runs recover RUN_ID --json` prints the same read-only recovery state, commands, and next-step labels for automation",
         "`runs merge RUN_ID` validates the source repository, RunHaven branch, worktree path, worktree branch, and base `HEAD` before applying worktree changes and cleaning up",
         "Failed pre-cleanup `runs merge RUN_ID` attempts print source, worktree, branch, review, retry, keep, and discard commands without deleting the recorded worktree",
         "`runs discard RUN_ID` removes only the recorded RunHaven worktree and branch without changing the source checkout"
@@ -225,9 +226,11 @@
         "2026-06-15: Red/green focused lifecycle test passed for failed merge recovery guidance; adjacent worktree/run-history tests also passed.",
         "2026-06-15: Full verification passed with compileall, 170 unit tests, pin check, ruff, mypy, JSON validation, Markdown link check, diff check, and `PYTHON=<temporary-venv-python> ./init.sh` after failed merge recovery guidance.",
         "2026-06-15: Red/green focused lifecycle test passed for `runs recover` manual recovery guidance; adjacent worktree/run-history tests also passed.",
-        "2026-06-15: Full verification passed with compileall, 171 unit tests, pin check, ruff, mypy, JSON validation, Markdown link check, diff check, `runhaven runs --help`, and `PYTHON=<temporary-venv-python> ./init.sh` after adding `runs recover`."
+        "2026-06-15: Full verification passed with compileall, 171 unit tests, pin check, ruff, mypy, JSON validation, Markdown link check, diff check, `runhaven runs --help`, and `PYTHON=<temporary-venv-python> ./init.sh` after adding `runs recover`.",
+        "2026-06-15: Red/green focused tests passed for `runs recover --json` and dirty-source worktree choice guidance; adjacent worktree/run-history tests and compileall passed.",
+        "2026-06-15: Full verification passed with compileall, 172 unit tests, pin check, ruff, mypy, JSON validation, Markdown link check, diff check, `runhaven runs recover --help`, and `PYTHON=<temporary-venv-python> ./init.sh` after adding recovery JSON and dirty-source guidance."
       ],
-      "notes": "`runs merge` intentionally refuses when the source checkout is dirty or no longer at the recorded base commit. Failed pre-cleanup merge steps keep the RunHaven worktree and branch and print recovery commands. `runs recover` is read-only and does not commit, stash, merge, delete, or change files."
+      "notes": "`runs merge` intentionally refuses when the source checkout is dirty or no longer at the recorded base commit. Failed pre-cleanup merge steps keep the RunHaven worktree and branch and print recovery commands. `run --worktree` dirty-source refusals print safe next choices before creating any worktree. `runs recover` and `runs recover --json` are read-only and do not commit, stash, merge, delete, or change files."
     },
     {
       "id": "auth-broker-boundary",
