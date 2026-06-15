@@ -231,7 +231,8 @@ source checkout is dirty or if its `HEAD` moved since the worktree run. When
 checks pass, it fast-forwards committed worktree branch changes, applies dirty
 and untracked worktree file changes to the source checkout, then removes the
 RunHaven worktree and branch. If a merge step fails, RunHaven leaves the
-worktree and branch intact for manual recovery.
+worktree and branch intact and prints the source repo, worktree, branch,
+review, retry, keep, and discard commands for recovery.
 
 `runs discard` verifies the same RunHaven-owned worktree and branch, then
 removes the recorded worktree and deletes the recorded branch without touching

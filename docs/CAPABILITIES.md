@@ -81,7 +81,10 @@ discard commands in the run record.
 prints review commands without mutating anything. `runhaven runs merge RUN_ID`
 validates the source repository, branch, worktree path, and base commit before
 bringing committed, dirty, and untracked worktree changes back to the source
-checkout and then cleaning up the RunHaven worktree and branch. `runhaven runs
+checkout and then cleaning up the RunHaven worktree and branch. If a
+pre-cleanup merge check fails, RunHaven prints the source repo, worktree,
+branch, review, retry, keep, and discard commands without deleting the
+recorded worktree. `runhaven runs
 discard RUN_ID` validates the same ownership boundary, then removes the
 recorded worktree and branch without touching the source checkout.
 

@@ -113,6 +113,36 @@ class CliWorktreeLifecycleTests(unittest.TestCase):
             self.assertTrue(worktree_root.exists())
             self.assertTrue(branch_exists(repo, branch))
 
+    def test_runs_merge_refusal_prints_recovery_commands(self) -> None:
+        with TemporaryDirectory() as directory:
+            repo, cache, record = self.create_dirty_worktree_run(Path(directory))
+            worktree_root = Path(record["worktree"]["worktree_root"])
+            branch = record["worktree"]["branch"]
+            (repo / "source-local.txt").write_text("local source change\n", encoding="utf-8")
+            error_output = io.StringIO()
+
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": str(cache)}, clear=False),
+                redirect_stderr(error_output),
+                self.assertRaises(SystemExit) as error,
+            ):
+                main(["runs", "merge", record["run_id"]])
+
+            text = error_output.getvalue()
+
+            self.assertEqual(error.exception.code, 2)
+            self.assertIn(f"could not complete merge for run {record['run_id']}", text)
+            self.assertIn("source repository has uncommitted changes", text)
+            self.assertIn("No cleanup was attempted", text)
+            self.assertIn(str(worktree_root), text)
+            self.assertIn(branch, text)
+            self.assertIn(f"runhaven runs diff {record['run_id']}", text)
+            self.assertIn(f"runhaven runs keep {record['run_id']}", text)
+            self.assertIn(f"runhaven runs merge {record['run_id']}", text)
+            self.assertIn(f"runhaven runs discard {record['run_id']}", text)
+            self.assertTrue(worktree_root.exists())
+            self.assertTrue(branch_exists(repo, branch))
+
     def test_runs_discard_removes_worktree_without_touching_source(self) -> None:
         with TemporaryDirectory() as directory:
             repo, cache, record = self.create_dirty_worktree_run(Path(directory))

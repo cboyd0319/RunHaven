@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add worktree lifecycle commands.
+Add worktree merge failure recovery guidance.
 
 ## Current State
 
@@ -256,6 +256,9 @@ Add worktree lifecycle commands.
   moved source checkouts, applies committed, dirty, and untracked worktree
   changes back to the source checkout, then removes the worktree and branch.
   Discard removes only the recorded RunHaven worktree and branch.
+- Failed pre-cleanup `runhaven runs merge RUN_ID` attempts now print the
+  source repo, worktree, branch, review, retry, keep, and discard commands
+  without deleting the recorded worktree.
 - `src/runhaven/auth_profiles.py` now records per-profile auth broker metadata,
   and `src/runhaven/auth_broker.py` implements the first Codex API-key broker
   prototype.
@@ -392,8 +395,8 @@ Add worktree lifecycle commands.
 ## Recommended Next Step
 
 Run the optional Codex broker smoke with a disposable OpenAI API key when one
-is available. Continue worktree polish with conflict-recovery guidance only
-after the first guarded lifecycle commands have settled.
+is available. Continue worktree polish with guided manual conflict-resolution
+helpers for complex merge failures.
 
 ## Verification Evidence
 
@@ -1264,3 +1267,15 @@ after the first guarded lifecycle commands have settled.
   `python3 -m json.tool feature_list.json`, local Markdown link check across
   41 Markdown files, platform wording scan, `PYTHONPATH=src python3 -m runhaven runs --help`,
   `git diff --check`, and `PYTHON=<temporary-venv-python> ./init.sh`.
+- 2026-06-15: Worktree merge recovery red/green test passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle.CliWorktreeLifecycleTests.test_runs_merge_refusal_prints_recovery_commands`.
+- 2026-06-15: Adjacent worktree and run-history tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle tests.test_cli_standard_run tests.test_cli_runs_diff tests.test_cli_runs_list_show`.
+- 2026-06-15: Full worktree merge recovery verification passed:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src:tests python3 -m unittest discover -s tests` with 170
+  tests, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  41 Markdown files, `git diff --check`, and
+  `PYTHON=<temporary-venv-python> ./init.sh`.

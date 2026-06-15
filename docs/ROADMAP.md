@@ -60,7 +60,7 @@
 
 ## Phase 5: Isolation And Recovery
 
-- worktree conflict-recovery polish after failed or manual merges
+- guided manual conflict-resolution helpers for complex worktree merge failures
 - run records with `runs list`, `runs show`, `runs log`, `runs diff`,
   `runs keep`, `runs merge`, `runs discard`, `runs active`, `runs status`,
   `runs attach`, `runs logs-follow`, `runs stop`, `runs kill`, `runs repair`,

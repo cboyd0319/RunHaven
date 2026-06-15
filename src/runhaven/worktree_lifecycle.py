@@ -38,19 +38,10 @@ def runs_worktree_keep(run_id: str) -> int:
 def runs_worktree_merge(run_id: str) -> int:
     lifecycle = load_worktree_lifecycle(run_id)
     verify_lifecycle(lifecycle)
-    ensure_source_ready_for_merge(lifecycle)
-
-    worktree_head = git_stdout(lifecycle.worktree_root, "rev-parse", "HEAD")
-    if worktree_head != lifecycle.base_head:
-        git_checked(
-            lifecycle.source_repo_root,
-            "merge",
-            "--ff-only",
-            lifecycle.branch,
-            action="fast-forward source repository",
-        )
-
-    apply_worktree_dirty_changes(lifecycle)
+    try:
+        merge_worktree_changes(lifecycle)
+    except ValueError as exc:
+        raise ValueError(format_merge_recovery(lifecycle, str(exc))) from exc
     cleanup_worktree(lifecycle)
     print(f"Merged worktree run {run_id}")
     print(f"Source repo: {lifecycle.source_repo_root}")
@@ -156,6 +147,39 @@ def ensure_source_ready_for_merge(lifecycle: WorktreeLifecycle) -> None:
         raise ValueError("could not inspect source repository before merge")
     if snapshot.get("dirty") is True:
         raise ValueError("source repository has uncommitted changes; refusing merge")
+
+
+def merge_worktree_changes(lifecycle: WorktreeLifecycle) -> None:
+    ensure_source_ready_for_merge(lifecycle)
+    worktree_head = git_stdout(lifecycle.worktree_root, "rev-parse", "HEAD")
+    if worktree_head != lifecycle.base_head:
+        git_checked(
+            lifecycle.source_repo_root,
+            "merge",
+            "--ff-only",
+            lifecycle.branch,
+            action="fast-forward source repository",
+        )
+
+    apply_worktree_dirty_changes(lifecycle)
+
+
+def format_merge_recovery(lifecycle: WorktreeLifecycle, reason: str) -> str:
+    return "\n".join(
+        (
+            f"could not complete merge for run {lifecycle.run_id}: {reason}",
+            "No cleanup was attempted; review the recorded worktree before retrying.",
+            f"Source repo: {lifecycle.source_repo_root}",
+            f"Worktree: {lifecycle.worktree_root}",
+            f"Branch: {lifecycle.branch}",
+            f"Review changes: runhaven runs diff {lifecycle.run_id}",
+            f"Inspect source: git -C {lifecycle.source_repo_root} status --short",
+            f"Inspect worktree: git -C {lifecycle.worktree_root} status --short",
+            f"Retry after fixing the source checkout: runhaven runs merge {lifecycle.run_id}",
+            f"Keep for manual review: runhaven runs keep {lifecycle.run_id}",
+            f"Discard after review: runhaven runs discard {lifecycle.run_id}",
+        )
+    )
 
 
 def apply_worktree_dirty_changes(lifecycle: WorktreeLifecycle) -> None:

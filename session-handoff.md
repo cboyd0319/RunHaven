@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add worktree lifecycle commands.
+Add worktree merge failure recovery guidance.
 
 ## Files
 
@@ -241,6 +241,18 @@ Add worktree lifecycle commands.
   `python3 -m json.tool feature_list.json`, local Markdown link check across
   41 Markdown files, platform wording scan, `PYTHONPATH=src python3 -m runhaven runs --help`,
   `git diff --check`, and `PYTHON=<temporary-venv-python> ./init.sh`.
+- Worktree merge recovery red/green focused test passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle.CliWorktreeLifecycleTests.test_runs_merge_refusal_prints_recovery_commands`.
+- Adjacent worktree and run-history tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle tests.test_cli_standard_run tests.test_cli_runs_diff tests.test_cli_runs_list_show`.
+- Full worktree merge recovery verification passed:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src:tests python3 -m unittest discover -s tests` with 170
+  tests, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  41 Markdown files, `git diff --check`, and
+  `PYTHON=<temporary-venv-python> ./init.sh`.
 - Focused CLI test split checks passed: `python3 -m compileall tests`,
   `uvx --from ruff==0.15.17 ruff check` on the split CLI test files, and
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`
@@ -1171,6 +1183,9 @@ Add worktree lifecycle commands.
   checkout; and cleans up the worktree and branch after success. Discard
   removes only the recorded RunHaven worktree and branch without touching the
   source checkout.
+- Failed pre-cleanup `runhaven runs merge RUN_ID` attempts now print source
+  repo, worktree, branch, review, retry, keep, and discard commands without
+  deleting the recorded worktree.
 
 ## Next Session
 
@@ -1183,8 +1198,8 @@ Add worktree lifecycle commands.
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
 5. Run the Codex broker smoke with a disposable OpenAI API key when available.
-6. Continue worktree polish with failed-merge conflict guidance after the first
-   guarded lifecycle commands settle.
+6. Continue worktree polish with guided manual conflict-resolution helpers for
+   complex merge failures.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.
