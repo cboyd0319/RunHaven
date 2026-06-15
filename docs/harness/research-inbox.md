@@ -107,6 +107,12 @@ repo and link to primary sources instead.
 - 2026-06-15: Continued the pre-release modularization pass by extracting
   `src/runhaven/active_commands.py` for `runs active/status/attach/logs-follow`,
   `runs stop/kill/repair`, sanitized status output, and repair payloads.
+- 2026-06-15: Reviewed "Development On Apple Silicon with Apple Container
+  Machine" and recorded UX backlog items in
+  `docs/harness/ux-research-ideas.md`: explain why RunHaven avoids
+  `container machine` defaults, add future host-service/DNS diagnostics,
+  treat remote-editor and persistent-dev-environment workflows as explicit
+  advanced modes, and support inspect-before-run bootstrap recommendations.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.

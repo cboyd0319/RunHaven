@@ -7,15 +7,16 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the active-command extraction:
+Measured on 2026-06-15 after the provider-runtime extraction:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
 | `tests/test_cli.py` | 3515 | Broad integration-style CLI coverage. Useful, but too large for targeted review. |
-| `src/runhaven/cli.py` | 1411 | Still owns parser, command routing, provider runtime, auth, egress logs, network helpers, and state commands. |
+| `src/runhaven/cli.py` | 1005 | Still owns parser, command routing, auth, egress logs, `why`, state commands, and thin provider-runtime compatibility wrappers. |
 | `src/runhaven/run_history.py` | 604 | Owns run-record persistence, git metadata capture, and `runs list/show/log/diff`. |
 | `src/runhaven/active_commands.py` | 569 | Owns active-run command handlers, sanitized status output, attach/log-follow command construction, stop/kill, and repair. |
 | `src/runhaven/auth_broker.py` | 520 | Cohesive enough for now. |
+| `src/runhaven/provider_runtime.py` | 500 | Owns provider run lifecycle, proxy/broker startup, policy/auth decision logging, active marker cleanup, and internal network inspection. |
 | `scripts/check_pins.py` | 497 | Separate script; review after CLI/test split. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `src/runhaven/plans.py` | 403 | Cohesive planner and validation module. |
@@ -56,18 +57,29 @@ This removes active-run command handlers from `cli.py` while preserving
 RunHaven-owned container validation, non-root attach defaults, secret-free
 status output, stale-marker repair behavior, and existing test patch seams.
 
+## Provider-Runtime Extraction Completed
+
+- `src/runhaven/provider_runtime.py`: provider run lifecycle, provider proxy
+  startup, Codex broker startup, proxy environment injection, broker config
+  injection, policy/auth decision logging, blocked-host review, provider
+  network cleanup, and internal-network inspection helpers.
+- `src/runhaven/cli.py`: keeps parser, command dispatch, standard run flow,
+  and thin provider-runtime wrappers for `run_preflight`,
+  `inspect_internal_network`, `create_provider_proxy`,
+  `create_codex_api_key_broker`, `threading.Thread`, `subprocess.call`, and
+  `delete_container_network`.
+
+This removes provider orchestration from `cli.py` while preserving provider
+egress behavior, Codex broker behavior, secret-free run records, active marker
+cleanup, and existing test patch seams.
+
 ## Recommended Sequence
 
-1. Split provider runtime orchestration.
-   Move provider proxy startup, broker wiring, cleanup, and decision logging
-   into a provider runtime module. This is higher risk because tests patch
-   runtime hooks heavily.
-
-2. Split auth, egress log, and `why host` commands.
+1. Split auth, egress log, and `why host` commands.
    These are moderate-risk read-only command surfaces and can move after run
    history is stable.
 
-3. Split `tests/test_cli.py`.
+2. Split `tests/test_cli.py`.
    Mirror the production seams after they exist: setup, planning, provider
    runtime, run history, active runs, auth, egress, state, and repo policy.
 

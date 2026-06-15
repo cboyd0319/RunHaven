@@ -157,6 +157,37 @@ RunHaven direction:
 - Prefer commands that answer "what can this agent touch?" over long security
   essays.
 
+### Apple Container Machine Friction Report
+
+Source:
+https://rkiselenko.dev/blog/development-on-mac-with-acm/
+
+This 2026-06-14 field report sets up a persistent Apple Container Machine for
+Go, SSH-based Zed remote editing, and a coding agent. The useful RunHaven
+signal is the friction, not the default architecture: DNS setup is cumbersome,
+first-boot user creation complicates provisioning scripts, and Apple Container
+Machine mounts the host user home into the Linux environment with only broad
+`rw`, `ro`, or `none` mount options. The report also shows why users want this
+shape: fast reproducible Linux tooling, host-service access from the guest,
+remote editor access, and persistent tool state.
+
+RunHaven direction:
+
+- Keep `container machine` out of the default beginner-safe agent path because
+  broad host-home mapping conflicts with RunHaven's project-scoped mount
+  boundary.
+- Add clearer setup/docs language explaining why RunHaven uses task-scoped
+  `container run` instead of persistent machine defaults.
+- Consider future diagnostics for host-service access from a guest, such as
+  `runhaven why network host-service` or `runhaven doctor dns`, without
+  claiming DNS is an egress-control boundary.
+- Treat remote-editor and persistent-dev-environment workflows as explicit
+  advanced modes only after workspace, SSH, and credential boundaries are
+  verified.
+- Support project-local bootstrap or recommendation scripts through
+  inspect-before-run plans; do not run first-boot or host-mounted home scripts
+  implicitly.
+
 ## UX Improvements To Add
 
 ### Guided First Run

@@ -29,6 +29,7 @@ Start pre-release large-file modularization.
 - `src/runhaven/active_commands.py`
 - `src/runhaven/auth_broker.py`
 - `src/runhaven/provider_endpoints.py`
+- `src/runhaven/provider_runtime.py`
 - `src/runhaven/run_history.py`
 - `scripts/check_pins.py`
 - `scripts/codex_broker_smoke.py`
@@ -148,6 +149,30 @@ Start pre-release large-file modularization.
   status output, attach/log-follow command construction, stop/kill, and repair
   into `src/runhaven/active_commands.py`. `src/runhaven/cli.py` measured 1,411
   lines after extraction, down from 1,874 after the run-history slice.
+- Fourth modularization extraction moved provider run orchestration, provider
+  proxy and Codex broker startup, proxy/broker command injection, provider
+  policy and auth decision logging, provider network cleanup, and
+  internal-network inspection helpers into `src/runhaven/provider_runtime.py`.
+  `src/runhaven/cli.py` measured 1,005 lines after extraction, down from 1,411
+  after the active-command slice.
+- Reviewed "Development On Apple Silicon with Apple Container Machine" and
+  recorded UX backlog items in `docs/harness/ux-research-ideas.md`: explain
+  why RunHaven avoids `container machine` defaults, add future host-service/DNS
+  diagnostics, treat remote-editor and persistent-dev-environment workflows as
+  explicit advanced modes, and support inspect-before-run bootstrap
+  recommendations.
+- Focused provider-runtime extraction tests passed:
+  `PYTHONPATH=src python3 -m unittest` with 11 selected provider runtime,
+  Codex broker, provider run record, and internal-network tests.
+- Full verification passed after the provider-runtime extraction:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, generated artifact cleanup
+  scan, platform wording scan, and `PYTHON=<temporary-venv-python> ./init.sh`
+  with compileall, 156 unit tests, pin check, ruff, mypy, and build.
 - Focused active-command extraction tests passed:
   `PYTHONPATH=src python3 -m unittest` with 33 selected `runs active`,
   `runs status`, `runs attach`, `runs logs-follow`, `runs stop`, `runs kill`,
@@ -839,11 +864,10 @@ Start pre-release large-file modularization.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Continue large-file modularization by splitting provider runtime
-   orchestration from `src/runhaven/cli.py`: provider proxy startup, internal
-   network inspection, broker wiring, cleanup, and decision logging. Keep
-   Apple `container`, proxy, and broker patch seams explicit because current
-   tests patch provider runtime hooks heavily.
+5. Continue large-file modularization by splitting auth, egress log, and
+   `why host` commands from `src/runhaven/cli.py`. Keep log-reader injection
+   explicit for `runhaven runs log RUN_ID` and keep provider endpoint matching
+   behavior unchanged.
 6. Run the Codex broker smoke with a disposable OpenAI API key when available.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
