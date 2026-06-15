@@ -114,7 +114,11 @@ runhaven run claude --network provider
 `provider` creates a managed internal Apple `container` network and routes the
 agent through RunHaven's host-side allowlist CONNECT proxy. Bundled profiles
 include conservative provider hosts. A listed host permits that host and its
-subdomains. Add reviewed fully qualified extra hosts explicitly:
+subdomains. The proxy resolves allowed hosts before connecting and rejects
+non-public resolved addresses such as loopback, private, link-local, or other
+local-only addresses. Review the
+[provider endpoint matrix](PROVIDER_ENDPOINTS.md) before adding fully qualified
+extra hosts explicitly:
 
 ```bash
 runhaven run shell --network provider --provider-host api.example.com
@@ -127,6 +131,24 @@ internal-network gateway is inspected.
 If a provider run tries to reach a host outside the allowlist, RunHaven prints a
 blocked-host summary after the agent exits. Review each blocked hostname before
 adding it with `--provider-host`; IP literal targets cannot be allowed.
+
+Explain a host before adding it:
+
+```bash
+runhaven why host api.openai.com --agent codex
+runhaven why host api.example.com
+runhaven why host 1.1.1.1
+```
+
+Inspect recent provider proxy policy decisions:
+
+```bash
+runhaven egress log --limit 20
+runhaven egress log --json
+```
+
+The log is stored under RunHaven's cache directory. It records the profile,
+workspace, host, port, decision, reason, matched rule, count, and run id.
 
 ## Provider Egress Smoke
 

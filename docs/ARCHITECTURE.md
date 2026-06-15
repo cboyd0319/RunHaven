@@ -73,7 +73,10 @@ network inspection output and requires `configuration.mode` to be `hostOnly`.
 network for its IPv4 gateway and subnet, starts a host-side CONNECT proxy, and
 injects proxy environment variables into the agent run. The proxy allows only
 the bundled provider hosts for the selected profile, their subdomains, and
-explicit fully qualified `--provider-host HOST` additions.
+explicit fully qualified `--provider-host HOST` additions. Bundled hosts are
+maintained in the reviewed
+[`PROVIDER_ENDPOINTS.md`](PROVIDER_ENDPOINTS.md) matrix and mirrored into the
+profile metadata used by the planner.
 
 The enforcement pattern is:
 
@@ -84,6 +87,10 @@ The enforcement pattern is:
 - reject clients outside the internal-network subnet when gateway-specific
   binding is not available
 - block IP literal CONNECT targets at the proxy
+- resolve allowed hosts before connecting and reject non-public resolved
+  addresses
+- aggregate allowed and denied proxy policy decisions for the run
+- append provider policy decisions to the RunHaven cache log after the run
 - delete the managed provider network after the run
 
 `scripts/provider_egress_smoke.py` proves the lower-level proxy pattern with

@@ -1,10 +1,11 @@
 # Progress
 
-Last Updated: 2026-06-14
+Last Updated: 2026-06-15
 
 ## Current Objective
 
-Surface provider-mode blocked hosts without weakening the egress boundary.
+Implement the provider endpoint matrix and source-backed provider profile
+updates from the mined backlog.
 
 ## Current State
 
@@ -88,6 +89,27 @@ Surface provider-mode blocked hosts without weakening the egress boundary.
 - Provider mode now records blocked CONNECT host/port pairs in memory, caps the
   list, and prints a stderr summary after the run with review guidance for
   fully qualified host additions.
+- Provider mode now resolves allowed hosts before connecting and denies
+  loopback, private, link-local, multicast, and otherwise non-public resolved
+  addresses.
+- Provider mode now records allowed and denied proxy policy decisions and
+  persists them to a JSONL cache log after each run.
+- `runhaven egress log` now shows recent provider proxy decisions, with JSON
+  output available for automation.
+- `runhaven why host ...` now explains provider-host matching, IP literal
+  rejection, bundled profile matches, and the next review step before a user
+  adds a new host.
+- `src/runhaven/provider_endpoints.py` is now the structured provider endpoint
+  ledger for bundled, candidate, optional, and build-time hosts.
+- `docs/PROVIDER_ENDPOINTS.md` records the source-backed provider endpoint
+  matrix and explains why broad path-sensitive, telemetry, update, reporting,
+  and weakly sourced hosts stay explicit.
+- Source-backed bundled provider defaults now include Claude auth hosts,
+  Codex ChatGPT auth, and Copilot-specific routing hosts. Antigravity still has
+  no bundled runtime hosts because no minimal source-backed endpoint set has
+  been identified.
+- `runhaven why host ...` now surfaces known explicit-review endpoints, such as
+  Copilot `api.github.com`, with the reason they are not bundled.
 - A live normal-run smoke passed for `runhaven run shell --network provider
   --provider-host example.com`: allowed proxied HTTPS succeeded, while denied
   proxied host, proxied IP literal, direct DNS, and direct IP paths failed.
@@ -100,15 +122,114 @@ Surface provider-mode blocked hosts without weakening the egress boundary.
 - The new source review reinforced current RunHaven decisions: macOS 26+ only,
   task-scoped `container run`, no `container machine` default, no host home
   mount, and no DNS-as-egress-control claim.
+- Sibling repos `awman`, `aspec`, and `maki` were manually mined for
+  transferable ideas. AGY/Antigravity was intentionally not used for this pass.
+- The complete source-mined recommendation set is recorded in
+  `docs/harness/source-mined-ideas.md` and summarized in
+  `docs/harness/research-inbox.md`.
+- High-value promoted candidates include provider endpoint matrix, provider
+  proxy DNS/private-address guard, worktree isolation, workspace scope
+  selection, run observability, typed run options, strict workflow files,
+  context overlays, generated docs drift checks, JSON/headless output, and
+  deny-by-default MCP or extension boundaries.
+- The pass does not discard ideas merely because they are large. It stages them
+  by dependency and risk while preserving the hard product boundary: macOS 26+
+  only, Apple `container` only, no Docker fallback, no Windows/Linux runtime
+  support, no host home or credential mounts by default, and no
+  `container machine` default.
+- Current external open source projects were manually researched for adjacent
+  ideas. The full result is recorded in
+  `docs/harness/external-project-ideas.md`.
+- External source-backed candidates now in the backlog include `runhaven why`
+  diagnostics, provider proxy policy logs, empty-allowlist regression tests,
+  host-side provider credential brokering, agent profile investigation docs,
+  devcontainer metadata import for image planning, warm reusable project
+  sessions, and explicit extension/MCP boundary policy.
+- A UX-focused research pass is recorded in
+  `docs/harness/ux-research-ideas.md`.
+- UX candidates now in the backlog include guided `runhaven setup`, goal-based
+  network selection, `runhaven why`, provider policy logs, grouped
+  blocked-host review, `runs list/show/log/diff/attach/stop`, worktree review
+  flows, image/state/network repair commands, `auth status`, and
+  task-language docs recipes.
 
 ## Recommended Next Step
 
-Build the provider endpoint matrix for authentication, telemetry, and optional
-feature paths. Keep additions fully qualified, explicit, and evidence-backed,
-then update bundled profiles only after live or source-backed verification.
+Add grouped blocked-host review with run id, rule, count, and suggested next
+action, then add live provider profile smokes for the source-backed defaults.
+Keep broad path-sensitive hosts such as `github.com` explicit until RunHaven
+has path-aware policy or a credential broker.
 
 ## Verification Evidence
 
+- 2026-06-15: `git diff --check` passed after recording the source-mined
+  recommendations.
+- 2026-06-15: `python3 -m json.tool feature_list.json` passed after recording
+  the source-mined recommendations.
+- 2026-06-15: `python3 scripts/check_pins.py` passed after recording the
+  source-mined recommendations.
+- 2026-06-15: local Markdown link check passed for
+  `docs/harness/source-mined-ideas.md`, `docs/harness/research-inbox.md`,
+  `docs/ROADMAP.md`, `progress.md`, and `session-handoff.md`.
+- 2026-06-15: `git diff --check` passed after recording the external open
+  source research pass.
+- 2026-06-15: `python3 -m json.tool feature_list.json` passed after recording
+  the external open source research pass.
+- 2026-06-15: `python3 scripts/check_pins.py` passed after recording the
+  external open source research pass.
+- 2026-06-15: local Markdown link check passed for
+  `docs/harness/source-mined-ideas.md`,
+  `docs/harness/external-project-ideas.md`,
+  `docs/harness/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
+  `session-handoff.md`.
+- 2026-06-15: macOS-only boundary text check confirmed the edited docs still
+  exclude Windows and Linux runtime support.
+- 2026-06-15: `git diff --check` passed after recording the UX research pass.
+- 2026-06-15: `python3 -m json.tool feature_list.json` passed after recording
+  the UX research pass.
+- 2026-06-15: `python3 scripts/check_pins.py` passed after recording the UX
+  research pass.
+- 2026-06-15: local Markdown link check passed for
+  `docs/harness/source-mined-ideas.md`,
+  `docs/harness/external-project-ideas.md`,
+  `docs/harness/ux-research-ideas.md`,
+  `docs/harness/research-inbox.md`, `docs/ROADMAP.md`, `progress.md`, and
+  `session-handoff.md`.
+- 2026-06-15: platform boundary text check confirmed the edited docs still
+  state macOS 26+ only, Apple `container` only, and no Windows/Linux runtime
+  support.
+- 2026-06-15: `PYTHONPATH=src python3.14 -m unittest tests.test_egress.AllowlistProxyTests.test_proxy_rejects_allowed_host_resolving_to_private_address tests.test_egress.AllowlistProxyTests.test_proxy_records_allowed_and_denied_policy_decisions`
+  ran 2 focused proxy tests and passed after provider DNS unsafe-address
+  rejection and policy aggregation.
+- 2026-06-15: `PYTHONPATH=src python3.14 -m unittest tests.test_cli.CliTests.test_provider_run_writes_policy_log tests.test_cli.CliTests.test_egress_log_prints_recent_policy_entries tests.test_cli.CliTests.test_why_host_explains_ip_literal_rejection tests.test_cli.CliTests.test_why_host_explains_profile_allowlist_match`
+  ran 4 focused CLI tests and passed after provider policy logs and
+  `runhaven why host ...`.
+- 2026-06-15: `PYTHONPATH=src python3.14 -m unittest tests.test_egress tests.test_cli tests.test_plans`
+  ran 56 focused integration tests and passed after provider diagnostics.
+- 2026-06-15: `PYTHONPATH=src python3.14 -m unittest discover -s tests`
+  ran 68 tests and passed after provider diagnostics.
+- 2026-06-15: `python3.14 -m compileall src tests scripts` passed after
+  provider diagnostics.
+- 2026-06-15: `ruff check src/runhaven/egress.py src/runhaven/cli.py src/runhaven/plans.py tests/test_egress.py tests/test_cli.py`
+  passed after provider diagnostics.
+- 2026-06-15: `uvx --from mypy==2.1.0 mypy src` passed after provider
+  diagnostics.
+- 2026-06-15: `PYTHONPATH=src python3.14 -m runhaven why host api.openai.com --agent codex`
+  and `PYTHONPATH=src python3.14 -m runhaven why host 1.1.1.1` passed manual
+  CLI diagnostic checks.
+- 2026-06-15: `RUNHAVEN_CACHE_HOME=<temporary-dir> PYTHONPATH=src python3.14 -m runhaven egress log --limit 1`
+  passed a manual policy-log display check.
+- 2026-06-15: `python3.14 -m json.tool feature_list.json`,
+  `python3.14 scripts/check_pins.py`, `git diff --check`, and local Markdown
+  link checks passed after documenting provider diagnostics.
+- 2026-06-15: platform boundary scan confirmed live repo instructions and docs
+  preserve macOS 26+ only runtime and contributor verification.
+- 2026-06-15: final `ruff check .`, `uvx --from mypy==2.1.0 mypy src`, and
+  `PYTHONPATH=src python3.14 -m unittest discover -s tests` passed after the
+  provider diagnostics implementation.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 68 unit tests, pin check, ruff, mypy, and build after provider
+  diagnostics.
 - 2026-06-14: `PYTHONPATH=src python3.14 -m unittest discover -s tests`
   ran 34 tests and passed.
 - 2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests`
@@ -259,3 +380,19 @@ then update bundled profiles only after live or source-backed verification.
 - 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and
   `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 63 tests
   and passed after provider blocked-host diagnostics.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli tests.test_plans`
+  ran 49 tests and passed after provider endpoint matrix integration.
+- 2026-06-15: `uvx --from ruff==0.15.17 ruff check src/runhaven/provider_endpoints.py src/runhaven/profiles.py src/runhaven/cli.py tests/test_cli.py tests/test_plans.py`
+  passed after provider endpoint matrix integration.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 71
+  tests and passed after provider endpoint matrix integration.
+- 2026-06-15: `python3 -m compileall src tests scripts`,
+  `python3 -m json.tool feature_list.json`, and `git diff --check` passed.
+- 2026-06-15: `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, and `python3 scripts/check_pins.py`
+  passed.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 71 unit tests, pin check, ruff, mypy, and build.
+- 2026-06-15: `python3 -m json.tool feature_list.json`, `git diff --check`,
+  `python3 scripts/check_pins.py`, focused CLI/plan tests, and targeted local
+  Markdown link checks passed after final harness-state updates.

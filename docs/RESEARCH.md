@@ -71,6 +71,65 @@ Important distinction:
 - GitHub Copilot CLI overview:
   <https://docs.github.com/en/copilot/how-tos/copilot-cli/use-copilot-cli/overview>
 
+## Provider Endpoint Sources
+
+Reviewed on 2026-06-15 for the bundled provider endpoint matrix:
+
+- Claude Code enterprise network configuration:
+  <https://code.claude.com/docs/en/corporate-proxy>.
+  Source-backed bundled hosts are `api.anthropic.com`, `claude.ai`, and
+  `platform.claude.com`. Update, plugin, release-note, and extension bridge
+  hosts remain explicit.
+- OpenAI Codex authentication:
+  <https://developers.openai.com/codex/auth>.
+  Codex supports ChatGPT sign-in and API-key sign-in. ChatGPT auth is the
+  default path when no valid session is available.
+- OpenAI Codex CLI:
+  <https://developers.openai.com/codex/cli>.
+  The standalone installer and Codex web surface use `chatgpt.com`.
+- OpenAI Codex approvals and security:
+  <https://developers.openai.com/codex/agent-approvals-security>.
+  The network-policy examples use `api.openai.com` and describe allowlist-first
+  host matching, local/private destination blocking, and DNS rebinding checks.
+- OpenAI Codex permissions:
+  <https://developers.openai.com/codex/permissions>.
+  The common profile examples include `api.openai.com` as an allowed domain.
+- Gemini CLI authentication:
+  <https://google-gemini.github.io/gemini-cli/docs/get-started/authentication.html>.
+  API-key mode is backed by `generativelanguage.googleapis.com`; Google account
+  and Vertex modes remain explicit until live smokes confirm the minimal host
+  set.
+- Gemini CLI configuration:
+  <https://google-gemini.github.io/gemini-cli/docs/get-started/configuration.html>.
+  Reviewed for settings, telemetry, and local state behavior.
+- GitHub Copilot allowlist reference:
+  <https://docs.github.com/en/copilot/reference/copilot-allowlist-reference>.
+  Source-backed bundled hosts are limited to Copilot-specific suggestion and
+  routing domains. Path-sensitive `github.com` and `api.github.com` entries,
+  telemetry, experimentation, and reporting hosts remain explicit.
+- GitHub Copilot subscription-based routing:
+  <https://docs.github.com/en/copilot/how-tos/administer-copilot/manage-for-organization/manage-access/manage-network-access>.
+  Confirms Business and Enterprise Copilot routing wildcard families.
+- Google Developers Blog, Gemini CLI to Antigravity CLI transition:
+  <https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/>.
+  Reviewed for current Antigravity CLI lifecycle context. It does not provide a
+  minimal runtime endpoint allowlist.
+
+Pinned package scan on 2026-06-15:
+
+- Scanned npm tarballs matching current image pins:
+  `@anthropic-ai/claude-code@2.1.177`, `@openai/codex@0.139.0`,
+  `@google/gemini-cli@0.46.0`, and `@github/copilot@1.0.62`.
+- Package strings were used only as weak supporting evidence. Hosts were not
+  promoted to bundled defaults without official source evidence or a future
+  live RunHaven smoke.
+- Gemini package contents included many third-party and documentation domains,
+  so only official docs and focused candidate hosts were recorded.
+- Antigravity public docs are JavaScript-rendered through the static site. The
+  current image template downloads the pinned CLI archive from
+  `storage.googleapis.com/antigravity-public`, but no source-backed runtime host
+  list was found.
+
 Local reference harness:
 
 - A local reference harness repo was consulted for instruction, pin-check, and

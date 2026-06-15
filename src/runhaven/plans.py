@@ -59,6 +59,7 @@ class AgentRunPlan:
     preflight: tuple[tuple[str, ...], ...]
     workspace: Path
     state_volume: str
+    profile_name: str
     network_name: str | None
     network_mode: NetworkMode
     egress_summary: str
@@ -196,6 +197,7 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         preflight=tuple(preflight),
         workspace=workspace,
         state_volume=state_volume,
+        profile_name=options.profile.name,
         network_name=active_network,
         network_mode=options.network,
         egress_summary=network_egress_summary(options.network, provider_allowed_hosts),

@@ -3,11 +3,11 @@ from __future__ import annotations
 import socket
 import threading
 import unittest
-from contextlib import closing
 
 from runhaven.egress import (
     MAX_DENIED_CONNECT_TARGETS,
     EgressPolicy,
+    ProxyDecision,
     ThreadedAllowlistProxy,
 )
 
@@ -93,19 +93,81 @@ class AllowlistProxyTests(unittest.TestCase):
 
         self.assertIn(b"403 Forbidden", response)
 
-    def test_proxy_relays_allowed_connect_tunnel(self) -> None:
-        with running_echo_server() as upstream:
-            policy = EgressPolicy(allowed_hosts=("localhost",), allowed_ports=(upstream.port,))
-            with running_proxy(policy) as proxy:
-                with socket.create_connection(proxy.server_address, timeout=3) as client:
-                    request = (
-                        f"CONNECT localhost:{upstream.port} HTTP/1.1\r\n"
-                        f"Host: localhost:{upstream.port}\r\n\r\n"
-                    )
-                    client.sendall(request.encode("ascii"))
-                    self.assertIn(b"200 Connection Established", client.recv(4096))
-                    client.sendall(b"ping")
-                    self.assertEqual(client.recv(4), b"pong")
+    def test_proxy_rejects_allowed_host_resolving_to_private_address(self) -> None:
+        resolver = fake_resolver(("127.0.0.1",))
+        with running_proxy(
+            EgressPolicy(allowed_hosts=("allowed.test",)),
+            resolver=resolver,
+        ) as proxy:
+            response = proxy_request(
+                proxy,
+                b"CONNECT allowed.test:443 HTTP/1.1\r\nHost: allowed.test:443\r\n\r\n",
+            )
+
+            decisions = proxy.policy_decisions()
+
+        self.assertIn(b"403 Forbidden", response)
+        self.assertEqual(
+            decisions,
+            (
+                ProxyDecision(
+                    host="allowed.test",
+                    port=443,
+                    decision="denied",
+                    reason="unsafe-resolved-address",
+                    matched_rule="allowed.test",
+                    count=1,
+                ),
+            ),
+        )
+
+    def test_proxy_records_allowed_and_denied_policy_decisions(self) -> None:
+        connector = fake_echo_connector()
+        with running_proxy(
+            EgressPolicy(allowed_hosts=("allowed.test",)),
+            resolver=fake_resolver(("93.184.216.34",)),
+            connector=connector,
+        ) as proxy:
+            with socket.create_connection(proxy.server_address, timeout=3) as client:
+                client.sendall(
+                    b"CONNECT allowed.test:443 HTTP/1.1\r\nHost: allowed.test:443\r\n\r\n"
+                )
+                self.assertIn(b"200 Connection Established", client.recv(4096))
+                client.sendall(b"ping")
+                self.assertEqual(client.recv(4), b"pong")
+
+            proxy_request(
+                proxy,
+                b"CONNECT denied.test:443 HTTP/1.1\r\nHost: denied.test:443\r\n\r\n",
+            )
+            proxy_request(
+                proxy,
+                b"CONNECT denied.test:443 HTTP/1.1\r\nHost: denied.test:443\r\n\r\n",
+            )
+
+            decisions = proxy.policy_decisions()
+
+        self.assertEqual(
+            decisions,
+            (
+                ProxyDecision(
+                    host="allowed.test",
+                    port=443,
+                    decision="allowed",
+                    reason="allowed",
+                    matched_rule="allowed.test",
+                    count=1,
+                ),
+                ProxyDecision(
+                    host="denied.test",
+                    port=443,
+                    decision="denied",
+                    reason="not-in-allowlist",
+                    matched_rule="",
+                    count=2,
+                ),
+            ),
+        )
 
 
 class running_proxy:
@@ -114,11 +176,15 @@ class running_proxy:
         policy: EgressPolicy,
         *,
         allowed_client_subnets: tuple[str, ...] = (),
+        resolver: object | None = None,
+        connector: object | None = None,
     ) -> None:
         self.server = ThreadedAllowlistProxy(
             ("127.0.0.1", 0),
             policy,
             allowed_client_subnets=allowed_client_subnets,
+            resolver=resolver,
+            connector=connector,
         )
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
 
@@ -132,43 +198,43 @@ class running_proxy:
         self.thread.join(timeout=3)
 
 
-class running_echo_server:
-    def __init__(self) -> None:
-        self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.listener.bind(("127.0.0.1", 0))
-        self.listener.listen(1)
-        self.port = self.listener.getsockname()[1]
-        self.thread = threading.Thread(target=self._serve, daemon=True)
-
-    def __enter__(self) -> running_echo_server:
-        self.thread.start()
-        return self
-
-    def __exit__(self, *args: object) -> None:
-        with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as stopper:
-            stopper.settimeout(1)
-            try:
-                stopper.connect(("127.0.0.1", self.port))
-            except OSError:
-                pass
-        self.listener.close()
-        self.thread.join(timeout=3)
-
-    def _serve(self) -> None:
-        try:
-            connection, _ = self.listener.accept()
-        except OSError:
-            return
-        with connection:
-            data = connection.recv(4)
-            if data == b"ping":
-                connection.sendall(b"pong")
-
-
 def proxy_request(proxy: ThreadedAllowlistProxy, request: bytes) -> bytes:
     with socket.create_connection(proxy.server_address, timeout=3) as client:
         client.sendall(request)
         return client.recv(4096)
+
+
+def fake_resolver(addresses: tuple[str, ...]) -> object:
+    def resolve(
+        _host: str,
+        port: int,
+        *,
+        type: socket.SocketKind = socket.SOCK_STREAM,
+    ) -> list[tuple[socket.AddressFamily, socket.SocketKind, int, str, tuple[str, int]]]:
+        return [
+            (socket.AF_INET, type, socket.IPPROTO_TCP, "", (address, port))
+            for address in addresses
+        ]
+
+    return resolve
+
+
+class fake_echo_connector:
+    def __call__(
+        self,
+        _addrinfos: object,
+        _timeout: float,
+    ) -> socket.socket:
+        client, server = socket.socketpair()
+        thread = threading.Thread(target=self._serve, args=(server,), daemon=True)
+        thread.start()
+        return client
+
+    def _serve(self, connection: socket.socket) -> None:
+        with connection:
+            data = connection.recv(4)
+            if data == b"ping":
+                connection.sendall(b"pong")
 
 
 if __name__ == "__main__":

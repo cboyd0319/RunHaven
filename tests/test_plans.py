@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 from runhaven.plans import RunOptions, build_run_plan, validate_env_name
 from runhaven.profiles import get_profile
+from runhaven.provider_endpoints import BUNDLED_PROVIDER_HOSTS
 
 
 class RunPlanTests(unittest.TestCase):
@@ -72,8 +73,14 @@ class RunPlanTests(unittest.TestCase):
         self.assertIn("--network", plan.command)
         self.assertIn(plan.network_name, plan.command)
         self.assertIn("api.openai.com", plan.provider_allowed_hosts)
+        self.assertIn("chatgpt.com", plan.provider_allowed_hosts)
         self.assertIn("provider allowlist", plan.egress_summary)
         self.assertNotIn("HTTPS_PROXY", plan.command)
+
+    def test_profile_provider_hosts_match_endpoint_ledger(self) -> None:
+        for profile_name, expected_hosts in BUNDLED_PROVIDER_HOSTS.items():
+            with self.subTest(profile=profile_name):
+                self.assertEqual(get_profile(profile_name).provider_hosts, expected_hosts)
 
     def test_provider_network_requires_allowed_hosts(self) -> None:
         with TemporaryDirectory() as directory:

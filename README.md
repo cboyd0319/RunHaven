@@ -40,7 +40,9 @@ supported runtimes or contributor verification targets for this project.
 
 Use `--network provider` to restrict normal agent runs to the bundled provider
 host allowlist plus any explicit fully qualified `--provider-host HOST`
-additions. A listed host permits that host and its subdomains.
+additions. A listed host permits that host and its subdomains. The provider
+proxy resolves allowed hosts before connecting and rejects non-public resolved
+addresses.
 
 ## What It Protects By Default
 
@@ -80,7 +82,8 @@ This is not a complete data-loss or exfiltration solution.
 - Internet mode does not yet restrict outbound domains.
 - Provider mode uses conservative host allowlists; login, telemetry, or
   provider-side feature paths may need additional reviewed fully qualified
-  `--provider-host` entries. Blocked hosts are summarized after provider runs.
+  `--provider-host` entries. Blocked hosts are summarized after provider runs
+  and recorded in the provider egress policy log.
 - The selected agent can still read files inside the mounted workspace and its
   isolated agent home volume.
 - If a credential is available inside the agent home volume or passed with
@@ -219,11 +222,27 @@ runhaven run claude --network provider
 ```
 
 Bundled profiles include conservative provider hosts. A listed host permits
-that host and its subdomains. For custom images or extra provider endpoints,
-add reviewed fully qualified hosts explicitly:
+that host and its subdomains. See the reviewed
+[provider endpoint matrix](docs/PROVIDER_ENDPOINTS.md) before adding custom
+image hosts or extra provider endpoints. Add reviewed fully qualified hosts
+explicitly:
 
 ```bash
 runhaven run shell --network provider --provider-host api.example.com
+```
+
+Before adding a host, ask RunHaven why it would or would not be allowed:
+
+```bash
+runhaven why host api.openai.com --agent codex
+runhaven why host api.example.com
+```
+
+After a provider run, inspect recent allowed and denied CONNECT decisions:
+
+```bash
+runhaven egress log --limit 20
+runhaven egress log --json
 ```
 
 Pass a token by variable name only:

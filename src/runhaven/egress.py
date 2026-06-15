@@ -5,13 +5,45 @@ import select
 import socket
 import socketserver
 import threading
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import cast
+from typing import Literal, Protocol, cast
 
 MAX_HEADER_BYTES = 64 * 1024
 RELAY_BUFFER_BYTES = 64 * 1024
 MAX_DENIED_CONNECT_TARGETS = 50
+
+SocketAddress = tuple[object, ...]
+AddressInfo = tuple[socket.AddressFamily, socket.SocketKind, int, str, SocketAddress]
+
+
+class Resolver(Protocol):
+    def __call__(
+        self,
+        host: str,
+        port: int,
+        *,
+        type: socket.SocketKind = socket.SOCK_STREAM,
+    ) -> Sequence[AddressInfo]: ...
+
+
+Connector = Callable[[Sequence[AddressInfo], float], socket.socket]
+
+
+class UnsafeResolvedAddress(ValueError):
+    def __init__(self, address: str) -> None:
+        super().__init__(f"unsafe resolved address: {address}")
+        self.address = address
+
+
+@dataclass(frozen=True)
+class ProxyDecision:
+    host: str
+    port: int
+    decision: Literal["allowed", "denied"]
+    reason: str
+    matched_rule: str
+    count: int = 1
 
 
 @dataclass(frozen=True)
@@ -30,18 +62,32 @@ class EgressPolicy:
         object.__setattr__(self, "allowed_ports", ports)
 
     def allows(self, host: str, port: int) -> bool:
+        return self.match_rule(host, port) is not None
+
+    def match_rule(self, host: str, port: int) -> str | None:
         try:
             normalized = normalize_host(host)
         except ValueError:
-            return False
+            return None
         if port not in self.allowed_ports:
-            return False
+            return None
         if is_ip_literal(normalized):
-            return False
-        return any(
-            normalized == allowed or normalized.endswith(f".{allowed}")
-            for allowed in self.allowed_hosts
-        )
+            return None
+        for allowed in self.allowed_hosts:
+            if normalized == allowed or normalized.endswith(f".{allowed}"):
+                return allowed
+        return None
+
+    def denial_reason(self, host: str, port: int) -> str:
+        try:
+            normalized = normalize_host(host)
+        except ValueError:
+            return "invalid-host"
+        if port not in self.allowed_ports:
+            return "port-not-allowed"
+        if is_ip_literal(normalized):
+            return "ip-literal"
+        return "not-in-allowlist"
 
 
 class ThreadedAllowlistProxy(socketserver.ThreadingTCPServer):
@@ -56,16 +102,22 @@ class ThreadedAllowlistProxy(socketserver.ThreadingTCPServer):
         connect_timeout: float = 10.0,
         relay_timeout: float = 30.0,
         allowed_client_subnets: Sequence[str] = (),
+        resolver: Resolver | None = None,
+        connector: Connector | None = None,
     ) -> None:
         self.policy = policy
         self.connect_timeout = connect_timeout
         self.relay_timeout = relay_timeout
+        self.resolver = resolver or default_resolver
+        self.connector = connector or default_connector
         self.allowed_client_networks = tuple(
             ipaddress.ip_network(subnet, strict=False) for subnet in allowed_client_subnets
         )
         self._denied_connect_targets: list[tuple[str, int]] = []
         self._denied_connect_target_set: set[tuple[str, int]] = set()
         self._denied_connect_targets_lock = threading.Lock()
+        self._policy_decisions: dict[tuple[str, int, str, str, str], int] = {}
+        self._policy_decisions_lock = threading.Lock()
         super().__init__(server_address, AllowlistProxyHandler)
 
     def allows_client(self, address: str) -> bool:
@@ -89,6 +141,35 @@ class ThreadedAllowlistProxy(socketserver.ThreadingTCPServer):
     def denied_connect_targets(self) -> tuple[tuple[str, int], ...]:
         with self._denied_connect_targets_lock:
             return tuple(self._denied_connect_targets)
+
+    def record_policy_decision(
+        self,
+        host: str,
+        port: int,
+        *,
+        decision: Literal["allowed", "denied"],
+        reason: str,
+        matched_rule: str = "",
+    ) -> None:
+        key = (host, port, decision, reason, matched_rule)
+        with self._policy_decisions_lock:
+            self._policy_decisions[key] = self._policy_decisions.get(key, 0) + 1
+
+    def policy_decisions(self) -> tuple[ProxyDecision, ...]:
+        with self._policy_decisions_lock:
+            return tuple(
+                ProxyDecision(
+                    host=host,
+                    port=port,
+                    decision=cast(Literal["allowed", "denied"], decision),
+                    reason=reason,
+                    matched_rule=matched_rule,
+                    count=count,
+                )
+                for (host, port, decision, reason, matched_rule), count in (
+                    self._policy_decisions.items()
+                )
+            )
 
 
 class AllowlistProxyHandler(socketserver.StreamRequestHandler):
@@ -121,17 +202,57 @@ class AllowlistProxyHandler(socketserver.StreamRequestHandler):
         except ValueError:
             self.send_response(400, "Bad Request")
             return
-        if not server.policy.allows(host, port):
+        matched_rule = server.policy.match_rule(host, port)
+        if matched_rule is None:
+            reason = server.policy.denial_reason(host, port)
+            server.record_policy_decision(host, port, decision="denied", reason=reason)
             server.record_denied_connect_target(host, port)
             self.send_response(403, "Forbidden")
             return
 
         try:
-            upstream = socket.create_connection((host, port), timeout=server.connect_timeout)
+            addrinfos = safe_addrinfos(host, port, server.resolver)
+        except UnsafeResolvedAddress:
+            server.record_policy_decision(
+                host,
+                port,
+                decision="denied",
+                reason="unsafe-resolved-address",
+                matched_rule=matched_rule,
+            )
+            self.send_response(403, "Forbidden")
+            return
         except OSError:
+            server.record_policy_decision(
+                host,
+                port,
+                decision="denied",
+                reason="dns-resolution-failed",
+                matched_rule=matched_rule,
+            )
             self.send_response(502, "Bad Gateway")
             return
 
+        try:
+            upstream = server.connector(addrinfos, server.connect_timeout)
+        except OSError:
+            server.record_policy_decision(
+                host,
+                port,
+                decision="allowed",
+                reason="allowed",
+                matched_rule=matched_rule,
+            )
+            self.send_response(502, "Bad Gateway")
+            return
+
+        server.record_policy_decision(
+            host,
+            port,
+            decision="allowed",
+            reason="allowed",
+            matched_rule=matched_rule,
+        )
         with upstream:
             self.send_raw_response(200, "Connection Established")
             relay(self.connection, upstream, timeout=server.relay_timeout)
@@ -191,6 +312,55 @@ def is_ip_literal(host: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+def default_resolver(
+    host: str,
+    port: int,
+    *,
+    type: socket.SocketKind = socket.SOCK_STREAM,
+) -> Sequence[AddressInfo]:
+    return cast(
+        Sequence[AddressInfo],
+        socket.getaddrinfo(host, port, type=type),
+    )
+
+
+def safe_addrinfos(host: str, port: int, resolver: Resolver) -> tuple[AddressInfo, ...]:
+    addrinfos = tuple(resolver(host, port, type=socket.SOCK_STREAM))
+    if not addrinfos:
+        raise OSError(f"no addresses resolved for {host}:{port}")
+    for _family, _socktype, _proto, _canonname, sockaddr in addrinfos:
+        address = str(sockaddr[0])
+        if not is_safe_upstream_address(address):
+            raise UnsafeResolvedAddress(address)
+    return addrinfos
+
+
+def is_safe_upstream_address(address: str) -> bool:
+    try:
+        parsed = ipaddress.ip_address(address)
+    except ValueError:
+        return False
+    if isinstance(parsed, ipaddress.IPv6Address) and parsed.ipv4_mapped is not None:
+        parsed = parsed.ipv4_mapped
+    return parsed.is_global
+
+
+def default_connector(addrinfos: Sequence[AddressInfo], timeout: float) -> socket.socket:
+    last_error: OSError | None = None
+    for family, socktype, proto, _canonname, sockaddr in addrinfos:
+        upstream = socket.socket(family, socktype, proto)
+        try:
+            upstream.settimeout(timeout)
+            upstream.connect(sockaddr)
+            return upstream
+        except OSError as exc:
+            upstream.close()
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+    raise OSError("no upstream addresses to connect")
 
 
 def parse_connect_target(target: str) -> tuple[str, int]:

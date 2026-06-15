@@ -4,6 +4,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 
+from .provider_endpoints import bundled_provider_hosts
+
 
 @dataclass(frozen=True)
 class AgentProfile:
@@ -28,7 +30,7 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
             command=("claude",),
             home_env={"CLAUDE_CONFIG_DIR": "/home/agent/.claude"},
             image_context="claude",
-            provider_hosts=("api.anthropic.com",),
+            provider_hosts=bundled_provider_hosts("claude"),
         ),
         "codex": AgentProfile(
             name="codex",
@@ -37,7 +39,7 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
             command=("codex", "--sandbox", "workspace-write", "--ask-for-approval", "on-request"),
             home_env={"CODEX_HOME": "/home/agent/.codex"},
             image_context="codex",
-            provider_hosts=("api.openai.com",),
+            provider_hosts=bundled_provider_hosts("codex"),
         ),
         "gemini": AgentProfile(
             name="gemini",
@@ -45,7 +47,7 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
             image="runhaven/gemini:0.1.0",
             command=("gemini",),
             image_context="gemini",
-            provider_hosts=("generativelanguage.googleapis.com",),
+            provider_hosts=bundled_provider_hosts("gemini"),
         ),
         "antigravity": AgentProfile(
             name="antigravity",
@@ -61,7 +63,7 @@ PROFILES: Mapping[str, AgentProfile] = MappingProxyType(
             command=("copilot",),
             home_env={"COPILOT_HOME": "/home/agent/.copilot"},
             image_context="copilot",
-            provider_hosts=("api.githubcopilot.com",),
+            provider_hosts=bundled_provider_hosts("copilot"),
         ),
         "shell": AgentProfile(
             name="shell",

@@ -1,7 +1,7 @@
 {
   "$schema": "docs/harness/feature-list.schema.json",
   "project": "RunHaven",
-  "last_updated": "2026-06-14",
+  "last_updated": "2026-06-15",
   "rules": {
     "single_active_feature": true,
     "passing_requires_evidence": true,
@@ -116,8 +116,12 @@
         "Smoke harness proves host allowlist proxy on an internal Apple container network",
         "Provider allowlist behavior tested",
         "Runtime smoke proves denied and allowed network paths",
-        "Docs state exact limitations",
-        "Blocked provider hosts are surfaced to the user"
+                "Docs state exact limitations",
+                "Blocked provider hosts are surfaced to the user",
+                "Allowed hosts resolving to unsafe local addresses are denied",
+                "Provider policy decisions are persisted for later review",
+                "Host allowlist decisions can be explained before rerun",
+                "Provider endpoint matrix backs bundled hosts and known explicit-review hosts"
       ],
       "evidence": [
         "2026-06-14: Rendered Apple DocC networking docs with Playwright and checked generated DocC JSON endpoints for `ContainerNetworkService`.",
@@ -142,10 +146,21 @@
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 60 tests and passed after the provider-host guard cleanup.",
         "2026-06-14: focused egress, CLI, and plan tests passed after adding blocked-host diagnostics for provider runs.",
         "2026-06-14: live `runhaven run shell --network provider --provider-host example.com` diagnostic smoke reported denied `iana.org:443`; follow-up cleanup removed the test state volume and found no leftover provider network.",
-        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 63 tests and passed after provider blocked-host diagnostics."
-      ],
-      "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider host lists are conservative and may need reviewed fully qualified `--provider-host` additions for login, telemetry, or optional feature paths. Blocked provider targets are reported after runs."
-    },
+        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 63 tests and passed after provider blocked-host diagnostics.",
+        "2026-06-15: focused proxy and CLI tests passed after adding provider DNS unsafe-address rejection, policy logs, and `runhaven why host ...`.",
+        "2026-06-15: `PYTHONPATH=src python3.14 -m unittest discover -s tests` ran 68 tests and passed after provider diagnostics.",
+                "2026-06-15: `ruff check src/runhaven/egress.py src/runhaven/cli.py src/runhaven/plans.py tests/test_egress.py tests/test_cli.py` passed.",
+                "2026-06-15: `uvx --from mypy==2.1.0 mypy src` passed.",
+                "2026-06-15: `python3.14 -m compileall src tests scripts` passed.",
+                "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 68 unit tests, pin check, ruff, mypy, and build after provider diagnostics.",
+                "2026-06-15: provider endpoint matrix added with source-backed bundled hosts and explicit-review candidates.",
+                "2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 71 tests and passed after provider endpoint matrix integration.",
+                "2026-06-15: `python3 -m compileall src tests scripts`, `python3 -m json.tool feature_list.json`, and `git diff --check` passed after provider endpoint matrix integration.",
+                "2026-06-15: `uvx --from ruff==0.15.17 ruff check .`, `uvx --from mypy==2.1.0 mypy src`, and `python3 scripts/check_pins.py` passed.",
+                "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 71 unit tests, pin check, ruff, mypy, and build after provider endpoint matrix integration."
+            ],
+            "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider hosts now come from the reviewed provider endpoint matrix. Broad path-sensitive, telemetry, update, reporting, and weakly sourced hosts remain explicit `--provider-host` review items. Provider policy decisions are logged for review, and blocked provider targets are reported after runs."
+        },
     {
       "id": "repo-logo",
       "priority": 5,

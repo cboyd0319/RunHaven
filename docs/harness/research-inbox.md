@@ -16,4 +16,39 @@ repo and link to primary sources instead.
 
 ## Notes
 
-- Pending first scheduled or manual research refresh.
+- 2026-06-15: Completed a manual source-mining pass across sibling local
+  checkouts `awman`, `aspec`, and `maki`. AGY/Antigravity was not used.
+- The full recommendation set is recorded in
+  `docs/harness/source-mined-ideas.md`.
+- High-value candidates promoted from the pass: provider endpoint matrix,
+  provider proxy DNS/private-address guard, worktree isolation, workspace scope
+  selection, run observability, strict workflow files, context overlays, MCP
+  boundaries, generated docs drift checks, and JSON/headless output.
+- Ideas explicitly not promoted as-is: host Keychain or credential extraction,
+  default host home mounts, Docker fallback, Windows/Linux runtime support,
+  `container machine` defaults, and unreviewed host-side dynamic provider
+  scripts.
+- 2026-06-15: Completed a manual external open source research pass. The full
+  set is recorded in `docs/harness/external-project-ideas.md`.
+- Additional external-project candidates promoted from that pass: `runhaven
+  why` diagnostics, provider proxy policy logs, empty-allowlist regression
+  tests, host-side provider credential brokering, agent profile investigation
+  docs, devcontainer metadata import for image planning, warm reusable project
+  sessions, and explicit extension/MCP boundary policy.
+- 2026-06-15: Completed a UX-focused research pass around easier setup,
+  clearer blocked-action explanations, recovery, and lower-friction safe
+  autonomy. The full result is recorded in
+  `docs/harness/ux-research-ideas.md`.
+- UX candidates promoted from that pass: guided `runhaven setup`, goal-based
+  network selection, `runhaven why`, provider policy logs, grouped
+  blocked-host review, `runs list/show/log/diff/attach/stop`, worktree review
+  flows, image/state/network repair commands, `auth status`, and task-language
+  docs recipes.
+- 2026-06-15: First implementation slice landed from the promoted backlog:
+  provider proxy DNS/private-address rejection, provider policy decision logs,
+  and `runhaven why host ...`.
+- 2026-06-15: Promoted the provider endpoint matrix into
+  `docs/PROVIDER_ENDPOINTS.md` and `src/runhaven/provider_endpoints.py`.
+  Source-backed defaults now include Claude auth hosts, Codex ChatGPT auth, and
+  Copilot-specific routing hosts. Broad path-sensitive, telemetry, update, and
+  weakly sourced hosts remain explicit review items.

@@ -77,13 +77,25 @@ CONNECT proxy, injects proxy environment variables at runtime, and deletes the
 managed provider network after the run. The proxy permits the bundled provider
 hosts for the selected profile, their subdomains, and explicit fully qualified
 `--provider-host HOST` additions. It rejects IP literal proxy targets and
-single-label provider hosts, and relies on the internal network to block direct
-guest egress. Blocked proxy targets are summarized after provider runs so users
-can review missing endpoints without weakening the default policy.
+single-label provider hosts. Before opening an upstream connection, the proxy
+resolves the destination and rejects non-public resolved addresses such as
+loopback, private, link-local, multicast, or otherwise local-only addresses.
+It relies on the internal network to block direct guest egress. Blocked proxy
+targets are summarized after provider runs so users can review missing
+endpoints without weakening the default policy.
 
-Provider host allowlists are intentionally conservative. Authentication,
-telemetry, or optional provider feature paths may fail until an additional
-fully qualified host is reviewed and passed with `--provider-host`.
+Provider runs also append allowed and denied CONNECT policy decisions to a
+RunHaven cache log. `runhaven egress log` shows recent decisions, including the
+matched rule, denial reason, count, profile, workspace, and run id. `runhaven
+why host HOST` explains bundled provider-host matches, IP-literal rejection,
+and the next review step before the user adds a new host.
+
+Provider host allowlists are intentionally conservative and source-backed.
+Bundled auth and provider routing hosts are tracked in
+[`PROVIDER_ENDPOINTS.md`](PROVIDER_ENDPOINTS.md). Telemetry, reporting,
+release-note, update, plugin marketplace, and broad path-sensitive hosts may
+fail until an additional fully qualified host is reviewed and passed with
+`--provider-host`.
 
 The selected agent still controls what it reads inside `/workspace` and
 `/home/agent`. If the agent has model credentials inside its project volume and

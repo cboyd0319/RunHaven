@@ -15,6 +15,7 @@ from runhaven.cli import (
     state_lock_path,
 )
 from runhaven.doctor import Check
+from runhaven.egress import ProxyDecision
 
 
 class CliTests(unittest.TestCase):
@@ -96,6 +97,7 @@ class CliTests(unittest.TestCase):
         text = output.getvalue()
         self.assertIn("provider allowlist", text)
         self.assertIn("api.openai.com", text)
+        self.assertIn("chatgpt.com", text)
         self.assertIn("RunHaven injects proxy environment variables at runtime", text)
 
     def test_provider_run_injects_proxy_environment_and_cleans_network(self) -> None:
@@ -103,6 +105,16 @@ class CliTests(unittest.TestCase):
             fake_proxy = Mock()
             fake_proxy.server_address = ("0.0.0.0", 49321)
             fake_proxy.denied_connect_targets.return_value = ()
+            fake_proxy.policy_decisions.return_value = (
+                ProxyDecision(
+                    host="api.example.com",
+                    port=443,
+                    decision="allowed",
+                    reason="allowed",
+                    matched_rule="example.com",
+                    count=2,
+                ),
+            )
             thread = Mock()
             network_info = Mock(ipv4_gateway="192.168.130.1", ipv4_subnet="192.168.130.0/24")
             with (
@@ -167,6 +179,16 @@ class CliTests(unittest.TestCase):
                 ("blocked.example.com", 443),
                 ("1.1.1.1", 443),
             )
+            fake_proxy.policy_decisions.return_value = (
+                ProxyDecision(
+                    host="blocked.example.com",
+                    port=443,
+                    decision="denied",
+                    reason="not-in-allowlist",
+                    matched_rule="",
+                    count=1,
+                ),
+            )
             thread = Mock()
             network_info = Mock(ipv4_gateway="192.168.130.1", ipv4_subnet="192.168.130.0/24")
             error_output = io.StringIO()
@@ -205,6 +227,166 @@ class CliTests(unittest.TestCase):
         self.assertIn("--provider-host blocked.example.com", text)
         self.assertIn("1.1.1.1:443", text)
         self.assertIn("IP literal targets cannot be allowed", text)
+
+    def test_provider_run_writes_policy_log(self) -> None:
+        with TemporaryDirectory() as directory:
+            fake_proxy = Mock()
+            fake_proxy.server_address = ("0.0.0.0", 49321)
+            fake_proxy.denied_connect_targets.return_value = ()
+            fake_proxy.policy_decisions.return_value = (
+                ProxyDecision(
+                    host="api.example.com",
+                    port=443,
+                    decision="allowed",
+                    reason="allowed",
+                    matched_rule="example.com",
+                    count=2,
+                ),
+                ProxyDecision(
+                    host="blocked.example.com",
+                    port=443,
+                    decision="denied",
+                    reason="not-in-allowlist",
+                    matched_rule="",
+                    count=1,
+                ),
+            )
+            thread = Mock()
+            network_info = Mock(ipv4_gateway="192.168.130.1", ipv4_subnet="192.168.130.0/24")
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.run_preflight"),
+                patch("runhaven.cli.inspect_internal_network", return_value=network_info),
+                patch("runhaven.cli.create_provider_proxy", return_value=fake_proxy),
+                patch("runhaven.cli.threading.Thread", return_value=thread),
+                patch("runhaven.cli.delete_container_network"),
+                patch("runhaven.cli.subprocess.call", return_value=0),
+            ):
+                code = main(
+                    [
+                        "run",
+                        "shell",
+                        "--workspace",
+                        directory,
+                        "--network",
+                        "provider",
+                        "--provider-host",
+                        "example.com",
+                        "--tty",
+                        "never",
+                        "--",
+                        "/bin/true",
+                    ]
+                )
+
+            self.assertEqual(code, 0)
+            entries = [
+                json.loads(line)
+                for line in (Path(directory) / "egress-policy.jsonl").read_text().splitlines()
+            ]
+            self.assertEqual(len(entries), 2)
+            self.assertEqual(entries[0]["decision"], "allowed")
+            self.assertEqual(entries[0]["host"], "api.example.com")
+            self.assertEqual(entries[0]["count"], 2)
+            self.assertEqual(entries[1]["decision"], "denied")
+            self.assertEqual(entries[1]["reason"], "not-in-allowlist")
+
+    def test_egress_log_prints_recent_policy_entries(self) -> None:
+        with TemporaryDirectory() as directory:
+            log_path = Path(directory) / "egress-policy.jsonl"
+            log_path.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "timestamp": "2026-06-15T00:00:00Z",
+                                "profile": "shell",
+                                "workspace": directory,
+                                "network": "provider",
+                                "host": "api.example.com",
+                                "port": 443,
+                                "decision": "allowed",
+                                "reason": "allowed",
+                                "matched_rule": "example.com",
+                                "count": 2,
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "timestamp": "2026-06-15T00:00:01Z",
+                                "profile": "shell",
+                                "workspace": directory,
+                                "network": "provider",
+                                "host": "blocked.example.com",
+                                "port": 443,
+                                "decision": "denied",
+                                "reason": "not-in-allowlist",
+                                "matched_rule": "",
+                                "count": 1,
+                            }
+                        ),
+                    ]
+                )
+                + "\n"
+            )
+            output = io.StringIO()
+            with patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False):
+                with redirect_stdout(output):
+                    code = main(["egress", "log", "--limit", "1"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("blocked.example.com:443", text)
+        self.assertIn("denied", text)
+        self.assertNotIn("api.example.com", text)
+
+    def test_why_host_explains_ip_literal_rejection(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["why", "host", "1.1.1.1"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Host: 1.1.1.1", text)
+        self.assertIn("IP literal", text)
+        self.assertIn("cannot be allowed", text)
+
+    def test_why_host_explains_profile_allowlist_match(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["why", "host", "api.openai.com", "--agent", "codex"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Host: api.openai.com", text)
+        self.assertIn("Provider profile: codex", text)
+        self.assertIn("allowed", text)
+        self.assertIn("api.openai.com", text)
+
+    def test_why_host_explains_known_unbundled_endpoint(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["why", "host", "api.github.com", "--agent", "copilot"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Provider profile: copilot", text)
+        self.assertIn("not allowed by bundled provider profile", text)
+        self.assertIn("Known endpoint record", text)
+        self.assertIn("candidate", text)
+        self.assertIn("specific API paths", text)
+
+    def test_why_host_allows_copilot_subscription_routing(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["why", "host", "api.business.githubcopilot.com", "--agent", "copilot"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Provider profile: copilot", text)
+        self.assertIn("allowed by bundled provider profile", text)
+        self.assertIn("business.githubcopilot.com", text)
 
     def test_doctor_prints_remedy_for_failed_checks(self) -> None:
         output = io.StringIO()

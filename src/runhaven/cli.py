@@ -8,17 +8,26 @@ import shutil
 import subprocess
 import sys
 import threading
+import uuid
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 from .doctor import collect_checks
-from .egress import EgressPolicy, ThreadedAllowlistProxy, is_ip_literal
+from .egress import (
+    EgressPolicy,
+    ProxyDecision,
+    ThreadedAllowlistProxy,
+    is_ip_literal,
+    normalize_host,
+)
 from .images import build_image_plan
 from .plans import SUPPORTED_NETWORK_MODES, AgentRunPlan, RunOptions, build_run_plan
 from .profiles import PROFILES, get_profile
+from .provider_endpoints import ProviderEndpoint, match_provider_endpoints
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -41,6 +50,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return image_command(args)
         if args.command == "state":
             return state_command(args)
+        if args.command == "egress":
+            return egress_command(args)
+        if args.command == "why":
+            return why_command(args)
     except ValueError as exc:
         parser.exit(2, f"runhaven: {exc}\n")
     except KeyboardInterrupt:
@@ -101,6 +114,34 @@ def build_parser() -> argparse.ArgumentParser:
     state_subcommands.add_parser("list", help="list RunHaven agent home volumes")
     prune_parser = state_subcommands.add_parser("prune", help="remove RunHaven agent home volumes")
     prune_parser.add_argument("--yes", action="store_true", help="delete listed volumes")
+
+    egress_parser = subcommands.add_parser("egress", help="inspect provider egress policy logs")
+    egress_subcommands = egress_parser.add_subparsers(dest="egress_command", required=True)
+    egress_log_parser = egress_subcommands.add_parser(
+        "log",
+        help="show recent provider proxy policy decisions",
+    )
+    egress_log_parser.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="maximum entries to show; use 0 for all entries",
+    )
+    egress_log_parser.add_argument("--json", action="store_true", help="print JSON output")
+
+    why_parser = subcommands.add_parser("why", help="explain RunHaven safety decisions")
+    why_subcommands = why_parser.add_subparsers(dest="why_command", required=True)
+    why_host_parser = why_subcommands.add_parser(
+        "host",
+        help="explain provider-host allowlist behavior",
+    )
+    why_host_parser.add_argument("host", help="host to explain")
+    why_host_parser.add_argument("--port", type=int, default=443, help="provider port to check")
+    why_host_parser.add_argument(
+        "--agent",
+        choices=sorted(PROFILES),
+        help="agent profile whose bundled provider hosts should be checked",
+    )
 
     return parser
 
@@ -237,6 +278,18 @@ def state_command(args: argparse.Namespace) -> int:
     raise ValueError(f"unknown state command: {args.state_command}")
 
 
+def egress_command(args: argparse.Namespace) -> int:
+    if args.egress_command == "log":
+        return egress_log(limit=args.limit, json_output=args.json)
+    raise ValueError(f"unknown egress command: {args.egress_command}")
+
+
+def why_command(args: argparse.Namespace) -> int:
+    if args.why_command == "host":
+        return why_host(args.host, port=args.port, agent=args.agent)
+    raise ValueError(f"unknown why command: {args.why_command}")
+
+
 def make_run_plan(args: argparse.Namespace) -> AgentRunPlan:
     profile = get_profile(args.agent)
     tty = args.tty == "always" or (
@@ -321,6 +374,7 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
         thread = worker
         proxy_url = f"http://{network_info.ipv4_gateway}:{proxy.server_address[1]}"
         return_code = subprocess.call(with_provider_proxy_environment(plan, proxy_url))
+        write_provider_policy_log(plan, proxy.policy_decisions())
         print_provider_denials(proxy.denied_connect_targets())
         return return_code
     finally:
@@ -365,6 +419,145 @@ def print_provider_denials(denied_targets: tuple[tuple[str, int], ...]) -> None:
         else:
             note = f"review before rerunning with --provider-host {host}"
         print(f"  - {target} ({note})", file=sys.stderr)
+
+
+def write_provider_policy_log(plan: AgentRunPlan, decisions: Sequence[ProxyDecision]) -> None:
+    if not decisions:
+        return
+    log_path = egress_policy_log_path()
+    log_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    run_id = uuid.uuid4().hex
+    with log_path.open("a", encoding="utf-8") as log_file:
+        for decision in decisions:
+            payload = {
+                "timestamp": timestamp,
+                "run_id": run_id,
+                "profile": plan.profile_name,
+                "workspace": str(plan.workspace),
+                "network": plan.network_mode,
+                "host": decision.host,
+                "port": decision.port,
+                "decision": decision.decision,
+                "reason": decision.reason,
+                "matched_rule": decision.matched_rule,
+                "count": decision.count,
+            }
+            log_file.write(json.dumps(payload, sort_keys=True) + "\n")
+
+
+def egress_log(*, limit: int, json_output: bool) -> int:
+    if limit < 0:
+        raise ValueError("--limit must be 0 or greater")
+    entries = read_egress_policy_log(limit=limit)
+    if json_output:
+        print(json.dumps(entries, indent=2, sort_keys=True))
+        return 0
+    if not entries:
+        print("No RunHaven provider egress policy log entries found.")
+        return 0
+    for entry in entries:
+        host = entry.get("host", "<unknown>")
+        port = entry.get("port", "?")
+        decision = entry.get("decision", "unknown")
+        reason = entry.get("reason", "unknown")
+        count = entry.get("count", 1)
+        profile = entry.get("profile", "unknown")
+        matched_rule = entry.get("matched_rule") or "-"
+        print(
+            f"{entry.get('timestamp', '<unknown>')}  {profile}  {decision}  "
+            f"{host}:{port}  count={count}  reason={reason}  rule={matched_rule}"
+        )
+    return 0
+
+
+def read_egress_policy_log(*, limit: int) -> list[dict[str, Any]]:
+    log_path = egress_policy_log_path()
+    if not log_path.exists():
+        return []
+    entries: list[dict[str, Any]] = []
+    for line in log_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            entries.append(payload)
+    if limit == 0:
+        return entries
+    return entries[-limit:]
+
+
+def egress_policy_log_path() -> Path:
+    return runhaven_cache_root() / "egress-policy.jsonl"
+
+
+def why_host(host: str, *, port: int, agent: str | None) -> int:
+    if port < 1 or port > 65535:
+        raise ValueError("--port must be between 1 and 65535")
+    normalized = normalize_host(host)
+    print(f"Host: {normalized}")
+    print(f"Port: {port}")
+    if is_ip_literal(normalized):
+        print("Provider mode: denied")
+        print("Reason: IP literal targets cannot be allowed in provider mode.")
+        print("Next action: use a reviewed fully qualified provider hostname instead.")
+        return 0
+    if "." not in normalized:
+        print("Provider mode: denied")
+        print("Reason: provider hosts must be fully qualified, not single-label names.")
+        print("Next action: use a specific hostname such as api.example.com.")
+        return 0
+
+    if agent is not None:
+        profile = get_profile(agent)
+        print(f"Provider profile: {profile.name}")
+        if not profile.provider_hosts:
+            print("Provider mode: no bundled provider hosts are defined for this profile.")
+            print("Next action: use --provider-host only after reviewing a fully qualified host.")
+            return 0
+        policy = EgressPolicy(profile.provider_hosts)
+        matched_rule = policy.match_rule(normalized, port)
+        if matched_rule is not None:
+            print("Provider mode: allowed by bundled provider profile")
+            print(f"Matched rule: {matched_rule}")
+            print("DNS safety: checked at runtime before the proxy opens the connection.")
+            return 0
+        print("Provider mode: not allowed by bundled provider profile")
+        print(f"Bundled hosts: {', '.join(profile.provider_hosts)}")
+        print_endpoint_matches(match_provider_endpoints(normalized, profile=profile.name))
+        print(f"Next action: review before rerunning with --provider-host {normalized}.")
+        return 0
+
+    matches: list[str] = []
+    for profile in PROFILES.values():
+        if not profile.provider_hosts:
+            continue
+        policy = EgressPolicy(profile.provider_hosts)
+        matched_rule = policy.match_rule(normalized, port)
+        if matched_rule is not None:
+            matches.append(f"{profile.name} ({matched_rule})")
+    if matches:
+        print("Provider mode: allowed by bundled profile(s)")
+        print(f"Matches: {', '.join(matches)}")
+    else:
+        print("Provider mode: not allowed by any bundled provider profile")
+        print_endpoint_matches(match_provider_endpoints(normalized))
+        print(f"Next action: review before rerunning with --provider-host {normalized}.")
+    print("DNS safety: checked at runtime before the proxy opens the connection.")
+    return 0
+
+
+def print_endpoint_matches(matches: Sequence[ProviderEndpoint]) -> None:
+    if not matches:
+        return
+    print("Known endpoint record(s):")
+    for endpoint in matches:
+        print(f"  - {endpoint.profile}: {endpoint.status}; {endpoint.purpose}")
+        if endpoint.note:
+            print(f"    Note: {endpoint.note}")
 
 
 def create_provider_proxy(
@@ -534,12 +727,14 @@ def unlock_state_file(lock_file: TextIO) -> None:
 
 
 def state_lock_path(state_volume: str) -> Path:
+    return runhaven_cache_root() / "locks" / f"{state_volume}.lock"
+
+
+def runhaven_cache_root() -> Path:
     override = os.environ.get("RUNHAVEN_CACHE_HOME")
     if override:
-        cache_root = Path(override)
-    else:
-        cache_root = Path.home() / "Library" / "Caches" / "runhaven"
-    return cache_root / "locks" / f"{state_volume}.lock"
+        return Path(override)
+    return Path.home() / "Library" / "Caches" / "runhaven"
 
 
 def require_container_cli() -> None:
