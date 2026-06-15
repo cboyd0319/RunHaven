@@ -1,0 +1,30 @@
+{
+  "$schema": "./source-record.schema.json",
+  "schemaVersion": 1,
+  "id": "source-record-example",
+  "title": "REVIEW REQUIRED: replace with a project source title",
+  "sourceType": "project-document",
+  "source": {
+    "targetRelativePath": "docs/ARCHITECTURE.md",
+    "section": "Runtime Pattern"
+  },
+  "owner": "RunHaven maintainers",
+  "purpose": "Example project-owned source record for architecture claims that should guide agents and maintainers.",
+  "reviewedOn": "2026-06-15",
+  "reviewCadence": "Review before runtime-boundary, workspace, network, auth, or release changes.",
+  "reviewStatus": "REVIEW REQUIRED",
+  "trustBoundary": "repo-owned",
+  "harnessUsage": [
+    "instructions",
+    "verification"
+  ],
+  "claims": [
+    {
+      "claim": "RunHaven uses Apple `container run` around a selected workspace and isolated agent home volume.",
+      "evidence": "`docs/ARCHITECTURE.md` explains the runtime pattern and credential boundary.",
+      "limitations": "Live Apple `container` behavior must still be verified when runtime claims change."
+    }
+  ],
+  "retireWhen": "Retire this example when real source records are added or a stronger source ledger replaces example records.",
+  "notes": "Project-owned source records are separate from docs/harness/research-sources.json."
+}

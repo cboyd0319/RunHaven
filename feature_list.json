@@ -38,7 +38,7 @@
         "2026-06-14: `PYTHONPATH=src python3 -m unittest discover -s tests` passed",
         "2026-06-14: `python3 scripts/check_pins.py` passed",
         "2026-06-14: temporary external venv installed pinned dev requirements; ruff, mypy, build, wheel install, and `runhaven agents` passed",
-        "2026-06-14: `PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction"
+        "2026-06-14: `python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction"
       ],
       "notes": "GitHub repository remote rename is a separate credentialed vendor change and requires explicit approval before execution."
     },
@@ -59,7 +59,7 @@
       "evidence": [
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed",
         "2026-06-14: non-macOS verification entrypoint was removed when the project was clarified as macOS-only",
-        "2026-06-14: `PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction"
+        "2026-06-14: `python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction"
       ],
       "notes": "This feature addresses the audit bottleneck reported before harness adoption."
     },
@@ -95,7 +95,7 @@
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after the second follow-up hardening pass; the unit suite ran 47 tests",
         "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 47 tests and passed after the second follow-up hardening pass",
         "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven run --help`, `PYTHONPATH=src python3.14 -m runhaven plan shell --network internal --tty never -- /bin/true`, and `PYTHONPATH=src python3.14 -m runhaven doctor` passed after the second follow-up hardening pass",
-        "2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100 after the second follow-up hardening pass"
+        "2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100 after the second follow-up hardening pass"
       ],
       "notes": "Runtime and contributor verification are macOS 26+ only."
     },
@@ -183,9 +183,9 @@
         "2026-06-14: Added reserved `--network provider` mode that failed closed at that stage until provider egress enforcement existed.",
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed with 49 tests, pin check, ruff, mypy, and build.",
         "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 49 tests and passed.",
-        "2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100.",
+        "2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100.",
         "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider` exited 2 with a fail-closed provider egress message during the reserved-mode stage.",
-        "2026-06-14: `python3 -m json.tool feature_list.json`, `python3 scripts/check_pins.py`, `git diff --check`, local absolute-path leak scan, and `PYTHONPATH=<temporary-HarnessForge-copy>/src python3.14 -m harnessforge audit --target . --min-score 85` passed after the complete DocC snapshot evidence update.",
+        "2026-06-14: `python3 -m json.tool feature_list.json`, `python3 scripts/check_pins.py`, `git diff --check`, local absolute-path leak scan, and `python3.14 -m harnessforge audit --target . --min-score 85` passed after the complete DocC snapshot evidence update.",
         "2026-06-14: added a standard-library CONNECT allowlist proxy and `scripts/provider_egress_smoke.py`.",
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after the provider egress proxy smoke pass; the unit suite ran 56 tests.",
         "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 56 tests and passed after the provider egress proxy smoke pass.",

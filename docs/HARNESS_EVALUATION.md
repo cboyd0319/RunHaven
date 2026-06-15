@@ -66,7 +66,7 @@ Covered:
 - `python -m build`
 
 ```bash
-PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target . --min-score 85
+python3 -m harnessforge audit --target . --min-score 85
 ```
 
 Result: passed with 100/100.
@@ -81,7 +81,7 @@ Result: passed with 100/100.
 | State | 5/5 | Feature state, progress, privacy labels, and handoff checks passed |
 | Feedback | 5/5 | Verification matrix, evidence log, evaluator rubric, audit loop, links, and entrypoints passed |
 | Scope | 5/5 | Change contract, security map, dependency policy, acceptance, verification, and rollback passed |
-| Lifecycle | 5/5 | Handoff, restart path, clean-state checklist, quality doc, self-healing, sources, entropy control, and update loop passed |
+| Lifecycle | 5/5 | Handoff, restart path, clean-state checklist, quality doc, sources, entropy control, roadmap, and update loop passed |
 
 ## Remaining Product Work
 

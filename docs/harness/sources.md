@@ -35,6 +35,6 @@ Do not add unreviewed secondary links here. Put candidates in
 - Check local Markdown links so harness docs remain navigable and portable.
 - Keep dependency and workflow changes on latest stable supported releases with
   hard pins and verification evidence.
-- Use reviewed self-healing pull requests instead of silent default-branch
+- Use reviewed maintenance pull requests instead of silent default-branch
   mutation.
 - Treat structural scores as guidance, not proof of real task success.

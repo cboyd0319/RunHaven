@@ -1,30 +1,31 @@
 # Verification Matrix
 
 Use the smallest check set that can catch likely regressions for the change.
+Escalate to `./init.sh` when a change touches shared behavior, release
+readiness, runtime boundaries, or multiple components.
+
+## Required Checks
 
 | Change Type | Required Checks |
 | --- | --- |
-| Harness docs or templates | `PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target .` and inspect generated diff |
-| README, AGENTS, or docs-only changes | `python3 scripts/check_pins.py`, `git diff --check`, local Markdown link check |
-| Python code | `python3 -m compileall src tests scripts`, `PYTHONPATH=src python3 -m unittest discover -s tests`, `python3 -m ruff check .`, `python3 -m mypy src` |
+| Harness docs, instructions, state, or templates | `python3 scripts/check_pins.py`, JSON validation, local Markdown link check, `git diff --check`, `python3 -m harnessforge report --target .`, and `python3 -m harnessforge audit --target . --min-score 85` |
+| README, AGENTS, or docs-only changes | `python3 scripts/check_pins.py`, local Markdown link check, platform wording scan, and `git diff --check` |
+| Feature state, manifest, or schema changes | JSON validation for changed JSON files, `python3 -m json.tool feature_list.json`, `python3 -m harnessforge report --target .`, and relevant repo-policy tests |
+| Python code | `python3 -m compileall src tests scripts`, focused `unittest` modules, `PYTHONPATH=src python3 -m unittest discover -s tests`, `python3 -m ruff check .`, and `python3 -m mypy src` |
 | Packaging | Python code checks plus `python3 -m build` |
-| CLI command construction | Python code checks plus focused tests in `tests/test_plans.py` or `tests/test_cli.py` |
-| Setup and prerequisite UX | Python code checks plus focused setup, workspace, credential, network guidance, and doctor tests in `tests/test_cli.py` and a manual `runhaven setup` smoke |
-| Image and network repair UX | Python code checks plus focused `tests/test_images.py` build-label tests, `tests/test_cli_image.py` image doctor stale/missing/state-volume tests, `tests/test_cli.py` image rebuild, and `tests/test_cli_network.py` managed-network list/prune tests; use `runhaven image doctor shell`, `runhaven image build shell --dry-run`, `runhaven image rebuild --dry-run`, `runhaven network list`, and `runhaven network prune` smokes |
-| Apple container runtime boundary | Python code checks plus `runhaven doctor`, `runhaven plan`, and a focused `runhaven run shell` smoke |
-| Session and state management | Python code checks plus focused planner, standard-run, and state tests for `--session`, active/run-record session metadata, `state list --session`, `state reset`, and session-filtered `state prune` |
-| Worktree run isolation and lifecycle | Python code checks plus focused standard-run and worktree-lifecycle tests for `--worktree` dry-run preview, dirty-source choice guidance, clean-source enforcement, isolated mount, source checkout preservation, run-record recovery metadata, project check suggestions, `runs keep`, `runs recover`, `runs recover --json`, `runs merge`, failed-merge recovery guidance, and `runs discard` |
-| Auth broker runtime boundary | Python code checks plus focused auth broker tests, `runhaven auth log`, and `scripts/codex_broker_smoke.py --require-api-key` when a disposable key is available |
-| Run observability | Python code checks plus focused `tests/test_cli.py` run-record tests, git and non-git workspace cases, active-run listing/status/attach/logs-follow/stop/kill/repair checks, and manual `runhaven runs list/show/log/diff/active/status/attach/logs-follow/stop/kill/repair`, `runhaven runs repair --all`, and repair JSON checks |
-| Image templates | Pin check, image build for changed profile, and version smoke for affected agent |
-| Node or web code | package manager `test`, `lint`, `typecheck`, or `build` scripts when present |
-| Go code | `go test ./...` |
-| Rust code | `cargo test` |
-| Java code | `mvn test`, `./gradlew test`, or project equivalent |
-| .NET code | `dotnet test` |
-| Terraform or infrastructure | `terraform fmt -check -recursive` plus project-specific validation |
-| Security, auth, secrets, data loss, or billing | Focused tests, human review, rollback path, and least-privilege check |
-| Dependencies, tool versions, or workflow Actions | Pin check, primary-source version evidence, install smoke, and affected tests |
+| CLI command construction | Python code checks plus focused tests in `tests/test_plans.py`, `tests/test_cli.py`, or the relevant split CLI test module |
+| Setup and prerequisite UX | Python code checks plus focused setup, workspace, credential, network guidance, and doctor tests; add a manual `runhaven setup --agent shell` smoke when user-facing text changes |
+| Image and network repair UX | Python code checks plus focused image/network/state tests, `runhaven image doctor shell`, `runhaven image build shell --dry-run`, `runhaven image rebuild --dry-run`, `runhaven network list`, and `runhaven network prune` smokes |
+| Apple `container` runtime boundary | Python code checks plus `runhaven doctor`, `runhaven plan`, and a focused `runhaven run shell` smoke that proves the claimed mount, user, network, or filesystem behavior |
+| Provider egress or endpoint policy | Focused egress, provider proxy, provider endpoint, and plan tests; source review for endpoint changes; live provider smoke when behavior changes and the host/runtime are available |
+| Auth broker boundary | Focused auth broker and provider Codex broker tests, `runhaven auth status`, `runhaven auth explain codex`, `runhaven auth log`, and `scripts/codex_broker_smoke.py --require-api-key` only with a disposable key |
+| Run observability | Focused run-history, active-run, repair, and git metadata tests; manual `runhaven runs list/show/log/diff/active/status/attach/logs-follow/stop/kill/repair` smokes when behavior changes |
+| Session and state management | Focused planner, standard-run, and state tests for `--session`, active/run-record metadata, `state list --session`, `state reset`, and session-filtered `state prune` |
+| Worktree run isolation and lifecycle | Focused standard-run and worktree-lifecycle tests for `--worktree`, dirty-source guidance, clean-source enforcement, isolated mounts, recovery metadata, project check suggestions, `runs keep`, `runs recover`, `runs merge`, and `runs discard` |
+| Image templates | Pin check, focused image tests, `runhaven image build PROFILE --dry-run`, and a real image build/version smoke for changed profiles when Apple `container` is available |
+| Pin, dependency, runner, or workflow changes | `python3 scripts/check_pins.py`, primary-source version evidence, affected tests, and `.github/workflows/ci.yml` review for macOS 26+ only support |
+| Security, auth, secrets, data loss, or billing | Focused tests, human review, rollback path, least-privilege check, and evidence in `docs/harness/evidence-log.md` |
+| Release prep | `./init.sh`, harness report/audit, `runhaven doctor`, relevant Apple `container` smokes, dirty-tree check, pin/source review, SBOM/provenance review when packaging exists |
 
 ## Detected Commands
 
@@ -35,6 +36,24 @@ Use the smallest check set that can catch likely regressions for the change.
 - `python3 -m mypy src`
 - `python3 -m build`
 
+## HarnessForge Review Commands
+
+These commands are read-only unless a target-relative report path is supplied:
+
+```bash
+harnessforge index --target . --json
+harnessforge session --target .
+harnessforge report --target .
+harnessforge plan --target . --since HEAD
+harnessforge enhance --target .
+harnessforge audit --target . --min-score 85
+```
+
+Use `harnessforge verify --target . --json --run --json-report
+docs/harness/evidence/verify-YYYY-MM-DD.json` only when the project is ready to
+record command-execution evidence. Do not confuse structural harness audit with
+real-agent effectiveness.
+
 ## When Checks Cannot Run
 
 Record:
@@ -43,9 +62,19 @@ Record:
 - The exact reason.
 - The risk.
 - The next best check that did run.
+- The follow-up needed to close the evidence gap.
 
 ## Test Integrity
 
 Generated tests must state test intent through the test name or assertions.
 Do not count assertion-free tests, import-only tests, or stubbed tests as
 behavioral coverage unless the evidence log records that limited purpose.
+
+## Agent-Oriented Failure Messages
+
+Prefer failure output that states:
+
+- what failed;
+- why the RunHaven boundary matters;
+- where the agent should look first to repair it;
+- which command or evidence should be recorded after repair.

@@ -11,6 +11,8 @@ API, workflow action, Python, Node, npm, or security-tool versions.
 Use exact pins for direct package dependencies and immutable commit SHAs for
 external GitHub Actions. If the newest stable release has a known reachable
 security issue, pin the newest supported clean release and record the reason.
+Use `pins.toml` for reviewed pin rationale when a dependency, image base, or
+Action reference is governed by the project pin ledger.
 
 ## Decision Order
 

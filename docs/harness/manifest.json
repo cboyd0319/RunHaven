@@ -1,139 +1,331 @@
 {
-  "version": 1,
-  "generatedBy": "HarnessForge",
-  "generatedFor": "RunHaven",
-  "detectedStack": "python",
-  "supportedPlatforms": {
-    "macosOnly": {
-      "python": "3.13+",
-      "macOS": "26+",
-      "architecture": "Apple silicon",
-      "appleContainer": "1.0.0",
-      "note": "RunHaven does not support Windows or Linux runtime or contributor verification targets."
+    "version": 1,
+    "generatedBy": "HarnessForge",
+    "generator": {
+        "name": "harnessforge",
+        "version": "0.1.0"
+    },
+    "generatedFor": "RunHaven",
+    "detectedStack": "python",
+    "platformContract": "macos-only",
+    "supportedPlatforms": {
+        "macosOnly": {
+            "python": "3.13+",
+            "macOS": "26+",
+            "architecture": "Apple silicon",
+            "appleContainer": "1.0.0",
+            "note": "RunHaven does not support Windows or Linux runtime or contributor verification targets."
+        }
+    },
+    "platformSourceReview": {
+        "lastReviewed": "2026-06-15",
+        "reviewRequiredBeforePlatformChange": true,
+        "sources": [
+            {
+                "id": "python-devguide-versions",
+                "url": "https://devguide.python.org/versions/",
+                "evidence": "Python 3.13 and 3.14 are supported bugfix branches."
+            },
+            {
+                "id": "github-actions-hosted-runners",
+                "url": "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
+                "evidence": "Runner labels and platform availability must be rechecked before changing CI assumptions."
+            },
+            {
+                "id": "apple-container-release",
+                "url": "https://github.com/apple/container/releases",
+                "evidence": "RunHaven currently documents Apple container 1.0.0 as the reviewed runtime pin."
+            }
+        ],
+        "note": "Recheck current primary sources before changing platform floors, interpreter versions, runner labels, Apple container assumptions, package pins, or image pins."
+    },
+    "requiredFiles": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "GEMINI.md",
+        ".github/copilot-instructions.md",
+        "feature_list.json",
+        "progress.md",
+        "session-handoff.md",
+        "init.sh",
+        "docs/assets/logo.png",
+        "docs/harness/README.md",
+        "docs/harness/first-agent-task.md",
+        "docs/harness/roadmap.md",
+        "docs/harness/change-contract.md",
+        "docs/harness/verification-matrix.md",
+        "docs/harness/sensor-registry.md",
+        "docs/harness/component-inventory.md",
+        "docs/harness/dependency-change-policy.md",
+        "docs/harness/security-boundary-map.md",
+        "docs/harness/feature-privacy-labels.json",
+        "docs/harness/evidence-log.md",
+        "docs/harness/clean-state-checklist.md",
+        "docs/harness/evaluator-rubric.md",
+        "docs/harness/quality-document.md",
+        "docs/harness/release-controls.md",
+        "docs/harness/source-record.schema.json",
+        "docs/harness/source-record-example.json",
+        "docs/harness/research-sources.json",
+        "docs/harness/research-inbox.md",
+        "docs/harness/manifest.json",
+        "docs/harness/sources.md",
+        "docs/harness/entropy-control.md",
+        "docs/harness/agent-operating-model.md",
+        "docs/harness/multi-agent-orchestration.md",
+        "docs/harness/modularization-plan.md"
+    ],
+    "requiredHarnessSnippets": {
+        "AGENTS.md": [
+            "Startup",
+            "Core harness contract",
+            "effective agent",
+            "Build and test commands",
+            "Definition Of Done",
+            "feature_list.json",
+            "progress.md",
+            "first-agent-task.md",
+            "macOS 26+"
+        ],
+        ".github/copilot-instructions.md": [
+            "source of truth",
+            "AGENTS.md",
+            "Security model"
+        ],
+        "docs/harness/README.md": [
+            "Five Core Subsystems",
+            "Effective Agent Boundary",
+            "instructions + tools + environment + state + feedback",
+            "Operating Loop",
+            "When To Add Harness",
+            "Assessment And Updates",
+            "Bottleneck And Harness Debt",
+            "first-agent-task.md",
+            "harnessforge report",
+            "harnessforge enhance"
+        ],
+        "docs/harness/first-agent-task.md": [
+            "First-Agent Harness Improvement Task",
+            "REVIEW REQUIRED",
+            "fresh-session test",
+            "sensor registry",
+            "security boundary",
+            "Do not overwrite project-owned instructions",
+            "Do not add Windows or Linux"
+        ],
+        "docs/harness/roadmap.md": [
+            "Harness Roadmap",
+            "Source And Evidence Weighting",
+            "Smallest Correct Work Gate",
+            "Task Buckets",
+            "Status Lifecycle",
+            "Surface Impact Checklist",
+            "Fresh-Session Test",
+            "Instruction Rule Lifecycle",
+            "Completion Evidence Ladder",
+            "Roadmap Items",
+            "Surfaces In Scope",
+            "Execution Gate",
+            "Done Or Retire When",
+            "progress.md",
+            "session-handoff.md"
+        ],
+        "docs/harness/change-contract.md": [
+            "Problem",
+            "Build Necessity Gate",
+            "Acceptance Criteria",
+            "Verification",
+            "Rollback",
+            "primary-source evidence"
+        ],
+        "docs/harness/verification-matrix.md": [
+            "Change Type",
+            "Required Checks",
+            "When Checks Cannot Run",
+            "HarnessForge Review Commands",
+            "harnessforge plan --target . --since HEAD",
+            "harnessforge report --target .",
+            "harnessforge verify --target . --json --run",
+            "Agent-Oriented Failure Messages",
+            "structural harness audit"
+        ],
+        "docs/harness/sensor-registry.md": [
+            "Sensor Registry",
+            "Registered Sensors",
+            "Owner",
+            "Retire When",
+            "Agent-Oriented Failure Feedback",
+            "harnessforge report --target .",
+            "real-agent effectiveness"
+        ],
+        "docs/harness/component-inventory.md": [
+            "Component Inventory",
+            "Effective Agent Boundary",
+            "Detected Workspace Markers",
+            "Detected Routing Markers",
+            "Detected Components",
+            "Routing Rules",
+            "macOS 26+"
+        ],
+        "docs/harness/dependency-change-policy.md": [
+            "latest stable",
+            "exact pins",
+            "pins.toml",
+            "GitHub Actions"
+        ],
+        "docs/harness/security-boundary-map.md": [
+            "Access Boundaries",
+            "Data Boundaries",
+            "Required Checks",
+            "security wins",
+            "Prompt injection",
+            "least privilege"
+        ],
+        "docs/harness/feature-privacy-labels.json": [
+            "External AI optional",
+            "Sensitive",
+            "Public-data only"
+        ],
+        "docs/harness/evidence-log.md": [
+            "Date",
+            "Scope",
+            "Command Or Review"
+        ],
+        "docs/harness/clean-state-checklist.md": [
+            "Startup path",
+            "Verification path",
+            "Next Session"
+        ],
+        "docs/harness/evaluator-rubric.md": [
+            "Correctness",
+            "Verification",
+            "Handoff Readiness"
+        ],
+        "docs/harness/quality-document.md": [
+            "Quality Document",
+            "Domain Grades",
+            "Harness Subsystem Health",
+            "Benchmark Or Task Evidence"
+        ],
+        "docs/harness/release-controls.md": [
+            "Release Controls",
+            "SBOM",
+            "provenance",
+            "Rollback"
+        ],
+        "docs/harness/source-record.schema.json": [
+            "HarnessForge Project Source Record",
+            "targetRelativePath"
+        ],
+        "docs/harness/source-record-example.json": [
+            "source-record-example",
+            "docs/ARCHITECTURE.md"
+        ],
+        "docs/harness/research-sources.json": [
+            "openai-harness-engineering",
+            "walkinglabs-course",
+            "github-actions-secure-use"
+        ],
+        "docs/harness/research-inbox.md": [
+            "Research Inbox",
+            "Promotion checklist"
+        ],
+        "docs/harness/entropy-control.md": [
+            "Entropy Control",
+            "Regular Assessment",
+            "Correction Loop"
+        ]
+    },
+    "reviewRequired": [
+        "docs/harness/first-agent-task.md",
+        "docs/harness/roadmap.md",
+        "docs/harness/sensor-registry.md",
+        "docs/harness/source-record-example.json",
+        "docs/harness/quality-document.md",
+        "docs/harness/release-controls.md"
+    ],
+    "verificationCommands": [
+        "python3 -m compileall src tests scripts",
+        "PYTHONPATH=src python3 -m unittest discover -s tests",
+        "python3 scripts/check_pins.py",
+        "python3 -m ruff check .",
+        "python3 -m mypy src",
+        "python3 -m build",
+        "python3 -m harnessforge report --target .",
+        "python3 -m harnessforge audit --target . --min-score 85"
+    ],
+    "detectedComponents": [
+        ". (pyproject.toml)",
+        "src/runhaven/images/antigravity (Containerfile)",
+        "src/runhaven/images/base (Containerfile)",
+        "src/runhaven/images/claude (Containerfile, package.json)",
+        "src/runhaven/images/codex (Containerfile, package.json)",
+        "src/runhaven/images/copilot (Containerfile, package.json)",
+        "src/runhaven/images/gemini (Containerfile, package.json)"
+    ],
+    "generatedFiles": {
+        "AGENTS.md": {
+            "ownership": "project",
+            "template": "agents.md.tmpl",
+            "templateSha256": "8821bf9878ca2af423dbdbb4dd08b63764698f8d92df056e3944a34d4c6fe56d",
+            "contentSha256": "fe0d9797a4922267f4b75727e21d5e0d2ee464258cf441a5a5b7f1a786c4ad3c",
+            "reviewRequired": false,
+            "writeStatus": "project-owned-preserved"
+        },
+        "docs/harness/README.md": {
+            "ownership": "project",
+            "template": "harness-readme.md.tmpl",
+            "templateSha256": "d5be447bca56ce8346907d49dba400982f1c1dfe1e9246956c45b11c5bdafd86",
+            "contentSha256": "5f2d31b9021b74bce59b2d5cec799509d8184a287ab0bafdc272010eff3c6e86",
+            "reviewRequired": false,
+            "writeStatus": "project-owned-reviewed"
+        },
+        "docs/harness/first-agent-task.md": {
+            "ownership": "project",
+            "template": "first-agent-task.md.tmpl",
+            "templateSha256": "e4f18dfa04545ca079be88f2374a5100e114b31fe44e9d006a0d531a4ac2520a",
+            "contentSha256": "104d4b739f339b5ce4504475119d1ad78813d581a0891fb4990f5c7039fe028f",
+            "reviewRequired": true,
+            "writeStatus": "generated-then-reviewed"
+        },
+        "docs/harness/roadmap.md": {
+            "ownership": "project",
+            "template": "roadmap.md.tmpl",
+            "templateSha256": "2e463f81bb9d155c78dd80ee04ed1c472764a4e833241e3d72e56511469fa2de",
+            "contentSha256": "c88ff9eac8d7597c6f4f1eabbca4f44e18527233b29e46bb5cee877f459bf984",
+            "reviewRequired": true,
+            "writeStatus": "generated-then-reviewed"
+        },
+        "docs/harness/sensor-registry.md": {
+            "ownership": "project",
+            "template": "sensor-registry.md.tmpl",
+            "templateSha256": "71ba78ab59640079f17a643ff6916ff041be13f2fffebd3473bc16b19a03e638",
+            "contentSha256": "7d8e0ca44ca4dfd74406a1e321fc66ee48c390dc78208c04a7792457c997b0bc",
+            "reviewRequired": true,
+            "writeStatus": "generated-then-reviewed"
+        },
+        "docs/harness/source-record.schema.json": {
+            "ownership": "project",
+            "template": "source-record.schema.json.tmpl",
+            "templateSha256": "03f0080f798d88750bbab45e1c3d56c4b20cbb5c9d8109968b76c93723382ee8",
+            "contentSha256": "03f0080f798d88750bbab45e1c3d56c4b20cbb5c9d8109968b76c93723382ee8",
+            "reviewRequired": false,
+            "writeStatus": "generated"
+        },
+        "docs/harness/source-record-example.json": {
+            "ownership": "project",
+            "template": "source-record-example.json.tmpl",
+            "templateSha256": "2558ba481e1804544f83d46b3a2dcbdcf625e88f6fa2cdb3c89147d6eee32ee4",
+            "contentSha256": "9a77ab87a6c02ca05b071c24259a63f1305de21ceb53047b5dc58b2e98e3c338",
+            "reviewRequired": true,
+            "writeStatus": "generated-then-reviewed"
+        },
+        "docs/harness/manifest.json": {
+            "ownership": "project",
+            "template": "manifest.json.tmpl",
+            "templateSha256": "c3246e45e22b3c3ac0b364d5a94d771714ebae2360c577db301ba5dec4f49f62",
+            "reviewRequired": false,
+            "writeStatus": "project-owned-reviewed"
+        }
     }
-  },
-  "requiredFiles": [
-    "AGENTS.md",
-    "feature_list.json",
-    "progress.md",
-    "session-handoff.md",
-    "init.sh",
-    "docs/assets/logo.png",
-    "docs/harness/README.md",
-    "docs/harness/change-contract.md",
-    "docs/harness/verification-matrix.md",
-    "docs/harness/component-inventory.md",
-    "docs/harness/dependency-change-policy.md",
-    "docs/harness/security-boundary-map.md",
-    "docs/harness/feature-privacy-labels.json",
-    "docs/harness/evidence-log.md",
-    "docs/harness/clean-state-checklist.md",
-    "docs/harness/evaluator-rubric.md",
-    "docs/harness/quality-document.md",
-    "docs/harness/release-controls.md",
-    "docs/harness/self-healing.md",
-    "docs/harness/research-sources.json",
-    "docs/harness/research-inbox.md",
-    "docs/harness/manifest.json",
-    "docs/harness/sources.md",
-    "docs/harness/entropy-control.md",
-    "docs/harness/agent-operating-model.md",
-    "docs/harness/multi-agent-orchestration.md",
-    "docs/harness/feature-list.schema.json"
-  ],
-  "requiredHarnessSnippets": {
-    "AGENTS.md": [
-      "Startup",
-      "Verification",
-      "Definition Of Done",
-      "feature_list.json",
-      "progress.md"
-    ],
-    "docs/harness/README.md": [
-      "Operating Loop",
-      "When To Add Harness",
-      "Assessment And Updates"
-    ],
-    "docs/harness/change-contract.md": [
-      "Problem",
-      "Acceptance Criteria",
-      "Verification",
-      "Rollback"
-    ],
-    "docs/harness/verification-matrix.md": [
-      "Change Type",
-      "Required Checks",
-      "When Checks Cannot Run"
-    ],
-    "docs/harness/component-inventory.md": [
-      "Component Inventory",
-      "Detected Components",
-      "Routing Rules"
-    ],
-    "docs/harness/dependency-change-policy.md": [
-      "latest stable",
-      "exact pins",
-      "GitHub Actions"
-    ],
-    "docs/harness/security-boundary-map.md": [
-      "Access Boundaries",
-      "Data Boundaries",
-      "Required Checks",
-      "security wins"
-    ],
-    "docs/harness/feature-privacy-labels.json": [
-      "External AI optional",
-      "Sensitive",
-      "Public-data only"
-    ],
-    "docs/harness/evidence-log.md": [
-      "Date",
-      "Scope",
-      "Command Or Review"
-    ],
-    "docs/harness/clean-state-checklist.md": [
-      "Startup path",
-      "Verification path",
-      "Next Session"
-    ],
-    "docs/harness/evaluator-rubric.md": [
-      "Correctness",
-      "Verification",
-      "Handoff Readiness"
-    ],
-    "docs/harness/quality-document.md": [
-      "Quality Document",
-      "Domain Grades",
-      "Harness Simplification"
-    ],
-    "docs/harness/release-controls.md": [
-      "Release Controls",
-      "SBOM",
-      "provenance",
-      "Rollback"
-    ],
-    "docs/harness/self-healing.md": [
-      "Self-healing must be reviewable",
-      "Safe Loop",
-      "Promotion Rule"
-    ],
-    "docs/harness/research-sources.json": [
-      "openai-harness-engineering",
-      "walkinglabs-course",
-      "github-actions-secure-use"
-    ],
-    "docs/harness/research-inbox.md": [
-      "Research Inbox",
-      "Promotion checklist"
-    ]
-  },
-  "verificationCommands": [
-    "python3 -m compileall src tests scripts",
-    "PYTHONPATH=src python3 -m unittest discover -s tests",
-    "python3 scripts/check_pins.py",
-    "python3 -m ruff check .",
-    "python3 -m mypy src",
-    "python3 -m build"
-  ],
-  "detectedComponents": []
 }

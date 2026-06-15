@@ -42,7 +42,7 @@ class CliActiveStatusTests(unittest.TestCase):
                             "arguments": ["agent", "--secret-flag"],
                             "environment": ["OPENAI_API_KEY=fake-secret-value"],
                         },
-                        "mounts": [{"source": "/Users/c/private", "destination": "/workspace"}],
+                        "mounts": [{"source": "/host/private", "destination": "/workspace"}],
                     },
                     "status": {
                         "state": "running",
@@ -89,7 +89,7 @@ class CliActiveStatusTests(unittest.TestCase):
         self.assertNotIn("fake-secret-value", text)
         self.assertNotIn("OPENAI_API_KEY", text)
         self.assertNotIn("secret-flag", text)
-        self.assertNotIn("/Users/c/private", text)
+        self.assertNotIn("/host/private", text)
         self.assertNotIn("do-not-print", text)
 
     def test_runs_status_json_is_sanitized(self) -> None:

@@ -952,7 +952,7 @@ Refresh repository documentation accuracy and handoff state.
   passed.
 - `python -m build` in a temporary hardening venv passed.
 - `PYTHON=<temporary-venv-python> ./init.sh` passed.
-- `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+- `python3.14 -m harnessforge audit --target . --min-score 85`
   passed with 100/100.
 - `PYTHONPATH=src python3.14 -m runhaven plan shell --tty always -- /bin/true`
   passed and emitted a run command with `--interactive --tty`.
@@ -971,11 +971,11 @@ Refresh repository documentation accuracy and handoff state.
   hardening pass.
 - `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 39 tests and
   passed after the follow-up hardening pass.
-- `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+- `python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100 after the follow-up hardening pass.
 - Cleanup pass removed stale local paths, stale local-venv evidence, and old
   HarnessForge predecessor references from tracked docs.
-- `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+- `python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100 after the cleanup pass.
 - `python3.14 scripts/check_pins.py`, `git diff --check`, and
   `python3 -m json.tool feature_list.json` passed after the cleanup pass.
@@ -989,7 +989,7 @@ Refresh repository documentation accuracy and handoff state.
   `PYTHONPATH=src python3.14 -m runhaven plan shell --network internal --tty never -- /bin/true`,
   and `PYTHONPATH=src python3.14 -m runhaven doctor` passed after the second
   follow-up hardening pass.
-- `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+- `python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100 after the second follow-up hardening pass.
 - `python3 -m json.tool feature_list.json`, `git diff --check`,
   generated-artifact checks, and stale-reference scans passed after the second
@@ -1010,13 +1010,13 @@ Refresh repository documentation accuracy and handoff state.
   passed after the provider egress preparation pass.
 - `PYTHONPATH=src python3.14 -m runhaven doctor` passed on macOS 26.5.1 arm64
   with Apple `container` 1.0.0.
-- `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+- `python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100 after the provider egress preparation pass.
 - `git diff --check` and `python3 -m json.tool feature_list.json` passed after
   the provider egress preparation pass.
 - `python3 -m json.tool feature_list.json`, `python3 scripts/check_pins.py`,
   `git diff --check`, local absolute-path leak scan, and
-  `PYTHONPATH=<temporary-HarnessForge-copy>/src python3.14 -m harnessforge audit --target . --min-score 85`
+  `python3.14 -m harnessforge audit --target . --min-score 85`
   passed after the complete DocC snapshot evidence update.
 - `PYTHONPATH=src python3.14 -m unittest tests.test_egress` ran 7 tests and
   passed after adding the allowlist proxy.
@@ -1335,6 +1335,12 @@ Refresh repository documentation accuracy and handoff state.
   commands. Harness state docs now reflect the docs-refresh objective, current
   component inventory, current modularization line-count snapshot, and roadmap
   status semantics.
+- Harness boundary correction removed the generated autonomous repair-loop
+  artifact and manifest references. Treat that workflow model as HarnessForge
+  repo-local only, not a RunHaven generated-harness contract. Recurring upkeep
+  should be described as reviewed maintenance or explicit opt-in automation.
+  The corrected HarnessForge audit now returns `100/100`; `harnessforge report`
+  is warning-only for expected workflow and governance review surfaces.
 
 ## Next Session
 

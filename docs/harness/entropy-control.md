@@ -5,18 +5,24 @@ files do not.
 
 ## Regular Assessment
 
-Run at least before releases, large refactors, and after repeated agent errors:
+Run at least before releases, large refactors, platform contract changes,
+provider endpoint changes, image pin changes, auth broker changes, and after
+repeated agent errors:
 
 ```bash
-PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target .
+harnessforge report --target .
+harnessforge audit --target . --min-score 85
 ```
 
 ## Correction Loop
 
-1. Identify the lowest-scoring domain.
-2. Confirm the failure from logs, review comments, or missed checks.
-3. Add the smallest guide or sensor that would have prevented it.
-4. Re-run the audit and relevant project checks.
+1. Identify the weakest subsystem or repeated failure mode.
+2. Confirm the failure from logs, review comments, missed checks, or real
+   runtime evidence.
+3. Add the smallest guide, sensor, test, or state update that would have
+   prevented it.
+4. Re-run the relevant project checks and harness report/audit.
+5. Record evidence and the next review trigger.
 
 ## Cleanup
 
@@ -24,4 +30,8 @@ PYTHONPATH=../HarnessForge/src python3 -m harnessforge audit --target .
 - Merge duplicate docs.
 - Keep root instructions short.
 - Keep state files current.
-- Delete generated reports unless intentionally tracked.
+- Delete generated reports unless intentionally tracked as evidence.
+- Retire `first-agent-task.md` after the maintainer accepts the harness
+  overhaul and its follow-up actions are captured elsewhere.
+- Move completed roadmap behavior into durable docs, tests, schemas, templates,
+  or code.

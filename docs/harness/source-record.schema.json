@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HarnessForge Project Source Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "title",
+    "sourceType",
+    "source",
+    "owner",
+    "purpose",
+    "reviewedOn",
+    "reviewCadence",
+    "reviewStatus",
+    "trustBoundary",
+    "harnessUsage",
+    "claims",
+    "retireWhen"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sourceType": {
+      "type": "string",
+      "enum": [
+        "project-document",
+        "decision-record",
+        "issue",
+        "pull-request",
+        "runbook",
+        "policy",
+        "external-reference",
+        "dataset",
+        "benchmark",
+        "other"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Use targetRelativePath for repo-local sources. Do not store machine-local absolute paths. Public source ledgers such as docs/harness/research-sources.json remain separate from project-owned records.",
+      "properties": {
+        "targetRelativePath": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(^|/)\\.\\.($|/)).+",
+          "description": "Target-relative path to a project-owned source file. Do not use machine-local absolute paths."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Reviewed source URL when a project intentionally depends on an external reference."
+        },
+        "section": {
+          "type": "string"
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "targetRelativePath"
+          ]
+        },
+        {
+          "required": [
+            "url"
+          ]
+        }
+      ]
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewedOn": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "reviewCadence": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewStatus": {
+      "type": "string",
+      "enum": [
+        "REVIEW REQUIRED",
+        "reviewed",
+        "stale",
+        "retired",
+        "rejected"
+      ]
+    },
+    "trustBoundary": {
+      "type": "string",
+      "enum": [
+        "repo-owned",
+        "public-source",
+        "private-source",
+        "generated-output",
+        "user-provided",
+        "other"
+      ]
+    },
+    "harnessUsage": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "instructions",
+          "verification",
+          "release",
+          "security",
+          "research",
+          "architecture",
+          "planning",
+          "evaluation",
+          "other"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "claim",
+          "evidence",
+          "limitations"
+        ],
+        "properties": {
+          "claim": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "limitations": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "retireWhen": {
+      "type": "string",
+      "minLength": 1
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

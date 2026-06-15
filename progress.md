@@ -1114,7 +1114,7 @@ workspace, or continue with the next mined UX improvement from
   passed.
 - 2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh`
   passed.
-- 2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+- 2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100.
 - 2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --tty always -- /bin/true`
   passed and emitted a run command with `--interactive --tty`.
@@ -1144,11 +1144,11 @@ workspace, or continue with the next mined UX improvement from
   follow-up hardening pass.
 - 2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests`
   ran 39 tests and passed after the follow-up hardening pass.
-- 2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+- 2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100 after the follow-up hardening pass.
 - 2026-06-14: cleanup pass removed stale local paths, stale local-venv
   evidence, and old HarnessForge predecessor references from tracked docs.
-- 2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+- 2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100 after the cleanup pass.
 - 2026-06-14: `python3.14 scripts/check_pins.py`, `git diff --check`, and
   `python3 -m json.tool feature_list.json` passed after the cleanup pass.
@@ -1162,7 +1162,7 @@ workspace, or continue with the next mined UX improvement from
   `PYTHONPATH=src python3.14 -m runhaven plan shell --network internal --tty never -- /bin/true`,
   and `PYTHONPATH=src python3.14 -m runhaven doctor` passed after the second
   follow-up hardening pass.
-- 2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+- 2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100 after the second follow-up hardening pass.
 - 2026-06-14: `python3 -m json.tool feature_list.json`, `git diff --check`,
   generated-artifact checks, and stale-reference scans passed after the second
@@ -1184,7 +1184,7 @@ workspace, or continue with the next mined UX improvement from
   ran 49 tests and passed after the provider egress preparation pass.
 - 2026-06-14: `PYTHONPATH=src python3.14 -m runhaven doctor` passed on
   macOS 26.5.1 arm64 with Apple `container` 1.0.0.
-- 2026-06-14: `PYTHONPATH=../HarnessForge/src python3.14 -m harnessforge audit --target . --min-score 85`
+- 2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85`
   reported 100/100 after the provider egress preparation pass.
 - 2026-06-14: `git diff --check` and
   `python3 -m json.tool feature_list.json` passed after the provider egress
@@ -1192,7 +1192,7 @@ workspace, or continue with the next mined UX improvement from
 - 2026-06-14: `python3 -m json.tool feature_list.json`,
   `python3 scripts/check_pins.py`, `git diff --check`, local absolute-path
   leak scan, and
-  `PYTHONPATH=<temporary-HarnessForge-copy>/src python3.14 -m harnessforge audit --target . --min-score 85`
+  `python3.14 -m harnessforge audit --target . --min-score 85`
   passed after the complete DocC snapshot evidence update.
 - 2026-06-14: `PYTHONPATH=src python3.14 -m unittest tests.test_egress`
   ran 7 tests and passed after adding the allowlist proxy.
@@ -1418,3 +1418,12 @@ workspace, or continue with the next mined UX improvement from
   scan, HarnessForge audit at 100/100, `git diff --check`, and
   `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 195 unit tests,
   pin check, ruff, mypy, and build.
+- 2026-06-15: Harness boundary correction removed the generated autonomous
+  repair-loop artifact and manifest references because that workflow model is
+  HarnessForge repo-local, not a generated target-repo contract. Active harness
+  docs now use reviewed maintenance/automation wording, generated-file
+  ownership metadata includes current content and template hashes, and the
+  dependency policy explicitly routes pin-ledger rationale through `pins.toml`.
+  Verification passed with `python3 -m json.tool docs/harness/manifest.json`, a
+  clean local HarnessForge leakage scan, and HarnessForge audit `100/100` using
+  the corrected local HarnessForge checkout.

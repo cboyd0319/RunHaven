@@ -5,14 +5,26 @@
 RunHaven is a Python 3.13+ CLI for running AI coding agents inside
 Apple `container` on macOS 26+.
 
+Core harness contract: instructions, tools, environment, state, and feedback
+are all required. Keep instructions map-like, tool access sufficient but least
+privileged, environment facts self-describing, state current across sessions,
+and verification commands explicit. Changing instruction files, shell access,
+filesystem scope, git state, startup scripts, verification commands, container
+defaults, provider allowlists, hooks, lint checks, or evaluator loops changes
+the effective agent. Treat those as product changes.
+
 Startup path:
 
 1. Confirm the working directory and inspect `git status --short --branch`.
 2. Read this file, `README.md`, and `docs/harness/README.md`.
 3. Read `feature_list.json`, `progress.md`, and `session-handoff.md`.
-4. Check `docs/harness/component-inventory.md` before changing CLI modules,
+4. Check `docs/harness/roadmap.md` before selecting, deferring, or reshaping
+   backlog, release-prep, or product-scope work.
+5. Check `docs/harness/component-inventory.md` before changing CLI modules,
    image templates, verification routing, or harness files.
-5. Pick one current objective before editing.
+6. If `docs/harness/first-agent-task.md` still exists, complete or retire it
+   before unrelated feature work.
+7. Pick one current objective before editing.
 
 This repo is harnessed. Keep root instructions short and place durable detail
 in `docs/harness/`.
@@ -39,13 +51,17 @@ python3 scripts/check_pins.py
 python3 -m ruff check .
 python3 -m mypy src
 python3 -m build
-HARNESSFORGE=../HarnessForge
-PYTHONPATH="${HARNESSFORGE}/src" python3 -m harnessforge audit --target . --min-score 85
+python3 -m harnessforge report --target .
+python3 -m harnessforge audit --target . --min-score 85
 ```
 
 Use `runhaven doctor` and Apple `container` runtime smokes when changes affect the
 actual macOS container boundary, image templates, agent profiles, or install
 flow.
+
+Before running `harnessforge` commands, install HarnessForge in the current
+development environment or run from an environment where the package is already
+available. Do not commit machine-specific checkout paths for local tooling.
 
 ## Code style guidelines
 
@@ -55,6 +71,9 @@ flow.
   are required for the task.
 - Keep runtime dependencies at zero unless a dependency removes real security or
   usability risk.
+- Before writing code, stop at the first rung that solves the request: no
+  change, deletion, documentation, configuration, standard library, native
+  platform behavior, existing project dependency, then minimum custom code.
 - Use exact subprocess argument lists, not executable shell strings, for
   runtime command generation.
 - Use `rg` for repository searches. Keep command output bounded when possible.
@@ -72,8 +91,8 @@ flow.
   `session-handoff.md`.
 - Definition Of Done: target behavior or documentation change is complete,
   acceptance criteria are satisfied, relevant checks ran, local Markdown links
-  resolve, harness audit passes the threshold, and the next session can restart
-  from the harness files.
+  resolve, harness report/audit are current when the harness changed, and the
+  next session can restart from the harness files.
 - End of Session: update `progress.md` and `session-handoff.md` with current
   state, verification evidence, blockers, touched files, and the recommended
   next step. Use `docs/harness/clean-state-checklist.md` before claiming the
