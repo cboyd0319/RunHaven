@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement setup network selection guidance.
+Implement setup workspace and credential guidance.
 
 ## Files
 
@@ -118,6 +118,21 @@ Implement setup network selection guidance.
   passed after adding setup network guidance.
 - `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 155 unit
   tests, pin check, ruff, mypy, and build after adding setup network guidance.
+- `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_setup_prints_workspace_and_credential_guidance`
+  first failed because `setup` did not print a workspace and credential
+  section, then passed after adding smallest-project workspace, avoided host
+  credential paths, `--ssh`, and reviewed `--env NAME` guidance.
+- Focused setup/doctor tests, full
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runhaven setup --agent shell` smoke
+  passed after adding setup workspace and credential guidance.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 156 unit
+  tests, pin check, ruff, mypy, and build after adding setup workspace and
+  credential guidance.
 - Focused `runs repair` tests, full
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
   `python3 -m compileall src tests scripts`,
@@ -721,6 +736,11 @@ Implement setup network selection guidance.
   provider-only, package install, and unrestricted internet runs. The guidance
   keeps provider egress framed as stricter and potentially review-heavy for
   login, telemetry, package registry, or feature-path hosts.
+- `runhaven setup` now prints workspace-scope and credential-path guidance:
+  run from the smallest project directory, confirm the `/workspace` mount with
+  `runhaven plan`, avoid home directories and credential folders, use `--ssh`
+  for SSH agent forwarding, and pass only reviewed environment variables with
+  `--env NAME`.
 - `docs/AUTH_BROKER.md` records the Codex prototype status, remaining
   design-only provider status, provider auth notes, non-goals, and acceptance
   criteria for future broker expansion.
@@ -766,12 +786,10 @@ Implement setup network selection guidance.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Choose the next UX improvement from the backlog, such as workspace-scope
-   guidance and credential-path explanations in `runhaven setup`. Run the
-   Codex broker smoke with a disposable OpenAI API key when available.
-6. Before release, evaluate whether a major large-file refactor and
+5. Before release, evaluate whether a major large-file refactor and
    modularization pass is needed for reviewability, especially around the CLI
    and broad test modules.
+6. Run the Codex broker smoke with a disposable OpenAI API key when available.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

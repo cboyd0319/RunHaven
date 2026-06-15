@@ -276,7 +276,7 @@
       "priority": 7,
       "area": "usability",
       "title": "Guided first-run setup",
-      "user_visible_behavior": "`runhaven setup` runs prerequisite checks, prints exact fixes when the host is not ready, shows the next image build, plan, and run commands for a selected agent, and explains goal-based network choices without mutating the machine.",
+      "user_visible_behavior": "`runhaven setup` runs prerequisite checks, prints exact fixes when the host is not ready, shows the next image build, plan, and run commands for a selected agent, and explains workspace, credential, and network choices without mutating the machine.",
       "status": "passing",
       "dependencies": [
         "runtime-hardening-macos-only-boundary"
@@ -286,15 +286,18 @@
         "`runhaven setup` returns nonzero and prints exact remedies when prerequisites fail",
         "`runhaven setup --agent AGENT` prints profile-specific image build, plan, and run commands when prerequisites pass",
         "`runhaven setup` prints local-only, provider-only, package install, and unrestricted internet network guidance",
+        "`runhaven setup` explains smallest-project workspace scope, `/workspace` mounting, avoided credential paths, `--ssh`, and reviewed `--env NAME` usage",
         "`runhaven setup` does not install, start services, build images, run agents, or mount workspaces"
       ],
       "evidence": [
         "2026-06-15: Focused setup CLI tests first failed because `setup` was not a valid subcommand, then passed after adding the non-mutating guided setup flow.",
         "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 154 unit tests, pin check, ruff, mypy, and build after adding `runhaven setup`. Manual `runhaven setup --agent shell` smoke, JSON validation, Markdown link check, platform scan, and `git diff --check` also passed.",
         "2026-06-15: Focused setup network guidance test first failed because `setup` did not print a network-choice section, then passed after adding local-only, provider-only, package install, and unrestricted internet guidance.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 155 unit tests, pin check, ruff, mypy, and build after adding setup network guidance."
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 155 unit tests, pin check, ruff, mypy, and build after adding setup network guidance.",
+        "2026-06-15: Focused setup workspace and credential guidance test first failed because `setup` did not print that section, then passed after adding smallest-project workspace, avoided credential paths, `--ssh`, and reviewed `--env NAME` guidance.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 156 unit tests, pin check, ruff, mypy, and build after adding setup workspace and credential guidance."
       ],
-      "notes": "`setup` intentionally does not call Apple `container system start`, build images, run agents, or write state. Future setup work can add workspace-scope guidance and credential-path explanations."
+      "notes": "`setup` intentionally does not call Apple `container system start`, build images, run agents, mount a workspace, read credential stores, or write state."
     },
     {
       "id": "repo-logo",

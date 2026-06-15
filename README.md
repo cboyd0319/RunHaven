@@ -142,8 +142,9 @@ runhaven setup
 the host is not ready, and shows the image build, plan, and run commands for
 the selected agent without installing, starting, building, or mounting
 anything. It also explains when to use local-only, provider-only, package
-install, or unrestricted internet network modes. Use
-`runhaven setup --agent codex` to prepare a different profile.
+install, or unrestricted internet network modes, and how to choose a workspace
+without mounting host credential paths. Use `runhaven setup --agent codex` to
+prepare a different profile.
 
 Build and preview a bundled agent image:
 
@@ -157,6 +158,11 @@ Run the agent from the project directory you want it to work on:
 ```bash
 runhaven run claude
 ```
+
+Use the smallest project directory the agent needs. RunHaven mounts that
+directory at `/workspace`, not your whole home directory. Do not run from your
+home directory, a cloud sync root, or a credential folder unless you
+intentionally want that broader scope.
 
 ## Plan Before Run
 
@@ -218,6 +224,11 @@ Private Git access without mounting raw SSH keys:
 ```bash
 runhaven run claude --ssh
 ```
+
+RunHaven does not mount raw SSH keys, browser profiles, cloud credential
+folders, or provider login caches by default. Use `--ssh` for SSH agent
+forwarding and `--env NAME` only for a reviewed variable the agent really
+needs.
 
 Local-only command:
 

@@ -461,8 +461,34 @@ def setup(agent: str) -> int:
     print("Safety defaults")
     print("- One selected project is mounted at /workspace.")
     print("- No host home, raw SSH keys, or cloud credential folders are mounted by default.")
+    print_setup_workspace_and_credentials()
     print_setup_network_choices(agent)
     return 0
+
+
+def print_setup_workspace_and_credentials() -> None:
+    print()
+    print("Workspace and credentials")
+    print(
+        "- Run from the smallest project directory you want the agent to see; "
+        "that directory is mounted at /workspace."
+    )
+    print(
+        "- Do not run from your home directory, a cloud sync root, or a "
+        "credential folder unless you intentionally allow that broader scope."
+    )
+    print(
+        "- RunHaven does not mount raw SSH keys, browser profiles, cloud "
+        "credential folders, or provider login caches by default."
+    )
+    print(
+        "- Use `--ssh` for SSH agent forwarding instead of mounting key files."
+    )
+    print(
+        "- Use `--env NAME` only for a reviewed variable that the agent really "
+        "needs."
+    )
+    print("- Use `runhaven plan` to confirm the mounted host path.")
 
 
 def print_setup_network_choices(agent: str) -> None:

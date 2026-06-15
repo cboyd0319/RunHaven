@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement setup network selection guidance.
+Implement setup workspace and credential guidance.
 
 ## Current State
 
@@ -269,6 +269,11 @@ Implement setup network selection guidance.
   provider-only, package install, and unrestricted internet runs. The guidance
   keeps provider egress framed as stricter and potentially review-heavy for
   login, telemetry, package registry, or feature-path hosts.
+- `runhaven setup` now prints workspace-scope and credential-path guidance:
+  run from the smallest project directory, confirm the `/workspace` mount with
+  `runhaven plan`, avoid home directories and credential folders, use `--ssh`
+  for SSH agent forwarding, and pass only reviewed environment variables with
+  `--env NAME`.
 - Active markers are removed after run completion. If a run exits after a stop
   or kill request, the completed run record is marked `stopped` or `killed`.
 - Run records omit diffs, file contents, prompts, command lines, agent
@@ -290,10 +295,10 @@ Implement setup network selection guidance.
 
 ## Recommended Next Step
 
-Extend `runhaven setup` with workspace-scope guidance and credential-path
-explanations. Before release, evaluate whether a major large-file refactor and
-modularization pass is needed for reviewability. Run the optional Codex broker
-smoke with a disposable OpenAI API key when one is available.
+Evaluate whether a major large-file refactor and modularization pass is needed
+before release, especially around the CLI and broad test modules. Run the
+optional Codex broker smoke with a disposable OpenAI API key when one is
+available.
 
 ## Verification Evidence
 
@@ -371,6 +376,21 @@ smoke with a disposable OpenAI API key when one is available.
 - 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
   compileall, 155 unit tests, pin check, ruff, mypy, and build after adding
   setup network guidance.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_setup_prints_workspace_and_credential_guidance`
+  first failed because `setup` did not print a workspace and credential
+  section, then passed after adding smallest-project workspace, avoided host
+  credential paths, `--ssh`, and reviewed `--env NAME` guidance.
+- 2026-06-15: Focused setup/doctor tests, full
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runhaven setup --agent shell` smoke
+  passed after adding setup workspace and credential guidance.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 156 unit tests, pin check, ruff, mypy, and build after adding
+  setup workspace and credential guidance.
 - 2026-06-15: Focused `runs repair` tests, full
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
   `python3 -m compileall src tests scripts`,

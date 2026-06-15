@@ -29,7 +29,8 @@ runhaven setup --agent codex
 image build, plan, and run commands for the selected agent. It does not
 install Apple `container`, start the container service, build images, run
 agents, or mount any workspace. It also explains when to use local-only,
-provider-only, package install, or unrestricted internet network modes.
+provider-only, package install, or unrestricted internet network modes, and
+how to choose a workspace without mounting host credential paths.
 
 ## Check the Mac
 
@@ -180,6 +181,18 @@ runhaven run codex --read-only-workspace
 
 This lets an agent inspect the project without writing to the mounted
 workspace.
+
+## Workspace And Credentials
+
+Run `runhaven` from the smallest project directory the agent needs. That
+directory is mounted at `/workspace`. Do not run from your home directory, a
+cloud sync root, or a credential folder unless you intentionally want that
+broader scope and have reviewed the plan.
+
+RunHaven does not mount raw SSH keys, browser profiles, cloud credential
+folders, or provider login caches by default. Use `--ssh` for SSH agent
+forwarding instead of mounting key files. Use `--env NAME` only for a reviewed
+variable the agent really needs.
 
 ## Local-Only Network
 

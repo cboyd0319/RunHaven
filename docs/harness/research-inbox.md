@@ -89,6 +89,11 @@ repo and link to primary sources instead.
   `runhaven setup`. The guide now distinguishes local-only, provider-only,
   package install, and unrestricted internet runs without changing runtime
   behavior.
+- 2026-06-15: Implemented workspace-scope and credential-path guidance in
+  `runhaven setup`. The guide now tells users to run from the smallest project
+  directory, confirms `/workspace` semantics, names credential paths that are
+  not mounted by default, and points to `--ssh` plus reviewed `--env NAME`
+  usage.
 - 2026-06-15: Added a pre-release backlog item to consider a major large-file
   refactor and modularization pass, especially around the CLI and broad test
   modules, before release.

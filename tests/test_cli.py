@@ -3343,6 +3343,31 @@ class CliTests(unittest.TestCase):
         self.assertIn("Unrestricted internet", text)
         self.assertIn("Use `runhaven plan` before changing network modes.", text)
 
+    def test_setup_prints_workspace_and_credential_guidance(self) -> None:
+        output = io.StringIO()
+        with (
+            redirect_stdout(output),
+            patch(
+                "runhaven.cli.collect_checks",
+                return_value=(Check("container system", True, "running"),),
+            ),
+        ):
+            code = main(["setup"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Workspace and credentials", text)
+        self.assertIn("smallest project directory", text)
+        self.assertIn("mounted at /workspace", text)
+        self.assertIn("Do not run from your home directory", text)
+        self.assertIn("raw SSH keys", text)
+        self.assertIn("browser profiles", text)
+        self.assertIn("cloud credential folders", text)
+        self.assertIn("provider login caches", text)
+        self.assertIn("Use `--ssh` for SSH agent forwarding", text)
+        self.assertIn("Use `--env NAME` only for a reviewed variable", text)
+        self.assertIn("Use `runhaven plan` to confirm the mounted host path.", text)
+
     def test_existing_internal_network_is_reused(self) -> None:
         with patch("runhaven.cli.subprocess.run") as run:
             run.return_value = Mock(
