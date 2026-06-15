@@ -156,6 +156,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="show live git diff for one RunHaven run",
     )
     runs_diff_parser.add_argument("run_id", help="run id to diff")
+    runs_active_parser = runs_subcommands.add_parser(
+        "active",
+        help="show currently active RunHaven runs",
+    )
+    runs_active_parser.add_argument("--json", action="store_true", help="print JSON output")
     runs_stop_parser = runs_subcommands.add_parser(
         "stop",
         help="stop an active RunHaven run",
@@ -392,6 +397,8 @@ def runs_command(args: argparse.Namespace) -> int:
         return runs_log(args.run_id, json_output=args.json)
     if args.runs_command == "diff":
         return runs_diff(args.run_id)
+    if args.runs_command == "active":
+        return runs_active(json_output=args.json)
     if args.runs_command == "stop":
         return runs_stop(args.run_id)
     raise ValueError(f"unknown runs command: {args.runs_command}")
@@ -1022,11 +1029,66 @@ def active_runs_dir() -> Path:
     return runhaven_cache_root() / "active-runs"
 
 
+def read_active_run_records() -> list[dict[str, Any]]:
+    active_dir = active_runs_dir()
+    if not active_dir.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for path in sorted(active_dir.glob("*.json")):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        run_id = payload.get("run_id")
+        container_name = payload.get("container_name")
+        if not isinstance(run_id, str) or not isinstance(container_name, str):
+            continue
+        try:
+            validate_run_id(run_id)
+            validate_runhaven_container_name(container_name)
+        except ValueError:
+            continue
+        records.append(payload)
+    return sorted(records, key=active_run_sort_key)
+
+
+def active_run_sort_key(record: dict[str, Any]) -> tuple[str, str]:
+    timestamp = record.get("timestamp")
+    run_id = record.get("run_id")
+    return (
+        timestamp if isinstance(timestamp, str) else "",
+        run_id if isinstance(run_id, str) else "",
+    )
+
+
 def validate_run_id(run_id: str) -> None:
     if not run_id or run_id.startswith("-"):
         raise ValueError(f"invalid run id: {run_id!r}")
     if any(character.isspace() or character in "/\\" for character in run_id):
         raise ValueError(f"invalid run id: {run_id!r}")
+
+
+def runs_active(*, json_output: bool) -> int:
+    records = read_active_run_records()
+    if json_output:
+        print(json.dumps(records, indent=2, sort_keys=True))
+        return 0
+    if not records:
+        print("No active RunHaven runs found.")
+        return 0
+    for record in records:
+        print(
+            f"{record.get('timestamp', '<unknown>')}  "
+            f"{record.get('profile', 'unknown')}  "
+            f"{record.get('network', 'unknown')}  "
+            f"{record.get('status', 'unknown')}  "
+            f"run={record.get('run_id', '-')}  "
+            f"workspace={record.get('workspace', '-')}  "
+            f"container={record.get('container_name', '-')}"
+        )
+    return 0
 
 
 def runs_stop(run_id: str) -> int:

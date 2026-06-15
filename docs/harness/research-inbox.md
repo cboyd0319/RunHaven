@@ -54,6 +54,8 @@ repo and link to primary sources instead.
 - 2026-06-15: Implemented `runhaven runs stop RUN_ID` from the promoted run
   recovery backlog. Active markers stay secret-free and stop only
   RunHaven-owned named Apple containers.
+- 2026-06-15: Implemented `runhaven runs active` so users can recover active
+  run ids from secret-free markers before using `runs stop`.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.

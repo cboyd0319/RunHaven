@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement `runhaven runs stop RUN_ID` for active RunHaven containers.
+Implement `runhaven runs active` for active RunHaven run discovery.
 
 ## Current State
 
@@ -226,6 +226,9 @@ Implement `runhaven runs stop RUN_ID` for active RunHaven containers.
 - `runhaven runs stop RUN_ID` now reads the active marker, verifies the
   container name is RunHaven-owned, marks stop requested, and calls Apple
   `container stop` for that container.
+- `runhaven runs active` now lists current active-run markers in text or JSON
+  without requiring Apple `container` access. It skips invalid or
+  non-actionable marker files.
 - Active markers are removed after run completion. If a run exits after a stop
   request, the completed run record is marked `stopped`.
 - Run records omit diffs, file contents, prompts, command lines, agent
@@ -247,13 +250,28 @@ Implement `runhaven runs stop RUN_ID` for active RunHaven containers.
 
 ## Recommended Next Step
 
-Add `runhaven runs attach RUN_ID` for visibility into active runs, or add
-`runhaven runs active` if active-run discovery proves more urgent. Run the
-optional Codex broker smoke with a disposable OpenAI API key when one is
-available.
+Add `runhaven runs attach RUN_ID` for visibility and direct intervention in
+active runs. Run the optional Codex broker smoke with a disposable OpenAI API
+key when one is available.
 
 ## Verification Evidence
 
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_active_prints_active_run_markers tests.test_cli.CliTests.test_runs_active_json_prints_active_run_markers tests.test_cli.CliTests.test_runs_active_prints_empty_message`
+  first failed because `active` was not a valid `runs` subcommand, then passed
+  after adding text and JSON active-marker listing.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli` ran 57 tests
+  and passed after adding `runs active`.
+- 2026-06-15: `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 123 tests,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, and `git diff --check` passed
+  after adding `runs active`.
+- 2026-06-15: Local Markdown link check, macOS-only platform boundary scan,
+  and manual `runs active` text/JSON smoke passed.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 123 unit tests, pin check, ruff, mypy, and build after adding
+  `runs active`.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_plans.RunPlanTests.test_default_plan_mounts_only_workspace_and_agent_home tests.test_cli.CliTests.test_standard_run_writes_and_removes_active_run_marker tests.test_cli.CliTests.test_standard_run_records_stopped_status_when_stop_requested tests.test_cli.CliTests.test_runs_stop_stops_active_run_container tests.test_cli.CliTests.test_runs_stop_refuses_missing_active_run tests.test_cli.CliTests.test_runs_stop_refuses_unowned_container_name`
   first failed because plans had no named container, runs wrote no active
   marker, and `runs stop` was not a valid subcommand. The focused set passed

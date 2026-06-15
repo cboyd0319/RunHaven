@@ -110,10 +110,11 @@ Actual `runhaven run` executions append one JSON object to `runs.jsonl` under
 the RunHaven cache root. While a run is active, RunHaven also writes a
 temporary secret-free marker under `active-runs/` with run id, profile,
 workspace, network mode, state volume, host pid, and the RunHaven-owned
-container name. `runhaven runs stop RUN_ID` reads that marker and calls Apple
-`container stop` for the named container. The marker is removed when the run
-finishes. `runhaven runs list`, `runhaven runs show RUN_ID`, and `runhaven
-runs log RUN_ID` read the completed-run ledger. Records include run id,
+container name. `runhaven runs active` lists current active markers, and
+`runhaven runs stop RUN_ID` reads one marker and calls Apple `container stop`
+for the named container. The marker is removed when the run finishes.
+`runhaven runs list`, `runhaven runs show RUN_ID`, and `runhaven runs log
+RUN_ID` read the completed-run ledger. Records include run id,
 timestamps, profile, workspace, network mode, return code, provider policy
 summary, auth broker summary, cleanup outcome, and git change metadata when the
 workspace is inside a git repository. Git metadata records repo root, before
