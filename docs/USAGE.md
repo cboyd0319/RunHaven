@@ -202,6 +202,27 @@ folders, or provider login caches by default. Use `--ssh` for SSH agent
 forwarding instead of mounting key files. Use `--env NAME` only for a reviewed
 variable the agent really needs.
 
+## Worktree Isolation
+
+```bash
+runhaven run claude --worktree --dry-run
+runhaven run claude --worktree
+```
+
+`--worktree` requires a clean source git worktree with a committed `HEAD`.
+RunHaven creates a branch named `runhaven/<agent>/<run-id>` and a git worktree
+under its cache directory, then mounts that worktree at `/workspace`. If you
+started from a subdirectory with the default `--workspace-scope current`,
+RunHaven mounts the matching subdirectory inside the isolated worktree rather
+than silently broadening to the whole repo.
+
+The source checkout is left untouched. RunHaven keeps the worktree after the
+run and records the worktree path, branch, base commit, and exact git commands
+for status, diff, merge, worktree removal, and branch deletion in the run
+record. Use `runhaven runs show RUN_ID --json` to retrieve those commands.
+Convenience commands such as `runs merge`, `runs keep`, and `runs discard` are
+not implemented yet.
+
 ## Local-Only Network
 
 ```bash
@@ -302,11 +323,13 @@ include run id, profile, workspace, network mode, return code, provider policy
 summary, auth broker summary, cleanup outcome, and git change metadata when
 the workspace is inside a git repository. Git metadata includes repo root,
 before and after `HEAD`, dirty state, changed file count, and a capped list of
-relative paths scoped to the selected workspace. It does not include diffs or
-file contents. Run records also omit command lines, agent arguments,
-environment variable names, environment values, request bodies, prompts, and
-token values. `runs log` joins the run record with matching provider policy and
-auth broker entries for the same run id.
+relative paths scoped to the selected workspace. Worktree run records also
+include source repo, worktree path, branch, base `HEAD`, mounted workspace, and
+recovery commands. Run records do not include diffs or file contents. They also
+omit command lines, agent arguments, environment variable names, environment
+values, request bodies, prompts, and token values. `runs log` joins the run
+record with matching provider policy and auth broker entries for the same run
+id.
 
 `runs diff` prints an on-demand live git diff from the recorded metadata. It
 refuses when git metadata is unavailable, the recorded repository or workspace

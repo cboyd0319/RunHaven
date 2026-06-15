@@ -71,7 +71,7 @@ def run_provider_agent(plan: AgentRunPlan, *, deps: ProviderRuntimeDependencies)
     proxy_thread: threading.Thread | None = None
     codex_broker: CodexApiKeyBrokerProxy | None = None
     codex_broker_thread: threading.Thread | None = None
-    run_id = uuid.uuid4().hex
+    run_id = plan.run_id or uuid.uuid4().hex
     started_at: str | None = None
     finished_at: str | None = None
     return_code: int | None = None

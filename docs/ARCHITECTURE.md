@@ -133,15 +133,17 @@ timestamps, profile, workspace, network mode, return code, provider policy
 summary, auth broker summary, cleanup outcome, and git change metadata when the
 workspace is inside a git repository. Git metadata records repo root, before
 and after `HEAD`, dirty state, changed file count, and a capped list of
-relative paths scoped to the selected workspace. `runs log` joins the run
-record with matching `egress-policy.jsonl` and `auth-broker.jsonl` entries for
-the same run id. `runs diff` validates the recorded git metadata against live
-git state and then prints a live `git diff`; it does not read or store patches
-from `runs.jsonl`. These commands intentionally omit diffs, file contents,
-prompts, the `container run` command, agent arguments, environment variable
-names, environment values, request bodies, and token values from persisted
-ledgers and active-run markers. `runs status` also avoids printing raw
-`container inspect` arguments, environment, and mount fields.
+relative paths scoped to the selected workspace. Worktree runs also record the
+source repo, RunHaven-owned worktree path, branch, base `HEAD`, mounted
+workspace, and recovery commands. `runs log` joins the run record with matching
+`egress-policy.jsonl` and `auth-broker.jsonl` entries for the same run id.
+`runs diff` validates the recorded git metadata against live git state and
+then prints a live `git diff`; it does not read or store patches from
+`runs.jsonl`. These commands intentionally omit diffs, file contents, prompts,
+the `container run` command, agent arguments, environment variable names,
+environment values, request bodies, and token values from persisted ledgers and
+active-run markers. `runs status` also avoids printing raw `container inspect`
+arguments, environment, and mount fields.
 
 ## Auth Broker Model
 

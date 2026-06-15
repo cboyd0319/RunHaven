@@ -21,6 +21,7 @@ from .git_metadata import (
 )
 from .plans import AgentRunPlan
 from .validators import require_string
+from .worktrees import worktree_record
 
 LogReader = Callable[[], Sequence[dict[str, Any]]]
 
@@ -56,6 +57,8 @@ def write_run_record(
         "cleanup": cleanup,
         "git": git,
     }
+    if plan.worktree is not None:
+        payload["worktree"] = worktree_record(plan.worktree)
     with log_path.open("a", encoding="utf-8") as log_file:
         log_file.write(json.dumps(payload, sort_keys=True) + "\n")
 
@@ -137,6 +140,10 @@ def runs_show(run_id: str, *, json_output: bool) -> int:
     print(f"Workspace: {record.get('workspace', 'unknown')}")
     if record.get("workspace_scope"):
         print(f"Workspace scope: {record.get('workspace_scope')}")
+    worktree = record.get("worktree")
+    if isinstance(worktree, dict):
+        print(f"Worktree: {worktree.get('worktree_root', 'unknown')}")
+        print(f"Worktree branch: {worktree.get('branch', 'unknown')}")
     print(f"Network: {record.get('network', 'unknown')}")
     print(f"Status: {record.get('status', 'unknown')}")
     print(f"Return code: {record.get('return_code', '-')}")

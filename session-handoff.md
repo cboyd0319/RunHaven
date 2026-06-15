@@ -351,6 +351,22 @@ Start pre-release large-file modularization.
   `runhaven plan` smokes for default current scope and explicit git-root scope,
   and `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 160 unit
   tests, pin check, ruff, mypy, and build.
+- Focused worktree run isolation checks passed:
+  `python3 -m compileall src/runhaven tests/test_cli_standard_run.py`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_standard_run.py'`
+  with 9 tests, `uvx --from ruff==0.15.17 ruff check` on touched Python
+  files, and `uvx --from mypy==2.1.0 mypy` on touched source files.
+- Full verification passed after worktree run isolation:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 163 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src` with 24 source files,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  local link check, platform wording scan, manual
+  `runhaven run shell --worktree --dry-run` smoke, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 163 unit tests,
+  pin check, ruff, mypy, and build.
 - Full verification passed after the active-repair extraction:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
@@ -1119,6 +1135,10 @@ Start pre-release large-file modularization.
   `--workspace-scope current|git-root`. Default current scope keeps selected
   git subdirectories mounted; explicit git-root scope expands only inside a
   git worktree. Run records and active markers include the selected scope.
+- `runhaven run AGENT --worktree` landed for clean source repositories. It
+  creates a RunHaven-owned branch and git worktree, mounts the worktree for the
+  agent, keeps the worktree after the run, and records exact recovery commands.
+  Dirty source repositories fail before worktree creation.
 
 ## Next Session
 
@@ -1130,8 +1150,8 @@ Start pre-release large-file modularization.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Continue the product backlog with the first worktree-isolation slice, now
-   that workspace scope selection is explicit.
+5. Continue the product backlog with `runs merge`, `runs keep`, and
+   `runs discard` for worktree review flows.
 6. Run the Codex broker smoke with a disposable OpenAI API key when available.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into

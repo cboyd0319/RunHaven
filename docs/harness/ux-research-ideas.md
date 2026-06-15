@@ -297,6 +297,11 @@ UX requirements:
 - explain dirty-start choices before the run begins
 - use normal git concepts, but do not require the user to remember git commands
 
+Current state: `runhaven run AGENT --worktree` creates a RunHaven-owned branch
+and git worktree for clean source repositories, keeps it after the run, and
+records exact recovery commands. `runs merge`, `runs keep`, and `runs discard`
+remain backlog items.
+
 ### Image Repair And State Repair
 
 Command shapes:

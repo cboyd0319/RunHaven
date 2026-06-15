@@ -12,6 +12,7 @@ from typing import Literal
 from .egress import is_ip_literal, normalize_host
 from .git_metadata import git_repo_root
 from .profiles import AgentProfile
+from .validators import validate_run_id
 
 NetworkMode = Literal["internet", "internal", "provider"]
 WorkspaceScope = Literal["current", "git-root"]
@@ -37,6 +38,17 @@ VOLUME_PREP_NETWORK = "runhaven-volume-prep-internal"
 
 
 @dataclass(frozen=True)
+class WorktreeRun:
+    source_workspace: Path
+    source_repo_root: Path
+    worktree_root: Path
+    mounted_workspace: Path
+    branch: str
+    base_head: str | None
+    recovery_commands: tuple[tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
 class RunOptions:
     profile: AgentProfile
     workspace: Path
@@ -56,6 +68,8 @@ class RunOptions:
     allow_root_user: bool = False
     provider_hosts: tuple[str, ...] = ()
     codex_api_key_broker_env: str | None = None
+    worktree: WorktreeRun | None = None
+    run_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -68,6 +82,8 @@ class AgentRunPlan:
     profile_name: str
     workspace_scope: WorkspaceScope
     workspace_scope_note: str | None
+    worktree: WorktreeRun | None
+    run_id: str | None
     network_name: str | None
     network_mode: NetworkMode
     egress_summary: str
@@ -83,6 +99,8 @@ class AgentRunPlan:
 
 
 def build_run_plan(options: RunOptions) -> AgentRunPlan:
+    if options.run_id is not None:
+        validate_run_id(options.run_id)
     validate_workspace_scope(options.workspace_scope)
     try:
         workspace = options.workspace.expanduser().resolve()
@@ -226,6 +244,8 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         profile_name=options.profile.name,
         workspace_scope=options.workspace_scope,
         workspace_scope_note=workspace_scope_note,
+        worktree=options.worktree,
+        run_id=options.run_id,
         network_name=active_network,
         network_mode=options.network,
         egress_summary=network_egress_summary(

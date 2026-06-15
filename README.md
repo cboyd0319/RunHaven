@@ -169,6 +169,14 @@ current directory as the workspace by default and notes the containing git
 root in `runhaven plan`. Use `--workspace-scope git-root` only when you
 intentionally want the full repository mounted at `/workspace`.
 
+For a clean git repository, `runhaven run AGENT --worktree` creates a
+RunHaven-owned branch and git worktree under RunHaven's cache directory, then
+mounts that worktree at `/workspace`. The source checkout is left untouched
+while the agent works. RunHaven keeps the worktree after the run and records
+the branch, path, and exact review, merge, and discard git commands in the run
+record. Use `runhaven run AGENT --worktree --dry-run` to preview the source
+repo and base commit without creating anything.
+
 ## Plan Before Run
 
 `runhaven plan` is the trust checkpoint. It prints the workspace, the isolated
@@ -190,6 +198,9 @@ Preflight:
 Run:
   container run --rm --init --read-only --tmpfs <container-temp> --cap-drop ALL ...
 ```
+
+Worktree runs allocate their branch and worktree path at runtime, so preview
+them with `runhaven run AGENT --worktree --dry-run` rather than `plan`.
 
 If the plan shows a mount, environment variable, or network mode you do not
 expect, stop before running it.

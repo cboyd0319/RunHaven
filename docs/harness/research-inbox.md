@@ -98,6 +98,11 @@ repo and link to primary sources instead.
   backlog. `runhaven plan` and `runhaven run` default to current-directory
   workspace scope, warn when that directory sits inside a larger git repo, and
   expand to the repo root only with `--workspace-scope git-root`.
+- 2026-06-15: Implemented the first worktree isolation slice from the promoted
+  backlog. `runhaven run AGENT --worktree` now creates a RunHaven-owned branch
+  and git worktree for clean source repositories, mounts that worktree for the
+  agent, and records exact recovery commands; `runs merge`, `runs keep`, and
+  `runs discard` remain backlog items.
 - 2026-06-15: Added a pre-release backlog item to consider a major large-file
   refactor and modularization pass, especially around the CLI and broad test
   modules, before release.

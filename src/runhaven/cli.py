@@ -50,6 +50,7 @@ from .images import build_image_plan
 from .plans import (
     AgentRunPlan,
     RunOptions,
+    WorktreeRun,
     build_run_plan,
 )
 from .profiles import PROFILES, get_profile
@@ -62,6 +63,7 @@ from .run_history import (
     write_run_record,
 )
 from .setup_guide import print_checks, print_setup_guide
+from .worktrees import create_worktree_for_run, preview_worktree
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -127,7 +129,27 @@ def plan_run(args: argparse.Namespace) -> int:
 
 
 def run_agent(args: argparse.Namespace) -> int:
+    if args.worktree and args.dry_run:
+        return print_worktree_dry_run(args)
+
     plan = make_run_plan(args)
+    if args.worktree:
+        provider_runtime.validate_runtime_auth_broker_environment(plan)
+        require_container_cli()
+        run_id = uuid.uuid4().hex
+        worktree = create_worktree_for_run(
+            args.workspace,
+            workspace_scope=args.workspace_scope,
+            allow_sensitive_workspace=args.allow_sensitive_workspace,
+            profile_name=args.agent,
+            run_id=run_id,
+        )
+        plan = make_run_plan(
+            args,
+            workspace_override=worktree.mounted_workspace,
+            worktree=worktree,
+            run_id=run_id,
+        )
     if args.dry_run:
         print_run_plan(plan)
         return 0
@@ -139,7 +161,7 @@ def run_agent(args: argparse.Namespace) -> int:
             return run_provider_agent(plan)
         for command in plan.preflight:
             run_preflight(command)
-        run_id = uuid.uuid4().hex
+        run_id = plan.run_id or uuid.uuid4().hex
         git_before = capture_git_snapshot(plan.workspace)
         started_at = utc_timestamp()
         print(f"Run id: {run_id}", file=sys.stderr)
@@ -276,7 +298,29 @@ def why_command(args: argparse.Namespace) -> int:
     raise ValueError(f"unknown why command: {args.why_command}")
 
 
-def make_run_plan(args: argparse.Namespace) -> AgentRunPlan:
+def print_worktree_dry_run(args: argparse.Namespace) -> int:
+    make_run_plan(args)
+    source_workspace, repo_root, base_head = preview_worktree(
+        args.workspace,
+        workspace_scope=args.workspace_scope,
+        allow_sensitive_workspace=args.allow_sensitive_workspace,
+    )
+    print("Worktree: enabled")
+    print(f"Source workspace: {source_workspace}")
+    print(f"Source repo root: {repo_root}")
+    print(f"Base HEAD: {base_head}")
+    print("RunHaven will create a branch named runhaven/<agent>/<run-id>.")
+    print("RunHaven will keep the worktree after the run and record recovery commands.")
+    return 0
+
+
+def make_run_plan(
+    args: argparse.Namespace,
+    *,
+    workspace_override: Path | None = None,
+    worktree: WorktreeRun | None = None,
+    run_id: str | None = None,
+) -> AgentRunPlan:
     profile = get_profile(args.agent)
     tty = args.tty == "always" or (
         args.tty == "auto" and sys.stdin.isatty() and sys.stdout.isatty()
@@ -284,7 +328,7 @@ def make_run_plan(args: argparse.Namespace) -> AgentRunPlan:
     return build_run_plan(
         RunOptions(
             profile=profile,
-            workspace=args.workspace,
+            workspace=workspace_override or args.workspace,
             agent_args=tuple(args.agent_args),
             image=args.image,
             cpus=args.cpus,
@@ -301,6 +345,8 @@ def make_run_plan(args: argparse.Namespace) -> AgentRunPlan:
             allow_root_user=args.allow_root_user,
             provider_hosts=tuple(args.provider_host),
             codex_api_key_broker_env=args.codex_api_key_broker_env,
+            worktree=worktree,
+            run_id=run_id,
         )
     )
 
@@ -310,6 +356,9 @@ def print_run_plan(plan: AgentRunPlan) -> None:
     print(f"Workspace scope: {plan.workspace_scope}")
     if plan.workspace_scope_note:
         print(f"Workspace note: {plan.workspace_scope_note}")
+    if plan.worktree is not None:
+        print(f"Worktree: {plan.worktree.worktree_root}")
+        print(f"Worktree branch: {plan.worktree.branch}")
     print(f"State volume: {plan.state_volume}")
     print(f"Network: {plan.network_name or 'default internet network'}")
     print(f"Egress: {plan.egress_summary}")

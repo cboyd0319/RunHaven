@@ -62,6 +62,7 @@ Use this for compact current evidence. Keep raw logs out of this file.
 | 2026-06-15 | CLI parser extraction | structural review, focused CLI parser checks, compileall, ruff, mypy, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `src/runhaven/cli_parser.py` for argparse construction; `src/runhaven/cli.py` is now 472 lines. |
 | 2026-06-15 | Active-repair test cleanup | structural review, focused active-repair tests, compileall, ruff, full unit suite, pin check, docs checks, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Reused `write_active_marker` in `tests/test_cli_active_repair.py`; file is now 401 lines and remains cohesive. |
 | 2026-06-15 | Workspace scope selection | focused planner, CLI, and standard-run tests, compileall, ruff, mypy, full unit suite, pin check, docs checks, manual plan smoke, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `--workspace-scope` with `current` and `git-root`; default current scope does not silently broaden git subdirectory mounts, and git-root expansion is explicit. |
+| 2026-06-15 | Worktree run isolation | focused standard-run tests, compileall, ruff, mypy, full unit suite, pin check, docs checks, manual worktree dry-run smoke, and `PYTHON=<temporary-venv-python> ./init.sh` | passed | Added `run --worktree` with clean-source enforcement, RunHaven-owned git branch/worktree creation, isolated mount, and run-record recovery commands. |
 
 Rules:
 

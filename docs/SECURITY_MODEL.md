@@ -129,6 +129,11 @@ root, before and after `HEAD`, dirty state, changed file count, and a capped
 list of relative paths scoped to the selected workspace. Run records also store
 the workspace scope choice, so later review can distinguish the default
 current-directory mount from an explicit `--workspace-scope git-root` run.
+For `--worktree` runs, RunHaven creates a RunHaven-owned branch and git
+worktree from a clean source repository, mounts the worktree instead of the
+source checkout, and records the source repo, worktree path, branch, base
+commit, and recovery commands. RunHaven does not automatically merge or delete
+that worktree after the run.
 The run ledger and active-run markers do not record diffs, file contents,
 prompts, command lines, agent arguments, attach commands, environment variable
 names, environment values, request bodies, or token values. Live container logs

@@ -60,8 +60,7 @@
 
 ## Phase 5: Isolation And Recovery
 
-- optional git worktree isolation for agent runs
-- merge, keep, discard, and conflict-recovery flows
+- worktree merge, keep, discard, and conflict-recovery flows
 - run records with `runs list`, `runs show`, `runs log`, `runs diff`,
   `runs active`, `runs status`, `runs attach`, `runs logs-follow`,
   `runs stop`, `runs kill`, `runs repair`, `runs repair --all`, and git

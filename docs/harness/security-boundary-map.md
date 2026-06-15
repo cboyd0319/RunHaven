@@ -15,6 +15,7 @@ security wins and the tool must explain the safe next step.
 | --- | --- | --- |
 | Local repository files | Project maintainers | Agents must preserve user changes and avoid destructive git operations unless explicitly approved. |
 | Host filesystem | `runhaven` CLI and Apple `container` | Default runs mount only the selected workspace and a project-scoped agent home volume. Host home directories, raw SSH keys, browser profiles, and cloud credential folders stay unmounted. Do not replace this with `container machine` defaults that map the host user or home directory into the guest. |
+| Git worktrees | `runhaven` CLI | `run --worktree` requires a clean source git repository, creates a RunHaven-owned branch and worktree under the cache root, mounts that worktree for the agent, and keeps it for explicit user review. |
 | Agent state volume | `runhaven` CLI | Per-project/profile state is locked during a run so concurrent agents cannot attach the same named volume. |
 | Generated paths | Project maintainers | Generated paths must remain inside the repository after symlink resolution. Unsafe path inputs are rejected. |
 | Secrets and credentials | Project maintainers | Do not print, store, transform, or transmit secrets unless the task explicitly requires a reviewed secret-handling path. Prefer `--env NAME` over inline values. |

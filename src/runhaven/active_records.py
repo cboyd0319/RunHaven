@@ -8,6 +8,7 @@ from typing import Any
 from .cache_paths import active_run_path, active_runs_dir
 from .plans import AgentRunPlan
 from .validators import validate_run_id, validate_runhaven_container_name
+from .worktrees import worktree_record
 
 
 def write_active_run_record(plan: AgentRunPlan, *, run_id: str, started_at: str) -> None:
@@ -24,6 +25,8 @@ def write_active_run_record(plan: AgentRunPlan, *, run_id: str, started_at: str)
         "network_name": plan.network_name,
         "host_pid": os.getpid(),
     }
+    if plan.worktree is not None:
+        payload["worktree"] = worktree_record(plan.worktree)
     write_active_run_payload(run_id, payload)
 
 

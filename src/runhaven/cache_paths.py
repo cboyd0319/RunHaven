@@ -29,6 +29,10 @@ def active_runs_dir() -> Path:
     return runhaven_cache_root() / "active-runs"
 
 
+def worktrees_dir() -> Path:
+    return runhaven_cache_root() / "worktrees"
+
+
 def active_run_path(run_id: str) -> Path:
     validate_run_id(run_id)
     return active_runs_dir() / f"{run_id}.json"

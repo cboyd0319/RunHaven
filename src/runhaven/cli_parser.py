@@ -52,6 +52,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="print the plan instead of running",
     )
+    run_parser.add_argument(
+        "--worktree",
+        action="store_true",
+        help="create a RunHaven-owned git worktree for this run and mount it",
+    )
 
     image_parser = subcommands.add_parser("image", help="manage local agent images")
     image_subcommands = image_parser.add_subparsers(dest="image_command", required=True)

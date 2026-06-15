@@ -324,6 +324,8 @@ Implementation shape:
 3. Add workspace scope detection and explicit `--workspace-scope`.
    Implemented 2026-06-15.
 4. Add worktree isolation with merge, keep, discard, and recovery commands.
+   First `run --worktree` isolation slice implemented 2026-06-15; merge,
+   keep, and discard convenience commands remain.
 5. Add run records and `runs list/show/stop`.
 6. Add strict workflow files with container-only setup and teardown.
 7. Add context overlays with read-only defaults.

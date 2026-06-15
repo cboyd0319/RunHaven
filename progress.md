@@ -241,6 +241,10 @@ Start pre-release large-file modularization.
   selection with `--workspace-scope current|git-root`. Default current scope
   keeps selected git subdirectories mounted without silently broadening to the
   repo root; explicit git-root scope expands only inside a git worktree.
+- `runhaven run AGENT --worktree` now creates a RunHaven-owned git branch and
+  worktree for clean source repositories, mounts that worktree for the agent,
+  keeps it after the run, and records exact recovery commands in the run
+  record. Dirty source repositories fail before worktree creation.
 - `src/runhaven/auth_profiles.py` now records per-profile auth broker metadata,
   and `src/runhaven/auth_broker.py` implements the first Codex API-key broker
   prototype.
@@ -376,9 +380,9 @@ Start pre-release large-file modularization.
 
 ## Recommended Next Step
 
-Continue the product backlog with the first worktree-isolation slice, now that
-workspace scope selection is explicit. Run the optional Codex broker smoke with
-a disposable OpenAI API key when one is available.
+Continue the product backlog with `runs merge`, `runs keep`, and
+`runs discard` for worktree review flows. Run the optional Codex broker smoke
+with a disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
@@ -524,6 +528,22 @@ a disposable OpenAI API key when one is available.
   `runhaven plan` smokes for default current scope and explicit git-root scope,
   and `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 160 unit
   tests, pin check, ruff, mypy, and build.
+- 2026-06-15: Focused worktree run isolation checks passed:
+  `python3 -m compileall src/runhaven tests/test_cli_standard_run.py`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_standard_run.py'`
+  with 9 tests, `uvx --from ruff==0.15.17 ruff check` on touched Python
+  files, and `uvx --from mypy==2.1.0 mypy` on touched source files.
+- 2026-06-15: Full verification passed after worktree run isolation:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 163 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src` with 24 source files,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  local link check, platform wording scan, manual
+  `runhaven run shell --worktree --dry-run` smoke, and
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 163 unit tests,
+  pin check, ruff, mypy, and build.
 - 2026-06-15: Full verification passed after the active-repair extraction:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,

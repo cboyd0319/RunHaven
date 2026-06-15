@@ -192,8 +192,32 @@
                 "2026-06-15: Added empty-allowlist regression coverage for internet, internal, provider, and `EgressPolicy` paths; focused planner and egress tests passed.",
                 "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 84 unit tests, pin check, ruff, mypy, and build after empty-allowlist regression coverage."
             ],
-            "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider hosts now come from the reviewed provider endpoint matrix. Broad path-sensitive, telemetry, update, reporting, and weakly sourced hosts remain explicit `--provider-host` review items. Provider policy decisions are logged for review, and blocked provider targets are grouped after runs with run id, counts, reasons, matched rules, and suggested next actions."
-        },
+      "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider hosts now come from the reviewed provider endpoint matrix. Broad path-sensitive, telemetry, update, reporting, and weakly sourced hosts remain explicit `--provider-host` review items. Provider policy decisions are logged for review, and blocked provider targets are grouped after runs with run id, counts, reasons, matched rules, and suggested next actions."
+    },
+    {
+      "id": "worktree-run-isolation",
+      "priority": 5,
+      "area": "safety",
+      "title": "Git worktree run isolation",
+      "user_visible_behavior": "`runhaven run AGENT --worktree` creates a RunHaven-owned branch and git worktree for a clean source repository, mounts that worktree for the agent run, leaves the source checkout untouched, and records recovery commands.",
+      "status": "passing",
+      "dependencies": [
+        "workspace-scope-selection",
+        "run-observability"
+      ],
+      "verification": [
+        "`runhaven run AGENT --worktree --dry-run` previews source workspace, source repo, and base `HEAD` without creating a worktree",
+        "`runhaven run AGENT --worktree` refuses dirty source repositories before creating a worktree",
+        "Worktree runs mount the RunHaven-owned worktree instead of the source checkout",
+        "Run records include worktree source, branch, base `HEAD`, mounted workspace, and exact recovery commands",
+        "The source checkout remains unchanged by the container-mounted worktree"
+      ],
+      "evidence": [
+        "2026-06-15: Focused standard-run tests passed for worktree dry-run preview, isolated worktree mount and run-record recovery metadata, dirty-source refusal, and source checkout preservation.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 163 unit tests, pin check, ruff, mypy, and build after adding worktree run isolation. Manual `runhaven run shell --worktree --dry-run` smoke passed without creating a worktree."
+      ],
+      "notes": "`runs merge`, `runs keep`, and `runs discard` convenience commands are not implemented yet; the run record currently provides exact git commands for review, merge, worktree removal, and branch deletion."
+    },
     {
       "id": "auth-broker-boundary",
       "priority": 5,
