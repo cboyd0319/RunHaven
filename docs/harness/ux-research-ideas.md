@@ -344,16 +344,20 @@ but the current commands avoid deleting workspace files.
 
 ### Credential UX
 
+Current state: `runhaven auth status` and `runhaven auth explain AGENT`
+provide static, secret-free broker boundary diagnostics. They describe expected
+host-side key names, broker support, provider hosts, and known limitations
+without reading credential stores or environment values.
+
 Near-term:
 
 - prefer authenticating inside isolated agent home state
 - make `--env NAME` output clearer about what becomes visible inside the guest
-- add `runhaven auth status <profile>` that checks whether expected provider
-  auth files or variables exist without printing secrets
 
 Future:
 
-- host-side provider credential broker
+- broaden host-side provider credential brokers beyond the Codex prototype only
+  after provider-specific design and evidence
 - scoped provider tokens or placeholders inside the container
 - broker tied to provider endpoint matrix and proxy allowlist
 
@@ -372,13 +376,18 @@ Add these as README or usage recipes before adding a larger UI.
 
 ## Recommended UX Build Order
 
-1. `runhaven why` for workspace, network, provider host, and state decisions.
-2. Provider policy logs with JSON output and grouped blocked-host review.
+1. `runhaven why` for provider-host decisions is implemented; workspace,
+   network, and state explanations remain future work.
+2. Provider policy logs with JSON output and grouped blocked-host review are
+   implemented.
 3. Goal-based network copy in `plan`, `run --help`, README, and `docs/USAGE.md`.
 4. `runhaven setup` guided first run.
-5. `runhaven runs list/show/log` backed by durable run records.
-6. Worktree mode with diff, merge, keep, discard, and recovery commands.
-7. Image/state/network repair commands.
+5. `runhaven runs list/show/log` backed by durable run records is implemented.
+6. Worktree mode with diff, merge, keep, discard, and recovery commands is
+   implemented.
+7. Image/state/network repair commands are implemented; future work can make
+   state-volume review workspace-aware.
 8. Project recommendation/import from manifests and devcontainer metadata.
-9. Auth status and future provider credential broker.
+9. Auth status and Codex broker prototype are implemented; broader provider
+   brokers remain future work.
 10. Local-only browser UI after the CLI planner and run records stabilize.

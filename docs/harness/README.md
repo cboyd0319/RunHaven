@@ -27,7 +27,7 @@ one of these makes the harness incomplete.
 | Subsystem | This Harness Provides | Review Question |
 | --- | --- | --- |
 | Instructions | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` | Does the agent see purpose, stack, startup commands, hard constraints, and links to detail? |
-| Tools | `init.sh`, local shell commands, HarnessForge reports, CI | Can the agent do useful work with least privilege instead of blanket-disabled shell access or unrestricted access? |
+| Tools | `init.sh`, local shell commands, advisory HarnessForge reports, CI | Can the agent do useful work with least privilege instead of blanket-disabled shell access or unrestricted access? |
 | Environment | `pyproject.toml`, `.python-version`, `pins.toml`, image templates, component inventory | Are versions, dependencies, setup facts, and reproducible environment choices self-describing? |
 | State | `feature_list.json`, `progress.md`, `session-handoff.md`, `docs/ROADMAP.md`, `docs/harness/roadmap.md` | Can a new session see what is done, current, blocked, accepted, and next? |
 | Feedback | `verification-matrix.md`, `sensor-registry.md`, `evidence-log.md`, local checks | Are verification commands explicit, runnable, and prioritized before broader process? |
@@ -50,21 +50,21 @@ rollback.
 | Domain | Artifact | Purpose |
 | --- | --- | --- |
 | Instructions | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` | Startup path, invariants, definition of done, and platform routing |
-| Tools | `init.sh`, `scripts/check_pins.py`, smoke scripts, HarnessForge commands | Local macOS verification and review entrypoints |
+| Tools | `init.sh`, `scripts/check_pins.py`, smoke scripts, advisory HarnessForge commands | Local macOS verification and review entrypoints |
 | Environment | `pyproject.toml`, `.python-version`, `pins.toml`, image package locks, `component-inventory.md`, `dependency-change-policy.md` | Versions, package managers, setup facts, image boundaries, and pin policy |
-| State | `feature_list.json`, `progress.md`, `session-handoff.md`, `docs/ROADMAP.md`, `roadmap.md` | Current objective, accepted roadmap, feature status, and evidence |
+| State | `feature_list.json`, `progress.md`, `session-handoff.md`, `docs/ROADMAP.md`, `docs/harness/roadmap.md` | Current objective, accepted roadmap, feature status, and evidence |
 | Feedback | `verification-matrix.md`, `sensor-registry.md`, `evaluator-rubric.md`, `evidence-log.md` | Deterministic signals, ownership, and lifecycle before claiming completion |
 | Research | `docs/RESEARCH.md`, `sources.md`, `research-sources.json`, `source-record.schema.json`, `source-record-example.json` | Reviewed provenance, public source ledger, and project-owned source records |
 | Scope | `change-contract.md`, `security-boundary-map.md`, `feature-privacy-labels.json` | Problem, non-goals, acceptance, rollback, data, security, permission, and cost boundaries |
-| Lifecycle | `first-agent-task.md`, `clean-state-checklist.md`, `quality-document.md`, `release-controls.md`, `entropy-control.md`, `modularization-plan.md` | First-session harness improvement, restart, release readiness, code-health sequencing, and recurring upkeep |
+| Lifecycle | `first-agent-task.md`, `clean-state-checklist.md`, `quality-document.md`, `release-controls.md`, `entropy-control.md`, `modularization-plan.md` | Retired first-session harness review record, restart, release readiness, code-health sequencing, and recurring upkeep |
 
 ## Operating Loop
 
 1. Start from `AGENTS.md`.
 2. Read `feature_list.json`, `progress.md`, `session-handoff.md`, and relevant
    project docs.
-3. If `first-agent-task.md` still exists, complete or retire it before
-   unrelated feature work.
+3. If `first-agent-task.md` still exists and is not marked retired, complete
+   or retire it before unrelated feature work.
 4. Check `docs/ROADMAP.md` for product direction and
    `docs/harness/roadmap.md` for harness/backlog operating boundaries.
 5. Use `change-contract.md` for non-trivial work.
@@ -81,8 +81,10 @@ loop.
 
 ## Assessment And Updates
 
-Use HarnessForge for regular structural checks after installing it in the
-current development environment:
+Use HarnessForge for advisory structural checks after installing it in the
+current development environment. While HarnessForge is under active
+development, do not promote new report suggestions into RunHaven requirements
+until they match repo-owned docs, tests, policy, or maintainer decisions:
 
 ```bash
 harnessforge index --target . --json
@@ -93,11 +95,13 @@ harnessforge audit --target . --min-score 85
 harnessforge update --target .
 ```
 
-`harnessforge report --target .` is the preferred periodic harness status
-artifact. It composes readiness, audit, generated drift, structural index,
-verify evidence, effectiveness evidence, first-agent task status, and platform
-contract without running target commands. Use target-relative `--json-report`
-or `--markdown-report` paths only when intentionally recording evidence.
+`harnessforge report --target .` is a useful periodic structural signal. It
+composes readiness, audit, generated drift, structural index, verify evidence,
+effectiveness evidence, first-agent task status, and platform contract without
+running target commands. It is not the source of truth for RunHaven behavior;
+use repo-owned files and focused checks to decide whether a recommendation
+should become accepted work. Use target-relative `--json-report` or
+`--markdown-report` paths only when intentionally recording evidence.
 
 Before enhancing project-owned instruction files, run:
 

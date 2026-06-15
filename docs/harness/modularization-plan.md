@@ -1,9 +1,11 @@
 # Modularization Plan
 
-Status: active
+Status: paused
 
 This plan tracks the pre-release large-file refactor. Keep each slice
 behavior-preserving unless a separate feature change is explicitly selected.
+The current cleanup can stay paused after the completed extractions below
+unless a concrete readability, ownership, or test-maintenance issue reappears.
 
 ## Current Size Snapshot
 

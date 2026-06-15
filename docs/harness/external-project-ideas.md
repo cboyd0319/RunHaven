@@ -362,15 +362,20 @@ RunHaven direction:
 
 ## Recommended Additions To RunHaven Backlog
 
-1. `runhaven why`: explain blocked hosts, denied mounts, rejected workspace
-   paths, provider-host validation failures, and sensitive defaults.
+1. `runhaven why`: provider-host explanation and validation guidance are
+   implemented. Denied mounts, rejected workspace paths, and broader sensitive
+   default explanations remain future work.
 2. Provider proxy policy log: JSONL records for allowed and denied CONNECT
-   decisions, with capped display in normal CLI output.
-3. Empty-allowlist regression tests for every network policy mode.
+   decisions, with capped display in normal CLI output. Implemented
+   2026-06-15.
+3. Empty-allowlist regression tests for every network policy mode. Implemented
+   2026-06-15.
 4. Host-side provider credential broker design, tied to provider endpoint
-   matrix entries.
+   matrix entries. The Codex API-key broker prototype and secret-free broker
+   diagnostics are implemented; broader provider brokers remain future work.
 5. Worktree plus run-record feature set: create, list, log, diff, attach, stop,
-   merge, keep, discard, recover.
+   merge, keep, discard, recover. Implemented for current run-record,
+   active-run, and worktree review flows on 2026-06-15.
 6. Agent profile investigation docs and live macOS smoke tests per supported
    agent.
 7. Devcontainer metadata import for image planning, with host lifecycle hooks

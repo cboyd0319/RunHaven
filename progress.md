@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Refresh repository documentation accuracy and handoff state.
+Manually refresh all harness documentation and keep the repo harness accurate.
 
 ## Current State
 
@@ -21,6 +21,14 @@ Refresh repository documentation accuracy and handoff state.
   `session-handoff.md`.
 - Verification entrypoint now exists: `init.sh`.
 - Harness docs now exist under `docs/harness/`.
+- The first-agent harness improvement task is retired after repo-specific
+  review. Its accepted guidance is now captured in the harness roadmap,
+  component inventory, verification matrix, sensor registry, evidence log,
+  progress, and session handoff.
+- All 29 files under `docs/harness/` were manually inspected during the
+  2026-06-15 harness refresh. Stale lifecycle, advisory-tooling, privacy-label,
+  source-record, modularization, and backlog-status wording was updated where
+  live repo evidence supported it.
 - `AGENTS.md` now includes Startup, Verification, Definition Of Done, state
   file routing, and End of Session instructions.
 - `docs/HARNESS_EVALUATION.md` records the before and after audit result.
@@ -59,6 +67,10 @@ Refresh repository documentation accuracy and handoff state.
   lifecycle commands, sessions, image doctor, managed-network cleanup, and
   secret-free observability. Harness state docs were refreshed for the current
   objective, component inventory, roadmap status, and modularization snapshot.
+- HarnessForge report now shows the first-agent task as reviewed or retired,
+  generated drift has no actionable items, and structural audit remains at
+  `100/100`. Report warnings remain advisory while HarnessForge is under active
+  development and do not automatically become RunHaven harness requirements.
 - `runhaven network list` now lists only RunHaven-managed Apple `container`
   network names. `runhaven network prune` previews those networks and
   `runhaven network prune --yes` deletes only RunHaven-managed
@@ -1427,3 +1439,18 @@ workspace, or continue with the next mined UX improvement from
   Verification passed with `python3 -m json.tool docs/harness/manifest.json`, a
   clean local HarnessForge leakage scan, and HarnessForge audit `100/100` using
   the corrected local HarnessForge checkout.
+- 2026-06-15: First-agent harness task retirement synchronized the retired task
+  marker, startup routing, harness operating loop, harness roadmap status, and
+  manifest metadata. Verification passed with JSON validation, pin check,
+  Markdown link check, platform wording scan, HarnessForge drift report,
+  HarnessForge report, HarnessForge audit, and `git diff --check`. New
+  HarnessForge report suggestions were treated as advisory unless already
+  backed by repo-owned RunHaven contracts.
+- 2026-06-15: Manual harness documentation refresh inspected all 29 files under
+  `docs/harness/` and corrected stale lifecycle, advisory-tooling,
+  privacy-label, source-record, modularization, and backlog-status wording.
+  Verification passed with JSON validation for `feature_list.json` and all
+  harness JSON files, local Markdown link check, platform wording scan,
+  `python3 scripts/check_pins.py`, `git diff --check`, HarnessForge dry-run
+  drift report with no actionable items, HarnessForge report, and HarnessForge
+  audit `100/100`. Full `./init.sh` was not run because no runtime code changed.

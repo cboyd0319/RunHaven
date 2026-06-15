@@ -320,7 +320,9 @@ Implementation shape:
 ## Recommended Build Order
 
 1. Harden provider proxy DNS resolution and unsafe-address rejection.
-2. Add the provider endpoint matrix and a docs drift check.
+   Implemented 2026-06-15.
+2. Add the provider endpoint matrix.
+   Implemented 2026-06-15. Source-backed docs drift checks remain future work.
 3. Add workspace scope detection and explicit `--workspace-scope`.
    Implemented 2026-06-15.
 4. Add worktree isolation with merge, keep, discard, and recovery commands.
@@ -328,6 +330,7 @@ Implementation shape:
    `runs recover --json`, project check suggestions, and `runs discard`
    lifecycle commands implemented 2026-06-15.
 5. Add run records and `runs list/show/stop`.
+   Implemented 2026-06-15.
 6. Add strict workflow files with container-only setup and teardown.
 7. Add context overlays with read-only defaults.
 8. Add MCP and extension support only after the boundary model is explicit.

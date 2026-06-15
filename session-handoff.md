@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Refresh repository documentation accuracy and handoff state.
+Manually refresh all harness documentation and keep the repo harness accurate.
 
 ## Files
 
@@ -80,6 +80,8 @@ Refresh repository documentation accuracy and handoff state.
 - `docs/harness/`
 - `docs/harness/component-inventory.md`
 - `docs/harness/evidence-log.md`
+- `docs/harness/first-agent-task.md`
+- `docs/harness/manifest.json`
 - `docs/harness/modularization-plan.md`
 - `docs/harness/security-boundary-map.md`
 - `docs/harness/source-mined-ideas.md`
@@ -92,6 +94,15 @@ Refresh repository documentation accuracy and handoff state.
 
 ## Verification Evidence
 
+- 2026-06-15 manual harness documentation refresh verification passed:
+  JSON validation for `feature_list.json` and all `docs/harness/*.json`,
+  local Markdown link check, platform wording scan,
+  `python3 scripts/check_pins.py`, `git diff --check`, and advisory
+  HarnessForge drift/report/audit commands from an installed or local
+  development environment.
+  HarnessForge reported no actionable generated drift and audit `100/100`;
+  its new report suggestions remain advisory. Full `./init.sh` was skipped
+  because this was a docs/metadata-only harness refresh.
 - `container --help`, `container exec --help`, and `container attach --help`
   were checked. The pinned local Apple `container` CLI exposes `exec`; `attach`
   reports plugin `container-attach` is not installed.
@@ -1340,7 +1351,21 @@ Refresh repository documentation accuracy and handoff state.
   repo-local only, not a RunHaven generated-harness contract. Recurring upkeep
   should be described as reviewed maintenance or explicit opt-in automation.
   The corrected HarnessForge audit now returns `100/100`; `harnessforge report`
-  is warning-only for expected workflow and governance review surfaces.
+  is advisory while HarnessForge is under active development.
+- First-agent harness task retirement marks the repo-specific review complete
+  without deleting the lifecycle artifact that current HarnessForge audit
+  expects. Startup routing and the harness operating loop now only require
+  action when that task is not marked retired. The harness roadmap marks the
+  repo harness overhaul validated, while release evidence automation,
+  extension/MCP boundary policy, and image/state/network repair polish remain
+  accepted follow-up work. New HarnessForge report suggestions should be
+  adopted only after they match repo-owned RunHaven contracts, not just because
+  the local HarnessForge checkout reports them.
+- The 2026-06-15 harness refresh manually inspected every file under
+  `docs/harness/`. It updated stale current/future status in mined backlog docs,
+  paused the modularization plan after completed extraction work, refreshed
+  privacy labels for provider egress, Codex broker, and run metadata, and kept
+  HarnessForge output advisory rather than authoritative.
 
 ## Next Session
 
@@ -1348,17 +1373,21 @@ Refresh repository documentation accuracy and handoff state.
 2. Check `git status --short --branch`.
 3. Use `docs/harness/verification-matrix.md` to choose checks for the requested
    change.
-4. Read `docs/harness/source-mined-ideas.md` and
+4. Treat `docs/harness/first-agent-task.md` as retired unless a maintainer
+   resets its status.
+5. Read `docs/harness/source-mined-ideas.md` and
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Run the Codex broker smoke with a disposable OpenAI API key when available.
-6. Make `image doctor` state-volume review workspace-aware enough to print
+6. Consider release evidence automation or the remaining docs drift checks
+   before adding new harness process.
+7. Run the Codex broker smoke with a disposable OpenAI API key when available.
+8. Make `image doctor` state-volume review workspace-aware enough to print
    exact reset commands when the user supplies a workspace, or continue with
    the next mined UX improvement from `docs/harness/ux-research-ideas.md`.
-7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
+9. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.
-8. Ask for explicit approval before renaming the hosted GitHub repository or
+10. Ask for explicit approval before renaming the hosted GitHub repository or
    changing other credentialed vendor state.
-9. Preserve the macOS 26+ only runtime and contributor-verification contract.
+11. Preserve the macOS 26+ only runtime and contributor-verification contract.

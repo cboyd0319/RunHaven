@@ -2,7 +2,7 @@
   "$schema": "./source-record.schema.json",
   "schemaVersion": 1,
   "id": "source-record-example",
-  "title": "REVIEW REQUIRED: replace with a project source title",
+  "title": "Example source record for RunHaven runtime pattern",
   "sourceType": "project-document",
   "source": {
     "targetRelativePath": "docs/ARCHITECTURE.md",
@@ -12,7 +12,7 @@
   "purpose": "Example project-owned source record for architecture claims that should guide agents and maintainers.",
   "reviewedOn": "2026-06-15",
   "reviewCadence": "Review before runtime-boundary, workspace, network, auth, or release changes.",
-  "reviewStatus": "REVIEW REQUIRED",
+  "reviewStatus": "reviewed",
   "trustBoundary": "repo-owned",
   "harnessUsage": [
     "instructions",

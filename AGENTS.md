@@ -22,8 +22,8 @@ Startup path:
    backlog, release-prep, or product-scope work.
 5. Check `docs/harness/component-inventory.md` before changing CLI modules,
    image templates, verification routing, or harness files.
-6. If `docs/harness/first-agent-task.md` still exists, complete or retire it
-   before unrelated feature work.
+6. If `docs/harness/first-agent-task.md` still exists and is not marked
+   retired, complete or retire it before unrelated feature work.
 7. Pick one current objective before editing.
 
 This repo is harnessed. Keep root instructions short and place durable detail
@@ -61,7 +61,9 @@ flow.
 
 Before running `harnessforge` commands, install HarnessForge in the current
 development environment or run from an environment where the package is already
-available. Do not commit machine-specific checkout paths for local tooling.
+available. Treat HarnessForge as advisory while it is under active development:
+repo-owned files, tests, policy docs, and manual review are authoritative. Do
+not commit machine-specific checkout paths for local tooling.
 
 ## Code style guidelines
 
@@ -90,9 +92,9 @@ available. Do not commit machine-specific checkout paths for local tooling.
 - Record skipped checks with reason and risk in `progress.md` or
   `session-handoff.md`.
 - Definition Of Done: target behavior or documentation change is complete,
-  acceptance criteria are satisfied, relevant checks ran, local Markdown links
-  resolve, harness report/audit are current when the harness changed, and the
-  next session can restart from the harness files.
+  acceptance criteria are satisfied, relevant repo-owned checks ran, local
+  Markdown links resolve, harness report/audit were considered when available
+  for harness changes, and the next session can restart from the harness files.
 - End of Session: update `progress.md` and `session-handoff.md` with current
   state, verification evidence, blockers, touched files, and the recommended
   next step. Use `docs/harness/clean-state-checklist.md` before claiming the

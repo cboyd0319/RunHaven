@@ -106,7 +106,7 @@
         ],
         "docs/harness/first-agent-task.md": [
             "First-Agent Harness Improvement Task",
-            "REVIEW REQUIRED",
+            "Review required",
             "fresh-session test",
             "sensor registry",
             "security boundary",
@@ -237,10 +237,8 @@
         ]
     },
     "reviewRequired": [
-        "docs/harness/first-agent-task.md",
         "docs/harness/roadmap.md",
         "docs/harness/sensor-registry.md",
-        "docs/harness/source-record-example.json",
         "docs/harness/quality-document.md",
         "docs/harness/release-controls.md"
     ],
@@ -268,15 +266,15 @@
             "ownership": "project",
             "template": "agents.md.tmpl",
             "templateSha256": "8821bf9878ca2af423dbdbb4dd08b63764698f8d92df056e3944a34d4c6fe56d",
-            "contentSha256": "fe0d9797a4922267f4b75727e21d5e0d2ee464258cf441a5a5b7f1a786c4ad3c",
+            "contentSha256": "67dffbca99662041a3fe727ab3167f9ac4db8871de1450dbb92f64b5e3389e86",
             "reviewRequired": false,
             "writeStatus": "project-owned-preserved"
         },
         "docs/harness/README.md": {
             "ownership": "project",
             "template": "harness-readme.md.tmpl",
-            "templateSha256": "d5be447bca56ce8346907d49dba400982f1c1dfe1e9246956c45b11c5bdafd86",
-            "contentSha256": "5f2d31b9021b74bce59b2d5cec799509d8184a287ab0bafdc272010eff3c6e86",
+            "templateSha256": "82935dcfff28780a0dd8b9f58c85576689b21a08b6d96162c011643d42214d06",
+            "contentSha256": "098b7e029e6471c425e8c5cccbd4800c2448e304bce0a9f0191f2ca06a370522",
             "reviewRequired": false,
             "writeStatus": "project-owned-reviewed"
         },
@@ -284,15 +282,15 @@
             "ownership": "project",
             "template": "first-agent-task.md.tmpl",
             "templateSha256": "e4f18dfa04545ca079be88f2374a5100e114b31fe44e9d006a0d531a4ac2520a",
-            "contentSha256": "104d4b739f339b5ce4504475119d1ad78813d581a0891fb4990f5c7039fe028f",
-            "reviewRequired": true,
+            "contentSha256": "545e3607e6a159622deb1366f967efb1ffe1d7bbf2f859609b23dbac1358fa67",
+            "reviewRequired": false,
             "writeStatus": "generated-then-reviewed"
         },
         "docs/harness/roadmap.md": {
             "ownership": "project",
             "template": "roadmap.md.tmpl",
             "templateSha256": "2e463f81bb9d155c78dd80ee04ed1c472764a4e833241e3d72e56511469fa2de",
-            "contentSha256": "c88ff9eac8d7597c6f4f1eabbca4f44e18527233b29e46bb5cee877f459bf984",
+            "contentSha256": "9b8d3287608f7a364e64bad0eb9ca1a60f117ef94e4417dbf02fe056ec8bf9bd",
             "reviewRequired": true,
             "writeStatus": "generated-then-reviewed"
         },
@@ -300,7 +298,7 @@
             "ownership": "project",
             "template": "sensor-registry.md.tmpl",
             "templateSha256": "71ba78ab59640079f17a643ff6916ff041be13f2fffebd3473bc16b19a03e638",
-            "contentSha256": "7d8e0ca44ca4dfd74406a1e321fc66ee48c390dc78208c04a7792457c997b0bc",
+            "contentSha256": "aafe9c7d12f0f0b36237df4f3839024b0772f7cab1f72e2b4f6e34093e1ca2fe",
             "reviewRequired": true,
             "writeStatus": "generated-then-reviewed"
         },
@@ -316,8 +314,8 @@
             "ownership": "project",
             "template": "source-record-example.json.tmpl",
             "templateSha256": "2558ba481e1804544f83d46b3a2dcbdcf625e88f6fa2cdb3c89147d6eee32ee4",
-            "contentSha256": "9a77ab87a6c02ca05b071c24259a63f1305de21ceb53047b5dc58b2e98e3c338",
-            "reviewRequired": true,
+            "contentSha256": "d35f732b3efab855a7228de40ff2fd95b36a247cac058e014eaeed3485cb0f41",
+            "reviewRequired": false,
             "writeStatus": "generated-then-reviewed"
         },
         "docs/harness/manifest.json": {

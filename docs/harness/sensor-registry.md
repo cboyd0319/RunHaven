@@ -17,8 +17,8 @@ real-agent effectiveness.
 | `python3 -m mypy src` | `pyproject.toml` strict mypy config | Catch type regressions in runtime package code | Maintainers | Replace if type-checking policy changes by accepted project decision | Runtime Python source changes |
 | `python3 -m build` | Python packaging build backend | Verify package metadata and build artifacts can be produced | Maintainers | Replace when release packaging flow changes | Packaging, manifest, dependency, or release changes |
 | `./init.sh` | macOS local verification entrypoint | Run the full macOS harness verification set in one command | Maintainers | Replace if the repo adopts a different full local verification entrypoint | Release prep, broad changes, or shared behavior changes |
-| `python3 -m harnessforge report --target .` | HarnessForge unified report | Compose readiness, audit, drift, index, evidence, first-agent task, and platform contract without running target commands | Maintainers | Replace if report evidence moves into a project-owned release command | Harness, release-prep, state, or docs changes |
-| `python3 -m harnessforge audit --target . --min-score 85` | HarnessForge structural audit | Confirm the structural repo harness stays above the accepted floor | Maintainers | Replace if a project-owned harness audit supersedes it | Harness changes and release prep |
+| `python3 -m harnessforge report --target .` | HarnessForge unified report | Advisory structural signal for readiness, audit, drift, index, evidence, first-agent task, and platform contract without running target commands | Maintainers | Replace if report evidence moves into a project-owned release command | Harness, release-prep, state, or docs changes when HarnessForge is available |
+| `python3 -m harnessforge audit --target . --min-score 85` | HarnessForge structural audit | Advisory structural check for the repo harness floor; repo-owned docs, tests, and maintainer decisions remain authoritative | Maintainers | Replace if a project-owned harness audit supersedes it | Harness changes and release prep when HarnessForge is available |
 | Local Markdown link check | One-off local script or reviewer command over tracked Markdown files | Confirm target-relative doc links resolve after docs changes | Maintainers | Replace if a packaged docs checker is added | Docs, README, harness docs, and roadmap changes |
 | Platform wording scan | `rg` over docs/state for unsupported platform claims | Preserve macOS 26+ only runtime and contributor verification | Maintainers | Replace if platform contract expands by accepted source-backed decision | Docs, CI, install, runtime, or manifest changes |
 | Provider egress smoke | `scripts/provider_egress_smoke.py` | Prove provider proxy allow/deny behavior on Apple `container` internal network | Maintainers | Replace if provider network architecture changes | Provider proxy, endpoint, DNS, or network runtime changes |
@@ -38,10 +38,9 @@ For custom checks, prefer failure messages with:
 
 ## Promotion Rules
 
-- Do not run commands only because they appear here. Use
-  `harnessforge plan --target . --since HEAD` to choose relevant checks and
-  `harnessforge verify --target . --run` only when command execution is
-  intended.
+- Do not run commands only because they appear here. Use repo-owned change
+  type guidance first. HarnessForge planning or verification output is
+  advisory while the tool is under active development.
 - Keep owner, source, purpose, and retire conditions current before promoting
   a check into release or automation gates.
 - Remove or replace sensors that no longer catch meaningful regressions.

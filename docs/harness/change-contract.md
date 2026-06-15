@@ -63,7 +63,7 @@ Detected baseline commands:
 - `python3 -m mypy src`
 - `python3 -m build`
 
-Harness review commands:
+Advisory HarnessForge review commands, when the package is available:
 
 - `python3 -m harnessforge report --target .`
 - `python3 -m harnessforge audit --target . --min-score 85`
@@ -73,6 +73,8 @@ Required evidence:
 - Command names.
 - Pass or fail result.
 - Any skipped checks, reason, risk, and next best check.
+- Any HarnessForge recommendation adopted into RunHaven must be backed by
+  repo-owned docs, tests, policy, or maintainer decision.
 - Runtime smoke evidence for Apple `container`, provider, image, auth, or
   worktree boundary changes.
 

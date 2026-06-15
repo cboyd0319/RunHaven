@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-06-14",
+  "lastUpdated": "2026-06-15",
   "labels": [
     "Local only",
     "External AI optional",
@@ -14,7 +14,12 @@
     "environment variable names",
     "SSH agent socket",
     "package metadata",
-    "runtime source records"
+    "runtime source records",
+    "provider hostnames",
+    "provider proxy policy decisions",
+    "auth broker decision metadata",
+    "run metadata",
+    "git metadata"
   ],
   "features": [
     {
@@ -90,6 +95,65 @@
         "fallback": "Use registry APIs, lockfiles, checksums, and local build logs."
       },
       "sensitivityNote": "Image builds are supply-chain sensitive and require pin-policy verification."
+    },
+    {
+      "id": "provider-egress-policy",
+      "name": "Provider egress allowlisting and policy logs",
+      "labels": [
+        "External AI optional",
+        "Sensitive"
+      ],
+      "dataCategories": [
+        "provider hostnames",
+        "provider proxy policy decisions"
+      ],
+      "defaultDataFlow": "Provider mode routes allowed CONNECT requests through a host-side proxy on a managed internal network. Policy logs record sanitized host, port, decision, reason, profile, workspace, and run id metadata without request bodies or token values.",
+      "externalAi": {
+        "allowed": true,
+        "required": false,
+        "fallback": "Use `--network internal` for local-only commands or inspect decisions with `runhaven why host` and `runhaven egress log`."
+      },
+      "sensitivityNote": "Provider host choices can expose intended services and can widen egress if reviewed too broadly."
+    },
+    {
+      "id": "codex-auth-broker",
+      "name": "Codex API-key broker prototype",
+      "labels": [
+        "External AI optional",
+        "Sensitive"
+      ],
+      "dataCategories": [
+        "auth broker decision metadata",
+        "provider hostnames"
+      ],
+      "defaultDataFlow": "The opt-in Codex broker reads the named host API-key environment variable, forwards allowed Responses API create requests, and logs sanitized method, path, allow/deny reason, upstream status, workspace, profile, and run id metadata. It does not log raw key values or request bodies.",
+      "externalAi": {
+        "allowed": true,
+        "required": false,
+        "fallback": "Skip broker smokes without a disposable key and use static `runhaven auth status` or `runhaven auth explain AGENT` diagnostics."
+      },
+      "sensitivityNote": "Broker expansion beyond Codex requires provider-specific design and evidence before credentials are handled."
+    },
+    {
+      "id": "run-observability",
+      "name": "Secret-free run, active-run, worktree, and git metadata",
+      "labels": [
+        "Local only",
+        "Sensitive"
+      ],
+      "dataCategories": [
+        "workspace files",
+        "run metadata",
+        "git metadata",
+        "agent home state"
+      ],
+      "defaultDataFlow": "Run records and active markers store run id, profile, workspace, network mode, state volume, status, cleanup summaries, and capped git metadata. They omit command lines, prompts, file contents, diffs, environment values, request bodies, and token values.",
+      "externalAi": {
+        "allowed": false,
+        "required": false,
+        "fallback": "Use local run-history, active-run, worktree, and state tests plus manual CLI smokes."
+      },
+      "sensitivityNote": "Workspace paths, changed-file names, and git state can reveal private project structure even when contents are omitted."
     }
   ]
 }

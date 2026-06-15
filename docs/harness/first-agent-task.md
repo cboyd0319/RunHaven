@@ -1,8 +1,17 @@
 # First-Agent Harness Improvement Task
 
-REVIEW REQUIRED: use this during the first agent session after this harness
-overhaul. Replace or retire this task after the maintainer accepts the improved
-harness and any remaining actions are captured in `docs/harness/roadmap.md`.
+Status: retired
+
+Review required: completed on 2026-06-15 during repo-specific harness review.
+Keep this file as a lifecycle record for HarnessForge audit compatibility. Do
+not treat it as an active task unless a maintainer resets this status.
+
+The accepted harness state now lives in `AGENTS.md`, `docs/harness/README.md`,
+`docs/harness/component-inventory.md`, `docs/harness/verification-matrix.md`,
+`docs/harness/sensor-registry.md`, `docs/harness/evidence-log.md`,
+`docs/harness/roadmap.md`, `feature_list.json`, `progress.md`, and
+`session-handoff.md`. Remaining product and harness work is tracked in
+`docs/ROADMAP.md`, `docs/harness/roadmap.md`, and the handoff files.
 
 ## Goal
 

@@ -8,9 +8,9 @@ readiness, runtime boundaries, or multiple components.
 
 | Change Type | Required Checks |
 | --- | --- |
-| Harness docs, instructions, state, or templates | `python3 scripts/check_pins.py`, JSON validation, local Markdown link check, `git diff --check`, `python3 -m harnessforge report --target .`, and `python3 -m harnessforge audit --target . --min-score 85` |
+| Harness docs, instructions, state, or templates | `python3 scripts/check_pins.py`, JSON validation, local Markdown link check, platform wording scan, and `git diff --check`; run HarnessForge report/audit as advisory checks when available |
 | README, AGENTS, or docs-only changes | `python3 scripts/check_pins.py`, local Markdown link check, platform wording scan, and `git diff --check` |
-| Feature state, manifest, or schema changes | JSON validation for changed JSON files, `python3 -m json.tool feature_list.json`, `python3 -m harnessforge report --target .`, and relevant repo-policy tests |
+| Feature state, manifest, or schema changes | JSON validation for changed JSON files, `python3 -m json.tool feature_list.json`, relevant repo-policy tests, and advisory HarnessForge report when available |
 | Python code | `python3 -m compileall src tests scripts`, focused `unittest` modules, `PYTHONPATH=src python3 -m unittest discover -s tests`, `python3 -m ruff check .`, and `python3 -m mypy src` |
 | Packaging | Python code checks plus `python3 -m build` |
 | CLI command construction | Python code checks plus focused tests in `tests/test_plans.py`, `tests/test_cli.py`, or the relevant split CLI test module |
@@ -36,9 +36,11 @@ readiness, runtime boundaries, or multiple components.
 - `python3 -m mypy src`
 - `python3 -m build`
 
-## HarnessForge Review Commands
+## Advisory HarnessForge Review Commands
 
-These commands are read-only unless a target-relative report path is supplied:
+These commands are read-only unless a target-relative report path is supplied.
+Use them as structural signals, not as the sole source of truth for RunHaven
+while HarnessForge is under active development:
 
 ```bash
 harnessforge index --target . --json

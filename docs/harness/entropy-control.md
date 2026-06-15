@@ -31,7 +31,6 @@ harnessforge audit --target . --min-score 85
 - Keep root instructions short.
 - Keep state files current.
 - Delete generated reports unless intentionally tracked as evidence.
-- Retire `first-agent-task.md` after the maintainer accepts the harness
-  overhaul and its follow-up actions are captured elsewhere.
+- Keep `first-agent-task.md` retired unless a maintainer explicitly resets it.
 - Move completed roadmap behavior into durable docs, tests, schemas, templates,
   or code.

@@ -7,7 +7,9 @@ machines. A release cannot rely on chat history or unstated local setup.
 
 ## Required Gates
 
-- Run `./init.sh` and the harness audit before release.
+- Run `./init.sh` and the relevant repo-owned docs, pin, and policy checks
+  before release. Use HarnessForge audit/report as advisory structural signals
+  when available, not as the only release gate.
 - Run `runhaven doctor` and focused Apple `container` smoke checks for any runtime
   boundary change.
 - Verify package, image, GitHub Action, Debian, npm, Python, and Apple

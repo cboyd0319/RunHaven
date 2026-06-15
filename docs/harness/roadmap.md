@@ -17,13 +17,14 @@ Use this order when roadmap evidence conflicts:
    decisions.
 2. Reviewed RunHaven product docs and harness docs.
 3. Canonical harness patterns from HarnessForge and approved harness-learning
-   resources.
+   resources, treated as advisory while HarnessForge is under active
+   development.
 4. Sibling-project examples, external ideas, generated reports, and research
    notes.
 
-Sibling-project examples and generated reports are useful evidence, but they
-are not contracts until a maintainer promotes the pattern into repo-owned docs,
-tests, schemas, templates, or code.
+Sibling-project examples, HarnessForge output, and generated reports are useful
+evidence, but they are not contracts until a maintainer promotes the pattern
+into repo-owned docs, tests, schemas, templates, or code.
 
 ## Smallest Correct Work Gate
 
@@ -94,7 +95,7 @@ other silently.
 
 | Item | Status | User Outcome | Surfaces In Scope | Execution Gate | Owner | Verification Evidence | Done Or Retire When |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Repo harness overhaul | in_progress | A new agent can understand RunHaven, improve the harness, choose checks, and preserve the macOS 26+ security boundary from repo files alone | Local repo harness, generated/owned harness files, docs, sensors, manifest, state | Documentation/configuration plus generated missing harness artifacts is sufficient | Maintainers | Pending final docs checks, report/audit, JSON validation, and diff hygiene | Move to validated after evidence is recorded in `progress.md`, `session-handoff.md`, and `evidence-log.md` |
+| Repo harness overhaul | validated | A new agent can understand RunHaven, improve the harness, choose checks, and preserve the macOS 26+ security boundary from repo files alone | Local repo harness, generated/owned harness files, docs, sensors, manifest, state | Documentation/configuration plus generated missing harness artifacts was sufficient | Maintainers | 2026-06-15: first-agent task retired, report/audit rerun, JSON validation, docs checks, and diff hygiene recorded in `progress.md`, `session-handoff.md`, and `evidence-log.md` | Reopen only if report/audit, fresh-session review, or maintainer feedback finds stale routing |
 | Release evidence automation | accepted | Release prep has repeatable SBOM, provenance, dirty-tree, pin, and smoke evidence | Release surface, sensors, docs, CLI/runtime if a command is added | Start with docs and scripts before adding CLI surface | Maintainers | Pending | Release checklist can produce evidence without chat history |
 | Effectiveness evidence for agent runs | candidate | Claims about agent quality are backed by representative tasks, not structural audit | Evaluation, docs, sensors, future reports | Design evidence contract before automating | Maintainers | Pending | Adopt or retire after representative task set is defined |
 | Path-aware provider host policy | candidate | Broad hosts such as `github.com` can be constrained by verified path or brokered credential flow | Provider runtime, security, docs, tests, smokes | Do not build until source-backed paths and enforcement mechanism are clear | Maintainers | Pending | Accepted only with proof it avoids credential leakage and broad egress |
@@ -142,7 +143,7 @@ risk, and next best evidence when a layer cannot run.
 | Item | Evidence | Risk | Next Step | Status |
 | --- | --- | --- | --- | --- |
 | Release evidence automation is still manual | Release controls are documented but not automated | Release prep could rely on chat history or ad hoc commands | Design script or command after harness overhaul | accepted |
-| Real-agent effectiveness evidence is absent | HarnessForge report blocks effectiveness claims without evidence reports | Structural score could be overclaimed | Define representative tasks before public claims | candidate |
+| Real-agent effectiveness evidence is absent | Repo docs intentionally block effectiveness claims without representative evidence | Structural score could be overclaimed | Define representative tasks before public claims | candidate |
 | Historical evidence includes old local HarnessForge invocation examples | Older evidence rows preserve exact commands | Active docs could copy stale sibling-checkout patterns | Keep active guidance self-contained; do not edit old evidence unless cleaning history is in scope | debt |
 
 ## Failure-Mode Map
