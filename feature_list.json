@@ -210,7 +210,7 @@
       "priority": 6,
       "area": "usability",
       "title": "Secret-free run observability",
-      "user_visible_behavior": "`runhaven runs list`, `runhaven runs show RUN_ID`, `runhaven runs log RUN_ID`, `runhaven runs diff RUN_ID`, `runhaven runs active`, `runhaven runs attach RUN_ID`, and `runhaven runs stop RUN_ID` show recent actual agent runs and control active runs without exposing commands or secrets.",
+      "user_visible_behavior": "`runhaven runs list`, `runhaven runs show RUN_ID`, `runhaven runs log RUN_ID`, `runhaven runs diff RUN_ID`, `runhaven runs active`, `runhaven runs attach RUN_ID`, `runhaven runs logs-follow RUN_ID`, and `runhaven runs stop RUN_ID` show recent actual agent runs and control active runs without exposing commands or secrets.",
       "status": "passing",
       "dependencies": [
         "provider-egress-allowlisting",
@@ -226,6 +226,7 @@
         "`runhaven runs diff RUN_ID` prints a live git diff only after recorded metadata still matches the live workspace",
         "`runhaven runs active` lists currently active RunHaven markers in text and JSON without requiring Apple `container` access",
         "`runhaven runs attach RUN_ID` opens a guarded Apple `container exec` shell or command only for an active RunHaven-owned named container",
+        "`runhaven runs logs-follow RUN_ID` follows recent and live Apple `container logs` output only for an active RunHaven-owned named container",
         "`runhaven runs stop RUN_ID` stops only an active RunHaven-owned named Apple container",
         "Run records and active-run markers omit diffs, file contents, prompts, command lines, agent arguments, environment variable names, environment values, request bodies, and token values"
       ],
@@ -249,9 +250,11 @@
         "2026-06-15: Focused `runs active` tests first failed because `active` was not a valid `runs` subcommand, then passed after adding active-marker text and JSON listing.",
         "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 123 unit tests, pin check, ruff, mypy, and build after adding `runs active`.",
         "2026-06-15: Focused `runs attach` tests first failed because `attach` was not a valid `runs` subcommand, then passed after adding guarded `container exec` attach.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 128 unit tests, pin check, ruff, mypy, and build after adding `runs attach`."
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 128 unit tests, pin check, ruff, mypy, and build after adding `runs attach`.",
+        "2026-06-15: Focused `runs logs-follow` tests first failed because `logs-follow` was not a valid `runs` subcommand, then passed after adding guarded Apple `container logs --follow` routing. Local `container logs --help` confirmed the supported command shape.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 132 unit tests, pin check, ruff, mypy, and build after adding `runs logs-follow`."
       ],
-      "notes": "`runs list/show/log/diff/active/attach/stop` are the first run dashboard and recovery slices. `runs diff` prints live git output on demand and does not store patches. `runs active` recovers current run ids from secret-free markers. `runs attach` uses Apple `container exec` because the pinned local CLI has no installed attach plugin. `runs stop` works only for active runs with a current active marker."
+      "notes": "`runs list/show/log/diff/active/attach/logs-follow/stop` are the first run dashboard and recovery slices. `runs diff` prints live git output on demand and does not store patches. `runs active` recovers current run ids from secret-free markers. `runs attach` uses Apple `container exec` because the pinned local CLI has no installed attach plugin. `runs logs-follow` uses Apple `container logs --follow`. `runs stop` works only for active runs with a current active marker."
     },
     {
       "id": "repo-logo",

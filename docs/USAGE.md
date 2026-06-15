@@ -77,6 +77,7 @@ another terminal:
 ```bash
 runhaven runs active
 runhaven runs attach <run-id>
+runhaven runs logs-follow <run-id>
 runhaven runs stop <run-id>
 ```
 
@@ -87,6 +88,13 @@ Pass a custom command after `--` when needed:
 
 ```bash
 runhaven runs attach <run-id> -- pwd
+```
+
+Follow recent active-run output without opening a shell:
+
+```bash
+runhaven runs logs-follow <run-id>
+runhaven runs logs-follow <run-id> --lines 50
 ```
 
 RunHaven allocates an interactive TTY when attached to a terminal. Use
@@ -214,6 +222,7 @@ runhaven runs log <run-id>
 runhaven runs diff <run-id>
 runhaven runs active
 runhaven runs attach <run-id>
+runhaven runs logs-follow <run-id>
 runhaven runs stop <run-id>
 runhaven runs show <run-id> --json
 runhaven runs log <run-id> --json
@@ -250,6 +259,11 @@ requiring Apple `container` access and skips invalid marker files.
 `runs attach` uses the same active marker and RunHaven-owned container-name
 check before calling Apple `container exec`. Root attach requires an explicit
 `--allow-root-user` override.
+
+`runs logs-follow` uses the same active marker and RunHaven-owned
+container-name check before calling Apple `container logs --follow`. It shows
+the most recent 200 lines by default before following new output; use
+`--lines N` to change that history cap.
 
 ## Provider Egress Smoke
 

@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement `runhaven runs attach RUN_ID` for active RunHaven run intervention.
+Implement `runhaven runs logs-follow RUN_ID` for active RunHaven run visibility.
 
 ## Current State
 
@@ -233,6 +233,9 @@ Implement `runhaven runs attach RUN_ID` for active RunHaven run intervention.
   container name is RunHaven-owned, rejects root attach without
   `--allow-root-user`, and calls Apple `container exec` to start a guarded
   shell or command in the active container.
+- `runhaven runs logs-follow RUN_ID` now reads the active marker, verifies the
+  container name is RunHaven-owned, and calls Apple `container logs --follow`
+  with a configurable recent-line cap.
 - Active markers are removed after run completion. If a run exits after a stop
   request, the completed run record is marked `stopped`.
 - Run records omit diffs, file contents, prompts, command lines, agent
@@ -254,9 +257,9 @@ Implement `runhaven runs attach RUN_ID` for active RunHaven run intervention.
 
 ## Recommended Next Step
 
-Add `runhaven runs logs-follow RUN_ID` or another live visibility command if
-live agent output remains hard to inspect. Run the optional Codex broker smoke
-with a disposable OpenAI API key when one is available.
+Add a guarded active-run status or inspect command if users need container
+state without opening a shell. Run the optional Codex broker smoke with a
+disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
@@ -264,6 +267,20 @@ with a disposable OpenAI API key when one is available.
   `container attach --help` were checked. The pinned local Apple `container`
   CLI exposes `exec`; `attach` reports plugin `container-attach` is not
   installed.
+- 2026-06-15: Local `container logs --help` shows
+  `container logs [--boot] [--follow] [-n <n>] <container-id>`.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_logs_follow_streams_recent_active_container_logs tests.test_cli.CliTests.test_runs_logs_follow_accepts_line_count_override tests.test_cli.CliTests.test_runs_logs_follow_refuses_invalid_line_count tests.test_cli.CliTests.test_runs_logs_follow_refuses_unowned_container_name`
+  first failed because `logs-follow` was not a valid `runs` subcommand, then
+  passed after adding guarded Apple `container logs --follow` routing.
+- 2026-06-15: Focused `runs logs-follow` tests, full `PYTHONPATH=src python3 -m unittest discover -s tests`
+  with 132 tests, `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runs logs-follow` smoke passed.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 132 unit tests, pin check, ruff, mypy, and build after adding
+  `runs logs-follow`.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_attach_execs_shell_in_active_container tests.test_cli.CliTests.test_runs_attach_uses_custom_command_without_tty_when_requested tests.test_cli.CliTests.test_runs_attach_refuses_unowned_container_name tests.test_cli.CliTests.test_runs_attach_refuses_root_user_without_override tests.test_cli.CliTests.test_runs_attach_allows_root_user_with_override`
   first failed because `attach` was not a valid `runs` subcommand, then passed
   after adding guarded `container exec` attach.

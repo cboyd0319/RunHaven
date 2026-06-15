@@ -38,6 +38,8 @@ Observed runtime command surface on 2026-06-15:
 - Local `container exec --help` shows the supported shape:
   `container exec [<options>] <container-id> <arguments> ...`, including
   `--interactive`, `--tty`, `--user`, and `--workdir`.
+- Local `container logs --help` shows the supported shape:
+  `container logs [--boot] [--follow] [-n <n>] <container-id>`.
 - Local `container attach --help` reports that plugin `container-attach` is not
   installed. RunHaven `runs attach` therefore uses guarded `container exec`
   against the active RunHaven-owned container name.

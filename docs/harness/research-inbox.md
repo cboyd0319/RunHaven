@@ -60,6 +60,9 @@ repo and link to primary sources instead.
   recovery backlog. The command uses Apple `container exec` because the pinned
   local Apple `container` CLI exposes `exec` and has no installed `attach`
   plugin.
+- 2026-06-15: Implemented `runhaven runs logs-follow RUN_ID` from the promoted
+  run visibility backlog. The command uses Apple `container logs --follow`
+  after the same active-marker and RunHaven-owned container-name checks.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.

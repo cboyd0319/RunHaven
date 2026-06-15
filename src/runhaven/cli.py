@@ -49,6 +49,7 @@ from .provider_endpoints import ProviderEndpoint, match_provider_endpoints
 
 GIT_STATUS_PATH_LIMIT = 100
 DEFAULT_ATTACH_COMMAND = ("/bin/bash",)
+DEFAULT_LOG_FOLLOW_LINES = 200
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -196,6 +197,17 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("auto", "always", "never"),
         default="auto",
         help="allocate a TTY for the attached process; auto follows the current terminal",
+    )
+    runs_logs_follow_parser = runs_subcommands.add_parser(
+        "logs-follow",
+        help="follow logs from an active RunHaven run",
+    )
+    runs_logs_follow_parser.add_argument("run_id", help="active run id to follow")
+    runs_logs_follow_parser.add_argument(
+        "--lines",
+        type=int,
+        default=DEFAULT_LOG_FOLLOW_LINES,
+        help="recent log lines to show before following",
     )
     runs_stop_parser = runs_subcommands.add_parser(
         "stop",
@@ -444,6 +456,8 @@ def runs_command(args: argparse.Namespace) -> int:
             allow_root_user=args.allow_root_user,
             command_args=tuple(args.agent_args),
         )
+    if args.runs_command == "logs-follow":
+        return runs_logs_follow(args.run_id, lines=args.lines)
     if args.runs_command == "stop":
         return runs_stop(args.run_id)
     raise ValueError(f"unknown runs command: {args.runs_command}")
@@ -1167,6 +1181,28 @@ def runs_attach(
     attach_command.extend(("--user", user, "--workdir", workdir, container_name))
     attach_command.extend(command)
     return subprocess.call(tuple(attach_command))
+
+
+def runs_logs_follow(run_id: str, *, lines: int) -> int:
+    if lines < 1:
+        raise ValueError("--lines must be 1 or greater")
+    record = find_active_run_record(run_id)
+    container_name = require_string(
+        record.get("container_name"),
+        "active run record is missing container name",
+    )
+    validate_runhaven_container_name(container_name)
+    require_container_cli()
+    return subprocess.call(
+        (
+            "container",
+            "logs",
+            "--follow",
+            "-n",
+            str(lines),
+            container_name,
+        )
+    )
 
 
 def validate_attach_workdir(workdir: str) -> None:
