@@ -120,6 +120,11 @@ login caches, cloud credential files, or environment values. During a real
 Codex run with `--codex-api-key-broker-env`, the host process reads only the
 named environment variable, starts a subnet-restricted broker on the provider
 network, and injects temporary Codex custom-provider overrides into the guest.
+Broker decisions are written to `auth-broker.jsonl` under the RunHaven cache
+root. The log records method, sanitized path, allow/deny outcome, reason,
+upstream status, count, and run id; it does not record request bodies, token
+values, or environment variable names. `scripts/codex_broker_smoke.py` can run
+an optional real Codex non-interactive smoke with a disposable API key.
 
 The broker shape is:
 

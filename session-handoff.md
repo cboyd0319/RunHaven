@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement the first real Codex API-key broker prototype behind explicit opt-in.
+Add broker observability and live-smoke coverage for the Codex API-key broker.
 
 ## Files
 
@@ -29,9 +29,11 @@ Implement the first real Codex API-key broker prototype behind explicit opt-in.
 - `src/runhaven/auth_broker.py`
 - `src/runhaven/provider_endpoints.py`
 - `scripts/check_pins.py`
+- `scripts/codex_broker_smoke.py`
 - `scripts/provider_egress_smoke.py`
 - `tests/`
 - `tests/test_auth_broker.py`
+- `tests/test_codex_broker_smoke.py`
 - `tests/test_egress.py`
 - `tests/test_plans.py`
 - `tests/test_provider_egress_smoke.py`
@@ -48,6 +50,21 @@ Implement the first real Codex API-key broker prototype behind explicit opt-in.
 
 ## Verification Evidence
 
+- `PYTHONPATH=src python3 -m unittest tests.test_auth_broker tests.test_cli.CliTests.test_provider_run_with_codex_api_key_broker_writes_secret_free_auth_log tests.test_cli.CliTests.test_provider_run_with_codex_api_key_broker_logs_no_requests tests.test_cli.CliTests.test_auth_log_prints_recent_broker_entries tests.test_cli.CliTests.test_auth_log_json_is_secret_free tests.test_codex_broker_smoke`
+  ran 10 focused broker observability and smoke harness tests and passed.
+- `PYTHONPATH=src python3 -m unittest discover -s tests` ran 100 tests and
+  passed after adding broker observability and the optional smoke harness.
+- `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`, and
+  `uvx --from mypy==2.1.0 mypy src scripts/codex_broker_smoke.py` passed.
+- `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`,
+  and `git diff --check` passed.
+- Manual smokes passed: `PYTHONPATH=src python3 -m runhaven auth log --limit 1`
+  and `PYTHONPATH=src python3 scripts/codex_broker_smoke.py`. The Codex broker
+  smoke skipped because `RUNHAVEN_CODEX_BROKER_SMOKE_API_KEY` was not set.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 100 unit
+  tests, pin check, ruff, mypy, and build after adding broker observability and
+  the optional smoke harness.
 - `PYTHONPATH=src python3 -m unittest discover -s tests` ran 93 tests and
   passed after adding the Codex API-key broker prototype.
 - `python3 -m compileall src tests scripts`,
@@ -407,6 +424,13 @@ Implement the first real Codex API-key broker prototype behind explicit opt-in.
   secret-free broker boundary diagnostics. They do not read Keychain, browser
   profiles, cloud credential files, provider login caches, or environment
   values.
+- `runhaven auth log` and `runhaven auth log --json` now show secret-free Codex
+  broker decisions. Entries include method, sanitized path, allow/deny outcome,
+  reason, upstream status, count, return code, workspace, profile, and run id.
+  They omit token values, request bodies, and environment variable names.
+- `scripts/codex_broker_smoke.py` can run a real non-interactive Codex request
+  through the broker when a disposable key env var is set. Without the key it
+  prints `SKIP` and exits successfully unless `--require-api-key` is passed.
 - `docs/AUTH_BROKER.md` records the Codex prototype status, remaining
   design-only provider status, provider auth notes, non-goals, and acceptance
   criteria for future broker expansion.
@@ -449,8 +473,9 @@ Implement the first real Codex API-key broker prototype behind explicit opt-in.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Add broker observability and live-smoke coverage for the Codex API-key
-   broker. Use a disposable test key if a real provider smoke is requested.
+5. Run `scripts/codex_broker_smoke.py --require-api-key` with a disposable
+   OpenAI API key when available, then add `runhaven runs list/show` backed by
+   secret-free run records for provider, auth broker, and cleanup outcomes.
 6. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

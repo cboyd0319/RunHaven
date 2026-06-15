@@ -12,6 +12,7 @@ from runhaven.auth_broker import (
     CODEX_BROKER_PLACEHOLDER_ENV,
     CODEX_BROKER_PLACEHOLDER_VALUE,
     CODEX_BROKER_PROVIDER_ID,
+    BrokerDecision,
 )
 from runhaven.cli import (
     acquire_state_lock,
@@ -323,6 +324,7 @@ class CliTests(unittest.TestCase):
             fake_proxy.policy_decisions.return_value = ()
             fake_broker = Mock()
             fake_broker.server_address = ("0.0.0.0", 48123)
+            fake_broker.broker_decisions.return_value = ()
             thread = Mock()
             network_info = Mock(ipv4_gateway="192.168.130.1", ipv4_subnet="192.168.130.0/24")
             with (
@@ -388,6 +390,129 @@ class CliTests(unittest.TestCase):
         self.assertIn("NO_PROXY=localhost,127.0.0.1,::1,192.168.130.1", command)
         self.assertNotIn("fake-openai-api-key-value", joined)
         self.assertNotIn("OPENAI_API_KEY", joined)
+
+    def test_provider_run_with_codex_api_key_broker_writes_secret_free_auth_log(self) -> None:
+        with TemporaryDirectory() as directory:
+            fake_proxy = Mock()
+            fake_proxy.server_address = ("0.0.0.0", 49321)
+            fake_proxy.policy_decisions.return_value = ()
+            fake_broker = Mock()
+            fake_broker.server_address = ("0.0.0.0", 48123)
+            fake_broker.broker_decisions.return_value = (
+                BrokerDecision(
+                    method="POST",
+                    path="/v1/responses",
+                    decision="allowed",
+                    reason="upstream-response",
+                    upstream_status=200,
+                    count=1,
+                ),
+            )
+            thread = Mock()
+            network_info = Mock(ipv4_gateway="192.168.130.1", ipv4_subnet="192.168.130.0/24")
+            with (
+                patch.dict(
+                    "os.environ",
+                    {
+                        "OPENAI_API_KEY": "fake-openai-api-key-value",
+                        "RUNHAVEN_CACHE_HOME": directory,
+                    },
+                    clear=True,
+                ),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.run_preflight"),
+                patch("runhaven.cli.inspect_internal_network", return_value=network_info),
+                patch("runhaven.cli.create_provider_proxy", return_value=fake_proxy),
+                patch("runhaven.cli.create_codex_api_key_broker", return_value=fake_broker),
+                patch("runhaven.cli.threading.Thread", return_value=thread),
+                patch("runhaven.cli.delete_container_network"),
+                patch("runhaven.cli.subprocess.call", return_value=0),
+            ):
+                code = main(
+                    [
+                        "run",
+                        "codex",
+                        "--workspace",
+                        directory,
+                        "--network",
+                        "provider",
+                        "--codex-api-key-broker-env",
+                        "OPENAI_API_KEY",
+                        "--tty",
+                        "never",
+                    ]
+                )
+
+            self.assertEqual(code, 0)
+            entries = [
+                json.loads(line)
+                for line in (Path(directory) / "auth-broker.jsonl").read_text().splitlines()
+            ]
+
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["broker"], "codex-api-key")
+        self.assertEqual(entries[0]["profile"], "codex")
+        self.assertEqual(entries[0]["method"], "POST")
+        self.assertEqual(entries[0]["path"], "/v1/responses")
+        self.assertEqual(entries[0]["decision"], "allowed")
+        self.assertEqual(entries[0]["reason"], "upstream-response")
+        self.assertEqual(entries[0]["upstream_status"], 200)
+        self.assertEqual(entries[0]["count"], 1)
+        self.assertNotIn("fake-openai-api-key-value", json.dumps(entries))
+        self.assertNotIn("OPENAI_API_KEY", json.dumps(entries))
+
+    def test_provider_run_with_codex_api_key_broker_logs_no_requests(self) -> None:
+        with TemporaryDirectory() as directory:
+            fake_proxy = Mock()
+            fake_proxy.server_address = ("0.0.0.0", 49321)
+            fake_proxy.policy_decisions.return_value = ()
+            fake_broker = Mock()
+            fake_broker.server_address = ("0.0.0.0", 48123)
+            fake_broker.broker_decisions.return_value = ()
+            thread = Mock()
+            network_info = Mock(ipv4_gateway="192.168.130.1", ipv4_subnet="192.168.130.0/24")
+            with (
+                patch.dict(
+                    "os.environ",
+                    {
+                        "OPENAI_API_KEY": "fake-openai-api-key-value",
+                        "RUNHAVEN_CACHE_HOME": directory,
+                    },
+                    clear=True,
+                ),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.run_preflight"),
+                patch("runhaven.cli.inspect_internal_network", return_value=network_info),
+                patch("runhaven.cli.create_provider_proxy", return_value=fake_proxy),
+                patch("runhaven.cli.create_codex_api_key_broker", return_value=fake_broker),
+                patch("runhaven.cli.threading.Thread", return_value=thread),
+                patch("runhaven.cli.delete_container_network"),
+                patch("runhaven.cli.subprocess.call", return_value=0),
+            ):
+                code = main(
+                    [
+                        "run",
+                        "codex",
+                        "--workspace",
+                        directory,
+                        "--network",
+                        "provider",
+                        "--codex-api-key-broker-env",
+                        "OPENAI_API_KEY",
+                        "--tty",
+                        "never",
+                    ]
+                )
+
+            self.assertEqual(code, 0)
+            entries = [
+                json.loads(line)
+                for line in (Path(directory) / "auth-broker.jsonl").read_text().splitlines()
+            ]
+
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["decision"], "no-requests")
+        self.assertEqual(entries[0]["count"], 0)
 
     def test_provider_run_with_codex_api_key_broker_requires_host_env_first(self) -> None:
         with TemporaryDirectory() as directory:
@@ -468,6 +593,101 @@ class CliTests(unittest.TestCase):
         self.assertIn("denied", text)
         self.assertIn("run=run-denied", text)
         self.assertNotIn("api.example.com", text)
+
+    def test_auth_log_prints_recent_broker_entries(self) -> None:
+        with TemporaryDirectory() as directory:
+            log_path = Path(directory) / "auth-broker.jsonl"
+            log_path.write_text(
+                "\n".join(
+                    [
+                        json.dumps(
+                            {
+                                "timestamp": "2026-06-15T00:00:00Z",
+                                "run_id": "run-old",
+                                "profile": "codex",
+                                "workspace": directory,
+                                "network": "provider",
+                                "broker": "codex-api-key",
+                                "method": "POST",
+                                "path": "/v1/responses",
+                                "decision": "allowed",
+                                "reason": "upstream-response",
+                                "upstream_status": 200,
+                                "count": 1,
+                            }
+                        ),
+                        json.dumps(
+                            {
+                                "timestamp": "2026-06-15T00:00:01Z",
+                                "run_id": "run-new",
+                                "profile": "codex",
+                                "workspace": directory,
+                                "network": "provider",
+                                "broker": "codex-api-key",
+                                "method": "-",
+                                "path": "-",
+                                "decision": "no-requests",
+                                "reason": "run-complete",
+                                "upstream_status": None,
+                                "count": 0,
+                            }
+                        ),
+                    ]
+                )
+                + "\n"
+            )
+            output = io.StringIO()
+            with patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False):
+                with redirect_stdout(output):
+                    code = main(["auth", "log", "--limit", "1"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("codex-api-key", text)
+        self.assertIn("no-requests", text)
+        self.assertIn("run=run-new", text)
+        self.assertNotIn("run-old", text)
+
+    def test_auth_log_json_is_secret_free(self) -> None:
+        with TemporaryDirectory() as directory:
+            log_path = Path(directory) / "auth-broker.jsonl"
+            log_path.write_text(
+                json.dumps(
+                    {
+                        "timestamp": "2026-06-15T00:00:00Z",
+                        "run_id": "run-allowed",
+                        "profile": "codex",
+                        "workspace": directory,
+                        "network": "provider",
+                        "broker": "codex-api-key",
+                        "method": "POST",
+                        "path": "/v1/responses",
+                        "decision": "allowed",
+                        "reason": "upstream-response",
+                        "upstream_status": 200,
+                        "count": 1,
+                    }
+                )
+                + "\n"
+            )
+            output = io.StringIO()
+            with (
+                patch.dict(
+                    "os.environ",
+                    {
+                        "RUNHAVEN_CACHE_HOME": directory,
+                        "OPENAI_API_KEY": "fake-openai-api-key-value",
+                    },
+                    clear=True,
+                ),
+                redirect_stdout(output),
+            ):
+                code = main(["auth", "log", "--json"])
+
+        self.assertEqual(code, 0)
+        self.assertIn('"broker": "codex-api-key"', output.getvalue())
+        self.assertNotIn("fake-openai-api-key-value", output.getvalue())
+        self.assertNotIn("OPENAI_API_KEY", output.getvalue())
 
     def test_auth_status_does_not_print_secret_values(self) -> None:
         output = io.StringIO()

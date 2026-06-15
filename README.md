@@ -270,9 +270,12 @@ Inspect the auth broker boundary:
 ```bash
 runhaven auth status
 runhaven auth explain codex
+runhaven auth log --limit 20
 ```
 
-These commands do not read credential stores or environment values.
+These commands do not read credential stores or environment values. The auth log
+records broker decisions without request bodies, token values, or environment
+variable names.
 
 List or remove isolated agent home volumes:
 

@@ -10,6 +10,7 @@ inventory, not permission to mutate nested projects.
 - Root Python package: `pyproject.toml`, `src/runhaven/`,
   `tests/`, `scripts/check_pins.py`, and
   `scripts/provider_egress_smoke.py`.
+- Broker smoke harness: `scripts/codex_broker_smoke.py`.
 - Bundled image templates:
   `src/runhaven/images/base/`,
   `src/runhaven/images/claude/`,

@@ -115,9 +115,10 @@ fail until an additional fully qualified host is reviewed and passed with
 
 The host-side auth broker currently has an opt-in Codex API-key prototype. It
 keeps the raw API key in the RunHaven host process and gives the guest only a
-placeholder token plus temporary Codex custom-provider config. Other providers
-remain design-only, and credentials can still reach the guest through isolated
-in-agent login state or explicit `--env NAME` passthrough. Use
+placeholder token plus temporary Codex custom-provider config. Broker decisions
+are logged without request bodies, token values, or environment variable names.
+Other providers remain design-only, and credentials can still reach the guest
+through isolated in-agent login state or explicit `--env NAME` passthrough. Use
 [`AUTH_BROKER.md`](AUTH_BROKER.md) for the current boundary and non-goals.
 
 The selected agent still controls what it reads inside `/workspace` and

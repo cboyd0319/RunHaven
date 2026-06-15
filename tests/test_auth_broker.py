@@ -58,6 +58,14 @@ class CodexApiKeyBrokerTests(unittest.TestCase):
         self.assertEqual(headers["Host"], "api.openai.com")
         self.assertNotIn("guest-token", "\n".join(headers.values()))
         self.assertIn(b'"input": "hello"', body)
+        decisions = broker.broker_decisions()
+        self.assertEqual(len(decisions), 1)
+        self.assertEqual(decisions[0].method, "POST")
+        self.assertEqual(decisions[0].path, "/v1/responses")
+        self.assertEqual(decisions[0].decision, "allowed")
+        self.assertEqual(decisions[0].reason, "upstream-response")
+        self.assertEqual(decisions[0].upstream_status, 200)
+        self.assertEqual(decisions[0].count, 1)
 
     def test_broker_blocks_unsupported_paths(self) -> None:
         calls: list[object] = []
@@ -91,6 +99,13 @@ class CodexApiKeyBrokerTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 403)
         error.exception.close()
         self.assertEqual(calls, [])
+        decisions = broker.broker_decisions()
+        self.assertEqual(len(decisions), 1)
+        self.assertEqual(decisions[0].method, "POST")
+        self.assertEqual(decisions[0].path, "<unsupported>")
+        self.assertEqual(decisions[0].decision, "denied")
+        self.assertEqual(decisions[0].reason, "unsupported-path")
+        self.assertIsNone(decisions[0].upstream_status)
 
     def test_broker_restricts_client_subnets(self) -> None:
         broker = CodexApiKeyBrokerProxy(
@@ -115,6 +130,10 @@ class CodexApiKeyBrokerTests(unittest.TestCase):
 
         self.assertEqual(error.exception.code, 403)
         error.exception.close()
+        decisions = broker.broker_decisions()
+        self.assertEqual(len(decisions), 1)
+        self.assertEqual(decisions[0].decision, "denied")
+        self.assertEqual(decisions[0].reason, "client-not-allowed")
 
 
 if __name__ == "__main__":

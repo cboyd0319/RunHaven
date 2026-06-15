@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement the first real Codex API-key broker prototype behind explicit opt-in.
+Add broker observability and live-smoke coverage for the Codex API-key broker.
 
 ## Current State
 
@@ -182,6 +182,17 @@ Implement the first real Codex API-key broker prototype behind explicit opt-in.
   and remaining acceptance criteria.
 - `docs/RESEARCH.md` now records the current provider auth references and the
   official Codex configuration references used for this broker boundary.
+- The Codex broker now records in-memory decisions with method, sanitized path,
+  allow/deny outcome, reason, upstream status, and count.
+- Brokered Codex runs now write secret-free entries to
+  `auth-broker.jsonl` under the RunHaven cache root. The log omits token
+  values, request bodies, and environment variable names.
+- `runhaven auth log` and `runhaven auth log --json` now display recent auth
+  broker decisions without inspecting credential stores or environment values.
+- `scripts/codex_broker_smoke.py` can run a real non-interactive Codex request
+  through the broker when `RUNHAVEN_CODEX_BROKER_SMOKE_API_KEY` or another
+  named disposable-key env var is set. Without the key it prints `SKIP` and
+  exits successfully unless `--require-api-key` is passed.
 - Empty provider allowlist behavior is now covered at both the planner and
   proxy-policy layers.
 - `internet` mode is regression-tested as no provider allowlist and
@@ -198,13 +209,29 @@ Implement the first real Codex API-key broker prototype behind explicit opt-in.
 
 ## Recommended Next Step
 
-Add broker observability and live-smoke coverage for the Codex API-key broker:
-record secret-free broker run decisions, exercise the real Codex container path
-when a disposable test key is available, and keep other provider brokers
-design-only until their path and credential boundaries are similarly narrow.
+Run the optional Codex broker smoke with a disposable OpenAI API key, then add
+the next run-observability slice: `runhaven runs list/show` backed by
+secret-free run records for provider, auth broker, and cleanup outcomes.
 
 ## Verification Evidence
 
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_auth_broker tests.test_cli.CliTests.test_provider_run_with_codex_api_key_broker_writes_secret_free_auth_log tests.test_cli.CliTests.test_provider_run_with_codex_api_key_broker_logs_no_requests tests.test_cli.CliTests.test_auth_log_prints_recent_broker_entries tests.test_cli.CliTests.test_auth_log_json_is_secret_free tests.test_codex_broker_smoke`
+  ran 10 focused broker observability and smoke harness tests and passed.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 100
+  tests and passed after adding broker observability and the optional smoke
+  harness.
+- 2026-06-15: `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`, and
+  `uvx --from mypy==2.1.0 mypy src scripts/codex_broker_smoke.py` passed.
+- 2026-06-15: `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, and `git diff --check` passed.
+- 2026-06-15: Manual smokes passed:
+  `PYTHONPATH=src python3 -m runhaven auth log --limit 1` and
+  `PYTHONPATH=src python3 scripts/codex_broker_smoke.py`. The Codex broker
+  smoke skipped because `RUNHAVEN_CODEX_BROKER_SMOKE_API_KEY` was not set.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 100 unit tests, pin check, ruff, mypy, and build after adding
+  broker observability and the optional smoke harness.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 93
   tests and passed after adding the Codex API-key broker prototype.
 - 2026-06-15: `python3 -m compileall src tests scripts`,

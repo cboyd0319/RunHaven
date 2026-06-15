@@ -22,6 +22,7 @@ from .auth_broker import (
     CODEX_BROKER_PLACEHOLDER_ENV,
     CODEX_BROKER_PLACEHOLDER_VALUE,
     CODEX_BROKER_PROVIDER_ID,
+    BrokerDecision,
     CodexApiKeyBrokerProxy,
     auth_broker_profiles,
     get_auth_broker_profile,
@@ -154,6 +155,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     auth_explain_parser.add_argument("agent", choices=sorted(PROFILES), help="agent profile")
     auth_explain_parser.add_argument("--json", action="store_true", help="print JSON output")
+    auth_log_parser = auth_subcommands.add_parser(
+        "log",
+        help="show recent auth broker decisions without secrets",
+    )
+    auth_log_parser.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="maximum entries to show; use 0 for all entries",
+    )
+    auth_log_parser.add_argument("--json", action="store_true", help="print JSON output")
 
     why_parser = subcommands.add_parser("why", help="explain RunHaven safety decisions")
     why_subcommands = why_parser.add_subparsers(dest="why_command", required=True)
@@ -324,6 +336,8 @@ def auth_command(args: argparse.Namespace) -> int:
         return auth_status(json_output=args.json)
     if args.auth_command == "explain":
         return auth_explain(args.agent, json_output=args.json)
+    if args.auth_command == "log":
+        return auth_log(limit=args.limit, json_output=args.json)
     raise ValueError(f"unknown auth command: {args.auth_command}")
 
 
@@ -444,10 +458,17 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
             )
             command = with_codex_api_key_broker_config(command, plan, broker_url)
 
+        run_id = uuid.uuid4().hex
         return_code = subprocess.call(command)
         decisions = proxy.policy_decisions()
-        run_id = uuid.uuid4().hex
         write_provider_policy_log(plan, decisions, run_id=run_id)
+        if codex_broker is not None:
+            write_auth_broker_log(
+                plan,
+                codex_broker.broker_decisions(),
+                run_id=run_id,
+                return_code=return_code,
+            )
         print_provider_blocked_host_review(plan, decisions, run_id=run_id)
         return return_code
     finally:
@@ -671,6 +692,98 @@ def read_egress_policy_log(*, limit: int) -> list[dict[str, Any]]:
 
 def egress_policy_log_path() -> Path:
     return runhaven_cache_root() / "egress-policy.jsonl"
+
+
+def write_auth_broker_log(
+    plan: AgentRunPlan,
+    decisions: Sequence[BrokerDecision],
+    *,
+    run_id: str,
+    return_code: int,
+) -> None:
+    log_path = auth_broker_log_path()
+    log_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    entries = decisions or (
+        BrokerDecision(
+            method="-",
+            path="-",
+            decision="denied",
+            reason="run-complete",
+            upstream_status=None,
+            count=0,
+        ),
+    )
+    with log_path.open("a", encoding="utf-8") as log_file:
+        for decision in entries:
+            payload = {
+                "timestamp": timestamp,
+                "run_id": run_id,
+                "profile": plan.profile_name,
+                "workspace": str(plan.workspace),
+                "network": plan.network_mode,
+                "broker": "codex-api-key",
+                "method": decision.method,
+                "path": decision.path,
+                "decision": "no-requests" if not decisions else decision.decision,
+                "reason": decision.reason,
+                "upstream_status": decision.upstream_status,
+                "count": decision.count,
+                "return_code": return_code,
+            }
+            log_file.write(json.dumps(payload, sort_keys=True) + "\n")
+
+
+def auth_log(*, limit: int, json_output: bool) -> int:
+    if limit < 0:
+        raise ValueError("--limit must be 0 or greater")
+    entries = read_auth_broker_log(limit=limit)
+    if json_output:
+        print(json.dumps(entries, indent=2, sort_keys=True))
+        return 0
+    if not entries:
+        print("No RunHaven auth broker log entries found.")
+        return 0
+    for entry in entries:
+        broker = entry.get("broker", "unknown")
+        decision = entry.get("decision", "unknown")
+        reason = entry.get("reason", "unknown")
+        method = entry.get("method", "-")
+        path = entry.get("path", "-")
+        count = entry.get("count", 1)
+        profile = entry.get("profile", "unknown")
+        run_id = entry.get("run_id", "-")
+        upstream_status = entry.get("upstream_status")
+        status = upstream_status if upstream_status is not None else "-"
+        print(
+            f"{entry.get('timestamp', '<unknown>')}  {profile}  {broker}  "
+            f"{decision}  {method} {path}  status={status}  count={count}  "
+            f"reason={reason}  run={run_id}"
+        )
+    return 0
+
+
+def read_auth_broker_log(*, limit: int) -> list[dict[str, Any]]:
+    log_path = auth_broker_log_path()
+    if not log_path.exists():
+        return []
+    entries: list[dict[str, Any]] = []
+    for line in log_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            entries.append(payload)
+    if limit == 0:
+        return entries
+    return entries[-limit:]
+
+
+def auth_broker_log_path() -> Path:
+    return runhaven_cache_root() / "auth-broker.jsonl"
 
 
 def auth_status(*, json_output: bool) -> int:

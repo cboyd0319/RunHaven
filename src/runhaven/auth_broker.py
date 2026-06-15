@@ -3,11 +3,12 @@ from __future__ import annotations
 import http.client
 import ipaddress
 import socketserver
+import threading
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from http.server import BaseHTTPRequestHandler
 from types import MappingProxyType
-from typing import Any, cast
+from typing import Any, Literal, cast
 from urllib.parse import urlsplit
 
 DESIGN_ONLY_AUTH_BROKER_STATUS = "design-only"
@@ -75,6 +76,16 @@ class BrokerUpstreamResponse:
     body: bytes
 
 
+@dataclass(frozen=True)
+class BrokerDecision:
+    method: str
+    path: str
+    decision: Literal["allowed", "denied"]
+    reason: str
+    upstream_status: int | None = None
+    count: int = 1
+
+
 class OpenAIResponsesUpstream:
     def __init__(
         self,
@@ -139,6 +150,8 @@ class CodexApiKeyBrokerProxy(socketserver.ThreadingTCPServer):
         self.allowed_client_networks = tuple(
             ipaddress.ip_network(subnet, strict=False) for subnet in allowed_client_subnets
         )
+        self._broker_decisions: dict[tuple[str, str, str, str, int | None], int] = {}
+        self._broker_decisions_lock = threading.Lock()
         super().__init__(server_address, CodexApiKeyBrokerHandler)
 
     def allows_client(self, address: str) -> bool:
@@ -150,6 +163,35 @@ class CodexApiKeyBrokerProxy(socketserver.ThreadingTCPServer):
             return False
         return any(client_address in network for network in self.allowed_client_networks)
 
+    def record_broker_decision(
+        self,
+        method: str,
+        path: str,
+        *,
+        decision: Literal["allowed", "denied"],
+        reason: str,
+        upstream_status: int | None = None,
+    ) -> None:
+        key = (method, path, decision, reason, upstream_status)
+        with self._broker_decisions_lock:
+            self._broker_decisions[key] = self._broker_decisions.get(key, 0) + 1
+
+    def broker_decisions(self) -> tuple[BrokerDecision, ...]:
+        with self._broker_decisions_lock:
+            return tuple(
+                BrokerDecision(
+                    method=method,
+                    path=path,
+                    decision=cast(Literal["allowed", "denied"], decision),
+                    reason=reason,
+                    upstream_status=upstream_status,
+                    count=count,
+                )
+                for (method, path, decision, reason, upstream_status), count in (
+                    self._broker_decisions.items()
+                )
+            )
+
 
 class CodexApiKeyBrokerHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -157,24 +199,54 @@ class CodexApiKeyBrokerHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         server = cast(CodexApiKeyBrokerProxy, self.server)
         if not server.allows_client(self.client_address[0]):
+            server.record_broker_decision(
+                "POST",
+                "<client-denied>",
+                decision="denied",
+                reason="client-not-allowed",
+            )
             self.send_broker_error(403, "Forbidden")
             return
 
         try:
             upstream_path = codex_broker_upstream_path(self.path)
         except ValueError:
+            server.record_broker_decision(
+                "POST",
+                "<unsupported>",
+                decision="denied",
+                reason="unsupported-path",
+            )
             self.send_broker_error(403, "Forbidden")
             return
 
         try:
             length = parse_content_length(self.headers.get("Content-Length"))
         except ValueError:
+            server.record_broker_decision(
+                "POST",
+                CODEX_BROKER_RESPONSES_PATH,
+                decision="denied",
+                reason="bad-content-length",
+            )
             self.send_broker_error(400, "Bad Request")
             return
         if length is None:
+            server.record_broker_decision(
+                "POST",
+                CODEX_BROKER_RESPONSES_PATH,
+                decision="denied",
+                reason="length-required",
+            )
             self.send_broker_error(411, "Length Required")
             return
         if length > MAX_CODEX_BROKER_REQUEST_BYTES:
+            server.record_broker_decision(
+                "POST",
+                CODEX_BROKER_RESPONSES_PATH,
+                decision="denied",
+                reason="payload-too-large",
+            )
             self.send_broker_error(413, "Payload Too Large")
             return
 
@@ -188,9 +260,22 @@ class CodexApiKeyBrokerHandler(BaseHTTPRequestHandler):
         try:
             response = server.upstream("POST", upstream_path, headers, body)
         except OSError:
+            server.record_broker_decision(
+                "POST",
+                CODEX_BROKER_RESPONSES_PATH,
+                decision="allowed",
+                reason="upstream-error",
+            )
             self.send_broker_error(502, "Bad Gateway")
             return
 
+        server.record_broker_decision(
+            "POST",
+            CODEX_BROKER_RESPONSES_PATH,
+            decision="allowed",
+            reason="upstream-response",
+            upstream_status=response.status,
+        )
         self.send_response(response.status, response.reason)
         has_content_length = False
         for name, value in response.headers:
@@ -205,15 +290,25 @@ class CodexApiKeyBrokerHandler(BaseHTTPRequestHandler):
         self.wfile.write(response.body)
 
     def do_GET(self) -> None:
-        self.send_broker_error(405, "Method Not Allowed")
+        self.send_method_not_allowed("GET")
 
     def do_PUT(self) -> None:
-        self.send_broker_error(405, "Method Not Allowed")
+        self.send_method_not_allowed("PUT")
 
     def do_PATCH(self) -> None:
-        self.send_broker_error(405, "Method Not Allowed")
+        self.send_method_not_allowed("PATCH")
 
     def do_DELETE(self) -> None:
+        self.send_method_not_allowed("DELETE")
+
+    def send_method_not_allowed(self, method: str) -> None:
+        server = cast(CodexApiKeyBrokerProxy, self.server)
+        server.record_broker_decision(
+            method,
+            "<unsupported>",
+            decision="denied",
+            reason="method-not-allowed",
+        )
         self.send_broker_error(405, "Method Not Allowed")
 
     def log_message(self, format: str, *args: object) -> None:

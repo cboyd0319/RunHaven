@@ -113,7 +113,9 @@ Codex API-key broker implementation source check on 2026-06-15:
 
 - Codex CLI command-line options:
   <https://developers.openai.com/codex/cli/reference>.
-  Reviewed for repeatable `-c key=value` configuration overrides.
+  Reviewed for repeatable `-c key=value` configuration overrides, `codex exec`,
+  `--skip-git-repo-check`, `--sandbox`, `--ask-for-approval`, and
+  `--output-last-message`.
 - Codex advanced configuration:
   <https://developers.openai.com/codex/config-advanced>.
   Reviewed for custom model provider definitions and `model_provider`

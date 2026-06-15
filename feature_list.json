@@ -186,6 +186,8 @@
         "Codex API-key broker reads a named host environment variable only during real runs",
         "Codex broker injects temporary custom-provider config and a placeholder token into the guest without exposing the raw key",
         "Codex broker only accepts provider-network clients and forwards Responses API create requests",
+        "Codex broker records secret-free decisions in `runhaven auth log`",
+        "Optional Codex broker smoke harness skips without a key and runs only with an explicit disposable key environment variable",
         "`runhaven auth status` prints broker status without reading credential stores or environment values",
         "`runhaven auth explain AGENT` prints profile-specific auth guidance without brokered secrets",
         "JSON auth output is deterministic and secret-free",
@@ -198,9 +200,10 @@
         "2026-06-15: Focused auth CLI tests passed and verified fake `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` values were not printed.",
         "2026-06-15: Manual `PYTHONPATH=src python3 -m runhaven auth status` and `PYTHONPATH=src python3 -m runhaven auth explain codex` checks passed.",
         "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 79 unit tests, pin check, ruff, mypy, and build.",
-        "2026-06-15: Added opt-in Codex API-key broker prototype, focused planner/proxy/CLI tests, and official Codex configuration source notes."
+        "2026-06-15: Added opt-in Codex API-key broker prototype, focused planner/proxy/CLI tests, and official Codex configuration source notes.",
+        "2026-06-15: Added secret-free Codex broker decision logging, `runhaven auth log`, and optional `scripts/codex_broker_smoke.py` live-smoke harness."
       ],
-      "notes": "Codex has an opt-in host-side API-key broker prototype. Other agent auth brokers remain design-only. Auth status/explain do not inspect credential stores or environment values. `plan` and `run --dry-run` do not read the named Codex API-key environment variable."
+      "notes": "Codex has an opt-in host-side API-key broker prototype. Other agent auth brokers remain design-only. Auth status/explain/log do not inspect credential stores or environment values. `plan` and `run --dry-run` do not read the named Codex API-key environment variable. Broker logs omit token values, request bodies, and environment variable names."
     },
     {
       "id": "repo-logo",

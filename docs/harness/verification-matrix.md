@@ -10,6 +10,7 @@ Use the smallest check set that can catch likely regressions for the change.
 | Packaging | Python code checks plus `python3 -m build` |
 | CLI command construction | Python code checks plus focused tests in `tests/test_plans.py` or `tests/test_cli.py` |
 | Apple container runtime boundary | Python code checks plus `runhaven doctor`, `runhaven plan`, and a focused `runhaven run shell` smoke |
+| Auth broker runtime boundary | Python code checks plus focused auth broker tests, `runhaven auth log`, and `scripts/codex_broker_smoke.py --require-api-key` when a disposable key is available |
 | Image templates | Pin check, image build for changed profile, and version smoke for affected agent |
 | Node or web code | package manager `test`, `lint`, `typecheck`, or `build` scripts when present |
 | Go code | `go test ./...` |

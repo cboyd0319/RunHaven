@@ -59,7 +59,11 @@ Current behavior:
 - the broker binds to the RunHaven provider network, restricts clients to that
   Apple `container` subnet, and forwards only Codex Responses API create
   requests to `api.openai.com`
+- after a brokered run, `runhaven auth log` records only method, sanitized path,
+  decision, reason, upstream status, count, and run id
 - no token is printed in plan, status, JSON, or diagnostic output
+- no token value, request body, or environment variable name is stored in the
+  auth broker log
 - interactive login inside the isolated agent home volume remains available
   when the agent supports it
 
@@ -70,6 +74,20 @@ but it is not the preferred Codex headless path.
 Provider egress controls are separate. `--network provider` limits CONNECT
 targets by host, records policy decisions, and groups blocked-host reviews.
 It does not authenticate to the provider and it does not see HTTPS URL paths.
+
+## Smoke Coverage
+
+`scripts/codex_broker_smoke.py` can run a real non-interactive Codex request
+through the broker when a disposable OpenAI API key is available:
+
+```bash
+export RUNHAVEN_CODEX_BROKER_SMOKE_API_KEY=...
+PYTHONPATH=src python3.14 scripts/codex_broker_smoke.py --require-api-key
+```
+
+If the environment variable is absent and `--require-api-key` is not passed, the
+script prints `SKIP` and exits successfully. The key value is inherited by the
+host process only; it is not placed on the command line.
 
 ## Why Host-Side
 

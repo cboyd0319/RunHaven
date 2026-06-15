@@ -98,6 +98,8 @@ history or dry-run output.
 runhaven auth status
 runhaven auth explain codex
 runhaven auth explain codex --json
+runhaven auth log --limit 20
+runhaven auth log --json
 ```
 
 The Codex API-key broker is an opt-in prototype. Other agent auth brokers remain
@@ -105,6 +107,11 @@ design-only. These commands describe the host-side broker boundary and the
 current safe paths for each profile. They do not inspect Keychain, browser
 profiles, provider login caches, cloud credential files, or environment variable
 values, and they do not print secrets.
+
+After a brokered Codex run, `runhaven auth log` shows secret-free broker
+decisions: method, sanitized path, allow/deny outcome, reason, upstream status,
+count, and run id. It never records request bodies, token values, or environment
+variable names.
 
 For non-Codex providers, authenticate inside the isolated agent state volume
 when the provider supports interactive login. Use `--env NAME` only when a
@@ -202,6 +209,17 @@ and direct IP paths fail. Profile smoke mode proves that bundled provider hosts
 are reachable through the proxy without requiring provider credentials. Normal
 provider runs use the same proxy enforcement pattern through
 `runhaven run --network provider`.
+
+Run the optional Codex broker smoke only with a disposable OpenAI API key:
+
+```bash
+export RUNHAVEN_CODEX_BROKER_SMOKE_API_KEY=...
+PYTHONPATH=src python3.14 scripts/codex_broker_smoke.py --require-api-key
+```
+
+Without the environment variable, the smoke prints `SKIP` and exits
+successfully. The key value is inherited by the host process only; it is not
+placed on the command line.
 
 ## Private Git
 
