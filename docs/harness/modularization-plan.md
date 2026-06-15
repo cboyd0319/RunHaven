@@ -7,20 +7,28 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the diagnostic-command extraction:
+Measured on 2026-06-15 after the CLI test split:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
-| `tests/test_cli.py` | 3515 | Broad integration-style CLI coverage. Useful, but too large for targeted review. |
+| `tests/test_cli_active_commands.py` | 900 | Largest remaining split CLI test file; owns active listing, attach, logs-follow, status, stop, and kill coverage. |
 | `src/runhaven/cli.py` | 767 | Still owns parser, command routing, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
+| `tests/test_cli_run_history.py` | 663 | Owns `runs list/show/diff/log` CLI coverage. |
+| `tests/test_cli_provider_runtime.py` | 622 | Owns provider runtime, Codex broker run, and internal-network CLI coverage. |
 | `src/runhaven/run_history.py` | 604 | Owns run-record persistence, git metadata capture, and `runs list/show/log/diff`. |
 | `src/runhaven/active_commands.py` | 569 | Owns active-run command handlers, sanitized status output, attach/log-follow command construction, stop/kill, and repair. |
 | `src/runhaven/auth_broker.py` | 520 | Cohesive enough for now. |
 | `src/runhaven/provider_runtime.py` | 500 | Owns provider run lifecycle, proxy/broker startup, policy/auth decision logging, active marker cleanup, and internal network inspection. |
 | `scripts/check_pins.py` | 497 | Separate script; review after CLI/test split. |
+| `tests/test_cli_active_repair.py` | 452 | Owns active-run stale-marker repair coverage. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `src/runhaven/plans.py` | 403 | Cohesive planner and validation module. |
+| `tests/test_cli_standard_run.py` | 304 | Owns standard run record and active-marker lifecycle coverage. |
+| `tests/test_cli_diagnostics.py` | 273 | Owns `auth`, `egress log`, and `why host` CLI coverage. |
 | `src/runhaven/diagnostic_commands.py` | 249 | Owns `auth status/explain/log`, `egress log`, `why host`, and diagnostic log readers. |
+| `tests/test_cli.py` | 228 | Owns core CLI, setup, doctor, and plan smoke coverage. |
+| `tests/cli_test_helpers.py` | 107 | Shared git, run-record, and active-marker helpers for split CLI tests. |
+| `tests/test_cli_state.py` | 80 | Owns state list, prune, and state lock coverage. |
 
 ## First Extraction Completed
 
@@ -87,11 +95,35 @@ This removes read-only diagnostics from `cli.py` while preserving secret-free
 auth output, provider policy log output, `why host` provider matching, and
 `runs log` joins.
 
+## CLI Test Split Completed
+
+- `tests/cli_test_helpers.py`: existing shared git, run-record, and
+  active-marker helpers moved out of the monolithic test file.
+- `tests/test_cli.py`: core CLI, setup, doctor, and plan smoke coverage.
+- `tests/test_cli_provider_runtime.py`: provider runtime, Codex broker run, and
+  internal-network CLI coverage.
+- `tests/test_cli_standard_run.py`: standard run record and active-marker
+  lifecycle coverage.
+- `tests/test_cli_active_commands.py`: active listing, attach, logs-follow,
+  status, stop, and kill coverage.
+- `tests/test_cli_active_repair.py`: stale active-marker repair coverage.
+- `tests/test_cli_run_history.py`: `runs list/show/diff/log` coverage.
+- `tests/test_cli_diagnostics.py`: `auth`, `egress log`, and `why host`
+  diagnostic coverage.
+- `tests/test_cli_state.py`: state list, prune, and state lock coverage.
+
+This removes the 3,515-line CLI test file while preserving the existing 90 CLI
+tests and the same production patch targets.
+
 ## Recommended Sequence
 
-1. Split `tests/test_cli.py`.
-   Mirror the production seams after they exist: setup, planning, provider
-   runtime, run history, active runs, auth, egress, state, and repo policy.
+1. Split `tests/test_cli_active_commands.py` further if the next cleanup pass
+   stays focused on large test files. Good seams are active listing, attach and
+   logs-follow, status, stop/kill, and ownership refusal cases.
+
+2. Review `scripts/check_pins.py`, `src/runhaven/auth_broker.py`, and
+   `src/runhaven/provider_runtime.py` for complexity-only refactors. Keep them
+   intact if a split would only move code without improving reviewability.
 
 ## Acceptance Criteria
 

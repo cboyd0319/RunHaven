@@ -111,6 +111,10 @@ repo and link to primary sources instead.
   `src/runhaven/diagnostic_commands.py` for `auth status/explain/log`,
   `egress log`, `why host`, provider/auth log readers, and provider endpoint
   explanation output.
+- 2026-06-15: Continued the pre-release modularization pass by splitting the
+  3,515-line `tests/test_cli.py` into focused CLI test files for core/setup,
+  provider runtime, standard runs, active commands, active repair, run history,
+  diagnostics, and state, plus `tests/cli_test_helpers.py`.
 - 2026-06-15: Reviewed "Development On Apple Silicon with Apple Container
   Machine" and recorded UX backlog items in
   `docs/harness/ux-research-ideas.md`: explain why RunHaven avoids
