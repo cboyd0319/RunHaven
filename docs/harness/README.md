@@ -28,7 +28,7 @@ checks, and leave evidence for the next session.
 | State | `feature_list.json`, `progress.md`, `evidence-log.md` | Current objective, feature status, and evidence |
 | Feedback | `verification-matrix.md`, `evaluator-rubric.md`, local checks | Deterministic signals before claiming completion |
 | Scope | `change-contract.md`, `security-boundary-map.md`, `feature-privacy-labels.json` | Problem, non-goals, acceptance, rollback, and data boundaries |
-| Lifecycle | `session-handoff.md`, `clean-state-checklist.md`, `quality-document.md`, `release-controls.md`, `self-healing.md`, `entropy-control.md` | Restart, release, and recurring harness upkeep |
+| Lifecycle | `session-handoff.md`, `clean-state-checklist.md`, `quality-document.md`, `release-controls.md`, `self-healing.md`, `entropy-control.md`, `modularization-plan.md` | Restart, release, code-health sequencing, and recurring harness upkeep |
 
 ## Operating Loop
 

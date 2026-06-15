@@ -16,6 +16,17 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, TextIO
 
+from .active_records import (
+    active_run_terminal_status,
+    clear_active_run_kill_requested,
+    clear_active_run_stop_requested,
+    find_active_run_record,
+    mark_active_run_kill_requested,
+    mark_active_run_stop_requested,
+    read_active_run_records,
+    remove_active_run_record,
+    write_active_run_record,
+)
 from .auth_broker import (
     AUTH_BROKER_RUNTIME,
     AUTH_BROKER_STATUS,
@@ -27,7 +38,13 @@ from .auth_broker import (
     auth_broker_profiles,
     get_auth_broker_profile,
 )
-from .doctor import Check, collect_checks
+from .cache_paths import (
+    auth_broker_log_path,
+    egress_policy_log_path,
+    runs_log_path,
+    state_lock_path,
+)
+from .doctor import collect_checks
 from .egress import (
     EgressPolicy,
     ProxyDecision,
@@ -46,6 +63,8 @@ from .plans import (
 )
 from .profiles import PROFILES, get_profile
 from .provider_endpoints import ProviderEndpoint, match_provider_endpoints
+from .setup_guide import print_checks, print_setup_guide
+from .validators import require_string, validate_runhaven_container_name
 
 GIT_STATUS_PATH_LIMIT = 100
 DEFAULT_ATTACH_COMMAND = ("/bin/bash",)
@@ -422,97 +441,8 @@ def doctor() -> int:
     return 0 if all(check.ok for check in checks) else 1
 
 
-def print_checks(checks: tuple[Check, ...]) -> None:
-    for check in checks:
-        status = "ok" if check.ok else "fail"
-        print(f"{status:4} {check.name}: {check.detail}")
-        if not check.ok and check.remedy:
-            print(f"     fix: {check.remedy}")
-
-
 def setup(agent: str) -> int:
-    profile = get_profile(agent)
-    checks = collect_checks()
-    ready = all(check.ok for check in checks)
-    print("RunHaven setup")
-    print()
-    print("1. Host prerequisites")
-    print_checks(checks)
-    print()
-    if not ready:
-        print("Next steps")
-        for check in checks:
-            if not check.ok and check.remedy:
-                print(f"- {check.name}: {check.remedy}")
-        print("- After fixing the items above, run `runhaven setup` again.")
-        return 1
-
-    print(f"Selected agent: {agent} - {profile.description}")
-    print()
-    print("2. Build the agent image")
-    print(f"   runhaven image build {agent}")
-    print()
-    print("3. Preview the container boundary")
-    print(f"   runhaven plan {agent}")
-    print()
-    print("4. Run from your project directory")
-    print(f"   runhaven run {agent}")
-    print()
-    print("Safety defaults")
-    print("- One selected project is mounted at /workspace.")
-    print("- No host home, raw SSH keys, or cloud credential folders are mounted by default.")
-    print_setup_workspace_and_credentials()
-    print_setup_network_choices(agent)
-    return 0
-
-
-def print_setup_workspace_and_credentials() -> None:
-    print()
-    print("Workspace and credentials")
-    print(
-        "- Run from the smallest project directory you want the agent to see; "
-        "that directory is mounted at /workspace."
-    )
-    print(
-        "- Do not run from your home directory, a cloud sync root, or a "
-        "credential folder unless you intentionally allow that broader scope."
-    )
-    print(
-        "- RunHaven does not mount raw SSH keys, browser profiles, cloud "
-        "credential folders, or provider login caches by default."
-    )
-    print(
-        "- Use `--ssh` for SSH agent forwarding instead of mounting key files."
-    )
-    print(
-        "- Use `--env NAME` only for a reviewed variable that the agent really "
-        "needs."
-    )
-    print("- Use `runhaven plan` to confirm the mounted host path.")
-
-
-def print_setup_network_choices(agent: str) -> None:
-    print()
-    print("Network choices")
-    print(
-        f"- Local-only: use `runhaven run {agent} --network internal` for tests, "
-        "builds, and commands that do not need internet."
-    )
-    print(
-        f"- Provider-only: use `runhaven run {agent} --network provider` to allow "
-        "reviewed provider hosts through the proxy. Login, telemetry, package "
-        "registries, or feature paths may need extra reviewed hosts."
-    )
-    print(
-        f"- Package install: use default internet mode with `runhaven run {agent}` "
-        "when package managers or dependency updates need broad registry and "
-        "CDN access."
-    )
-    print(
-        f"- Unrestricted internet: default `runhaven run {agent}` leaves egress "
-        "unrestricted inside Apple `container` and your host network."
-    )
-    print("- Use `runhaven plan` before changing network modes.")
+    return print_setup_guide(agent, collect_checks())
 
 
 def plan_run(args: argparse.Namespace) -> int:
@@ -1165,141 +1095,6 @@ def summarize_auth_broker(decisions: Sequence[BrokerDecision] | None) -> dict[st
     }
 
 
-def write_active_run_record(plan: AgentRunPlan, *, run_id: str, started_at: str) -> None:
-    payload: dict[str, object] = {
-        "timestamp": started_at,
-        "run_id": run_id,
-        "profile": plan.profile_name,
-        "workspace": str(plan.workspace),
-        "network": plan.network_mode,
-        "status": "running",
-        "container_name": plan.container_name,
-        "state_volume": plan.state_volume,
-        "network_name": plan.network_name,
-        "host_pid": os.getpid(),
-    }
-    write_active_run_payload(run_id, payload)
-
-
-def write_active_run_payload(run_id: str, payload: dict[str, object]) -> None:
-    path = active_run_path(run_id)
-    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    temporary_path = path.with_suffix(".tmp")
-    temporary_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
-    temporary_path.chmod(0o600)
-    temporary_path.replace(path)
-
-
-def find_active_run_record(run_id: str) -> dict[str, Any]:
-    path = active_run_path(run_id)
-    if not path.exists():
-        raise ValueError(f"active run not found: {run_id}")
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"active run record is invalid: {run_id}") from exc
-    if not isinstance(payload, dict):
-        raise ValueError(f"active run record is invalid: {run_id}")
-    return payload
-
-
-def mark_active_run_stop_requested(run_id: str, record: dict[str, Any]) -> None:
-    updated = dict(record)
-    updated["status"] = "stop-requested"
-    updated["stop_requested_at"] = utc_timestamp()
-    write_active_run_payload(run_id, updated)
-
-
-def clear_active_run_stop_requested(run_id: str, record: dict[str, Any]) -> None:
-    updated = dict(record)
-    updated["status"] = "running"
-    updated.pop("stop_requested_at", None)
-    write_active_run_payload(run_id, updated)
-
-
-def mark_active_run_kill_requested(run_id: str, record: dict[str, Any]) -> None:
-    updated = dict(record)
-    updated["status"] = "kill-requested"
-    updated["kill_requested_at"] = utc_timestamp()
-    write_active_run_payload(run_id, updated)
-
-
-def clear_active_run_kill_requested(run_id: str, record: dict[str, Any]) -> None:
-    updated = dict(record)
-    updated["status"] = "running"
-    updated.pop("kill_requested_at", None)
-    write_active_run_payload(run_id, updated)
-
-
-def active_run_terminal_status(run_id: str) -> str | None:
-    try:
-        record = find_active_run_record(run_id)
-    except ValueError:
-        return None
-    if isinstance(record.get("kill_requested_at"), str):
-        return "killed"
-    if isinstance(record.get("stop_requested_at"), str):
-        return "stopped"
-    return None
-
-
-def remove_active_run_record(run_id: str) -> None:
-    try:
-        active_run_path(run_id).unlink()
-    except FileNotFoundError:
-        pass
-
-
-def active_run_path(run_id: str) -> Path:
-    validate_run_id(run_id)
-    return active_runs_dir() / f"{run_id}.json"
-
-
-def active_runs_dir() -> Path:
-    return runhaven_cache_root() / "active-runs"
-
-
-def read_active_run_records() -> list[dict[str, Any]]:
-    active_dir = active_runs_dir()
-    if not active_dir.exists():
-        return []
-    records: list[dict[str, Any]] = []
-    for path in sorted(active_dir.glob("*.json")):
-        try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            continue
-        if not isinstance(payload, dict):
-            continue
-        run_id = payload.get("run_id")
-        container_name = payload.get("container_name")
-        if not isinstance(run_id, str) or not isinstance(container_name, str):
-            continue
-        try:
-            validate_run_id(run_id)
-            validate_runhaven_container_name(container_name)
-        except ValueError:
-            continue
-        records.append(payload)
-    return sorted(records, key=active_run_sort_key)
-
-
-def active_run_sort_key(record: dict[str, Any]) -> tuple[str, str]:
-    timestamp = record.get("timestamp")
-    run_id = record.get("run_id")
-    return (
-        timestamp if isinstance(timestamp, str) else "",
-        run_id if isinstance(run_id, str) else "",
-    )
-
-
-def validate_run_id(run_id: str) -> None:
-    if not run_id or run_id.startswith("-"):
-        raise ValueError(f"invalid run id: {run_id!r}")
-    if any(character.isspace() or character in "/\\" for character in run_id):
-        raise ValueError(f"invalid run id: {run_id!r}")
-
-
 def runs_active(*, json_output: bool) -> int:
     records = read_active_run_records()
     if json_output:
@@ -1765,17 +1560,6 @@ def container_inspect_reports_missing(
     return f"container not found: {container_name.lower()}" in output
 
 
-def validate_runhaven_container_name(container_name: str) -> None:
-    if not container_name.startswith("runhaven-"):
-        raise ValueError(
-            f"active run container {container_name!r} is not a RunHaven-owned container"
-        )
-    if container_name.startswith("-"):
-        raise ValueError(f"invalid active run container name: {container_name!r}")
-    if any(character.isspace() or character in "/\\," for character in container_name):
-        raise ValueError(f"invalid active run container name: {container_name!r}")
-
-
 def runs_list(*, limit: int, json_output: bool) -> int:
     if limit < 0:
         raise ValueError("--limit must be 0 or greater")
@@ -2008,12 +1792,6 @@ def require_git_snapshot(value: object, name: str) -> dict[str, Any]:
     return value
 
 
-def require_string(value: object, message: str) -> str:
-    if not isinstance(value, str) or not value:
-        raise ValueError(message)
-    return value
-
-
 def git_snapshot_paths(snapshot: dict[str, Any]) -> tuple[str, ...]:
     paths = snapshot.get("paths")
     if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
@@ -2157,10 +1935,6 @@ def read_run_records(*, limit: int) -> list[dict[str, Any]]:
     return records[-limit:]
 
 
-def runs_log_path() -> Path:
-    return runhaven_cache_root() / "runs.jsonl"
-
-
 def write_provider_policy_log(
     plan: AgentRunPlan,
     decisions: Sequence[ProxyDecision],
@@ -2234,10 +2008,6 @@ def read_egress_policy_log(*, limit: int) -> list[dict[str, Any]]:
     if limit == 0:
         return entries
     return entries[-limit:]
-
-
-def egress_policy_log_path() -> Path:
-    return runhaven_cache_root() / "egress-policy.jsonl"
 
 
 def write_auth_broker_log(
@@ -2326,10 +2096,6 @@ def read_auth_broker_log(*, limit: int) -> list[dict[str, Any]]:
     if limit == 0:
         return entries
     return entries[-limit:]
-
-
-def auth_broker_log_path() -> Path:
-    return runhaven_cache_root() / "auth-broker.jsonl"
 
 
 def auth_status(*, json_output: bool) -> int:
@@ -2653,17 +2419,6 @@ def lock_state_file(lock_file: TextIO) -> None:
 
 def unlock_state_file(lock_file: TextIO) -> None:
     fcntl.flock(lock_file, fcntl.LOCK_UN)
-
-
-def state_lock_path(state_volume: str) -> Path:
-    return runhaven_cache_root() / "locks" / f"{state_volume}.lock"
-
-
-def runhaven_cache_root() -> Path:
-    override = os.environ.get("RUNHAVEN_CACHE_HOME")
-    if override:
-        return Path(override)
-    return Path.home() / "Library" / "Caches" / "runhaven"
 
 
 def require_container_cli() -> None:

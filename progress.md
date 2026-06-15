@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement setup workspace and credential guidance.
+Start pre-release large-file modularization.
 
 ## Current State
 
@@ -161,6 +161,10 @@ Implement setup workspace and credential guidance.
 - The pre-release backlog now includes considering a major large-file refactor
   and modularization pass, especially around the CLI and broad test modules,
   before release.
+- The pre-release modularization plan is now tracked in
+  `docs/harness/modularization-plan.md`. The first behavior-preserving
+  extraction moved setup guide output, active-run marker persistence, cache
+  paths, and shared validators out of `src/runhaven/cli.py`.
 - `src/runhaven/auth_broker.py` now records per-profile auth broker metadata
   and implements the first Codex API-key broker prototype.
 - `runhaven run codex --network provider --codex-api-key-broker-env NAME` reads
@@ -295,10 +299,10 @@ Implement setup workspace and credential guidance.
 
 ## Recommended Next Step
 
-Evaluate whether a major large-file refactor and modularization pass is needed
-before release, especially around the CLI and broad test modules. Run the
-optional Codex broker smoke with a disposable OpenAI API key when one is
-available.
+Continue the large-file modularization by splitting run observability from
+`src/runhaven/cli.py`: `runs list/show/log/diff`, git metadata helpers, and
+run-record readers. Run the optional Codex broker smoke with a disposable
+OpenAI API key when one is available.
 
 ## Verification Evidence
 
@@ -391,6 +395,24 @@ available.
 - 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
   compileall, 156 unit tests, pin check, ruff, mypy, and build after adding
   setup workspace and credential guidance.
+- 2026-06-15: First modularization extraction moved setup guide output,
+  active-run marker persistence, cache path helpers, and shared validators out
+  of `src/runhaven/cli.py`. `src/runhaven/cli.py` measured 2,440 lines after
+  extraction, down from 2,685 before the slice; `tests/test_cli.py` remains
+  3,515 lines and is still a major pre-release split target.
+- 2026-06-15: Focused setup and active-record CLI tests passed after the first
+  modularization extraction:
+  `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_setup_prints_workspace_and_credential_guidance tests.test_cli.CliTests.test_standard_run_writes_and_removes_active_run_marker tests.test_cli.CliTests.test_runs_active_prints_active_run_markers tests.test_cli.CliTests.test_runs_repair_removes_marker_when_container_is_missing`.
+- 2026-06-15: Full `PYTHONPATH=src python3 -m unittest discover -s tests`
+  with 156 tests, `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, and `python3 scripts/check_pins.py`
+  passed after the first modularization extraction.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 156 unit tests, pin check, ruff, mypy, and build after the first
+  modularization extraction. The build output included the new
+  `active_records.py`, `cache_paths.py`, `setup_guide.py`, and
+  `validators.py` modules.
 - 2026-06-15: Focused `runs repair` tests, full
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
   `python3 -m compileall src tests scripts`,

@@ -97,6 +97,10 @@ repo and link to primary sources instead.
 - 2026-06-15: Added a pre-release backlog item to consider a major large-file
   refactor and modularization pass, especially around the CLI and broad test
   modules, before release.
+- 2026-06-15: Started the pre-release modularization pass. Added
+  `docs/harness/modularization-plan.md` and extracted setup guide output,
+  active-run marker persistence, cache path helpers, and shared validators from
+  `src/runhaven/cli.py`.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.

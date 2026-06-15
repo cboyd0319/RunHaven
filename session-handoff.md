@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement setup workspace and credential guidance.
+Start pre-release large-file modularization.
 
 ## Files
 
@@ -133,6 +133,23 @@ Implement setup workspace and credential guidance.
 - `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 156 unit
   tests, pin check, ruff, mypy, and build after adding setup workspace and
   credential guidance.
+- First modularization extraction moved setup guide output, active-run marker
+  persistence, cache path helpers, and shared validators out of
+  `src/runhaven/cli.py`. `src/runhaven/cli.py` measured 2,440 lines after
+  extraction, down from 2,685 before the slice; `tests/test_cli.py` remains
+  3,515 lines and is still a major pre-release split target.
+- Focused setup and active-record CLI tests passed after the first
+  modularization extraction:
+  `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_setup_prints_workspace_and_credential_guidance tests.test_cli.CliTests.test_standard_run_writes_and_removes_active_run_marker tests.test_cli.CliTests.test_runs_active_prints_active_run_markers tests.test_cli.CliTests.test_runs_repair_removes_marker_when_container_is_missing`.
+- Full `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, and `python3 scripts/check_pins.py`
+  passed after the first modularization extraction.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 156 unit
+  tests, pin check, ruff, mypy, and build after the first modularization
+  extraction. The build output included the new `active_records.py`,
+  `cache_paths.py`, `setup_guide.py`, and `validators.py` modules.
 - Focused `runs repair` tests, full
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
   `python3 -m compileall src tests scripts`,
@@ -775,6 +792,10 @@ Implement setup workspace and credential guidance.
 - The pre-release backlog now includes considering a major large-file refactor
   and modularization pass, especially around the CLI and broad test modules,
   before release.
+- `docs/harness/modularization-plan.md` now tracks the pre-release large-file
+  refactor sequence. The first behavior-preserving extraction moved setup
+  guide output, active-run marker persistence, cache paths, and shared
+  validators out of `src/runhaven/cli.py`.
 
 ## Next Session
 
@@ -786,9 +807,9 @@ Implement setup workspace and credential guidance.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Before release, evaluate whether a major large-file refactor and
-   modularization pass is needed for reviewability, especially around the CLI
-   and broad test modules.
+5. Continue large-file modularization by splitting run observability from
+   `src/runhaven/cli.py`: `runs list/show/log/diff`, git metadata helpers, and
+   run-record readers.
 6. Run the Codex broker smoke with a disposable OpenAI API key when available.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into

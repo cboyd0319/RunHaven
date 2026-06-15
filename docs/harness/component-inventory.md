@@ -8,6 +8,8 @@ inventory, not permission to mutate nested projects.
 ## Detected Components
 
 - Root Python package: `pyproject.toml`, `src/runhaven/`,
+  `src/runhaven/active_records.py`, `src/runhaven/cache_paths.py`,
+  `src/runhaven/setup_guide.py`, `src/runhaven/validators.py`,
   `tests/`, `scripts/check_pins.py`, and
   `scripts/provider_egress_smoke.py`.
 - Broker smoke harness: `scripts/codex_broker_smoke.py`.
