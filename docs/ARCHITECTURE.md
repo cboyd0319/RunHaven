@@ -101,3 +101,33 @@ hosts for a provider profile with `--agent AGENT`. The `runhaven run --network
 provider` runtime path is also smoke-tested with allowed proxied HTTPS plus
 denied proxied host, proxied IP literal, direct DNS, and direct IP paths.
 Internet mode remains unrestricted egress.
+
+## Auth Broker Model
+
+Auth brokering is a separate host-side boundary from provider egress. The
+current implementation is design-only and exposes static inspection commands:
+
+```bash
+runhaven auth status
+runhaven auth explain codex
+```
+
+`src/runhaven/auth_broker.py` records per-profile auth surfaces, current safe
+paths, and broker notes. `runhaven auth` reads that static metadata only. It
+does not inspect Keychain, browser profiles, provider login caches, cloud
+credential files, or environment values.
+
+The future broker shape is:
+
+- keep provider credentials owned by the host
+- require explicit user opt-in for each provider account or credential source
+- tie provider-specific broker policy to the endpoint matrix
+- expose no raw credential to the guest by default
+- audit brokered provider actions without logging secret values
+- fail closed when the provider, host, path, or credential scope is not
+  explicitly supported
+
+A plain HTTPS CONNECT proxy cannot make path-aware decisions for TLS traffic
+without intercepting provider TLS, so broad path-sensitive hosts are not solved
+by provider egress alone. Host-side credential brokering is the preferred future
+direction for those flows.

@@ -169,8 +169,35 @@
             "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider hosts now come from the reviewed provider endpoint matrix. Broad path-sensitive, telemetry, update, reporting, and weakly sourced hosts remain explicit `--provider-host` review items. Provider policy decisions are logged for review, and blocked provider targets are grouped after runs with run id, counts, reasons, matched rules, and suggested next actions."
         },
     {
-      "id": "repo-logo",
+      "id": "auth-broker-boundary",
       "priority": 5,
+      "area": "security",
+      "title": "Host-side auth broker boundary",
+      "user_visible_behavior": "`runhaven auth status` and `runhaven auth explain AGENT` describe the future credential broker boundary without reading or printing secrets.",
+      "status": "passing",
+      "dependencies": [
+        "provider-egress-allowlisting"
+      ],
+      "verification": [
+        "Static auth broker metadata exists for every bundled profile",
+        "`runhaven auth status` prints broker status without reading credential stores or environment values",
+        "`runhaven auth explain AGENT` prints profile-specific auth guidance without brokered secrets",
+        "JSON auth output is deterministic and secret-free",
+        "Docs state the design-only status, trust boundary, non-goals, and future acceptance criteria",
+        "Source ledger records current provider auth references"
+      ],
+      "evidence": [
+        "2026-06-15: Added `src/runhaven/auth_broker.py` with static per-profile broker metadata.",
+        "2026-06-15: Added `runhaven auth status` and `runhaven auth explain AGENT` with optional JSON output.",
+        "2026-06-15: Focused auth CLI tests passed and verified fake `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` values were not printed.",
+        "2026-06-15: Manual `PYTHONPATH=src python3 -m runhaven auth status` and `PYTHONPATH=src python3 -m runhaven auth explain codex` checks passed.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 79 unit tests, pin check, ruff, mypy, and build."
+      ],
+      "notes": "This is a design and diagnostics slice only. No credential store is read, no environment value is inspected, and no provider credential is brokered into the guest yet."
+    },
+    {
+      "id": "repo-logo",
+      "priority": 6,
       "area": "documentation",
       "title": "Project logo integration",
       "user_visible_behavior": "The project README displays the maintained repository logo from a tracked asset path.",

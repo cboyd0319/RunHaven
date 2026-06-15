@@ -56,3 +56,7 @@ repo and link to primary sources instead.
   support. Provider run summaries now include run id, reason, count, rule, and
   suggested next action; `scripts/provider_egress_smoke.py --agent AGENT`
   validates bundled provider hosts without credentials.
+- 2026-06-15: Implemented the auth broker boundary diagnostics slice.
+  `runhaven auth status` and `runhaven auth explain AGENT` read static profile
+  metadata only, with JSON output available for future automation. No
+  credential store or environment value is read.

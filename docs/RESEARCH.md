@@ -71,6 +71,42 @@ Important distinction:
 - GitHub Copilot CLI overview:
   <https://docs.github.com/en/copilot/how-tos/copilot-cli/use-copilot-cli/overview>
 
+Auth broker source review on 2026-06-15:
+
+- OpenAI Codex authentication:
+  <https://developers.openai.com/codex/auth>.
+  Reviewed for ChatGPT sign-in, API-key sign-in, access-token automation, and
+  local login caching behavior.
+- Claude Code authentication:
+  <https://code.claude.com/docs/en/iam>.
+  Reviewed for supported auth types, environment-variable precedence, and
+  `apiKeyHelper`.
+- Claude Code setup:
+  <https://code.claude.com/docs/en/setup>.
+  Reviewed for browser-login setup context.
+- Gemini CLI authentication:
+  <https://google-gemini.github.io/gemini-cli/docs/get-started/authentication.html>.
+  Reviewed for Google login, Gemini API key, Vertex ADC, service account JSON,
+  Google Cloud API-key, and headless-environment behavior.
+- GitHub Copilot CLI authentication:
+  <https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/authenticate-copilot-cli>.
+  Reviewed for OAuth device login, environment-token auth, GitHub CLI fallback,
+  BYOK environment variables, and token precedence.
+- GitHub Copilot SDK authentication:
+  <https://docs.github.com/en/copilot/how-tos/copilot-sdk/auth/authenticate>.
+  Reviewed for stored GitHub signed-in user credentials and system keychain
+  usage.
+
+RunHaven auth broker decision from this review:
+
+- `runhaven auth status` and `runhaven auth explain AGENT` are static,
+  secret-free diagnostics only.
+- The real broker remains future work. It should be provider-specific,
+  host-owned, explicit opt-in, auditable, and tied to the endpoint matrix.
+- Broad path-sensitive GitHub hosts are not bundled merely because Copilot can
+  use them; the broker or another verified provider-specific control must make
+  the credential and path boundary explicit first.
+
 ## Provider Endpoint Sources
 
 Reviewed on 2026-06-15 for the bundled provider endpoint matrix:

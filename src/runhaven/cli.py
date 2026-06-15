@@ -16,6 +16,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, TextIO
 
+from .auth_broker import (
+    AUTH_BROKER_RUNTIME,
+    AUTH_BROKER_STATUS,
+    auth_broker_profiles,
+    get_auth_broker_profile,
+)
 from .doctor import collect_checks
 from .egress import (
     EgressPolicy,
@@ -50,6 +56,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return image_command(args)
         if args.command == "state":
             return state_command(args)
+        if args.command == "auth":
+            return auth_command(args)
         if args.command == "egress":
             return egress_command(args)
         if args.command == "why":
@@ -128,6 +136,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="maximum entries to show; use 0 for all entries",
     )
     egress_log_parser.add_argument("--json", action="store_true", help="print JSON output")
+
+    auth_parser = subcommands.add_parser("auth", help="inspect provider auth broker status")
+    auth_subcommands = auth_parser.add_subparsers(dest="auth_command", required=True)
+    auth_status_parser = auth_subcommands.add_parser(
+        "status",
+        help="show auth broker status without reading secrets",
+    )
+    auth_status_parser.add_argument("--json", action="store_true", help="print JSON output")
+    auth_explain_parser = auth_subcommands.add_parser(
+        "explain",
+        help="explain the auth broker boundary for an agent",
+    )
+    auth_explain_parser.add_argument("agent", choices=sorted(PROFILES), help="agent profile")
+    auth_explain_parser.add_argument("--json", action="store_true", help="print JSON output")
 
     why_parser = subcommands.add_parser("why", help="explain RunHaven safety decisions")
     why_subcommands = why_parser.add_subparsers(dest="why_command", required=True)
@@ -282,6 +304,14 @@ def egress_command(args: argparse.Namespace) -> int:
     if args.egress_command == "log":
         return egress_log(limit=args.limit, json_output=args.json)
     raise ValueError(f"unknown egress command: {args.egress_command}")
+
+
+def auth_command(args: argparse.Namespace) -> int:
+    if args.auth_command == "status":
+        return auth_status(json_output=args.json)
+    if args.auth_command == "explain":
+        return auth_explain(args.agent, json_output=args.json)
+    raise ValueError(f"unknown auth command: {args.auth_command}")
 
 
 def why_command(args: argparse.Namespace) -> int:
@@ -537,6 +567,78 @@ def read_egress_policy_log(*, limit: int) -> list[dict[str, Any]]:
 
 def egress_policy_log_path() -> Path:
     return runhaven_cache_root() / "egress-policy.jsonl"
+
+
+def auth_status(*, json_output: bool) -> int:
+    profiles = auth_broker_profiles()
+    payload = {
+        "status": AUTH_BROKER_STATUS,
+        "runtime": AUTH_BROKER_RUNTIME,
+        "credential_stores_inspected": False,
+        "environment_values_inspected": False,
+        "secrets_printed": False,
+        "profiles": [profile.to_json() for profile in profiles],
+    }
+    if json_output:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    print(f"Auth broker: {AUTH_BROKER_STATUS}")
+    print(f"Runtime: {AUTH_BROKER_RUNTIME}")
+    print("Credential stores inspected: no")
+    print("Environment values inspected: no")
+    print("Secrets printed: no")
+    print("Profiles:")
+    width = max(len(profile.name) for profile in profiles)
+    for profile in profiles:
+        print(f"  {profile.name:<{width}}  {profile.status}")
+    print("Current safe paths:")
+    print("  - authenticate inside the isolated agent state volume when interactive")
+    print("  - pass one token with --env NAME only when explicitly needed")
+    print("  - use --network provider to constrain provider egress separately")
+    return 0
+
+
+def auth_explain(agent: str, *, json_output: bool) -> int:
+    profile = get_profile(agent)
+    auth_profile = get_auth_broker_profile(profile.name)
+    payload = {
+        **auth_profile.to_json(),
+        "runtime": AUTH_BROKER_RUNTIME,
+        "credential_stores_inspected": False,
+        "environment_values_inspected": False,
+        "secrets_printed": False,
+        "provider_hosts": profile.provider_hosts,
+    }
+    if json_output:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    print(f"Profile: {profile.name}")
+    print(f"Auth broker: {auth_profile.status}")
+    print(f"Runtime: {AUTH_BROKER_RUNTIME}")
+    print("Credential stores inspected: no")
+    print("Environment values inspected: no")
+    print("Secrets printed: no")
+    print("Supported auth surfaces:")
+    for item in auth_profile.supported_auth:
+        print(f"  - {item}")
+    print("Host keeps:")
+    for item in auth_profile.host_keeps:
+        print(f"  - {item}")
+    print("Guest receives:")
+    for item in auth_profile.guest_receives:
+        print(f"  - {item}")
+    if profile.provider_hosts:
+        print(f"Provider hosts: {', '.join(profile.provider_hosts)}")
+    else:
+        print("Provider hosts: none bundled")
+    print(f"Current safe path: {auth_profile.current_safe_path}")
+    if auth_profile.notes:
+        print("Notes:")
+        for note in auth_profile.notes:
+            print(f"  - {note}")
+    return 0
 
 
 def why_host(host: str, *, port: int, agent: str | None) -> int:

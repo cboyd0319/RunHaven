@@ -22,8 +22,10 @@
 - grouped blocked-host review with rule, count, run id, and suggested next
   action
 - provider-profile smoke support for bundled source-backed hosts
+- host-side provider credential broker design with `runhaven auth status` and
+  `runhaven auth explain AGENT`
 - empty-allowlist regression tests for every network policy mode
-- host-side provider credential broker design tied to endpoint allowlists
+- first real host-side provider credential broker implementation
 - local proxy option for model credentials
 - clear offline and package-install network modes
 - live provider auth-flow smokes for optional feature paths
@@ -69,7 +71,7 @@
 - stable JSON output for read-only and run-status commands
 - warm reusable project sessions with explicit reset and prune UX
 - image, state, and managed-network repair commands
-- auth status checks that never print secrets
+- provider auth broker run records that never print secrets
 
 ## Phase 6: Repeatable Workflows
 

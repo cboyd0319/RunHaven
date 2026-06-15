@@ -4,8 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement grouped blocked-host review and provider-profile smoke support from
-the mined backlog.
+Implement host-side auth broker boundary diagnostics from the mined backlog.
 
 ## Current State
 
@@ -159,16 +158,46 @@ the mined backlog.
   blocked-host review, `runs list/show/log/diff/attach/stop`, worktree review
   flows, image/state/network repair commands, `auth status`, and
   task-language docs recipes.
+- `src/runhaven/auth_broker.py` now records static per-profile auth broker
+  metadata for Claude, Codex, Gemini, Antigravity, Copilot, and custom shell
+  profiles.
+- `runhaven auth status` and `runhaven auth explain AGENT` now describe the
+  future host-side broker boundary without reading Keychain, browser profiles,
+  cloud credential files, provider login caches, or environment values.
+- `runhaven auth status --json` and `runhaven auth explain AGENT --json` expose
+  the same static broker metadata for future automation without secret values.
+- `docs/AUTH_BROKER.md` records the design-only status, trust boundary,
+  provider auth notes, non-goals, and future acceptance criteria.
+- `docs/RESEARCH.md` now records the current provider auth references used for
+  this broker boundary.
 
 ## Recommended Next Step
 
-Add path-aware provider policy design for broad hosts such as `github.com` and
-`api.github.com`, or start the host-side credential broker design. Keep those
-hosts explicit until RunHaven can restrict them by path or proxy credentials
-without mounting provider secrets into the guest.
+Build the first real host-side broker prototype for Codex behind explicit user
+opt-in, or add empty-allowlist regression tests for every network policy mode
+before expanding broker behavior. Keep broad hosts such as `github.com` and
+`api.github.com` explicit until RunHaven can restrict them by path or brokered
+credentials without mounting provider secrets into the guest.
 
 ## Verification Evidence
 
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_auth_status_does_not_print_secret_values tests.test_cli.CliTests.test_auth_explain_prints_profile_boundary tests.test_cli.CliTests.test_auth_explain_json_is_static_and_secret_free`
+  ran 3 focused auth CLI tests and passed.
+- 2026-06-15: `PYTHONPATH=src python3 -m runhaven auth status` and
+  `PYTHONPATH=src python3 -m runhaven auth explain codex` passed manual CLI
+  smoke checks.
+- 2026-06-15: `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 79 tests,
+  `python3 scripts/check_pins.py`, `uvx --from ruff==0.15.17 ruff check .`,
+  and `uvx --from mypy==2.1.0 mypy src` passed.
+- 2026-06-15: `python3 -m json.tool feature_list.json`,
+  `git diff --check`, local Markdown link check, and platform-boundary text
+  scan passed.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 79 unit tests, pin check, ruff, mypy, and build.
+- 2026-06-15: Generated build and cache artifacts were removed; cleanup scan
+  found no `build`, `dist`, `src/runhaven.egg-info`, Python cache, ruff cache,
+  or mypy cache directories.
 - 2026-06-15: `git diff --check` passed after recording the source-mined
   recommendations.
 - 2026-06-15: `python3 -m json.tool feature_list.json` passed after recording

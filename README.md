@@ -89,6 +89,9 @@ This is not a complete data-loss or exfiltration solution.
   isolated agent home volume.
 - If a credential is available inside the agent home volume or passed with
   `--env NAME`, malicious repository content may try to misuse it.
+- Host-side auth brokering is design-only. `runhaven auth status` and
+  `runhaven auth explain AGENT` explain the boundary without reading or
+  printing secrets.
 - Agent-native approval systems are useful, but they are not a replacement for
   the outer container boundary.
 
@@ -255,6 +258,15 @@ runhaven run codex --env OPENAI_API_KEY
 `runhaven` rejects `NAME=value` so secrets do not get copied into shell history or
 dry-run output.
 
+Inspect the future auth broker boundary:
+
+```bash
+runhaven auth status
+runhaven auth explain codex
+```
+
+These commands do not read credential stores or environment values.
+
 List or remove isolated agent home volumes:
 
 ```bash
@@ -323,6 +335,7 @@ Current pins are recorded in [pins.toml](pins.toml). The source ledger is
 - [Usage](docs/USAGE.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Security model](docs/SECURITY_MODEL.md)
+- [Auth broker](docs/AUTH_BROKER.md)
 - [Pinning policy](docs/PINNING.md)
 - [Research and source ledger](docs/RESEARCH.md)
 - [Roadmap](docs/ROADMAP.md)

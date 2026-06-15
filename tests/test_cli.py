@@ -363,6 +363,63 @@ class CliTests(unittest.TestCase):
         self.assertIn("run=run-denied", text)
         self.assertNotIn("api.example.com", text)
 
+    def test_auth_status_does_not_print_secret_values(self) -> None:
+        output = io.StringIO()
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "OPENAI_API_KEY": "sk-test-secret-value",
+                    "ANTHROPIC_API_KEY": "anthropic-test-secret-value",
+                },
+                clear=False,
+            ),
+            redirect_stdout(output),
+        ):
+            code = main(["auth", "status"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Auth broker: design-only", text)
+        self.assertIn("Credential stores inspected: no", text)
+        self.assertIn("Environment values inspected: no", text)
+        self.assertIn("Secrets printed: no", text)
+        for profile in ("antigravity", "claude", "codex", "copilot", "gemini", "shell"):
+            self.assertIn(profile, text)
+        self.assertNotIn("sk-test-secret-value", text)
+        self.assertNotIn("anthropic-test-secret-value", text)
+
+    def test_auth_explain_prints_profile_boundary(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["auth", "explain", "codex"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Profile: codex", text)
+        self.assertIn("Auth broker: design-only", text)
+        self.assertIn("OpenAI API key sign-in", text)
+        self.assertIn("nothing brokered by RunHaven today", text)
+        self.assertIn("Provider hosts: api.openai.com, chatgpt.com", text)
+        self.assertIn("OPENAI_API_KEY by name only", text)
+
+    def test_auth_explain_json_is_static_and_secret_free(self) -> None:
+        output = io.StringIO()
+        with (
+            patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test-secret-value"}, clear=False),
+            redirect_stdout(output),
+        ):
+            code = main(["auth", "explain", "codex", "--json"])
+
+        self.assertEqual(code, 0)
+        payload = json.loads(output.getvalue())
+        self.assertEqual(payload["name"], "codex")
+        self.assertFalse(payload["credential_stores_inspected"])
+        self.assertFalse(payload["environment_values_inspected"])
+        self.assertFalse(payload["secrets_printed"])
+        self.assertIn("api.openai.com", payload["provider_hosts"])
+        self.assertNotIn("sk-test-secret-value", output.getvalue())
+
     def test_why_host_explains_ip_literal_rejection(self) -> None:
         output = io.StringIO()
         with redirect_stdout(output):

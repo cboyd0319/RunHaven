@@ -85,6 +85,23 @@ runhaven run copilot --env COPILOT_GITHUB_TOKEN
 `runhaven` intentionally rejects `NAME=value` so secrets do not get copied into shell
 history or dry-run output.
 
+## Auth Broker Status
+
+```bash
+runhaven auth status
+runhaven auth explain codex
+runhaven auth explain codex --json
+```
+
+The auth broker is design-only. These commands describe the future
+host-side broker boundary and the current safe paths for each profile. They do
+not inspect Keychain, browser profiles, provider login caches, cloud credential
+files, or environment variable values, and they do not print secrets.
+
+Until a broker is implemented, authenticate inside the isolated agent state
+volume when the provider supports interactive login. Use `--env NAME` only when
+a headless run deliberately needs one token value inside the guest.
+
 ## Read-Only Review
 
 ```bash
