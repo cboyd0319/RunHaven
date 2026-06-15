@@ -390,8 +390,33 @@
       "notes": "`setup` intentionally does not call Apple `container system start`, build images, run agents, mount a workspace, read credential stores, or write state."
     },
     {
-      "id": "repo-logo",
+      "id": "image-network-repair-ux",
       "priority": 8,
+      "area": "usability",
+      "title": "Image and managed-network repair UX",
+      "user_visible_behavior": "`runhaven image rebuild AGENT` rebuilds a bundled image with explicit repair intent, while `runhaven network list` and `runhaven network prune --yes` help users find and remove only RunHaven-managed Apple container networks.",
+      "status": "passing",
+      "dependencies": [
+        "runtime-hardening-macos-only-boundary",
+        "guided-first-run-setup"
+      ],
+      "verification": [
+        "`runhaven image rebuild AGENT --dry-run` prints the same pinned bundled build command shape as `image build`",
+        "`runhaven network list` filters Apple container networks to RunHaven-managed names only",
+        "`runhaven network prune` previews managed networks and requires `--yes` before deletion",
+        "`runhaven network prune --yes` deletes only RunHaven-managed network names",
+        "User docs state that network pruning does not delete arbitrary Apple-managed networks, workspaces, images, or state volumes"
+      ],
+      "evidence": [
+        "2026-06-15: Focused image rebuild and managed-network tests first failed because `image rebuild` and top-level `network` commands were not valid subcommands, then passed after adding the commands.",
+        "2026-06-15: Focused adjacent CLI tests, compileall for touched files, ruff on touched files, and mypy on touched source files passed after adding image rebuild and managed-network list/prune.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 187 unit tests, pin check, ruff, mypy, and build. Manual `image rebuild --dry-run`, `network list`, and `network prune` smokes, JSON validation, Markdown link check, and `git diff --check` also passed."
+      ],
+      "notes": "`image rebuild` is intentionally an alias for the pinned bundled image build plan, not a health diagnosis command. Network pruning is limited to RunHaven-managed name shapes and requires explicit confirmation."
+    },
+    {
+      "id": "repo-logo",
+      "priority": 9,
       "area": "documentation",
       "title": "Project logo integration",
       "user_visible_behavior": "The project README displays the maintained repository logo from a tracked asset path.",

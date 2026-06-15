@@ -55,6 +55,9 @@ failure mode understandable for non-technical users. Named sessions selected
 with `--session NAME` reuse only the isolated `/home/agent` volume; they do not
 widen workspace mounts or host credential access. `state reset` and
 session-filtered `state prune` delete RunHaven-managed home volumes only.
+`network list` and `network prune --yes` operate only on RunHaven-managed
+Apple `container` network names and do not delete arbitrary Apple-managed or
+user-created networks.
 
 ## Why Not Container Machine
 

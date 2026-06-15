@@ -89,6 +89,17 @@ class CliCoreTests(unittest.TestCase):
         self.assertIn("Containerfile", text)
         self.assertIn("runhaven/base:0.1.0", text)
 
+    def test_image_rebuild_dry_run_uses_bundled_containerfile(self) -> None:
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = main(["image", "rebuild", "shell", "--dry-run"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("container build", text)
+        self.assertIn("Containerfile", text)
+        self.assertIn("runhaven/base:0.1.0", text)
+
     def test_missing_workspace_is_user_error(self) -> None:
         with TemporaryDirectory() as directory:
             missing = Path(directory) / "missing"

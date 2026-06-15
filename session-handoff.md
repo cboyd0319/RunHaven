@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add warm reusable project sessions with reset and prune UX.
+Add image and managed-network repair UX.
 
 ## Files
 
@@ -35,6 +35,7 @@ Add warm reusable project sessions with reset and prune UX.
 - `src/runhaven/cli_parser.py`
 - `src/runhaven/diagnostic_commands.py`
 - `src/runhaven/git_metadata.py`
+- `src/runhaven/network_commands.py`
 - `src/runhaven/provider_endpoints.py`
 - `src/runhaven/provider_observability.py`
 - `src/runhaven/provider_runtime.py`
@@ -56,6 +57,7 @@ Add warm reusable project sessions with reset and prune UX.
 - `tests/test_cli_active_status.py`
 - `tests/test_cli_active_stop_kill.py`
 - `tests/test_cli_diagnostics.py`
+- `tests/test_cli_network.py`
 - `tests/test_cli_provider_codex_broker.py`
 - `tests/test_cli_provider_internal_network.py`
 - `tests/test_cli_provider_proxy.py`
@@ -320,6 +322,16 @@ Add warm reusable project sessions with reset and prune UX.
   `PYTHONPATH=src python3 -m runhaven state reset --help`,
   `PYTHONPATH=src python3 -m runhaven plan shell --session review --tty never -- /bin/true`,
   and `PYTHON=<temporary-venv-python> ./init.sh`.
+- Image rebuild and managed-network repair red/green focused tests first
+  failed because `image rebuild` and top-level `network` were not valid
+  subcommands, then passed after adding the commands.
+- Full image and managed-network repair verification passed:
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 187 unit tests,
+  pin check, ruff, mypy, and build; `PYTHONPATH=src python3 -m runhaven image rebuild shell --dry-run`,
+  `PYTHONPATH=src python3 -m runhaven network list`,
+  `PYTHONPATH=src python3 -m runhaven network prune`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check, and
+  `git diff --check` also passed.
 - Focused CLI test split checks passed: `python3 -m compileall tests`,
   `uvx --from ruff==0.15.17 ruff check` on the split CLI test files, and
   `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli*.py'`
@@ -1271,6 +1283,13 @@ Add warm reusable project sessions with reset and prune UX.
   volume. `runhaven state reset AGENT --session NAME --yes`, `state list
   --session NAME`, and `state prune --session NAME --yes` provide explicit
   cleanup paths for named sessions.
+- `runhaven image rebuild AGENT` rebuilds a bundled image through the same
+  pinned build plan as `image build`, with clearer repair intent for stale or
+  missing local images.
+- `runhaven network list` lists only RunHaven-managed Apple `container`
+  network names. `runhaven network prune` previews those names and
+  `runhaven network prune --yes` deletes only RunHaven-managed
+  volume-preparation, internal, and provider network names.
 
 ## Next Session
 
@@ -1283,8 +1302,9 @@ Add warm reusable project sessions with reset and prune UX.
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
 5. Run the Codex broker smoke with a disposable OpenAI API key when available.
-6. Add image and managed-network repair UX so users can recover stale local
-   runtime resources without guessing Apple `container` commands.
+6. Add `runhaven image doctor` and interrupted preflight diagnostics so
+   RunHaven can identify missing or stale bundled images and explain rebuild
+   or cleanup steps before users guess Apple `container` commands.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

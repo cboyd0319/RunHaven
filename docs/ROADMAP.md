@@ -66,7 +66,7 @@
   `runs kill`, `runs repair`, `runs repair --all`, and git change metadata
 - structured blocked-host and cleanup event records
 - stable JSON output for read-only, run-status, and repair-summary commands
-- image, state, and managed-network repair commands
+- image rebuild, state reset/prune, and managed-network list/prune commands
 - provider auth broker run records that never print secrets
 
 ## Pre-Release Codebase Health

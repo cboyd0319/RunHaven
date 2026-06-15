@@ -128,6 +128,7 @@ runhaven plan shell --image my-agent:2026.06.14 -- my-agent --help
 | Guided first-run check | `runhaven setup` |
 | Host prerequisite check | `runhaven doctor` |
 | Build a bundled image | `runhaven image build claude` |
+| Rebuild a bundled image | `runhaven image rebuild claude` |
 | Preview a run | `runhaven plan claude` |
 | Run an agent | `runhaven run claude` |
 | Run with a named session | `runhaven run claude --session review` |
@@ -145,6 +146,8 @@ runhaven plan shell --image my-agent:2026.06.14 -- my-agent --help
 | Auth broker status | `runhaven auth status` |
 | Isolated state volumes | `runhaven state list` |
 | Reset one session | `runhaven state reset claude --session review --yes` |
+| Managed networks | `runhaven network list` |
+| Prune managed networks | `runhaven network prune --yes` |
 
 ## Documentation
 

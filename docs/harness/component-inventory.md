@@ -13,13 +13,13 @@ inventory, not permission to mutate nested projects.
   `src/runhaven/auth_profiles.py`, `src/runhaven/cache_paths.py`,
   `src/runhaven/cli_parser.py`,
   `src/runhaven/diagnostic_commands.py`, `src/runhaven/git_metadata.py`,
-  `src/runhaven/project_checks.py`, `src/runhaven/provider_observability.py`,
-  `src/runhaven/provider_runtime.py`,
+  `src/runhaven/network_commands.py`, `src/runhaven/project_checks.py`,
+  `src/runhaven/provider_observability.py`, `src/runhaven/provider_runtime.py`,
   `src/runhaven/run_history.py`, `src/runhaven/session_state.py`,
   `src/runhaven/setup_guide.py`, `src/runhaven/validators.py`,
   `src/runhaven/worktree_lifecycle.py`, `src/runhaven/worktrees.py`,
-  `tests/`, `scripts/check_pins.py`, `scripts/npm_pin_policy.py`, and
-  `scripts/provider_egress_smoke.py`.
+  `tests/`, including `tests/test_cli_network.py`, `scripts/check_pins.py`,
+  `scripts/npm_pin_policy.py`, and `scripts/provider_egress_smoke.py`.
 - Broker smoke harness: `scripts/codex_broker_smoke.py`.
 - Runtime cache ledgers and markers: `egress-policy.jsonl`,
   `auth-broker.jsonl`, `runs.jsonl`, `active-runs/*.json`, and

@@ -61,13 +61,31 @@ def build_parser() -> argparse.ArgumentParser:
     image_parser = subcommands.add_parser("image", help="manage local agent images")
     image_subcommands = image_parser.add_subparsers(dest="image_command", required=True)
     build_parser_ = image_subcommands.add_parser("build", help="build a bundled agent image")
-    build_parser_.add_argument(
-        "agent",
-        choices=sorted(PROFILES),
-        help="agent image template to build",
+    add_image_build_arguments(build_parser_)
+    rebuild_parser = image_subcommands.add_parser(
+        "rebuild",
+        help="rebuild a bundled agent image",
     )
-    build_parser_.add_argument("--tag", help="override the image tag")
-    build_parser_.add_argument("--dry-run", action="store_true", help="print the build command")
+    add_image_build_arguments(rebuild_parser)
+
+    network_parser = subcommands.add_parser(
+        "network",
+        help="inspect or remove RunHaven managed networks",
+    )
+    network_subcommands = network_parser.add_subparsers(dest="network_command", required=True)
+    network_subcommands.add_parser(
+        "list",
+        help="list RunHaven managed Apple container networks",
+    )
+    network_prune_parser = network_subcommands.add_parser(
+        "prune",
+        help="remove RunHaven managed Apple container networks",
+    )
+    network_prune_parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="delete listed networks",
+    )
 
     state_parser = subcommands.add_parser("state", help="inspect or remove RunHaven state volumes")
     state_subcommands = state_parser.add_subparsers(dest="state_command", required=True)
@@ -278,6 +296,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     return parser
+
+
+def add_image_build_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "agent",
+        choices=sorted(PROFILES),
+        help="agent image template to build",
+    )
+    parser.add_argument("--tag", help="override the image tag")
+    parser.add_argument("--dry-run", action="store_true", help="print the build command")
 
 
 def add_run_arguments(parser: argparse.ArgumentParser) -> None:

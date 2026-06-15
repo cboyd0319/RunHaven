@@ -47,6 +47,7 @@ from .egress import (
 )
 from .git_metadata import capture_git_snapshot, summarize_git_change
 from .images import build_image_plan
+from .network_commands import network_list, network_prune
 from .plans import (
     AgentRunPlan,
     RunOptions,
@@ -93,6 +94,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_agent(args)
         if args.command == "image":
             return image_command(args)
+        if args.command == "network":
+            return network_command(args)
         if args.command == "state":
             return state_command(args)
         if args.command == "runs":
@@ -196,7 +199,7 @@ def run_agent(args: argparse.Namespace) -> int:
 
 
 def image_command(args: argparse.Namespace) -> int:
-    if args.image_command != "build":
+    if args.image_command not in {"build", "rebuild"}:
         raise ValueError(f"unknown image command: {args.image_command}")
 
     profile = get_profile(args.agent)
@@ -207,6 +210,21 @@ def image_command(args: argparse.Namespace) -> int:
 
     require_container_cli()
     return subprocess.call(plan.command)
+
+
+def network_command(args: argparse.Namespace) -> int:
+    if args.network_command == "list":
+        return network_list(
+            require_container=require_container_cli,
+            run_container=subprocess.run,
+        )
+    if args.network_command == "prune":
+        return network_prune(
+            confirm=args.yes,
+            require_container=require_container_cli,
+            run_container=subprocess.run,
+        )
+    raise ValueError(f"unknown network command: {args.network_command}")
 
 
 def state_command(args: argparse.Namespace) -> int:

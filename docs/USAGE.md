@@ -50,6 +50,18 @@ Dry-run first if you want to inspect the exact build command:
 runhaven image build claude --dry-run
 ```
 
+Use `rebuild` when the local bundled image is stale or missing and you want the
+repair intent to be clear:
+
+```bash
+runhaven image rebuild claude
+runhaven image rebuild claude --dry-run
+```
+
+`image rebuild` uses the same exact pinned bundled image template and tag rules
+as `image build`; it does not delete workspaces, state volumes, or other local
+images.
+
 ## Preview a Run
 
 ```bash
@@ -324,6 +336,32 @@ runhaven egress log --json
 
 The log is stored under RunHaven's cache directory. It records the profile,
 workspace, host, port, decision, reason, matched rule, count, and run id.
+
+## Recover Local Resources
+
+Rebuild a stale or missing bundled image:
+
+```bash
+runhaven image rebuild claude
+```
+
+List RunHaven-managed Apple `container` networks:
+
+```bash
+runhaven network list
+```
+
+Remove only RunHaven-managed networks after reviewing the list:
+
+```bash
+runhaven network prune
+runhaven network prune --yes
+```
+
+`network prune` filters to RunHaven-owned network names such as the
+volume-preparation network, per-project internal networks, and per-run provider
+networks. It does not delete Apple-managed networks, the default network,
+arbitrary user-created networks, workspaces, images, or state volumes.
 
 ## Run History
 

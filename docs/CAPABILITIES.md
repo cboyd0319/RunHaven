@@ -113,6 +113,25 @@ Useful opt-in controls:
 `runhaven` rejects `NAME=value` so secrets do not get copied into shell history
 or dry-run output.
 
+## Local Resource Recovery
+
+RunHaven includes explicit cleanup paths for local resources it owns:
+
+```bash
+runhaven image rebuild claude
+runhaven state list
+runhaven state reset claude --session review --yes
+runhaven state prune --yes
+runhaven network list
+runhaven network prune --yes
+```
+
+`image rebuild` rebuilds the bundled image from the pinned local template.
+`state` commands manage RunHaven agent home volumes. `network` commands list or
+delete only RunHaven-managed Apple `container` network names, including
+volume-preparation, internal, and provider networks. None of these commands
+delete workspace files.
+
 ## Run Observability And Recovery
 
 RunHaven records secret-free run metadata under its cache directory:

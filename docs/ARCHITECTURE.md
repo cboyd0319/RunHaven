@@ -106,6 +106,13 @@ provider` runtime path is also smoke-tested with allowed proxied HTTPS plus
 denied proxied host, proxied IP literal, direct DNS, and direct IP paths.
 Internet mode remains unrestricted egress.
 
+Managed-network cleanup is explicit. `runhaven network list` reads
+`container network list --quiet` and shows only RunHaven-owned network names.
+`runhaven network prune --yes` deletes only those managed names: the
+volume-preparation network, per-project internal networks, and per-run provider
+networks. It does not delete the Apple default network, Apple-managed runtime
+networks, arbitrary user networks, images, volumes, or workspace files.
+
 ## Run Records
 
 Actual `runhaven run` executions append one JSON object to `runs.jsonl` under

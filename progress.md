@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add warm reusable project sessions with reset and prune UX.
+Add image and managed-network repair UX.
 
 ## Current State
 
@@ -45,6 +45,13 @@ Add warm reusable project sessions with reset and prune UX.
   volume. `runhaven state reset AGENT --session NAME --yes`, `state list
   --session NAME`, and `state prune --session NAME --yes` provide explicit
   cleanup paths for named sessions.
+- `runhaven image rebuild AGENT` now rebuilds a bundled image through the same
+  pinned build plan as `image build`, with clearer repair intent for stale or
+  missing local images.
+- `runhaven network list` now lists only RunHaven-managed Apple `container`
+  network names. `runhaven network prune` previews those networks and
+  `runhaven network prune --yes` deletes only RunHaven-managed
+  volume-preparation, internal, and provider network names.
 - Dev dependencies now match the `unittest` suite and no longer include pytest.
 - `scripts/check_pins.py` now enforces `pins.toml` against source files.
 - Follow-up hardening now rejects root group identities such as `agent:0`
@@ -414,9 +421,10 @@ Add warm reusable project sessions with reset and prune UX.
 ## Recommended Next Step
 
 Run the optional Codex broker smoke with a disposable OpenAI API key when one
-is available. Next product slice: add image and managed-network repair UX so
-users can recover stale local runtime resources without guessing Apple
-`container` commands.
+is available. Next product slice: add `runhaven image doctor` and interrupted
+preflight diagnostics so RunHaven can identify missing or stale bundled images
+and explain rebuild or cleanup steps before users guess Apple `container`
+commands.
 
 ## Verification Evidence
 
@@ -1364,3 +1372,13 @@ users can recover stale local runtime resources without guessing Apple
   `PYTHONPATH=src python3 -m runhaven state reset --help`,
   `PYTHONPATH=src python3 -m runhaven plan shell --session review --tty never -- /bin/true`,
   and `PYTHON=<temporary-venv-python> ./init.sh`.
+- 2026-06-15: Image rebuild and managed-network repair red/green focused
+  tests first failed because `image rebuild` and top-level `network` were not
+  valid subcommands, then passed after adding the commands.
+- 2026-06-15: Full image and managed-network repair verification passed:
+  `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 187 unit tests,
+  pin check, ruff, mypy, and build; `PYTHONPATH=src python3 -m runhaven image rebuild shell --dry-run`,
+  `PYTHONPATH=src python3 -m runhaven network list`,
+  `PYTHONPATH=src python3 -m runhaven network prune`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check, and
+  `git diff --check` also passed.

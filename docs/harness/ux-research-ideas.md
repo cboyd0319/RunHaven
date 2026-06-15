@@ -318,18 +318,23 @@ recorded RunHaven worktree and branch.
 
 ### Image Repair And State Repair
 
-Command shapes:
+Current command shapes:
 
 ```bash
-runhaven image doctor
 runhaven image rebuild claude
-runhaven repair state
-runhaven repair networks
+runhaven state list
+runhaven state reset claude --session review --yes
+runhaven state prune --yes
+runhaven network list
+runhaven network prune --yes
 ```
 
-These commands should identify stale images, missing volumes, leftover managed
-networks, and interrupted preflight setup. They should print exact fixes and
-avoid deleting workspace files.
+Current state: `runhaven image rebuild` reuses the pinned bundled image build
+plan with clearer repair intent. `state` commands list, reset, and prune
+RunHaven-owned agent home volumes. `network` commands list and prune only
+RunHaven-managed Apple `container` networks after explicit confirmation. Future
+work can add `image doctor` and deeper interrupted-preflight diagnosis, but the
+current commands avoid deleting workspace files.
 
 ### Credential UX
 
