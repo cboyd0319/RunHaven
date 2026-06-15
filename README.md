@@ -132,11 +132,16 @@ python -m pip install pip==26.1.2
 python -m pip install --no-deps -e .
 ```
 
-Check the Mac before running an agent:
+Run the non-mutating guided setup before running an agent:
 
 ```bash
-runhaven doctor
+runhaven setup
 ```
+
+`setup` runs the same prerequisite checks as `doctor`, prints exact fixes when
+the host is not ready, and shows the image build, plan, and run commands for
+the selected agent without installing, starting, building, or mounting
+anything. Use `runhaven setup --agent codex` to prepare a different profile.
 
 Build and preview a bundled agent image:
 
@@ -330,12 +335,13 @@ runhaven state prune --yes
 Run this first:
 
 ```bash
-runhaven doctor
+runhaven setup
 ```
 
 If a run fails, collect these commands before opening an issue:
 
 ```bash
+runhaven setup
 runhaven doctor
 runhaven plan <agent>
 container system status

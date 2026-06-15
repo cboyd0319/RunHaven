@@ -27,7 +27,7 @@ from .auth_broker import (
     auth_broker_profiles,
     get_auth_broker_profile,
 )
-from .doctor import collect_checks
+from .doctor import Check, collect_checks
 from .egress import (
     EgressPolicy,
     ProxyDecision,
@@ -88,6 +88,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return list_agents()
         if args.command == "doctor":
             return doctor()
+        if args.command == "setup":
+            return setup(args.agent)
         if args.command == "plan":
             return plan_run(args)
         if args.command == "run":
@@ -122,6 +124,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     subcommands.add_parser("agents", help="list bundled agent profiles")
     subcommands.add_parser("doctor", help="check local runtime prerequisites")
+    setup_parser = subcommands.add_parser(
+        "setup",
+        help="guide first-run prerequisites and next commands",
+    )
+    setup_parser.add_argument(
+        "--agent",
+        choices=sorted(PROFILES),
+        default="claude",
+        help="agent profile to prepare; defaults to claude",
+    )
 
     agent_args_epilog = (
         "Use -- before flags meant for the agent, for example:\n"
@@ -406,12 +418,54 @@ def list_agents() -> int:
 
 def doctor() -> int:
     checks = collect_checks()
+    print_checks(checks)
+    return 0 if all(check.ok for check in checks) else 1
+
+
+def print_checks(checks: tuple[Check, ...]) -> None:
     for check in checks:
         status = "ok" if check.ok else "fail"
         print(f"{status:4} {check.name}: {check.detail}")
         if not check.ok and check.remedy:
             print(f"     fix: {check.remedy}")
-    return 0 if all(check.ok for check in checks) else 1
+
+
+def setup(agent: str) -> int:
+    profile = get_profile(agent)
+    checks = collect_checks()
+    ready = all(check.ok for check in checks)
+    print("RunHaven setup")
+    print()
+    print("1. Host prerequisites")
+    print_checks(checks)
+    print()
+    if not ready:
+        print("Next steps")
+        for check in checks:
+            if not check.ok and check.remedy:
+                print(f"- {check.name}: {check.remedy}")
+        print("- After fixing the items above, run `runhaven setup` again.")
+        return 1
+
+    print(f"Selected agent: {agent} - {profile.description}")
+    print()
+    print("2. Build the agent image")
+    print(f"   runhaven image build {agent}")
+    print()
+    print("3. Preview the container boundary")
+    print(f"   runhaven plan {agent}")
+    print()
+    print("4. Run from your project directory")
+    print(f"   runhaven run {agent}")
+    print()
+    print("Safety defaults")
+    print("- One selected project is mounted at /workspace.")
+    print("- No host home, raw SSH keys, or cloud credential folders are mounted by default.")
+    print(
+        "- Use `--network internal` for local-only work or "
+        "`--network provider` for provider mode."
+    )
+    return 0
 
 
 def plan_run(args: argparse.Namespace) -> int:

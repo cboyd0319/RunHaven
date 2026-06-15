@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement JSON output for active-run repair summaries.
+Implement non-mutating guided first-run setup.
 
 ## Current State
 
@@ -255,6 +255,13 @@ Implement JSON output for active-run repair summaries.
   `runhaven runs repair --all --json` now emit secret-free repair results,
   counts, and exit codes for scripts without raw Apple inspect output or
   active-marker contents.
+- `runhaven setup` now runs the same prerequisite checks as `doctor`, prints
+  exact remedies when the host is not ready, and shows profile-specific image
+  build, plan, and run commands when prerequisites pass.
+- `runhaven setup --agent AGENT` selects the profile used in the suggested
+  first-run commands. The command is intentionally non-mutating: it does not
+  install Apple `container`, start services, build images, run agents, write
+  state, or mount a workspace.
 - Active markers are removed after run completion. If a run exits after a stop
   or kill request, the completed run record is marked `stopped` or `killed`.
 - Run records omit diffs, file contents, prompts, command lines, agent
@@ -276,9 +283,10 @@ Implement JSON output for active-run repair summaries.
 
 ## Recommended Next Step
 
-Add a guided `runhaven setup` or `runhaven doctor --fix` style path for
-beginner-safe prerequisite checks and repair prompts. Run the optional Codex
-broker smoke with a disposable OpenAI API key when one is available.
+Extend `runhaven setup` with goal-based network selection copy for local-only,
+provider-only, package install, and unrestricted internet runs. Run the
+optional Codex broker smoke with a disposable OpenAI API key when one is
+available.
 
 ## Verification Evidence
 
@@ -327,6 +335,20 @@ broker smoke with a disposable OpenAI API key when one is available.
 - 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
   compileall, 151 unit tests, pin check, ruff, mypy, and build after adding
   repair JSON output.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_setup_prints_remedies_when_prerequisites_fail tests.test_cli.CliTests.test_setup_prints_first_run_commands_when_ready tests.test_cli.CliTests.test_setup_accepts_agent_profile`
+  first failed because `setup` was not a valid subcommand, then passed after
+  adding the non-mutating guided setup flow.
+- 2026-06-15: Focused setup tests, full
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 154 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runhaven setup --agent shell` smoke
+  passed.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 154 unit tests, pin check, ruff, mypy, and build after adding
+  `runhaven setup`.
 - 2026-06-15: Focused `runs repair` tests, full
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
   `python3 -m compileall src tests scripts`,

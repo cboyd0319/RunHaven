@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement JSON output for active-run repair summaries.
+Implement non-mutating guided first-run setup.
 
 ## Files
 
@@ -91,6 +91,19 @@ Implement JSON output for active-run repair summaries.
   link check, platform scan, and manual repair JSON smokes passed.
 - `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 151 unit
   tests, pin check, ruff, mypy, and build after adding repair JSON output.
+- `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_setup_prints_remedies_when_prerequisites_fail tests.test_cli.CliTests.test_setup_prints_first_run_commands_when_ready tests.test_cli.CliTests.test_setup_accepts_agent_profile`
+  first failed because `setup` was not a valid subcommand, then passed after
+  adding the non-mutating guided setup flow.
+- Focused setup tests, full
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 154 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runhaven setup --agent shell` smoke
+  passed.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 154 unit
+  tests, pin check, ruff, mypy, and build after adding `runhaven setup`.
 - Focused `runs repair` tests, full
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
   `python3 -m compileall src tests scripts`,
@@ -683,6 +696,13 @@ Implement JSON output for active-run repair summaries.
   `runhaven runs repair --all --json` now emit secret-free repair results,
   counts, and exit codes for scripts without raw Apple inspect output or
   active-marker contents.
+- `runhaven setup` now runs the same prerequisite checks as `doctor`, prints
+  exact remedies when the host is not ready, and shows profile-specific image
+  build, plan, and run commands when prerequisites pass.
+- `runhaven setup --agent AGENT` selects the profile used in the suggested
+  first-run commands. The command is intentionally non-mutating: it does not
+  install Apple `container`, start services, build images, run agents, write
+  state, or mount a workspace.
 - `docs/AUTH_BROKER.md` records the Codex prototype status, remaining
   design-only provider status, provider auth notes, non-goals, and acceptance
   criteria for future broker expansion.
@@ -725,9 +745,10 @@ Implement JSON output for active-run repair summaries.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Choose the next UX improvement from the backlog, such as guided
-   `runhaven setup` or `runhaven doctor --fix` prerequisite repair. Run the
-   Codex broker smoke with a disposable OpenAI API key when available.
+5. Choose the next UX improvement from the backlog, such as goal-based network
+   selection copy in `runhaven setup` for local-only, provider-only, package
+   install, and unrestricted internet runs. Run the Codex broker smoke with a
+   disposable OpenAI API key when available.
 6. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

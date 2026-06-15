@@ -17,6 +17,19 @@ Development tools are exact-pinned in `pyproject.toml` and
 `requirements-dev.txt`. When updating them, use the current stable release and
 commit the exact new version.
 
+## Guided Setup
+
+```bash
+runhaven setup
+runhaven setup --agent codex
+```
+
+`setup` is a safe first-run guide. It runs the same prerequisite checks as
+`doctor`, prints exact fixes when the Mac is not ready, and then shows the
+image build, plan, and run commands for the selected agent. It does not
+install Apple `container`, start the container service, build images, run
+agents, or mount any workspace.
+
 ## Check the Mac
 
 ```bash

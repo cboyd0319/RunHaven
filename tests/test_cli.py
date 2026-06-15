@@ -3250,6 +3250,77 @@ class CliTests(unittest.TestCase):
         self.assertIn("fail Apple container CLI", text)
         self.assertIn("fix: Install it.", text)
 
+    def test_setup_prints_remedies_when_prerequisites_fail(self) -> None:
+        output = io.StringIO()
+        with (
+            redirect_stdout(output),
+            patch(
+                "runhaven.cli.collect_checks",
+                return_value=(
+                    Check("python", True, "3.14.6"),
+                    Check(
+                        "container system",
+                        False,
+                        "not running",
+                        "Run `container system start`.",
+                    ),
+                ),
+            ),
+        ):
+            code = main(["setup"])
+
+        self.assertEqual(code, 1)
+        text = output.getvalue()
+        self.assertIn("RunHaven setup", text)
+        self.assertIn("ok   python: 3.14.6", text)
+        self.assertIn("fail container system: not running", text)
+        self.assertIn("Next steps", text)
+        self.assertIn("- container system: Run `container system start`.", text)
+        self.assertIn("runhaven setup", text)
+        self.assertNotIn("runhaven image build", text)
+
+    def test_setup_prints_first_run_commands_when_ready(self) -> None:
+        output = io.StringIO()
+        with (
+            redirect_stdout(output),
+            patch(
+                "runhaven.cli.collect_checks",
+                return_value=(
+                    Check("python", True, "3.14.6"),
+                    Check("container system", True, "running"),
+                ),
+            ),
+        ):
+            code = main(["setup"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("RunHaven setup", text)
+        self.assertIn("Selected agent: claude", text)
+        self.assertIn("runhaven image build claude", text)
+        self.assertIn("runhaven plan claude", text)
+        self.assertIn("runhaven run claude", text)
+        self.assertIn("No host home, raw SSH keys, or cloud credential folders", text)
+        self.assertNotIn("Next steps", text)
+
+    def test_setup_accepts_agent_profile(self) -> None:
+        output = io.StringIO()
+        with (
+            redirect_stdout(output),
+            patch(
+                "runhaven.cli.collect_checks",
+                return_value=(Check("container system", True, "running"),),
+            ),
+        ):
+            code = main(["setup", "--agent", "codex"])
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn("Selected agent: codex", text)
+        self.assertIn("runhaven image build codex", text)
+        self.assertIn("runhaven plan codex", text)
+        self.assertIn("runhaven run codex", text)
+
     def test_existing_internal_network_is_reused(self) -> None:
         with patch("runhaven.cli.subprocess.run") as run:
             run.return_value = Mock(

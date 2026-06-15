@@ -9,6 +9,7 @@ Use the smallest check set that can catch likely regressions for the change.
 | Python code | `python3 -m compileall src tests scripts`, `PYTHONPATH=src python3 -m unittest discover -s tests`, `python3 -m ruff check .`, `python3 -m mypy src` |
 | Packaging | Python code checks plus `python3 -m build` |
 | CLI command construction | Python code checks plus focused tests in `tests/test_plans.py` or `tests/test_cli.py` |
+| Setup and prerequisite UX | Python code checks plus focused setup and doctor tests in `tests/test_cli.py` and a manual `runhaven setup` smoke |
 | Apple container runtime boundary | Python code checks plus `runhaven doctor`, `runhaven plan`, and a focused `runhaven run shell` smoke |
 | Auth broker runtime boundary | Python code checks plus focused auth broker tests, `runhaven auth log`, and `scripts/codex_broker_smoke.py --require-api-key` when a disposable key is available |
 | Run observability | Python code checks plus focused `tests/test_cli.py` run-record tests, git and non-git workspace cases, active-run listing/status/attach/logs-follow/stop/kill/repair checks, and manual `runhaven runs list/show/log/diff/active/status/attach/logs-follow/stop/kill/repair`, `runhaven runs repair --all`, and repair JSON checks |

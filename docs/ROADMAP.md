@@ -35,13 +35,13 @@
 
 - signed release artifacts
 - one-command bootstrap for Apple `container`
-- guided first-run setup
+- non-mutating guided first-run setup with exact prerequisite fixes
 - plain-language explanations for every requested permission
 - workspace scope detection with explicit current-directory versus git-root
   selection
 - `runhaven why` diagnostics for blocked hosts, rejected mounts, sensitive
   defaults, and validation failures
-- guided `runhaven setup` first-run flow
+- guided `runhaven setup` first-run flow with profile-specific next commands
 - goal-based network selection copy for local-only, provider-only, package
   install, and unrestricted internet use cases
 

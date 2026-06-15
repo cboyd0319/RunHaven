@@ -81,6 +81,10 @@ repo and link to primary sources instead.
   backlog. `runhaven runs repair RUN_ID --json` and
   `runhaven runs repair --all --json` emit secret-free result lists, counts,
   and exit codes.
+- 2026-06-15: Implemented the first guided setup slice from the promoted UX
+  backlog. `runhaven setup` runs prerequisite checks, prints exact remedies
+  when the host is not ready, and shows profile-specific first-run commands
+  without installing, starting, building, running, or mounting anything.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.

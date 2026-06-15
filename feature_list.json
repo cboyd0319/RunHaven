@@ -272,8 +272,30 @@
       "notes": "`runs list/show/log/diff/active/status/attach/logs-follow/stop/kill/repair` are the first run dashboard and recovery slices. `runs diff` prints live git output on demand and does not store patches. `runs active` recovers current run ids from secret-free markers. `runs status` uses curated Apple `container inspect` output. `runs attach` uses Apple `container exec` because the pinned local CLI has no installed attach plugin. `runs logs-follow` uses Apple `container logs --follow`. `runs stop`, `runs kill`, and `runs repair` work only for active runs with a current active marker. `runs repair --all` handles multiple valid active markers with the same confirmed-missing guard. Repair JSON output includes only result status, counts, run id, container name, inspect return code, marker removal state, and exit code."
     },
     {
-      "id": "repo-logo",
+      "id": "guided-first-run-setup",
       "priority": 7,
+      "area": "usability",
+      "title": "Guided first-run setup",
+      "user_visible_behavior": "`runhaven setup` runs prerequisite checks, prints exact fixes when the host is not ready, and shows the next image build, plan, and run commands for a selected agent without mutating the machine.",
+      "status": "passing",
+      "dependencies": [
+        "runtime-hardening-macos-only-boundary"
+      ],
+      "verification": [
+        "`runhaven setup` runs the same prerequisite checks as `doctor`",
+        "`runhaven setup` returns nonzero and prints exact remedies when prerequisites fail",
+        "`runhaven setup --agent AGENT` prints profile-specific image build, plan, and run commands when prerequisites pass",
+        "`runhaven setup` does not install, start services, build images, run agents, or mount workspaces"
+      ],
+      "evidence": [
+        "2026-06-15: Focused setup CLI tests first failed because `setup` was not a valid subcommand, then passed after adding the non-mutating guided setup flow.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 154 unit tests, pin check, ruff, mypy, and build after adding `runhaven setup`. Manual `runhaven setup --agent shell` smoke, JSON validation, Markdown link check, platform scan, and `git diff --check` also passed."
+      ],
+      "notes": "This is the first guided setup slice. It intentionally does not call Apple `container system start`, build images, run agents, or write state. Future setup work can add goal-based network selection, workspace-scope guidance, and credential-path explanations."
+    },
+    {
+      "id": "repo-logo",
+      "priority": 8,
       "area": "documentation",
       "title": "Project logo integration",
       "user_visible_behavior": "The project README displays the maintained repository logo from a tracked asset path.",
