@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add worktree merge failure recovery guidance.
+Add worktree manual recovery command.
 
 ## Current State
 
@@ -249,16 +249,18 @@ Add worktree merge failure recovery guidance.
   worktree for clean source repositories, mounts that worktree for the agent,
   keeps it after the run, and records exact recovery commands in the run
   record. Dirty source repositories fail before worktree creation.
-- `runhaven runs keep RUN_ID`, `runhaven runs merge RUN_ID`, and
-  `runhaven runs discard RUN_ID` now provide guarded worktree lifecycle
-  actions. They validate the recorded RunHaven-owned source repository,
-  worktree, branch, and base metadata before acting. Merge refuses dirty or
-  moved source checkouts, applies committed, dirty, and untracked worktree
-  changes back to the source checkout, then removes the worktree and branch.
-  Discard removes only the recorded RunHaven worktree and branch.
+- `runhaven runs keep RUN_ID`, `runhaven runs recover RUN_ID`,
+  `runhaven runs merge RUN_ID`, and `runhaven runs discard RUN_ID` now
+  provide guarded worktree lifecycle actions. They validate the recorded
+  RunHaven-owned source repository, worktree, branch, and base metadata before
+  acting. Recover prints source/worktree status and manual steps without
+  mutation. Merge refuses dirty or moved source checkouts, applies committed,
+  dirty, and untracked worktree changes back to the source checkout, then
+  removes the worktree and branch. Discard removes only the recorded RunHaven
+  worktree and branch.
 - Failed pre-cleanup `runhaven runs merge RUN_ID` attempts now print the
-  source repo, worktree, branch, review, retry, keep, and discard commands
-  without deleting the recorded worktree.
+  source repo, worktree, branch, review, recover, retry, keep, and discard
+  commands without deleting the recorded worktree.
 - `src/runhaven/auth_profiles.py` now records per-profile auth broker metadata,
   and `src/runhaven/auth_broker.py` implements the first Codex API-key broker
   prototype.
@@ -395,8 +397,8 @@ Add worktree merge failure recovery guidance.
 ## Recommended Next Step
 
 Run the optional Codex broker smoke with a disposable OpenAI API key when one
-is available. Continue worktree polish with guided manual conflict-resolution
-helpers for complex merge failures.
+is available. Add structured JSON output for worktree recovery when automation
+or a UI needs the same guidance without parsing text.
 
 ## Verification Evidence
 
@@ -1278,4 +1280,17 @@ helpers for complex merge failures.
   `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
   `python3 -m json.tool feature_list.json`, local Markdown link check across
   41 Markdown files, `git diff --check`, and
+  `PYTHON=<temporary-venv-python> ./init.sh`.
+- 2026-06-15: Worktree manual recovery red/green test passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle.CliWorktreeLifecycleTests.test_runs_recover_prints_manual_steps_without_cleanup`.
+- 2026-06-15: Adjacent worktree and run-history tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle tests.test_cli_standard_run tests.test_cli_runs_diff tests.test_cli_runs_list_show`.
+- 2026-06-15: Full worktree manual recovery verification passed:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src:tests python3 -m unittest discover -s tests` with 171
+  tests, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  41 Markdown files, `git diff --check`,
+  `PYTHONPATH=src python3 -m runhaven runs --help`, and
   `PYTHON=<temporary-venv-python> ./init.sh`.

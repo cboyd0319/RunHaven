@@ -99,6 +99,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="show live git diff for one RunHaven run",
     )
     runs_diff_parser.add_argument("run_id", help="run id to diff")
+    runs_recover_parser = runs_subcommands.add_parser(
+        "recover",
+        help="print manual recovery steps for a RunHaven worktree run",
+    )
+    runs_recover_parser.add_argument("run_id", help="worktree run id to recover")
     runs_merge_parser = runs_subcommands.add_parser(
         "merge",
         help="merge a RunHaven worktree run back into the source checkout",

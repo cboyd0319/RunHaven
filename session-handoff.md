@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add worktree merge failure recovery guidance.
+Add worktree manual recovery command.
 
 ## Files
 
@@ -252,6 +252,19 @@ Add worktree merge failure recovery guidance.
   `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
   `python3 -m json.tool feature_list.json`, local Markdown link check across
   41 Markdown files, `git diff --check`, and
+  `PYTHON=<temporary-venv-python> ./init.sh`.
+- Worktree manual recovery red/green focused test passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle.CliWorktreeLifecycleTests.test_runs_recover_prints_manual_steps_without_cleanup`.
+- Adjacent worktree and run-history tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle tests.test_cli_standard_run tests.test_cli_runs_diff tests.test_cli_runs_list_show`.
+- Full worktree manual recovery verification passed:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src:tests python3 -m unittest discover -s tests` with 171
+  tests, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  41 Markdown files, `git diff --check`,
+  `PYTHONPATH=src python3 -m runhaven runs --help`, and
   `PYTHON=<temporary-venv-python> ./init.sh`.
 - Focused CLI test split checks passed: `python3 -m compileall tests`,
   `uvx --from ruff==0.15.17 ruff check` on the split CLI test files, and
@@ -1174,18 +1187,19 @@ Add worktree merge failure recovery guidance.
   creates a RunHaven-owned branch and git worktree, mounts the worktree for the
   agent, keeps the worktree after the run, and records exact recovery commands.
   Dirty source repositories fail before worktree creation.
-- `runhaven runs keep RUN_ID`, `runhaven runs merge RUN_ID`, and
-  `runhaven runs discard RUN_ID` landed for worktree review flows. Keep
-  validates and prints review actions without mutating state. Merge validates
-  the recorded source repository, RunHaven-owned branch, worktree path,
-  worktree branch, and base `HEAD`; refuses dirty or moved source checkouts;
-  applies committed, dirty, and untracked worktree changes back to the source
-  checkout; and cleans up the worktree and branch after success. Discard
-  removes only the recorded RunHaven worktree and branch without touching the
-  source checkout.
+- `runhaven runs keep RUN_ID`, `runhaven runs recover RUN_ID`,
+  `runhaven runs merge RUN_ID`, and `runhaven runs discard RUN_ID` landed
+  for worktree review flows. Keep validates and prints review actions without
+  mutating state. Recover validates and prints source/worktree status plus
+  manual recovery steps without mutating state. Merge validates the recorded
+  source repository, RunHaven-owned branch, worktree path, worktree branch,
+  and base `HEAD`; refuses dirty or moved source checkouts; applies committed,
+  dirty, and untracked worktree changes back to the source checkout; and
+  cleans up the worktree and branch after success. Discard removes only the
+  recorded RunHaven worktree and branch without touching the source checkout.
 - Failed pre-cleanup `runhaven runs merge RUN_ID` attempts now print source
-  repo, worktree, branch, review, retry, keep, and discard commands without
-  deleting the recorded worktree.
+  repo, worktree, branch, review, recover, retry, keep, and discard commands
+  without deleting the recorded worktree.
 
 ## Next Session
 
@@ -1198,8 +1212,8 @@ Add worktree merge failure recovery guidance.
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
 5. Run the Codex broker smoke with a disposable OpenAI API key when available.
-6. Continue worktree polish with guided manual conflict-resolution helpers for
-   complex merge failures.
+6. Add structured JSON output for worktree recovery when automation or a UI
+   needs the same guidance without parsing text.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

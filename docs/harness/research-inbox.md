@@ -108,6 +108,10 @@ repo and link to primary sources instead.
   boundary before applying committed, dirty, and untracked changes back to the
   source checkout, and `runhaven runs discard RUN_ID` removes the recorded
   RunHaven worktree and branch without touching the source checkout.
+- 2026-06-15: Implemented `runhaven runs recover RUN_ID` from the promoted
+  worktree review backlog. The command validates the recorded RunHaven-owned
+  worktree, prints source and worktree status, and gives numbered manual
+  recovery steps without mutating source or worktree files.
 - 2026-06-15: Added a pre-release backlog item to consider a major large-file
   refactor and modularization pass, especially around the CLI and broad test
   modules, before release.

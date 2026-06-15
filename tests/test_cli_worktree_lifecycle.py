@@ -137,8 +137,42 @@ class CliWorktreeLifecycleTests(unittest.TestCase):
             self.assertIn(str(worktree_root), text)
             self.assertIn(branch, text)
             self.assertIn(f"runhaven runs diff {record['run_id']}", text)
+            self.assertIn(f"runhaven runs recover {record['run_id']}", text)
             self.assertIn(f"runhaven runs keep {record['run_id']}", text)
             self.assertIn(f"runhaven runs merge {record['run_id']}", text)
+            self.assertIn(f"runhaven runs discard {record['run_id']}", text)
+            self.assertTrue(worktree_root.exists())
+            self.assertTrue(branch_exists(repo, branch))
+
+    def test_runs_recover_prints_manual_steps_without_cleanup(self) -> None:
+        with TemporaryDirectory() as directory:
+            repo, cache, record = self.create_dirty_worktree_run(Path(directory))
+            worktree_root = Path(record["worktree"]["worktree_root"])
+            branch = record["worktree"]["branch"]
+            (repo / "source-local.txt").write_text("local source change\n", encoding="utf-8")
+            output = io.StringIO()
+
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": str(cache)}, clear=False),
+                redirect_stdout(output),
+            ):
+                code = main(["runs", "recover", record["run_id"]])
+
+            text = output.getvalue()
+
+            self.assertEqual(code, 0)
+            self.assertIn(f"Manual recovery for worktree run {record['run_id']}", text)
+            self.assertIn(str(repo), text)
+            self.assertIn(str(worktree_root), text)
+            self.assertIn(branch, text)
+            self.assertIn("Source status:", text)
+            self.assertIn("?? source-local.txt", text)
+            self.assertIn("Worktree status:", text)
+            self.assertIn(" M tracked.txt", text)
+            self.assertIn("?? created.txt", text)
+            self.assertIn(f"runhaven runs diff {record['run_id']}", text)
+            self.assertIn(f"runhaven runs merge {record['run_id']}", text)
+            self.assertIn(f"runhaven runs keep {record['run_id']}", text)
             self.assertIn(f"runhaven runs discard {record['run_id']}", text)
             self.assertTrue(worktree_root.exists())
             self.assertTrue(branch_exists(repo, branch))

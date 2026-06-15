@@ -78,7 +78,10 @@ RunHaven keeps the worktree after the run and records exact review, merge, and
 discard commands in the run record.
 
 `runhaven runs keep RUN_ID` validates the recorded RunHaven-owned worktree and
-prints review commands without mutating anything. `runhaven runs merge RUN_ID`
+prints review and recovery commands without mutating anything. `runhaven runs
+recover RUN_ID` validates the same boundary, prints source and worktree status,
+and provides numbered manual recovery steps without changing files. `runhaven
+runs merge RUN_ID`
 validates the source repository, branch, worktree path, and base commit before
 bringing committed, dirty, and untracked worktree changes back to the source
 checkout and then cleaning up the RunHaven worktree and branch. If a
@@ -114,6 +117,7 @@ RunHaven records secret-free run metadata under its cache directory:
 - `runhaven runs log RUN_ID`
 - `runhaven runs diff RUN_ID`
 - `runhaven runs keep RUN_ID`
+- `runhaven runs recover RUN_ID`
 - `runhaven runs merge RUN_ID`
 - `runhaven runs discard RUN_ID`
 - `runhaven runs active`

@@ -199,7 +199,7 @@
       "priority": 5,
       "area": "safety",
       "title": "Git worktree run isolation and lifecycle",
-      "user_visible_behavior": "`runhaven run AGENT --worktree` creates a RunHaven-owned branch and git worktree for a clean source repository, mounts that worktree for the agent run, leaves the source checkout untouched, and `runs keep`, `runs merge`, and `runs discard` provide guarded review lifecycle actions.",
+      "user_visible_behavior": "`runhaven run AGENT --worktree` creates a RunHaven-owned branch and git worktree for a clean source repository, mounts that worktree for the agent run, leaves the source checkout untouched, and `runs keep`, `runs recover`, `runs merge`, and `runs discard` provide guarded review lifecycle actions.",
       "status": "passing",
       "dependencies": [
         "workspace-scope-selection",
@@ -212,6 +212,7 @@
         "Run records include worktree source, branch, base `HEAD`, mounted workspace, and exact recovery commands",
         "The source checkout remains unchanged by the container-mounted worktree",
         "`runs keep RUN_ID` validates the recorded worktree and prints review actions without mutating state",
+        "`runs recover RUN_ID` validates the recorded worktree and prints source/worktree status plus manual recovery steps without mutating state",
         "`runs merge RUN_ID` validates the source repository, RunHaven branch, worktree path, worktree branch, and base `HEAD` before applying worktree changes and cleaning up",
         "Failed pre-cleanup `runs merge RUN_ID` attempts print source, worktree, branch, review, retry, keep, and discard commands without deleting the recorded worktree",
         "`runs discard RUN_ID` removes only the recorded RunHaven worktree and branch without changing the source checkout"
@@ -222,9 +223,11 @@
         "2026-06-15: Focused worktree lifecycle tests passed for `runs keep`, dirty and committed `runs merge`, stale-source merge refusal, explicit `runs discard`, and non-worktree refusal.",
         "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 169 unit tests, pin check, ruff, mypy, and build after adding worktree lifecycle commands.",
         "2026-06-15: Red/green focused lifecycle test passed for failed merge recovery guidance; adjacent worktree/run-history tests also passed.",
-        "2026-06-15: Full verification passed with compileall, 170 unit tests, pin check, ruff, mypy, JSON validation, Markdown link check, diff check, and `PYTHON=<temporary-venv-python> ./init.sh` after failed merge recovery guidance."
+        "2026-06-15: Full verification passed with compileall, 170 unit tests, pin check, ruff, mypy, JSON validation, Markdown link check, diff check, and `PYTHON=<temporary-venv-python> ./init.sh` after failed merge recovery guidance.",
+        "2026-06-15: Red/green focused lifecycle test passed for `runs recover` manual recovery guidance; adjacent worktree/run-history tests also passed.",
+        "2026-06-15: Full verification passed with compileall, 171 unit tests, pin check, ruff, mypy, JSON validation, Markdown link check, diff check, `runhaven runs --help`, and `PYTHON=<temporary-venv-python> ./init.sh` after adding `runs recover`."
       ],
-      "notes": "`runs merge` intentionally refuses when the source checkout is dirty or no longer at the recorded base commit. Failed pre-cleanup merge steps keep the RunHaven worktree and branch and print recovery commands."
+      "notes": "`runs merge` intentionally refuses when the source checkout is dirty or no longer at the recorded base commit. Failed pre-cleanup merge steps keep the RunHaven worktree and branch and print recovery commands. `runs recover` is read-only and does not commit, stash, merge, delete, or change files."
     },
     {
       "id": "auth-broker-boundary",

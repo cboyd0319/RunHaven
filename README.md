@@ -131,6 +131,7 @@ runhaven plan shell --image my-agent:2026.06.14 -- my-agent --help
 | Local-only command | `runhaven run shell --network internal -- python -m unittest discover -s tests` |
 | Worktree-isolated run | `runhaven run claude --worktree` |
 | Merge worktree run | `runhaven runs merge <run-id>` |
+| Recover worktree run | `runhaven runs recover <run-id>` |
 | Keep worktree run | `runhaven runs keep <run-id>` |
 | Discard worktree run | `runhaven runs discard <run-id>` |
 | Recent runs | `runhaven runs list --limit 20` |

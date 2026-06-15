@@ -105,8 +105,8 @@ RunHaven direction:
 - Add worktree mode before high-autonomy UX.
 - Detect dirty work before starting and explain the choices: continue in-place,
   create a worktree, or abort.
-- Add post-run review commands: `runs diff`, `runs keep`, `runs discard`,
-  `runs merge`.
+- Add post-run review commands: `runs diff`, `runs keep`, `runs recover`,
+  `runs discard`, `runs merge`.
 - Let profiles or project config suggest lint/test commands that run inside the
   container after the agent finishes.
 
@@ -284,6 +284,7 @@ Post-run commands:
 ```bash
 runhaven runs diff <id>
 runhaven runs test <id>
+runhaven runs recover <id>
 runhaven runs merge <id>
 runhaven runs keep <id>
 runhaven runs discard <id>
@@ -299,11 +300,12 @@ UX requirements:
 
 Current state: `runhaven run AGENT --worktree` creates a RunHaven-owned branch
 and git worktree for clean source repositories, keeps it after the run, and
-records exact recovery commands. `runs keep`, `runs merge`, and
-`runs discard` now provide the first guarded review lifecycle: keep validates
-and prints review paths, merge validates the source/worktree/branch boundary
-before applying changes back to the source checkout, and discard removes only
-the recorded RunHaven worktree and branch.
+records exact recovery commands. `runs keep`, `runs recover`, `runs merge`,
+and `runs discard` now provide the first guarded review lifecycle: keep
+validates and prints review paths, recover prints source/worktree status and
+manual steps without mutation, merge validates the source/worktree/branch
+boundary before applying changes back to the source checkout, and discard
+removes only the recorded RunHaven worktree and branch.
 
 ### Image Repair And State Repair
 

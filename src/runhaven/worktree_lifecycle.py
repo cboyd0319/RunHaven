@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -30,8 +31,38 @@ def runs_worktree_keep(run_id: str) -> int:
     print(f"Mounted workspace: {lifecycle.mounted_workspace}")
     print(f"Branch: {lifecycle.branch}")
     print(f"Review: runhaven runs diff {run_id}")
+    print(f"Recover: runhaven runs recover {run_id}")
     print(f"Merge: runhaven runs merge {run_id}")
     print(f"Discard: runhaven runs discard {run_id}")
+    return 0
+
+
+def runs_worktree_recover(run_id: str) -> int:
+    lifecycle = load_worktree_lifecycle(run_id)
+    verify_lifecycle(lifecycle)
+
+    print(f"Manual recovery for worktree run {run_id}")
+    print(f"Source repo: {lifecycle.source_repo_root}")
+    print(f"Worktree: {lifecycle.worktree_root}")
+    print(f"Mounted workspace: {lifecycle.mounted_workspace}")
+    print(f"Branch: {lifecycle.branch}")
+    print(f"Base HEAD: {lifecycle.base_head}")
+    print(f"Source HEAD: {git_stdout(lifecycle.source_repo_root, 'rev-parse', 'HEAD')}")
+    print(f"Worktree HEAD: {git_stdout(lifecycle.worktree_root, 'rev-parse', 'HEAD')}")
+    print_status("Source status", git_status_lines(lifecycle.source_repo_root))
+    print_status("Worktree status", git_status_lines(lifecycle.worktree_root))
+
+    source = shlex.quote(str(lifecycle.source_repo_root))
+    worktree = shlex.quote(str(lifecycle.worktree_root))
+    print("Manual recovery steps:")
+    print(f"1. Review recorded changes: runhaven runs diff {run_id}")
+    print(f"2. Inspect the source checkout: git -C {source} status --short")
+    print("   Commit, stash, or remove source-local changes before retrying.")
+    print(f"3. Inspect the worktree: git -C {worktree} status --short")
+    print("   Resolve conflicts or commit finished work in the worktree if needed.")
+    print(f"4. Retry guarded merge: runhaven runs merge {run_id}")
+    print(f"5. Keep for manual review: runhaven runs keep {run_id}")
+    print(f"6. Discard only after review: runhaven runs discard {run_id}")
     return 0
 
 
@@ -175,6 +206,7 @@ def format_merge_recovery(lifecycle: WorktreeLifecycle, reason: str) -> str:
             f"Review changes: runhaven runs diff {lifecycle.run_id}",
             f"Inspect source: git -C {lifecycle.source_repo_root} status --short",
             f"Inspect worktree: git -C {lifecycle.worktree_root} status --short",
+            f"Manual recovery guide: runhaven runs recover {lifecycle.run_id}",
             f"Retry after fixing the source checkout: runhaven runs merge {lifecycle.run_id}",
             f"Keep for manual review: runhaven runs keep {lifecycle.run_id}",
             f"Discard after review: runhaven runs discard {lifecycle.run_id}",
@@ -283,6 +315,21 @@ def git_stdout(cwd: Path, *args: str) -> str:
 def git_bytes(cwd: Path, *args: str, action: str) -> bytes:
     result = git_result(cwd, *args, action=action)
     return result.stdout
+
+
+def git_status_lines(cwd: Path) -> tuple[str, ...]:
+    result = git_result(cwd, "status", "--short")
+    text = result.stdout.decode("utf-8", errors="replace")
+    return tuple(line for line in text.splitlines() if line)
+
+
+def print_status(title: str, lines: tuple[str, ...]) -> None:
+    print(f"{title}:")
+    if not lines:
+        print("  clean")
+        return
+    for line in lines:
+        print(f"  {line}")
 
 
 def git_checked(
