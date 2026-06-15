@@ -106,6 +106,13 @@ matched rule, denial reason, count, profile, workspace, and run id. `runhaven
 why host HOST` explains bundled provider-host matches, IP-literal rejection,
 and the next review step before the user adds a new host.
 
+Actual agent runs also append one secret-free record to `runs.jsonl`.
+`runhaven runs list` and `runhaven runs show RUN_ID` expose run id, profile,
+workspace, network mode, return code, provider policy summary, auth broker
+summary, and cleanup outcome. The run ledger does not record command lines,
+agent arguments, environment variable names, environment values, request
+bodies, or token values.
+
 Provider host allowlists are intentionally conservative and source-backed.
 Bundled auth and provider routing hosts are tracked in
 [`PROVIDER_ENDPOINTS.md`](PROVIDER_ENDPOINTS.md). Telemetry, reporting,

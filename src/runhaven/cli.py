@@ -61,6 +61,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return image_command(args)
         if args.command == "state":
             return state_command(args)
+        if args.command == "runs":
+            return runs_command(args)
         if args.command == "auth":
             return auth_command(args)
         if args.command == "egress":
@@ -127,6 +129,20 @@ def build_parser() -> argparse.ArgumentParser:
     state_subcommands.add_parser("list", help="list RunHaven agent home volumes")
     prune_parser = state_subcommands.add_parser("prune", help="remove RunHaven agent home volumes")
     prune_parser.add_argument("--yes", action="store_true", help="delete listed volumes")
+
+    runs_parser = subcommands.add_parser("runs", help="inspect RunHaven run history")
+    runs_subcommands = runs_parser.add_subparsers(dest="runs_command", required=True)
+    runs_list_parser = runs_subcommands.add_parser("list", help="show recent RunHaven runs")
+    runs_list_parser.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="maximum entries to show; use 0 for all entries",
+    )
+    runs_list_parser.add_argument("--json", action="store_true", help="print JSON output")
+    runs_show_parser = runs_subcommands.add_parser("show", help="show one RunHaven run record")
+    runs_show_parser.add_argument("run_id", help="run id to show")
+    runs_show_parser.add_argument("--json", action="store_true", help="print JSON output")
 
     egress_parser = subcommands.add_parser("egress", help="inspect provider egress policy logs")
     egress_subcommands = egress_parser.add_subparsers(dest="egress_command", required=True)
@@ -300,7 +316,21 @@ def run_agent(args: argparse.Namespace) -> int:
             return run_provider_agent(plan)
         for command in plan.preflight:
             run_preflight(command)
-        return subprocess.call(plan.command)
+        run_id = uuid.uuid4().hex
+        started_at = utc_timestamp()
+        return_code = subprocess.call(plan.command)
+        finished_at = utc_timestamp()
+        write_run_record(
+            plan,
+            run_id=run_id,
+            started_at=started_at,
+            finished_at=finished_at,
+            return_code=return_code,
+            provider_decisions=(),
+            auth_decisions=None,
+            cleanup={"provider_network": "not-applicable"},
+        )
+        return return_code
 
 
 def image_command(args: argparse.Namespace) -> int:
@@ -323,6 +353,14 @@ def state_command(args: argparse.Namespace) -> int:
     if args.state_command == "prune":
         return state_prune(confirm=args.yes)
     raise ValueError(f"unknown state command: {args.state_command}")
+
+
+def runs_command(args: argparse.Namespace) -> int:
+    if args.runs_command == "list":
+        return runs_list(limit=args.limit, json_output=args.json)
+    if args.runs_command == "show":
+        return runs_show(args.run_id, json_output=args.json)
+    raise ValueError(f"unknown runs command: {args.runs_command}")
 
 
 def egress_command(args: argparse.Namespace) -> int:
@@ -424,6 +462,16 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
     proxy_thread: threading.Thread | None = None
     codex_broker: CodexApiKeyBrokerProxy | None = None
     codex_broker_thread: threading.Thread | None = None
+    run_id = uuid.uuid4().hex
+    started_at: str | None = None
+    finished_at: str | None = None
+    return_code: int | None = None
+    provider_decisions: tuple[ProxyDecision, ...] = ()
+    auth_decisions: tuple[BrokerDecision, ...] | None = None
+    cleanup: dict[str, object] = {
+        "provider_network": "not-created",
+        "provider_network_name": plan.network_name,
+    }
     try:
         for command in plan.preflight:
             run_preflight(command)
@@ -458,18 +506,20 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
             )
             command = with_codex_api_key_broker_config(command, plan, broker_url)
 
-        run_id = uuid.uuid4().hex
+        started_at = utc_timestamp()
         return_code = subprocess.call(command)
-        decisions = proxy.policy_decisions()
-        write_provider_policy_log(plan, decisions, run_id=run_id)
+        finished_at = utc_timestamp()
+        provider_decisions = tuple(proxy.policy_decisions())
+        write_provider_policy_log(plan, provider_decisions, run_id=run_id)
         if codex_broker is not None:
+            auth_decisions = tuple(codex_broker.broker_decisions())
             write_auth_broker_log(
                 plan,
-                codex_broker.broker_decisions(),
+                auth_decisions,
                 run_id=run_id,
                 return_code=return_code,
             )
-        print_provider_blocked_host_review(plan, decisions, run_id=run_id)
+        print_provider_blocked_host_review(plan, provider_decisions, run_id=run_id)
         return return_code
     finally:
         if codex_broker is not None:
@@ -485,7 +535,18 @@ def run_provider_agent(plan: AgentRunPlan) -> int:
         if proxy_thread is not None:
             proxy_thread.join(timeout=5)
         if provider_network_created:
-            delete_container_network(plan.network_name)
+            cleanup = cleanup_provider_network(plan)
+        if return_code is not None and started_at is not None and finished_at is not None:
+            write_run_record(
+                plan,
+                run_id=run_id,
+                started_at=started_at,
+                finished_at=finished_at,
+                return_code=return_code,
+                provider_decisions=provider_decisions,
+                auth_decisions=auth_decisions,
+                cleanup=cleanup,
+            )
 
 
 def require_codex_api_key_broker_secret(plan: AgentRunPlan) -> str | None:
@@ -613,6 +674,185 @@ def provider_denial_next_action(plan: AgentRunPlan, decision: ProxyDecision) -> 
             "purpose matches."
         )
     return f"{explanation}; add --provider-host {host} only after source review."
+
+
+def utc_timestamp() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def cleanup_provider_network(plan: AgentRunPlan) -> dict[str, object]:
+    if plan.network_name is None:
+        return {"provider_network": "not-created", "provider_network_name": None}
+    result: object = delete_container_network(plan.network_name)
+    status = "deleted" if result == 0 else "delete-failed"
+    cleanup: dict[str, object] = {
+        "provider_network": status,
+        "provider_network_name": plan.network_name,
+    }
+    if isinstance(result, int):
+        cleanup["delete_return_code"] = result
+    return cleanup
+
+
+def write_run_record(
+    plan: AgentRunPlan,
+    *,
+    run_id: str,
+    started_at: str,
+    finished_at: str,
+    return_code: int,
+    provider_decisions: Sequence[ProxyDecision],
+    auth_decisions: Sequence[BrokerDecision] | None,
+    cleanup: dict[str, object],
+) -> None:
+    log_path = runs_log_path()
+    log_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    payload = {
+        "timestamp": finished_at,
+        "started_at": started_at,
+        "finished_at": finished_at,
+        "run_id": run_id,
+        "profile": plan.profile_name,
+        "workspace": str(plan.workspace),
+        "network": plan.network_mode,
+        "status": "succeeded" if return_code == 0 else "failed",
+        "return_code": return_code,
+        "provider_policy": summarize_provider_policy(provider_decisions),
+        "auth_broker": summarize_auth_broker(auth_decisions),
+        "cleanup": cleanup,
+    }
+    with log_path.open("a", encoding="utf-8") as log_file:
+        log_file.write(json.dumps(payload, sort_keys=True) + "\n")
+
+
+def summarize_provider_policy(decisions: Sequence[ProxyDecision]) -> dict[str, int]:
+    return {
+        "entries": len(decisions),
+        "allowed": sum(decision.count for decision in decisions if decision.decision == "allowed"),
+        "denied": sum(decision.count for decision in decisions if decision.decision == "denied"),
+    }
+
+
+def summarize_auth_broker(decisions: Sequence[BrokerDecision] | None) -> dict[str, object]:
+    if decisions is None:
+        return {
+            "broker": None,
+            "entries": 0,
+            "allowed": 0,
+            "denied": 0,
+            "no_requests": False,
+        }
+    return {
+        "broker": "codex-api-key",
+        "entries": len(decisions),
+        "allowed": sum(decision.count for decision in decisions if decision.decision == "allowed"),
+        "denied": sum(decision.count for decision in decisions if decision.decision == "denied"),
+        "no_requests": not decisions,
+    }
+
+
+def runs_list(*, limit: int, json_output: bool) -> int:
+    if limit < 0:
+        raise ValueError("--limit must be 0 or greater")
+    records = read_run_records(limit=limit)
+    if json_output:
+        print(json.dumps(records, indent=2, sort_keys=True))
+        return 0
+    if not records:
+        print("No RunHaven run records found.")
+        return 0
+    for record in records:
+        provider_policy = record.get("provider_policy")
+        auth_broker = record.get("auth_broker")
+        cleanup = record.get("cleanup")
+        provider_denied = (
+            provider_policy.get("denied", 0) if isinstance(provider_policy, dict) else 0
+        )
+        auth_denied = auth_broker.get("denied", 0) if isinstance(auth_broker, dict) else 0
+        cleanup_status = (
+            cleanup.get("provider_network", "-") if isinstance(cleanup, dict) else "-"
+        )
+        print(
+            f"{record.get('timestamp', '<unknown>')}  "
+            f"{record.get('profile', 'unknown')}  "
+            f"{record.get('network', 'unknown')}  "
+            f"{record.get('status', 'unknown')}  "
+            f"return={record.get('return_code', '-')}  "
+            f"provider_denied={provider_denied}  "
+            f"auth_denied={auth_denied}  "
+            f"cleanup={cleanup_status}  "
+            f"run={record.get('run_id', '-')}"
+        )
+    return 0
+
+
+def runs_show(run_id: str, *, json_output: bool) -> int:
+    record = find_run_record(run_id)
+    if json_output:
+        print(json.dumps(record, indent=2, sort_keys=True))
+        return 0
+
+    provider_policy = record.get("provider_policy")
+    auth_broker = record.get("auth_broker")
+    cleanup = record.get("cleanup")
+    print(f"Run id: {record.get('run_id', '-')}")
+    print(f"Started: {record.get('started_at', '-')}")
+    print(f"Finished: {record.get('finished_at', '-')}")
+    print(f"Profile: {record.get('profile', 'unknown')}")
+    print(f"Workspace: {record.get('workspace', 'unknown')}")
+    print(f"Network: {record.get('network', 'unknown')}")
+    print(f"Status: {record.get('status', 'unknown')}")
+    print(f"Return code: {record.get('return_code', '-')}")
+    if isinstance(provider_policy, dict):
+        print(
+            "Provider policy: "
+            f"entries={provider_policy.get('entries', 0)} "
+            f"allowed={provider_policy.get('allowed', 0)} "
+            f"denied={provider_policy.get('denied', 0)}"
+        )
+    if isinstance(auth_broker, dict):
+        no_requests = str(auth_broker.get("no_requests", False)).lower()
+        print(
+            "Auth broker: "
+            f"broker={auth_broker.get('broker') or '-'} "
+            f"entries={auth_broker.get('entries', 0)} "
+            f"allowed={auth_broker.get('allowed', 0)} "
+            f"denied={auth_broker.get('denied', 0)} "
+            f"no_requests={no_requests}"
+        )
+    if isinstance(cleanup, dict):
+        print(f"Cleanup provider network: {cleanup.get('provider_network', '-')}")
+    return 0
+
+
+def find_run_record(run_id: str) -> dict[str, Any]:
+    for record in reversed(read_run_records(limit=0)):
+        if record.get("run_id") == run_id:
+            return record
+    raise ValueError(f"run record not found: {run_id}")
+
+
+def read_run_records(*, limit: int) -> list[dict[str, Any]]:
+    log_path = runs_log_path()
+    if not log_path.exists():
+        return []
+    records: list[dict[str, Any]] = []
+    for line in log_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            records.append(payload)
+    if limit == 0:
+        return records
+    return records[-limit:]
+
+
+def runs_log_path() -> Path:
+    return runhaven_cache_root() / "runs.jsonl"
 
 
 def write_provider_policy_log(
@@ -991,8 +1231,8 @@ def inspect_internal_network(name: str) -> InternalNetworkInfo:
     return InternalNetworkInfo(ipv4_gateway=gateway, ipv4_subnet=subnet)
 
 
-def delete_container_network(name: str) -> None:
-    subprocess.run(("container", "network", "delete", name), check=False)
+def delete_container_network(name: str) -> int:
+    return subprocess.run(("container", "network", "delete", name), check=False).returncode
 
 
 def ensure_internal_network(name: str) -> None:

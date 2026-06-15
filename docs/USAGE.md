@@ -184,6 +184,22 @@ runhaven egress log --json
 The log is stored under RunHaven's cache directory. It records the profile,
 workspace, host, port, decision, reason, matched rule, count, and run id.
 
+## Run History
+
+After an actual agent run, inspect the secret-free run ledger:
+
+```bash
+runhaven runs list --limit 20
+runhaven runs show <run-id>
+runhaven runs show <run-id> --json
+```
+
+Run records are stored under RunHaven's cache directory in `runs.jsonl`. They
+include run id, profile, workspace, network mode, return code, provider policy
+summary, auth broker summary, and cleanup outcome. They do not include command
+lines, agent arguments, environment variable names, environment values, request
+bodies, or token values.
+
 ## Provider Egress Smoke
 
 Build the base image and run the live smoke on macOS 26+:

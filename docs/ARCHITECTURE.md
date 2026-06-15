@@ -93,6 +93,8 @@ The enforcement pattern is:
 - group blocked targets with run id, reason, count, rule, and suggested next
   action after the run
 - append provider policy decisions to the RunHaven cache log after the run
+- append a secret-free run record with provider policy, auth broker, and cleanup
+  summaries
 - delete the managed provider network after the run
 
 `scripts/provider_egress_smoke.py` proves the lower-level proxy pattern with
@@ -101,6 +103,16 @@ hosts for a provider profile with `--agent AGENT`. The `runhaven run --network
 provider` runtime path is also smoke-tested with allowed proxied HTTPS plus
 denied proxied host, proxied IP literal, direct DNS, and direct IP paths.
 Internet mode remains unrestricted egress.
+
+## Run Records
+
+Actual `runhaven run` executions append one JSON object to `runs.jsonl` under
+the RunHaven cache root. `runhaven runs list` and `runhaven runs show RUN_ID`
+read this ledger. Records include run id, timestamps, profile, workspace,
+network mode, return code, provider policy summary, auth broker summary, and
+cleanup outcome. They intentionally omit the `container run` command, agent
+arguments, environment variable names, environment values, request bodies, and
+token values.
 
 ## Auth Broker Model
 

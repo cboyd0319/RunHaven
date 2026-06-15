@@ -249,6 +249,15 @@ runhaven egress log --limit 20
 runhaven egress log --json
 ```
 
+Inspect recent agent runs without exposing command lines, agent arguments, or
+secrets:
+
+```bash
+runhaven runs list --limit 20
+runhaven runs show <run-id>
+runhaven runs show <run-id> --json
+```
+
 Broker a Codex API key without placing the raw value in the guest:
 
 ```bash

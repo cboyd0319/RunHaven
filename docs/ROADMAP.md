@@ -64,7 +64,8 @@
 
 - optional git worktree isolation for agent runs
 - merge, keep, discard, and conflict-recovery flows
-- run records with `runs list`, `runs show`, and `runs stop`
+- run records with `runs list` and `runs show`
+- `runs stop`
 - `runs log`, `runs diff`, and `runs attach` for visibility and direct
   intervention
 - structured blocked-host and cleanup event records
