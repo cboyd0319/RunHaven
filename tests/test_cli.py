@@ -98,6 +98,35 @@ def write_run_record_for_git_diff(
     (cache / "runs.jsonl").write_text(json.dumps(payload) + "\n", encoding="utf-8")
 
 
+def write_active_marker(
+    cache: Path,
+    *,
+    run_id: str,
+    timestamp: str,
+    container_name: str,
+) -> Path:
+    active_dir = cache / "active-runs"
+    active_dir.mkdir(parents=True, exist_ok=True)
+    active_path = active_dir / f"{run_id}.json"
+    active_path.write_text(
+        json.dumps(
+            {
+                "timestamp": timestamp,
+                "run_id": run_id,
+                "profile": "shell",
+                "workspace": str(cache),
+                "network": "internet",
+                "status": "running",
+                "container_name": container_name,
+                "host_pid": 12345,
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return active_path
+
+
 class CliTests(unittest.TestCase):
     def test_agents_lists_known_profiles(self) -> None:
         output = io.StringIO()
@@ -1193,6 +1222,141 @@ class CliTests(unittest.TestCase):
             self.assertEqual(code, 7)
             self.assertTrue(active_path.exists())
             self.assertIn("could not confirm", error_output.getvalue())
+
+    def test_runs_repair_all_removes_confirmed_stale_markers(self) -> None:
+        with TemporaryDirectory() as directory:
+            cache = Path(directory)
+            stale_path = write_active_marker(
+                cache,
+                run_id="run-stale",
+                timestamp="2026-06-15T00:00:01Z",
+                container_name="runhaven-shell-stale-run",
+            )
+            live_path = write_active_marker(
+                cache,
+                run_id="run-live",
+                timestamp="2026-06-15T00:00:02Z",
+                container_name="runhaven-shell-live-run",
+            )
+
+            def fake_inspect(command: tuple[str, ...], **kwargs: object) -> Mock:
+                self.assertEqual(
+                    kwargs,
+                    {"check": False, "capture_output": True, "text": True},
+                )
+                container_name = command[-1]
+                if container_name == "runhaven-shell-stale-run":
+                    return Mock(
+                        returncode=1,
+                        stdout="",
+                        stderr="Error: container not found: runhaven-shell-stale-run\n",
+                    )
+                if container_name == "runhaven-shell-live-run":
+                    return Mock(returncode=0, stdout="[]", stderr="")
+                raise AssertionError(f"unexpected inspect target: {container_name}")
+
+            output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.subprocess.run", side_effect=fake_inspect) as run,
+                redirect_stdout(output),
+            ):
+                code = main(["runs", "repair", "--all"])
+
+            self.assertEqual(code, 0)
+            self.assertEqual(
+                [call.args[0] for call in run.call_args_list],
+                [
+                    ("container", "inspect", "runhaven-shell-stale-run"),
+                    ("container", "inspect", "runhaven-shell-live-run"),
+                ],
+            )
+            self.assertFalse(stale_path.exists())
+            self.assertTrue(live_path.exists())
+            text = output.getvalue()
+            self.assertIn("Removed stale active marker for run run-stale", text)
+            self.assertIn("Kept active marker for run run-live", text)
+            self.assertIn("Repair summary: removed=1 kept=1 unverified=0", text)
+
+    def test_runs_repair_all_returns_nonzero_when_any_marker_unverified(self) -> None:
+        with TemporaryDirectory() as directory:
+            cache = Path(directory)
+            stale_path = write_active_marker(
+                cache,
+                run_id="run-stale",
+                timestamp="2026-06-15T00:00:01Z",
+                container_name="runhaven-shell-stale-run",
+            )
+            unknown_path = write_active_marker(
+                cache,
+                run_id="run-unknown",
+                timestamp="2026-06-15T00:00:02Z",
+                container_name="runhaven-shell-unknown-run",
+            )
+
+            def fake_inspect(command: tuple[str, ...], **kwargs: object) -> Mock:
+                self.assertEqual(
+                    kwargs,
+                    {"check": False, "capture_output": True, "text": True},
+                )
+                container_name = command[-1]
+                if container_name == "runhaven-shell-stale-run":
+                    return Mock(
+                        returncode=1,
+                        stdout="",
+                        stderr="Error: container not found: runhaven-shell-stale-run\n",
+                    )
+                if container_name == "runhaven-shell-unknown-run":
+                    return Mock(returncode=7, stdout="", stderr="daemon unavailable\n")
+                raise AssertionError(f"unexpected inspect target: {container_name}")
+
+            output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli"),
+                patch("runhaven.cli.subprocess.run", side_effect=fake_inspect),
+                redirect_stdout(output),
+            ):
+                code = main(["runs", "repair", "--all"])
+
+            self.assertEqual(code, 1)
+            self.assertFalse(stale_path.exists())
+            self.assertTrue(unknown_path.exists())
+            text = output.getvalue()
+            self.assertIn("Removed stale active marker for run run-stale", text)
+            self.assertIn("Could not verify active marker for run run-unknown", text)
+            self.assertIn("Repair summary: removed=1 kept=0 unverified=1", text)
+
+    def test_runs_repair_requires_run_id_or_all(self) -> None:
+        with TemporaryDirectory() as directory:
+            error_output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli") as require_container,
+                redirect_stderr(error_output),
+                self.assertRaises(SystemExit) as error,
+            ):
+                main(["runs", "repair"])
+
+        self.assertEqual(error.exception.code, 2)
+        require_container.assert_not_called()
+        self.assertIn("repair requires RUN_ID or --all", error_output.getvalue())
+
+    def test_runs_repair_refuses_run_id_with_all(self) -> None:
+        with TemporaryDirectory() as directory:
+            error_output = io.StringIO()
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": directory}, clear=False),
+                patch("runhaven.cli.require_container_cli") as require_container,
+                redirect_stderr(error_output),
+                self.assertRaises(SystemExit) as error,
+            ):
+                main(["runs", "repair", "run-active", "--all"])
+
+        self.assertEqual(error.exception.code, 2)
+        require_container.assert_not_called()
+        self.assertIn("--all cannot be used with RUN_ID", error_output.getvalue())
 
     def test_runs_active_prints_active_run_markers(self) -> None:
         with TemporaryDirectory() as directory:

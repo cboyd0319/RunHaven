@@ -74,6 +74,9 @@ repo and link to primary sources instead.
   recovery backlog. The command removes a stale marker only after Apple
   `container inspect` reports that the recorded RunHaven-owned container is
   not found.
+- 2026-06-15: Implemented `runhaven runs repair --all` from the promoted run
+  recovery backlog. The command applies the same confirmed-missing guard to
+  each valid active marker and keeps live or unverified markers.
 - 2026-06-15: First implementation slice landed from the promoted backlog:
   provider proxy DNS/private-address rejection, provider policy decision logs,
   and `runhaven why host ...`.

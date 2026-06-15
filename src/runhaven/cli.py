@@ -66,6 +66,14 @@ ACTIVE_RUN_PUBLIC_FIELDS = (
 )
 
 
+@dataclass(frozen=True)
+class ActiveRunRepairResult:
+    run_id: str
+    container_name: str
+    status: str
+    return_code: int
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     raw_args = list(sys.argv[1:] if argv is None else argv)
     parse_args, agent_args = split_agent_args(raw_args)
@@ -243,7 +251,12 @@ def build_parser() -> argparse.ArgumentParser:
         "repair",
         help="remove a stale active marker after confirming its container is gone",
     )
-    runs_repair_parser.add_argument("run_id", help="active run id to repair")
+    runs_repair_parser.add_argument("run_id", nargs="?", help="active run id to repair")
+    runs_repair_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="inspect all active markers and remove only confirmed-stale markers",
+    )
 
     egress_parser = subcommands.add_parser("egress", help="inspect provider egress policy logs")
     egress_subcommands = egress_parser.add_subparsers(dest="egress_command", required=True)
@@ -495,7 +508,7 @@ def runs_command(args: argparse.Namespace) -> int:
     if args.runs_command == "kill":
         return runs_kill(args.run_id)
     if args.runs_command == "repair":
-        return runs_repair(args.run_id)
+        return runs_repair(args.run_id, repair_all=args.all)
     raise ValueError(f"unknown runs command: {args.runs_command}")
 
 
@@ -1460,14 +1473,75 @@ def runs_kill(run_id: str) -> int:
     return 0
 
 
-def runs_repair(run_id: str) -> int:
+def runs_repair(run_id: str | None, *, repair_all: bool) -> int:
+    if run_id is not None and repair_all:
+        raise ValueError("--all cannot be used with RUN_ID")
+    if repair_all:
+        return runs_repair_all()
+    if run_id is None:
+        raise ValueError("repair requires RUN_ID or --all")
+    return runs_repair_one(run_id)
+
+
+def runs_repair_one(run_id: str) -> int:
     record = find_active_run_record(run_id)
-    container_name = require_string(
-        record.get("container_name"),
-        "active run record is missing container name",
-    )
-    validate_runhaven_container_name(container_name)
+    active_run_repair_container_name(record)
     require_container_cli()
+    result = repair_active_run_record(run_id, record)
+    if result.status == "kept":
+        print(
+            f"runhaven: active marker kept because container still exists: "
+            f"{result.container_name}",
+            file=sys.stderr,
+        )
+        return 1
+    if result.status == "unverified":
+        print(
+            f"runhaven: could not confirm missing container for run "
+            f"{result.run_id} ({result.container_name})",
+            file=sys.stderr,
+        )
+        return result.return_code
+    print(f"Removed stale active marker for run {result.run_id} ({result.container_name}).")
+    return 0
+
+
+def runs_repair_all() -> int:
+    records = read_active_run_records()
+    if not records:
+        print("No active RunHaven runs found.")
+        return 0
+    require_container_cli()
+    removed = 0
+    kept = 0
+    unverified = 0
+    for record in records:
+        run_id = require_string(record.get("run_id"), "active run record is missing run id")
+        result = repair_active_run_record(run_id, record)
+        if result.status == "removed":
+            removed += 1
+            print(f"Removed stale active marker for run {run_id} ({result.container_name}).")
+        elif result.status == "kept":
+            kept += 1
+            print(
+                f"Kept active marker for run {run_id} "
+                f"({result.container_name}): container still exists."
+            )
+        else:
+            unverified += 1
+            print(
+                f"Could not verify active marker for run {run_id} "
+                f"({result.container_name}); marker kept."
+            )
+    print(f"Repair summary: removed={removed} kept={kept} unverified={unverified}")
+    return 1 if unverified else 0
+
+
+def repair_active_run_record(
+    run_id: str,
+    record: dict[str, Any],
+) -> ActiveRunRepairResult:
+    container_name = active_run_repair_container_name(record)
     result = subprocess.run(
         ("container", "inspect", container_name),
         check=False,
@@ -1475,20 +1549,35 @@ def runs_repair(run_id: str) -> int:
         text=True,
     )
     if result.returncode == 0:
-        print(
-            f"runhaven: active marker kept because container still exists: {container_name}",
-            file=sys.stderr,
+        return ActiveRunRepairResult(
+            run_id=run_id,
+            container_name=container_name,
+            status="kept",
+            return_code=1,
         )
-        return 1
     if not container_inspect_reports_missing(result, container_name):
-        print(
-            f"runhaven: could not confirm missing container for run {run_id} ({container_name})",
-            file=sys.stderr,
+        return ActiveRunRepairResult(
+            run_id=run_id,
+            container_name=container_name,
+            status="unverified",
+            return_code=result.returncode,
         )
-        return result.returncode
     remove_active_run_record(run_id)
-    print(f"Removed stale active marker for run {run_id} ({container_name}).")
-    return 0
+    return ActiveRunRepairResult(
+        run_id=run_id,
+        container_name=container_name,
+        status="removed",
+        return_code=0,
+    )
+
+
+def active_run_repair_container_name(record: dict[str, Any]) -> str:
+    container_name = require_string(
+        record.get("container_name"),
+        "active run record is missing container name",
+    )
+    validate_runhaven_container_name(container_name)
+    return container_name
 
 
 def container_inspect_reports_missing(

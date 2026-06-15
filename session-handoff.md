@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement `runhaven runs repair RUN_ID` for stale active-run marker recovery.
+Implement `runhaven runs repair --all` for bulk stale active-run marker recovery.
 
 ## Files
 
@@ -67,6 +67,18 @@ Implement `runhaven runs repair RUN_ID` for stale active-run marker recovery.
 - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_repair_removes_marker_when_container_is_missing tests.test_cli.CliTests.test_runs_repair_refuses_when_container_still_exists tests.test_cli.CliTests.test_runs_repair_leaves_marker_on_unverified_inspect_failure tests.test_cli.CliTests.test_runs_repair_refuses_unowned_container_name`
   first failed because `repair` was not a valid `runs` subcommand, then passed
   after adding fail-closed stale-marker repair.
+- `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_repair_all_removes_confirmed_stale_markers tests.test_cli.CliTests.test_runs_repair_all_returns_nonzero_when_any_marker_unverified tests.test_cli.CliTests.test_runs_repair_requires_run_id_or_all tests.test_cli.CliTests.test_runs_repair_refuses_run_id_with_all`
+  first failed because `repair` still required a positional run id and did not
+  accept `--all`, then passed after adding guarded bulk repair.
+- Focused `runs repair --all` tests, focused combined repair tests, full
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 148 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runs repair --all` smoke passed.
+- `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 148 unit
+  tests, pin check, ruff, mypy, and build after adding `runs repair --all`.
 - Focused `runs repair` tests, full
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
   `python3 -m compileall src tests scripts`,
@@ -652,6 +664,9 @@ Implement `runhaven runs repair RUN_ID` for stale active-run marker recovery.
   the marker only when Apple reports that the recorded container is not found.
   It keeps the marker if the container still exists or inspection fails for any
   other reason.
+- `runhaven runs repair --all` now applies the same confirmed-missing guard to
+  all valid active markers, removes only confirmed-stale markers, keeps live or
+  unverified markers, and returns nonzero when any marker cannot be verified.
 - `docs/AUTH_BROKER.md` records the Codex prototype status, remaining
   design-only provider status, provider auth notes, non-goals, and acceptance
   criteria for future broker expansion.
@@ -694,8 +709,8 @@ Implement `runhaven runs repair RUN_ID` for stale active-run marker recovery.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Choose the next recovery improvement from the backlog, such as a guarded
-   bulk stale-marker review and repair mode. Run the Codex broker smoke with a
+5. Choose the next recovery improvement from the backlog, such as JSON output
+   for active-run repair summaries. Run the Codex broker smoke with a
    disposable OpenAI API key when available.
 6. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into

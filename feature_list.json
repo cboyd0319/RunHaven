@@ -210,7 +210,7 @@
       "priority": 6,
       "area": "usability",
       "title": "Secret-free run observability",
-      "user_visible_behavior": "`runhaven runs list`, `runhaven runs show RUN_ID`, `runhaven runs log RUN_ID`, `runhaven runs diff RUN_ID`, `runhaven runs active`, `runhaven runs status RUN_ID`, `runhaven runs attach RUN_ID`, `runhaven runs logs-follow RUN_ID`, `runhaven runs stop RUN_ID`, `runhaven runs kill RUN_ID`, and `runhaven runs repair RUN_ID` show recent actual agent runs and control active runs without exposing commands or secrets.",
+      "user_visible_behavior": "`runhaven runs list`, `runhaven runs show RUN_ID`, `runhaven runs log RUN_ID`, `runhaven runs diff RUN_ID`, `runhaven runs active`, `runhaven runs status RUN_ID`, `runhaven runs attach RUN_ID`, `runhaven runs logs-follow RUN_ID`, `runhaven runs stop RUN_ID`, `runhaven runs kill RUN_ID`, `runhaven runs repair RUN_ID`, and `runhaven runs repair --all` show recent actual agent runs and control active runs without exposing commands or secrets.",
       "status": "passing",
       "dependencies": [
         "provider-egress-allowlisting",
@@ -231,6 +231,7 @@
         "`runhaven runs stop RUN_ID` stops only an active RunHaven-owned named Apple container",
         "`runhaven runs kill RUN_ID` hard-stops only an active RunHaven-owned named Apple container and records killed runs as `killed`",
         "`runhaven runs repair RUN_ID` removes only stale active markers whose recorded RunHaven-owned Apple container is confirmed missing",
+        "`runhaven runs repair --all` applies the same confirmed-missing guard across valid active markers and returns nonzero when any marker cannot be verified",
         "Run records and active-run markers omit diffs, file contents, prompts, command lines, agent arguments, environment variable names, environment values, request bodies, and token values"
       ],
       "evidence": [
@@ -261,9 +262,11 @@
         "2026-06-15: Focused `runs kill` tests first failed because `kill` was not a valid `runs` subcommand and kill-requested runs recorded as `failed`, then passed after adding guarded Apple `container kill` routing and killed run records. Local `container kill --help` confirmed the supported command shape.",
         "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 140 unit tests, pin check, ruff, mypy, and build after adding `runs kill`. Manual `runs kill` command-construction smoke, JSON validation, Markdown link check, platform scan, and `git diff --check` also passed.",
         "2026-06-15: Focused `runs repair` tests first failed because `repair` was not a valid `runs` subcommand, then passed after adding fail-closed Apple `container inspect` missing-container verification before stale marker removal. Local `container inspect runhaven-nonexistent-repair-smoke` confirmed the missing-container output.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 144 unit tests, pin check, ruff, mypy, and build after adding `runs repair`. Manual `runs repair` smoke, JSON validation, Markdown link check, platform scan, and `git diff --check` also passed."
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 144 unit tests, pin check, ruff, mypy, and build after adding `runs repair`. Manual `runs repair` smoke, JSON validation, Markdown link check, platform scan, and `git diff --check` also passed.",
+        "2026-06-15: Focused `runs repair --all` tests first failed because `repair` still required a positional run id and did not accept `--all`, then passed after adding guarded bulk repair.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 148 unit tests, pin check, ruff, mypy, and build after adding `runs repair --all`. Manual `runs repair --all` smoke, JSON validation, Markdown link check, platform scan, and `git diff --check` also passed."
       ],
-      "notes": "`runs list/show/log/diff/active/status/attach/logs-follow/stop/kill/repair` are the first run dashboard and recovery slices. `runs diff` prints live git output on demand and does not store patches. `runs active` recovers current run ids from secret-free markers. `runs status` uses curated Apple `container inspect` output. `runs attach` uses Apple `container exec` because the pinned local CLI has no installed attach plugin. `runs logs-follow` uses Apple `container logs --follow`. `runs stop`, `runs kill`, and `runs repair` work only for active runs with a current active marker."
+      "notes": "`runs list/show/log/diff/active/status/attach/logs-follow/stop/kill/repair` are the first run dashboard and recovery slices. `runs diff` prints live git output on demand and does not store patches. `runs active` recovers current run ids from secret-free markers. `runs status` uses curated Apple `container inspect` output. `runs attach` uses Apple `container exec` because the pinned local CLI has no installed attach plugin. `runs logs-follow` uses Apple `container logs --follow`. `runs stop`, `runs kill`, and `runs repair` work only for active runs with a current active marker. `runs repair --all` handles multiple valid active markers with the same confirmed-missing guard."
     },
     {
       "id": "repo-logo",

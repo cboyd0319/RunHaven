@@ -122,7 +122,9 @@ marker and calls Apple `container stop` for the named container. `runhaven runs
 kill RUN_ID` reads one marker and calls Apple `container kill` for explicit
 hard-stop recovery. `runhaven runs repair RUN_ID` removes a stale active marker
 only after Apple `container inspect` reports that the recorded RunHaven-owned
-container is not found. The marker is removed when the run finishes.
+container is not found. `runhaven runs repair --all` applies the same
+confirmed-missing guard to every valid active marker. The marker is removed
+when the run finishes.
 `runhaven runs list`, `runhaven runs show RUN_ID`, and `runhaven runs log
 RUN_ID` read the completed-run ledger. Records include run id,
 timestamps, profile, workspace, network mode, return code, provider policy

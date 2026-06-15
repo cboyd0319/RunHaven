@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Implement `runhaven runs repair RUN_ID` for stale active-run marker recovery.
+Implement `runhaven runs repair --all` for bulk stale active-run marker recovery.
 
 ## Current State
 
@@ -248,6 +248,9 @@ Implement `runhaven runs repair RUN_ID` for stale active-run marker recovery.
   the marker only when Apple reports that the recorded container is not found.
   It keeps the marker if the container still exists or if inspection fails for
   any other reason.
+- `runhaven runs repair --all` now applies the same confirmed-missing guard to
+  all valid active markers, removes only confirmed-stale markers, keeps live or
+  unverified markers, and returns nonzero when any marker cannot be verified.
 - Active markers are removed after run completion. If a run exits after a stop
   or kill request, the completed run record is marked `stopped` or `killed`.
 - Run records omit diffs, file contents, prompts, command lines, agent
@@ -269,10 +272,9 @@ Implement `runhaven runs repair RUN_ID` for stale active-run marker recovery.
 
 ## Recommended Next Step
 
-Add a bulk stale-marker review and repair mode, such as guarded
-`runhaven runs repair --all`, so users can clean multiple confirmed-stale
-markers without copying ids one by one. Run the optional Codex broker smoke
-with a disposable OpenAI API key when one is available.
+Add JSON output for active-run repair summaries so `runs repair RUN_ID` and
+`runs repair --all` can feed scripts without parsing text. Run the optional
+Codex broker smoke with a disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
@@ -295,6 +297,19 @@ with a disposable OpenAI API key when one is available.
 - 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_repair_removes_marker_when_container_is_missing tests.test_cli.CliTests.test_runs_repair_refuses_when_container_still_exists tests.test_cli.CliTests.test_runs_repair_leaves_marker_on_unverified_inspect_failure tests.test_cli.CliTests.test_runs_repair_refuses_unowned_container_name`
   first failed because `repair` was not a valid `runs` subcommand, then passed
   after adding fail-closed stale-marker repair.
+- 2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli.CliTests.test_runs_repair_all_removes_confirmed_stale_markers tests.test_cli.CliTests.test_runs_repair_all_returns_nonzero_when_any_marker_unverified tests.test_cli.CliTests.test_runs_repair_requires_run_id_or_all tests.test_cli.CliTests.test_runs_repair_refuses_run_id_with_all`
+  first failed because `repair` still required a positional run id and did not
+  accept `--all`, then passed after adding guarded bulk repair.
+- 2026-06-15: Focused `runs repair --all` tests, focused combined repair tests,
+  full `PYTHONPATH=src python3 -m unittest discover -s tests` with 148 tests,
+  `python3 -m compileall src tests scripts`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, `git diff --check`, Markdown
+  link check, platform scan, and manual `runs repair --all` smoke passed.
+- 2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with
+  compileall, 148 unit tests, pin check, ruff, mypy, and build after adding
+  `runs repair --all`.
 - 2026-06-15: Focused `runs repair` tests, full
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 144 tests,
   `python3 -m compileall src tests scripts`,
