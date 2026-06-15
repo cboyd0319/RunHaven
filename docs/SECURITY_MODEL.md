@@ -134,7 +134,8 @@ RunHaven-owned branch and git worktree, mounts the worktree instead of the
 source checkout, and records the source repo, worktree path, branch, base
 commit, and recovery commands. Dirty source checkouts fail before worktree
 creation and print safe next choices. `runs recover` and `runs recover --json`
-are read-only. RunHaven does not automatically merge or delete that worktree
+are read-only. Suggested project checks are advisory commands and are not run
+automatically. RunHaven does not automatically merge or delete that worktree
 after the run.
 The run ledger and active-run markers do not record diffs, file contents,
 prompts, command lines, agent arguments, attach commands, environment variable

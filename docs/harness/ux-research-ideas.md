@@ -305,10 +305,11 @@ creation with choices to commit or stash, run without `--worktree`, or start
 from a clean clone or git worktree. `runs keep`, `runs recover`,
 `runs recover --json`, `runs merge`, and `runs discard` now provide the first
 guarded review lifecycle: keep validates and prints review paths, recover
-prints source and worktree status plus structured JSON without mutation, merge
-validates the source/worktree/branch boundary before applying changes back to
-the source checkout, and discard removes only the recorded RunHaven worktree
-and branch.
+prints source and worktree status plus structured JSON without mutation, keep
+and recover suggest detected project checks that run through internal-network
+shell commands, merge validates the source/worktree/branch boundary before
+applying changes back to the source checkout, and discard removes only the
+recorded RunHaven worktree and branch.
 
 ### Image Repair And State Repair
 

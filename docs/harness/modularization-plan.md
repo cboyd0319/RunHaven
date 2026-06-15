@@ -7,15 +7,15 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the worktree recovery JSON and dirty-source
-guidance slice:
+Measured on 2026-06-15 after the project check suggestions slice:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
 | `src/runhaven/cli.py` | 539 | Owns command dispatch, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
 | `src/runhaven/plans.py` | 472 | Cohesive planner and validation module. |
 | `tests/test_cli_standard_run.py` | 451 | Owns standard run record, active-marker lifecycle, and worktree-run setup coverage. |
-| `src/runhaven/worktree_lifecycle.py` | 416 | Owns worktree run-record validation, keep/recover output, merge application, and discard cleanup. |
+| `tests/test_cli_worktree_lifecycle.py` | 445 | Owns `runs keep`, `runs recover`, `runs merge`, and `runs discard` worktree lifecycle coverage. |
+| `src/runhaven/worktree_lifecycle.py` | 431 | Owns worktree run-record validation, keep/recover output, merge application, and discard cleanup. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `tests/test_cli_active_repair.py` | 401 | Owns active-run stale-marker repair coverage; reviewed as cohesive after helper cleanup. |
 | `src/runhaven/run_history.py` | 393 | Owns run-record persistence, provider/auth summaries, and `runs list/show/log/diff` output. |
@@ -24,7 +24,6 @@ guidance slice:
 | `src/runhaven/auth_broker.py` | 374 | Owns the live Codex API-key broker proxy, upstream forwarding, request validation, and broker decision aggregation. |
 | `tests/test_cli_active_attach_logs.py` | 369 | Owns active attach and logs-follow coverage. |
 | `tests/test_cli_provider_codex_broker.py` | 359 | Owns Codex API-key broker run, auth log, no-request, run-record, and missing-env coverage. |
-| `tests/test_cli_worktree_lifecycle.py` | 349 | Owns `runs keep`, `runs recover`, `runs merge`, and `runs discard` worktree lifecycle coverage. |
 | `src/runhaven/active_commands.py` | 342 | Owns active-run listing, attach/log-follow, sanitized status output, stop, and kill. |
 | `src/runhaven/cli_parser.py` | 337 | Owns argparse construction for all RunHaven CLI commands. |
 | `tests/test_cli_diagnostics.py` | 273 | Owns `auth`, `egress log`, and `why host` CLI coverage. |

@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add worktree recovery JSON output and dirty-source guidance.
+Add project check suggestions for worktree review.
 
 ## Files
 
@@ -38,6 +38,7 @@ Add worktree recovery JSON output and dirty-source guidance.
 - `src/runhaven/provider_endpoints.py`
 - `src/runhaven/provider_observability.py`
 - `src/runhaven/provider_runtime.py`
+- `src/runhaven/project_checks.py`
 - `src/runhaven/run_history.py`
 - `src/runhaven/worktree_lifecycle.py`
 - `src/runhaven/worktrees.py`
@@ -280,6 +281,21 @@ Add worktree recovery JSON output and dirty-source guidance.
   `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
   `python3 -m json.tool feature_list.json`, local Markdown link check across
   45 Markdown links, `git diff --check`,
+  `PYTHONPATH=src python3 -m runhaven runs recover --help`, and
+  `PYTHON=<temporary-venv-python> ./init.sh`.
+- Project check suggestion red/green focused tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle.CliWorktreeLifecycleTests.test_runs_keep_prints_project_check_suggestions_without_cleanup`
+  and
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle.CliWorktreeLifecycleTests.test_runs_recover_json_includes_project_check_suggestions`.
+- Adjacent worktree and run-history tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle tests.test_cli_standard_run tests.test_cli_runs_diff tests.test_cli_runs_list_show`.
+- Full project check suggestion verification passed:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src:tests python3 -m unittest discover -s tests` with 174
+  tests, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  41 Markdown files, `git diff --check`,
   `PYTHONPATH=src python3 -m runhaven runs recover --help`, and
   `PYTHON=<temporary-venv-python> ./init.sh`.
 - Focused CLI test split checks passed: `python3 -m compileall tests`,
@@ -1221,6 +1237,12 @@ Add worktree recovery JSON output and dirty-source guidance.
 - `runhaven runs recover RUN_ID --json` prints the same read-only recovery
   state, status lines, commands, and next-step labels for automation or UI
   work without parsing prose.
+- `runhaven runs keep RUN_ID` and `runhaven runs recover RUN_ID` now suggest
+  detected project checks, such as `package.json` test/lint scripts and
+  Python `tests/`, as copyable `runhaven run shell --network internal`
+  commands against the recorded worktree workspace. The recovery JSON output
+  includes the same suggestions for automation. Suggestions are advisory and
+  are not run automatically.
 
 ## Next Session
 
@@ -1233,8 +1255,7 @@ Add worktree recovery JSON output and dirty-source guidance.
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
 5. Run the Codex broker smoke with a disposable OpenAI API key when available.
-6. Add project test and lint command suggestions so users have an easier
-   post-run review path after a worktree agent run.
+6. Design warm reusable project sessions with explicit reset and prune UX.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into
    the guest.

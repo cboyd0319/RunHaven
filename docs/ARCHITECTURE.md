@@ -137,6 +137,8 @@ relative paths scoped to the selected workspace. Worktree runs also record the
 source repo, RunHaven-owned worktree path, branch, base `HEAD`, mounted
 workspace, and recovery commands. `runs log` joins the run record with matching
 `egress-policy.jsonl` and `auth-broker.jsonl` entries for the same run id.
+Worktree review commands can also suggest detected local test and lint commands
+against the recorded worktree, but they do not execute those suggestions.
 `runs diff` validates the recorded git metadata against live git state and
 then prints a live `git diff`; it does not read or store patches from
 `runs.jsonl`. These commands intentionally omit diffs, file contents, prompts,

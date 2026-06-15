@@ -228,7 +228,10 @@ runhaven runs discard <run-id>
 
 `runs keep` verifies that the recorded RunHaven-owned worktree and branch still
 exist, then prints the review, recover, merge, and discard commands without
-changing anything.
+changing anything. When common project checks are detected, it also suggests
+copyable `runhaven run shell --network internal` commands against the recorded
+worktree workspace. Suggestions are advisory only; RunHaven does not run them
+automatically.
 
 `runs merge` verifies the recorded source repository, RunHaven-owned branch,
 worktree path, worktree branch, and base commit. It refuses to run if the
@@ -242,8 +245,9 @@ review, retry, keep, and discard commands for recovery.
 `runs recover` verifies the same recorded worktree and branch, then prints the
 source and worktree `git status --short` output plus a numbered manual recovery
 sequence. Use `--json` to print the same recovery state, status lines,
-commands, and next-step labels for automation or a future UI. It is read-only
-and does not merge, delete, commit, stash, or change files.
+commands, next-step labels, and suggested project checks for automation or a
+future UI. It is read-only and does not run checks, merge, delete, commit,
+stash, or change files.
 
 `runs discard` verifies the same RunHaven-owned worktree and branch, then
 removes the recorded worktree and deletes the recorded branch without touching

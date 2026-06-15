@@ -4,7 +4,7 @@ Last Updated: 2026-06-15
 
 ## Current Objective
 
-Add worktree recovery JSON output and dirty-source guidance.
+Add project check suggestions for worktree review.
 
 ## Current State
 
@@ -266,6 +266,12 @@ Add worktree recovery JSON output and dirty-source guidance.
 - `runhaven runs recover RUN_ID --json` prints the same read-only recovery
   state, status lines, commands, and next-step labels for automation or UI
   work without parsing prose.
+- `runhaven runs keep RUN_ID` and `runhaven runs recover RUN_ID` now suggest
+  detected project checks, such as `package.json` test/lint scripts and
+  Python `tests/`, as copyable `runhaven run shell --network internal`
+  commands against the recorded worktree workspace. The recovery JSON output
+  includes the same suggestions for automation. Suggestions are advisory and
+  are not run automatically.
 - `src/runhaven/auth_profiles.py` now records per-profile auth broker metadata,
   and `src/runhaven/auth_broker.py` implements the first Codex API-key broker
   prototype.
@@ -402,9 +408,8 @@ Add worktree recovery JSON output and dirty-source guidance.
 ## Recommended Next Step
 
 Run the optional Codex broker smoke with a disposable OpenAI API key when one
-is available. Next product slice: add project test and lint command
-suggestions so users have an easier post-run review path after a worktree
-agent run.
+is available. Next product slice: design warm reusable project sessions with
+explicit reset and prune UX.
 
 ## Verification Evidence
 
@@ -1314,5 +1319,20 @@ agent run.
   `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
   `python3 -m json.tool feature_list.json`, local Markdown link check across
   45 Markdown links, `git diff --check`,
+  `PYTHONPATH=src python3 -m runhaven runs recover --help`, and
+  `PYTHON=<temporary-venv-python> ./init.sh`.
+- 2026-06-15: Project check suggestion red/green focused tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle.CliWorktreeLifecycleTests.test_runs_keep_prints_project_check_suggestions_without_cleanup`
+  and
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle.CliWorktreeLifecycleTests.test_runs_recover_json_includes_project_check_suggestions`.
+- 2026-06-15: Adjacent worktree and run-history tests passed:
+  `PYTHONPATH=src:tests python3 -m unittest tests.test_cli_worktree_lifecycle tests.test_cli_standard_run tests.test_cli_runs_diff tests.test_cli_runs_list_show`.
+- 2026-06-15: Full project check suggestion verification passed:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src:tests python3 -m unittest discover -s tests` with 174
+  tests, `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 scripts/check_pins.py`,
+  `python3 -m json.tool feature_list.json`, local Markdown link check across
+  41 Markdown files, `git diff --check`,
   `PYTHONPATH=src python3 -m runhaven runs recover --help`, and
   `PYTHON=<temporary-venv-python> ./init.sh`.

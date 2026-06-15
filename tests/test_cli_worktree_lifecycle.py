@@ -42,6 +42,42 @@ class CliWorktreeLifecycleTests(unittest.TestCase):
             self.assertTrue(worktree_root.exists())
             self.assertTrue(branch_exists(repo, branch))
 
+    def test_runs_keep_prints_project_check_suggestions_without_cleanup(self) -> None:
+        with TemporaryDirectory() as directory:
+            repo, cache, record = self.create_project_check_worktree_run(Path(directory))
+            worktree_root = Path(record["worktree"]["worktree_root"])
+            mounted_workspace = record["worktree"]["mounted_workspace"]
+            branch = record["worktree"]["branch"]
+            output = io.StringIO()
+
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": str(cache)}, clear=False),
+                redirect_stdout(output),
+            ):
+                code = main(["runs", "keep", record["run_id"]])
+
+            text = output.getvalue()
+
+            self.assertEqual(code, 0)
+            self.assertIn("Suggested checks:", text)
+            self.assertIn(
+                f"runhaven run shell --workspace {mounted_workspace} "
+                "--network internal -- npm test",
+                text,
+            )
+            self.assertIn(
+                f"runhaven run shell --workspace {mounted_workspace} "
+                "--network internal -- npm run lint",
+                text,
+            )
+            self.assertIn(
+                f"runhaven run shell --workspace {mounted_workspace} "
+                "--network internal -- python -m unittest discover -s tests",
+                text,
+            )
+            self.assertTrue(worktree_root.exists())
+            self.assertTrue(branch_exists(repo, branch))
+
     def test_runs_merge_applies_dirty_worktree_changes_and_cleans_up(self) -> None:
         with TemporaryDirectory() as directory:
             repo, cache, record = self.create_dirty_worktree_run(Path(directory))
@@ -220,6 +256,44 @@ class CliWorktreeLifecycleTests(unittest.TestCase):
             self.assertTrue(worktree_root.exists())
             self.assertTrue(branch_exists(repo, branch))
 
+    def test_runs_recover_json_includes_project_check_suggestions(self) -> None:
+        with TemporaryDirectory() as directory:
+            repo, cache, record = self.create_project_check_worktree_run(Path(directory))
+            worktree = record["worktree"]
+            worktree_root = Path(worktree["worktree_root"])
+            output = io.StringIO()
+
+            with (
+                patch.dict("os.environ", {"RUNHAVEN_CACHE_HOME": str(cache)}, clear=False),
+                redirect_stdout(output),
+            ):
+                code = main(["runs", "recover", record["run_id"], "--json"])
+
+            payload = json.loads(output.getvalue())
+            suggested_checks = payload["suggested_checks"]
+            commands = {check["label"]: check["command"] for check in suggested_checks}
+
+            self.assertEqual(code, 0)
+            self.assertEqual(commands["Node tests"].split("-- ")[-1], "npm test")
+            self.assertEqual(commands["Node lint"].split("-- ")[-1], "npm run lint")
+            self.assertEqual(
+                commands["Python tests"].split("-- ")[-1],
+                "python -m unittest discover -s tests",
+            )
+            self.assertEqual(
+                suggested_checks[0]["argv"][:6],
+                [
+                    "runhaven",
+                    "run",
+                    "shell",
+                    "--workspace",
+                    worktree["mounted_workspace"],
+                    "--network",
+                ],
+            )
+            self.assertTrue(worktree_root.exists())
+            self.assertTrue(branch_exists(repo, worktree["branch"]))
+
     def test_runs_discard_removes_worktree_without_touching_source(self) -> None:
         with TemporaryDirectory() as directory:
             repo, cache, record = self.create_dirty_worktree_run(Path(directory))
@@ -287,6 +361,12 @@ class CliWorktreeLifecycleTests(unittest.TestCase):
     def create_dirty_worktree_run(self, directory: Path) -> tuple[Path, Path, dict[str, object]]:
         return self.create_worktree_run(directory, commit_change=False)
 
+    def create_project_check_worktree_run(
+        self,
+        directory: Path,
+    ) -> tuple[Path, Path, dict[str, object]]:
+        return self.create_worktree_run(directory, commit_change=False, project_checks=True)
+
     def create_committed_worktree_run(
         self,
         directory: Path,
@@ -298,11 +378,27 @@ class CliWorktreeLifecycleTests(unittest.TestCase):
         directory: Path,
         *,
         commit_change: bool,
+        project_checks: bool = False,
     ) -> tuple[Path, Path, dict[str, object]]:
         repo = directory / "repo"
         cache = directory / "cache"
         repo.mkdir()
         init_git_repo(repo)
+        if project_checks:
+            (repo / "package.json").write_text(
+                json.dumps({"scripts": {"test": "node --test", "lint": "eslint ."}}),
+                encoding="utf-8",
+            )
+            (repo / "tests").mkdir()
+            (repo / "tests" / "test_sample.py").write_text(
+                "import unittest\n\n"
+                "class SampleTests(unittest.TestCase):\n"
+                "    def test_sample(self) -> None:\n"
+                "        self.assertTrue(True)\n",
+                encoding="utf-8",
+            )
+            run_git(repo, "add", "package.json", "tests/test_sample.py")
+            run_git(repo, "commit", "-m", "add project check fixtures")
 
         def fake_container_run(command: tuple[str, ...]) -> int:
             workspace_mount = next(value for value in command if value.startswith("type=bind,"))

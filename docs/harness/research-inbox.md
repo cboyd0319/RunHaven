@@ -116,6 +116,11 @@ repo and link to primary sources instead.
   dirty-source choices before worktree creation. Recovery JSON exposes the
   same read-only source/worktree state, commands, and next-step labels for
   automation or UI work without parsing prose.
+- 2026-06-15: Implemented project check suggestions for the worktree review
+  backlog. `runs keep` and `runs recover` suggest detected `package.json`
+  test/lint scripts and Python `tests/` as internal-network shell commands
+  against the recorded worktree; `runs recover --json` includes the same
+  advisory suggestions.
 - 2026-06-15: Added a pre-release backlog item to consider a major large-file
   refactor and modularization pass, especially around the CLI and broad test
   modules, before release.

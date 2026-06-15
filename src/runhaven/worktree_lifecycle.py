@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import cast
 
 from .git_metadata import capture_git_snapshot, parse_git_status_entries, safe_repo_path
+from .project_checks import SuggestedCheck, suggest_project_checks
 from .run_history import find_run_record
 from .validators import require_string, validate_run_id
 
@@ -28,6 +29,7 @@ class WorktreeLifecycle:
 def runs_worktree_keep(run_id: str) -> int:
     lifecycle = load_worktree_lifecycle(run_id)
     verify_lifecycle(lifecycle)
+    suggested_checks = suggest_project_checks(lifecycle.mounted_workspace)
     print(f"Worktree kept for run {run_id}")
     print(f"Source repo: {lifecycle.source_repo_root}")
     print(f"Worktree: {lifecycle.worktree_root}")
@@ -37,6 +39,7 @@ def runs_worktree_keep(run_id: str) -> int:
     print(f"Recover: runhaven runs recover {run_id}")
     print(f"Merge: runhaven runs merge {run_id}")
     print(f"Discard: runhaven runs discard {run_id}")
+    print_suggested_checks(suggested_checks)
     return 0
 
 
@@ -53,6 +56,7 @@ def runs_worktree_recover(run_id: str, *, json_output: bool = False) -> int:
     next_steps = cast(list[str], payload["next_steps"])
     source_status = cast(list[str], payload["source_status"])
     worktree_status = cast(list[str], payload["worktree_status"])
+    suggested_checks = cast(list[SuggestedCheck], payload["suggested_checks"])
     print(f"Manual recovery for worktree run {run_id}")
     print(f"Source repo: {payload['source_repo_root']}")
     print(f"Worktree: {payload['worktree_root']}")
@@ -73,6 +77,7 @@ def runs_worktree_recover(run_id: str, *, json_output: bool = False) -> int:
     print(f"4. {next_steps[3]}: {commands['merge']}")
     print(f"5. {next_steps[4]}: {commands['keep']}")
     print(f"6. {next_steps[5]}: {commands['discard']}")
+    print_suggested_checks(suggested_checks)
     return 0
 
 
@@ -90,6 +95,7 @@ def worktree_recovery_payload(lifecycle: WorktreeLifecycle) -> dict[str, object]
         "worktree_status": list(git_status_lines(lifecycle.worktree_root)),
         "commands": worktree_recovery_commands(lifecycle),
         "next_steps": worktree_recovery_next_steps(),
+        "suggested_checks": suggest_project_checks(lifecycle.mounted_workspace),
     }
 
 
@@ -384,6 +390,15 @@ def print_status(title: str, lines: Sequence[str]) -> None:
         return
     for line in lines:
         print(f"  {line}")
+
+
+def print_suggested_checks(checks: Sequence[SuggestedCheck]) -> None:
+    if not checks:
+        return
+    print("Suggested checks:")
+    for index, check in enumerate(checks, start=1):
+        print(f"{index}. {check['label']}: {check['command']}")
+        print(f"   {check['reason']}")
 
 
 def git_checked(

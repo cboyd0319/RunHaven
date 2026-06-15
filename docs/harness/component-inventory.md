@@ -13,7 +13,7 @@ inventory, not permission to mutate nested projects.
   `src/runhaven/auth_profiles.py`, `src/runhaven/cache_paths.py`,
   `src/runhaven/cli_parser.py`,
   `src/runhaven/diagnostic_commands.py`, `src/runhaven/git_metadata.py`,
-  `src/runhaven/provider_observability.py`,
+  `src/runhaven/project_checks.py`, `src/runhaven/provider_observability.py`,
   `src/runhaven/provider_runtime.py`,
   `src/runhaven/run_history.py`,
   `src/runhaven/setup_guide.py`, `src/runhaven/validators.py`,

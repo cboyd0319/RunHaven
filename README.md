@@ -84,6 +84,8 @@ setup. See [Usage](docs/USAGE.md) for command-level workflows.
   repository-root expansion explicit.
 - `--worktree` runs agents in a RunHaven-owned git worktree so the source
   checkout stays untouched.
+- Worktree review commands suggest detected project checks without running
+  them automatically.
 - `--network internal` supports local-only commands.
 - `--network provider` routes normal agent runs through a host-side provider
   host allowlist proxy on an internal Apple `container` network.
