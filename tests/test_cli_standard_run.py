@@ -50,6 +50,7 @@ class CliStandardRunTests(unittest.TestCase):
         record = records[0]
         self.assertEqual(record["profile"], "shell")
         self.assertEqual(record["workspace"], str(Path(directory).resolve()))
+        self.assertEqual(record["workspace_scope"], "current")
         self.assertEqual(record["network"], "internet")
         self.assertEqual(record["return_code"], 7)
         self.assertEqual(record["status"], "failed")
@@ -76,6 +77,7 @@ class CliStandardRunTests(unittest.TestCase):
                 active_payloads.append(payload)
                 self.assertEqual(payload["profile"], "shell")
                 self.assertEqual(payload["workspace"], str(workspace.resolve()))
+                self.assertEqual(payload["workspace_scope"], "current")
                 self.assertEqual(payload["network"], "internet")
                 self.assertEqual(payload["status"], "running")
                 self.assertEqual(payload["container_name"], command[command.index("--name") + 1])

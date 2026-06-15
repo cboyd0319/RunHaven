@@ -331,6 +331,26 @@ Start pre-release large-file modularization.
   only the expected existing macOS-only evidence lines, and
   `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
   pin check, ruff, mypy, and build.
+- Focused workspace-scope selection checks passed:
+  `python3 -m compileall` on touched source and tests,
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_plans.py'`
+  with 35 tests,
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli.py'`
+  with 14 tests,
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_standard_run.py'`
+  with 6 tests,
+  `uvx --from ruff==0.15.17 ruff check` on touched Python files, and
+  `uvx --from mypy==2.1.0 mypy` on touched source files.
+- Full verification passed after workspace-scope selection:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 160 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, platform wording scan, manual
+  `runhaven plan` smokes for default current scope and explicit git-root scope,
+  and `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 160 unit
+  tests, pin check, ruff, mypy, and build.
 - Full verification passed after the active-repair extraction:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
@@ -1095,6 +1115,10 @@ Start pre-release large-file modularization.
 - The active-repair CLI test file was reviewed and kept as one focused repair
   command surface after replacing repeated marker JSON setup with
   `write_active_marker`.
+- Explicit workspace scope selection landed for `plan` and `run`:
+  `--workspace-scope current|git-root`. Default current scope keeps selected
+  git subdirectories mounted; explicit git-root scope expands only inside a
+  git worktree. Run records and active markers include the selected scope.
 
 ## Next Session
 
@@ -1106,8 +1130,8 @@ Start pre-release large-file modularization.
    `docs/harness/external-project-ideas.md` and
    `docs/harness/ux-research-ideas.md` before choosing the next product
    improvement from the mined backlog.
-5. Pause large-file cleanup and return to the product backlog unless a concrete
-   maintainability problem remains.
+5. Continue the product backlog with the first worktree-isolation slice, now
+   that workspace scope selection is explicit.
 6. Run the Codex broker smoke with a disposable OpenAI API key when available.
 7. Keep broad path-sensitive hosts explicit until RunHaven can restrict them by
    verified path or brokered credentials without mounting provider secrets into

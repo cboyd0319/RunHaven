@@ -237,6 +237,10 @@ Start pre-release large-file modularization.
   command surface. Repeated hand-written active marker JSON setup now uses the
   existing `write_active_marker` helper, reducing
   `tests/test_cli_active_repair.py` to 401 lines.
+- `runhaven plan` and `runhaven run` now support explicit workspace scope
+  selection with `--workspace-scope current|git-root`. Default current scope
+  keeps selected git subdirectories mounted without silently broadening to the
+  repo root; explicit git-root scope expands only inside a git worktree.
 - `src/runhaven/auth_profiles.py` now records per-profile auth broker metadata,
   and `src/runhaven/auth_broker.py` implements the first Codex API-key broker
   prototype.
@@ -372,9 +376,9 @@ Start pre-release large-file modularization.
 
 ## Recommended Next Step
 
-Pause the large-file cleanup and return to the product backlog unless a
-concrete maintainability problem remains. Run the optional Codex broker smoke
-with a disposable OpenAI API key when one is available.
+Continue the product backlog with the first worktree-isolation slice, now that
+workspace scope selection is explicit. Run the optional Codex broker smoke with
+a disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
@@ -500,6 +504,26 @@ with a disposable OpenAI API key when one is available.
   only the expected existing macOS-only evidence lines, and
   `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 156 unit tests,
   pin check, ruff, mypy, and build.
+- 2026-06-15: Focused workspace-scope selection checks passed:
+  `python3 -m compileall` on touched source and tests,
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_plans.py'`
+  with 35 tests,
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli.py'`
+  with 14 tests,
+  `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_cli_standard_run.py'`
+  with 6 tests,
+  `uvx --from ruff==0.15.17 ruff check` on touched Python files, and
+  `uvx --from mypy==2.1.0 mypy` on touched source files.
+- 2026-06-15: Full verification passed after workspace-scope selection:
+  `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 160 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, platform wording scan, manual
+  `runhaven plan` smokes for default current scope and explicit git-root scope,
+  and `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 160 unit
+  tests, pin check, ruff, mypy, and build.
 - 2026-06-15: Full verification passed after the active-repair extraction:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,

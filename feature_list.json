@@ -100,6 +100,29 @@
       "notes": "Runtime and contributor verification are macOS 26+ only."
     },
     {
+      "id": "workspace-scope-selection",
+      "priority": 4,
+      "area": "security",
+      "title": "Explicit workspace scope selection",
+      "user_visible_behavior": "`runhaven plan` and `runhaven run` default to mounting the selected current directory, note when it is inside a larger git repository, and expand to the git root only with explicit `--workspace-scope git-root`.",
+      "status": "passing",
+      "dependencies": [
+        "runtime-hardening-macos-only-boundary"
+      ],
+      "verification": [
+        "Default workspace scope keeps a selected git subdirectory mounted without silently broadening to the repo root",
+        "`--workspace-scope git-root` expands a selected git subdirectory to the containing repository root",
+        "`--workspace-scope git-root` fails closed outside a git worktree",
+        "`runhaven plan` prints workspace scope and git-root notes",
+        "Run records and active-run markers include the selected workspace scope without recording commands, arguments, file contents, or secrets"
+      ],
+      "evidence": [
+        "2026-06-15: Focused planner, CLI, and standard-run tests passed after adding explicit workspace scope selection; ruff and mypy also passed on touched Python files.",
+        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 160 unit tests, pin check, ruff, mypy, and build after adding workspace scope selection. Manual `runhaven plan` smokes confirmed default current scope and explicit git-root expansion."
+      ],
+      "notes": "The default remains `current` to avoid surprising mount broadening. Use `git-root` only when the agent needs the full repository at `/workspace`."
+    },
+    {
       "id": "provider-egress-allowlisting",
       "priority": 4,
       "area": "security",

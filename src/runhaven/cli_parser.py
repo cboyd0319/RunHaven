@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 from .active_commands import DEFAULT_LOG_FOLLOW_LINES
-from .plans import SUPPORTED_NETWORK_MODES
+from .plans import SUPPORTED_NETWORK_MODES, SUPPORTED_WORKSPACE_SCOPES
 from .profiles import PROFILES
 
 
@@ -229,6 +229,15 @@ def add_run_arguments(parser: argparse.ArgumentParser) -> None:
         type=Path,
         default=Path("."),
         help="host project directory to mount at /workspace",
+    )
+    parser.add_argument(
+        "--workspace-scope",
+        choices=SUPPORTED_WORKSPACE_SCOPES,
+        default="current",
+        help=(
+            "current mounts the selected directory; git-root explicitly expands "
+            "to the containing git repository root"
+        ),
     )
     parser.add_argument("--image", help="override the profile image")
     parser.add_argument("--cpus", default="4", help="virtual CPUs for the container")

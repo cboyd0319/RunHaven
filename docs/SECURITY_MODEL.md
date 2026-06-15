@@ -126,7 +126,9 @@ contains only result status, counts, exit code, run id, container name, and
 inspect return code; the marker is removed after the run finishes.
 When the workspace is inside a git repository, the run ledger also records repo
 root, before and after `HEAD`, dirty state, changed file count, and a capped
-list of relative paths scoped to the selected workspace.
+list of relative paths scoped to the selected workspace. Run records also store
+the workspace scope choice, so later review can distinguish the default
+current-directory mount from an explicit `--workspace-scope git-root` run.
 The run ledger and active-run markers do not record diffs, file contents,
 prompts, command lines, agent arguments, attach commands, environment variable
 names, environment values, request bodies, or token values. Live container logs

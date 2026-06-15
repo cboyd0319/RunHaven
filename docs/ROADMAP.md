@@ -37,8 +37,6 @@
 - one-command bootstrap for Apple `container`
 - non-mutating guided first-run setup with exact prerequisite fixes
 - plain-language explanations for every requested permission
-- workspace scope detection with explicit current-directory versus git-root
-  selection
 - `runhaven why` diagnostics for blocked hosts, rejected mounts, sensitive
   defaults, and validation failures
 - guided `runhaven setup` first-run flow with profile-specific next commands

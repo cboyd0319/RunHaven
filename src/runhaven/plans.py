@@ -10,10 +10,13 @@ from pathlib import Path
 from typing import Literal
 
 from .egress import is_ip_literal, normalize_host
+from .git_metadata import git_repo_root
 from .profiles import AgentProfile
 
 NetworkMode = Literal["internet", "internal", "provider"]
+WorkspaceScope = Literal["current", "git-root"]
 SUPPORTED_NETWORK_MODES = ("internet", "internal", "provider")
+SUPPORTED_WORKSPACE_SCOPES = ("current", "git-root")
 _ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _IMAGE_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$")
 _CPUS_RE = re.compile(r"^[1-9][0-9]*(?:\.[0-9]+)?$")
@@ -42,6 +45,7 @@ class RunOptions:
     cpus: str = "4"
     memory: str = "4g"
     network: NetworkMode = "internet"
+    workspace_scope: WorkspaceScope = "current"
     read_only_workspace: bool = False
     ssh: bool = False
     env: tuple[str, ...] = ()
@@ -62,6 +66,8 @@ class AgentRunPlan:
     state_volume: str
     container_name: str
     profile_name: str
+    workspace_scope: WorkspaceScope
+    workspace_scope_note: str | None
     network_name: str | None
     network_mode: NetworkMode
     egress_summary: str
@@ -77,6 +83,7 @@ class AgentRunPlan:
 
 
 def build_run_plan(options: RunOptions) -> AgentRunPlan:
+    validate_workspace_scope(options.workspace_scope)
     try:
         workspace = options.workspace.expanduser().resolve()
     except OSError as exc:
@@ -85,6 +92,10 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         raise ValueError(f"workspace does not exist: {workspace}")
     if not workspace.is_dir():
         raise ValueError(f"workspace is not a directory: {workspace}")
+    workspace, workspace_scope_note = apply_workspace_scope(
+        workspace,
+        scope=options.workspace_scope,
+    )
     validate_workspace(workspace, allow_sensitive=options.allow_sensitive_workspace)
     validate_network_mode(options.network)
 
@@ -213,6 +224,8 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         state_volume=state_volume,
         container_name=container_name,
         profile_name=options.profile.name,
+        workspace_scope=options.workspace_scope,
+        workspace_scope_note=workspace_scope_note,
         network_name=active_network,
         network_mode=options.network,
         egress_summary=network_egress_summary(
@@ -224,6 +237,37 @@ def build_run_plan(options: RunOptions) -> AgentRunPlan:
         provider_allowed_hosts=provider_allowed_hosts,
         codex_api_key_broker_env=options.codex_api_key_broker_env,
     )
+
+
+def apply_workspace_scope(workspace: Path, *, scope: WorkspaceScope) -> tuple[Path, str | None]:
+    repo_root, reason = git_repo_root(workspace)
+    if scope == "git-root":
+        if repo_root is None:
+            raise ValueError(
+                f"--workspace-scope git-root requires a git worktree: {reason}"
+            )
+        root = Path(repo_root).resolve()
+        if root != workspace:
+            return (
+                root,
+                f"expanded from {workspace} to git repository root {root}",
+            )
+        return root, "selected workspace is the git repository root"
+
+    if repo_root is None:
+        return workspace, None
+
+    root = Path(repo_root).resolve()
+    if root != workspace and workspace.is_relative_to(root):
+        return (
+            workspace,
+            (
+                f"selected workspace is inside git repository root {root}; "
+                "RunHaven mounts only the selected directory. Use "
+                "--workspace-scope git-root to mount the full repository."
+            ),
+        )
+    return workspace, None
 
 
 def provider_hosts_for_options(options: RunOptions) -> tuple[str, ...]:
@@ -328,6 +372,11 @@ def validate_resource_options(cpus: str, memory: str, user: str) -> None:
 def validate_network_mode(network: str) -> None:
     if network not in SUPPORTED_NETWORK_MODES:
         raise ValueError(f"invalid network mode: {network!r}")
+
+
+def validate_workspace_scope(scope: str) -> None:
+    if scope not in SUPPORTED_WORKSPACE_SCOPES:
+        raise ValueError(f"invalid workspace scope: {scope!r}")
 
 
 def network_egress_summary(

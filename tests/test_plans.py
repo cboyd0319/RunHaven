@@ -5,6 +5,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from cli_test_helpers import init_git_repo
+
 from runhaven.plans import RunOptions, build_run_plan, validate_env_name
 from runhaven.profiles import get_profile
 from runhaven.provider_endpoints import BUNDLED_PROVIDER_HOSTS
@@ -64,6 +66,58 @@ class RunPlanTests(unittest.TestCase):
         self.assertIn(plan.network_name, plan.command)
         self.assertEqual(plan.network_mode, "internal")
         self.assertIn("host-only", plan.egress_summary)
+
+    def test_current_workspace_scope_keeps_subdirectory_inside_git_repo(self) -> None:
+        with TemporaryDirectory() as directory:
+            repo = Path(directory)
+            init_git_repo(repo)
+            workspace = repo / "package"
+            workspace.mkdir()
+
+            plan = build_run_plan(
+                RunOptions(profile=get_profile("shell"), workspace=workspace)
+            )
+
+        self.assertEqual(plan.workspace, workspace.resolve())
+        self.assertEqual(plan.workspace_scope, "current")
+        self.assertIsNotNone(plan.workspace_scope_note)
+        self.assertIn("inside git repository root", plan.workspace_scope_note)
+        self.assertIn("--workspace-scope git-root", plan.workspace_scope_note)
+        workspace_mount = next(mount for mount in plan.command if "target=/workspace" in mount)
+        self.assertIn(f"source={workspace.resolve()}", workspace_mount)
+
+    def test_git_root_workspace_scope_expands_subdirectory_explicitly(self) -> None:
+        with TemporaryDirectory() as directory:
+            repo = Path(directory)
+            init_git_repo(repo)
+            workspace = repo / "package"
+            workspace.mkdir()
+
+            plan = build_run_plan(
+                RunOptions(
+                    profile=get_profile("shell"),
+                    workspace=workspace,
+                    workspace_scope="git-root",
+                )
+            )
+
+        self.assertEqual(plan.workspace, repo.resolve())
+        self.assertEqual(plan.workspace_scope, "git-root")
+        self.assertIsNotNone(plan.workspace_scope_note)
+        self.assertIn("expanded from", plan.workspace_scope_note)
+        workspace_mount = next(mount for mount in plan.command if "target=/workspace" in mount)
+        self.assertIn(f"source={repo.resolve()}", workspace_mount)
+
+    def test_git_root_workspace_scope_requires_git_worktree(self) -> None:
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "requires a git worktree"):
+                build_run_plan(
+                    RunOptions(
+                        profile=get_profile("shell"),
+                        workspace=Path(directory),
+                        workspace_scope="git-root",
+                    )
+                )
 
     def test_internet_network_has_no_provider_allowlist(self) -> None:
         with TemporaryDirectory() as directory:

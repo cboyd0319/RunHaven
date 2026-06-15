@@ -164,6 +164,11 @@ directory at `/workspace`, not your whole home directory. Do not run from your
 home directory, a cloud sync root, or a credential folder unless you
 intentionally want that broader scope.
 
+When you run from a subdirectory inside a git repository, RunHaven keeps the
+current directory as the workspace by default and notes the containing git
+root in `runhaven plan`. Use `--workspace-scope git-root` only when you
+intentionally want the full repository mounted at `/workspace`.
+
 ## Plan Before Run
 
 `runhaven plan` is the trust checkpoint. It prints the workspace, the isolated
@@ -175,6 +180,7 @@ Example shape:
 
 ```text
 Workspace: selected project directory
+Workspace scope: current
 State volume: runhaven-claude-...-home
 Network: default internet network
 Egress: unrestricted internet egress; domain allowlisting is not enforced

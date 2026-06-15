@@ -94,6 +94,10 @@ repo and link to primary sources instead.
   directory, confirms `/workspace` semantics, names credential paths that are
   not mounted by default, and points to `--ssh` plus reviewed `--env NAME`
   usage.
+- 2026-06-15: Implemented explicit workspace scope selection from the promoted
+  backlog. `runhaven plan` and `runhaven run` default to current-directory
+  workspace scope, warn when that directory sits inside a larger git repo, and
+  expand to the repo root only with `--workspace-scope git-root`.
 - 2026-06-15: Added a pre-release backlog item to consider a major large-file
   refactor and modularization pass, especially around the CLI and broad test
   modules, before release.

@@ -16,6 +16,7 @@ def write_active_run_record(plan: AgentRunPlan, *, run_id: str, started_at: str)
         "run_id": run_id,
         "profile": plan.profile_name,
         "workspace": str(plan.workspace),
+        "workspace_scope": plan.workspace_scope,
         "network": plan.network_mode,
         "status": "running",
         "container_name": plan.container_name,

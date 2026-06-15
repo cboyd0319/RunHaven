@@ -322,6 +322,7 @@ Implementation shape:
 1. Harden provider proxy DNS resolution and unsafe-address rejection.
 2. Add the provider endpoint matrix and a docs drift check.
 3. Add workspace scope detection and explicit `--workspace-scope`.
+   Implemented 2026-06-15.
 4. Add worktree isolation with merge, keep, discard, and recovery commands.
 5. Add run records and `runs list/show/stop`.
 6. Add strict workflow files with container-only setup and teardown.

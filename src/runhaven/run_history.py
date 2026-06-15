@@ -47,6 +47,7 @@ def write_run_record(
         "run_id": run_id,
         "profile": plan.profile_name,
         "workspace": str(plan.workspace),
+        "workspace_scope": plan.workspace_scope,
         "network": plan.network_mode,
         "status": status or ("succeeded" if return_code == 0 else "failed"),
         "return_code": return_code,
@@ -134,6 +135,8 @@ def runs_show(run_id: str, *, json_output: bool) -> int:
     print(f"Finished: {record.get('finished_at', '-')}")
     print(f"Profile: {record.get('profile', 'unknown')}")
     print(f"Workspace: {record.get('workspace', 'unknown')}")
+    if record.get("workspace_scope"):
+        print(f"Workspace scope: {record.get('workspace_scope')}")
     print(f"Network: {record.get('network', 'unknown')}")
     print(f"Status: {record.get('status', 'unknown')}")
     print(f"Return code: {record.get('return_code', '-')}")

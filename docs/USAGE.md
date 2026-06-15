@@ -69,6 +69,7 @@ runhaven plan claude
 The plan prints:
 
 - the mounted workspace
+- the workspace scope choice
 - the per-project state volume
 - the selected network mode
 - the egress status for that network mode
@@ -188,6 +189,13 @@ Run `runhaven` from the smallest project directory the agent needs. That
 directory is mounted at `/workspace`. Do not run from your home directory, a
 cloud sync root, or a credential folder unless you intentionally want that
 broader scope and have reviewed the plan.
+
+When the selected workspace is inside a larger git repository, RunHaven does
+not silently broaden the mount. The default `--workspace-scope current` keeps
+the selected directory mounted, and the plan prints a note naming the
+containing repository root. Use `--workspace-scope git-root` only when the
+agent needs the full repository mounted at `/workspace`; non-git directories
+fail closed with that scope.
 
 RunHaven does not mount raw SSH keys, browser profiles, cloud credential
 folders, or provider login caches by default. Use `--ssh` for SSH agent

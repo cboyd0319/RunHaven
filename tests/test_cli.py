@@ -7,6 +7,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from cli_test_helpers import init_git_repo
+
 from runhaven.cli import main
 from runhaven.doctor import Check
 
@@ -38,6 +40,32 @@ class CliCoreTests(unittest.TestCase):
         self.assertIn("container run", text)
         self.assertIn("/bin/bash -lc pwd", text)
         self.assertIn("Egress: unrestricted internet", text)
+
+    def test_plan_git_root_workspace_scope_expands_and_prints_note(self) -> None:
+        with TemporaryDirectory() as directory:
+            repo = Path(directory)
+            init_git_repo(repo)
+            workspace = repo / "package"
+            workspace.mkdir()
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = main(
+                    [
+                        "plan",
+                        "shell",
+                        "--workspace",
+                        str(workspace),
+                        "--workspace-scope",
+                        "git-root",
+                    ]
+                )
+
+        self.assertEqual(code, 0)
+        text = output.getvalue()
+        self.assertIn(f"Workspace: {repo.resolve()}", text)
+        self.assertIn("Workspace scope: git-root", text)
+        self.assertIn("Workspace note: expanded from", text)
 
     def test_image_build_dry_run_uses_bundled_containerfile(self) -> None:
         output = io.StringIO()
@@ -79,6 +107,7 @@ class CliCoreTests(unittest.TestCase):
         self.assertIn("Use -- before flags meant for the agent", output.getvalue())
         self.assertIn("provider", output.getvalue())
         self.assertIn("runtime allowlist proxy", output.getvalue())
+        self.assertIn("--workspace-scope", output.getvalue())
 
     def test_doctor_prints_remedy_for_failed_checks(self) -> None:
         output = io.StringIO()

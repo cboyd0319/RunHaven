@@ -290,6 +290,7 @@ def make_run_plan(args: argparse.Namespace) -> AgentRunPlan:
             cpus=args.cpus,
             memory=args.memory,
             network=args.network,
+            workspace_scope=args.workspace_scope,
             read_only_workspace=args.read_only_workspace,
             ssh=args.ssh,
             env=tuple(args.env),
@@ -306,6 +307,9 @@ def make_run_plan(args: argparse.Namespace) -> AgentRunPlan:
 
 def print_run_plan(plan: AgentRunPlan) -> None:
     print(f"Workspace: {plan.workspace}")
+    print(f"Workspace scope: {plan.workspace_scope}")
+    if plan.workspace_scope_note:
+        print(f"Workspace note: {plan.workspace_scope_note}")
     print(f"State volume: {plan.state_volume}")
     print(f"Network: {plan.network_name or 'default internet network'}")
     print(f"Egress: {plan.egress_summary}")
