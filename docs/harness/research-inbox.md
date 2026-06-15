@@ -107,6 +107,10 @@ repo and link to primary sources instead.
 - 2026-06-15: Continued the pre-release modularization pass by extracting
   `src/runhaven/active_commands.py` for `runs active/status/attach/logs-follow`,
   `runs stop/kill/repair`, sanitized status output, and repair payloads.
+- 2026-06-15: Continued the pre-release modularization pass by extracting
+  `src/runhaven/diagnostic_commands.py` for `auth status/explain/log`,
+  `egress log`, `why host`, provider/auth log readers, and provider endpoint
+  explanation output.
 - 2026-06-15: Reviewed "Development On Apple Silicon with Apple Container
   Machine" and recorded UX backlog items in
   `docs/harness/ux-research-ideas.md`: explain why RunHaven avoids

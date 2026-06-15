@@ -185,6 +185,12 @@ Start pre-release large-file modularization.
   cleanup, and internal-network inspection helpers into
   `src/runhaven/provider_runtime.py`. `src/runhaven/cli.py` now measures 1,005
   lines, down from 1,411 after the active-command extraction.
+- The fifth behavior-preserving modularization extraction moved read-only
+  diagnostic command handlers, provider/auth JSONL log readers, auth broker
+  status/explain output, provider egress log output, and `why host` provider
+  endpoint explanations into `src/runhaven/diagnostic_commands.py`.
+  `src/runhaven/cli.py` now measures 767 lines, down from 1,005 after the
+  provider-runtime extraction.
 - `src/runhaven/auth_broker.py` now records per-profile auth broker metadata
   and implements the first Codex API-key broker prototype.
 - `runhaven run codex --network provider --codex-api-key-broker-env NAME` reads
@@ -319,18 +325,30 @@ Start pre-release large-file modularization.
 
 ## Recommended Next Step
 
-Continue the large-file modularization by splitting auth, egress log, and
-`why host` commands from `src/runhaven/cli.py`. These are mostly read-only
-diagnostic command surfaces; keep log-reader injection explicit for
-`runhaven runs log RUN_ID` and keep provider endpoint matching behavior
-unchanged. Run the optional Codex broker smoke with a disposable OpenAI API key
-when one is available.
+Continue the large-file modularization by splitting `tests/test_cli.py` along
+the production seams that now exist: setup, planning/run dispatch, provider
+runtime, run history, active runs, diagnostics, state, and repo policy. Keep
+helpers shared only when they remove real duplication. Run the optional Codex
+broker smoke with a disposable OpenAI API key when one is available.
 
 ## Verification Evidence
 
 - 2026-06-15: Focused provider-runtime extraction tests passed:
   `PYTHONPATH=src python3 -m unittest` with 11 selected provider runtime,
   Codex broker, provider run record, and internal-network tests.
+- 2026-06-15: Focused diagnostic-command extraction tests passed:
+  `PYTHONPATH=src python3 -m unittest` with 11 selected `egress log`,
+  `auth log`, `auth status`, `auth explain`, `why host`, and
+  `runs log --json` tests.
+- 2026-06-15: Full verification passed after the diagnostic-command
+  extraction: `python3 -m compileall src tests scripts`,
+  `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,
+  `python3 scripts/check_pins.py`,
+  `uvx --from ruff==0.15.17 ruff check .`,
+  `uvx --from mypy==2.1.0 mypy src`, `python3 -m json.tool feature_list.json`,
+  `git diff --check`, Markdown local link check, generated artifact cleanup
+  scan, platform wording scan, and `PYTHON=<temporary-venv-python> ./init.sh`
+  with compileall, 156 unit tests, pin check, ruff, mypy, and build.
 - 2026-06-15: Full verification passed after the provider-runtime extraction:
   `python3 -m compileall src tests scripts`,
   `PYTHONPATH=src python3 -m unittest discover -s tests` with 156 tests,

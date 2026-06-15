@@ -7,12 +7,12 @@ behavior-preserving unless a separate feature change is explicitly selected.
 
 ## Current Size Snapshot
 
-Measured on 2026-06-15 after the provider-runtime extraction:
+Measured on 2026-06-15 after the diagnostic-command extraction:
 
 | File | Lines | Notes |
 | --- | ---: | --- |
 | `tests/test_cli.py` | 3515 | Broad integration-style CLI coverage. Useful, but too large for targeted review. |
-| `src/runhaven/cli.py` | 1005 | Still owns parser, command routing, auth, egress logs, `why`, state commands, and thin provider-runtime compatibility wrappers. |
+| `src/runhaven/cli.py` | 767 | Still owns parser, command routing, standard run flow, state commands, and thin provider-runtime compatibility wrappers. |
 | `src/runhaven/run_history.py` | 604 | Owns run-record persistence, git metadata capture, and `runs list/show/log/diff`. |
 | `src/runhaven/active_commands.py` | 569 | Owns active-run command handlers, sanitized status output, attach/log-follow command construction, stop/kill, and repair. |
 | `src/runhaven/auth_broker.py` | 520 | Cohesive enough for now. |
@@ -20,6 +20,7 @@ Measured on 2026-06-15 after the provider-runtime extraction:
 | `scripts/check_pins.py` | 497 | Separate script; review after CLI/test split. |
 | `src/runhaven/egress.py` | 404 | Cohesive provider proxy implementation. |
 | `src/runhaven/plans.py` | 403 | Cohesive planner and validation module. |
+| `src/runhaven/diagnostic_commands.py` | 249 | Owns `auth status/explain/log`, `egress log`, `why host`, and diagnostic log readers. |
 
 ## First Extraction Completed
 
@@ -73,13 +74,22 @@ This removes provider orchestration from `cli.py` while preserving provider
 egress behavior, Codex broker behavior, secret-free run records, active marker
 cleanup, and existing test patch seams.
 
+## Diagnostic-Command Extraction Completed
+
+- `src/runhaven/diagnostic_commands.py`: `auth status`, `auth explain`,
+  `auth log`, `egress log`, `why host`, provider/auth JSONL log readers, and
+  provider endpoint explanation output.
+- `src/runhaven/cli.py`: keeps parser and command dispatch, and passes
+  `read_egress_policy_log(limit=0)` plus `read_auth_broker_log(limit=0)` into
+  `runs log` so joined run-history output keeps explicit reader seams.
+
+This removes read-only diagnostics from `cli.py` while preserving secret-free
+auth output, provider policy log output, `why host` provider matching, and
+`runs log` joins.
+
 ## Recommended Sequence
 
-1. Split auth, egress log, and `why host` commands.
-   These are moderate-risk read-only command surfaces and can move after run
-   history is stable.
-
-2. Split `tests/test_cli.py`.
+1. Split `tests/test_cli.py`.
    Mirror the production seams after they exist: setup, planning, provider
    runtime, run history, active runs, auth, egress, state, and repo policy.
 
