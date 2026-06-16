@@ -5,15 +5,14 @@ hard-pinned.
 
 ## Required Pins
 
-- Python build dependencies use exact `==` versions in `pyproject.toml`.
-- Python development dependencies use exact `==` versions in `pyproject.toml`.
-- Python development transitive dependencies use exact `==` versions in
-  `requirements-dev.txt`.
+- Rust direct dependencies use exact `=` versions in `Cargo.toml`.
+- Rust toolchain version is pinned in `rust-toolchain.toml` and `pins.toml`.
+- `Cargo.lock` is checked in for reproducible CLI builds.
 - GitHub Actions use immutable commit SHAs, with the release tag in a comment.
 - Container base images use versioned tags plus `sha256` digests.
 - Debian packages installed in images use exact package versions in
-  `src/runhaven/images/common/debian-packages.txt`, including the
-  observed install closure for the base image.
+  `images/common/debian-packages.txt`, including the observed install closure
+  for the base image.
 - Debian apt sources use timestamped `snapshot.debian.org` URIs so exact
   package pins do not depend on moving mirrors.
 - npm packages installed in images use exact package versions.
@@ -27,17 +26,15 @@ hard-pinned.
 - major-only GitHub Action refs such as `actions/checkout@v6`
 - loose dependency ranges such as `>=`, `~=`, or wildcard package pins
 - unversioned installer scripts inside images
-- unpinned `apt-get install`, `npm install`, or `pip install`
+- unpinned `apt-get install`, `npm install`, or `cargo add`
 
 Run the policy check:
 
 ```bash
-python3 scripts/check_pins.py
+cargo run --locked --bin runhaven-check-pins
 ```
 
 The current reviewed pins are recorded in [`pins.toml`](../pins.toml).
-Python development transitive pins are recorded in
-[`requirements-dev.txt`](../requirements-dev.txt).
 The source record for current-version checks is
 [`RESEARCH.md`](RESEARCH.md).
 

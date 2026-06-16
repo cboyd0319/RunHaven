@@ -81,9 +81,9 @@ Record the smallest safe rollback:
 
 ## Platform Impact
 
-Record whether the change affects Python 3.13+, Python 3.14.6 development
-runtime, macOS 26+ runtime behavior, Apple silicon, Apple `container` 1.0.0,
-macOS-only CI, or unsupported-platform guardrails.
+Record whether the change affects Rust 1.96.0, Cargo dependency resolution,
+macOS 26+ runtime behavior, Apple silicon, Apple `container` 1.0.0, macOS-only
+CI, or unsupported-platform guardrails.
 
 Before changing platform floors, interpreter versions, runner labels, Apple
 `container` assumptions, package pins, or image pins, record current

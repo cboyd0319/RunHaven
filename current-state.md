@@ -4,9 +4,9 @@ Last Updated: 2026-06-16 UTC
 
 ## Current Objective
 
-RunHaven's repo harness has been refreshed onto the current operating contract:
-one compact state file, organized harness docs, repo-owned verification, and
-advisory HarnessForge checks.
+RunHaven has been converted from a Python project to a fully functional Rust
+CLI while preserving the macOS Apple `container` harness contract, exact pin
+policy, and repo-owned verification route.
 
 ## State Contract
 
@@ -20,8 +20,13 @@ advisory HarnessForge checks.
 
 ## Product State
 
-- RunHaven is a Python 3.13+ CLI for running AI coding agents inside Apple
+- RunHaven is a Rust 1.96.0 CLI for running AI coding agents inside Apple
   `container` on macOS 26+ on Apple silicon.
+- The application code is organized as a Cargo crate under `src/runhaven/` with
+  CLI, runtime, provider, image, records, harness, and support modules. Bundled
+  image templates live under top-level `images/`.
+- The old Python package, Python tests, Python scripts, `pyproject.toml`,
+  `.python-version`, and `requirements-dev.txt` have been removed.
 - Windows and Linux are not supported runtime or contributor-verification
   targets.
 - Default product safety boundaries remain: no host home mount, no cloud
@@ -33,53 +38,63 @@ advisory HarnessForge checks.
 
 ## Latest Verified Work
 
-- Root startup and harness docs now route to `current-state.md`.
-- The obsolete `progress.md` and `session-handoff.md` split has been retired.
-- The first-agent harness review is recorded at
-  `docs/harness/evidence/first-agent-review.json`.
-- The local harness skill at `.agents/skills/harness/` is active and wired to
-  repo-owned guidance without requiring HarnessForge for ordinary contributors.
-- `docs/harness/manifest.json` now requires `current-state.md` and the
-  first-agent review evidence file.
+- Rebuilt the CLI in Rust with exact-pinned Cargo dependencies and a checked-in
+  `Cargo.lock`.
+- Replaced the Python pin checker with `runhaven-check-pins`.
+- Updated `init.sh`, CI, root docs, installation docs, usage docs, pinning docs,
+  harness docs, component inventory, verification matrix, and manifest metadata
+  for the Rust stack.
+- Kept file organization nested by responsibility instead of flattening the
+  Rust source tree.
+- Split large Rust modules so every Rust source file is under 500 lines; the
+  current largest file is `src/runhaven/cli/app.rs` at 494 lines.
+- Updated `.gitignore` for Rust build output.
+- Completed the final active-document accuracy sweep for the Rust conversion
+  across product docs, GitHub instructions, harness boundaries, roadmap,
+  release controls, and source-mined ideas.
+- Removed ignored local cleanup artifacts from the working tree, including
+  stale Python cache/build output and `.DS_Store` files.
 
 ## Trusted Verification
 
-- `python3 scripts/check_pins.py`: passed.
-- JSON validation for `feature_list.json`, `docs/harness/manifest.json`,
-  `docs/harness/evidence/first-agent-review.json`, harness privacy labels, and
-  research source records: passed.
-- Local Markdown link check across tracked Markdown files: passed.
-- Platform wording scan: passed. Matches were intentional macOS-only,
-  unsupported-platform, or Linux-container implementation references.
-- `git diff --check`: passed.
-- Advisory HarnessForge audit from the sibling development checkout:
-  `100/100`.
-- Advisory HarnessForge report from the sibling development checkout: audit
-  `100/100`, generated drift actionable `0`, docs fanout warnings `0`,
-  first-agent lifecycle `retired`. Remaining readiness warnings are high-risk
-  workflow/governance inventory reminders and stay advisory unless maintainers
-  promote them into RunHaven-owned policy.
-- Harness maturity remains at `generated` with next level `reviewed` until the
-  advisory high-risk workflow/governance inventory is explicitly accepted or
-  promoted into repo-owned requirements.
-- RunHaven-side acceptance evidence for the instruction routers, CI workflow,
-  and image Containerfiles is recorded in
-  `docs/harness/evidence/first-agent-review.json`; current HarnessForge report
-  logic does not yet consume that evidence.
-- `PYTHON=<temporary-venv-python> ./init.sh`: passed. The full local harness
-  ran compileall, 195 unit tests, pin policy, ruff, mypy, and build.
+- `cargo fmt --check`: passed.
+- `cargo test --locked`: passed with 7 unit tests and 2 integration tests.
+- `cargo clippy --all-targets -- -D warnings`: passed.
+- `cargo run --locked --bin runhaven-check-pins`: passed.
+- `cargo build --locked`: passed.
+- `./init.sh`: passed. The full local harness ran Cargo format, tests, clippy,
+  pin policy, and build.
+- Rust source size scan: passed; no Rust source file is over 500 lines.
+- Direct CLI smokes passed: `target/debug/runhaven agents`,
+  `target/debug/runhaven plan shell --workspace . -- /bin/bash -lc pwd`,
+  `target/debug/runhaven doctor`, and
+  `target/debug/runhaven image build shell --dry-run`.
+- Active-doc stale-reference scan: passed for old Python project paths,
+  Python-package guidance, and pre-Rust source paths.
+- Cleanup scan: passed; no Python project artifacts, Python caches, old Python
+  packaging files, or `.DS_Store` files remain outside ignored build output.
+- JSON validation, local Markdown link check, `git diff --check`, and Rust
+  source size guard: passed.
 
 ## Touched Surfaces
 
 - `AGENTS.md`
-- `.agents/skills/harness/`
+- `.github/workflows/ci.yml`
+- `.gitignore`
+- `Cargo.toml`
+- `Cargo.lock`
+- `rust-toolchain.toml`
+- `init.sh`
 - `current-state.md`
-- `docs/ROADMAP.md`
-- `docs/HARNESS_EVALUATION.md`
+- `pins.toml`
+- `README.md`
+- `CONTRIBUTING.md`
+- `docs/`
 - `docs/harness/`
-- `docs/harness/evidence/first-agent-review.json`
 - `feature_list.json`
-- `tests/test_repo_policy.py`
+- `images/`
+- `src/`
+- `tests/`
 
 ## Blockers
 
@@ -87,5 +102,6 @@ advisory HarnessForge checks.
 
 ## Next Step
 
-Review and commit the RunHaven harness cleanup, then continue normal feature
-work from `docs/ROADMAP.md` and `docs/harness/state/roadmap.md`.
+Push the committed Rust conversion to `main`, then monitor main-branch CI.
+Future work should broaden live provider/container smokes and Tauri planning
+from the Rust module boundaries now in place.

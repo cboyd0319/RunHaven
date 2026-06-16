@@ -29,8 +29,8 @@ how to choose a workspace without mounting host credential paths.
 runhaven doctor
 ```
 
-`doctor` checks Python, macOS, Apple silicon, the pinned Apple `container`
-version, and the Apple container system status when the CLI is installed. A
+`doctor` checks macOS, Apple silicon, the pinned Apple `container` version, and
+the Apple container system status when the CLI is installed. A
 newer Apple `container` release should fail until this repo updates its reviewed
 pin.
 
@@ -286,7 +286,7 @@ the source checkout.
 ## Local-Only Network
 
 ```bash
-runhaven run shell --network internal -- python -m unittest discover -s tests
+runhaven run shell --network internal -- cargo test
 ```
 
 `internal` creates a host-only Apple container network before the run. Hosted AI
@@ -486,40 +486,38 @@ the most recent 200 lines by default before following new output; use
 
 ## Provider Egress Smoke
 
-Build the base image and run the live smoke on macOS 26+:
+Build the base image and run a live provider-mode command on macOS 26+:
 
 ```bash
 runhaven image build shell
-PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py \
-  --allowed-host api.openai.com \
-  --allowed-url https://api.openai.com/ \
-  --denied-host example.com
+runhaven run shell --network provider --provider-host api.openai.com -- \
+  curl -fsS https://api.openai.com/
 ```
 
-Run the same smoke against the bundled hosts for a provider profile:
+Run a provider profile dry run to review bundled hosts before a live agent
+smoke:
 
 ```bash
-PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --agent codex
+runhaven plan codex --network provider
 ```
 
-The smoke creates a temporary internal Apple `container` network and starts a
-host-side allowlist CONNECT proxy. It passes only when the allowed proxied HTTPS
-path or paths succeed and denied proxied host, proxied IP literal, direct DNS,
-and direct IP paths fail. Profile smoke mode proves that bundled provider hosts
-are reachable through the proxy without requiring provider credentials. Normal
-provider runs use the same proxy enforcement pattern through
-`runhaven run --network provider`.
+Provider mode creates a temporary internal Apple `container` network and starts
+a host-side allowlist CONNECT proxy. Runtime tests and live smokes should prove
+allowed proxied HTTPS paths succeed while denied proxied hosts, proxied IP
+literals, direct DNS, and direct IP paths fail. Normal provider runs use the
+same proxy enforcement pattern through `runhaven run --network provider`.
 
-Run the optional Codex broker smoke only with a disposable OpenAI API key:
+Run an optional Codex broker smoke only with a disposable OpenAI API key:
 
 ```bash
-export RUNHAVEN_CODEX_BROKER_SMOKE_API_KEY=...
-PYTHONPATH=src python3.14 scripts/codex_broker_smoke.py --require-api-key
+export RUNHAVEN_CODEX_SMOKE_API_KEY=...
+runhaven run codex --network provider \
+  --codex-api-key-broker-env RUNHAVEN_CODEX_SMOKE_API_KEY -- \
+  codex --version
 ```
 
-Without the environment variable, the smoke prints `SKIP` and exits
-successfully. The key value is inherited by the host process only; it is not
-placed on the command line.
+The key value is inherited by the host process only; it is not placed on the
+command line or inside the guest environment.
 
 ## Private Git
 

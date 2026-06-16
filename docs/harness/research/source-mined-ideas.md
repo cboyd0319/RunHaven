@@ -66,7 +66,7 @@ Sources:
 
 - `maki:plugins/webfetch/init.lua`
 - `maki:maki-lua/src/api/net.rs`
-- `src/runhaven/egress.py`
+- `src/runhaven/provider/egress.rs`
 
 Idea: extend the provider CONNECT proxy so allowed hostnames are also checked
 after DNS resolution. Reject loopback, link-local, private, multicast,
@@ -81,7 +81,7 @@ Implementation shape:
 
 - Resolve allowed CONNECT targets before opening the upstream socket.
 - Reject unsafe address classes for IPv4, IPv6, and IPv4-mapped IPv6.
-- Add focused unit tests in `tests/test_egress.py`.
+- Add focused Rust tests for provider egress behavior.
 - Add a live smoke variant only if it can be deterministic and low-friction.
 
 ### Worktree Isolation And Recovery
@@ -257,7 +257,7 @@ Sources:
 - `maki:maki-docgen/src/gen_tools.rs`
 - `maki:maki-docgen/src/gen_config.rs`
 - `maki:maki-docgen/src/gen_commands.rs`
-- `scripts/check_pins.py`
+- `src/bin/runhaven-check-pins.rs`
 
 Idea: add a focused docs check that validates RunHaven docs against source
 metadata for profiles, network modes, provider hosts, image tags, and supported
@@ -269,7 +269,7 @@ product grows.
 
 Implementation shape:
 
-- Extend `scripts/check_pins.py` or add `scripts/check_docs.py`.
+- Extend `runhaven-check-pins` or add a focused docs-check binary.
 - Verify README and usage docs mention current profiles and network modes.
 - Verify no Windows/Linux runtime support text returns.
 - Verify provider docs match the structured endpoint matrix.

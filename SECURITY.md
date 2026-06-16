@@ -2,7 +2,7 @@
 
 ## Supported Scope
 
-This project targets macOS 26+ on Apple silicon with Python 3.13+ and Apple
+This project targets macOS 26+ on Apple silicon with Rust 1.96.0 and Apple
 `container` 1.0.0. Windows and Linux are not supported.
 
 ## Reporting

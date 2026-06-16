@@ -5,7 +5,7 @@
 Trusted:
 
 - the user
-- this Python wrapper
+- this Rust CLI
 - Apple `container`
 - the selected agent image
 

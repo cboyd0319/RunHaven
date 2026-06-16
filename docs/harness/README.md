@@ -6,7 +6,7 @@ This directory is the operating layer for agent-assisted work in RunHaven.
 It keeps instructions, state, verification, scope, and lifecycle handoff visible
 in repo files instead of hidden in chat history.
 
-Product runtime contract: macOS 26+ on Apple silicon, Python 3.13+, and Apple
+Product runtime contract: macOS 26+ on Apple silicon, Rust 1.96.0, and Apple
 `container` 1.0.0.
 
 Contributor verification contract: all local and CI verification runs target
@@ -28,7 +28,7 @@ one of these makes the harness incomplete.
 | --- | --- | --- |
 | Instructions | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` | Does the agent see purpose, stack, startup commands, hard constraints, and links to detail? |
 | Tools | `init.sh`, local shell commands, advisory HarnessForge reports, CI | Can the agent do useful work with least privilege instead of blanket-disabled shell access or unrestricted access? |
-| Environment | `pyproject.toml`, `.python-version`, `pins.toml`, image templates, component inventory | Are versions, dependencies, setup facts, and reproducible environment choices self-describing? |
+| Environment | `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `pins.toml`, image templates, component inventory | Are versions, dependencies, setup facts, and reproducible environment choices self-describing? |
 | State | `feature_list.json`, `current-state.md`, `docs/ROADMAP.md`, `docs/harness/state/roadmap.md` | Can a new session see what is done, current, blocked, accepted, and next? |
 | Feedback | `verification-matrix.md`, `sensor-registry.md`, `evidence-log.md`, local checks | Are verification commands explicit, runnable, and prioritized before broader process? |
 
@@ -50,8 +50,8 @@ rollback.
 | Domain | Artifact | Purpose |
 | --- | --- | --- |
 | Instructions | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` | Startup path, invariants, definition of done, and platform routing |
-| Tools | `init.sh`, `scripts/check_pins.py`, smoke scripts, advisory HarnessForge commands | Local macOS verification and review entrypoints |
-| Environment | `pyproject.toml`, `.python-version`, `pins.toml`, image package locks, `component-inventory.md`, `dependency-change-policy.md` | Versions, package managers, setup facts, image boundaries, and pin policy |
+| Tools | `init.sh`, `runhaven-check-pins`, advisory HarnessForge commands | Local macOS verification and review entrypoints |
+| Environment | `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `pins.toml`, image package locks, `component-inventory.md`, `dependency-change-policy.md` | Versions, package managers, setup facts, image boundaries, and pin policy |
 | State | `feature_list.json`, `current-state.md`, `docs/ROADMAP.md`, `docs/harness/state/roadmap.md` | Current objective, accepted roadmap, feature status, and evidence |
 | Feedback | `verification-matrix.md`, `sensor-registry.md`, `evaluator-rubric.md`, `evidence-log.md` | Deterministic signals, ownership, and lifecycle before claiming completion |
 | Research | `docs/RESEARCH.md`, `docs/harness/research/sources.md`, `docs/harness/research/source-record.schema.json`, `docs/harness/research/source-record-example.json` | Reviewed provenance and project-owned source records |

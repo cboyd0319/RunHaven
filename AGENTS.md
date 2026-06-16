@@ -2,7 +2,7 @@
 
 ## Project overview
 
-RunHaven is a Python 3.13+ CLI for running AI coding agents inside
+RunHaven is a Rust CLI for running AI coding agents inside
 Apple `container` on macOS 26+.
 
 Core harness contract: instructions, tools, environment, state, and feedback
@@ -49,14 +49,13 @@ Full local verification on macOS 26+:
 Focused checks:
 
 ```bash
-python3 -m compileall src tests scripts
-PYTHONPATH=src python3 -m unittest discover -s tests
-python3 scripts/check_pins.py
-python3 -m ruff check .
-python3 -m mypy src
-python3 -m build
-python3 -m harnessforge report --target .
-python3 -m harnessforge audit --target . --min-score 85
+cargo fmt --check
+cargo test --locked
+cargo clippy --all-targets -- -D warnings
+cargo run --locked --bin runhaven-check-pins
+cargo build --locked
+harnessforge report --target .
+harnessforge audit --target . --min-score 85
 ```
 
 Use `runhaven doctor` and Apple `container` runtime smokes when changes affect the
@@ -71,12 +70,12 @@ not commit machine-specific checkout paths for local tooling.
 
 ## Code style guidelines
 
-- Prefer standard library tools: `argparse`, `dataclasses`, `pathlib`,
-  `subprocess`, `unittest`, and structured data APIs.
+- Prefer standard library tools and existing crates already pinned in
+  `Cargo.toml`; add crates only when they remove real security or usability
+  risk.
 - Match local code style and file structure. Avoid broad refactors unless they
   are required for the task.
-- Keep runtime dependencies at zero unless a dependency removes real security or
-  usability risk.
+- Keep direct dependencies exact-pinned and minimal.
 - Before writing code, stop at the first rung that solves the request: no
   change, deletion, documentation, configuration, standard library, native
   platform behavior, existing project dependency, then minimum custom code.

@@ -4,7 +4,7 @@
 
 # RunHaven
 
-![Python 3.13+](https://img.shields.io/badge/python-3.13%2B-blue)
+![Rust 1.96.0](https://img.shields.io/badge/rust-1.96.0-orange)
 ![macOS 26+](https://img.shields.io/badge/macOS-26%2B-black)
 ![Apple container 1.0.0](https://img.shields.io/badge/apple%20container-1.0.0-555)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -50,10 +50,7 @@ container system start
 Install RunHaven from this checkout:
 
 ```bash
-python3.14 -m venv .venv
-source .venv/bin/activate
-python -m pip install pip==26.1.2
-python -m pip install --no-deps -e .
+cargo install --path . --locked
 ```
 
 Run the non-mutating setup guide, build an image, inspect the plan, then run
@@ -135,7 +132,7 @@ runhaven plan shell --image my-agent:2026.06.14 -- my-agent --help
 | Run with a named session | `runhaven run claude --session review` |
 | Read-only review | `runhaven run codex --read-only-workspace` |
 | Provider-restricted run | `runhaven run claude --network provider` |
-| Local-only command | `runhaven run shell --network internal -- python -m unittest discover -s tests` |
+| Local-only command | `runhaven run shell --network internal -- cargo test` |
 | Worktree-isolated run | `runhaven run claude --worktree` |
 | Merge worktree run | `runhaven runs merge <run-id>` |
 | Recover worktree run | `runhaven runs recover <run-id>` |
@@ -175,9 +172,9 @@ runhaven plan shell --image my-agent:2026.06.14 -- my-agent --help
 Use the smallest relevant check for a change:
 
 ```bash
-python -m compileall src tests scripts
-PYTHONPATH=src python -m unittest discover -s tests
-python scripts/check_pins.py
+cargo fmt --check
+cargo test --locked
+cargo run --locked --bin runhaven-check-pins
 git diff --check
 ```
 

@@ -20,21 +20,16 @@ Full local harness verification:
 Focused checks:
 
 ```bash
-python3 -m compileall src tests
-PYTHONPATH=src python3 -m unittest discover -s tests
-python3 scripts/check_pins.py
+cargo fmt --check
+cargo test --locked
+cargo run --locked --bin runhaven-check-pins
 ```
 
-Developer tools are installed from the transitive lock:
+Additional Rust checks:
 
 ```bash
-python3.14 -m venv .venv
-source .venv/bin/activate
-python -m pip install pip==26.1.2
-python -m pip install -r requirements-dev.txt
-python -m pip install --no-deps -e .
-python -m ruff check .
-python -m mypy src
+cargo clippy --all-targets -- -D warnings
+cargo build --locked
 ```
 
 ## Security Review Expectations

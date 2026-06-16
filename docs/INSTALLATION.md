@@ -1,19 +1,16 @@
 # Installation
 
 RunHaven is a macOS-only project. Runtime and contributor verification require
-macOS 26+ on Apple silicon, Python 3.13+, and Apple `container` 1.0.0.
+macOS 26+ on Apple silicon, Rust 1.96.0, and Apple `container` 1.0.0.
 Windows and Linux are not supported.
 
 ## Requirements
 
 - macOS 26+
 - Apple silicon
-- Python 3.13+
+- Rust 1.96.0
 - Apple [`container`](https://github.com/apple/container) 1.0.0
 - Git
-
-The recommended Python runtime is 3.14.6. CI also tests Python 3.13.14 as the
-minimum supported maintenance release.
 
 RunHaven intentionally pins Apple `container` 1.0.0. If Apple ships a newer
 runtime, `runhaven doctor` should fail until this repo updates and verifies the
@@ -30,24 +27,21 @@ container system start
 
 ## Install From This Checkout
 
-Create a local virtual environment and install the CLI in editable mode:
+Install the CLI from this checkout:
 
 ```bash
-python3.14 -m venv .venv
-source .venv/bin/activate
-python -m pip install pip==26.1.2
-python -m pip install --no-deps -e .
+cargo install --path . --locked
 ```
 
-For development checks, install the pinned development requirements:
+For development without installing, run the binary through Cargo:
 
 ```bash
-python -m pip install -r requirements-dev.txt
+cargo run --locked -- plan shell
 ```
 
-Development tools are exact-pinned in `pyproject.toml`,
-`requirements-dev.txt`, and `pins.toml`. When updating them, use the current
-stable release and commit the exact new version.
+Development tools and dependencies are exact-pinned in `rust-toolchain.toml`,
+`Cargo.toml`, `Cargo.lock`, and `pins.toml`. When updating them, use the
+current stable release and commit the exact new version.
 
 Confirm the host before running an agent:
 
@@ -55,7 +49,7 @@ Confirm the host before running an agent:
 runhaven doctor
 ```
 
-`doctor` checks Python, macOS, Apple silicon, the pinned Apple `container`
+`doctor` checks Rust, macOS, Apple silicon, the pinned Apple `container`
 version, and Apple container system status.
 
 ## First Run
@@ -93,9 +87,9 @@ want that broader scope and have reviewed `runhaven plan`.
 Use focused checks for narrow changes:
 
 ```bash
-python -m compileall src tests scripts
-PYTHONPATH=src python -m unittest discover -s tests
-python scripts/check_pins.py
+cargo fmt --check
+cargo test --locked
+cargo run --locked --bin runhaven-check-pins
 git diff --check
 ```
 

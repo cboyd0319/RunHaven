@@ -1,6 +1,6 @@
 # Architecture
 
-`runhaven` is a thin Python wrapper around Apple `container`. It does not try to
+`runhaven` is a Rust CLI around Apple `container`. It does not try to
 replace the agent CLIs. Its job is to make the safe container boundary easy to
 choose and hard to accidentally widen.
 
@@ -99,12 +99,10 @@ The enforcement pattern is:
   summaries
 - delete the managed provider network after the run
 
-`scripts/provider_egress_smoke.py` proves the lower-level proxy pattern with
-live Apple `container` smokes. It can test a single allowed host or all bundled
-hosts for a provider profile with `--agent AGENT`. The `runhaven run --network
-provider` runtime path is also smoke-tested with allowed proxied HTTPS plus
-denied proxied host, proxied IP literal, direct DNS, and direct IP paths.
-Internet mode remains unrestricted egress.
+Provider-mode runtime tests and live Apple `container` smokes prove the proxy
+pattern with allowed proxied HTTPS plus denied proxied host, proxied IP
+literal, direct DNS, and direct IP paths. Internet mode remains unrestricted
+egress.
 
 Managed-network cleanup is explicit. `runhaven network list` reads
 `container network list --quiet` and shows only RunHaven-owned network names.
@@ -181,18 +179,20 @@ runhaven auth status
 runhaven auth explain codex
 ```
 
-`src/runhaven/auth_broker.py` records per-profile auth surfaces, current safe
-paths, broker notes, and the Codex Responses API broker. `runhaven auth` reads
-static metadata only. It does not inspect Keychain, browser profiles, provider
-login caches, cloud credential files, or environment values. During a real
-Codex run with `--codex-api-key-broker-env`, the host process reads only the
-named environment variable, starts a subnet-restricted broker on the provider
-network, and injects temporary Codex custom-provider overrides into the guest.
-Broker decisions are written to `auth-broker.jsonl` under the RunHaven cache
-root. The log records method, sanitized path, allow/deny outcome, reason,
-upstream status, count, and run id; it does not record request bodies, token
-values, or environment variable names. `scripts/codex_broker_smoke.py` can run
-an optional real Codex non-interactive smoke with a disposable API key.
+`src/runhaven/provider/auth_profiles.rs` records per-profile auth surfaces,
+current safe paths, and broker notes. `src/runhaven/provider/auth_broker.rs`
+owns the Codex Responses API broker. `runhaven auth` reads static metadata
+only. It does not inspect Keychain, browser profiles, provider login caches,
+cloud credential files, or environment values. During a real Codex run with
+`--codex-api-key-broker-env`, the host process reads only the named environment
+variable, starts a subnet-restricted broker on the provider network, and
+injects temporary Codex custom-provider overrides into the guest. Broker
+decisions are written to `auth-broker.jsonl` under the RunHaven cache root. The
+log records method, sanitized path, allow/deny outcome, reason, upstream
+status, count, and run id; it does not record request bodies, token values, or
+environment variable names. Optional real Codex non-interactive smokes should
+use a disposable API key and the normal `runhaven run codex --network provider
+--codex-api-key-broker-env NAME` path.
 
 The broker shape is:
 

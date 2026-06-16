@@ -220,15 +220,11 @@ Local reference harness:
 
 ## Package And Image Sources
 
-- Python source releases, current stable 3.14.6 on 2026-06-14 and latest 3.13
-  maintenance release 3.13.14:
-  <https://www.python.org/downloads/source/>
-- PyPI JSON API for Python package versions:
-  <https://pypi.org/pypi/pip/json>,
-  <https://pypi.org/pypi/setuptools/json>,
-  <https://pypi.org/pypi/build/json>,
-  <https://pypi.org/pypi/mypy/json>,
-  <https://pypi.org/pypi/ruff/json>
+- Rust toolchain and crate versions reviewed on 2026-06-16 with local
+  `rustc --version`, `cargo --version`, and `cargo search`:
+  <https://crates.io/>
+- Rust release calendar reference:
+  <https://releases.rs/>
 - npm registry records checked with `npm view` for:
   `@anthropic-ai/claude-code`, `@openai/codex`,
   `@google/gemini-cli`, `@github/copilot`, and `npm`.
@@ -239,14 +235,13 @@ Local reference harness:
 - Docker image digests checked with `docker buildx imagetools inspect`:
   `debian:trixie-slim` and `node:26.3.0-trixie-slim`.
 - GitHub Actions release API:
-  <https://api.github.com/repos/actions/checkout/releases/latest>
-  and
-  <https://api.github.com/repos/actions/setup-python/releases/latest>.
+  <https://api.github.com/repos/actions/checkout/releases/latest>.
 
 Current reviewed pins are recorded in [`../pins.toml`](../pins.toml). The
-Python development transitive lock is recorded in
-[`../requirements-dev.txt`](../requirements-dev.txt). The enforced pin policy
-lives in [`../scripts/check_pins.py`](../scripts/check_pins.py).
+Rust dependency lock is recorded in [`../Cargo.lock`](../Cargo.lock). The
+enforced pin policy lives in
+[`../src/runhaven/harness/pins.rs`](../src/runhaven/harness/pins.rs) and is run
+with `cargo run --locked --bin runhaven-check-pins`.
 
 ## Documentation Research Sources
 

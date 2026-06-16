@@ -77,17 +77,18 @@ It does not authenticate to the provider and it does not see HTTPS URL paths.
 
 ## Smoke Coverage
 
-`scripts/codex_broker_smoke.py` can run a real non-interactive Codex request
-through the broker when a disposable OpenAI API key is available:
+Run a real non-interactive Codex request through the broker only with a
+disposable OpenAI API key:
 
 ```bash
-export RUNHAVEN_CODEX_BROKER_SMOKE_API_KEY=...
-PYTHONPATH=src python3.14 scripts/codex_broker_smoke.py --require-api-key
+export RUNHAVEN_CODEX_SMOKE_API_KEY=...
+runhaven run codex --network provider \
+  --codex-api-key-broker-env RUNHAVEN_CODEX_SMOKE_API_KEY -- \
+  codex --version
 ```
 
-If the environment variable is absent and `--require-api-key` is not passed, the
-script prints `SKIP` and exits successfully. The key value is inherited by the
-host process only; it is not placed on the command line.
+The key value is inherited by the host process only; it is not placed on the
+command line or inside the guest environment.
 
 ## Why Host-Side
 

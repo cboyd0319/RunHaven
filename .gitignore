@@ -36,6 +36,9 @@ venv/
 ENV/
 env/
 
+target/
+*.rs.bk
+
 node_modules/
 npm-debug.log*
 yarn-debug.log*

@@ -33,7 +33,7 @@ Use this gate for each accepted roadmap item before implementation starts:
 
 1. Can the outcome be met by no change, deletion, documentation,
    configuration, or existing behavior?
-2. Can the Python standard library cover it?
+2. Can the Rust standard library cover it?
 3. Can native macOS or Apple `container` behavior cover it?
 4. Can an existing project dependency cover it without new configuration?
 5. Can one clear local change satisfy the contract?
@@ -85,7 +85,7 @@ implementation starts.
 | Release surface | Does this affect packaging, tags, SBOM, provenance evidence, release notes, or rollback? |
 | Research and source records | Does this need current primary-source evidence or project-owned source records? |
 | Security and privacy | Could this expose secrets, local paths, private code, tool permissions, network access, user data, or cost? |
-| Platform contracts | Does this affect macOS 26+, Python, Apple `container`, runner labels, or unsupported platform guardrails? |
+| Platform contracts | Does this affect macOS 26+, Rust, Apple `container`, runner labels, or unsupported platform guardrails? |
 | Docs and UX | Which user-facing docs, help output, startup instructions, and first-run guidance need to change? |
 
 If a surface is out of scope, say so in the item notes. Do not let target-local
@@ -122,9 +122,9 @@ instruction file as a router; move topic detail into focused docs.
 
 | Rule Or Topic | Source | Applies When | Mechanical Check | Retire Or Replace When |
 | --- | --- | --- | --- | --- |
-| macOS 26+ only runtime and contributor verification | Product docs, `pins.toml`, CI, repo policy tests | Any runtime, CI, install, or docs change | `tests/test_repo_policy.py`, platform wording scan | Maintainer accepts a source-backed platform expansion |
+| macOS 26+ only runtime and contributor verification | Product docs, `pins.toml`, CI, Rust tests | Any runtime, CI, install, or docs change | `cargo test --locked`, platform wording scan | Maintainer accepts a source-backed platform expansion |
 | No host home, raw SSH key, browser profile, cloud credential, or arbitrary env passthrough by default | Security model and command validators | Any workspace, env, SSH, auth, or container invocation change | Focused plan/run validator tests and runtime smokes | Replaced by a stronger least-privilege boundary |
-| Provider hosts are explicit and source-backed | `docs/PROVIDER_ENDPOINTS.md`, `provider_endpoints.py` | Provider endpoint, proxy, auth, or network change | Endpoint tests, `why host`, provider smoke when needed | Path-aware or brokered policy supersedes broad host handling |
+| Provider hosts are explicit and source-backed | `docs/PROVIDER_ENDPOINTS.md`, `src/runhaven/provider/endpoints.rs` | Provider endpoint, proxy, auth, or network change | Endpoint tests, `why host`, provider smoke when needed | Path-aware or brokered policy supersedes broad host handling |
 | Run records stay secret-free | Run observability docs and tests | Any runs, auth, egress, active, or git metadata change | Run-history and active-run tests | Replaced by stronger redaction and evidence contract |
 | Root instructions stay map-like | `AGENTS.md`, this harness | Any instruction or harness doc change | Harness audit and manual review | Platform-specific routers become canonical by accepted decision |
 

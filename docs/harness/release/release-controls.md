@@ -12,7 +12,7 @@ machines. A release cannot rely on chat history or unstated local setup.
   when available, not as the only release gate.
 - Run `runhaven doctor` and focused Apple `container` smoke checks for any runtime
   boundary change.
-- Verify package, image, GitHub Action, Debian, npm, Python, and Apple
+- Verify package, image, GitHub Action, Debian, npm, Rust/Cargo, and Apple
   `container` pins from primary sources before changing release artifacts.
 - Produce or review an SBOM before publishing installable artifacts once
   release packaging exists.

@@ -16,6 +16,28 @@
   },
   "features": [
     {
+      "id": "rust-cli-conversion",
+      "priority": 1,
+      "area": "platform",
+      "title": "Rust CLI conversion",
+      "user_visible_behavior": "RunHaven is a Rust CLI with exact-pinned Cargo dependencies, repo-owned verification, and the same macOS Apple container safety contract.",
+      "status": "passing",
+      "dependencies": [
+        "repo-harness-operating-layer"
+      ],
+      "verification": [
+        "Python package, scripts, tests, and packaging files are removed",
+        "Cargo crate builds and tests with the locked dependency graph",
+        "Pin policy is enforced by the Rust `runhaven-check-pins` binary",
+        "Harness docs and current state route contributors through Rust verification"
+      ],
+      "evidence": [
+        "2026-06-16: `cargo fmt --check`, `cargo test --locked`, `cargo clippy --all-targets -- -D warnings`, `cargo run --locked --bin runhaven-check-pins`, `cargo build --locked`, and `./init.sh` passed after the Rust conversion.",
+        "2026-06-16: direct CLI smokes passed for `target/debug/runhaven agents`, `target/debug/runhaven plan shell --workspace . -- /bin/bash -lc pwd`, `target/debug/runhaven doctor`, and `target/debug/runhaven image build shell --dry-run`."
+      ],
+      "notes": "Historical feature evidence below still records the Python implementation that existed before the 2026-06-16 conversion."
+    },
+    {
       "id": "runhaven-project-rename",
       "priority": 1,
       "area": "identity",
@@ -27,7 +49,7 @@
       ],
       "verification": [
         "Old project, module, and CLI names are absent from tracked text",
-        "Python package imports use `runhaven`",
+        "Rust crate modules use `runhaven`",
         "Console command is `runhaven`",
         "Tests and package build pass",
         "Harness audit passes"

@@ -1,6 +1,7 @@
 # Harness Evaluation
 
 Evaluated: 2026-06-14
+Refreshed: 2026-06-16 for the Rust conversion
 
 Target: RunHaven
 
@@ -46,29 +47,28 @@ representative agent-workload evaluation.
 - Replaced generic harness source records with a small reviewed source list and
   a pointer to `docs/RESEARCH.md`.
 - Corrected generated platform language so product runtime support remains
-  macOS 26+ on Apple silicon with Python 3.13+ and Apple `container` 1.0.0.
+  macOS 26+ on Apple silicon with Rust 1.96.0 and Apple `container` 1.0.0.
 - Removed non-macOS verification surfaces after clarifying that RunHaven is
   macOS 26+ only.
 
 ## Verification Evidence
 
 ```bash
-PYTHON=<temporary-venv-python> ./init.sh
+./init.sh
 ```
 
 Result: passed.
 
 Covered:
 
-- `python -m compileall src tests scripts`
-- `PYTHONPATH=src python -m unittest discover -s tests`
-- `python scripts/check_pins.py`
-- `python -m ruff check .`
-- `python -m mypy src`
-- `python -m build`
+- `cargo fmt --check`
+- `cargo test --locked`
+- `cargo clippy --all-targets -- -D warnings`
+- `cargo run --locked --bin runhaven-check-pins`
+- `cargo build --locked`
 
 ```bash
-python3 -m harnessforge audit --target . --min-score 85
+harnessforge audit --target . --min-score 85
 ```
 
 Result: passed with 100/100.
@@ -79,7 +79,7 @@ Result: passed with 100/100.
 | --- | ---: | --- |
 | Instructions | 5/5 | Startup, Verification, Definition Of Done, state routing, and size checks passed |
 | Tools | 5/5 | macOS entrypoint, pin check, fail-fast behavior, and tool-safety docs passed |
-| Environment | 5/5 | Runtime manifest, Python floor, OS-floor language, component inventory, and manifest passed |
+| Environment | 5/5 | Runtime manifest, Rust toolchain pin, OS-floor language, component inventory, and manifest passed |
 | State | 5/5 | Feature state, progress, privacy labels, and handoff checks passed |
 | Feedback | 5/5 | Verification matrix, evidence log, evaluator rubric, audit loop, links, and entrypoints passed |
 | Scope | 5/5 | Change contract, security map, dependency policy, acceptance, verification, and rollback passed |

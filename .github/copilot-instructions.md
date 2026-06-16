@@ -17,8 +17,8 @@ instead of duplicating project manuals.
 
 ## Core Rules
 
-- This repo builds a Python 3.13+ CLI for running AI coding agents inside
-  Apple `container` on macOS 26+.
+- This repo builds a Rust CLI for running AI coding agents inside Apple
+  `container` on macOS 26+.
 - People will run untrusted code on personal machines through this project.
   User safety is the product. If a boundary cannot be verified, fail closed or
   state the limitation plainly.
@@ -32,8 +32,8 @@ instead of duplicating project manuals.
   environment passthrough, user identity, network mode, and dry-run output.
 - Use exact subprocess argument lists. Do not use shell strings for commands
   that execute.
-- Keep runtime dependencies at zero unless a dependency removes real security
-  or usability risk.
+- Keep direct Rust dependencies minimal and exact-pinned. Add a crate only when
+  it removes real security or usability risk.
 - All package, image, tool, and CI action dependencies must use the current
   stable release and be hard-pinned. Do not use floating ranges, mutable
   `latest` tags, major-only action refs, unversioned installer scripts, or

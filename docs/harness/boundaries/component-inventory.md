@@ -1,7 +1,7 @@
 # Component Inventory
 
-Generated: 2026-06-15
-Reviewed: 2026-06-15
+Generated: 2026-06-16
+Reviewed: 2026-06-16
 
 This file records the project boundaries the harness knows about. It is an
 inventory, not permission to mutate every nested surface.
@@ -23,11 +23,11 @@ Treat those changes as product changes with scope, verification, and rollback.
 
 ## Detected Workspace Markers
 
-- Root Python package: `pyproject.toml`.
-- Python runtime pin: `.python-version`.
+- Root Rust package: `Cargo.toml`.
+- Rust toolchain pin: `rust-toolchain.toml`.
 - Exact dependency and runtime pin ledger: `pins.toml`.
 - MacOS-only CI workflow: `.github/workflows/ci.yml`.
-- Multiple nested image/package manifests under `src/runhaven/images/`.
+- Multiple nested image/package manifests under `images/`.
 - Harness operating layer under `docs/harness/`.
 
 ## Detected Routing Markers
@@ -46,17 +46,16 @@ Treat those changes as product changes with scope, verification, and rollback.
 
 | Component | Primary Files | Review Notes |
 | --- | --- | --- |
-| CLI entrypoint and parser | `src/runhaven/cli.py`, `src/runhaven/cli_parser.py`, `src/runhaven/__main__.py` | Keep argparse construction side-effect light. CLI behavior changes need focused command tests plus relevant help smokes. |
-| Planning and validation | `src/runhaven/plans.py`, `src/runhaven/validators.py`, `src/runhaven/project_checks.py` | Security-sensitive command construction surface. Use exact subprocess argument lists and fail closed on unsafe inputs. |
-| Provider network runtime | `src/runhaven/egress.py`, `src/runhaven/provider_runtime.py`, `src/runhaven/provider_endpoints.py`, `src/runhaven/provider_observability.py` | Provider egress is a core safety boundary. Changes need focused proxy/policy tests and, when behavior changes, Apple `container` smokes. |
-| Auth broker prototype | `src/runhaven/auth_broker.py`, `src/runhaven/auth_profiles.py`, `scripts/codex_broker_smoke.py`, `docs/AUTH_BROKER.md` | Secret-handling boundary. Do not read or persist raw credential values in diagnostics, plans, logs, or run records. |
-| Run records and active runs | `src/runhaven/run_history.py`, `src/runhaven/active_records.py`, `src/runhaven/active_commands.py`, `src/runhaven/active_repair.py`, `src/runhaven/git_metadata.py` | Observability must stay secret-free and avoid raw command lines, env values, prompts, request bodies, and token values. |
-| Worktree lifecycle | `src/runhaven/worktrees.py`, `src/runhaven/worktree_lifecycle.py` | Data-loss boundary. Keep source-checkout validation, RunHaven-owned branch checks, and explicit merge/discard recovery paths. |
-| State and network repair UX | `src/runhaven/session_state.py`, `src/runhaven/image_commands.py`, `src/runhaven/network_commands.py`, `src/runhaven/setup_guide.py`, `src/runhaven/doctor.py` | Repair commands should preview before deletion, mutate only RunHaven-owned resources, and print exact next steps. |
-| Bundled images | `src/runhaven/images/base/`, `src/runhaven/images/claude/`, `src/runhaven/images/codex/`, `src/runhaven/images/gemini/`, `src/runhaven/images/antigravity/`, `src/runhaven/images/copilot/`, `src/runhaven/images/common/` | Keep image tags, npm packages, Debian snapshot inputs, non-root user setup, and source-digest labels pinned and reviewed. |
-| Pin policy | `scripts/check_pins.py`, `scripts/npm_pin_policy.py`, `pins.toml`, `requirements-dev.txt` | Pin checks are a release gate. Dependency and runner changes need primary-source evidence. |
-| Runtime smoke scripts | `scripts/provider_egress_smoke.py`, `scripts/codex_broker_smoke.py` | Live smokes may use network or disposable credentials. Keep defaults safe and clearly skipped when required inputs are absent. |
-| Test suite | `tests/` | Focused `unittest` modules cover CLI, plans, egress, images, state, worktrees, auth, and repo policy. Do not add pytest-only assumptions. |
+| CLI entrypoint and parser | `src/main.rs`, `src/runhaven/cli/app.rs`, `src/runhaven/cli/args.rs` | Keep clap construction side-effect light. CLI behavior changes need focused command tests plus relevant help smokes. |
+| Planning and validation | `src/runhaven/runtime/plans/`, `src/runhaven/support/validators.rs`, `src/runhaven/support/project_checks.rs` | Security-sensitive command construction surface. Use exact subprocess argument lists and fail closed on unsafe inputs. |
+| Provider network runtime | `src/runhaven/provider/egress.rs`, `src/runhaven/provider/runtime.rs`, `src/runhaven/provider/endpoints.rs`, `src/runhaven/provider/observability.rs` | Provider egress is a core safety boundary. Changes need focused proxy/policy tests and, when behavior changes, Apple `container` smokes. |
+| Auth broker prototype | `src/runhaven/provider/auth_broker.rs`, `src/runhaven/provider/auth_broker/`, `src/runhaven/provider/auth_profiles.rs`, `docs/AUTH_BROKER.md` | Secret-handling boundary. Do not read or persist raw credential values in diagnostics, plans, logs, or run records. |
+| Run records and active runs | `src/runhaven/records/history.rs`, `src/runhaven/records/history/`, `src/runhaven/runtime/active/`, `src/runhaven/support/git.rs` | Observability must stay secret-free and avoid raw command lines, env values, prompts, request bodies, and token values. |
+| Worktree lifecycle | `src/runhaven/runtime/worktrees/` | Data-loss boundary. Keep source-checkout validation, RunHaven-owned branch checks, and explicit merge/discard recovery paths. |
+| State and network repair UX | `src/runhaven/runtime/session_state.rs`, `src/runhaven/runtime/state.rs`, `src/runhaven/image/doctor.rs`, `src/runhaven/runtime/network.rs`, `src/runhaven/cli/setup.rs`, `src/runhaven/cli/doctor.rs` | Repair commands should preview before deletion, mutate only RunHaven-owned resources, and print exact next steps. |
+| Bundled images | `images/base/`, `images/claude/`, `images/codex/`, `images/gemini/`, `images/antigravity/`, `images/copilot/`, `images/common/` | Keep image tags, npm packages, Debian snapshot inputs, non-root user setup, and source-digest labels pinned and reviewed. |
+| Pin policy | `src/runhaven/harness/pins.rs`, `src/bin/runhaven-check-pins.rs`, `pins.toml`, `Cargo.toml`, `Cargo.lock` | Pin checks are a release gate. Dependency and runner changes need primary-source evidence. |
+| Test suite | `tests/` plus module tests | Focused Rust tests cover CLI, plans, egress, images, state, worktrees, auth, and repo policy. |
 | Harness operating layer | `AGENTS.md`, `feature_list.json`, `current-state.md`, `docs/harness/` | Keep root instructions compact and move durable operating detail into focused harness docs. |
 | Human documentation | `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/` | Docs are product surfaces. Keep macOS 26+ only support, Apple `container` 1.0.0, security boundaries, and command examples aligned with code. |
 | Project asset | `docs/assets/logo.png` | Required README asset and manifest entry. |
@@ -74,7 +73,7 @@ Treat those changes as product changes with scope, verification, and rollback.
   mutate Apple `container` resources unless the task needs it and the command
   is documented.
 - Product runtime and contributor verification support is macOS 26+ on Apple
-  silicon with Python 3.13+ and Apple `container` 1.0.0.
+  silicon with Rust 1.96.0 and Apple `container` 1.0.0.
 - Do not add Windows or Linux verification targets; unsupported platforms
   should fail closed or be documented as unsupported.
 - Do not commit machine-local absolute paths, private checkout paths, secret

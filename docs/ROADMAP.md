@@ -7,7 +7,7 @@ direction. The live feature status and verification evidence are tracked in
 
 ## Phase 1: Safe Local Baseline
 
-- Python 3.13+ package and CLI
+- Rust CLI package and command
 - agent profiles
 - dry-run planning
 - bundled image templates
@@ -77,9 +77,10 @@ direction. The live feature status and verification evidence are tracked in
 
 ## Pre-Release Codebase Health
 
-- consider a major large-file refactor and modularization pass before release,
-  especially around the CLI and broad test modules, so command surfaces,
-  policy logic, run-state handling, and verification helpers remain reviewable
+- Rust conversion and modularization completed with source organized under
+  `src/runhaven/` by ownership boundary.
+- keep the Rust source size guard active so command surfaces, policy logic,
+  run-state handling, and verification helpers remain reviewable.
 
 ## Phase 6: Repeatable Workflows
 
