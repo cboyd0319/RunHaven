@@ -81,6 +81,22 @@ export type RunPlanResponse = {
   warnings: PlanWarning[];
 };
 
+export type LaunchRunRequest = {
+  plan: RunPlanRequest;
+  confirmLaunch: boolean;
+  confirmedWarnings: string[];
+};
+
+export type LaunchRunResponse = {
+  runId: string;
+  status: "started";
+  profile: string;
+  workspace: string;
+  stateVolume: string;
+  session: string;
+  networkMode: string;
+};
+
 const mockAgents: AgentProfile[] = [
   {
     name: "claude",
@@ -177,6 +193,27 @@ export async function planRun(request: RunPlanRequest): Promise<RunPlanResponse>
   }));
 }
 
+export async function launchRun(request: LaunchRunRequest): Promise<LaunchRunResponse> {
+  return call("launch_run", { request }, () => {
+    const plan = {
+      ...request.plan,
+      warnings: warningPreview(request.plan)
+    };
+    if (!isLaunchReady(plan, request.confirmLaunch, new Set(request.confirmedWarnings))) {
+      throw new Error("Confirm the launch and every warning before starting a run.");
+    }
+    return {
+      runId: `preview-${Date.now()}`,
+      status: "started",
+      profile: request.plan.agent,
+      workspace: request.plan.workspacePath || ".",
+      stateVolume: "preview",
+      session: request.plan.sessionName || "default",
+      networkMode: request.plan.networkMode
+    };
+  });
+}
+
 export async function chooseProjectFolder(): Promise<string | null> {
   if (!hasTauriRuntime()) {
     return null;
@@ -247,4 +284,15 @@ export function warningPreview(request: RunPlanRequest): PlanWarning[] {
     });
   }
   return warnings;
+}
+
+export function isLaunchReady(
+  plan: Pick<RunPlanResponse, "warnings"> | null,
+  confirmLaunch: boolean,
+  confirmedWarnings: Set<string>
+): boolean {
+  if (!plan || !confirmLaunch) {
+    return false;
+  }
+  return plan.warnings.every((warning) => confirmedWarnings.has(warning.code));
 }

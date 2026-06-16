@@ -5,19 +5,21 @@ Last updated: 2026-06-16
 Status: durable backlog for work that is not Tauri/UI implementation.
 
 RunHaven's Rust CLI is the current product core. This file keeps remaining
-non-UI work explicit so the Tauri/UI research phase can proceed without losing
+non-UI work explicit so Tauri/UI implementation can proceed without losing
 known runtime, evidence, and product-scope items.
 
-## Required Before UI Implementation
+## Ongoing Runtime Evidence Gates
 
-These are gates, not broad feature work.
+These were the pre-UI gates. UI work has started, so keep them as recurring
+runtime evidence gates before broadening launch, run-control, image, state, or
+network UI surfaces.
 
 | Item | Status | Why It Matters | Action | Done When |
 | --- | --- | --- | --- | --- |
-| Fresh Apple `container` default smoke | required before UI implementation | Unit tests cannot prove installed Apple `container` runtime behavior or JSON shapes. | Run `scripts/apple_container_smoke.sh` on macOS 26+ with Apple `container` 1.0.0. | Smoke exits 0 and cleanup evidence shows no unexpected active runs, state volumes, or managed networks. |
-| Fresh provider-mode smoke | required before UI implementation | Provider mode depends on host-only networking, gateway/subnet inspect output, proxy binding, egress denial, and cleanup. | Run `scripts/apple_container_smoke.sh --with-provider`. | Allowed provider HTTPS works, denied proxy/direct egress fails, and no provider network is left behind. |
+| Fresh Apple `container` default smoke | recurring before broader UI runtime controls | Unit tests cannot prove installed Apple `container` runtime behavior or JSON shapes. | Run `scripts/apple_container_smoke.sh` on macOS 26+ with Apple `container` 1.0.0. | Smoke exits 0 and cleanup evidence shows no unexpected active runs, state volumes, or managed networks. |
+| Fresh provider-mode smoke | recurring before provider-sensitive UI changes | Provider mode depends on host-only networking, gateway/subnet inspect output, proxy binding, egress denial, and cleanup. | Run `scripts/apple_container_smoke.sh --with-provider`. | Allowed provider HTTPS works, denied proxy/direct egress fails, and no provider network is left behind. |
 | SSH forwarding decision | blocked | Apple `container --ssh` exposes a socket, but the default non-root guest cannot use it on the current pinned runtime. | Keep `--ssh` fail-closed unless a no-secret smoke proves `ssh-add -l` from the non-root guest. | Either documented as intentionally unsupported for the UI, or re-enabled with tests/docs after a passing no-secret runtime proof. |
-| Final local verification pass | required before UI implementation | UI work should begin from a clean, verified CLI core. | Run `./init.sh`, JSON validation, Markdown link check, Rust source-size guard, and `git diff --check`. | All checks pass and current-state evidence is updated. |
+| Final local verification pass | recurring before commits that broaden runtime control | UI work should continue from a clean, verified CLI core. | Run `./init.sh` or the smallest equivalent complete check set for the changed surface, JSON validation, Markdown link check, Rust source-size guard, and `git diff --check`. | All relevant checks pass and current-state evidence is updated. |
 
 ## Accepted Non-UI Polish
 

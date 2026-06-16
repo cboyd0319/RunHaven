@@ -2,10 +2,10 @@
 
 Status: active UI contract.
 
-RunHaven has a first Tauri app scaffold with read-only setup, dashboard,
-profile, folder-pick, and run-plan review surfaces. This document defines the
-security, resource, and approval boundaries before a WebView can control
-mutating RunHaven operations.
+RunHaven has a first Tauri app scaffold with setup, dashboard, profile,
+folder-pick, run-plan review, and an explicitly confirmed launch path. This
+document defines the security, resource, and approval boundaries for every
+WebView-controlled RunHaven operation.
 
 ## Source Evidence
 
@@ -62,7 +62,7 @@ Do not merge these capabilities into one broad default window permission.
 Apple `container` runs each container inside its own lightweight VM. The UI must
 make resource impact visible before starting or rebuilding anything.
 
-Minimum UI state before enabling a run button:
+Current alpha launch gate:
 
 - current active run count from `runhaven runs active --json`;
 - selected run CPU and memory limits from the run plan, currently defaulting to
@@ -70,22 +70,29 @@ Minimum UI state before enabling a run button:
 - selected network mode and egress summary from `runhaven plan`;
 - selected workspace path and workspace scope;
 - selected state volume and session;
+- explicit confirmation of the reviewed plan;
+- explicit confirmation for every warning returned by the plan;
+- launch blocked when `runhaven doctor` fails.
+
+Remaining launch-readiness gaps before this flow is complete:
+
 - image status from `runhaven image doctor AGENT`;
-- builder status and builder CPU/memory guidance from `image doctor`.
+- builder status and builder CPU/memory guidance from `image doctor`;
+- warning when there is at least one active run and the user starts another
+  run;
+- warning when the selected memory limit plus active runs could be material on
+  the host, even if RunHaven cannot know exact macOS memory pressure yet.
 
 Warnings:
 
-- warn when there is at least one active run and the user starts another run;
-- warn when the selected memory limit plus active runs could be material on the
-  host, even if RunHaven cannot know exact macOS memory pressure yet;
-- warn before provider mode, default internet mode, disabled SSH-forwarding
-  attempts, explicit env passthrough, sensitive workspaces, root user
-  overrides, and worktree discard or merge flows;
+- warn before full internet mode, additional provider hosts, disabled
+  SSH-forwarding attempts, explicit env passthrough, sensitive workspaces, root
+  user overrides, and worktree discard or merge flows;
 - block launch if `runhaven doctor` fails.
 
-Until a dedicated typed UI status command exists, the UI may consume the
-existing JSON/text CLI outputs above. Long term, prefer a Rust command that
-returns one structured dashboard payload instead of parsing prose.
+The current dashboard command already returns setup, active-run, recent-run,
+agent, and warning summaries. Add dedicated typed Rust commands for image,
+builder, and maintenance status before parsing prose in the frontend.
 
 ## Approval Gates
 
@@ -159,7 +166,8 @@ Each Tauri command needs:
   versions.
 - The first `src-tauri/capabilities/` files and app manifest command list were
   reviewed against this document.
-- UI command tests prove denied-by-default behavior before mutating operations
-  are wired.
+- UI command tests prove denied-by-default behavior before each new mutating
+  operation is wired. The current `launch_run` command has confirmation tests
+  and its own `launch-run` capability.
 - Local Apple `container` smoke remains the runtime evidence source while
   hosted CI is disabled.

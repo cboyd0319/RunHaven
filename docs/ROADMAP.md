@@ -111,17 +111,21 @@ The consolidated non-UI backlog lives in
   contract for UI resource warnings, approval gates, typed Rust commands, and
   narrow Tauri capabilities.
 
-## Tauri/UI Research Phase
+## Tauri/UI Research And Implementation
 
 - Completed 2026-06-16 in
   [`docs/TAURI_UI_RESEARCH_PLAN.md`](TAURI_UI_RESEARCH_PLAN.md).
 - Decision: Tauri v2 with Svelte + Vite + TypeScript, npm lockfile, a separate
   `src-tauri` crate that calls the existing Rust library, narrow capabilities,
   and a secure default path with warning-confirmed advanced choices.
-- First scaffold work has started with exact-pinned Tauri/Svelte dependencies,
-  a separate `src-tauri` crate, narrow capabilities, and read-only setup,
-  dashboard, profile, folder-pick, and run-plan surfaces. Do not add mutating
-  commands before the read-only shell is verified.
+- First scaffold work is validated with exact-pinned Tauri/Svelte
+  dependencies, a separate `src-tauri` crate, narrow capabilities, setup,
+  dashboard, profile, folder-pick, and run-plan surfaces.
+- First mutating slice is implemented: `launch_run` reuses the Rust launch
+  path, requires explicit launch and warning confirmation, blocks when setup
+  checks fail, and lives behind the `launch-run` capability.
+- Remaining UI controls should still be added one at a time with typed Rust
+  commands, explicit confirmation, focused tests, and narrow capabilities.
 
 ## Phase 6: Repeatable Workflows
 

@@ -9,6 +9,7 @@ pub fn run() {
             commands::list_agents,
             commands::get_dashboard_status,
             commands::plan_run,
+            commands::launch_run,
         ])
         .run(tauri::generate_context!())
         .expect("error while running RunHaven desktop app");

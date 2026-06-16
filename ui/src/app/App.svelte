@@ -1,12 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { FolderOpen, RefreshCw, ShieldCheck, ClipboardCheck } from "@lucide/svelte";
+  import { ClipboardCheck, FolderOpen, Play, RefreshCw, ShieldCheck } from "@lucide/svelte";
   import StatusPill from "../components/StatusPill.svelte";
   import Metric from "../components/Metric.svelte";
   import {
     chooseProjectFolder,
     defaultRunPlanRequest,
     getDashboardStatus,
+    isLaunchReady,
+    launchRun,
     planRun,
     secureNetworkDefault,
     type AgentProfile,
@@ -20,9 +22,15 @@
   let plan: RunPlanResponse | null = null;
   let loading = true;
   let planning = false;
+  let launching = false;
+  let launchConfirmation = false;
+  let confirmedWarnings: string[] = [];
+  let launchMessage = "";
   let error = "";
 
   $: selectedAgent = dashboard?.agents.find((agent) => agent.name === request.agent);
+  $: launchReady =
+    Boolean(dashboard?.setup.ok) && isLaunchReady(plan, launchConfirmation, new Set(confirmedWarnings));
 
   onMount(() => {
     void refresh();
@@ -55,14 +63,14 @@
       agent: agentName,
       networkMode: secureNetworkDefault(agent)
     };
-    plan = null;
+    invalidatePlan();
   }
 
   async function pickFolder() {
     const selected = await chooseProjectFolder();
     if (selected) {
       request = { ...request, workspacePath: selected };
-      plan = null;
+      invalidatePlan();
     }
   }
 
@@ -70,6 +78,7 @@
     planning = true;
     error = "";
     plan = null;
+    resetLaunchConfirmation();
     try {
       plan = await planRun(request);
     } catch (cause) {
@@ -81,7 +90,57 @@
 
   function updateNetworkMode(networkMode: RunPlanRequest["networkMode"]) {
     request = { ...request, networkMode };
+    invalidatePlan();
+  }
+
+  function invalidatePlan() {
     plan = null;
+    resetLaunchConfirmation();
+  }
+
+  function resetLaunchConfirmation() {
+    launchConfirmation = false;
+    confirmedWarnings = [];
+    launchMessage = "";
+  }
+
+  function warningConfirmed(code: string): boolean {
+    return confirmedWarnings.includes(code);
+  }
+
+  function setWarningConfirmation(code: string, checked: boolean) {
+    const next = new Set(confirmedWarnings);
+    if (checked) {
+      next.add(code);
+    } else {
+      next.delete(code);
+    }
+    confirmedWarnings = Array.from(next);
+  }
+
+  async function startRun() {
+    if (!plan) {
+      return;
+    }
+    launching = true;
+    error = "";
+    launchMessage = "";
+    try {
+      const started = await launchRun({
+        plan: request,
+        confirmLaunch: launchConfirmation,
+        confirmedWarnings
+      });
+      launchMessage = `Run started: ${started.runId}`;
+      plan = null;
+      launchConfirmation = false;
+      confirmedWarnings = [];
+      await refresh();
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : String(cause);
+    } finally {
+      launching = false;
+    }
   }
 </script>
 
@@ -102,6 +161,10 @@
 
   {#if error}
     <section class="notice" role="alert">{error}</section>
+  {/if}
+
+  {#if launchMessage}
+    <section class="notice success" role="status">{launchMessage}</section>
   {/if}
 
   <section class="status-band">
@@ -170,6 +233,7 @@
           <div class="folder-row">
             <input
               bind:value={request.workspacePath}
+              on:input={invalidatePlan}
               placeholder="/Users/you/project"
               aria-label="Project folder path"
             />
@@ -213,16 +277,16 @@
         <div class="inline-fields">
           <label>
             <span>CPU</span>
-            <input bind:value={request.cpus} />
+            <input bind:value={request.cpus} on:input={invalidatePlan} />
           </label>
           <label>
             <span>Memory</span>
-            <input bind:value={request.memory} />
+            <input bind:value={request.memory} on:input={invalidatePlan} />
           </label>
         </div>
 
         <label class="choice">
-          <input type="checkbox" bind:checked={request.readOnlyWorkspace} />
+          <input type="checkbox" bind:checked={request.readOnlyWorkspace} on:change={invalidatePlan} />
           <span>Read-only project folder</span>
         </label>
 
@@ -258,6 +322,38 @@
           {/each}
         </div>
       {/if}
+
+      <div class="launch-confirmation">
+        <label class="choice">
+          <input type="checkbox" bind:checked={launchConfirmation} />
+          <span>I reviewed this plan and want to start this run.</span>
+        </label>
+
+        {#if plan.warnings.length > 0}
+          <div class="warning-confirmations">
+            {#each plan.warnings as warning}
+              <label class="choice warning-choice">
+                <input
+                  type="checkbox"
+                  checked={warningConfirmed(warning.code)}
+                  on:change={(event) => setWarningConfirmation(warning.code, event.currentTarget.checked)}
+                  aria-label={`Confirm ${warning.code} warning`}
+                />
+                <span>{warning.message}</span>
+              </label>
+            {/each}
+          </div>
+        {/if}
+
+        {#if dashboard && !dashboard.setup.ok}
+          <p class="muted">Fix setup blockers before launching a run.</p>
+        {/if}
+
+        <button class="primary launch-button" type="button" disabled={!launchReady || launching} on:click={startRun}>
+          <Play size={18} />
+          <span>{launching ? "Launching..." : "Launch run"}</span>
+        </button>
+      </div>
     </section>
   {/if}
 </main>

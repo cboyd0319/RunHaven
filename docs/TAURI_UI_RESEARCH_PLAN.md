@@ -2,9 +2,10 @@
 
 Last updated: 2026-06-16
 
-Status: research complete. The first Tauri/Svelte scaffold has started from
-this plan with read-only setup, dashboard, profile, folder-pick, and run-plan
-review surfaces only.
+Status: research complete. The first Tauri/Svelte scaffold started from this
+plan with setup, dashboard, profile, folder-pick, and run-plan review surfaces.
+The first mutating slice, `launch_run`, is now implemented behind explicit
+plan and warning confirmation plus its own `launch-run` capability.
 
 Goal: build the easiest safe desktop experience for people with little or no
 technical background to run AI coding agents inside Apple `container`.
@@ -20,7 +21,7 @@ technical background to run AI coding agents inside Apple `container`.
 | UI posture | The secure path is the default and shortest path. Supported advanced or risky paths warn clearly but stay available behind explicit confirmation. |
 | WebView trust | Treat the WebView as untrusted. All privileged work stays in typed Rust commands. |
 | Native plugins | Start with only the dialog plugin for folder selection. Avoid shell, filesystem, HTTP, updater, store, clipboard, notification, and opener plugins until a feature proves it needs one. |
-| First implementation | Build a read-only dashboard plus a launch-plan wizard before wiring mutating run controls. |
+| First implementation | Build a dashboard plus a launch-plan wizard first, then wire mutating controls one at a time behind typed Rust commands, explicit confirmation, and narrow capabilities. |
 
 Hard blocks are reserved for invalid input, unsupported platform state, failed
 doctor checks, nonfunctional features such as current `--ssh`, and operations
@@ -359,9 +360,10 @@ Initial plugin permissions:
 - No clipboard, notification, opener, tray, single-instance, SQL, stronghold, or
   websocket plugin in the first pass.
 
-## First Scaffold Acceptance Criteria
+## First Scaffold And Launch Slice Acceptance Criteria
 
-The first scaffold is acceptable only while all of these remain true:
+The first scaffold and first launch slice are acceptable only while all of
+these remain true:
 
 1. `docs/TAURI_UI_RESEARCH_PLAN.md` remains the accepted research source.
 2. `docs/TAURI_UI_GUARDRAILS.md` is still accurate.
@@ -373,12 +375,16 @@ The first scaffold is acceptable only while all of these remain true:
 7. The first UI renders setup status and dashboard state without mutating
    RunHaven resources.
 8. Folder picker output is revalidated in Rust before being used.
-9. The launch wizard can call `plan_run` but cannot launch until the read-only
-   plan and warning model are reviewed.
-10. Frontend tests cover setup, dashboard, plan, warning, and preview states.
-11. Rust command tests cover invalid input, missing confirmation, and denied
+9. The launch wizard cannot call `launch_run` until the plan is reviewed, the
+   user confirms launch, and every warning is acknowledged.
+10. `launch_run` uses existing Rust validators, blocks when setup checks fail,
+    starts work through the shared runtime launch path, and has its own
+    `launch-run` capability.
+11. Frontend tests cover setup, dashboard, plan, warning, preview, and launch
+    confirmation states.
+12. Rust command tests cover invalid input, missing confirmation, and denied
     capability assumptions where testable.
-12. Verification includes `cargo fmt --check`, `cargo test --locked`, frontend
+13. Verification includes `cargo fmt --check`, `cargo test --locked`, frontend
     typecheck/unit/browser/build checks, Tauri Rust checks, local Markdown link
     check, pin policy, and `git diff --check`.
 
@@ -427,7 +433,8 @@ Tauri was added manually so the repo keeps the planned `ui/` plus
    - wire native folder selection and `plan_run`;
    - show secure default choices and warning-required advanced choices.
 5. Mutating controls:
-   - add launch, stop, kill, repair, image build, state reset, network prune,
+   - launch is implemented as the first slice;
+   - add stop, kill, repair, image build, state reset, network prune,
      worktree merge, and worktree discard one at a time with confirmation tests.
 6. Visual and accessibility pass:
    - keyboard paths, focus states, labels, contrast, reduced motion, responsive

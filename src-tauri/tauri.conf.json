@@ -23,7 +23,7 @@
     ],
     "security": {
       "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost",
-      "capabilities": ["main-read", "folder-pick"]
+      "capabilities": ["main-read", "folder-pick", "launch-run"]
     }
   },
   "bundle": {

@@ -4,11 +4,12 @@ Last Updated: 2026-06-16 UTC
 
 ## Current Objective
 
-Plan the next Tauri/UI slice after validating the first Tauri/Svelte scaffold.
-The desktop shell now has read-only setup, dashboard, profile, folder-pick, and
-run-plan review surfaces. The next implementation should add one mutating UI
-operation at a time only after typed Rust validation, explicit confirmation,
-narrow capability review, and focused tests are in place.
+Continue Tauri/UI implementation after the first mutating launch slice. The
+desktop shell now has setup, dashboard, profile, folder-pick, run-plan review,
+and explicitly confirmed launch surfaces. The next implementation should add
+one missing launch-readiness or run-control operation at a time only after typed
+Rust validation, explicit confirmation, narrow capability review, and focused
+tests are in place.
 
 ## State Contract
 
@@ -29,8 +30,8 @@ narrow capability review, and focused tests are in place.
   image templates live under top-level `images/`.
 - An alpha desktop scaffold lives under `ui/` and `src-tauri/`. It uses
   Svelte + Vite + TypeScript and Tauri v2, calls the root Rust library through
-  typed commands, and currently exposes read-only setup/dashboard/profile,
-  native folder picking, and run-plan review only.
+  typed commands, and currently exposes setup/dashboard/profile, native folder
+  picking, run-plan review, and an explicitly confirmed launch path.
 - The old Python package, Python tests, Python scripts, `pyproject.toml`,
   `.python-version`, and `requirements-dev.txt` have been removed.
 - Windows and Linux are not supported runtime or contributor-verification
@@ -66,8 +67,17 @@ narrow capability review, and focused tests are in place.
   capabilities.
 - Added a Svelte operational UI for setup checks, active/recent run counts,
   agent selection, folder selection, secure-default network choices, resource
-  inputs, read-only workspace selection, and plan review. The UI does not
-  launch or control runs yet.
+  inputs, read-only workspace selection, plan review, and explicit launch
+  confirmation.
+- Added the first mutating desktop slice: typed Tauri `launch_run`, separate
+  `launch-run` capability, shared Rust runtime launch module, shared
+  state-volume lock module, frontend launch helper, confirmation controls, and
+  Playwright preview coverage. Launch requires plan confirmation, every warning
+  acknowledgement, and passing setup checks before it starts a background run.
+- Remaining launch-readiness gaps before the UI launch flow is complete are
+  image status, builder status, active-run resource warnings, and richer
+  post-start status/log feedback. Stop, kill, attach, repair, image build,
+  state cleanup, network cleanup, and worktree review remain CLI-first.
 - Fixed the Svelte 5 blank-page runtime failure by replacing the old
   `new App(...)` entrypoint with `mount(App, ...)`.
 - Added exact-pinned Playwright browser coverage for the UI shell so runtime
@@ -191,6 +201,35 @@ narrow capability review, and focused tests are in place.
 
 ## Trusted Verification
 
+- Tauri launch red checks failed first for missing launch contract pieces:
+  `cargo test --manifest-path src-tauri/Cargo.toml launch_run` and
+  `npm --prefix ui test -- --run`.
+- `cargo fmt`: passed.
+- `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
+- `npm --prefix ui test -- --run`: passed with 1 test file and 9 tests.
+- `npm --prefix ui run build`: passed with Vite 8.0.16.
+- `npm --prefix ui run test:e2e`: passed with 2 Chromium tests, including the
+  preview launch confirmation flow.
+- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 7
+  Tauri command tests.
+- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`:
+  passed.
+- `cargo test --locked`: passed with 41 library tests and 6 integration tests.
+- `cargo fmt --check`: passed.
+- `cargo clippy --all-targets --locked -- -D warnings`: passed.
+- `cargo run --locked --bin runhaven-check-pins`: passed.
+- `npm --prefix ui run tauri:build`: passed and built
+  `src-tauri/target/debug/runhaven-tauri` without bundling.
+- `./init.sh`: initially found one Tauri rustfmt issue, then passed after
+  `cargo fmt --manifest-path src-tauri/Cargo.toml`.
+- JSON validation for `feature_list.json` and `docs/harness/manifest.json`:
+  passed.
+- Local Markdown link check over 51 tracked Markdown files: passed.
+- `git diff --check`: passed.
+- Rust source size guard: passed; no Rust source file under `src/` or
+  `src-tauri/src/` is over 500 lines. The current largest files are
+  `src/runhaven/provider/auth_broker.rs` at 499 lines and
+  `src/runhaven/provider/egress.rs` at 495 lines.
 - `./init.sh`: passed after the harness was extended for the desktop scaffold.
   It ran root Rust format/tests/clippy/pin policy/build,
   `npm --prefix ui ci --ignore-scripts`, frontend typecheck/tests/build, Tauri
@@ -347,6 +386,8 @@ narrow capability review, and focused tests are in place.
 - `docs/harness/manifest.json`
 - `docs/harness/state/roadmap.md`
 - `src/runhaven/harness/pins.rs`
+- `src/runhaven/runtime/launch.rs`
+- `src/runhaven/runtime/lock.rs`
 - `src-tauri/`
 - `ui/`
 
@@ -360,10 +401,12 @@ narrow capability review, and focused tests are in place.
 
 ## Next Step
 
-Choose the first mutating Tauri/UI operation deliberately. The likely next
-slice is launch planning to launch execution: add a typed `launch_run` command
-that reuses existing Rust validators, requires explicit confirmation for every
-warning, records no secrets in frontend state, gets its own narrow capability,
-and adds focused Rust/frontend tests before any stop/kill/repair or maintenance
-controls. Keep `--ssh` fail-closed until a no-secret non-root Apple
-`container` smoke proves usable forwarding.
+Choose the next Tauri/UI slice deliberately. The best next step is launch
+readiness and run feedback before broader controls: add typed image/builder
+status to the dashboard or launch panel, warn on concurrent active runs and
+material memory usage, and show post-start active-run status/log snapshots.
+After that, add stop, kill, attach, repair, image build, state cleanup,
+network cleanup, and worktree review one at a time with typed Rust commands,
+explicit confirmation, focused tests, and narrow capabilities. Keep `--ssh`
+fail-closed until a no-secret non-root Apple `container` smoke proves usable
+forwarding.

@@ -4,29 +4,27 @@ use std::process::Command;
 
 use anyhow::{Result, bail};
 use clap::{CommandFactory, Parser};
-use serde_json::json;
 
 use super::args::*;
-use super::lock::acquire_state_lock;
 use crate::active::{
-    active_run_terminal_status, remove_active_run_record, runs_active, runs_attach, runs_kill,
-    runs_logs_follow, runs_repair, runs_status, runs_stop, write_active_run_record,
+    runs_active, runs_attach, runs_kill, runs_logs_follow, runs_repair, runs_status, runs_stop,
 };
 use crate::diagnostics::{
     auth_explain, auth_log, auth_status, egress_log, read_auth_broker_log, read_egress_policy_log,
     why_host, why_network, why_state, why_workspace,
 };
-use crate::doctor::{collect_checks, find_on_path};
-use crate::git::{capture_git_snapshot, summarize_git_change};
+use crate::doctor::collect_checks;
 use crate::image_doctor;
 use crate::images::build_image_plan;
+#[cfg(test)]
+use crate::launch::run_standard_agent;
+use crate::launch::{launch_run_plan, require_container_cli};
 use crate::plans::{
     AgentRunPlan, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
 };
 use crate::profiles::{get_profile, profiles};
-use crate::provider_observability::utc_timestamp;
 use crate::provider_runtime;
-use crate::records::{RunRecordInput, runs_diff, runs_list, runs_log, runs_show, write_run_record};
+use crate::records::{runs_diff, runs_list, runs_log, runs_show};
 use crate::runtime_state;
 use crate::setup::{print_checks, print_setup_guide};
 use crate::worktrees::{
@@ -177,61 +175,7 @@ fn run_agent(
         return Ok(0);
     }
 
-    provider_runtime::validate_runtime_auth_broker_environment(&plan)?;
-    require_container_cli()?;
-    let _state_lock = acquire_state_lock(&plan.state_volume)?;
-    if plan.network_mode == NetworkMode::Provider {
-        return provider_runtime::run_provider_agent(&plan);
-    }
-    for command in &plan.preflight {
-        provider_runtime::run_preflight(command)?;
-    }
-    run_standard_agent(&plan)
-}
-
-fn run_standard_agent(plan: &AgentRunPlan) -> Result<i32> {
-    let run_id = plan
-        .run_id
-        .clone()
-        .unwrap_or_else(|| uuid::Uuid::new_v4().simple().to_string());
-    let git_before = capture_git_snapshot(&plan.workspace);
-    let started_at = utc_timestamp();
-    eprintln!("Run id: {run_id}");
-    write_active_run_record(plan, &run_id, &started_at)?;
-    let status_result = Command::new(&plan.command[0])
-        .args(&plan.command[1..])
-        .status();
-    let terminal_status = active_run_terminal_status(&run_id);
-    let _ = remove_active_run_record(&run_id);
-    let finished_at = utc_timestamp();
-    let mut command_error = None;
-    let return_code = match status_result {
-        Ok(status) => status.code().unwrap_or(1),
-        Err(error) => {
-            command_error = Some(anyhow::anyhow!(
-                "could not launch agent command {:?}: {error}",
-                plan.command[0]
-            ));
-            1
-        }
-    };
-    let git = summarize_git_change(git_before, capture_git_snapshot(&plan.workspace));
-    write_run_record(RunRecordInput {
-        plan,
-        run_id: &run_id,
-        started_at: &started_at,
-        finished_at: &finished_at,
-        return_code,
-        status: terminal_status.as_deref(),
-        provider_decisions: &[],
-        auth_decisions: None,
-        cleanup: json!({"provider_network": "not-applicable"}),
-        git,
-    })?;
-    if let Some(error) = command_error {
-        return Err(error);
-    }
-    Ok(return_code)
+    launch_run_plan(&plan)
 }
 
 fn image_command(command: ImageCommand) -> Result<i32> {
@@ -481,15 +425,6 @@ fn split_agent_args(argv: &[String]) -> (Vec<String>, Vec<String>) {
         return (argv.to_vec(), Vec::new());
     };
     (argv[..separator].to_vec(), argv[separator + 1..].to_vec())
-}
-
-fn require_container_cli() -> Result<()> {
-    if find_on_path("container").is_some() {
-        return Ok(());
-    }
-    bail!(
-        "Apple container CLI was not found. Install it from https://github.com/apple/container/releases and run `container system start`."
-    )
 }
 
 #[cfg(test)]

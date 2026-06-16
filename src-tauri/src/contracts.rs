@@ -97,3 +97,24 @@ pub(crate) struct RunPlanResponse {
     pub preflight_count: usize,
     pub warnings: Vec<PlanWarning>,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct LaunchRunRequest {
+    pub plan: RunPlanRequest,
+    pub confirm_launch: bool,
+    #[serde(default)]
+    pub confirmed_warnings: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct LaunchRunResponse {
+    pub run_id: String,
+    pub status: String,
+    pub profile: String,
+    pub workspace: String,
+    pub state_volume: String,
+    pub session: String,
+    pub network_mode: String,
+}

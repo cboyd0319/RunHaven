@@ -6,9 +6,12 @@ choose and hard to accidentally widen.
 
 An alpha Tauri/Svelte desktop scaffold lives under `src-tauri/` and `ui/`.
 The Tauri crate depends on the root Rust library and exposes typed commands
-for read-only setup, dashboard, profile, folder-pick, and run-plan review
-surfaces. It does not expose a shell, filesystem, process, HTTP, or Apple
-`container` bridge to JavaScript, and it does not launch or control runs yet.
+for setup, dashboard, profile, folder-pick, run-plan review, and the first
+explicitly confirmed launch path. It does not expose a shell, filesystem,
+process, HTTP, or Apple `container` bridge to JavaScript. Stop, kill, attach,
+repair, logs, image build, state cleanup, and worktree review remain CLI-first
+until each gets a typed command, explicit confirmation, focused tests, and a
+narrow capability.
 
 ## Runtime Pattern
 

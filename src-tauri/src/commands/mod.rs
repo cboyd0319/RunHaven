@@ -1,17 +1,20 @@
+use std::collections::HashSet;
 use std::path::PathBuf;
+use std::thread;
 
 use runhaven::active::read_active_run_records;
 use runhaven::doctor::collect_checks;
+use runhaven::launch::{launch_run_plan, new_run_id};
 use runhaven::plans::{
-    NetworkMode, RunOptions, WorkspaceScope, build_run_plan, normalize_provider_hosts,
+    AgentRunPlan, NetworkMode, RunOptions, WorkspaceScope, build_run_plan, normalize_provider_hosts,
 };
 use runhaven::profiles::{get_profile, profiles};
 use runhaven::records::read_run_records;
 use serde_json::Value;
 
 use crate::contracts::{
-    AgentProfileSummary, CheckStatus, DashboardStatus, PlanWarning, RunPlanRequest,
-    RunPlanResponse, RunSummary, SetupStatus,
+    AgentProfileSummary, CheckStatus, DashboardStatus, LaunchRunRequest, LaunchRunResponse,
+    PlanWarning, RunPlanRequest, RunPlanResponse, RunSummary, SetupStatus,
 };
 
 #[tauri::command]
@@ -32,6 +35,28 @@ pub(crate) fn get_dashboard_status() -> DashboardStatus {
 #[tauri::command]
 pub(crate) fn plan_run(request: RunPlanRequest) -> Result<RunPlanResponse, String> {
     build_plan_response(request)
+}
+
+#[tauri::command]
+pub(crate) fn launch_run(request: LaunchRunRequest) -> Result<LaunchRunResponse, String> {
+    validate_launch_confirmation(&request)?;
+    let setup = collect_setup_status();
+    if !setup.ok {
+        return Err(
+            "RunHaven setup is not ready. Fix setup checks before launching a run.".to_string(),
+        );
+    }
+    let run_id = new_run_id();
+    let (plan, response) = prepare_launch(request.plan, run_id.clone())?;
+    thread::Builder::new()
+        .name(format!("runhaven-launch-{run_id}"))
+        .spawn(move || {
+            if let Err(error) = launch_run_plan(&plan) {
+                eprintln!("runhaven launch {run_id} failed: {error}");
+            }
+        })
+        .map_err(|error| format!("could not start background run: {error}"))?;
+    Ok(response)
 }
 
 fn collect_setup_status() -> SetupStatus {
@@ -93,6 +118,30 @@ fn collect_dashboard_status() -> DashboardStatus {
 }
 
 fn build_plan_response(request: RunPlanRequest) -> Result<RunPlanResponse, String> {
+    let warnings = plan_warnings(&request);
+    let plan = build_agent_run_plan(&request, None)?;
+    Ok(RunPlanResponse {
+        profile: plan.profile_name,
+        workspace: plan.workspace.display().to_string(),
+        workspace_scope: plan.workspace_scope.as_str().to_string(),
+        workspace_scope_note: plan.workspace_scope_note,
+        state_volume: plan.state_volume,
+        session: plan.session,
+        container_name: plan.container_name,
+        network_mode: plan.network_mode.as_str().to_string(),
+        network_name: plan.network_name,
+        egress_summary: plan.egress_summary,
+        image: plan.image,
+        provider_allowed_hosts: plan.provider_allowed_hosts,
+        preflight_count: plan.preflight.len(),
+        warnings,
+    })
+}
+
+fn build_agent_run_plan(
+    request: &RunPlanRequest,
+    run_id: Option<String>,
+) -> Result<AgentRunPlan, String> {
     let profile = get_profile(&request.agent).map_err(|error| error.to_string())?;
     let network =
         NetworkMode::try_from(request.network_mode.as_str()).map_err(|error| error.to_string())?;
@@ -100,7 +149,7 @@ fn build_plan_response(request: RunPlanRequest) -> Result<RunPlanResponse, Strin
         .map_err(|error| error.to_string())?;
     let provider_hosts =
         normalize_provider_hosts(&request.provider_hosts).map_err(|error| error.to_string())?;
-    let plan = build_run_plan(RunOptions {
+    build_run_plan(RunOptions {
         profile,
         workspace: PathBuf::from(&request.workspace_path),
         agent_args: Vec::new(),
@@ -121,25 +170,54 @@ fn build_plan_response(request: RunPlanRequest) -> Result<RunPlanResponse, Strin
         provider_hosts,
         codex_api_key_broker_env: None,
         worktree: None,
-        run_id: None,
+        run_id,
     })
-    .map_err(|error| error.to_string())?;
-    Ok(RunPlanResponse {
-        profile: plan.profile_name,
+    .map_err(|error| error.to_string())
+}
+
+fn prepare_launch(
+    request: RunPlanRequest,
+    run_id: String,
+) -> Result<(AgentRunPlan, LaunchRunResponse), String> {
+    let plan = build_agent_run_plan(&request, Some(run_id.clone()))?;
+    let response = LaunchRunResponse {
+        run_id,
+        status: "started".to_string(),
+        profile: plan.profile_name.clone(),
         workspace: plan.workspace.display().to_string(),
-        workspace_scope: plan.workspace_scope.as_str().to_string(),
-        workspace_scope_note: plan.workspace_scope_note,
-        state_volume: plan.state_volume,
-        session: plan.session,
-        container_name: plan.container_name,
+        state_volume: plan.state_volume.clone(),
+        session: plan.session.clone(),
         network_mode: plan.network_mode.as_str().to_string(),
-        network_name: plan.network_name,
-        egress_summary: plan.egress_summary,
-        image: plan.image,
-        provider_allowed_hosts: plan.provider_allowed_hosts,
-        preflight_count: plan.preflight.len(),
-        warnings: plan_warnings(&request),
-    })
+    };
+    Ok((plan, response))
+}
+
+#[cfg(test)]
+fn build_launch_response(
+    request: RunPlanRequest,
+    run_id: String,
+) -> Result<LaunchRunResponse, String> {
+    prepare_launch(request, run_id).map(|(_, response)| response)
+}
+
+fn validate_launch_confirmation(request: &LaunchRunRequest) -> Result<(), String> {
+    if !request.confirm_launch {
+        return Err("Confirm the launch before starting a run.".to_string());
+    }
+    let confirmed = request
+        .confirmed_warnings
+        .iter()
+        .map(String::as_str)
+        .collect::<HashSet<_>>();
+    for warning in plan_warnings(&request.plan) {
+        if !confirmed.contains(warning.code.as_str()) {
+            return Err(format!(
+                "Confirm warning {} before starting a run: {}",
+                warning.code, warning.message
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn run_summary(record: &Value) -> RunSummary {
@@ -305,5 +383,49 @@ mod tests {
         let mut request = request(PathBuf::from("/definitely/not/a/runhaven/workspace"));
         request.network_mode = "internal".to_string();
         assert!(build_plan_response(request).is_err());
+    }
+
+    #[test]
+    fn launch_run_requires_explicit_confirmation() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let request = LaunchRunRequest {
+            plan: request(workspace.path().to_path_buf()),
+            confirm_launch: false,
+            confirmed_warnings: Vec::new(),
+        };
+
+        let error = validate_launch_confirmation(&request).expect_err("confirmation required");
+
+        assert!(error.contains("Confirm the launch"));
+    }
+
+    #[test]
+    fn launch_run_requires_each_warning_confirmation() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut plan = request(workspace.path().to_path_buf());
+        plan.network_mode = "internet".to_string();
+        let request = LaunchRunRequest {
+            plan,
+            confirm_launch: true,
+            confirmed_warnings: Vec::new(),
+        };
+
+        let error = validate_launch_confirmation(&request).expect_err("warning required");
+
+        assert!(error.contains("full-internet"));
+    }
+
+    #[test]
+    fn launch_run_response_uses_reserved_run_id_without_starting() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let response = build_launch_response(
+            request(workspace.path().to_path_buf()),
+            "runhaven-test-run".to_string(),
+        )
+        .expect("launch response");
+
+        assert_eq!(response.run_id, "runhaven-test-run");
+        assert_eq!(response.status, "started");
+        assert_eq!(response.profile, "codex");
     }
 }

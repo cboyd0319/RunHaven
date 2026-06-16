@@ -244,6 +244,10 @@ legend {
 }
 
 .primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   min-height: 2.75rem;
   color: #ffffff;
   background: #17643f;
@@ -261,6 +265,12 @@ legend {
   border-radius: 8px;
 }
 
+.notice.success {
+  color: #174a31;
+  background: #edf8f1;
+  border-color: #9bc5ab;
+}
+
 .warning-list {
   display: grid;
   gap: 0.45rem;
@@ -274,6 +284,29 @@ legend {
 
 .plan-panel {
   margin-top: 1rem;
+}
+
+.launch-confirmation {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #d7e0ea;
+}
+
+.warning-confirmations {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.warning-choice {
+  align-items: flex-start;
+  color: #5c3a04;
+}
+
+.launch-button {
+  width: fit-content;
+  min-width: 10rem;
 }
 
 @media (max-width: 860px) {
@@ -297,5 +330,9 @@ legend {
 
   .folder-row {
     align-items: stretch;
+  }
+
+  .launch-button {
+    width: 100%;
   }
 }

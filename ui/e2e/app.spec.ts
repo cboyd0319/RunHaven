@@ -17,3 +17,16 @@ test("renders the dashboard without runtime errors", async ({ page }) => {
   await expect(page.getByText("Preview mode")).toBeVisible();
   expect(runtimeErrors).toEqual([]);
 });
+
+test("reviews and starts a preview run", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByLabel("Project folder path").fill("/tmp/runhaven-preview");
+  await page.getByRole("button", { name: "Review plan" }).click();
+
+  await expect(page.getByRole("heading", { name: "Plan review" })).toBeVisible();
+  await page.getByLabel("I reviewed this plan and want to start this run.").check();
+  await page.getByRole("button", { name: "Launch run" }).click();
+
+  await expect(page.getByText(/Run started: preview-/)).toBeVisible();
+});

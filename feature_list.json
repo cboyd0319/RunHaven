@@ -46,7 +46,7 @@
       "priority": 0,
       "area": "ui",
       "title": "Tauri/Svelte first scaffold",
-      "user_visible_behavior": "RunHaven has an alpha desktop shell that reads setup, dashboard, profile, folder-pick, and run-plan state without launching or controlling runs.",
+      "user_visible_behavior": "RunHaven has an alpha desktop shell baseline for setup, dashboard, profile, folder-pick, and run-plan review. Current launch execution is tracked separately in `tauri-launch-execution`.",
       "status": "passing",
       "dependencies": [
         "tauri-ui-research",
@@ -57,7 +57,7 @@
       "verification": [
         "`ui/` and `src-tauri/` are organized as separate frontend and desktop-shell roots",
         "Tauri and frontend direct dependencies are exact-pinned and lockfiles are checked in",
-        "Capabilities explicitly allow only the four read-only scaffold commands plus native folder picking",
+        "The scaffold introduced narrow read-only command capabilities plus native folder picking; later launch capability work is tracked separately",
         "The WebView has no generic shell, filesystem, process, HTTP, or Apple `container` bridge",
         "Frontend helper tests cover secure defaults, warning previews, and read-only preview command paths",
         "Playwright browser smoke catches blank-page and console-error regressions",
@@ -67,7 +67,33 @@
       "evidence": [
         "2026-06-16: Added exact-pinned Svelte + Vite + TypeScript UI under `ui/`, Tauri v2 shell under `src-tauri/`, narrow `main-read` and `folder-pick` capabilities, read-only command contracts, frontend tests, Playwright browser smoke, Tauri command tests, and an updated local harness. `./init.sh` passed after adding the scaffold checks."
       ],
-      "notes": "This is not a run-control UI yet. Mutating commands remain deferred until each operation has typed Rust validation, explicit confirmation, and focused tests."
+      "notes": "This feature records the baseline scaffold. The first mutating launch slice is tracked separately; remaining run-control UI commands still need typed Rust validation, explicit confirmation, and focused tests."
+    },
+    {
+      "id": "tauri-launch-execution",
+      "priority": 0,
+      "area": "ui",
+      "title": "Tauri launch execution",
+      "user_visible_behavior": "The alpha desktop app can start a RunHaven agent run after the user reviews the plan, explicitly confirms launch, and acknowledges every warning.",
+      "status": "passing",
+      "dependencies": [
+        "tauri-svelte-first-scaffold",
+        "rust-cli-conversion",
+        "runtime-hardening-macos-only-boundary",
+        "run-observability"
+      ],
+      "verification": [
+        "`launch_run` uses a typed request and response and reuses the root Rust planner and shared launch runtime",
+        "Launch blocks when setup checks fail",
+        "Launch requires explicit confirmation and every warning code to be acknowledged",
+        "`launch-run` capability grants only `allow-launch-run` and is listed explicitly in Tauri config",
+        "Frontend state stores display options and run ids, not secrets, raw command lines, prompts, raw logs, or workspace contents",
+        "Frontend, Playwright, and Tauri command tests cover the launch confirmation path"
+      ],
+      "evidence": [
+        "2026-06-16: Added shared Rust launch runtime and state-volume lock modules, a typed Tauri `launch_run` command, a separate `launch-run` capability, Svelte launch confirmation controls, frontend command helpers, Rust/frontend/Playwright tests, and docs updates. Focused and broader verification passed before commit."
+      ],
+      "notes": "Image readiness, builder status, active-run resource warnings, live logs, stop, kill, attach, repair, image build, state cleanup, and worktree review controls remain future UI slices."
     },
     {
       "id": "rust-cli-conversion",

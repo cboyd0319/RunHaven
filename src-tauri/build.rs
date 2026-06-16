@@ -5,6 +5,7 @@ fn main() {
             "list_agents",
             "get_dashboard_status",
             "plan_run",
+            "launch_run",
         ]),
     ))
     .expect("failed to build Tauri application manifest");

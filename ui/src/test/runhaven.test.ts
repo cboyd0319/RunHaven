@@ -3,6 +3,8 @@ import {
   defaultRunPlanRequest,
   getDashboardStatus,
   getSetupStatus,
+  isLaunchReady,
+  launchRun,
   planRun,
   secureNetworkDefault,
   warningPreview,
@@ -78,5 +80,44 @@ describe("runhaven command helpers", () => {
     expect(plan.workspace).toBe("/tmp/runhaven-preview");
     expect(plan.networkMode).toBe("internet");
     expect(plan.warnings.map((warning) => warning.code)).toEqual(["full-internet"]);
+  });
+
+  it("requires explicit confirmation before launch is available", async () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview"
+    };
+    const plan = await planRun(request);
+
+    expect(isLaunchReady(plan, false, new Set())).toBe(false);
+    expect(isLaunchReady(plan, true, new Set())).toBe(true);
+  });
+
+  it("requires every warning to be acknowledged before launch is available", async () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview",
+      networkMode: "internet" as const
+    };
+    const plan = await planRun(request);
+
+    expect(isLaunchReady(plan, true, new Set())).toBe(false);
+    expect(isLaunchReady(plan, true, new Set(["full-internet"]))).toBe(true);
+  });
+
+  it("returns a launch preview outside the Tauri runtime", async () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview"
+    };
+
+    const started = await launchRun({
+      plan: request,
+      confirmLaunch: true,
+      confirmedWarnings: []
+    });
+
+    expect(started.runId).toMatch(/^preview-/);
+    expect(started.status).toBe("started");
   });
 });

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "launch-run",
+  "description": "Explicitly confirmed mutating launch command for starting RunHaven agent runs.",
+  "windows": ["main"],
+  "permissions": ["allow-launch-run"]
+}
