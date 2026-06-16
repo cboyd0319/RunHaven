@@ -9,9 +9,10 @@ in repo files instead of hidden in chat history.
 Product runtime contract: macOS 26+ on Apple silicon, Rust 1.96.0, and Apple
 `container` 1.0.0.
 
-Contributor verification contract: all local and CI verification runs target
-macOS 26+. Windows and Linux are not supported runtime or contributor
-verification targets for this project.
+Contributor verification contract: all verification runs target macOS 26+.
+GitHub Actions CI is disabled during alpha/pre-release to avoid hosted-runner
+cost. Windows and Linux are not supported runtime or contributor verification
+targets for this project.
 
 ## Purpose
 
@@ -27,7 +28,7 @@ one of these makes the harness incomplete.
 | Subsystem | This Harness Provides | Review Question |
 | --- | --- | --- |
 | Instructions | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md` | Does the agent see purpose, stack, startup commands, hard constraints, and links to detail? |
-| Tools | `init.sh`, local shell commands, advisory HarnessForge reports, CI | Can the agent do useful work with least privilege instead of blanket-disabled shell access or unrestricted access? |
+| Tools | `init.sh`, local shell commands, advisory HarnessForge reports | Can the agent do useful work with least privilege instead of blanket-disabled shell access or unrestricted access? |
 | Environment | `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `pins.toml`, image templates, component inventory | Are versions, dependencies, setup facts, and reproducible environment choices self-describing? |
 | State | `feature_list.json`, `current-state.md`, `docs/ROADMAP.md`, `docs/harness/state/roadmap.md` | Can a new session see what is done, current, blocked, accepted, and next? |
 | Feedback | `verification-matrix.md`, `sensor-registry.md`, `evidence-log.md`, local checks | Are verification commands explicit, runnable, and prioritized before broader process? |
@@ -75,9 +76,9 @@ rollback.
 11. Record evidence, blockers, skipped checks, and next steps.
 12. Update this harness when repeated failures show a missing guide or sensor.
 
-Remote CI is a shared cost and trust boundary. Run local checks before push,
-and use remote CI to confirm reviewed changes rather than as a trial-and-error
-loop.
+Remote CI is disabled during alpha/pre-release. Run local checks before push.
+Reintroduce hosted CI only by explicit maintainer decision, with pinned workflow
+actions and macOS 26+ runner assumptions reviewed from current primary sources.
 
 ## Assessment And Updates
 

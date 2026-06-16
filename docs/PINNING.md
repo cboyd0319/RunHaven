@@ -1,14 +1,16 @@
 # Pinning Policy
 
-All package, image, tool, and CI action dependencies must be current stable and
-hard-pinned.
+All package, image, and tool dependencies must be current stable and
+hard-pinned. While the project has no active GitHub Actions workflows, there
+are no active CI action dependencies to pin.
 
 ## Required Pins
 
 - Rust direct dependencies use exact `=` versions in `Cargo.toml`.
 - Rust toolchain version is pinned in `rust-toolchain.toml` and `pins.toml`.
 - `Cargo.lock` is checked in for reproducible CLI builds.
-- GitHub Actions use immutable commit SHAs, with the release tag in a comment.
+- If GitHub Actions workflows are reintroduced, actions must use immutable
+  commit SHAs, with the release tag in a comment.
 - Container base images use versioned tags plus `sha256` digests.
 - Debian packages installed in images use exact package versions in
   `images/common/debian-packages.txt`, including the observed install closure
@@ -23,7 +25,8 @@ hard-pinned.
 ## Disallowed
 
 - `latest` image or package tags
-- major-only GitHub Action refs such as `actions/checkout@v6`
+- major-only GitHub Action refs such as `actions/checkout@v6`, if workflows
+  are reintroduced
 - loose dependency ranges such as `>=`, `~=`, or wildcard package pins
 - unversioned installer scripts inside images
 - unpinned `apt-get install`, `npm install`, or `cargo add`

@@ -34,10 +34,11 @@ instead of duplicating project manuals.
   that execute.
 - Keep direct Rust dependencies minimal and exact-pinned. Add a crate only when
   it removes real security or usability risk.
-- All package, image, tool, and CI action dependencies must use the current
-  stable release and be hard-pinned. Do not use floating ranges, mutable
-  `latest` tags, major-only action refs, unversioned installer scripts, or
-  unpinned package installs.
+- All package, image, and tool dependencies must use the current stable release
+  and be hard-pinned. If GitHub Actions workflows are reintroduced, actions
+  must use immutable commit SHAs. Do not use floating ranges, mutable `latest`
+  tags, major-only action refs, unversioned installer scripts, or unpinned
+  package installs.
 - Update relevant docs with behavior, setup, architecture, command, security,
   or pinning changes.
 - Run the smallest relevant verification set before marking work complete.

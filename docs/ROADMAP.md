@@ -81,6 +81,23 @@ direction. The live feature status and verification evidence are tracked in
   `src/runhaven/` by ownership boundary.
 - keep the Rust source size guard active so command surfaces, policy logic,
   run-state handling, and verification helpers remain reviewable.
+- run the `rust-expert` agent with the Rust skill across the entire repo to
+  look for correctness, safety, idiomatic Rust, test, packaging, and
+  maintainability issues before release hardening.
+- use the `apple-container-expert` agent with the Apple Container skill for
+  Apple `container` runtime, networking, source, service, registry, machine,
+  and security-boundary work.
+
+## Pre-Tauri Apple Container Readiness
+
+- Action the coverage gaps in
+  [`docs/APPLE_CONTAINER_GAP_ANALYSIS.md`](APPLE_CONTAINER_GAP_ANALYSIS.md)
+  before starting Tauri/UI work.
+- Add opt-in live Apple `container` smoke coverage for command shapes and JSON
+  parsing that unit tests cannot prove.
+- Review builder resource and lifecycle guidance for image builds before adding
+  UI flows that trigger rebuilds.
+- Add UI-oriented resource guardrails for per-container VM memory behavior.
 
 ## Phase 6: Repeatable Workflows
 

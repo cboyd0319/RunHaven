@@ -100,7 +100,7 @@
         "Unsafe image references, resource values, network modes, workspaces, root users, and root groups are rejected by tests",
         "TTY and interactive behavior are controllable from the CLI",
         "RunHaven state listing and prune behavior are tested",
-        "macOS-only entrypoints and CI are enforced",
+        "macOS-only local verification entrypoints are enforced; hosted CI is disabled during alpha/pre-release",
         "Full local verification and harness audit pass"
       ],
       "evidence": [

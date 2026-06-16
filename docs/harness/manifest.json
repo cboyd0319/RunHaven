@@ -27,17 +27,12 @@
         "evidence": "Rust 1.96.0 is the pinned local toolchain recorded in rust-toolchain.toml and pins.toml."
       },
       {
-        "id": "github-actions-hosted-runners",
-        "url": "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
-        "evidence": "Runner labels and platform availability must be rechecked before changing CI assumptions."
-      },
-      {
         "id": "apple-container-release",
         "url": "https://github.com/apple/container/releases",
         "evidence": "RunHaven currently documents Apple container 1.0.0 as the reviewed runtime pin."
       }
     ],
-    "note": "Recheck current primary sources before changing platform floors, Rust versions, runner labels, Apple container assumptions, crate pins, or image pins."
+    "note": "Recheck current primary sources before changing platform floors, Rust versions, Apple container assumptions, crate pins, image pins, or reintroducing hosted CI."
   },
   "requiredFiles": [
     "rust-toolchain.toml",

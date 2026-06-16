@@ -115,9 +115,9 @@ not commit machine-specific checkout paths for local tooling.
 - Do not imply a boundary is enforced until code, tests, or live Apple
   `container` behavior prove it.
 - Fail closed or state limitations plainly when a boundary cannot be verified.
-- All package, image, tool, and CI action dependencies must use the current
-  stable release and exact pins. GitHub Actions use full-length commit SHAs
-  with version comments.
+- All package, image, and tool dependencies must use the current stable release
+  and exact pins. If GitHub Actions workflows are reintroduced, actions must
+  use full-length commit SHAs with version comments.
 - If a runtime, package, policy, CVE, release, or vendor claim affects a change,
   verify it from current primary sources and update `docs/RESEARCH.md` or
   `docs/harness/research/sources.md`.

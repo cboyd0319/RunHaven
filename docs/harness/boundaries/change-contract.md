@@ -82,10 +82,10 @@ Record the smallest safe rollback:
 ## Platform Impact
 
 Record whether the change affects Rust 1.96.0, Cargo dependency resolution,
-macOS 26+ runtime behavior, Apple silicon, Apple `container` 1.0.0, macOS-only
-CI, or unsupported-platform guardrails.
+macOS 26+ runtime behavior, Apple silicon, Apple `container` 1.0.0, future
+hosted CI, or unsupported-platform guardrails.
 
-Before changing platform floors, interpreter versions, runner labels, Apple
-`container` assumptions, package pins, or image pins, record current
-primary-source evidence and the review date in `docs/RESEARCH.md` or
+Before changing platform floors, interpreter versions, future hosted-CI runner
+labels, Apple `container` assumptions, package pins, or image pins, record
+current primary-source evidence and the review date in `docs/RESEARCH.md` or
 `docs/harness/evidence/evidence-log.md`.

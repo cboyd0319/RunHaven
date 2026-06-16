@@ -23,7 +23,7 @@ readiness, runtime boundaries, or multiple components.
 | Session and state management | Focused planner, standard-run, and state tests for `--session`, active/run-record metadata, `state list --session`, `state reset`, and session-filtered `state prune` |
 | Worktree run isolation and lifecycle | Focused standard-run and worktree-lifecycle tests for `--worktree`, dirty-source guidance, clean-source enforcement, isolated mounts, recovery metadata, project check suggestions, `runs keep`, `runs recover`, `runs merge`, and `runs discard` |
 | Image templates | Pin check, focused image tests, `runhaven image build PROFILE --dry-run`, and a real image build/version smoke for changed profiles when Apple `container` is available |
-| Pin, dependency, runner, or workflow changes | `cargo run --locked --bin runhaven-check-pins`, primary-source version evidence, affected tests, and `.github/workflows/ci.yml` review for macOS 26+ only support |
+| Pin, dependency, runner, or workflow changes | `cargo run --locked --bin runhaven-check-pins`, primary-source version evidence, and affected tests. If workflows are reintroduced, review every workflow file for macOS 26+ only support and immutable Action refs |
 | Security, auth, secrets, data loss, or billing | Focused tests, human review, rollback path, least-privilege check, and evidence in `docs/harness/evidence/evidence-log.md` |
 | Release prep | `./init.sh`, harness report/audit, `runhaven doctor`, relevant Apple `container` smokes, dirty-tree check, pin/source review, SBOM/provenance review when packaging exists |
 

@@ -85,7 +85,7 @@ implementation starts.
 | Release surface | Does this affect packaging, tags, SBOM, provenance evidence, release notes, or rollback? |
 | Research and source records | Does this need current primary-source evidence or project-owned source records? |
 | Security and privacy | Could this expose secrets, local paths, private code, tool permissions, network access, user data, or cost? |
-| Platform contracts | Does this affect macOS 26+, Rust, Apple `container`, runner labels, or unsupported platform guardrails? |
+| Platform contracts | Does this affect macOS 26+, Rust, Apple `container`, future hosted-CI runner labels, or unsupported platform guardrails? |
 | Docs and UX | Which user-facing docs, help output, startup instructions, and first-run guidance need to change? |
 
 If a surface is out of scope, say so in the item notes. Do not let target-local
@@ -112,7 +112,7 @@ Use this when reviewing whether the harness is actually useful to a new agent.
 | What is this system or package? | `README.md`, `AGENTS.md`, `docs/CAPABILITIES.md` | Keep product status and macOS 26+ boundary current |
 | How is the repo organized? | `docs/ARCHITECTURE.md`, `docs/harness/boundaries/component-inventory.md`, `docs/harness/state/modularization-plan.md` | Update after module extractions or new image/profile surfaces |
 | How does it start? | `docs/INSTALLATION.md`, `README.md`, `runhaven setup`, `init.sh` | Keep first-run setup and development setup aligned |
-| How is it verified? | `docs/harness/feedback/verification-matrix.md`, `docs/harness/feedback/sensor-registry.md`, `.github/workflows/ci.yml` | Add release evidence automation before shipping |
+| How is it verified? | `docs/harness/feedback/verification-matrix.md`, `docs/harness/feedback/sensor-registry.md`, `init.sh` | CI is intentionally disabled during alpha/pre-release; add release evidence automation before shipping |
 | What work is current? | `feature_list.json`, `current-state.md`, `docs/ROADMAP.md`, this roadmap | Keep objective and next-session guidance synchronized |
 
 ## Instruction Rule Lifecycle
@@ -122,7 +122,7 @@ instruction file as a router; move topic detail into focused docs.
 
 | Rule Or Topic | Source | Applies When | Mechanical Check | Retire Or Replace When |
 | --- | --- | --- | --- | --- |
-| macOS 26+ only runtime and contributor verification | Product docs, `pins.toml`, CI, Rust tests | Any runtime, CI, install, or docs change | `cargo test --locked`, platform wording scan | Maintainer accepts a source-backed platform expansion |
+| macOS 26+ only runtime and contributor verification | Product docs, `pins.toml`, local Rust tests, future CI if re-enabled | Any runtime, future CI, install, or docs change | `cargo test --locked`, platform wording scan | Maintainer accepts a source-backed platform expansion |
 | No host home, raw SSH key, browser profile, cloud credential, or arbitrary env passthrough by default | Security model and command validators | Any workspace, env, SSH, auth, or container invocation change | Focused plan/run validator tests and runtime smokes | Replaced by a stronger least-privilege boundary |
 | Provider hosts are explicit and source-backed | `docs/PROVIDER_ENDPOINTS.md`, `src/runhaven/provider/endpoints.rs` | Provider endpoint, proxy, auth, or network change | Endpoint tests, `why host`, provider smoke when needed | Path-aware or brokered policy supersedes broad host handling |
 | Run records stay secret-free | Run observability docs and tests | Any runs, auth, egress, active, or git metadata change | Run-history and active-run tests | Replaced by stronger redaction and evidence contract |

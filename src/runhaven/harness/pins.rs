@@ -9,7 +9,6 @@ pub fn check_pins() -> Result<()> {
     let root = repo_root();
     let pins = load_pins(&root)?;
     let mut failures = Vec::new();
-    failures.extend(check_pin_ledger(&pins));
     failures.extend(check_cargo_against_ledger(&root, &pins));
     failures.extend(check_ci_against_ledger(&root, &pins));
     failures.extend(check_text_policy(&root));
@@ -33,19 +32,6 @@ fn load_pins(root: &Path) -> Result<Value> {
     Ok(toml::from_str::<Value>(&fs::read_to_string(
         root.join("pins.toml"),
     )?)?)
-}
-
-fn check_pin_ledger(pins: &Value) -> Vec<String> {
-    let mut failures = Vec::new();
-    let runners = pins
-        .get("github_runners")
-        .and_then(Value::as_table)
-        .cloned()
-        .unwrap_or_default();
-    if runners.keys().map(String::as_str).collect::<Vec<_>>() != ["macos"] {
-        failures.push("pins.toml: GitHub runner pins must be macOS-only".to_string());
-    }
-    failures
 }
 
 fn check_cargo_against_ledger(root: &Path, pins: &Value) -> Vec<String> {
@@ -108,50 +94,88 @@ fn dependency_version(value: &Value) -> Option<String> {
 
 fn check_ci_against_ledger(root: &Path, pins: &Value) -> Vec<String> {
     let mut failures = Vec::new();
-    let path = root.join(".github/workflows/ci.yml");
-    let Ok(text) = fs::read_to_string(path) else {
-        return vec![".github/workflows/ci.yml: missing".to_string()];
-    };
+    let workflow_files = workflow_files(root);
+    if workflow_files.is_empty() {
+        return failures;
+    }
     let macos = toml_path(pins, &["github_runners", "macos"])
         .and_then(Value::as_str)
         .unwrap_or("");
-    if !text.contains(macos) {
-        failures
-            .push(".github/workflows/ci.yml: macOS runner does not match pins.toml".to_string());
-    }
-    if text.to_ascii_lowercase().contains("ubuntu") || text.to_ascii_lowercase().contains("windows")
-    {
-        failures.push(".github/workflows/ci.yml: CI must run only on macOS 26+".to_string());
-    }
     let toolchain = toml_path(pins, &["rust", "toolchain"])
         .and_then(Value::as_str)
         .unwrap_or("");
-    if !text.contains(toolchain) {
-        failures
-            .push(".github/workflows/ci.yml: Rust toolchain does not match pins.toml".to_string());
-    }
-    let action_ref = regex::Regex::new(r"uses:\s*[\w./-]+@([^\s#]+)").unwrap();
     let sha = regex::Regex::new(r"^[0-9a-f]{40}$").unwrap();
-    for capture in action_ref.captures_iter(&text) {
-        if !sha.is_match(&capture[1]) {
-            failures.push(
-                ".github/workflows/ci.yml: GitHub Action ref is not an immutable SHA".to_string(),
-            );
+    let action_ref = regex::Regex::new(r"uses:\s*[\w./-]+@([^\s#]+)").unwrap();
+    for path in workflow_files {
+        let relative = path
+            .strip_prefix(root)
+            .unwrap_or(&path)
+            .display()
+            .to_string();
+        let Ok(text) = fs::read_to_string(&path) else {
+            failures.push(format!("{relative}: unreadable workflow file"));
+            continue;
+        };
+        if macos.is_empty() {
+            failures.push(format!(
+                "{relative}: active workflow requires pins.toml [github_runners].macos"
+            ));
+        } else if !text.contains(macos) {
+            failures.push(format!("{relative}: macOS runner does not match pins.toml"));
+        }
+        let lower = text.to_ascii_lowercase();
+        if lower.contains("ubuntu") || lower.contains("windows") {
+            failures.push(format!("{relative}: CI must run only on macOS 26+"));
+        }
+        if toolchain.is_empty() || !text.contains(toolchain) {
+            failures.push(format!(
+                "{relative}: Rust toolchain does not match pins.toml"
+            ));
+        }
+        for capture in action_ref.captures_iter(&text) {
+            if !sha.is_match(&capture[1]) {
+                failures.push(format!(
+                    "{relative}: GitHub Action ref is not an immutable SHA"
+                ));
+            }
         }
     }
     failures
 }
 
+fn workflow_files(root: &Path) -> Vec<PathBuf> {
+    let workflows = root.join(".github/workflows");
+    let Ok(entries) = fs::read_dir(workflows) else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| matches!(extension, "yml" | "yaml"))
+        })
+        .collect()
+}
+
 fn check_text_policy(root: &Path) -> Vec<String> {
     let mut failures = Vec::new();
-    for relative in [
-        "Cargo.toml",
-        ".github/workflows/ci.yml",
-        "images/common/debian-packages.txt",
-        "images/common/debian.sources",
-    ] {
-        let path = root.join(relative);
-        let Ok(text) = fs::read_to_string(path) else {
+    let mut files = [
+        root.join("Cargo.toml"),
+        root.join("images/common/debian-packages.txt"),
+        root.join("images/common/debian.sources"),
+    ]
+    .into_iter()
+    .collect::<Vec<_>>();
+    files.extend(workflow_files(root));
+    for path in files {
+        let relative = path
+            .strip_prefix(root)
+            .unwrap_or(&path)
+            .display()
+            .to_string();
+        let Ok(text) = fs::read_to_string(&path) else {
             continue;
         };
         for (index, line) in text.lines().enumerate() {

@@ -17,7 +17,7 @@ For RunHaven, changing any of these changes effective agent behavior:
 - provider allowlists, proxy behavior, auth broker behavior, or SSH/env
   passthrough;
 - bundled image templates and image package locks;
-- verification entrypoints, CI, pin checks, and harness sensors.
+- verification entrypoints, future CI, pin checks, and harness sensors.
 
 Treat those changes as product changes with scope, verification, and rollback.
 
@@ -26,7 +26,7 @@ Treat those changes as product changes with scope, verification, and rollback.
 - Root Rust package: `Cargo.toml`.
 - Rust toolchain pin: `rust-toolchain.toml`.
 - Exact dependency and runtime pin ledger: `pins.toml`.
-- MacOS-only CI workflow: `.github/workflows/ci.yml`.
+- GitHub Actions CI disabled during alpha/pre-release; no active workflow files.
 - Multiple nested image/package manifests under `images/`.
 - Harness operating layer under `docs/harness/`.
 
@@ -54,7 +54,7 @@ Treat those changes as product changes with scope, verification, and rollback.
 | Worktree lifecycle | `src/runhaven/runtime/worktrees/` | Data-loss boundary. Keep source-checkout validation, RunHaven-owned branch checks, and explicit merge/discard recovery paths. |
 | State and network repair UX | `src/runhaven/runtime/session_state.rs`, `src/runhaven/runtime/state.rs`, `src/runhaven/image/doctor.rs`, `src/runhaven/runtime/network.rs`, `src/runhaven/cli/setup.rs`, `src/runhaven/cli/doctor.rs` | Repair commands should preview before deletion, mutate only RunHaven-owned resources, and print exact next steps. |
 | Bundled images | `images/base/`, `images/claude/`, `images/codex/`, `images/gemini/`, `images/antigravity/`, `images/copilot/`, `images/common/` | Keep image tags, npm packages, Debian snapshot inputs, non-root user setup, and source-digest labels pinned and reviewed. |
-| Pin policy | `src/runhaven/harness/pins.rs`, `src/bin/runhaven-check-pins.rs`, `pins.toml`, `Cargo.toml`, `Cargo.lock` | Pin checks are a release gate. Dependency and runner changes need primary-source evidence. |
+| Pin policy | `src/runhaven/harness/pins.rs`, `src/bin/runhaven-check-pins.rs`, `pins.toml`, `Cargo.toml`, `Cargo.lock` | Pin checks are a release gate. Dependency changes and any future workflow or runner changes need primary-source evidence. |
 | Test suite | `tests/` plus module tests | Focused Rust tests cover CLI, plans, egress, images, state, worktrees, auth, and repo policy. |
 | Harness operating layer | `AGENTS.md`, `feature_list.json`, `current-state.md`, `docs/harness/` | Keep root instructions compact and move durable operating detail into focused harness docs. |
 | Human documentation | `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/` | Docs are product surfaces. Keep macOS 26+ only support, Apple `container` 1.0.0, security boundaries, and command examples aligned with code. |

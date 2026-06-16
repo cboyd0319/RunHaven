@@ -98,6 +98,8 @@ setup. See [Usage](docs/USAGE.md) for command-level workflows.
   future broker criteria.
 - [Architecture](docs/ARCHITECTURE.md): runtime pattern, profiles, networking,
   records, and broker model.
+- [Apple Container gap analysis](docs/APPLE_CONTAINER_GAP_ANALYSIS.md):
+  pre-Tauri runtime, security, and verification gaps.
 - [Pinning policy](docs/PINNING.md): exact dependency and image pin rules.
 - [Roadmap](docs/ROADMAP.md): planned product and codebase work.
 - [Contributing](CONTRIBUTING.md): local checks and review expectations.

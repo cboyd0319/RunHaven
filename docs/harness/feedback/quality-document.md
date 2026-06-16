@@ -25,8 +25,8 @@ unsafe to rely on without repair.
 | Subsystem | Current State | Review Trigger |
 | --- | --- | --- |
 | Instructions | Root instructions are compact and route to harness docs, product docs, roadmap, and state | Root file grows beyond router role, platform routers duplicate rules, or agents miss current work |
-| Tools | `init.sh`, focused Cargo commands, advisory HarnessForge reports, and CI are discoverable | New command surface, CI behavior, or runtime smoke changes |
-| Environment | Rust, macOS, Apple `container`, pins, image manifests, and component boundaries are documented | Version, runner, image, dependency, or platform contract changes |
+| Tools | `init.sh`, focused Cargo commands, and advisory HarnessForge reports are discoverable | New command surface, future CI behavior, or runtime smoke changes |
+| Environment | Rust, macOS, Apple `container`, pins, image manifests, and component boundaries are documented | Version, future runner, image, dependency, or platform contract changes |
 | State | `feature_list.json`, `current-state.md`, product roadmap, and harness roadmap exist | Current objective changes, release prep starts, or planning decisions move from chat to repo |
 | Feedback | Verification matrix, sensor registry, evidence log, repo-policy tests, and pin checks exist | Repeated misses, vague failures, new release gates, or real-agent effectiveness claims |
 

@@ -20,12 +20,6 @@ ureq = "3.3.0"
 uuid = "1.23.3"
 tempfile = "3.27.0"
 
-[github_runners]
-macos = "macos-26"
-
-[github_actions]
-checkout = { version = "6.0.3", sha = "df4cb1c069e1874edd31b4311f1884172cec0e10" }
-
 [apple_container]
 version = "1.0.0"
 commit = "ee848e3ebfd7c73b04dd419683be54fb450b8779"
