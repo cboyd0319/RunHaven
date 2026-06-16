@@ -1,37 +1,47 @@
 # Capabilities
 
-RunHaven runs AI coding agents inside Apple `container` with beginner-safe
-defaults for local Mac development. This page summarizes what the CLI can do,
-what it protects by default, and where the current limits are.
+RunHaven runs AI coding agents inside Apple `container` with local-Mac safety
+defaults. This page is the product overview: what RunHaven can do, what it
+protects by default, and where the current limits are.
 
 RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
 supported runtimes or contributor verification targets.
 
-## Runtime Boundary
+For command walkthroughs, use [Usage](USAGE.md). For the full security boundary,
+use [Security model](SECURITY_MODEL.md).
+
+## At A Glance
+
+| Area | What RunHaven provides |
+| --- | --- |
+| Runtime boundary | One selected workspace, one isolated agent home volume, non-root bundled images, read-only root filesystem, dropped Linux capabilities, and explicit command preview. |
+| Agent profiles | Bundled Claude, Codex, Gemini, Antigravity, Copilot, and shell profiles, plus custom images through the `shell` profile. |
+| Network modes | Broad default internet, local-only internal networking, or provider allowlist proxy mode. |
+| Workspace safety | Current-directory mounts by default, explicit git-root expansion, sensitive-path rejection, and optional RunHaven-owned git worktrees. |
+| Credentials | No host home, raw SSH key, browser profile, cloud credential folder, or arbitrary environment passthrough by default. |
+| Observability | Secret-free run records, active-run controls, provider policy logs, auth broker status, and recovery commands. |
+| Cleanup | Focused image, state-volume, network, and worktree recovery for resources RunHaven owns. |
+
+## Runtime Defaults
 
 RunHaven generates Apple `container` commands with these defaults:
 
-- one selected project mounted at `/workspace`
-- one per-project/profile/session agent home volume mounted at the container
-  agent home path
-- no macOS home directory mount
-- no raw SSH key mount
-- no host cloud credential mount
-- no arbitrary host environment passthrough
-- read-only container root filesystem
-- temporary container scratch directory
-- dropped Linux capabilities
-- non-root `agent` user in bundled images
-- explicit command preview with `runhaven plan`
+| Default | Meaning |
+| --- | --- |
+| Workspace mount | One selected project directory is mounted at `/workspace`. |
+| Agent home | One per-project/profile/session volume is mounted at the agent home path. |
+| Host secrets | macOS home, raw SSH keys, browser profiles, cloud credential folders, and arbitrary host environment variables are not mounted or passed. |
+| Container user | Bundled images run as the non-root `agent` user. |
+| Filesystem | The container root filesystem is read-only, with temporary scratch space. |
+| Linux privileges | Linux capabilities are dropped. |
+| Preview | `runhaven plan` prints the selected workspace, state volume, network mode, egress status, preflight, and Apple `container run` command before execution. |
 
 The default workspace scope is the current directory. If that directory is
-inside a larger git repository, RunHaven does not silently broaden the mount.
-Use `--workspace-scope git-root` only when the agent needs the full repository
-mounted at `/workspace`.
+inside a larger git repository, RunHaven does not silently mount the repository
+root. Use `--workspace-scope git-root` only when the agent needs the full
+repository at `/workspace`.
 
 ## Agent Profiles
-
-Bundled profiles:
 
 | Profile | Default image | Use case |
 | --- | --- | --- |
@@ -42,29 +52,25 @@ Bundled profiles:
 | `copilot` | `runhaven/copilot:0.1.0` | GitHub Copilot CLI with isolated state |
 | `shell` | `runhaven/base:0.1.0` | Generic shell profile for custom agent images |
 
-Use `shell` with `--image IMAGE` for a custom agent image.
+Use `shell` with `--image IMAGE` when you want to run another agent image.
 
 ## Network Modes
 
-`internet` is the default network mode. It is intentionally broad and does not
-enforce provider-domain allowlisting. Use it for package managers, dependency
-updates, registries, CDNs, and other tasks that need unrestricted internet
-egress.
+| Mode | Use it for | Egress behavior |
+| --- | --- | --- |
+| `internet` | Normal hosted-agent runs, package managers, registries, CDNs, and dependency updates. | Broad default internet access. Provider-domain allowlisting is not enforced. |
+| `internal` | Local-only analysis, offline tests, and custom images that do not need internet. | Host-only Apple `container` network. |
+| `provider` | Agent runs that should be limited to reviewed provider hosts. | Managed internal network plus RunHaven's host-side allowlist CONNECT proxy. |
 
-`internal` creates a host-only Apple container network. It is useful for local
-commands and custom images that do not need internet access.
+Provider mode allows bundled provider hosts for the selected profile, their
+subdomains, and reviewed fully qualified `--provider-host HOST` additions. The
+proxy rejects IP literal targets and destinations that resolve to local-only
+addresses such as loopback, private, link-local, or multicast ranges.
 
-`provider` creates a managed internal Apple `container` network and routes the
-agent through RunHaven's host-side allowlist CONNECT proxy. Bundled profiles
-include conservative provider hosts. A listed host permits that host and its
-subdomains. The proxy resolves allowed hosts before connecting and rejects
-non-public resolved addresses such as loopback, private, link-local, multicast,
-or otherwise local-only addresses.
-
-Provider mode is stricter than internet mode and may require reviewed
-fully-qualified `--provider-host HOST` additions for login, telemetry,
-package-registry, update, or provider feature-path hosts. Review
-[the provider endpoint matrix](PROVIDER_ENDPOINTS.md) before adding hosts.
+Provider mode is intentionally stricter than internet mode. Some login,
+telemetry, package-registry, update, or provider feature-path hosts may need
+review before being added. Use the
+[provider endpoint matrix](PROVIDER_ENDPOINTS.md) for that review.
 
 ## Workspace And Git Safety
 
@@ -73,120 +79,64 @@ credential-bearing workspace paths unless `--allow-sensitive-workspace` is
 passed.
 
 For clean git repositories, `runhaven run AGENT --worktree` creates a
-RunHaven-owned branch and git worktree under RunHaven's cache directory, then
-mounts that worktree at `/workspace`. The source checkout is left untouched.
-Dirty source checkouts fail before worktree creation and print choices to
-commit or stash, run without `--worktree`, or start from a clean clone or git
-worktree. RunHaven keeps the worktree after the run and records exact review,
-merge, and discard commands in the run record.
+RunHaven-owned branch and git worktree under the RunHaven cache directory, then
+mounts that worktree at `/workspace`. The source checkout stays untouched until
+you explicitly merge worktree changes back.
 
-`runhaven runs keep RUN_ID` validates the recorded RunHaven-owned worktree and
-prints review, recovery, and detected project check suggestions without
-mutating anything. `runhaven runs recover RUN_ID` validates the same boundary,
-prints source and worktree status, and provides numbered manual recovery steps
-without changing files. `runhaven runs recover RUN_ID --json` prints the same
-recovery state and suggested checks for automation.
-`runhaven runs merge RUN_ID`
-validates the source repository, branch, worktree path, and base commit before
-bringing committed, dirty, and untracked worktree changes back to the source
-checkout and then cleaning up the RunHaven worktree and branch. If a
-pre-cleanup merge check fails, RunHaven prints the source repo, worktree,
-branch, review, retry, keep, and discard commands without deleting the
-recorded worktree. `runhaven runs
-discard RUN_ID` validates the same ownership boundary, then removes the
-recorded worktree and branch without touching the source checkout.
+Worktree support includes:
+
+| Command family | Purpose |
+| --- | --- |
+| `runs keep` | Validate the recorded worktree and print review guidance. |
+| `runs recover` | Show read-only recovery state and suggested project checks. |
+| `runs merge` | Validate the recorded source/worktree boundary before bringing changes back. |
+| `runs discard` | Remove the recorded RunHaven-owned worktree and branch without touching the source checkout. |
+
+See [Usage](USAGE.md) for the full worktree workflow.
 
 ## Credential Handling
 
 RunHaven does not mount raw SSH keys, browser profiles, cloud credential
-folders, or provider login caches by default.
+folders, provider login caches, or arbitrary host environment variables by
+default.
 
-Useful opt-in controls:
+| Opt-in | What it does |
+| --- | --- |
+| `--ssh` | Forwards the macOS SSH agent without mounting `~/.ssh`. |
+| `--env NAME` | Passes one reviewed host environment variable by name. `NAME=value` is rejected. |
+| `--codex-api-key-broker-env NAME` | Enables the Codex API-key broker prototype for provider-network Codex runs. |
+| `runhaven auth status` / `runhaven auth explain AGENT` | Explains current broker boundaries without reading or printing secrets. |
 
-- `--ssh` forwards the macOS SSH agent without mounting `~/.ssh`.
-- `--env NAME` passes one reviewed host environment variable by name.
-- `--codex-api-key-broker-env NAME` enables the Codex API-key broker prototype
-  for provider-network Codex runs.
-- `runhaven auth status` and `runhaven auth explain AGENT` explain current
-  broker boundaries without reading or printing secrets.
+## Sessions And State
 
-`runhaven` rejects `NAME=value` so secrets do not get copied into shell history
-or dry-run output.
+Each project/profile gets an isolated default agent home volume. Use
+`--session NAME` to create a named reusable project/profile home volume without
+changing the workspace mount or widening host credential access.
 
-## Local Resource Recovery
+Session and state commands manage RunHaven-owned agent home volumes only. They
+do not touch workspace files.
 
-RunHaven includes explicit cleanup paths for local resources it owns:
+## Observability And Recovery
 
-```bash
-runhaven image doctor
-runhaven image rebuild claude
-runhaven state list
-runhaven state reset claude --session review --yes
-runhaven state prune --yes
-runhaven network list
-runhaven network prune --yes
-```
+RunHaven records secret-free run metadata under its cache directory. Records
+include run id, profile, workspace, workspace scope, network mode, return code,
+provider policy summary, auth broker summary, cleanup outcome, and git metadata
+when available.
 
-`image doctor` is a read-only check for missing or stale local bundled images.
-It compares RunHaven source-digest labels when present, falls back to
-image/template timestamps for older unlabeled images, and reviews inactive
-RunHaven state volumes for the selected profile. `image rebuild` rebuilds the
-bundled image from the pinned local template. `state` commands manage RunHaven
-agent home volumes. `network` commands list or delete only RunHaven-managed
-Apple `container` network names, including volume-preparation, internal, and
-provider networks. None of these commands delete workspace files.
-
-## Run Observability And Recovery
-
-RunHaven records secret-free run metadata under its cache directory:
-
-- `runhaven runs list`
-- `runhaven runs show RUN_ID`
-- `runhaven runs log RUN_ID`
-- `runhaven runs diff RUN_ID`
-- `runhaven runs keep RUN_ID`
-- `runhaven runs recover RUN_ID`
-- `runhaven runs merge RUN_ID`
-- `runhaven runs discard RUN_ID`
-- `runhaven runs active`
-- `runhaven runs status RUN_ID`
-- `runhaven runs attach RUN_ID`
-- `runhaven runs logs-follow RUN_ID`
-- `runhaven runs stop RUN_ID`
-- `runhaven runs kill RUN_ID`
-- `runhaven runs repair RUN_ID`
-- `runhaven runs repair --all`
-
-Run records include run id, profile, workspace, workspace scope, network mode,
-return code, provider policy summary, auth broker summary, cleanup outcome, and
-git change metadata when available. Worktree run records also include source
-repo, worktree path, branch, base commit, mounted workspace, and recovery
-commands.
+| Need | Commands |
+| --- | --- |
+| Review completed runs | `runs list`, `runs show`, `runs log`, `runs diff` |
+| Inspect or control active runs | `runs active`, `runs status`, `runs attach`, `runs logs-follow`, `runs stop`, `runs kill`, `runs repair` |
+| Review provider policy decisions | `egress log`, `why host` |
+| Inspect auth broker state | `auth status`, `auth explain`, `auth log` |
+| Repair bundled images | `image doctor`, `image rebuild`, `image build --dry-run` |
+| Manage isolated state volumes | `state list`, `state reset`, `state prune` |
+| Manage RunHaven networks | `network list`, `network prune --yes` |
 
 Run records do not store diffs, file contents, prompts, command lines, agent
 arguments, attach commands, environment variable names, environment values,
 request bodies, or token values. Live container logs may still contain whatever
 the agent process printed during the run.
-
-## State Management
-
-Each project/profile gets an isolated default agent home volume. Use
-`--session NAME` to choose a named reusable project/profile home volume:
-
-```bash
-runhaven run claude --session review
-runhaven state list
-runhaven state list --session review
-runhaven state reset claude --session review --yes
-runhaven state prune --session review --yes
-runhaven state prune --yes
-```
-
-Session names use lowercase letters, numbers, dots, underscores, or dashes;
-`default` is reserved for the implicit default session. `state reset` deletes
-one planned project/profile/session home volume. `state prune --session NAME
---yes` deletes matching named-session volumes. `state prune --yes` deletes
-RunHaven agent home volumes. These commands do not touch workspace files.
 
 ## Current Limits
 

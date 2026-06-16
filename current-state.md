@@ -58,6 +58,9 @@ policy, and repo-owned verification route.
   keeps one compact product/value narrative, one quick-start path, and routes
   detailed feature and command coverage to `docs/CAPABILITIES.md` and
   `docs/USAGE.md`.
+- Reworked `docs/CAPABILITIES.md` into a scan-friendly overview with compact
+  tables for runtime defaults, profiles, network modes, credentials,
+  sessions/state, observability, and current limits.
 - Corrected the Cargo development command in installation docs to name the
   `runhaven` binary explicitly.
 
@@ -84,6 +87,9 @@ policy, and repo-owned verification route.
 - README docs checks: pin check, local Markdown link check, platform
   wording/stale-command scan, duplicate-section scan, `git diff --check`, and
   CLI `plan` smoke passed.
+- Capabilities docs cleanup checks: pin check, local Markdown link check,
+  platform/stale-command scan, `git diff --check`, `runhaven agents`, and
+  `runhaven plan shell` smokes passed.
 
 ## Touched Surfaces
 
@@ -111,6 +117,6 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Monitor main-branch CI after the README entry-point dedupe commit. Future work
+Monitor main-branch CI after the capabilities docs cleanup commit. Future work
 should broaden live provider/container smokes and Tauri planning from the Rust
 module boundaries now in place.
