@@ -74,10 +74,14 @@ tests are in place.
   state-volume lock module, frontend launch helper, confirmation controls, and
   Playwright preview coverage. Launch requires plan confirmation, every warning
   acknowledgement, and passing setup checks before it starts a background run.
+- Added the next launch-readiness slice: structured image and builder status
+  from the existing image doctor path, typed Tauri `get_image_status`,
+  `main-read` permission for that command, launch-panel readiness UI, and
+  launch refusal when the selected bundled profile image is missing or stale.
 - Remaining launch-readiness gaps before the UI launch flow is complete are
-  image status, builder status, active-run resource warnings, and richer
-  post-start status/log feedback. Stop, kill, attach, repair, image build,
-  state cleanup, network cleanup, and worktree review remain CLI-first.
+  active-run resource warnings and richer post-start status/log feedback. Stop,
+  kill, attach, repair, image build, state cleanup, network cleanup, and
+  worktree review remain CLI-first.
 - Fixed the Svelte 5 blank-page runtime failure by replacing the old
   `new App(...)` entrypoint with `mount(App, ...)`.
 - Added exact-pinned Playwright browser coverage for the UI shell so runtime
@@ -204,6 +208,32 @@ tests are in place.
 - Tauri launch red checks failed first for missing launch contract pieces:
   `cargo test --manifest-path src-tauri/Cargo.toml launch_run` and
   `npm --prefix ui test -- --run`.
+- Tauri image-readiness red checks failed first for missing structured image
+  status pieces: `cargo test --locked profile_image_status`,
+  `cargo test --manifest-path src-tauri/Cargo.toml image_readiness --locked`,
+  and `npm --prefix ui test -- --run`.
+- `cargo test --locked profile_image_status`: passed with 3 image status tests.
+- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 9
+  Tauri command tests.
+- `npm --prefix ui test -- --run`: passed with 11 frontend tests.
+- `npm --prefix ui run test:e2e`: passed with 2 Chromium tests, including the
+  image-readiness launch preview path.
+- `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
+- `cargo test --locked`: passed with 44 library tests and 6 integration tests.
+- `cargo clippy --all-targets --locked -- -D warnings`: passed.
+- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`:
+  passed.
+- `npm --prefix ui run build`: passed with Vite 8.0.16.
+- Browser screenshot review passed for the launch-panel image readiness block:
+  `/tmp/runhaven-image-readiness.png`.
+- `./init.sh`: passed with root Rust fmt/test/clippy/pin/build checks,
+  frontend install/typecheck/unit/build/Playwright checks, Tauri Rust
+  fmt/test/clippy checks, and debug no-bundle Tauri build.
+- `python3 -m json.tool feature_list.json`: passed.
+- `python3 -m json.tool src-tauri/capabilities/main-read.json`: passed.
+- Source-size guard passed; the largest Rust file remains
+  `src/runhaven/provider/auth_broker.rs` at 499 lines.
+- `git diff --check`: passed.
 - `cargo fmt`: passed.
 - `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
 - `npm --prefix ui test -- --run`: passed with 1 test file and 9 tests.
@@ -388,6 +418,8 @@ tests are in place.
 - `src/runhaven/harness/pins.rs`
 - `src/runhaven/runtime/launch.rs`
 - `src/runhaven/runtime/lock.rs`
+- `src/runhaven/image/doctor.rs`
+- `src/runhaven/image/doctor/builder.rs`
 - `src-tauri/`
 - `ui/`
 
@@ -401,12 +433,11 @@ tests are in place.
 
 ## Next Step
 
-Choose the next Tauri/UI slice deliberately. The best next step is launch
-readiness and run feedback before broader controls: add typed image/builder
-status to the dashboard or launch panel, warn on concurrent active runs and
-material memory usage, and show post-start active-run status/log snapshots.
-After that, add stop, kill, attach, repair, image build, state cleanup,
-network cleanup, and worktree review one at a time with typed Rust commands,
-explicit confirmation, focused tests, and narrow capabilities. Keep `--ssh`
-fail-closed until a no-secret non-root Apple `container` smoke proves usable
-forwarding.
+Choose the next Tauri/UI slice deliberately. The best next step is active-run
+resource warning and run feedback before broader controls: warn on concurrent
+active runs and material memory usage, then show post-start active-run
+status/log snapshots. After that, add stop, kill, attach, repair, image build,
+state cleanup, network cleanup, and worktree review one at a time with typed
+Rust commands, explicit confirmation, focused tests, and narrow capabilities.
+Keep `--ssh` fail-closed until a no-secret non-root Apple `container` smoke
+proves usable forwarding.

@@ -4,6 +4,7 @@ fn main() {
             "get_setup_status",
             "list_agents",
             "get_dashboard_status",
+            "get_image_status",
             "plan_run",
             "launch_run",
         ]),

@@ -7,12 +7,14 @@
     chooseProjectFolder,
     defaultRunPlanRequest,
     getDashboardStatus,
+    getImageStatus,
     isLaunchReady,
     launchRun,
     planRun,
     secureNetworkDefault,
     type AgentProfile,
     type DashboardStatus,
+    type ImageStatusResponse,
     type RunPlanRequest,
     type RunPlanResponse
   } from "../commands/runhaven";
@@ -23,14 +25,19 @@
   let loading = true;
   let planning = false;
   let launching = false;
+  let imageLoading = false;
+  let imageStatus: ImageStatusResponse | null = null;
+  let imageError = "";
   let launchConfirmation = false;
   let confirmedWarnings: string[] = [];
   let launchMessage = "";
   let error = "";
 
   $: selectedAgent = dashboard?.agents.find((agent) => agent.name === request.agent);
+  $: launchImageReady = request.image ? true : imageStatus?.image.ready === true;
   $: launchReady =
-    Boolean(dashboard?.setup.ok) && isLaunchReady(plan, launchConfirmation, new Set(confirmedWarnings));
+    Boolean(dashboard?.setup.ok) &&
+    isLaunchReady(plan, launchConfirmation, new Set(confirmedWarnings), launchImageReady);
 
   onMount(() => {
     void refresh();
@@ -48,6 +55,7 @@
           workspacePath: request.workspacePath,
           sessionName: request.sessionName
         };
+        await loadImageStatus(agent.name);
       }
     } catch (cause) {
       error = cause instanceof Error ? cause.message : String(cause);
@@ -64,6 +72,20 @@
       networkMode: secureNetworkDefault(agent)
     };
     invalidatePlan();
+    void loadImageStatus(agentName);
+  }
+
+  async function loadImageStatus(agentName: string) {
+    imageLoading = true;
+    imageError = "";
+    try {
+      imageStatus = await getImageStatus(agentName);
+    } catch (cause) {
+      imageStatus = null;
+      imageError = cause instanceof Error ? cause.message : String(cause);
+    } finally {
+      imageLoading = false;
+    }
   }
 
   async function pickFolder() {
@@ -228,6 +250,47 @@
           <p class="agent-detail">{selectedAgent.description}</p>
         {/if}
 
+        <div class="readiness" aria-live="polite">
+          {#if imageLoading}
+            <p class="muted">Checking image...</p>
+          {:else if imageStatus}
+            <div class="readiness-row">
+              <StatusPill
+                ok={imageStatus.image.ready}
+                label={imageStatus.image.ready ? "OK" : "Fix"}
+              />
+              <div>
+                <h3>{imageStatus.image.ready ? "Image ready" : "Image needs rebuild"}</h3>
+                <p>{imageStatus.image.image}</p>
+                {#if imageStatus.image.fixCommand}
+                  <p class="remedy">{imageStatus.image.fixCommand}</p>
+                {/if}
+              </div>
+            </div>
+            <div class="readiness-row builder-row">
+              <StatusPill ok={imageStatus.builder.status !== "unavailable"} label="Info" />
+              <div>
+                <h3>Builder {imageStatus.builder.status}</h3>
+                <p>{imageStatus.builder.detail}</p>
+                {#if imageStatus.builder.cpus || imageStatus.builder.memory}
+                  <p>{imageStatus.builder.cpus ?? "unknown"} CPUs, {imageStatus.builder.memory ?? "unknown memory"}</p>
+                {/if}
+                {#if imageStatus.builder.warning}
+                  <p class="remedy">{imageStatus.builder.warning}</p>
+                {/if}
+              </div>
+            </div>
+          {:else if imageError}
+            <div class="readiness-row">
+              <StatusPill ok={false} label="Fix" />
+              <div>
+                <h3>Image status unavailable</h3>
+                <p>{imageError}</p>
+              </div>
+            </div>
+          {/if}
+        </div>
+
         <label>
           <span>Project folder</span>
           <div class="folder-row">
@@ -347,6 +410,9 @@
 
         {#if dashboard && !dashboard.setup.ok}
           <p class="muted">Fix setup blockers before launching a run.</p>
+        {/if}
+        {#if !launchImageReady}
+          <p class="muted">Fix image readiness before launching a run.</p>
         {/if}
 
         <button class="primary launch-button" type="button" disabled={!launchReady || launching} on:click={startRun}>

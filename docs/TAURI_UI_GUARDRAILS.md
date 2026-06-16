@@ -70,14 +70,14 @@ Current alpha launch gate:
 - selected network mode and egress summary from `runhaven plan`;
 - selected workspace path and workspace scope;
 - selected state volume and session;
+- selected bundled profile image status and builder status from typed Rust
+  image diagnostics;
 - explicit confirmation of the reviewed plan;
 - explicit confirmation for every warning returned by the plan;
 - launch blocked when `runhaven doctor` fails.
 
 Remaining launch-readiness gaps before this flow is complete:
 
-- image status from `runhaven image doctor AGENT`;
-- builder status and builder CPU/memory guidance from `image doctor`;
 - warning when there is at least one active run and the user starts another
   run;
 - warning when the selected memory limit plus active runs could be material on
@@ -91,8 +91,9 @@ Warnings:
 - block launch if `runhaven doctor` fails.
 
 The current dashboard command already returns setup, active-run, recent-run,
-agent, and warning summaries. Add dedicated typed Rust commands for image,
-builder, and maintenance status before parsing prose in the frontend.
+agent, and warning summaries. Image and builder status are available through
+typed Rust commands. Add dedicated typed Rust commands for maintenance status
+before parsing prose in the frontend.
 
 ## Approval Gates
 

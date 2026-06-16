@@ -42,6 +42,34 @@ export type DashboardStatus = {
   warnings: string[];
 };
 
+export type ProfileImageStatus = {
+  agent: string;
+  image: string;
+  status: "ok" | "missing" | "stale" | string;
+  ready: boolean;
+  expectedSourceDigest: string;
+  localSourceDigest: string | null;
+  fixCommand: string | null;
+};
+
+export type BuilderStatus = {
+  status: string;
+  detail: string;
+  image: string | null;
+  cpus: string | null;
+  memory: string | null;
+  rosetta: boolean | null;
+  startedDate: string | null;
+  ipv4Address: string | null;
+  warning: string | null;
+};
+
+export type ImageStatusResponse = {
+  agent: string;
+  image: ProfileImageStatus;
+  builder: BuilderStatus;
+};
+
 export type RunPlanRequest = {
   agent: string;
   workspacePath: string;
@@ -174,6 +202,32 @@ export async function getDashboardStatus(): Promise<DashboardStatus> {
   }));
 }
 
+export async function getImageStatus(agent: string): Promise<ImageStatusResponse> {
+  return call("get_image_status", { request: { agent } }, () => ({
+    agent,
+    image: {
+      agent,
+      image: `runhaven/${agent}:0.1.0`,
+      status: "ok",
+      ready: true,
+      expectedSourceDigest: "preview",
+      localSourceDigest: "preview",
+      fixCommand: null
+    },
+    builder: {
+      status: "preview",
+      detail: "Using static preview data",
+      image: "preview",
+      cpus: "2",
+      memory: "2048 MiB",
+      rosetta: null,
+      startedDate: null,
+      ipv4Address: null,
+      warning: null
+    }
+  }));
+}
+
 export async function planRun(request: RunPlanRequest): Promise<RunPlanResponse> {
   return call("plan_run", { request }, () => ({
     profile: request.agent,
@@ -289,9 +343,10 @@ export function warningPreview(request: RunPlanRequest): PlanWarning[] {
 export function isLaunchReady(
   plan: Pick<RunPlanResponse, "warnings"> | null,
   confirmLaunch: boolean,
-  confirmedWarnings: Set<string>
+  confirmedWarnings: Set<string>,
+  imageReady = true
 ): boolean {
-  if (!plan || !confirmLaunch) {
+  if (!plan || !confirmLaunch || !imageReady) {
     return false;
   }
   return plan.warnings.every((warning) => confirmedWarnings.has(warning.code));

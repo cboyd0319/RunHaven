@@ -1,12 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-read",
-  "description": "Read-only access for RunHaven setup, dashboard, profile, and planning commands.",
+  "description": "Read-only access for RunHaven setup, dashboard, profile, image status, and planning commands.",
   "windows": ["main"],
   "permissions": [
     "allow-get-setup-status",
     "allow-list-agents",
     "allow-get-dashboard-status",
+    "allow-get-image-status",
     "allow-plan-run"
   ]
 }

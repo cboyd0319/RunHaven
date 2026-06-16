@@ -21,6 +21,7 @@ test("renders the dashboard without runtime errors", async ({ page }) => {
 test("reviews and starts a preview run", async ({ page }) => {
   await page.goto("/");
 
+  await expect(page.getByText("Image ready")).toBeVisible();
   await page.getByLabel("Project folder path").fill("/tmp/runhaven-preview");
   await page.getByRole("button", { name: "Review plan" }).click();
 

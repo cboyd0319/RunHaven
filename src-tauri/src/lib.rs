@@ -8,6 +8,7 @@ pub fn run() {
             commands::get_setup_status,
             commands::list_agents,
             commands::get_dashboard_status,
+            commands::image_status::get_image_status,
             commands::plan_run,
             commands::launch_run,
         ])

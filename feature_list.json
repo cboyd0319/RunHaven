@@ -93,7 +93,31 @@
       "evidence": [
         "2026-06-16: Added shared Rust launch runtime and state-volume lock modules, a typed Tauri `launch_run` command, a separate `launch-run` capability, Svelte launch confirmation controls, frontend command helpers, Rust/frontend/Playwright tests, and docs updates. Focused and broader verification passed before commit."
       ],
-      "notes": "Image readiness, builder status, active-run resource warnings, live logs, stop, kill, attach, repair, image build, state cleanup, and worktree review controls remain future UI slices."
+      "notes": "Active-run resource warnings, live logs, stop, kill, attach, repair, image build, state cleanup, and worktree review controls remain future UI slices. Image and builder readiness are tracked separately in `tauri-image-readiness`."
+    },
+    {
+      "id": "tauri-image-readiness",
+      "priority": 0,
+      "area": "ui",
+      "title": "Tauri image readiness",
+      "user_visible_behavior": "The alpha desktop launch panel shows selected-agent image readiness and Apple builder status, and launch is blocked when the bundled profile image is missing or stale.",
+      "status": "passing",
+      "dependencies": [
+        "tauri-launch-execution",
+        "rust-cli-conversion",
+        "runtime-hardening-macos-only-boundary"
+      ],
+      "verification": [
+        "Image readiness uses structured Rust image-doctor data instead of parsing CLI prose in the frontend",
+        "`get_image_status` is read-only and granted through `main-read`",
+        "The Tauri launch path refuses missing or stale bundled profile images before starting a background run",
+        "Custom image launches remain an explicit advanced path covered by the existing custom-image warning",
+        "Frontend and Playwright coverage prove image readiness appears in the launch panel and gates launch readiness"
+      ],
+      "evidence": [
+        "2026-06-16: Added structured image and builder status reports, typed Tauri `get_image_status`, image readiness launch enforcement, launch-panel readiness UI, and focused Rust/Tauri/frontend/Playwright tests."
+      ],
+      "notes": "Active-run resource warnings and post-start status/log feedback are still the next launch-readiness gaps."
     },
     {
       "id": "rust-cli-conversion",

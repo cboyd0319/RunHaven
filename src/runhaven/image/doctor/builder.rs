@@ -3,6 +3,8 @@ use std::process::Command;
 use anyhow::{Result, bail};
 use serde_json::Value;
 
+use super::BuilderStatusSummary;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum BuilderDiagnostics {
     Live(BuilderStatus),
@@ -42,6 +44,74 @@ pub(super) fn read_builder_diagnostics() -> BuilderDiagnostics {
         },
         Err(error) => BuilderDiagnostics::Unavailable {
             detail: error.to_string(),
+        },
+    }
+}
+
+pub(super) fn summarize_builder_diagnostics(
+    diagnostics: &BuilderDiagnostics,
+) -> BuilderStatusSummary {
+    match diagnostics {
+        BuilderDiagnostics::Live(status) => BuilderStatusSummary {
+            status: status
+                .state
+                .clone()
+                .unwrap_or_else(|| "unknown".to_string()),
+            detail: format!(
+                "{}: {}",
+                status.id.as_deref().unwrap_or("buildkit"),
+                status.image.as_deref().unwrap_or("unknown image")
+            ),
+            image: status.image.clone(),
+            cpus: status.cpus.map(|value| value.to_string()),
+            memory: status.memory_bytes.map(format_memory),
+            rosetta: status.rosetta,
+            started_date: status.started_date.clone(),
+            ipv4_address: status.ipv4_address.clone(),
+            warning: (status.state.as_deref() != Some("running")).then(|| {
+                "Builder is not running; the next build may need to start it.".to_string()
+            }),
+        },
+        BuilderDiagnostics::NotRunning { defaults } => match defaults {
+            Ok(defaults) => BuilderStatusSummary {
+                status: "not-running".to_string(),
+                detail: "No BuildKit builder container is running.".to_string(),
+                image: defaults.image.clone(),
+                cpus: defaults.cpus.map(|value| value.to_string()),
+                memory: defaults.memory.clone(),
+                rosetta: defaults.rosetta,
+                started_date: None,
+                ipv4_address: None,
+                warning: Some(
+                    "The next image build can start the builder automatically.".to_string(),
+                ),
+            },
+            Err(error) => BuilderStatusSummary {
+                status: "not-running".to_string(),
+                detail: format!(
+                    "No BuildKit builder container is running. Configured defaults unavailable: {error}"
+                ),
+                image: None,
+                cpus: None,
+                memory: None,
+                rosetta: None,
+                started_date: None,
+                ipv4_address: None,
+                warning: Some(
+                    "The next image build can start the builder automatically.".to_string(),
+                ),
+            },
+        },
+        BuilderDiagnostics::Unavailable { detail } => BuilderStatusSummary {
+            status: "unavailable".to_string(),
+            detail: detail.clone(),
+            image: None,
+            cpus: None,
+            memory: None,
+            rosetta: None,
+            started_date: None,
+            ipv4_address: None,
+            warning: Some("Run setup checks before relying on builder status.".to_string()),
         },
     }
 }

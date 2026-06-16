@@ -17,6 +17,48 @@ struct LocalImage {
     source_digest: Option<String>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ProfileImageStatus {
+    pub agent: String,
+    pub image: String,
+    pub status: String,
+    pub ready: bool,
+    pub expected_source_digest: String,
+    pub local_source_digest: Option<String>,
+    pub fix_command: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BuilderStatusSummary {
+    pub status: String,
+    pub detail: String,
+    pub image: Option<String>,
+    pub cpus: Option<String>,
+    pub memory: Option<String>,
+    pub rosetta: Option<bool>,
+    pub started_date: Option<String>,
+    pub ipv4_address: Option<String>,
+    pub warning: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ImageStatusReport {
+    pub agent: String,
+    pub image: ProfileImageStatus,
+    pub builder: BuilderStatusSummary,
+}
+
+pub fn collect_image_status(agent: &str) -> Result<ImageStatusReport> {
+    let profile = get_profile(agent)?;
+    let local_images = list_local_images()?;
+    let builder_diagnostics = builder::read_builder_diagnostics();
+    Ok(ImageStatusReport {
+        agent: profile.name.to_string(),
+        image: profile_image_status(&profile, &local_images)?,
+        builder: builder::summarize_builder_diagnostics(&builder_diagnostics),
+    })
+}
+
 pub fn image_doctor(agent: Option<&str>) -> Result<i32> {
     let local_images = list_local_images()?;
     let builder_diagnostics = builder::read_builder_diagnostics();
@@ -27,23 +69,11 @@ pub fn image_doctor(agent: Option<&str>) -> Result<i32> {
 
     println!("Image doctor");
     for profile in &selected {
-        let source_digest = image_source_digest(profile)?;
-        let local = find_local_image(profile.image, &local_images);
-        let stale = local
-            .and_then(|image| image.source_digest.as_deref())
-            .is_some_and(|digest| digest != source_digest);
-        let status = if local.is_none() {
+        let status = profile_image_status(profile, &local_images)?;
+        println!("{} {}: {}", status.status, profile.name, profile.image);
+        if !status.ready {
             ok = false;
-            "missing"
-        } else if stale {
-            ok = false;
-            "stale"
-        } else {
-            "ok"
-        };
-        println!("{status} {}: {}", profile.name, profile.image);
-        if local.is_none() || stale {
-            if stale {
+            if status.status == "stale" {
                 println!("reason: bundled source digest differs from local image metadata");
             }
             println!("fix: runhaven image rebuild {}", profile.name);
@@ -53,6 +83,34 @@ pub fn image_doctor(agent: Option<&str>) -> Result<i32> {
     print_state_volume_review(&selected, &state_volumes, &active_state_volumes, agent);
     print_preflight_recovery(agent);
     Ok(if ok { 0 } else { 1 })
+}
+
+fn profile_image_status(
+    profile: &AgentProfile,
+    local_images: &[LocalImage],
+) -> Result<ProfileImageStatus> {
+    let expected_source_digest = image_source_digest(profile)?;
+    let local = find_local_image(profile.image, local_images);
+    let stale = local
+        .and_then(|image| image.source_digest.as_deref())
+        .is_some_and(|digest| digest != expected_source_digest);
+    let status = if local.is_none() {
+        "missing"
+    } else if stale {
+        "stale"
+    } else {
+        "ok"
+    };
+    let ready = status == "ok";
+    Ok(ProfileImageStatus {
+        agent: profile.name.to_string(),
+        image: profile.image.to_string(),
+        status: status.to_string(),
+        ready,
+        expected_source_digest,
+        local_source_digest: local.and_then(|image| image.source_digest.clone()),
+        fix_command: (!ready).then(|| format!("runhaven image rebuild {}", profile.name)),
+    })
 }
 
 fn selected_profiles(agent: Option<&str>) -> Result<Vec<AgentProfile>> {
@@ -259,5 +317,47 @@ mod tests {
                 .to_string()
                 .contains("could not parse Apple container image list JSON")
         );
+    }
+
+    #[test]
+    fn profile_image_status_marks_missing_bundled_image_not_ready() {
+        let profile = get_profile("shell").expect("profile");
+        let status = profile_image_status(&profile, &[]).expect("image status");
+
+        assert_eq!(status.status, "missing");
+        assert!(!status.ready);
+        assert_eq!(
+            status.fix_command.as_deref(),
+            Some("runhaven image rebuild shell")
+        );
+    }
+
+    #[test]
+    fn profile_image_status_marks_stale_bundled_image_not_ready() {
+        let profile = get_profile("shell").expect("profile");
+        let local = LocalImage {
+            names: BTreeSet::from([profile.image.to_string()]),
+            source_digest: Some("old-source".to_string()),
+        };
+        let status = profile_image_status(&profile, &[local]).expect("image status");
+
+        assert_eq!(status.status, "stale");
+        assert!(!status.ready);
+        assert_eq!(status.local_source_digest.as_deref(), Some("old-source"));
+    }
+
+    #[test]
+    fn profile_image_status_marks_current_bundled_image_ready() {
+        let profile = get_profile("shell").expect("profile");
+        let source_digest = image_source_digest(&profile).expect("digest");
+        let local = LocalImage {
+            names: BTreeSet::from([profile.image.to_string()]),
+            source_digest: Some(source_digest),
+        };
+        let status = profile_image_status(&profile, &[local]).expect("image status");
+
+        assert_eq!(status.status, "ok");
+        assert!(status.ready);
+        assert_eq!(status.fix_command, None);
     }
 }

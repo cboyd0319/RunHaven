@@ -124,6 +124,8 @@ The consolidated non-UI backlog lives in
 - First mutating slice is implemented: `launch_run` reuses the Rust launch
   path, requires explicit launch and warning confirmation, blocks when setup
   checks fail, and lives behind the `launch-run` capability.
+- Launch readiness now shows typed image and builder status and blocks launch
+  when the selected bundled profile image is missing or stale.
 - Remaining UI controls should still be added one at a time with typed Rust
   commands, explicit confirmation, focused tests, and narrow capabilities.
 

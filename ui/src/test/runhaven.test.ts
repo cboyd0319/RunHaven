@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   defaultRunPlanRequest,
   getDashboardStatus,
+  getImageStatus,
   getSetupStatus,
   isLaunchReady,
   launchRun,
@@ -82,6 +83,15 @@ describe("runhaven command helpers", () => {
     expect(plan.warnings.map((warning) => warning.code)).toEqual(["full-internet"]);
   });
 
+  it("returns image readiness preview data outside the Tauri runtime", async () => {
+    const status = await getImageStatus("codex");
+
+    expect(status.agent).toBe("codex");
+    expect(status.image.ready).toBe(true);
+    expect(status.image.status).toBe("ok");
+    expect(status.builder.status).toBe("preview");
+  });
+
   it("requires explicit confirmation before launch is available", async () => {
     const request = {
       ...defaultRunPlanRequest(providerAgent),
@@ -91,6 +101,16 @@ describe("runhaven command helpers", () => {
 
     expect(isLaunchReady(plan, false, new Set())).toBe(false);
     expect(isLaunchReady(plan, true, new Set())).toBe(true);
+  });
+
+  it("blocks launch when the bundled image is not ready", async () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview"
+    };
+    const plan = await planRun(request);
+
+    expect(isLaunchReady(plan, true, new Set(), false)).toBe(false);
   });
 
   it("requires every warning to be acknowledged before launch is available", async () => {
