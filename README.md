@@ -133,34 +133,6 @@ directory at `/workspace`, not your whole home directory.
 See [Installation](docs/INSTALLATION.md) for requirements and development
 setup. See [Usage](docs/USAGE.md) for command-level workflows.
 
-## Core Capabilities
-
-- `runhaven plan` prints the workspace, state volume, network mode, egress
-  status, preflight setup, and Apple `container run` command before execution.
-- `runhaven run` mounts one selected workspace and one isolated per-project
-  agent home volume.
-- `--session NAME` selects a reusable named project/profile home volume, with
-  explicit reset and prune commands.
-- Bundled images run as a non-root `agent` user with a read-only root
-  filesystem, temporary scratch space, and dropped Linux capabilities.
-- `--workspace-scope current|git-root` keeps the default mount narrow and makes
-  repository-root expansion explicit.
-- `--worktree` runs agents in a RunHaven-owned git worktree so the source
-  checkout stays untouched.
-- Worktree review commands suggest detected project checks without running
-  them automatically.
-- `--network internal` supports local-only commands.
-- `--network provider` routes normal agent runs through a host-side provider
-  host allowlist proxy on an internal Apple `container` network.
-- `--ssh` forwards the macOS SSH agent without mounting raw SSH keys.
-- `--env NAME` passes one reviewed host environment variable by name; `NAME=value`
-  is rejected.
-- `runhaven runs ...`, `runhaven egress log`, and `runhaven auth ...` expose
-  secret-free run, provider policy, and auth broker diagnostics.
-
-See [Capabilities](docs/CAPABILITIES.md) for the full feature and limitation
-overview.
-
 ## Supported Agents
 
 ```bash
