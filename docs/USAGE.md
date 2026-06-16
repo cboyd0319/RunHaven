@@ -561,6 +561,20 @@ runhaven run claude --ssh
 This forwards the macOS SSH agent socket using Apple `container --ssh`. It does
 not mount the host SSH key directory.
 
+For local verification without exposing real private keys, use the Apple
+container smoke harness. Its default path checks the planned `--ssh` command
+shape. `--with-ssh` starts a disposable empty `ssh-agent` and checks whether
+the guest can reach it with `ssh-add -l` without mounting `~/.ssh`:
+
+```bash
+scripts/apple_container_smoke.sh --with-ssh
+```
+
+On the current pinned Apple `container` 1.0.0 runtime, this live check can fail
+for RunHaven's non-root `agent` user with a permission error even though the
+socket path is visible. Treat that as an Apple `container` SSH-forwarding
+blocker, not as a reason to mount raw SSH keys or run the agent as root.
+
 ## Reusable Sessions And State Volumes
 
 ```bash

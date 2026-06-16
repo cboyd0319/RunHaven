@@ -76,6 +76,9 @@ policy, and repo-owned verification route.
   readiness, internal read-only workspace behavior, active-run
   status/logs-follow/stop cleanup, provider planning, and exact cleanup.
   `--with-provider` adds live provider allowlist and egress-denial coverage.
+  `--with-ssh` is a no-secret live SSH-forwarding connectivity check with a
+  disposable empty `ssh-agent`; it currently exposes an Apple `container` 1.0.0
+  non-root socket permission blocker.
 - Fixed the Rust provider CONNECT proxy relay after the live smoke exposed TLS
   tunnel failures. Accepted/tunnel sockets are forced back to blocking mode,
   and CONNECT header reads no longer consume tunneled bytes.
@@ -109,6 +112,10 @@ policy, and repo-owned verification route.
 - Added provider-mode troubleshooting guidance that distinguishes allowlist
   denials from host-side proxy reachability or macOS Local Network privacy
   failures.
+- Extended `scripts/apple_container_smoke.sh` with default SSH-forwarding plan
+  coverage and an opt-in `--with-ssh` live connectivity check using a
+  disposable empty `ssh-agent`. Apple Container expert review found the
+  previous path-only check was a false positive.
 
 ## Trusted Verification
 
@@ -189,6 +196,12 @@ policy, and repo-owned verification route.
   `target/debug/runhaven network list`, pin policy, JSON validation, local
   Markdown link check, active-doc platform/stale-command scan, and
   `git diff --check` passed.
+- SSH forwarding smoke review found a blocker: Bash syntax check and the
+  default `scripts/apple_container_smoke.sh` path passed, corrected
+  `scripts/apple_container_smoke.sh --with-ssh` failed as expected with
+  `Error connecting to agent: Permission denied`, and cleanup checks found no
+  active runs or RunHaven state volumes. The script now treats that as a failed
+  live SSH smoke instead of passing on socket existence.
 
 ## Touched Surfaces
 
@@ -217,11 +230,16 @@ policy, and repo-owned verification route.
 
 ## Blockers
 
-- None known.
+- Apple `container` 1.0.0 exposes an SSH agent socket to the RunHaven non-root
+  `agent` user with `--ssh`, but the guest cannot use it: `ssh-add -l` returns
+  permission denied. Do not treat SSH forwarding as proven, do not mount raw SSH
+  keys, and do not switch the default agent user to root without an explicit
+  security decision.
 
 ## Next Step
 
-Decide whether to do the accepted script-description cleanup or the planned
-Rust expert plus Rust skill repo-wide review next. Remaining Apple
-`container` pre-Tauri items are P2 SSH-forwarding smoke coverage and the
-release-update playbook. Keep verification local while alpha CI is disabled.
+Decide how to handle the SSH-forwarding blocker: document and leave `--ssh` as
+known-limited, disable/hide `--ssh` until Apple `container` non-root forwarding
+works, or investigate a safe upstream/runtime workaround. After that, close the
+Apple `container` release-update playbook gap. Keep verification local while
+alpha CI is disabled.

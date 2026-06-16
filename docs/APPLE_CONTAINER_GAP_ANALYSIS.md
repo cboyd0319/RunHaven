@@ -21,6 +21,12 @@ closed before Tauri/UI work starts.
   temporary state/network cleanup. A later 2026-06-16 rerun also passed without
   a macOS Local Network privacy prompt or guest-to-host proxy reachability
   failure on the current host.
+- SSH smoke evidence: a path-only `--with-ssh` smoke false-passed on
+  2026-06-16 and was rejected by Apple Container expert review. The stricter
+  no-secret check must prove `ssh-add -l` connectivity against a disposable
+  empty `ssh-agent`; on the current pinned Apple `container` 1.0.0 runtime,
+  non-root RunHaven agent runs see the socket path but `ssh-add -l` fails with
+  permission denied.
 - Runtime property evidence: `container system version --format json` and
   `container system property list --format json` matched the reviewed Apple
   `container` commit, builder image
@@ -61,6 +67,7 @@ Apple `container` 1.0.0 behavior.
 | Managed cleanup | `network list/prune`, `state list/prune/reset`, and repair commands operate on RunHaven-owned names only. | `src/runhaven/runtime/network.rs`, `src/runhaven/runtime/state.rs` |
 | Tauri planning guardrails | Future WebView control is scoped to typed Rust commands, narrow Tauri capabilities, visible run resources, and explicit approval gates before mutating Apple `container` operations. | `docs/TAURI_UI_GUARDRAILS.md` |
 | Provider troubleshooting | Usage docs distinguish policy denials from host-side proxy reachability failures and name the safe provider-smoke commands to collect before changing security posture. | `docs/USAGE.md`, `scripts/apple_container_smoke.sh` |
+| SSH forwarding plan shape | The local smoke harness verifies `--ssh` plan shape without using real keys. Live no-secret connectivity remains blocked for the default non-root agent user on the current pinned Apple `container` runtime. | `scripts/apple_container_smoke.sh`, `docs/USAGE.md` |
 | Opt-in live smoke | `scripts/apple_container_smoke.sh` proves the internal runtime path by default and adds provider egress coverage with `--with-provider`; it is intentionally local-only while alpha CI is disabled. | `scripts/apple_container_smoke.sh`, `docs/harness/feedback/verification-matrix.md` |
 | JSON parser fixtures | Trimmed fixtures cover Apple `container` 1.0.0 image list, network inspect, container inspect, source-backed legacy inspect attachment aliases, and missing-container stderr classification without requiring live Apple `container` in unit tests. | `tests/fixtures/apple_container/`, `src/runhaven/image/doctor.rs`, `src/runhaven/provider/runtime.rs`, `src/runhaven/runtime/active/` |
 | Machine avoidance | RunHaven uses task-scoped `container run`, not `container machine`, because machine defaults can mount the host home directory read-write. | `docs/ARCHITECTURE.md`, Apple `docs/container-machine.md` |
@@ -85,7 +92,7 @@ Apple `container` 1.0.0 behavior.
 | --- | --- | --- | --- | --- |
 | P0 | Rust-era live runtime smokes must stay easy to run before Tauri/UI work. | Unit tests prove command construction, but not installed Apple `container` JSON shapes or runtime behavior. | Use `scripts/apple_container_smoke.sh` as the opt-in local smoke. It runs `runhaven doctor`, `runhaven plan shell`, a minimal `runhaven run shell` smoke, active-run status/logs-follow/stop/repair cleanup, provider plan guidance, and exact resource cleanup checks. Keep it out of hosted CI while alpha CI is disabled. | `scripts/apple_container_smoke.sh` exits 0 on macOS 26+ with Apple `container` 1.0.0 and records cleanup evidence. |
 | P0 | Provider-mode live smoke must stay covered in Rust. | Provider mode depends on host-only networking, network inspect schema, gateway binding, proxy env injection, and cleanup. | Use `scripts/apple_container_smoke.sh --with-provider` for release and pre-Tauri provider evidence. Keep the default smoke usable without live provider network/proxy dependencies. | Provider smoke passes with allowed proxied HTTPS, denied proxied host, denied proxied IP literal, denied direct DNS/IP egress, and no leftover provider network. |
-| P2 | SSH forwarding lacks a live RunHaven smoke. | `--ssh` uses Apple `container --ssh`, which mounts an SSH agent socket rather than raw keys. This is safer but still a credential boundary. | Add a no-secret smoke that verifies the planned command shape and, when a disposable agent socket is available, confirms the guest sees only the forwarded socket path. | Plan test plus optional live smoke documented as skipped when no disposable socket exists. |
+| P2 | SSH forwarding is not usable by the default non-root agent user on the current pinned runtime. | `--ssh` uses Apple `container --ssh`, which should forward an SSH agent socket rather than raw keys, but a visible socket is not enough if the `agent` user cannot connect to it. | Keep the plan check and no-secret `--with-ssh` smoke. Do not mount raw SSH keys or switch the default agent user to root. Investigate Apple `container` 1.0.0 non-root socket permissions or wait for an upstream runtime fix before treating `--ssh` as proven. | The gap closes only when `scripts/apple_container_smoke.sh --with-ssh` reaches a disposable empty agent from the non-root guest and `ssh-add -l` returns the no-identities status. |
 | P2 | Apple `container` release update playbook is manual. | Runtime pin updates require source review, helper version review, command help review, docs updates, and live smokes. | Add a small release-update checklist under docs or harness release controls. | Checklist names version, installer SHA, signing team ID, helper versions, command help diffs, and smoke commands. |
 
 Current P0, parser-fixture, doctor-pin, and builder-diagnostic status: the
@@ -98,10 +105,12 @@ builder status/resource guidance from `container builder status --format json`.
 `docs/TAURI_UI_GUARDRAILS.md` now closes the planning gap for UI resource
 warnings and approval gates before any Tauri scaffold exists. `docs/USAGE.md`
 now records provider reachability troubleshooting for host-side proxy and
-Local Network privacy symptoms.
+Local Network privacy symptoms. `scripts/apple_container_smoke.sh --with-ssh`
+now exposes the current SSH-forwarding blocker instead of passing on socket
+existence alone.
 Re-run the live smoke before Tauri/UI work and before release hardening; the
-remaining known pre-Tauri gaps are the P2 SSH and release-update items unless
-provider runtime behavior changes again.
+remaining known pre-Tauri gaps are the P2 SSH-forwarding blocker and the P2
+release-update playbook unless provider or SSH runtime behavior changes again.
 
 ## Backlog Additions
 
