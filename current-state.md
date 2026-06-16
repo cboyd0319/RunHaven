@@ -55,8 +55,9 @@ policy, and repo-owned verification route.
 - Removed ignored local cleanup artifacts from the working tree, including
   stale Python cache/build output and `.DS_Store` files.
 - Deduped the main README after the overview refresh so the top-level page now
-  keeps one product narrative and routes detailed feature coverage to
-  `docs/CAPABILITIES.md`.
+  keeps one compact product/value narrative, one quick-start path, and routes
+  detailed feature and command coverage to `docs/CAPABILITIES.md` and
+  `docs/USAGE.md`.
 - Corrected the Cargo development command in installation docs to name the
   `runhaven` binary explicitly.
 
@@ -81,8 +82,8 @@ policy, and repo-owned verification route.
 - JSON validation, local Markdown link check, `git diff --check`, and Rust
   source size guard: passed.
 - README docs checks: pin check, local Markdown link check, platform
-  wording/stale-command scan, `git diff --check`, and CLI `agents`/`plan`
-  smokes passed.
+  wording/stale-command scan, duplicate-section scan, `git diff --check`, and
+  CLI `plan` smoke passed.
 
 ## Touched Surfaces
 
@@ -110,6 +111,6 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Monitor main-branch CI after the README dedupe commit. Future work should
-broaden live provider/container smokes and Tauri planning from the Rust module
-boundaries now in place.
+Monitor main-branch CI after the README entry-point dedupe commit. Future work
+should broaden live provider/container smokes and Tauri planning from the Rust
+module boundaries now in place.
