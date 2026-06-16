@@ -1,10 +1,11 @@
 # Tauri UI Guardrails
 
-Status: pre-implementation contract.
+Status: active UI contract.
 
-RunHaven does not have a Tauri app scaffold yet. This document defines the
-security, resource, and approval boundaries that must exist before a WebView can
-control RunHaven operations.
+RunHaven has a first Tauri app scaffold with read-only setup, dashboard,
+profile, folder-pick, and run-plan review surfaces. This document defines the
+security, resource, and approval boundaries before a WebView can control
+mutating RunHaven operations.
 
 ## Source Evidence
 
@@ -29,9 +30,9 @@ control RunHaven operations.
   explicit booleans for destructive confirmations.
 - Keep capabilities deny-by-default. A window gets only the permissions it
   needs for its view.
-- When the scaffold is added, explicitly list reviewed capability identifiers
-  in `tauri.conf.*` and restrict registered commands in the app manifest so
-  stray capability files or registered commands do not become broad defaults.
+- Explicitly list reviewed capability identifiers in `tauri.conf.*` and
+  restrict registered commands in the app manifest so stray capability files or
+  registered commands do not become broad defaults.
 - Do not store provider tokens, SSH material, command lines, prompts, raw
   Apple inspect payloads, environment values, or workspace file contents in
   frontend state or browser storage.
@@ -43,11 +44,12 @@ control RunHaven operations.
 
 ## Initial Capability Shape
 
-Use separate capability files when Tauri is added:
+Use separate capability files as UI control surfaces are added:
 
 | Capability | Intended window | Allowed operations |
 | --- | --- | --- |
-| `main-read` | main dashboard | setup status, doctor status, profile list, image doctor summary, active runs, run history summaries |
+| `main-read` | main dashboard | setup status, profile list, active runs, run history summaries, launch planning |
+| `folder-pick` | main dashboard | native directory picker only |
 | `run-control` | run detail view | stop, kill, attach, logs-follow, repair for one validated active run id |
 | `launch-run` | explicit run launch flow | plan and run with validated profile, workspace, session, network, resource, and credential options |
 | `maintenance` | settings or maintenance view | state reset/prune, network prune, image rebuild, builder guidance after explicit confirmation |
@@ -155,7 +157,7 @@ Each Tauri command needs:
   [`TAURI_UI_RESEARCH_PLAN.md`](TAURI_UI_RESEARCH_PLAN.md) before scaffold work.
 - Tauri scaffold work starts with current official Tauri docs and pinned
   versions.
-- The first `src-tauri/capabilities/` files and app manifest command list are
+- The first `src-tauri/capabilities/` files and app manifest command list were
   reviewed against this document.
 - UI command tests prove denied-by-default behavior before mutating operations
   are wired.

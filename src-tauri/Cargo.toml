@@ -1,0 +1,22 @@
+[package]
+name = "runhaven-tauri"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "RunHaven Tauri desktop shell."
+authors = ["Chad Boyd"]
+build = "build.rs"
+
+[build-dependencies]
+tauri-build = { version = "=2.6.2", features = [] }
+
+[dependencies]
+runhaven = { path = ".." }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.150"
+tauri = { version = "=2.11.2", features = [] }
+tauri-plugin-dialog = "=2.7.1"
+
+[dev-dependencies]
+tempfile = "=3.27.0"

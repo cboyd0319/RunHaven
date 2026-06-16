@@ -7,8 +7,13 @@ are no active CI action dependencies to pin.
 ## Required Pins
 
 - Rust direct dependencies use exact `=` versions in `Cargo.toml`.
+- Tauri Rust direct dependencies use exact `=` versions in
+  `src-tauri/Cargo.toml`.
 - Rust toolchain version is pinned in `rust-toolchain.toml` and `pins.toml`.
 - `Cargo.lock` is checked in for reproducible CLI builds.
+- `src-tauri/Cargo.lock` is checked in for reproducible desktop-shell builds.
+- Frontend direct dependencies use exact versions in `ui/package.json`, and
+  `ui/package-lock.json` is checked in.
 - If GitHub Actions workflows are reintroduced, actions must use immutable
   commit SHAs, with the release tag in a comment.
 - Container base images use versioned tags plus `sha256` digests.
@@ -18,6 +23,7 @@ are no active CI action dependencies to pin.
 - Debian apt sources use timestamped `snapshot.debian.org` URIs so exact
   package pins do not depend on moving mirrors.
 - npm packages installed in images use exact package versions.
+- npm packages used by the desktop UI use exact package versions.
 - Direct binary downloads use exact versioned URLs plus checksum verification.
 - Apple `container` install evidence records the release version, commit,
   installer SHA-256, signing team ID, and observed runtime helper versions.

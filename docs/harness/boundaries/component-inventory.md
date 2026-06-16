@@ -24,8 +24,11 @@ Treat those changes as product changes with scope, verification, and rollback.
 ## Detected Workspace Markers
 
 - Root Rust package: `Cargo.toml`.
+- Tauri desktop crate: `src-tauri/Cargo.toml`.
+- Svelte/Vite frontend package: `ui/package.json`.
 - Rust toolchain pin: `rust-toolchain.toml`.
 - Exact dependency and runtime pin ledger: `pins.toml`.
+- Frontend lockfile: `ui/package-lock.json`.
 - GitHub Actions CI disabled during alpha/pre-release; no active workflow files.
 - Multiple nested image/package manifests under `images/`.
 - Harness operating layer under `docs/harness/`.
@@ -47,6 +50,8 @@ Treat those changes as product changes with scope, verification, and rollback.
 | Component | Primary Files | Review Notes |
 | --- | --- | --- |
 | CLI entrypoint and parser | `src/main.rs`, `src/runhaven/cli/app.rs`, `src/runhaven/cli/args.rs` | Keep clap construction side-effect light. CLI behavior changes need focused command tests plus relevant help smokes. |
+| Desktop shell | `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `src-tauri/src/`, `src-tauri/capabilities/` | Tauri WebView is untrusted. Keep commands typed, capabilities explicit, and privileged behavior in Rust. No generic shell, filesystem, process, HTTP, or Apple `container` bridge. |
+| Frontend UI | `ui/package.json`, `ui/package-lock.json`, `ui/src/`, `ui/vite.config.ts` | Operational desktop UI. Keep secure defaults shortest, supported advanced choices warning-based, and command helpers typed. Frontend must not store secrets, raw logs, command lines, prompts, or workspace contents. |
 | Planning and validation | `src/runhaven/runtime/plans/`, `src/runhaven/support/validators.rs`, `src/runhaven/support/project_checks.rs` | Security-sensitive command construction surface. Use exact subprocess argument lists and fail closed on unsafe inputs. |
 | Provider network runtime | `src/runhaven/provider/egress.rs`, `src/runhaven/provider/runtime.rs`, `src/runhaven/provider/endpoints.rs`, `src/runhaven/provider/observability.rs` | Provider egress is a core safety boundary. Changes need focused proxy/policy tests and, when behavior changes, Apple `container` smokes. |
 | Auth broker prototype | `src/runhaven/provider/auth_broker.rs`, `src/runhaven/provider/auth_broker/`, `src/runhaven/provider/auth_profiles.rs`, `docs/AUTH_BROKER.md` | Secret-handling boundary. Do not read or persist raw credential values in diagnostics, plans, logs, or run records. |
@@ -54,7 +59,7 @@ Treat those changes as product changes with scope, verification, and rollback.
 | Worktree lifecycle | `src/runhaven/runtime/worktrees/` | Data-loss boundary. Keep source-checkout validation, RunHaven-owned branch checks, and explicit merge/discard recovery paths. |
 | State and network repair UX | `src/runhaven/runtime/session_state.rs`, `src/runhaven/runtime/state.rs`, `src/runhaven/image/doctor.rs`, `src/runhaven/runtime/network.rs`, `src/runhaven/cli/setup.rs`, `src/runhaven/cli/doctor.rs` | Repair commands should preview before deletion, mutate only RunHaven-owned resources, and print exact next steps. |
 | Bundled images | `images/base/`, `images/claude/`, `images/codex/`, `images/gemini/`, `images/antigravity/`, `images/copilot/`, `images/common/` | Keep image tags, npm packages, Debian snapshot inputs, non-root user setup, and source-digest labels pinned and reviewed. |
-| Pin policy | `src/runhaven/harness/pins.rs`, `src/bin/runhaven-check-pins.rs`, `pins.toml`, `Cargo.toml`, `Cargo.lock` | Pin checks are a release gate. Dependency changes and any future workflow or runner changes need primary-source evidence. |
+| Pin policy | `src/runhaven/harness/pins.rs`, `src/bin/runhaven-check-pins.rs`, `pins.toml`, `Cargo.toml`, `Cargo.lock`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `ui/package.json`, `ui/package-lock.json` | Pin checks are a release gate. Dependency changes and any future workflow or runner changes need primary-source evidence. |
 | Test suite | `tests/` plus module tests | Focused Rust tests cover CLI, plans, egress, images, state, worktrees, auth, and repo policy. |
 | Harness operating layer | `AGENTS.md`, `feature_list.json`, `current-state.md`, `docs/harness/` | Keep root instructions compact and move durable operating detail into focused harness docs. |
 | Human documentation | `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/` | Docs are product surfaces. Keep macOS 26+ only support, Apple `container` 1.0.0, security boundaries, and command examples aligned with code. |

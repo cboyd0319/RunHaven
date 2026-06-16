@@ -10,6 +10,8 @@ pub fn check_pins() -> Result<()> {
     let pins = load_pins(&root)?;
     let mut failures = Vec::new();
     failures.extend(check_cargo_against_ledger(&root, &pins));
+    failures.extend(check_tauri_cargo_against_ledger(&root, &pins));
+    failures.extend(check_frontend_package_against_ledger(&root, &pins));
     failures.extend(check_ci_against_ledger(&root, &pins));
     failures.extend(check_text_policy(&root));
     failures.extend(check_image_pins(&root, &pins));
@@ -78,6 +80,96 @@ fn check_cargo_against_ledger(root: &Path, pins: &Value) -> Vec<String> {
         failures.push(format!(
             "Cargo.toml: dev dependency tempfile must be pinned as ={expected}"
         ));
+    }
+    failures
+}
+
+fn check_tauri_cargo_against_ledger(root: &Path, pins: &Value) -> Vec<String> {
+    let path = root.join("src-tauri/Cargo.toml");
+    if !path.exists() {
+        return Vec::new();
+    }
+    let relative = "src-tauri/Cargo.toml";
+    let Ok(text) = fs::read_to_string(&path) else {
+        return vec![format!("{relative}: unreadable")];
+    };
+    let Ok(cargo) = toml::from_str::<Value>(&text) else {
+        return vec![format!("{relative}: invalid TOML")];
+    };
+    let tauri_pins = pins.get("tauri").and_then(Value::as_table);
+    let rust_pins = pins.get("rust").and_then(Value::as_table);
+    let mut failures = Vec::new();
+    for (section, name, source) in [
+        ("dependencies", "tauri", tauri_pins),
+        ("dependencies", "tauri-plugin-dialog", tauri_pins),
+        ("dependencies", "serde", rust_pins),
+        ("dependencies", "serde_json", rust_pins),
+        ("build-dependencies", "tauri-build", tauri_pins),
+        ("dev-dependencies", "tempfile", rust_pins),
+    ] {
+        let expected = source
+            .and_then(|table| table.get(name))
+            .and_then(Value::as_str)
+            .unwrap_or("");
+        let actual = cargo
+            .get(section)
+            .and_then(Value::as_table)
+            .and_then(|deps| deps.get(name))
+            .and_then(dependency_version);
+        if actual != Some(format!("={expected}")) {
+            failures.push(format!(
+                "{relative}: {section}.{name} must be pinned as ={expected}"
+            ));
+        }
+    }
+    failures
+}
+
+fn check_frontend_package_against_ledger(root: &Path, pins: &Value) -> Vec<String> {
+    let package_json = root.join("ui/package.json");
+    if !package_json.exists() {
+        return Vec::new();
+    }
+    let mut failures = Vec::new();
+    if !root.join("ui/package-lock.json").is_file() {
+        failures.push("ui/package-lock.json: missing".to_string());
+    }
+    let Ok(text) = fs::read_to_string(&package_json) else {
+        return vec!["ui/package.json: unreadable".to_string()];
+    };
+    let Ok(json) = serde_json::from_str::<JsonValue>(&text) else {
+        return vec!["ui/package.json: invalid JSON".to_string()];
+    };
+    let Some(frontend_pins) = pins.get("frontend").and_then(Value::as_table) else {
+        return vec!["pins.toml: missing [frontend] dependency pins".to_string()];
+    };
+    let mut seen = Vec::new();
+    for section in ["dependencies", "devDependencies", "optionalDependencies"] {
+        let Some(object) = json.get(section).and_then(JsonValue::as_object) else {
+            continue;
+        };
+        for (name, version) in object {
+            seen.push(name.as_str());
+            let Some(version) = version.as_str() else {
+                failures.push(format!("ui/package.json: {section}.{name} is not a string"));
+                continue;
+            };
+            if !is_exact_npm_version(version) {
+                failures.push(format!(
+                    "ui/package.json: {section}.{name} is not exact-pinned"
+                ));
+            }
+            if frontend_pins.get(name).and_then(Value::as_str) != Some(version) {
+                failures.push(format!(
+                    "ui/package.json: {section}.{name} does not match pins.toml"
+                ));
+            }
+        }
+    }
+    for name in frontend_pins.keys() {
+        if !seen.contains(&name.as_str()) {
+            failures.push(format!("ui/package.json: missing pinned dependency {name}"));
+        }
     }
     failures
 }
@@ -164,6 +256,8 @@ fn check_text_policy(root: &Path) -> Vec<String> {
     let mut failures = Vec::new();
     let mut files = [
         root.join("Cargo.toml"),
+        root.join("src-tauri/Cargo.toml"),
+        root.join("ui/package.json"),
         root.join("images/common/debian-packages.txt"),
         root.join("images/common/debian.sources"),
     ]
@@ -264,11 +358,7 @@ fn check_image_pins(root: &Path, pins: &Value) -> Vec<String> {
                         failures.push(format!("{relative}: {section}.{name} is not a string"));
                         continue;
                     };
-                    if version.starts_with('^')
-                        || version.starts_with('~')
-                        || version.contains('*')
-                        || version.contains(">=")
-                    {
+                    if !is_exact_npm_version(version) {
                         failures.push(format!("{relative}: {section}.{name} is not exact-pinned"));
                     }
                 }
@@ -276,6 +366,17 @@ fn check_image_pins(root: &Path, pins: &Value) -> Vec<String> {
         }
     }
     failures
+}
+
+fn is_exact_npm_version(version: &str) -> bool {
+    !(version.starts_with('^')
+        || version.starts_with('~')
+        || version.contains('*')
+        || version.contains(">=")
+        || version.contains("<=")
+        || version.contains(">")
+        || version.contains("<")
+        || version == "latest")
 }
 
 fn image_files(root: &Path, name: &str) -> Vec<PathBuf> {

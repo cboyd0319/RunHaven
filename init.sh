@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run the local macOS verification harness for RunHaven.
-# Checks Rust formatting, tests, clippy, pin policy, and build output.
+# Checks Rust formatting, tests, clippy, pin policy, frontend, Tauri, and build output.
 set -euo pipefail
 
 echo "== Harness verification for RunHaven =="
@@ -39,6 +39,39 @@ cargo clippy --all-targets -- -D warnings
 
 echo "== cargo run --locked --bin runhaven-check-pins =="
 cargo run --locked --bin runhaven-check-pins
+
+if [ -f "ui/package.json" ]; then
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "npm was not found on PATH."
+    exit 1
+  fi
+
+  echo "== npm --prefix ui ci --ignore-scripts =="
+  npm --prefix ui ci --ignore-scripts
+
+  echo "== npm --prefix ui run check =="
+  npm --prefix ui run check
+
+  echo "== npm --prefix ui test =="
+  npm --prefix ui test
+
+  echo "== npm --prefix ui run build =="
+  npm --prefix ui run build
+fi
+
+if [ -f "src-tauri/Cargo.toml" ]; then
+  echo "== cargo fmt --manifest-path src-tauri/Cargo.toml --check =="
+  cargo fmt --manifest-path src-tauri/Cargo.toml --check
+
+  echo "== cargo test --manifest-path src-tauri/Cargo.toml --locked =="
+  cargo test --manifest-path src-tauri/Cargo.toml --locked
+
+  echo "== cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings =="
+  cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+
+  echo "== npm --prefix ui run tauri:build =="
+  npm --prefix ui run tauri:build
+fi
 
 echo "== cargo build --locked =="
 cargo build --locked

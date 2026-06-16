@@ -4,6 +4,12 @@
 replace the agent CLIs. Its job is to make the safe container boundary easy to
 choose and hard to accidentally widen.
 
+An alpha Tauri/Svelte desktop scaffold lives under `src-tauri/` and `ui/`.
+The Tauri crate depends on the root Rust library and exposes typed commands
+for read-only setup, dashboard, profile, folder-pick, and run-plan review
+surfaces. It does not expose a shell, filesystem, process, HTTP, or Apple
+`container` bridge to JavaScript, and it does not launch or control runs yet.
+
 ## Runtime Pattern
 
 Default runs use task-scoped `container run`, not `container machine`.

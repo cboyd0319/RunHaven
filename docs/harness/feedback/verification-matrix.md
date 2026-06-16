@@ -12,6 +12,8 @@ readiness, runtime boundaries, or multiple components.
 | README, AGENTS, or docs-only changes | `cargo run --locked --bin runhaven-check-pins`, local Markdown link check, platform wording scan, and `git diff --check` |
 | Feature state, manifest, or schema changes | JSON validation for changed JSON files, relevant Rust tests, and advisory HarnessForge report when available |
 | Rust code | `cargo fmt --check`, focused `cargo test` targets, `cargo test --locked`, and `cargo clippy --all-targets -- -D warnings` |
+| Frontend UI | `npm --prefix ui run check`, `npm --prefix ui test`, `npm --prefix ui run build`, relevant Tauri command tests, and `git diff --check` |
+| Tauri desktop shell | Frontend UI checks plus `cargo fmt --manifest-path src-tauri/Cargo.toml --check`, `cargo test --manifest-path src-tauri/Cargo.toml --locked`, `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`, `npm --prefix ui run tauri:build`, pin policy, and capability review |
 | Packaging | Rust code checks plus `cargo build --locked` |
 | CLI command construction | Rust code checks plus focused CLI and planning tests |
 | Setup and prerequisite UX | Rust code checks plus focused setup, workspace, credential, network guidance, and doctor tests; add a manual `runhaven setup --agent shell` smoke when user-facing text changes |
@@ -34,6 +36,10 @@ readiness, runtime boundaries, or multiple components.
 - `cargo test --locked`
 - `cargo clippy --all-targets -- -D warnings`
 - `cargo run --locked --bin runhaven-check-pins`
+- `npm --prefix ui run check`
+- `npm --prefix ui test`
+- `npm --prefix ui run build`
+- `npm --prefix ui run tauri:build`
 - `cargo build --locked`
 
 ## Advisory HarnessForge Review Commands

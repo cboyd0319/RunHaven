@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "RunHaven",
+  "version": "0.1.0",
+  "identifier": "dev.runhaven.desktop",
+  "build": {
+    "beforeDevCommand": "npm --prefix ../ui run dev",
+    "beforeBuildCommand": "npm --prefix ../ui run build",
+    "devUrl": "http://127.0.0.1:5173",
+    "frontendDist": "../ui/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "RunHaven",
+        "width": 1180,
+        "height": 780,
+        "minWidth": 920,
+        "minHeight": 620,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: https://asset.localhost; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost",
+      "capabilities": ["main-read", "folder-pick"]
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": ["../docs/assets/logo.png"]
+  }
+}

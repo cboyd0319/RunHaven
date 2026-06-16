@@ -107,9 +107,9 @@ The consolidated non-UI backlog lives in
   commit, builder image, vminit image, and Kata kernel pins.
 - Keep `image doctor` surfacing read-only builder status and resource guidance
   before adding UI flows that trigger rebuilds.
-- Keep [`docs/TAURI_UI_GUARDRAILS.md`](TAURI_UI_GUARDRAILS.md) as the
-  pre-implementation contract for UI resource warnings, approval gates, typed
-  Rust commands, and narrow Tauri capabilities.
+- Keep [`docs/TAURI_UI_GUARDRAILS.md`](TAURI_UI_GUARDRAILS.md) as the active
+  contract for UI resource warnings, approval gates, typed Rust commands, and
+  narrow Tauri capabilities.
 
 ## Tauri/UI Research Phase
 
@@ -118,9 +118,10 @@ The consolidated non-UI backlog lives in
 - Decision: Tauri v2 with Svelte + Vite + TypeScript, npm lockfile, a separate
   `src-tauri` crate that calls the existing Rust library, narrow capabilities,
   and a secure default path with warning-confirmed advanced choices.
-- Next UI phase starts with the first scaffold acceptance criteria in the
-  research plan. Do not add mutating commands before the read-only setup and
-  dashboard shell is verified.
+- First scaffold work has started with exact-pinned Tauri/Svelte dependencies,
+  a separate `src-tauri` crate, narrow capabilities, and read-only setup,
+  dashboard, profile, folder-pick, and run-plan surfaces. Do not add mutating
+  commands before the read-only shell is verified.
 
 ## Phase 6: Repeatable Workflows
 

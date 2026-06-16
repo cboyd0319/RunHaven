@@ -47,6 +47,20 @@
     "init.sh",
     "docs/NON_UI_BACKLOG.md",
     "docs/TAURI_UI_RESEARCH_PLAN.md",
+    "docs/TAURI_UI_GUARDRAILS.md",
+    "ui/package.json",
+    "ui/package-lock.json",
+    "ui/src/app/App.svelte",
+    "ui/src/commands/runhaven.ts",
+    "src-tauri/Cargo.toml",
+    "src-tauri/Cargo.lock",
+    "src-tauri/build.rs",
+    "src-tauri/tauri.conf.json",
+    "src-tauri/capabilities/main-read.json",
+    "src-tauri/capabilities/folder-pick.json",
+    "src-tauri/src/lib.rs",
+    "src-tauri/src/commands/mod.rs",
+    "src-tauri/src/contracts.rs",
     "docs/assets/logo.png",
     "docs/harness/README.md",
     ".agents/skills/harness/SKILL.md",
@@ -126,7 +140,53 @@
       "Command Contract",
       "Capability Map",
       "First Scaffold Acceptance Criteria",
-      "Do Not Build Yet"
+      "Deferred"
+    ],
+    "docs/TAURI_UI_GUARDRAILS.md": [
+      "active UI contract",
+      "WebView as untrusted UI",
+      "main-read",
+      "folder-pick",
+      "Explicit confirmation required"
+    ],
+    "ui/package.json": [
+      "tauri:build",
+      "@tauri-apps/api",
+      "@tauri-apps/plugin-dialog",
+      "@lucide/svelte"
+    ],
+    "ui/src/app/App.svelte": [
+      "Launch plan",
+      "Review plan",
+      "AI provider only",
+      "Full internet"
+    ],
+    "ui/src/commands/runhaven.ts": [
+      "get_dashboard_status",
+      "plan_run",
+      "secureNetworkDefault",
+      "warningPreview"
+    ],
+    "src-tauri/tauri.conf.json": [
+      "frontendDist",
+      "main-read",
+      "folder-pick",
+      "csp"
+    ],
+    "src-tauri/capabilities/main-read.json": [
+      "allow-get-setup-status",
+      "allow-list-agents",
+      "allow-get-dashboard-status",
+      "allow-plan-run"
+    ],
+    "src-tauri/capabilities/folder-pick.json": [
+      "dialog:allow-open"
+    ],
+    "src-tauri/src/commands/mod.rs": [
+      "get_setup_status",
+      "get_dashboard_status",
+      "plan_run",
+      "build_plan_response"
     ],
     "docs/harness/state/first-agent-task.md": [
       "First-Agent Harness Improvement Task",

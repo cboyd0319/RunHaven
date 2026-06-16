@@ -2,8 +2,9 @@
 
 Last updated: 2026-06-16
 
-Status: research complete. Ready for first scaffold planning, but no scaffold or
-frontend dependencies have been added yet.
+Status: research complete. The first Tauri/Svelte scaffold has started from
+this plan with read-only setup, dashboard, profile, folder-pick, and run-plan
+review surfaces only.
 
 Goal: build the easiest safe desktop experience for people with little or no
 technical background to run AI coding agents inside Apple `container`.
@@ -76,19 +77,20 @@ Current package and tool evidence from local commands on 2026-06-16:
 | `@sveltejs/vite-plugin-svelte` | `7.1.2` |
 | `svelte-check` | `4.6.0` |
 | `vitest` | `4.1.9` |
-| `lucide-svelte` | `1.0.1` |
+| `@lucide/svelte` | `1.20.0` |
 | `eslint` | `10.5.0` |
 | `prettier` | `3.8.4` |
 
-At scaffold time, re-run these version checks and hard-pin exact stable
-versions in `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, and
-`Cargo.lock`. Do not use caret, tilde, wildcard, or unpinned plugin versions.
+At scaffold time, version checks were re-run and exact stable versions were
+hard-pinned in `ui/package.json`, `ui/package-lock.json`,
+`src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock`. Do not use caret, tilde,
+wildcard, or unpinned plugin versions.
 
 ## Architecture Decision
 
 Use Tauri v2 as a thin desktop shell around the existing Rust library.
 
-Planned layout:
+Implemented first-scaffold layout:
 
 ```text
 ui/
@@ -100,18 +102,15 @@ ui/
     app/
     commands/
     components/
-    routes/
     styles/
     test/
 src-tauri/
   Cargo.toml
   build.rs
   capabilities/
-  permissions/
   src/
-    app_state.rs
     commands/
-    contracts/
+    contracts.rs
     lib.rs
 ```
 
@@ -147,7 +146,7 @@ Choose Svelte + Vite + TypeScript.
 Initial UI dependencies should be minimal:
 
 - Svelte, Vite, TypeScript, Tauri API, Tauri CLI, Tauri dialog plugin,
-  `svelte-check`, Vitest, and `lucide-svelte`.
+  `svelte-check`, Vitest, and `@lucide/svelte`.
 - No Tailwind, shadcn, Radix, global state library, query library, router, CSS
   framework, chart library, data grid, animation library, or component kit in
   the first scaffold.
@@ -362,40 +361,38 @@ Initial plugin permissions:
 
 ## First Scaffold Acceptance Criteria
 
-The next phase may add `ui/` and `src-tauri/` only when all of these are true:
+The first scaffold is acceptable only while all of these remain true:
 
 1. `docs/TAURI_UI_RESEARCH_PLAN.md` remains the accepted research source.
 2. `docs/TAURI_UI_GUARDRAILS.md` is still accurate.
 3. Version checks are rerun and exact stable pins are recorded.
 4. `package.json` uses exact versions and `package-lock.json` is checked in.
 5. `src-tauri/Cargo.toml` uses exact versions and `Cargo.lock` is updated.
-6. Tauri capabilities and permissions are committed with the scaffold, not
-   deferred.
+6. Tauri capabilities are committed with the scaffold, and generated Tauri
+   schema/permission artifacts stay out of source control.
 7. The first UI renders setup status and dashboard state without mutating
    RunHaven resources.
 8. Folder picker output is revalidated in Rust before being used.
 9. The launch wizard can call `plan_run` but cannot launch until the read-only
    plan and warning model are reviewed.
-10. Frontend tests mock IPC for setup, dashboard, plan, warning, and failure
-    states.
+10. Frontend tests cover setup, dashboard, plan, warning, and preview states.
 11. Rust command tests cover invalid input, missing confirmation, and denied
     capability assumptions where testable.
 12. Verification includes `cargo fmt --check`, `cargo test --locked`, frontend
     typecheck/test/build, Tauri Rust checks, local Markdown link check, pin
     policy, and `git diff --check`.
 
-Suggested first scaffold commands after rechecking versions:
+The scaffold used the current stable equivalent of:
 
 ```bash
 npm create vite@latest ui -- --template svelte-ts
 npm --prefix ui install --save-exact
 ```
 
-Then add Tauri manually or with the current official Tauri CLI so the repo keeps
-the planned `ui/` plus `src-tauri/` layout. Do not use `npm create
-tauri-app@latest` if it produces a flatter or less maintainable layout.
+Tauri was added manually so the repo keeps the planned `ui/` plus
+`src-tauri/` layout.
 
-## Do Not Build Yet
+## Deferred
 
 - Do not add a generic shell, process, filesystem, HTTP, or Apple `container`
   bridge.

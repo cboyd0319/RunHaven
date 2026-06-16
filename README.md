@@ -17,13 +17,18 @@
 > broker behavior, and docs may change without backward-compatibility
 > guarantees until maintainers declare an explicit release boundary.
 
-RunHaven is a Rust CLI for running Claude Code, Codex, Gemini, Antigravity,
-Copilot, or custom coding agents inside Apple `container` on macOS 26+. It
-does not replace those tools; it gives them a repeatable local boundary so the
-safer path is easier to choose.
+RunHaven is a Rust CLI, with an early Tauri/Svelte desktop shell, for running
+Claude Code, Codex, Gemini, Antigravity, Copilot, or custom coding agents
+inside Apple `container` on macOS 26+. It does not replace those tools; it
+gives them a repeatable local boundary so the safer path is easier to choose.
 
 RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
 supported runtimes or contributor verification targets.
+
+The CLI is the current working product surface. The desktop scaffold under
+`ui/` and `src-tauri/` is alpha UI work: it reads setup, dashboard, profile,
+folder-pick, and run-plan state only, and it does not launch or control runs
+yet.
 
 [Installation](docs/INSTALLATION.md) |
 [Capabilities](docs/CAPABILITIES.md) |
@@ -101,8 +106,7 @@ setup. See [Usage](docs/USAGE.md) for command-level workflows.
 - [Apple Container gap analysis](docs/APPLE_CONTAINER_GAP_ANALYSIS.md):
   pre-Tauri runtime, security, and verification gaps.
 - [Tauri UI guardrails](docs/TAURI_UI_GUARDRAILS.md):
-  pre-implementation resource, approval, and permission boundaries for the
-  future GUI.
+  resource, approval, and permission boundaries for the desktop UI.
 - [Pinning policy](docs/PINNING.md): exact dependency and image pin rules.
 - [Roadmap](docs/ROADMAP.md): planned product and codebase work.
 - [Contributing](CONTRIBUTING.md): local checks and review expectations.
@@ -116,6 +120,8 @@ Use the smallest relevant check for a change:
 cargo fmt --check
 cargo test --locked
 cargo run --locked --bin runhaven-check-pins
+npm --prefix ui run check
+npm --prefix ui test
 git diff --check
 ```
 

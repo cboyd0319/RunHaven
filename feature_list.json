@@ -33,13 +33,40 @@
         "Svelte, React, Solid, and Vue are compared against RunHaven's beginner-safe and maintainability requirements",
         "Comparable desktop/container/workspace UI patterns are recorded",
         "Information architecture, screen responsibilities, command contract, capability map, and first scaffold acceptance criteria are documented",
-        "No `src-tauri/` scaffold or frontend dependency is added before the research plan is accepted"
+        "Research was completed before `src-tauri/` and `ui/` scaffold work started"
       ],
       "evidence": [
         "2026-06-16: Tauri/UI research was promoted to the active repo phase with `docs/TAURI_UI_RESEARCH_PLAN.md`; non-UI gates and candidates were consolidated in `docs/NON_UI_BACKLOG.md`.",
         "2026-06-16: Tauri/UI research completed with a source-backed Tauri v2 architecture decision, Svelte + Vite + TypeScript recommendation, comparable UI analysis, beginner-safe information architecture, typed command contract, capability map, secure-default warning policy, and first scaffold acceptance criteria."
       ],
-      "notes": "The research phase is complete; UI implementation has not started. The target user is non-technical, so the UI must be plain-language, guided, reversible, and fail-closed."
+      "notes": "The research phase is complete. Scaffold implementation evidence is tracked separately in `tauri-svelte-first-scaffold`. The target user is non-technical, so the UI must be plain-language, guided, reversible, and fail-closed."
+    },
+    {
+      "id": "tauri-svelte-first-scaffold",
+      "priority": 0,
+      "area": "ui",
+      "title": "Tauri/Svelte first scaffold",
+      "user_visible_behavior": "RunHaven has an alpha desktop shell that reads setup, dashboard, profile, folder-pick, and run-plan state without launching or controlling runs.",
+      "status": "passing",
+      "dependencies": [
+        "tauri-ui-research",
+        "rust-cli-conversion",
+        "runtime-hardening-macos-only-boundary",
+        "run-observability"
+      ],
+      "verification": [
+        "`ui/` and `src-tauri/` are organized as separate frontend and desktop-shell roots",
+        "Tauri and frontend direct dependencies are exact-pinned and lockfiles are checked in",
+        "Capabilities explicitly allow only the four read-only scaffold commands plus native folder picking",
+        "The WebView has no generic shell, filesystem, process, HTTP, or Apple `container` bridge",
+        "Frontend helper tests cover secure defaults, warning previews, and read-only preview command paths",
+        "Tauri command tests cover profile listing, plan construction, advanced-choice warnings, and invalid workspace rejection",
+        "`./init.sh` passes with root Rust checks, frontend checks, Tauri Rust checks, and debug no-bundle Tauri build"
+      ],
+      "evidence": [
+        "2026-06-16: Added exact-pinned Svelte + Vite + TypeScript UI under `ui/`, Tauri v2 shell under `src-tauri/`, narrow `main-read` and `folder-pick` capabilities, read-only command contracts, frontend tests, Tauri command tests, and an updated local harness. `./init.sh` passed after adding the scaffold checks."
+      ],
+      "notes": "This is not a run-control UI yet. Mutating commands remain deferred until each operation has typed Rust validation, explicit confirmation, and focused tests."
     },
     {
       "id": "rust-cli-conversion",

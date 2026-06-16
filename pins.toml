@@ -20,6 +20,23 @@ ureq = "3.3.0"
 uuid = "1.23.3"
 tempfile = "3.27.0"
 
+[tauri]
+tauri = "2.11.2"
+tauri-build = "2.6.2"
+tauri-plugin-dialog = "2.7.1"
+
+[frontend]
+"@lucide/svelte" = "1.20.0"
+"@sveltejs/vite-plugin-svelte" = "7.1.2"
+"@tauri-apps/api" = "2.11.0"
+"@tauri-apps/cli" = "2.11.2"
+"@tauri-apps/plugin-dialog" = "2.7.1"
+svelte = "5.56.3"
+svelte-check = "4.6.0"
+typescript = "6.0.3"
+vite = "8.0.16"
+vitest = "4.1.9"
+
 [apple_container]
 version = "1.0.0"
 commit = "ee848e3ebfd7c73b04dd419683be54fb450b8779"

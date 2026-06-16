@@ -4,11 +4,11 @@ Last Updated: 2026-06-16 UTC
 
 ## Current Objective
 
-Prepare for the first Tauri/Svelte scaffold from completed UI research. The
-next implementation must start from `docs/TAURI_UI_RESEARCH_PLAN.md` and
-`docs/TAURI_UI_GUARDRAILS.md`, add exact-pinned dependencies, keep the WebView
-untrusted, and begin with read-only setup/dashboard behavior before mutating
-commands.
+Plan the next Tauri/UI slice after validating the first Tauri/Svelte scaffold.
+The desktop shell now has read-only setup, dashboard, profile, folder-pick, and
+run-plan review surfaces. The next implementation should add one mutating UI
+operation at a time only after typed Rust validation, explicit confirmation,
+narrow capability review, and focused tests are in place.
 
 ## State Contract
 
@@ -27,6 +27,10 @@ commands.
 - The application code is organized as a Cargo crate under `src/runhaven/` with
   CLI, runtime, provider, image, records, harness, and support modules. Bundled
   image templates live under top-level `images/`.
+- An alpha desktop scaffold lives under `ui/` and `src-tauri/`. It uses
+  Svelte + Vite + TypeScript and Tauri v2, calls the root Rust library through
+  typed commands, and currently exposes read-only setup/dashboard/profile,
+  native folder picking, and run-plan review only.
 - The old Python package, Python tests, Python scripts, `pyproject.toml`,
   `.python-version`, and `requirements-dev.txt` have been removed.
 - Windows and Linux are not supported runtime or contributor-verification
@@ -56,6 +60,17 @@ commands.
   calling the existing Rust library, narrow capabilities, typed command
   contracts, a read-only first scaffold, and no generic shell/filesystem/process
   bridge.
+- Added the first Tauri/Svelte scaffold under `ui/` and `src-tauri/` with
+  exact-pinned dependencies, checked-in npm and Cargo lockfiles, typed
+  read-only Rust commands, and narrow `main-read` plus `folder-pick`
+  capabilities.
+- Added a Svelte operational UI for setup checks, active/recent run counts,
+  agent selection, folder selection, secure-default network choices, resource
+  inputs, read-only workspace selection, and plan review. The UI does not
+  launch or control runs yet.
+- Updated the local harness so `./init.sh` now runs frontend npm ci, Svelte
+  typecheck, Vitest, Vite build, Tauri Rust fmt/test/clippy, and debug
+  no-bundle Tauri build in addition to the root Rust checks.
 - Added the project-wide secure-easy-path rule: the default and shortest path
   should be secure; supported advanced choices warn and require confirmation
   but are not hidden or blocked only because they are advanced.
@@ -138,9 +153,9 @@ commands.
 - Updated `scripts/apple_container_smoke.sh` to assert that
   `image doctor shell` reports builder status and large-build resource
   guidance.
-- Added `docs/TAURI_UI_GUARDRAILS.md` as the pre-implementation contract for
-  future Tauri resource warnings, approval gates, typed Rust commands, narrow
-  capabilities, and denied-by-default WebView access.
+- Added `docs/TAURI_UI_GUARDRAILS.md` as the active UI contract for Tauri
+  resource warnings, approval gates, typed Rust commands, narrow capabilities,
+  and denied-by-default WebView access.
 - Added an accepted backlog item to give every maintained script a short
   top-of-file description explaining what it is and what it does.
 - Added provider-mode troubleshooting guidance that distinguishes allowlist
@@ -171,6 +186,21 @@ commands.
 
 ## Trusted Verification
 
+- `./init.sh`: passed after the harness was extended for the desktop scaffold.
+  It ran root Rust format/tests/clippy/pin policy/build,
+  `npm --prefix ui ci --ignore-scripts`, frontend typecheck/tests/build, Tauri
+  Rust fmt/test/clippy, and `npm --prefix ui run tauri:build`.
+- `npm --prefix ui ci --ignore-scripts`: passed; frontend checks and Tauri
+  build still passed with install scripts disabled.
+- `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
+- `npm --prefix ui test`: passed with 1 test file and 6 tests.
+- `npm --prefix ui run build`: passed with Vite 8.0.16.
+- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 4
+  Tauri command tests.
+- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`:
+  passed.
+- `npm --prefix ui run tauri:build`: passed and built
+  `src-tauri/target/debug/runhaven-tauri` without bundling.
 - `cargo fmt --check`: passed.
 - `cargo test --locked`: passed with 41 library tests and 6 integration tests.
 - `cargo clippy --all-targets -- -D warnings`: passed.
@@ -292,26 +322,26 @@ commands.
 
 ## Touched Surfaces
 
+- `.gitignore`
+- `README.md`
 - `current-state.md`
 - `feature_list.json`
-- `docs/NON_UI_BACKLOG.md`
-- `docs/TAURI_UI_RESEARCH_PLAN.md`
-- `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`
-- `docs/EXTENSION_MCP_BOUNDARY.md`
-- `docs/TAURI_UI_GUARDRAILS.md`
-- `docs/CAPABILITIES.md`
+- `init.sh`
+- `pins.toml`
+- `docs/ARCHITECTURE.md`
+- `docs/PINNING.md`
 - `docs/ROADMAP.md`
-- `docs/SECURITY_MODEL.md`
-- `docs/USAGE.md`
+- `docs/TAURI_UI_GUARDRAILS.md`
+- `docs/TAURI_UI_RESEARCH_PLAN.md`
+- `docs/harness/boundaries/component-inventory.md`
 - `docs/harness/evidence/evidence-log.md`
+- `docs/harness/feedback/sensor-registry.md`
+- `docs/harness/feedback/verification-matrix.md`
 - `docs/harness/manifest.json`
-- `docs/harness/research/ux-research-ideas.md`
 - `docs/harness/state/roadmap.md`
-- `src/runhaven/cli/app.rs`
-- `src/runhaven/cli/args.rs`
-- `src/runhaven/cli/diagnostics.rs`
 - `src/runhaven/harness/pins.rs`
-- `tests/cli.rs`
+- `src-tauri/`
+- `ui/`
 
 ## Blockers
 
@@ -323,9 +353,10 @@ commands.
 
 ## Next Step
 
-Start the first Tauri/Svelte scaffold only from the acceptance criteria in
-`docs/TAURI_UI_RESEARCH_PLAN.md`. Add `ui/` and `src-tauri/` with exact pins,
-commit lockfiles, create narrow capabilities, and implement read-only
-setup/dashboard commands before any mutating UI operation. Keep `--ssh`
-fail-closed until a no-secret non-root Apple `container` smoke proves usable
-forwarding.
+Choose the first mutating Tauri/UI operation deliberately. The likely next
+slice is launch planning to launch execution: add a typed `launch_run` command
+that reuses existing Rust validators, requires explicit confirmation for every
+warning, records no secrets in frontend state, gets its own narrow capability,
+and adds focused Rust/frontend tests before any stop/kill/repair or maintenance
+controls. Keep `--ssh` fail-closed until a no-secret non-root Apple
+`container` smoke proves usable forwarding.

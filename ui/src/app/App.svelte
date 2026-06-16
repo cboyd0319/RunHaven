@@ -1,0 +1,263 @@
+<script lang="ts">
+  import { onMount } from "svelte";
+  import { FolderOpen, RefreshCw, ShieldCheck, ClipboardCheck } from "@lucide/svelte";
+  import StatusPill from "../components/StatusPill.svelte";
+  import Metric from "../components/Metric.svelte";
+  import {
+    chooseProjectFolder,
+    defaultRunPlanRequest,
+    getDashboardStatus,
+    planRun,
+    secureNetworkDefault,
+    type AgentProfile,
+    type DashboardStatus,
+    type RunPlanRequest,
+    type RunPlanResponse
+  } from "../commands/runhaven";
+
+  let dashboard: DashboardStatus | null = null;
+  let request: RunPlanRequest = defaultRunPlanRequest(undefined);
+  let plan: RunPlanResponse | null = null;
+  let loading = true;
+  let planning = false;
+  let error = "";
+
+  $: selectedAgent = dashboard?.agents.find((agent) => agent.name === request.agent);
+
+  onMount(() => {
+    void refresh();
+  });
+
+  async function refresh() {
+    loading = true;
+    error = "";
+    try {
+      dashboard = await getDashboardStatus();
+      const agent = dashboard.agents.find((item) => item.name === request.agent) ?? dashboard.agents[0];
+      if (agent) {
+        request = {
+          ...defaultRunPlanRequest(agent),
+          workspacePath: request.workspacePath,
+          sessionName: request.sessionName
+        };
+      }
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : String(cause);
+    } finally {
+      loading = false;
+    }
+  }
+
+  function changeAgent(agentName: string) {
+    const agent = dashboard?.agents.find((item) => item.name === agentName);
+    request = {
+      ...request,
+      agent: agentName,
+      networkMode: secureNetworkDefault(agent)
+    };
+    plan = null;
+  }
+
+  async function pickFolder() {
+    const selected = await chooseProjectFolder();
+    if (selected) {
+      request = { ...request, workspacePath: selected };
+      plan = null;
+    }
+  }
+
+  async function reviewPlan() {
+    planning = true;
+    error = "";
+    plan = null;
+    try {
+      plan = await planRun(request);
+    } catch (cause) {
+      error = cause instanceof Error ? cause.message : String(cause);
+    } finally {
+      planning = false;
+    }
+  }
+
+  function updateNetworkMode(networkMode: RunPlanRequest["networkMode"]) {
+    request = { ...request, networkMode };
+    plan = null;
+  }
+</script>
+
+<svelte:head>
+  <title>RunHaven</title>
+</svelte:head>
+
+<main>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">RunHaven</p>
+      <h1>Agent runs</h1>
+    </div>
+    <button class="icon-button" type="button" on:click={refresh} aria-label="Refresh status">
+      <RefreshCw size={18} />
+    </button>
+  </header>
+
+  {#if error}
+    <section class="notice" role="alert">{error}</section>
+  {/if}
+
+  <section class="status-band">
+    <div>
+      <p class="eyebrow">Setup</p>
+      <h2>{dashboard?.setup.ok ? "Ready" : "Needs attention"}</h2>
+    </div>
+    <StatusPill ok={Boolean(dashboard?.setup.ok)} label={dashboard?.setup.ok ? "Passing" : "Blocked"} />
+  </section>
+
+  <section class="grid">
+    <section class="panel setup-panel">
+      <div class="section-heading">
+        <ShieldCheck size={20} />
+        <h2>Setup checks</h2>
+      </div>
+
+      {#if loading}
+        <p class="muted">Loading status...</p>
+      {:else}
+        <dl class="metrics">
+          <Metric label="Blockers" value={String(dashboard?.setup.blockerCount ?? 0)} />
+          <Metric label="Active runs" value={String(dashboard?.activeRuns.length ?? 0)} />
+          <Metric label="Recent runs" value={String(dashboard?.recentRuns.length ?? 0)} />
+        </dl>
+
+        <div class="check-list">
+          {#each dashboard?.setup.checks ?? [] as check}
+            <article>
+              <StatusPill ok={check.ok} label={check.ok ? "OK" : "Fix"} />
+              <div>
+                <h3>{check.name}</h3>
+                <p>{check.detail}</p>
+                {#if !check.ok}
+                  <p class="remedy">{check.remedy}</p>
+                {/if}
+              </div>
+            </article>
+          {/each}
+        </div>
+      {/if}
+    </section>
+
+    <section class="panel launch-panel">
+      <div class="section-heading">
+        <ClipboardCheck size={20} />
+        <h2>Launch plan</h2>
+      </div>
+
+      <form on:submit|preventDefault={reviewPlan}>
+        <label>
+          <span>Agent</span>
+          <select bind:value={request.agent} on:change={(event) => changeAgent(event.currentTarget.value)}>
+            {#each dashboard?.agents ?? [] as agent}
+              <option value={agent.name}>{agent.name}</option>
+            {/each}
+          </select>
+        </label>
+
+        {#if selectedAgent}
+          <p class="agent-detail">{selectedAgent.description}</p>
+        {/if}
+
+        <label>
+          <span>Project folder</span>
+          <div class="folder-row">
+            <input
+              bind:value={request.workspacePath}
+              placeholder="/Users/you/project"
+              aria-label="Project folder path"
+            />
+            <button class="icon-button" type="button" on:click={pickFolder} aria-label="Choose project folder">
+              <FolderOpen size={18} />
+            </button>
+          </div>
+        </label>
+
+        <fieldset>
+          <legend>Network goal</legend>
+          <label class="choice">
+            <input
+              type="radio"
+              name="network"
+              checked={request.networkMode === "provider"}
+              on:change={() => updateNetworkMode("provider")}
+            />
+            <span>AI provider only</span>
+          </label>
+          <label class="choice">
+            <input
+              type="radio"
+              name="network"
+              checked={request.networkMode === "internal"}
+              on:change={() => updateNetworkMode("internal")}
+            />
+            <span>Offline or local only</span>
+          </label>
+          <label class="choice">
+            <input
+              type="radio"
+              name="network"
+              checked={request.networkMode === "internet"}
+              on:change={() => updateNetworkMode("internet")}
+            />
+            <span>Full internet</span>
+          </label>
+        </fieldset>
+
+        <div class="inline-fields">
+          <label>
+            <span>CPU</span>
+            <input bind:value={request.cpus} />
+          </label>
+          <label>
+            <span>Memory</span>
+            <input bind:value={request.memory} />
+          </label>
+        </div>
+
+        <label class="choice">
+          <input type="checkbox" bind:checked={request.readOnlyWorkspace} />
+          <span>Read-only project folder</span>
+        </label>
+
+        <button class="primary" type="submit" disabled={!request.workspacePath || planning}>
+          {planning ? "Reviewing..." : "Review plan"}
+        </button>
+      </form>
+    </section>
+  </section>
+
+  {#if plan}
+    <section class="panel plan-panel">
+      <h2>Plan review</h2>
+      <dl class="plan-grid">
+        <Metric label="Agent" value={plan.profile} />
+        <Metric label="Project" value={plan.workspace} />
+        <Metric label="Agent memory" value={plan.stateVolume} />
+        <Metric label="Network" value={plan.networkMode} />
+        <Metric label="Image" value={plan.image} />
+        <Metric label="Preflight steps" value={String(plan.preflightCount)} />
+      </dl>
+
+      {#if plan.workspaceScopeNote}
+        <p class="notice">{plan.workspaceScopeNote}</p>
+      {/if}
+
+      <p class="egress">{plan.egressSummary}</p>
+
+      {#if plan.warnings.length > 0}
+        <div class="warning-list">
+          {#each plan.warnings as warning}
+            <p>{warning.message}</p>
+          {/each}
+        </div>
+      {/if}
+    </section>
+  {/if}
+</main>
