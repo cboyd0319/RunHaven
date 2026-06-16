@@ -23,7 +23,7 @@ and unrelated repositories.
 - no host home mount
 - no host secret mount
 - explicit environment passthrough only
-- optional SSH agent forwarding with Apple `container --ssh`
+- `--ssh` fails closed until Apple `container` non-root forwarding is verified
 - interactive TTY allocation when requested or attached to a terminal
 - explicit unsafe overrides for sensitive workspaces and root agent execution
 

@@ -73,9 +73,9 @@ Warnings:
 - warn when there is at least one active run and the user starts another run;
 - warn when the selected memory limit plus active runs could be material on the
   host, even if RunHaven cannot know exact macOS memory pressure yet;
-- warn before provider mode, default internet mode, SSH forwarding, explicit
-  env passthrough, sensitive workspaces, root user overrides, and worktree
-  discard or merge flows;
+- warn before provider mode, default internet mode, disabled SSH-forwarding
+  attempts, explicit env passthrough, sensitive workspaces, root user
+  overrides, and worktree discard or merge flows;
 - block launch if `runhaven doctor` fails.
 
 Until a dedicated typed UI status command exists, the UI may consume the
@@ -115,7 +115,7 @@ Explicit confirmation required:
 - `state prune`;
 - `network prune`;
 - provider host additions;
-- SSH forwarding;
+- SSH-forwarding attempts while disabled;
 - environment passthrough.
 
 Blocked until a dedicated design exists:

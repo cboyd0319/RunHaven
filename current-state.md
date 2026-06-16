@@ -112,10 +112,13 @@ policy, and repo-owned verification route.
 - Added provider-mode troubleshooting guidance that distinguishes allowlist
   denials from host-side proxy reachability or macOS Local Network privacy
   failures.
-- Extended `scripts/apple_container_smoke.sh` with default SSH-forwarding plan
-  coverage and an opt-in `--with-ssh` live connectivity check using a
-  disposable empty `ssh-agent`. Apple Container expert review found the
-  previous path-only check was a false positive.
+- Changed `--ssh` to fail closed in planner and run paths while Apple
+  `container` 1.0.0 non-root SSH forwarding is blocked. The flag stays visible
+  so users get an explicit refusal instead of an implied working private-Git
+  path.
+- Updated `scripts/apple_container_smoke.sh` so the default path verifies
+  `runhaven plan --ssh` refusal, and `--with-ssh` verifies `runhaven run --ssh`
+  refusal before launch.
 
 ## Trusted Verification
 
@@ -202,6 +205,17 @@ policy, and repo-owned verification route.
   `Error connecting to agent: Permission denied`, and cleanup checks found no
   active runs or RunHaven state volumes. The script now treats that as a failed
   live SSH smoke instead of passing on socket existence.
+- SSH fail-closed guard checks passed: `cargo fmt --check`,
+  `cargo test --locked ssh_forwarding_fails_closed_until_non_root_runtime_is_verified`,
+  `cargo test --locked plan_ssh_fails_closed_until_runtime_boundary_is_verified`,
+  `cargo test --locked`, `cargo clippy --all-targets -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins`, `bash -n
+  scripts/apple_container_smoke.sh`, `scripts/apple_container_smoke.sh`,
+  `scripts/apple_container_smoke.sh --with-ssh`, direct
+  `target/debug/runhaven plan shell --workspace . --ssh -- /bin/bash -lc true`
+  expected refusal, `target/debug/runhaven setup --agent shell`, cleanup checks,
+  JSON validation, local Markdown link check, active-doc stale SSH wording scan,
+  Rust source size guard, and `git diff --check`.
 
 ## Touched Surfaces
 
@@ -232,14 +246,12 @@ policy, and repo-owned verification route.
 
 - Apple `container` 1.0.0 exposes an SSH agent socket to the RunHaven non-root
   `agent` user with `--ssh`, but the guest cannot use it: `ssh-add -l` returns
-  permission denied. Do not treat SSH forwarding as proven, do not mount raw SSH
-  keys, and do not switch the default agent user to root without an explicit
-  security decision.
+  permission denied. RunHaven now fails closed on `--ssh`; do not re-enable it,
+  mount raw SSH keys, or switch the default agent user to root without explicit
+  security review and no-secret runtime proof.
 
 ## Next Step
 
-Decide how to handle the SSH-forwarding blocker: document and leave `--ssh` as
-known-limited, disable/hide `--ssh` until Apple `container` non-root forwarding
-works, or investigate a safe upstream/runtime workaround. After that, close the
-Apple `container` release-update playbook gap. Keep verification local while
-alpha CI is disabled.
+Close the Apple `container` release-update playbook gap, then continue the
+accepted backlog items for script purpose headers and a whole-repo Rust expert
+review. Keep verification local while alpha CI is disabled.

@@ -134,7 +134,7 @@ pub(super) struct RunArgs {
     pub(super) read_only_workspace: bool,
     #[arg(
         long,
-        help = "forward the host SSH agent socket without mounting raw SSH keys"
+        help = "currently disabled: SSH forwarding fails closed until Apple container non-root forwarding is verified"
     )]
     pub(super) ssh: bool,
     #[arg(

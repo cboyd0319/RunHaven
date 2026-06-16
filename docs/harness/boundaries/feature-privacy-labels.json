@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-06-15",
+  "lastUpdated": "2026-06-16",
   "labels": [
     "Local only",
     "External AI optional",
@@ -69,7 +69,7 @@
       "dataCategories": [
         "SSH agent socket"
       ],
-      "defaultDataFlow": "Apple `container --ssh` forwards the agent socket without mounting raw SSH keys.",
+      "defaultDataFlow": "`--ssh` currently fails closed until Apple `container` non-root forwarding is verified; raw SSH keys are not mounted.",
       "externalAi": {
         "allowed": false,
         "required": false,

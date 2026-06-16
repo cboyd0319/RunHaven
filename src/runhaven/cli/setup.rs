@@ -56,7 +56,9 @@ fn print_setup_workspace_and_credentials() {
     println!(
         "- RunHaven does not mount raw SSH keys, browser profiles, cloud credential folders, or provider login caches by default."
     );
-    println!("- Use `--ssh` for SSH agent forwarding instead of mounting key files.");
+    println!(
+        "- SSH forwarding currently fails closed until Apple `container` non-root socket access is verified; do not mount raw key files."
+    );
     println!("- Use `--env NAME` only for a reviewed variable that the agent really needs.");
     println!("- Use `runhaven plan` to confirm the mounted host path.");
 }

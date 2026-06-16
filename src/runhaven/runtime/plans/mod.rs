@@ -24,6 +24,8 @@ pub use validation::{
 use crate::session_state::state_volume_name;
 use crate::validators::validate_run_id;
 
+const SSH_FORWARDING_DISABLED_MESSAGE: &str = "SSH forwarding is disabled: Apple container 1.0.0 exposes the forwarded socket to RunHaven's non-root agent user, but ssh-add -l returns permission denied. Do not mount raw SSH keys or run the agent as root; track docs/APPLE_CONTAINER_GAP_ANALYSIS.md.";
+
 pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     if let Some(run_id) = &options.run_id {
         validate_run_id(run_id)?;
@@ -60,6 +62,9 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     validate_resource_options(&options.cpus, &options.memory, &options.user)?;
     if uses_root_identity(&options.user) && !options.allow_root_user {
         bail!("root user or group requires --allow-root-user");
+    }
+    if options.ssh {
+        bail!(SSH_FORWARDING_DISABLED_MESSAGE);
     }
 
     let provider_allowed_hosts = provider_hosts_for_options(&options)?;
@@ -192,9 +197,6 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
         }
     };
 
-    if options.ssh {
-        command.push("--ssh".to_string());
-    }
     let mut agent_command = strip_remainder_separator(&options.agent_args);
     if agent_command.is_empty() {
         agent_command = options
@@ -323,5 +325,39 @@ mod tests {
 
         options.provider_hosts = vec!["127.0.0.1".to_string()];
         assert!(build_run_plan(options).is_err());
+    }
+
+    #[test]
+    fn ssh_forwarding_fails_closed_until_non_root_runtime_is_verified() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let error = build_run_plan(RunOptions {
+            profile: get_profile("shell").expect("profile"),
+            workspace: workspace.path().to_path_buf(),
+            agent_args: Vec::new(),
+            image: None,
+            cpus: "4".to_string(),
+            memory: "4g".to_string(),
+            network: NetworkMode::Internet,
+            workspace_scope: WorkspaceScope::Current,
+            session: None,
+            read_only_workspace: false,
+            ssh: true,
+            env: Vec::new(),
+            user: "agent".to_string(),
+            interactive: false,
+            tty: false,
+            allow_sensitive_workspace: false,
+            allow_root_user: false,
+            provider_hosts: Vec::new(),
+            codex_api_key_broker_env: None,
+            worktree: None,
+            run_id: None,
+        })
+        .expect_err("ssh forwarding should be disabled");
+        let message = error.to_string();
+
+        assert!(message.contains("SSH forwarding is disabled"));
+        assert!(message.contains("Apple container 1.0.0"));
+        assert!(message.contains("raw SSH keys"));
     }
 }

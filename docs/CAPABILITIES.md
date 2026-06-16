@@ -102,7 +102,7 @@ default.
 
 | Opt-in | What it does |
 | --- | --- |
-| `--ssh` | Forwards the macOS SSH agent without mounting `~/.ssh`. |
+| `--ssh` | Currently fails closed until Apple `container` non-root SSH forwarding is verified. |
 | `--env NAME` | Passes one reviewed host environment variable by name. `NAME=value` is rejected. |
 | `--codex-api-key-broker-env NAME` | Enables the Codex API-key broker prototype for provider-network Codex runs. |
 | `runhaven auth status` / `runhaven auth explain AGENT` | Explains current broker boundaries without reading or printing secrets. |

@@ -120,7 +120,8 @@
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after the second follow-up hardening pass; the unit suite ran 47 tests",
         "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 47 tests and passed after the second follow-up hardening pass",
         "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven run --help`, `PYTHONPATH=src python3.14 -m runhaven plan shell --network internal --tty never -- /bin/true`, and `PYTHONPATH=src python3.14 -m runhaven doctor` passed after the second follow-up hardening pass",
-        "2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100 after the second follow-up hardening pass"
+        "2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100 after the second follow-up hardening pass",
+        "2026-06-16: `--ssh` fails closed in planner and CLI paths while Apple `container` 1.0.0 non-root SSH forwarding is blocked; planner, CLI, and Apple container smoke guard checks cover the refusal."
       ],
       "notes": "Runtime and contributor verification are macOS 26+ only."
     },

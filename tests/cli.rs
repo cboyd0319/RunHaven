@@ -40,3 +40,24 @@ fn run_help_explains_agent_argument_separator() {
     assert!(stdout.contains("--workspace-scope"));
     assert!(stdout.contains("runtime allowlist proxy"));
 }
+
+#[test]
+fn plan_ssh_fails_closed_until_runtime_boundary_is_verified() {
+    let workspace = tempfile::tempdir().expect("temp workspace");
+    let output = Command::new(env!("CARGO_BIN_EXE_runhaven"))
+        .args(["plan", "shell", "--workspace"])
+        .arg(workspace.path())
+        .args(["--ssh"])
+        .output()
+        .expect("run runhaven");
+
+    assert!(
+        !output.status.success(),
+        "stdout: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("SSH forwarding is disabled"));
+    assert!(stderr.contains("Apple container 1.0.0"));
+    assert!(stderr.contains("raw SSH keys"));
+}

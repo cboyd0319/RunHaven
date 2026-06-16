@@ -224,9 +224,9 @@ agent needs the full repository mounted at `/workspace`; non-git directories
 fail closed with that scope.
 
 RunHaven does not mount raw SSH keys, browser profiles, cloud credential
-folders, or provider login caches by default. Use `--ssh` for SSH agent
-forwarding instead of mounting key files. Use `--env NAME` only for a reviewed
-variable the agent really needs.
+folders, or provider login caches by default. SSH forwarding currently fails
+closed until Apple `container` non-root socket access is verified. Use
+`--env NAME` only for a reviewed variable the agent really needs.
 
 ## Worktree Isolation
 
@@ -555,25 +555,26 @@ command line or inside the guest environment.
 ## Private Git
 
 ```bash
-runhaven run claude --ssh
+runhaven plan claude --ssh
 ```
 
-This forwards the macOS SSH agent socket using Apple `container --ssh`. It does
-not mount the host SSH key directory.
+`--ssh` currently fails closed on the pinned Apple `container` 1.0.0 runtime.
+RunHaven keeps the flag visible so the CLI can explain the blocker, but it does
+not build or launch an SSH-forwarded run while the non-root agent user cannot
+use the forwarded socket.
 
-For local verification without exposing real private keys, use the Apple
-container smoke harness. Its default path checks the planned `--ssh` command
-shape. `--with-ssh` starts a disposable empty `ssh-agent` and checks whether
-the guest can reach it with `ssh-add -l` without mounting `~/.ssh`:
+For local verification, use the Apple container smoke harness. Its default path
+checks that `runhaven plan --ssh` fails closed. `--with-ssh` also checks that
+`runhaven run --ssh` refuses before launching a container:
 
 ```bash
 scripts/apple_container_smoke.sh --with-ssh
 ```
 
-On the current pinned Apple `container` 1.0.0 runtime, this live check can fail
-for RunHaven's non-root `agent` user with a permission error even though the
-socket path is visible. Treat that as an Apple `container` SSH-forwarding
-blocker, not as a reason to mount raw SSH keys or run the agent as root.
+The live blocker found on 2026-06-16 was that RunHaven's non-root `agent` user
+could see the forwarded socket path, but `ssh-add -l` returned permission
+denied. Treat that as an Apple `container` SSH-forwarding blocker, not as a
+reason to mount raw SSH keys or run the agent as root.
 
 ## Reusable Sessions And State Volumes
 

@@ -16,8 +16,8 @@ Checks:
   - active run status, logs-follow, stop, and completed run record
   - provider plan guidance
   - provider network allowlist and direct-egress denial, when requested
-  - SSH forwarding plan guidance
-  - SSH forwarding connectivity with a disposable empty ssh-agent, when requested
+  - SSH forwarding fail-closed guidance
+  - SSH forwarding run refusal, when requested
 
 The script creates a temporary workspace and RunHaven state for a unique
 session. Cleanup is limited to those resources and the exact temporary
@@ -101,9 +101,6 @@ INTERNAL_RUN_PID=""
 LOGS_PID=""
 PROVIDER_SESSION="${SESSION}-provider"
 SSH_SESSION="${SESSION}-ssh"
-SSH_NETWORK=""
-SSH_SMOKE_AUTH_SOCK=""
-SSH_SMOKE_AGENT_PID=""
 
 safe_runhaven_network_name() {
   case "$1" in
@@ -153,16 +150,11 @@ cleanup() {
     "$RUNHAVEN_BIN" runs repair "$INTERNAL_RUN_ID" >/dev/null 2>&1 || true
   fi
 
-  if [ -n "${SSH_SMOKE_AGENT_PID:-}" ]; then
-    SSH_AUTH_SOCK="$SSH_SMOKE_AUTH_SOCK" SSH_AGENT_PID="$SSH_SMOKE_AGENT_PID" ssh-agent -k >/dev/null 2>&1 || true
-  fi
-
   reset_state_if_possible "$SESSION"
   reset_state_if_possible "$PROVIDER_SESSION"
   reset_state_if_possible "$SSH_SESSION"
   delete_network_if_present "$INTERNAL_NETWORK"
   delete_network_if_present "$PROVIDER_NETWORK"
-  delete_network_if_present "$SSH_NETWORK"
 
   if [ -n "${TMP_ROOT:-}" ] && [ -d "$TMP_ROOT" ] && [ "$KEEP_TMP" -eq 0 ]; then
     rm -rf "$TMP_ROOT"
@@ -234,11 +226,6 @@ require_command container
 require_command mktemp
 require_command sed
 require_command awk
-if [ "$RUN_SSH" -eq 1 ]; then
-  require_command ssh-agent
-  require_command ssh-add
-fi
-
 case "$(uname -s)" in
   Darwin) ;;
   *) fail "Apple container smoke tests require macOS" ;;
@@ -371,28 +358,26 @@ sleep 30
   printf 'internal run %s stopped after status %s\n' "$INTERNAL_RUN_ID" "$run_status"
 }
 
-start_disposable_ssh_agent() {
-  local agent_env="$TMP_ROOT/ssh-agent.env"
-  local agent_socket="$TMP_ROOT/ssh-agent.sock"
+expect_ssh_disabled_error() {
+  local stderr_path="$1"
 
-  ssh-agent -a "$agent_socket" -s >"$agent_env"
-  SSH_SMOKE_AUTH_SOCK="$(awk -F'[=;]' '/^SSH_AUTH_SOCK=/ {print $2; exit}' "$agent_env")"
-  SSH_SMOKE_AGENT_PID="$(awk -F'[=;]' '/^SSH_AGENT_PID=/ {print $2; exit}' "$agent_env")"
-  [ -n "$SSH_SMOKE_AUTH_SOCK" ] || fail "could not parse disposable ssh-agent socket"
-  [ -n "$SSH_SMOKE_AGENT_PID" ] || fail "could not parse disposable ssh-agent pid"
-  [ -S "$SSH_SMOKE_AUTH_SOCK" ] || fail "disposable ssh-agent socket is missing"
-
-  set +e
-  SSH_AUTH_SOCK="$SSH_SMOKE_AUTH_SOCK" ssh-add -l >/dev/null 2>&1
-  local add_status=$?
-  set -e
-  [ "$add_status" -eq 1 ] || fail "disposable ssh-agent unexpectedly has identities"
+  grep -F "SSH forwarding is disabled" "$stderr_path" >/dev/null || {
+    print_file "$stderr_path"
+    fail "SSH command did not explain the disabled forwarding boundary"
+  }
+  grep -F "Apple container 1.0.0" "$stderr_path" >/dev/null || {
+    print_file "$stderr_path"
+    fail "SSH command did not name the pinned Apple container blocker"
+  }
 }
 
 plan_ssh_smoke() {
-  local plan_path="$TMP_ROOT/ssh-plan.txt"
+  local stdout_path="$TMP_ROOT/ssh-plan.stdout.txt"
+  local stderr_path="$TMP_ROOT/ssh-plan.stderr.txt"
+  local status=0
 
-  step "plan SSH forwarding run"
+  step "check SSH forwarding plan fails closed"
+  set +e
   "$RUNHAVEN_BIN" plan shell \
     --workspace "$WORKSPACE" \
     --session "$SSH_SESSION" \
@@ -401,19 +386,25 @@ plan_ssh_smoke() {
     --ssh \
     --no-interactive \
     --tty never \
-    -- /bin/bash -lc 'command -v ssh-add >/dev/null && ssh-add -l' >"$plan_path"
-  grep -F -- "--ssh" "$plan_path" >/dev/null || fail "plan did not include --ssh"
-  grep -F "target=/workspace,readonly" "$plan_path" >/dev/null || fail "SSH plan did not keep workspace read-only"
-  SSH_NETWORK="$(parse_network_from_plan "$plan_path")"
+    -- /bin/bash -lc true >"$stdout_path" 2>"$stderr_path"
+  status=$?
+  set -e
+
+  [ "$status" -ne 0 ] || {
+    print_file "$stdout_path"
+    fail "SSH plan unexpectedly succeeded"
+  }
+  expect_ssh_disabled_error "$stderr_path"
 }
 
 run_ssh_smoke() {
-  local stdout_path="$TMP_ROOT/ssh-stdout.txt"
-  local stderr_path="$TMP_ROOT/ssh-stderr.txt"
+  local stdout_path="$TMP_ROOT/ssh-run.stdout.txt"
+  local stderr_path="$TMP_ROOT/ssh-run.stderr.txt"
+  local status=0
 
-  step "run SSH forwarding smoke container"
-  start_disposable_ssh_agent
-  SSH_AUTH_SOCK="$SSH_SMOKE_AUTH_SOCK" "$RUNHAVEN_BIN" run shell \
+  step "check SSH forwarding run fails closed"
+  set +e
+  "$RUNHAVEN_BIN" run shell \
     --workspace "$WORKSPACE" \
     --session "$SSH_SESSION" \
     --network internal \
@@ -421,32 +412,15 @@ run_ssh_smoke() {
     --ssh \
     --no-interactive \
     --tty never \
-    -- /bin/bash -lc 'set -u
-test -n "${SSH_AUTH_SOCK:-}"
-test -S "$SSH_AUTH_SOCK"
-test ! -e "$HOME/.ssh"
-command -v ssh-add >/dev/null
-ssh_status=0
-ssh-add -l >/tmp/runhaven-ssh-add.out 2>/tmp/runhaven-ssh-add.err || ssh_status=$?
-if [ "$ssh_status" -eq 1 ]; then
-  echo runhaven-ssh-ready
-  exit 0
-fi
-cat /tmp/runhaven-ssh-add.out
-cat /tmp/runhaven-ssh-add.err >&2
-if [ "$ssh_status" -eq 0 ]; then
-  echo "disposable ssh-agent unexpectedly exposed identities" >&2
-  exit 47
-fi
-echo "SSH forwarding socket is present but not usable by the guest agent user" >&2
-exit 48
-' >"$stdout_path" 2>"$stderr_path" || {
-    print_file "$stdout_path"
-    print_file "$stderr_path"
-    fail "SSH forwarding smoke run failed"
-  }
+    -- /bin/bash -lc true >"$stdout_path" 2>"$stderr_path"
+  status=$?
+  set -e
 
-  grep -F "runhaven-ssh-ready" "$stdout_path" >/dev/null || fail "SSH smoke output missing ready marker"
+  [ "$status" -ne 0 ] || {
+    print_file "$stdout_path"
+    fail "SSH run unexpectedly succeeded"
+  }
+  expect_ssh_disabled_error "$stderr_path"
 }
 
 plan_provider_smoke() {
@@ -513,8 +487,8 @@ plan_ssh_smoke
 if [ "$RUN_SSH" -eq 1 ]; then
   run_ssh_smoke
 else
-  step "skip live SSH smoke"
-  echo "Use --with-ssh to run live SSH forwarding with a disposable empty ssh-agent."
+  step "skip SSH run refusal check"
+  echo "Use --with-ssh to also verify that runhaven run --ssh fails closed before launch."
 fi
 plan_provider_smoke
 if [ "$RUN_PROVIDER" -eq 1 ]; then
@@ -530,7 +504,6 @@ reset_state_if_possible "$PROVIDER_SESSION"
 reset_state_if_possible "$SSH_SESSION"
 delete_network_if_present "$INTERNAL_NETWORK"
 delete_network_if_present "$PROVIDER_NETWORK"
-delete_network_if_present "$SSH_NETWORK"
 
 if "$RUNHAVEN_BIN" runs active | grep -F "${INTERNAL_RUN_ID:-__missing__}" >/dev/null; then
   fail "active run marker still exists after cleanup: $INTERNAL_RUN_ID"

@@ -189,6 +189,7 @@ Use this order:
    volume when possible.
 4. Use `--env NAME` only when a headless run needs a token.
 5. Use `--read-only-workspace` for review and audit tasks.
-6. Use `--ssh` only when private Git access is required.
+6. Treat `--ssh` as disabled until Apple `container` non-root forwarding is
+   verified; do not mount raw SSH keys as a workaround.
 7. Use `--allow-sensitive-workspace` or `--allow-root-user` only when the
    security tradeoff is intentional.
