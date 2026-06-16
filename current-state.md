@@ -54,6 +54,8 @@ policy, and repo-owned verification route.
   release controls, and source-mined ideas.
 - Removed ignored local cleanup artifacts from the working tree, including
   stale Python cache/build output and `.DS_Store` files.
+- Added an explicit README alpha/pre-release warning aligned with the
+  HarnessForge repo wording.
 
 ## Trusted Verification
 
@@ -75,6 +77,8 @@ policy, and repo-owned verification route.
   packaging files, or `.DS_Store` files remain outside ignored build output.
 - JSON validation, local Markdown link check, `git diff --check`, and Rust
   source size guard: passed.
+- README alpha/pre-release docs check: local Markdown link check and
+  `git diff --check` passed.
 
 ## Touched Surfaces
 
@@ -102,6 +106,6 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Push the committed Rust conversion to `main`, then monitor main-branch CI.
-Future work should broaden live provider/container smokes and Tauri planning
-from the Rust module boundaries now in place.
+Monitor main-branch CI after the README pre-release marker commit. Future work
+should broaden live provider/container smokes and Tauri planning from the Rust
+module boundaries now in place.

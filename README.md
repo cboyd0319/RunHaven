@@ -9,6 +9,14 @@
 ![Apple container 1.0.0](https://img.shields.io/badge/apple%20container-1.0.0-555)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
+> [!CAUTION]
+> # ALPHA / PRE-RELEASE PROJECT
+>
+> RunHaven has not been deployed and has no external users yet. CLI contracts,
+> container and image layouts, run-record formats, provider allowlists, auth
+> broker behavior, and docs may change without backward-compatibility
+> guarantees until maintainers declare an explicit release boundary.
+
 Run AI coding agents inside Apple `container` on macOS 26+ with a narrow,
 previewable local boundary.
 
@@ -27,8 +35,9 @@ secrets, and shows the exact Apple `container` command before anything runs.
 
 ## Status
 
-Early foundation. RunHaven is usable for local testing, image builds, and
-provider-restricted agent runs.
+Alpha / pre-release. RunHaven is usable for local testing, image builds, and
+provider-restricted agent runs, but maintainers have not declared a stable
+release boundary.
 
 RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
 supported runtimes or contributor verification targets.
