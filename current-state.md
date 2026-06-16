@@ -56,6 +56,9 @@ policy, and repo-owned verification route.
   stale Python cache/build output and `.DS_Store` files.
 - Added an explicit README alpha/pre-release warning aligned with the
   HarnessForge repo wording.
+- Expanded the main README to explain what RunHaven is, why users want it, and
+  what makes the runtime boundary distinctive; corrected the Cargo development
+  command in installation docs to name the `runhaven` binary explicitly.
 
 ## Trusted Verification
 
@@ -79,6 +82,9 @@ policy, and repo-owned verification route.
   source size guard: passed.
 - README alpha/pre-release docs check: local Markdown link check and
   `git diff --check` passed.
+- README full accuracy refresh: pin check, local Markdown link check, platform
+  wording/stale-command scan, `git diff --check`, and CLI `agents`/`plan`
+  smokes passed.
 
 ## Touched Surfaces
 
@@ -106,6 +112,6 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Monitor main-branch CI after the README pre-release marker commit. Future work
-should broaden live provider/container smokes and Tauri planning from the Rust
-module boundaries now in place.
+Monitor main-branch CI after the README accuracy commit. Future work should
+broaden live provider/container smokes and Tauri planning from the Rust module
+boundaries now in place.

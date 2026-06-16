@@ -36,7 +36,7 @@ cargo install --path . --locked
 For development without installing, run the binary through Cargo:
 
 ```bash
-cargo run --locked -- plan shell
+cargo run --locked --bin runhaven -- plan shell
 ```
 
 Development tools and dependencies are exact-pinned in `rust-toolchain.toml`,

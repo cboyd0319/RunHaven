@@ -17,14 +17,15 @@
 > broker behavior, and docs may change without backward-compatibility
 > guarantees until maintainers declare an explicit release boundary.
 
-Run AI coding agents inside Apple `container` on macOS 26+ with a narrow,
-previewable local boundary.
+RunHaven is a Rust CLI for running AI coding agents inside Apple `container`
+on macOS 26+. It gives every run a previewable local boundary: one selected
+workspace, one isolated agent home volume, an explicit network mode, a pinned
+agent image, and secret-free run records for review and recovery.
 
-RunHaven is for people who should not need to understand containers,
-sandboxing, SSH agents, or credential leakage before using Claude Code, Codex,
-Gemini, Antigravity, Copilot, or a custom agent on their Mac. It mounts one
-selected project, gives the agent one isolated home volume, avoids host
-secrets, and shows the exact Apple `container` command before anything runs.
+It is for people who want the power of Claude Code, Codex, Gemini,
+Antigravity, Copilot, or a custom agent without casually handing an agent their
+whole Mac. RunHaven does not replace those tools. It wraps them in a repeatable
+container runtime that makes the safer path the default.
 
 [Installation](docs/INSTALLATION.md) |
 [Capabilities](docs/CAPABILITIES.md) |
@@ -47,6 +48,60 @@ as unrestricted egress inside whatever Apple `container` and your host network
 allow. Use `--network provider` when a run should be restricted to the bundled
 provider host allowlist plus any reviewed fully qualified `--provider-host`
 entries.
+
+## What It Is
+
+RunHaven is the outer runtime layer for local AI coding agents:
+
+- a command planner that prints the Apple `container run` command before
+  execution;
+- a profile system for bundled Claude, Codex, Gemini, Antigravity, Copilot, and
+  generic shell images;
+- a narrow workspace mount policy that defaults to the current directory
+  instead of a whole home directory or silent git-root expansion;
+- a per-project/profile/session home volume so agent state stays isolated from
+  the host and from other projects;
+- a run ledger with secret-free metadata, active-run controls, logs, diffs, and
+  recovery commands.
+
+It is not a complete data-loss or exfiltration solution. The selected agent can
+still read the mounted workspace and its own isolated home volume, and default
+internet mode is not domain-restricted. RunHaven's job is to make the outer
+container boundary explicit, narrow, inspectable, and recoverable.
+
+## Why You Want It
+
+AI coding agents are useful because they can inspect a project, edit files, run
+commands, and iterate quickly. That same power is risky when the agent runs
+directly on your Mac with ambient access to your home directory, dotfiles, SSH
+keys, cloud credentials, browser profiles, unrelated repositories, and shell
+environment.
+
+RunHaven gives you a safer default workflow:
+
+- preview the exact container command before the agent starts;
+- mount only the project directory you intentionally selected;
+- keep the agent's login/cache state in an isolated project volume;
+- forward SSH through the macOS SSH agent without mounting raw private keys;
+- pass environment variables only by reviewed name, never `NAME=value`;
+- run local-only tasks with `--network internal`;
+- use provider mode when you want a host allowlist proxy instead of broad
+  internet egress;
+- run risky edits in a RunHaven-owned git worktree and merge, keep, recover, or
+  discard the result explicitly.
+
+## What Makes It Cool
+
+| Capability | Why it matters |
+| --- | --- |
+| Plan-first execution | `runhaven plan` shows the workspace, state volume, network, egress status, preflight, and full Apple `container run` command before anything mutates. |
+| Beginner-safe defaults | Bundled images run as a non-root `agent` user with a read-only root filesystem, dropped Linux capabilities, temporary scratch space, and no host home or credential folder mount. |
+| Project-scoped memory | Each project/profile/session gets its own agent home volume, so logins and caches can be reused without mixing unrelated projects. |
+| Provider egress mode | `--network provider` runs the agent on an internal Apple `container` network and routes HTTP CONNECT traffic through a host-side reviewed provider allowlist proxy. |
+| Worktree isolation | `--worktree` runs the agent in a RunHaven-owned git worktree so the source checkout stays untouched until you explicitly merge. |
+| Secret-free observability | `runhaven runs ...`, `runhaven egress log`, and `runhaven auth ...` expose run status, provider policy, broker status, and recovery paths without storing prompts, command lines, env values, request bodies, token values, or diffs. |
+| Local resource repair | `image doctor`, `image rebuild`, `state reset`, `network list`, and `network prune` focus only on RunHaven-owned images, volumes, and networks. |
+| Tauri-ready shape | The Rust CLI is organized around separate runtime, provider, image, records, and support modules so a future desktop UI can call the same core behavior. |
 
 ## Quick Start
 
