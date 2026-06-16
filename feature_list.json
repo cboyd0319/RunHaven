@@ -16,6 +16,31 @@
   },
   "features": [
     {
+      "id": "tauri-ui-research",
+      "priority": 0,
+      "area": "ui",
+      "title": "Tauri/UI research and framework selection",
+      "user_visible_behavior": "RunHaven's first desktop UI will be planned from current Tauri v2 evidence, a deliberate frontend framework choice, comparable product UX research, and beginner-safe interaction flows before any scaffold is added.",
+      "status": "active",
+      "dependencies": [
+        "rust-cli-conversion",
+        "runtime-hardening-macos-only-boundary",
+        "provider-egress-allowlisting",
+        "run-observability"
+      ],
+      "verification": [
+        "Current official Tauri v2 architecture, command, capability, permission, frontend, and build/test docs are reviewed",
+        "Svelte, React, Solid, and Vue are compared against RunHaven's beginner-safe and maintainability requirements",
+        "Comparable desktop/container/workspace UI patterns are recorded",
+        "Information architecture, screen responsibilities, command contract, capability map, and first scaffold acceptance criteria are documented",
+        "No `src-tauri/` scaffold or frontend dependency is added before the research plan is accepted"
+      ],
+      "evidence": [
+        "2026-06-16: Tauri/UI research was promoted to the active repo phase with `docs/TAURI_UI_RESEARCH_PLAN.md`; non-UI gates and candidates were consolidated in `docs/NON_UI_BACKLOG.md`."
+      ],
+      "notes": "This is a research phase, not implementation. The target user is non-technical, so the UI must be plain-language, guided, reversible, and fail-closed."
+    },
+    {
       "id": "rust-cli-conversion",
       "priority": 1,
       "area": "platform",

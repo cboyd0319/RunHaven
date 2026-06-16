@@ -375,8 +375,8 @@ Add these as README or usage recipes before adding a larger UI.
 
 ## Recommended UX Build Order
 
-1. `runhaven why` for provider-host decisions is implemented; workspace,
-   network, and state explanations remain future work.
+1. `runhaven why` for provider-host, workspace, network, and state decisions is
+   implemented.
 2. Provider policy logs with JSON output and grouped blocked-host review are
    implemented.
 3. Goal-based network copy in `plan`, `run --help`, README, and `docs/USAGE.md`.
@@ -389,4 +389,4 @@ Add these as README or usage recipes before adding a larger UI.
 8. Project recommendation/import from manifests and devcontainer metadata.
 9. Auth status and Codex broker prototype are implemented; broader provider
    brokers remain future work.
-10. Local-only browser UI after the CLI planner and run records stabilize.
+10. Tauri/UI research phase after the CLI planner and run records stabilize.

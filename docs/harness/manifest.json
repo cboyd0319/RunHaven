@@ -45,6 +45,8 @@
     "feature_list.json",
     "current-state.md",
     "init.sh",
+    "docs/NON_UI_BACKLOG.md",
+    "docs/TAURI_UI_RESEARCH_PLAN.md",
     "docs/assets/logo.png",
     "docs/harness/README.md",
     ".agents/skills/harness/SKILL.md",
@@ -105,6 +107,19 @@
       "first-agent-task.md",
       "harnessforge report",
       "harnessforge enhance"
+    ],
+    "docs/NON_UI_BACKLOG.md": [
+      "Required Before UI Implementation",
+      "Accepted Non-UI Polish",
+      "Candidate Work Requiring Design First",
+      "Deferred Until End-Stage Packaging"
+    ],
+    "docs/TAURI_UI_RESEARCH_PLAN.md": [
+      "Research Outcome",
+      "Framework Candidates",
+      "Comparable UI Analysis",
+      "Beginner-Safe UX Questions",
+      "Do Not Start Yet"
     ],
     "docs/harness/state/first-agent-task.md": [
       "First-Agent Harness Improvement Task",

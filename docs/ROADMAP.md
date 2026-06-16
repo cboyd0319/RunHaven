@@ -5,6 +5,10 @@ direction. The live feature status and verification evidence are tracked in
 `feature_list.json`, `current-state.md`, and
 `docs/harness/evidence/evidence-log.md`.
 
+The consolidated non-UI backlog lives in
+[`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md). Tauri/UI research lives in
+[`TAURI_UI_RESEARCH_PLAN.md`](TAURI_UI_RESEARCH_PLAN.md).
+
 ## Phase 1: Safe Local Baseline
 
 - Rust CLI package and command
@@ -94,6 +98,9 @@ direction. The live feature status and verification evidence are tracked in
 - Action the coverage gaps in
   [`docs/APPLE_CONTAINER_GAP_ANALYSIS.md`](APPLE_CONTAINER_GAP_ANALYSIS.md)
   before starting Tauri/UI work.
+- Keep the consolidated non-UI backlog in
+  [`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md) current before promoting any
+  candidate item to implementation.
 - Keep opt-in live Apple `container` smoke coverage for command shapes and JSON
   parsing that unit tests cannot prove.
 - Keep `runhaven doctor` enforcing the reviewed Apple `container` runtime
@@ -103,6 +110,20 @@ direction. The live feature status and verification evidence are tracked in
 - Keep [`docs/TAURI_UI_GUARDRAILS.md`](TAURI_UI_GUARDRAILS.md) as the
   pre-implementation contract for UI resource warnings, approval gates, typed
   Rust commands, and narrow Tauri capabilities.
+
+## Tauri/UI Research Phase
+
+- Use [`docs/TAURI_UI_RESEARCH_PLAN.md`](TAURI_UI_RESEARCH_PLAN.md) as the
+  active research plan.
+- Research current Tauri v2 architecture, capabilities, permissions, command
+  IPC, frontend configuration, and test/build flow before scaffolding.
+- Compare Svelte, React, Solid, and Vue against RunHaven's beginner-safe,
+  low-maintenance desktop requirements.
+- Study Docker Desktop, Podman Desktop, DevPod Desktop, and GitHub Desktop for
+  setup, dashboard, logs, workspace, review, and recovery patterns.
+- Produce information architecture, screen responsibilities, command contract,
+  capability mapping, and UX copy before adding `src-tauri/` or frontend
+  dependencies.
 
 ## Phase 6: Repeatable Workflows
 

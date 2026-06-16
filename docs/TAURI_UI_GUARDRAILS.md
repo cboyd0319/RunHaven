@@ -148,6 +148,8 @@ Each Tauri command needs:
 
 - This guardrail document is linked from the roadmap and Apple Container gap
   analysis.
+- Tauri/UI research follows
+  [`TAURI_UI_RESEARCH_PLAN.md`](TAURI_UI_RESEARCH_PLAN.md) before scaffold work.
 - Tauri scaffold work starts with current official Tauri docs and pinned
   versions.
 - The first `src-tauri/capabilities/` files and app manifest command list are

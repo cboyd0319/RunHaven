@@ -113,6 +113,8 @@ playbook now covers runtime pin update evidence and rollback.
 Re-run the live smoke before Tauri/UI work and before release hardening; the
 remaining known pre-Tauri gap is the P2 SSH-forwarding blocker unless provider
 or SSH runtime behavior changes again.
+The consolidated non-UI backlog is tracked in
+[`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md).
 
 ## Backlog Additions
 

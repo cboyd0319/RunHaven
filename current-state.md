@@ -4,9 +4,10 @@ Last Updated: 2026-06-16 UTC
 
 ## Current Objective
 
-Finish the non-UI CLI, safety-policy, documentation, and harness cleanup pass
-for the Rust RunHaven CLI while preserving the macOS Apple `container`
-boundary, exact pin policy, and repo-owned verification route.
+Begin the Tauri/UI research phase from a clean Rust CLI core. The research must
+choose a source-backed Tauri v2 architecture, frontend framework, comparable UI
+patterns, and beginner-safe UX plan before any scaffold or frontend dependency
+is added.
 
 ## State Contract
 
@@ -41,6 +42,14 @@ boundary, exact pin policy, and repo-owned verification route.
 
 ## Latest Verified Work
 
+- Added `docs/NON_UI_BACKLOG.md` as the consolidated backlog for all remaining
+  non-UI gates, accepted polish, candidates, and deferred end-stage packaging
+  work.
+- Added `docs/TAURI_UI_RESEARCH_PLAN.md` as the active research plan for Tauri
+  architecture, frontend framework selection, comparable product analysis, UX
+  questions, information architecture, command contracts, and scaffold gates.
+- Promoted Tauri/UI research and framework selection to the active harness
+  roadmap item.
 - Added non-mutating CLI explainers for `runhaven why workspace PATH`,
   `runhaven why network MODE`, and `runhaven why state AGENT`; existing
   `why host` remains the provider-host explainer.
@@ -261,17 +270,27 @@ boundary, exact pin policy, and repo-owned verification route.
   `scripts/apple_container_smoke.sh --with-ssh`, cleanup checks, tracked-ignored
   check, JSON validation, local Markdown link check, Rust source size guard, and
   `git diff --check`.
+- Tauri/UI research setup checks passed: Antigravity read-only research,
+  current official Tauri/Vite/frontend source review, comparable UI source
+  review, JSON validation for `feature_list.json` and
+  `docs/harness/manifest.json`, local Markdown link check, stale-text scan,
+  `cargo run --locked --bin runhaven-check-pins`, and `git diff --check`.
 
 ## Touched Surfaces
 
 - `current-state.md`
 - `feature_list.json`
+- `docs/NON_UI_BACKLOG.md`
+- `docs/TAURI_UI_RESEARCH_PLAN.md`
+- `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`
 - `docs/EXTENSION_MCP_BOUNDARY.md`
+- `docs/TAURI_UI_GUARDRAILS.md`
 - `docs/CAPABILITIES.md`
 - `docs/ROADMAP.md`
 - `docs/SECURITY_MODEL.md`
 - `docs/USAGE.md`
 - `docs/harness/evidence/evidence-log.md`
+- `docs/harness/manifest.json`
 - `docs/harness/research/ux-research-ideas.md`
 - `docs/harness/state/roadmap.md`
 - `src/runhaven/cli/app.rs`
@@ -290,7 +309,8 @@ boundary, exact pin policy, and repo-owned verification route.
 
 ## Next Step
 
-No additional non-UI implementation task is currently accepted beyond known
-candidate research items that need a scoped design or representative evidence.
-Keep `--ssh` fail-closed until a no-secret non-root Apple `container` smoke
-proves usable forwarding.
+Continue the Tauri/UI research phase in `docs/TAURI_UI_RESEARCH_PLAN.md`.
+Research current Tauri v2 architecture, frontend framework fit, comparable
+desktop/container/workspace UIs, and beginner-safe UX flows before adding a
+Tauri scaffold. Keep `--ssh` fail-closed until a no-secret non-root Apple
+`container` smoke proves usable forwarding.
