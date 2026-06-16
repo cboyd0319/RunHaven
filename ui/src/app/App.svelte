@@ -15,6 +15,7 @@
     type AgentProfile,
     type DashboardStatus,
     type ImageStatusResponse,
+    type LaunchRunResponse,
     type RunPlanRequest,
     type RunPlanResponse
   } from "../commands/runhaven";
@@ -31,6 +32,7 @@
   let launchConfirmation = false;
   let confirmedWarnings: string[] = [];
   let launchMessage = "";
+  let lastLaunch: LaunchRunResponse | null = null;
   let error = "";
 
   $: selectedAgent = dashboard?.agents.find((agent) => agent.name === request.agent);
@@ -153,6 +155,7 @@
         confirmLaunch: launchConfirmation,
         confirmedWarnings
       });
+      lastLaunch = started;
       launchMessage = `Run started: ${started.runId}`;
       plan = null;
       launchConfirmation = false;
@@ -420,6 +423,21 @@
           <span>{launching ? "Launching..." : "Launch run"}</span>
         </button>
       </div>
+    </section>
+  {/if}
+
+  {#if lastLaunch}
+    <section class="panel last-launch-panel">
+      <h2>Last launch</h2>
+      <dl class="plan-grid">
+        <Metric label="Run" value={lastLaunch.snapshot.runId} />
+        <Metric label="Status" value={lastLaunch.snapshot.status} />
+        <Metric label="Agent" value={lastLaunch.snapshot.profile} />
+        <Metric label="Project" value={lastLaunch.snapshot.workspace} />
+        <Metric label="State volume" value={lastLaunch.snapshot.stateVolume} />
+        <Metric label="Network" value={lastLaunch.snapshot.networkMode} />
+        <Metric label="Container" value={lastLaunch.snapshot.containerName} />
+      </dl>
     </section>
   {/if}
 </main>

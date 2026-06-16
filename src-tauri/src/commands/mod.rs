@@ -15,7 +15,7 @@ use serde_json::Value;
 
 use crate::contracts::{
     AgentProfileSummary, CheckStatus, DashboardStatus, LaunchRunRequest, LaunchRunResponse,
-    PlanWarning, RunPlanRequest, RunPlanResponse, RunSummary, SetupStatus,
+    PlanWarning, RunPlanRequest, RunPlanResponse, RunSummary, SetupStatus, StartedRunSnapshot,
 };
 
 pub(crate) mod image_status;
@@ -122,7 +122,8 @@ fn collect_dashboard_status() -> DashboardStatus {
 }
 
 fn build_plan_response(request: RunPlanRequest) -> Result<RunPlanResponse, String> {
-    let warnings = plan_warnings(&request);
+    let active_run_count = active_run_count();
+    let warnings = plan_warnings(&request, active_run_count);
     let plan = build_agent_run_plan(&request, None)?;
     Ok(RunPlanResponse {
         profile: plan.profile_name,
@@ -185,13 +186,23 @@ fn prepare_launch(
 ) -> Result<(AgentRunPlan, LaunchRunResponse), String> {
     let plan = build_agent_run_plan(&request, Some(run_id.clone()))?;
     let response = LaunchRunResponse {
-        run_id,
+        run_id: run_id.clone(),
         status: "started".to_string(),
         profile: plan.profile_name.clone(),
         workspace: plan.workspace.display().to_string(),
         state_volume: plan.state_volume.clone(),
         session: plan.session.clone(),
         network_mode: plan.network_mode.as_str().to_string(),
+        snapshot: StartedRunSnapshot {
+            run_id,
+            status: "started".to_string(),
+            profile: plan.profile_name.clone(),
+            workspace: plan.workspace.display().to_string(),
+            state_volume: plan.state_volume.clone(),
+            session: plan.session.clone(),
+            network_mode: plan.network_mode.as_str().to_string(),
+            container_name: plan.container_name.clone(),
+        },
     };
     Ok((plan, response))
 }
@@ -213,7 +224,7 @@ fn validate_launch_confirmation(request: &LaunchRunRequest) -> Result<(), String
         .iter()
         .map(String::as_str)
         .collect::<HashSet<_>>();
-    for warning in plan_warnings(&request.plan) {
+    for warning in plan_warnings(&request.plan, active_run_count()) {
         if !confirmed.contains(warning.code.as_str()) {
             return Err(format!(
                 "Confirm warning {} before starting a run: {}",
@@ -313,8 +324,24 @@ fn non_empty(value: Option<String>) -> Option<String> {
     })
 }
 
-fn plan_warnings(request: &RunPlanRequest) -> Vec<PlanWarning> {
+fn active_run_count() -> usize {
+    read_active_run_records().len()
+}
+
+fn plan_warnings(request: &RunPlanRequest, active_run_count: usize) -> Vec<PlanWarning> {
     let mut warnings = Vec::new();
+    if active_run_count > 0 {
+        warnings.push(warning(
+            "active-runs",
+            &active_runs_warning_message(active_run_count),
+        ));
+    }
+    if active_run_count > 0 && material_memory_request(&defaulted(&request.memory, "4g")) {
+        warnings.push(warning(
+            "resource-memory",
+            "This memory limit plus active runs may be material on the host. macOS memory pressure is not measured yet.",
+        ));
+    }
     if request.network_mode == "internet" {
         warnings.push(warning(
             "full-internet",
@@ -356,6 +383,39 @@ fn plan_warnings(request: &RunPlanRequest) -> Vec<PlanWarning> {
         ));
     }
     warnings
+}
+
+fn active_runs_warning_message(active_run_count: usize) -> String {
+    let noun = if active_run_count == 1 { "run" } else { "runs" };
+    let verb = if active_run_count == 1 {
+        "exists"
+    } else {
+        "exist"
+    };
+    format!(
+        "{active_run_count} active RunHaven {noun} already {verb}. Starting another run starts another Apple container VM."
+    )
+}
+
+fn material_memory_request(memory: &str) -> bool {
+    const TWO_GIB: u64 = 2 * 1024 * 1024 * 1024;
+    memory_bytes(memory).is_some_and(|bytes| bytes >= TWO_GIB)
+}
+
+fn memory_bytes(memory: &str) -> Option<u64> {
+    let memory = memory.trim();
+    if memory.is_empty() {
+        return None;
+    }
+    let suffix = memory.chars().last()?;
+    let (digits, multiplier) = match suffix {
+        'K' | 'k' => (&memory[..memory.len() - suffix.len_utf8()], 1024),
+        'M' | 'm' => (&memory[..memory.len() - suffix.len_utf8()], 1024_u64.pow(2)),
+        'G' | 'g' => (&memory[..memory.len() - suffix.len_utf8()], 1024_u64.pow(3)),
+        'T' | 't' => (&memory[..memory.len() - suffix.len_utf8()], 1024_u64.pow(4)),
+        _ => (memory, 1),
+    };
+    digits.parse::<u64>().ok()?.checked_mul(multiplier)
 }
 
 fn warning(code: &str, message: &str) -> PlanWarning {

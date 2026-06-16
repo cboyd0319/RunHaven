@@ -72,16 +72,19 @@ Current alpha launch gate:
 - selected state volume and session;
 - selected bundled profile image status and builder status from typed Rust
   image diagnostics;
+- dynamic warnings when another RunHaven run is active and when the selected
+  memory limit plus active runs could be material on the host;
+- sanitized post-launch snapshot with run id, profile, workspace, state volume,
+  network mode, and container name;
 - explicit confirmation of the reviewed plan;
 - explicit confirmation for every warning returned by the plan;
 - launch blocked when `runhaven doctor` fails.
 
 Remaining launch-readiness gaps before this flow is complete:
 
-- warning when there is at least one active run and the user starts another
-  run;
-- warning when the selected memory limit plus active runs could be material on
-  the host, even if RunHaven cannot know exact macOS memory pressure yet.
+- richer live status and log feedback. Raw logs must not be stored in frontend
+  state without a dedicated design because agent output can contain secrets or
+  workspace content.
 
 Warnings:
 
@@ -92,8 +95,9 @@ Warnings:
 
 The current dashboard command already returns setup, active-run, recent-run,
 agent, and warning summaries. Image and builder status are available through
-typed Rust commands. Add dedicated typed Rust commands for maintenance status
-before parsing prose in the frontend.
+typed Rust commands. Launch resource warnings are computed in the Rust plan and
+launch-confirmation path. Add dedicated typed Rust commands for maintenance
+status before parsing prose in the frontend.
 
 ## Approval Gates
 

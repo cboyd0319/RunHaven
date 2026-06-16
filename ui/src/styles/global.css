@@ -304,7 +304,8 @@ legend {
   margin-bottom: 0;
 }
 
-.plan-panel {
+.plan-panel,
+.last-launch-panel {
   margin-top: 1rem;
 }
 

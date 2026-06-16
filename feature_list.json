@@ -93,7 +93,7 @@
       "evidence": [
         "2026-06-16: Added shared Rust launch runtime and state-volume lock modules, a typed Tauri `launch_run` command, a separate `launch-run` capability, Svelte launch confirmation controls, frontend command helpers, Rust/frontend/Playwright tests, and docs updates. Focused and broader verification passed before commit."
       ],
-      "notes": "Active-run resource warnings, live logs, stop, kill, attach, repair, image build, state cleanup, and worktree review controls remain future UI slices. Image and builder readiness are tracked separately in `tauri-image-readiness`."
+      "notes": "Live logs, stop, kill, attach, repair, image build, state cleanup, and worktree review controls remain future UI slices. Image and builder readiness are tracked separately in `tauri-image-readiness`; active-run and resource warnings are tracked separately in `tauri-launch-resource-warnings`."
     },
     {
       "id": "tauri-image-readiness",
@@ -117,7 +117,31 @@
       "evidence": [
         "2026-06-16: Added structured image and builder status reports, typed Tauri `get_image_status`, image readiness launch enforcement, launch-panel readiness UI, and focused Rust/Tauri/frontend/Playwright tests."
       ],
-      "notes": "Active-run resource warnings and post-start status/log feedback are still the next launch-readiness gaps."
+      "notes": "Live status/log feedback remains a launch-readiness gap. Active-run and resource warnings are tracked separately in `tauri-launch-resource-warnings`."
+    },
+    {
+      "id": "tauri-launch-resource-warnings",
+      "priority": 0,
+      "area": "ui",
+      "title": "Tauri launch resource warnings",
+      "user_visible_behavior": "The alpha desktop launch flow warns when other RunHaven runs are active, warns when the selected memory limit plus active runs may be material on the host, and shows a sanitized launch snapshot after start.",
+      "status": "passing",
+      "dependencies": [
+        "tauri-launch-execution",
+        "tauri-image-readiness",
+        "run-observability"
+      ],
+      "verification": [
+        "Dynamic active-run and resource warning codes are computed in Rust plan and launch-confirmation paths",
+        "Launch requires explicit acknowledgement of the active-run and resource warning codes when they apply",
+        "The frontend helper tests cover active-run warning acknowledgement and the launch snapshot payload",
+        "The post-launch UI displays sanitized run metadata only, not raw logs or workspace content",
+        "Playwright coverage proves the launch snapshot renders after the preview launch path"
+      ],
+      "evidence": [
+        "2026-06-16: Added active-run and material-memory warning codes to Tauri plan and launch confirmation, added a typed launch snapshot response, rendered the snapshot after launch, and covered the behavior with Rust/frontend/Playwright tests and browser screenshots."
+      ],
+      "notes": "Raw log feedback and deeper active-run status remain future work because logs can contain secrets or workspace content and need a dedicated design."
     },
     {
       "id": "rust-cli-conversion",

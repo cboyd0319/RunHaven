@@ -115,6 +115,17 @@ export type LaunchRunRequest = {
   confirmedWarnings: string[];
 };
 
+export type StartedRunSnapshot = {
+  runId: string;
+  status: string;
+  profile: string;
+  workspace: string;
+  stateVolume: string;
+  session: string;
+  networkMode: string;
+  containerName: string;
+};
+
 export type LaunchRunResponse = {
   runId: string;
   status: "started";
@@ -123,6 +134,7 @@ export type LaunchRunResponse = {
   stateVolume: string;
   session: string;
   networkMode: string;
+  snapshot: StartedRunSnapshot;
 };
 
 const mockAgents: AgentProfile[] = [
@@ -256,14 +268,26 @@ export async function launchRun(request: LaunchRunRequest): Promise<LaunchRunRes
     if (!isLaunchReady(plan, request.confirmLaunch, new Set(request.confirmedWarnings))) {
       throw new Error("Confirm the launch and every warning before starting a run.");
     }
-    return {
-      runId: `preview-${Date.now()}`,
+    const runId = `preview-${Date.now()}`;
+    const snapshot = {
+      runId,
       status: "started",
       profile: request.plan.agent,
       workspace: request.plan.workspacePath || ".",
       stateVolume: "preview",
       session: request.plan.sessionName || "default",
-      networkMode: request.plan.networkMode
+      networkMode: request.plan.networkMode,
+      containerName: "preview"
+    };
+    return {
+      runId,
+      status: "started",
+      profile: snapshot.profile,
+      workspace: snapshot.workspace,
+      stateVolume: snapshot.stateVolume,
+      session: snapshot.session,
+      networkMode: snapshot.networkMode,
+      snapshot
     };
   });
 }
@@ -299,8 +323,25 @@ export function defaultRunPlanRequest(agent: AgentProfile | undefined): RunPlanR
   };
 }
 
-export function warningPreview(request: RunPlanRequest): PlanWarning[] {
+export type WarningPreviewContext = {
+  activeRunCount?: number;
+};
+
+export function warningPreview(request: RunPlanRequest, context: WarningPreviewContext = {}): PlanWarning[] {
   const warnings: PlanWarning[] = [];
+  const activeRunCount = context.activeRunCount ?? 0;
+  if (activeRunCount > 0) {
+    warnings.push({
+      code: "active-runs",
+      message: activeRunsWarningMessage(activeRunCount)
+    });
+  }
+  if (activeRunCount > 0 && materialMemoryRequest(request.memory || "4g")) {
+    warnings.push({
+      code: "resource-memory",
+      message: "This memory limit plus active runs may be material on the host. macOS memory pressure is not measured yet."
+    });
+  }
   if (request.networkMode === "internet") {
     warnings.push({
       code: "full-internet",
@@ -338,6 +379,37 @@ export function warningPreview(request: RunPlanRequest): PlanWarning[] {
     });
   }
   return warnings;
+}
+
+function activeRunsWarningMessage(activeRunCount: number): string {
+  const noun = activeRunCount === 1 ? "run" : "runs";
+  const verb = activeRunCount === 1 ? "exists" : "exist";
+  return `${activeRunCount} active RunHaven ${noun} already ${verb}. Starting another run starts another Apple container VM.`;
+}
+
+function materialMemoryRequest(memory: string): boolean {
+  const bytes = memoryBytes(memory);
+  return bytes !== null && bytes >= 2 * 1024 ** 3;
+}
+
+function memoryBytes(memory: string): number | null {
+  const trimmed = memory.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const suffix = trimmed.at(-1) ?? "";
+  const multipliers: Record<string, number> = {
+    k: 1024,
+    m: 1024 ** 2,
+    g: 1024 ** 3,
+    t: 1024 ** 4
+  };
+  const multiplier = multipliers[suffix.toLowerCase()] ?? 1;
+  const digits = multiplier === 1 ? trimmed : trimmed.slice(0, -1);
+  if (!/^[1-9][0-9]*$/.test(digits)) {
+    return null;
+  }
+  return Number(digits) * multiplier;
 }
 
 export function isLaunchReady(

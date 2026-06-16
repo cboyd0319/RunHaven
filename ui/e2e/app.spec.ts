@@ -30,4 +30,6 @@ test("reviews and starts a preview run", async ({ page }) => {
   await page.getByRole("button", { name: "Launch run" }).click();
 
   await expect(page.getByText(/Run started: preview-/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Last launch" })).toBeVisible();
+  await expect(page.getByText("Container")).toBeVisible();
 });

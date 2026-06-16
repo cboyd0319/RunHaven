@@ -55,6 +55,19 @@ describe("runhaven command helpers", () => {
     ]);
   });
 
+  it("previews active-run resource warnings when context has active runs", () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview",
+      memory: "4g"
+    };
+
+    expect(warningPreview(request, { activeRunCount: 1 }).map((warning) => warning.code)).toEqual([
+      "active-runs",
+      "resource-memory"
+    ]);
+  });
+
   it("returns setup preview data outside the Tauri runtime", async () => {
     const setup = await getSetupStatus();
 
@@ -125,6 +138,17 @@ describe("runhaven command helpers", () => {
     expect(isLaunchReady(plan, true, new Set(["full-internet"]))).toBe(true);
   });
 
+  it("requires active-run warnings to be acknowledged before launch is available", async () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview"
+    };
+    const warnings = warningPreview(request, { activeRunCount: 1 });
+
+    expect(isLaunchReady({ warnings }, true, new Set())).toBe(false);
+    expect(isLaunchReady({ warnings }, true, new Set(["active-runs", "resource-memory"]))).toBe(true);
+  });
+
   it("returns a launch preview outside the Tauri runtime", async () => {
     const request = {
       ...defaultRunPlanRequest(providerAgent),
@@ -139,5 +163,7 @@ describe("runhaven command helpers", () => {
 
     expect(started.runId).toMatch(/^preview-/);
     expect(started.status).toBe("started");
+    expect(started.snapshot.runId).toBe(started.runId);
+    expect(started.snapshot.containerName).toBe("preview");
   });
 });

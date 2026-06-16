@@ -126,6 +126,9 @@ The consolidated non-UI backlog lives in
   checks fail, and lives behind the `launch-run` capability.
 - Launch readiness now shows typed image and builder status and blocks launch
   when the selected bundled profile image is missing or stale.
+- Launch planning now warns when other RunHaven runs are active and when the
+  selected memory limit plus active runs may be material on the host. The
+  post-launch UI shows a sanitized run snapshot.
 - Remaining UI controls should still be added one at a time with typed Rust
   commands, explicit confirmation, focused tests, and narrow capabilities.
 

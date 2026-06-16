@@ -149,6 +149,19 @@ pub(crate) struct LaunchRunRequest {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct StartedRunSnapshot {
+    pub run_id: String,
+    pub status: String,
+    pub profile: String,
+    pub workspace: String,
+    pub state_volume: String,
+    pub session: String,
+    pub network_mode: String,
+    pub container_name: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct LaunchRunResponse {
     pub run_id: String,
     pub status: String,
@@ -157,4 +170,5 @@ pub(crate) struct LaunchRunResponse {
     pub state_volume: String,
     pub session: String,
     pub network_mode: String,
+    pub snapshot: StartedRunSnapshot,
 }
