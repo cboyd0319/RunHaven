@@ -99,8 +99,7 @@ fn repair_one_marker(record: &Value) -> Result<Value> {
             "status": "kept",
         }));
     }
-    let stderr = String::from_utf8_lossy(&output.stderr).to_ascii_lowercase();
-    if stderr.contains("container not found") || stderr.contains("not found") {
+    if is_missing_container_stderr(&output.stderr) {
         remove_active_run_record(run_id)?;
         return Ok(json!({
             "run_id": run_id,
@@ -117,4 +116,42 @@ fn repair_one_marker(record: &Value) -> Result<Value> {
         "marker_removed": false,
         "status": "unverified",
     }))
+}
+
+fn is_missing_container_stderr(stderr: &[u8]) -> bool {
+    let stderr = String::from_utf8_lossy(stderr).to_ascii_lowercase();
+    stderr.contains("container not found:")
+        || (stderr.contains("container with id ") && stderr.contains(" not found"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_container_stderr_accepts_current_cli_wording() {
+        assert!(is_missing_container_stderr(
+            b"Error: container not found: runhaven-nonexistent-fixture\n"
+        ));
+    }
+
+    #[test]
+    fn missing_container_stderr_accepts_source_not_found_wording() {
+        assert!(is_missing_container_stderr(
+            b"Error: container with ID runhaven-shell-run not found\n"
+        ));
+    }
+
+    #[test]
+    fn missing_container_stderr_rejects_unverified_errors() {
+        assert!(!is_missing_container_stderr(
+            b"Error: failed to connect to container service\n"
+        ));
+        assert!(!is_missing_container_stderr(
+            b"Error: network not found: runhaven-fixture\n"
+        ));
+        assert!(!is_missing_container_stderr(
+            b"Error: image not found: runhaven/base:0.1.0\n"
+        ));
+    }
 }

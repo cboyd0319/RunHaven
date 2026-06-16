@@ -1,0 +1,40 @@
+[
+  {
+    "configuration": {
+      "id": "buildkit",
+      "image": {
+        "reference": "ghcr.io/apple/container-builder-shim/builder:0.12.0"
+      },
+      "initProcess": {
+        "arguments": ["--debug", "--vsock"],
+        "environment": ["SECRET_TOKEN=redacted"],
+        "workingDirectory": "/"
+      },
+      "mounts": [
+        {
+          "destination": "/var/lib/container-builder-shim/exports",
+          "source": "/Users/example/Library/Application Support/com.apple.container/builder"
+        }
+      ],
+      "resources": {
+        "cpus": 2,
+        "memoryInBytes": 2147483648
+      }
+    },
+    "id": "buildkit",
+    "status": {
+      "networks": [
+        {
+          "hostname": "buildkit",
+          "ipv4Address": "192.168.64.2/24",
+          "ipv4Gateway": "192.168.64.1",
+          "ipv6Address": "fd99:1769:ebb4:67eb:f863:5aff:feeb:252/64",
+          "macAddress": "fa:63:5a:eb:02:52",
+          "network": "default"
+        }
+      ],
+      "startedDate": "2026-06-14T02:50:37Z",
+      "state": "running"
+    }
+  }
+]

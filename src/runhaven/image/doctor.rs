@@ -65,7 +65,11 @@ fn list_local_images() -> Result<Vec<LocalImage>> {
     if !output.status.success() {
         bail!("container image list failed: {}", output.status);
     }
-    let payload: Value = serde_json::from_slice(&output.stdout)?;
+    parse_local_images(&output.stdout)
+}
+
+fn parse_local_images(stdout: &[u8]) -> Result<Vec<LocalImage>> {
+    let payload: Value = serde_json::from_slice(stdout)?;
     let Some(items) = payload.as_array() else {
         bail!("could not parse Apple container image list JSON");
     };
@@ -94,8 +98,13 @@ fn image_names(item: &Value) -> BTreeSet<String> {
         .pointer("/configuration/descriptor/annotations")
         .and_then(Value::as_object)
     {
-        for value in annotations.values().filter_map(Value::as_str) {
-            names.insert(value.to_string());
+        for key in [
+            "com.apple.containerization.image.name",
+            "io.containerd.image.name",
+        ] {
+            if let Some(value) = annotations.get(key).and_then(Value::as_str) {
+                names.insert(value.to_string());
+            }
         }
     }
     names
@@ -126,8 +135,10 @@ fn image_label_mappings(item: &Value) -> Vec<&serde_json::Map<String, Value>> {
     }
     if let Some(variants) = item.get("variants").and_then(Value::as_array) {
         for variant in variants {
-            if let Some(labels) = variant.pointer("/config/Labels").and_then(Value::as_object) {
-                mappings.push(labels);
+            for pointer in ["/config/Labels", "/config/config/Labels"] {
+                if let Some(labels) = variant.pointer(pointer).and_then(Value::as_object) {
+                    mappings.push(labels);
+                }
             }
         }
     }
@@ -209,4 +220,40 @@ fn print_preflight_recovery(agent: Option<&str>) {
     println!(
         "- Reset interrupted isolated home state only when you want to discard it: runhaven state reset {agent} --workspace PATH --yes"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const IMAGE_LIST_CURRENT: &[u8] = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/apple_container/image-list-current.json"
+    ));
+
+    #[test]
+    fn parses_current_apple_image_list_shape() {
+        let images = parse_local_images(IMAGE_LIST_CURRENT).expect("image list");
+
+        assert_eq!(images.len(), 1);
+        assert!(images[0].names.contains("runhaven/base:0.1.0"));
+        assert!(images[0].names.contains("docker.io/runhaven/base:0.1.0"));
+        assert!(!images[0].names.contains("0.1.0"));
+        assert!(!images[0].names.contains("2026-06-14T03:26:29Z"));
+        assert_eq!(
+            images[0].source_digest.as_deref(),
+            Some("fixture-source-digest")
+        );
+    }
+
+    #[test]
+    fn rejects_non_array_image_list_json() {
+        let error = parse_local_images(br#"{"configuration":{}}"#).expect_err("invalid shape");
+
+        assert!(
+            error
+                .to_string()
+                .contains("could not parse Apple container image list JSON")
+        );
+    }
 }

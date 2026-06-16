@@ -79,6 +79,13 @@ policy, and repo-owned verification route.
 - Fixed the Rust provider CONNECT proxy relay after the live smoke exposed TLS
   tunnel failures. Accepted/tunnel sockets are forced back to blocking mode,
   and CONNECT header reads no longer consume tunneled bytes.
+- Added fixture-backed parser tests for Apple `container` JSON shapes covering
+  image list, network inspect, container inspect, source-backed legacy
+  attachment aliases, invalid shapes, and missing-container repair stderr.
+- Tightened parser behavior found during the fixture pass: image matching now
+  trusts only actual image-name fields instead of all descriptor annotations,
+  and active-run repair no longer removes markers for unrelated `not found`
+  inspect failures.
 
 ## Trusted Verification
 
@@ -129,6 +136,9 @@ policy, and repo-owned verification route.
   list` reported no RunHaven state volumes, `target/debug/runhaven runs active`
   reported no active runs, and `target/debug/runhaven network list` showed only
   the shared `runhaven-volume-prep-internal` network.
+- Apple Container JSON parser fixture checks passed: `cargo fmt --check` and
+  `cargo test --locked` ran 22 library tests and 2 integration tests covering
+  the fixture-backed parsers and existing CLI behavior.
 
 ## Touched Surfaces
 
@@ -158,8 +168,8 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Close the remaining Apple Container P1 gaps before Tauri/UI planning: add
-fixture coverage for Apple `container` JSON schema assumptions and decide
-whether `doctor` should enforce the full runtime pin surface. Keep verification
-local while alpha CI is disabled, and run the planned Rust expert plus Rust
-skill repo-wide review as a backlog task.
+Close the remaining Apple Container P1 gaps before Tauri/UI planning: decide
+whether `doctor` should enforce the full runtime pin surface, then surface image
+builder lifecycle diagnostics. Keep verification local while alpha CI is
+disabled, and run the planned Rust expert plus Rust skill repo-wide review as a
+backlog task.

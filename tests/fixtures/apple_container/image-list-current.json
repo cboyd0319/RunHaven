@@ -1,0 +1,44 @@
+[
+  {
+    "configuration": {
+      "creationDate": "2026-06-14T03:26:26Z",
+      "descriptor": {
+        "annotations": {
+          "com.apple.containerization.image.name": "runhaven/base:0.1.0",
+          "io.containerd.image.name": "docker.io/runhaven/base:0.1.0",
+          "org.opencontainers.image.created": "2026-06-14T03:26:29Z",
+          "org.opencontainers.image.ref.name": "0.1.0"
+        },
+        "digest": "sha256:818ed618172319fc9a28f431ccdd2b95032cdb004d5296cceab2566fb5a8d89f",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "size": 375
+      },
+      "name": "runhaven/base:0.1.0"
+    },
+    "id": "818ed618172319fc9a28f431ccdd2b95032cdb004d5296cceab2566fb5a8d89f",
+    "variants": [
+      {
+        "config": {
+          "architecture": "arm64",
+          "config": {
+            "Cmd": ["/bin/bash"],
+            "Env": ["HOME=/home/agent"],
+            "Labels": {
+              "org.runhaven.source-sha256": "fixture-source-digest"
+            },
+            "User": "agent",
+            "WorkingDir": "/workspace"
+          },
+          "created": "2026-06-14T03:26:26.383730585Z",
+          "os": "linux"
+        },
+        "digest": "sha256:15d07154bd8cb0d6f298942a7907f4d7d3f0198271ba493a02963aa9016e42a8",
+        "platform": {
+          "architecture": "arm64",
+          "os": "linux"
+        },
+        "size": 88993772
+      }
+    ]
+  }
+]

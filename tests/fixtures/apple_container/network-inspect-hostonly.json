@@ -1,0 +1,18 @@
+[
+  {
+    "configuration": {
+      "creationDate": "2026-06-16T17:53:29Z",
+      "labels": {},
+      "mode": "hostOnly",
+      "name": "runhaven-volume-prep-internal",
+      "options": {},
+      "plugin": "container-network-vmnet"
+    },
+    "id": "runhaven-volume-prep-internal",
+    "status": {
+      "ipv4Gateway": "192.168.130.1",
+      "ipv4Subnet": "192.168.130.0/24",
+      "ipv6Subnet": "fdb9:1001:e1f9:4d52::/64"
+    }
+  }
+]

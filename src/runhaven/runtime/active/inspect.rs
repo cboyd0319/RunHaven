@@ -59,6 +59,8 @@ pub fn summarize_container_inspect(record: Value) -> Value {
     }
     if let Some(state) = record.pointer("/status/state").and_then(Value::as_str) {
         container.insert("state".to_string(), json!(state));
+    } else if let Some(state) = record.get("status").and_then(Value::as_str) {
+        container.insert("state".to_string(), json!(state));
     }
     if let Some(started) = record
         .pointer("/status/startedDate")
@@ -66,7 +68,11 @@ pub fn summarize_container_inspect(record: Value) -> Value {
     {
         container.insert("started_at".to_string(), json!(started));
     }
-    let networks = summarize_container_networks(record.pointer("/status/networks"));
+    let networks = summarize_container_networks(
+        record
+            .pointer("/status/networks")
+            .or_else(|| record.get("networks")),
+    );
     if !networks.is_empty() {
         container.insert("networks".to_string(), Value::Array(networks));
     }
@@ -105,6 +111,13 @@ fn summarize_container_networks(networks: Option<&Value>) -> Vec<Value> {
                 ("ipv6Address", "ipv6_address"),
             ] {
                 if let Some(value) = network.get(source).and_then(Value::as_str) {
+                    summary.insert(output.to_string(), json!(value));
+                }
+            }
+            for (source, output) in [("address", "ipv4_address"), ("gateway", "ipv4_gateway")] {
+                if !summary.contains_key(output)
+                    && let Some(value) = network.get(source).and_then(Value::as_str)
+                {
                     summary.insert(output.to_string(), json!(value));
                 }
             }
@@ -212,6 +225,15 @@ mod tests {
 
     use super::*;
 
+    const CONTAINER_INSPECT_CURRENT: &[u8] = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/apple_container/container-inspect-current.json"
+    ));
+    const CONTAINER_INSPECT_LEGACY_ATTACHMENT: &[u8] = include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/apple_container/container-inspect-legacy-attachment.json"
+    ));
+
     #[test]
     fn container_status_summary_omits_command_environment_mounts_and_secrets() {
         let summary = summarize_container_inspect(json!({
@@ -246,5 +268,57 @@ mod tests {
         assert!(!serialized.contains("OPENAI_API_KEY"));
         assert!(!serialized.contains("secret-flag"));
         assert!(!serialized.contains("/host/private"));
+    }
+
+    #[test]
+    fn parses_current_apple_container_inspect_shape() {
+        let record = load_container_inspect(CONTAINER_INSPECT_CURRENT).expect("inspect record");
+        let summary = summarize_container_inspect(record);
+
+        assert_eq!(
+            summary["image"],
+            "ghcr.io/apple/container-builder-shim/builder:0.12.0"
+        );
+        assert_eq!(summary["state"], "running");
+        assert_eq!(summary["started_at"], "2026-06-14T02:50:37Z");
+        assert_eq!(summary["resources"]["memory_in_bytes"], 2147483648u64);
+        assert_eq!(summary["networks"][0]["network"], "default");
+        assert_eq!(summary["networks"][0]["ipv4_gateway"], "192.168.64.1");
+        let serialized = serde_json::to_string(&summary).expect("json");
+        assert!(!serialized.contains("SECRET_TOKEN"));
+        assert!(!serialized.contains("/Users/example"));
+    }
+
+    #[test]
+    fn parses_legacy_apple_network_attachment_aliases() {
+        let record =
+            load_container_inspect(CONTAINER_INSPECT_LEGACY_ATTACHMENT).expect("inspect record");
+        let summary = summarize_container_inspect(record);
+
+        assert_eq!(summary["state"], "running");
+        assert_eq!(summary["networks"][0]["ipv4_address"], "192.168.70.2/24");
+        assert_eq!(summary["networks"][0]["ipv4_gateway"], "192.168.70.1");
+    }
+
+    #[test]
+    fn accepts_single_object_container_inspect_shape() {
+        let record = load_container_inspect(br#"{"id":"runhaven-shell-fixture-run"}"#)
+            .expect("single object");
+
+        assert_eq!(record["id"], "runhaven-shell-fixture-run");
+    }
+
+    #[test]
+    fn rejects_empty_container_inspect_array() {
+        let error = load_container_inspect(b"[]").expect_err("empty inspect");
+
+        assert!(error.to_string().contains("returned no records"));
+    }
+
+    #[test]
+    fn rejects_non_object_container_inspect_shape() {
+        let error = load_container_inspect(b"false").expect_err("invalid inspect");
+
+        assert!(error.to_string().contains("invalid record"));
     }
 }
