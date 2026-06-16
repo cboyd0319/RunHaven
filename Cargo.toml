@@ -3,6 +3,7 @@ name = "runhaven"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+publish = false
 description = "Run AI coding agents inside Apple container on macOS."
 authors = ["Chad Boyd"]
 keywords = ["ai-agents", "apple-container", "macos", "runhaven", "sandbox", "security"]

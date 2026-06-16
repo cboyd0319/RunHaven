@@ -100,8 +100,11 @@ egress within the host's network policy. Use `internal` for local-only runs.
 `--network provider` is now the constrained egress path for normal agent runs.
 It runs the agent on an internal Apple `container` network, starts a host-side
 CONNECT proxy, injects proxy environment variables at runtime, and deletes the
-managed provider network after the run. The proxy permits the bundled provider
-hosts for the selected profile, their subdomains, and explicit fully qualified
+managed provider network after the run. Apple `container` 1.0.0 exposes an
+internal gateway address to guests that is not always bindable on the macOS
+host, so the host listener can bind wildcard while rejecting clients outside the
+inspected Apple `container` subnet. The proxy permits the bundled provider hosts
+for the selected profile, their subdomains, and explicit fully qualified
 `--provider-host HOST` additions. It rejects IP literal proxy targets and
 single-label provider hosts. Before opening an upstream connection, the proxy
 resolves the destination and rejects non-public resolved addresses such as

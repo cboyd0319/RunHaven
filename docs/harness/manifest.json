@@ -64,6 +64,7 @@
     "docs/harness/feedback/evaluator-rubric.md",
     "docs/harness/feedback/quality-document.md",
     "docs/harness/release/release-controls.md",
+    "docs/harness/release/apple-container-update-playbook.md",
     "docs/harness/research/source-record.schema.json",
     "docs/harness/research/source-record-example.json",
     "docs/harness/research/research-inbox.md",
@@ -213,6 +214,12 @@
       "provenance",
       "Rollback"
     ],
+    "docs/harness/release/apple-container-update-playbook.md": [
+      "Apple Container Update Playbook",
+      "Pre-Update Evidence",
+      "Required Verification",
+      "Rollback"
+    ],
     "docs/harness/research/source-record.schema.json": [
       "HarnessForge Project Source Record",
       "targetRelativePath"
@@ -316,7 +323,7 @@
       "ownership": "project",
       "template": "current-state.md.tmpl",
       "templateSha256": "c71cb3f71408162e8ab56ee3690cc051d5d6bff409a34280fb5bc0083408367e",
-      "contentSha256": "c7ec93782fd2418fd0785af684a8e56d0e92be36ad7923e06251ccf2e3c4453c",
+      "contentSha256": "558a7bda8c5e714bab0f38c8ce393072b09ed681c61ccb481bd6ea51068f6175",
       "reviewRequired": false,
       "writeStatus": "project-owned-reviewed"
     },
@@ -324,7 +331,7 @@
       "ownership": "project",
       "template": "harness-readme.md.tmpl",
       "templateSha256": "9b51d82f562314dff27de8bb11584d83eb471cbf5931b12ad31ff6156891b0ae",
-      "contentSha256": "766965caf658af952ff4ca475af85c7eb6247c3d3cae4717f3515fddc9cb8496",
+      "contentSha256": "a2b14070f42d64c288e800a2c55d2117fa12b33d7970101a13915ebfc9aec538",
       "reviewRequired": false,
       "writeStatus": "project-owned-reviewed"
     },
@@ -363,7 +370,7 @@
       "ownership": "project",
       "template": "release-controls.md.tmpl",
       "templateSha256": "70f692d609f33d44271e253e12d572b669e63b6ab03030bae0878d885d6074b8",
-      "contentSha256": "70b0a8ce30c4ce99ef6fb4dbe2f0c813ea8c2b8e6b18705963fd2165af5ed9b4",
+      "contentSha256": "8d4e6f669c12f56f0067e7e8a65c5c7a00296783235fce3f96f4a876578ea00b",
       "reviewRequired": false,
       "writeStatus": "project-owned-reviewed"
     },
@@ -395,7 +402,7 @@
       "ownership": "project",
       "template": "roadmap.md.tmpl",
       "templateSha256": "8381d09eb13b6aff1ea02c8601731e0329574e0b15286069e0a73e60e99bee32",
-      "contentSha256": "494657feb83f00998e3f89979e34ba6fbbec9fd5f5ccf76ea5117fabc3a3ada7",
+      "contentSha256": "7664543b7bba66365d15dc1b259be09afcebe167e4ba82e374e9019334af1eb7",
       "reviewRequired": false,
       "writeStatus": "project-owned-reviewed"
     }

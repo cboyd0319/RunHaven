@@ -99,7 +99,7 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
         eprintln!("Run id: {run_id}");
         write_active_run_record(plan, &run_id, &started)?;
         active_recorded = true;
-        let status = Command::new(&command[0]).args(&command[1..]).status()?;
+        let status = Command::new(&command[0]).args(&command[1..]).status();
         terminal_status = active_run_terminal_status(&run_id);
         let finished = utc_timestamp();
         git = Some(summarize_git_change(
@@ -108,9 +108,20 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
         ));
         started_at = Some(started);
         finished_at = Some(finished);
-        let code = status.code().unwrap_or(1);
-        return_code = Some(code);
-        Ok(code)
+        match status {
+            Ok(status) => {
+                let code = status.code().unwrap_or(1);
+                return_code = Some(code);
+                Ok(code)
+            }
+            Err(error) => {
+                return_code = Some(1);
+                Err(anyhow::anyhow!(
+                    "could not launch provider agent command {:?}: {error}",
+                    command[0]
+                ))
+            }
+        }
     })();
 
     if let Some(broker) = &broker {
@@ -126,7 +137,13 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
         let _ = handle.join();
     }
     if provider_network_created {
-        cleanup = cleanup_provider_network(plan)?;
+        cleanup = cleanup_provider_network(plan).unwrap_or_else(|error| {
+            json!({
+                "provider_network": "cleanup-error",
+                "provider_network_name": network_name,
+                "error": error.to_string(),
+            })
+        });
     }
 
     let provider_decisions = proxy
@@ -136,32 +153,40 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
     let auth_decisions = broker
         .as_ref()
         .map(CodexApiKeyBrokerProxy::broker_decisions);
-    if let Some(code) = return_code
+    let record_result = if let Some(code) = return_code
         && let (Some(started), Some(finished), Some(git)) =
             (started_at.as_deref(), finished_at.as_deref(), git)
     {
-        write_provider_policy_log(plan, &provider_decisions, &run_id)?;
-        if let Some(decisions) = auth_decisions.as_ref() {
-            write_auth_broker_log(plan, decisions, &run_id, code)?;
-        }
-        print_provider_blocked_host_review(plan, &provider_decisions, &run_id);
-        write_run_record(RunRecordInput {
-            plan,
-            run_id: &run_id,
-            started_at: started,
-            finished_at: finished,
-            return_code: code,
-            status: terminal_status.as_deref(),
-            provider_decisions: &provider_decisions,
-            auth_decisions: auth_decisions.as_deref(),
-            cleanup,
-            git,
-        })?;
-    }
+        (|| -> Result<()> {
+            write_provider_policy_log(plan, &provider_decisions, &run_id)?;
+            if let Some(decisions) = auth_decisions.as_ref() {
+                write_auth_broker_log(plan, decisions, &run_id, code)?;
+            }
+            print_provider_blocked_host_review(plan, &provider_decisions, &run_id);
+            write_run_record(RunRecordInput {
+                plan,
+                run_id: &run_id,
+                started_at: started,
+                finished_at: finished,
+                return_code: code,
+                status: terminal_status.as_deref(),
+                provider_decisions: &provider_decisions,
+                auth_decisions: auth_decisions.as_deref(),
+                cleanup,
+                git,
+            })
+        })()
+    } else {
+        Ok(())
+    };
     if active_recorded {
         let _ = remove_active_run_record(&run_id);
     }
-    result
+    match (result, record_result) {
+        (Ok(code), Ok(())) => Ok(code),
+        (Ok(_), Err(error)) => Err(error),
+        (Err(error), _) => Err(error),
+    }
 }
 
 pub fn require_codex_api_key_broker_secret(plan: &AgentRunPlan) -> Result<Option<String>> {
@@ -273,8 +298,17 @@ pub fn create_provider_proxy(
     network_info: &InternalNetworkInfo,
 ) -> Result<ThreadedAllowlistProxy> {
     let subnets = vec![network_info.ipv4_subnet.clone()];
-    ThreadedAllowlistProxy::bind((&network_info.ipv4_gateway, 0), policy.clone(), &subnets)
-        .or_else(|_| ThreadedAllowlistProxy::bind(("0.0.0.0", 0), policy, &subnets))
+    match ThreadedAllowlistProxy::bind((&network_info.ipv4_gateway, 0), policy.clone(), &subnets) {
+        Ok(proxy) => Ok(proxy),
+        Err(_) => {
+            ThreadedAllowlistProxy::bind(("0.0.0.0", 0), policy, &subnets).with_context(|| {
+                format!(
+                    "could not bind provider allowlist proxy for Apple container gateway {}",
+                    network_info.ipv4_gateway
+                )
+            })
+        }
+    }
 }
 
 pub fn create_codex_api_key_broker(
@@ -282,8 +316,17 @@ pub fn create_codex_api_key_broker(
     network_info: &InternalNetworkInfo,
 ) -> Result<CodexApiKeyBrokerProxy> {
     let subnets = vec![network_info.ipv4_subnet.clone()];
-    CodexApiKeyBrokerProxy::bind((&network_info.ipv4_gateway, 0), api_key.clone(), &subnets)
-        .or_else(|_| CodexApiKeyBrokerProxy::bind(("0.0.0.0", 0), api_key, &subnets))
+    match CodexApiKeyBrokerProxy::bind((&network_info.ipv4_gateway, 0), api_key.clone(), &subnets) {
+        Ok(broker) => Ok(broker),
+        Err(_) => {
+            CodexApiKeyBrokerProxy::bind(("0.0.0.0", 0), api_key, &subnets).with_context(|| {
+                format!(
+                    "could not bind Codex API key broker for Apple container gateway {}",
+                    network_info.ipv4_gateway
+                )
+            })
+        }
+    }
 }
 
 pub fn inspect_internal_network(name: &str) -> Result<InternalNetworkInfo> {
@@ -387,43 +430,4 @@ fn command_starts_with(command: &[String], prefix: &[&str]) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    const NETWORK_INSPECT_HOSTONLY: &[u8] = include_bytes!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/tests/fixtures/apple_container/network-inspect-hostonly.json"
-    ));
-
-    #[test]
-    fn parses_current_apple_network_inspect_shape() {
-        let info =
-            parse_internal_network_info("runhaven-volume-prep-internal", NETWORK_INSPECT_HOSTONLY)
-                .expect("network inspect");
-
-        assert_eq!(info.ipv4_gateway, "192.168.130.1");
-        assert_eq!(info.ipv4_subnet, "192.168.130.0/24");
-    }
-
-    #[test]
-    fn rejects_non_host_only_network_inspect_shape() {
-        let error = parse_internal_network_info(
-            "runhaven-default",
-            br#"[{"configuration":{"mode":"nat"},"status":{"ipv4Gateway":"192.168.64.1","ipv4Subnet":"192.168.64.0/24"}}]"#,
-        )
-        .expect_err("nat network");
-
-        assert!(error.to_string().contains("not host-only"));
-    }
-
-    #[test]
-    fn rejects_network_inspect_missing_ipv4_fields() {
-        let error = parse_internal_network_info(
-            "runhaven-missing-ipv4",
-            br#"[{"configuration":{"mode":"hostOnly"},"status":{}}]"#,
-        )
-        .expect_err("missing ipv4");
-
-        assert!(error.to_string().contains("missing IPv4 gateway or subnet"));
-    }
-}
+mod tests;

@@ -35,7 +35,8 @@
       "evidence": [
         "2026-06-16: `cargo fmt --check`, `cargo test --locked`, `cargo clippy --all-targets -- -D warnings`, `cargo run --locked --bin runhaven-check-pins`, `cargo build --locked`, and `./init.sh` passed after the Rust conversion.",
         "2026-06-16: direct CLI smokes passed for `target/debug/runhaven agents`, `target/debug/runhaven plan shell --workspace . -- /bin/bash -lc pwd`, `target/debug/runhaven doctor`, and `target/debug/runhaven image build shell --dry-run`.",
-        "2026-06-16: `runhaven doctor` gained JSON-backed checks for `container system version --format json` and `container system property list --format json`, failing closed on mismatched runtime commit, builder image, vminit image, or Kata kernel pins."
+        "2026-06-16: `runhaven doctor` gained JSON-backed checks for `container system version --format json` and `container system property list --format json`, failing closed on mismatched runtime commit, builder image, vminit image, or Kata kernel pins.",
+        "2026-06-16: Whole-repo Rust expert review passed after fixes for auth-broker upstream request timeouts, failure-safe run records, Apple gateway bind compatibility with subnet-restricted provider listeners, exact publish policy, and Rust source file-size hygiene."
       ],
       "notes": "Historical feature evidence below still records the Python implementation that existed before the 2026-06-16 conversion."
     },
@@ -84,7 +85,8 @@
         "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed",
         "2026-06-14: non-macOS verification entrypoint was removed when the project was clarified as macOS-only",
         "2026-06-14: `python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction",
-        "2026-06-16: Repo harness state was consolidated to current-state.md; progress.md and session-handoff.md were retired from the active startup contract; first-agent review evidence was recorded at docs/harness/evidence/first-agent-review.json; manifest and harness docs were updated to the reviewed current-state contract."
+        "2026-06-16: Repo harness state was consolidated to current-state.md; progress.md and session-handoff.md were retired from the active startup contract; first-agent review evidence was recorded at docs/harness/evidence/first-agent-review.json; manifest and harness docs were updated to the reviewed current-state contract.",
+        "2026-06-16: Added `docs/harness/release/apple-container-update-playbook.md`, top-of-file descriptions for maintained scripts and image templates, and a refreshed `.gitignore` for Rust/macOS/local RunHaven artifacts."
       ],
       "notes": "The active startup contract is AGENTS.md, feature_list.json, current-state.md, and focused docs under docs/harness/."
     },
@@ -121,7 +123,8 @@
         "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 47 tests and passed after the second follow-up hardening pass",
         "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven run --help`, `PYTHONPATH=src python3.14 -m runhaven plan shell --network internal --tty never -- /bin/true`, and `PYTHONPATH=src python3.14 -m runhaven doctor` passed after the second follow-up hardening pass",
         "2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100 after the second follow-up hardening pass",
-        "2026-06-16: `--ssh` fails closed in planner and CLI paths while Apple `container` 1.0.0 non-root SSH forwarding is blocked; planner, CLI, and Apple container smoke guard checks cover the refusal."
+        "2026-06-16: `--ssh` fails closed in planner and CLI paths while Apple `container` 1.0.0 non-root SSH forwarding is blocked; planner, CLI, and Apple container smoke guard checks cover the refusal.",
+        "2026-06-16: Rust expert review fixes keep standard and provider runs failure-safe: command launch failures remove active markers, write failed run records when a run started, and preserve cleanup evidence without widening the runtime boundary."
       ],
       "notes": "Runtime and contributor verification are macOS 26+ only."
     },
@@ -245,7 +248,8 @@
         "2026-06-15: Added empty-allowlist regression coverage for internet, internal, provider, and `EgressPolicy` paths; focused planner and egress tests passed.",
         "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 84 unit tests, pin check, ruff, mypy, and build after empty-allowlist regression coverage.",
         "2026-06-16: Rust `scripts/apple_container_smoke.sh --with-provider` passed on macOS 26.5.1 arm64 with Apple `container` 1.0.0 after fixing the provider CONNECT relay to use blocking accepted/tunnel sockets and preserve tunneled bytes after CONNECT headers.",
-        "2026-06-16: Added fixture tests for Apple `container network inspect` host-only mode, IPv4 gateway, IPv4 subnet, and fail-closed invalid network shapes without requiring live Apple `container` in unit tests."
+        "2026-06-16: Added fixture tests for Apple `container network inspect` host-only mode, IPv4 gateway, IPv4 subnet, and fail-closed invalid network shapes without requiring live Apple `container` in unit tests.",
+        "2026-06-16: Provider allowlist proxy and Codex API-key broker startup handle Apple `container` 1.0.0's unbindable guest gateway by using a wildcard host listener with explicit Apple-container subnet rejection for off-subnet clients; focused tests and the live provider smoke cover this path."
       ],
       "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider hosts now come from the reviewed provider endpoint matrix. Broad path-sensitive, telemetry, update, reporting, and weakly sourced hosts remain explicit `--provider-host` review items. Provider policy decisions are logged for review, and blocked provider targets are grouped after runs with run id, counts, reasons, matched rules, and suggested next actions."
     },

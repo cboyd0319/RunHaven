@@ -1,4 +1,6 @@
 #!/bin/sh
+# Create or normalize the non-root agent user used by bundled images.
+# Ensures UID/GID 1000 owns /home/agent for RunHaven state volumes.
 set -eu
 
 agent_uid=1000

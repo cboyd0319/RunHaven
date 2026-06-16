@@ -50,8 +50,9 @@ policy, and repo-owned verification route.
 - Kept file organization nested by responsibility instead of flattening the
   Rust source tree.
 - Split large Rust modules so every Rust source file is under 500 lines; the
-  current largest file is `src/runhaven/cli/app.rs` at 494 lines.
-- Updated `.gitignore` for Rust build output.
+  current largest file is `src/runhaven/provider/auth_broker.rs` at 499 lines.
+- Updated `.gitignore` for Rust build, coverage, profiling, local
+  RunHaven/container, macOS, editor, and pre-Rust Python tooling artifacts.
 - Completed the final active-document accuracy sweep for the Rust conversion
   across product docs, GitHub instructions, harness boundaries, roadmap,
   release controls, and source-mined ideas.
@@ -119,17 +120,33 @@ policy, and repo-owned verification route.
 - Updated `scripts/apple_container_smoke.sh` so the default path verifies
   `runhaven plan --ssh` refusal, and `--with-ssh` verifies `runhaven run --ssh`
   refusal before launch.
+- Added `docs/harness/release/apple-container-update-playbook.md` for Apple
+  `container` runtime, helper image, installer, Kata kernel, CLI help, smoke,
+  cleanup, and rollback evidence before future pin changes.
+- Added top-of-file descriptions to every maintained shell script and bundled
+  image template.
+- Ran whole-repo Rust expert review and addressed the findings: auth broker
+  upstream requests now use the configured global timeout, standard and provider
+  launch failures remove active markers and record failed runs when a run
+  started, cleanup failures stay visible in run records, the crate is marked
+  `publish = false`, and tests were moved out of near-limit files to preserve
+  the source-size ceiling.
+- Fixed the provider-mode bind regression exposed by live verification. Apple
+  `container` 1.0.0 reports a guest gateway that is not bindable on macOS, so
+  RunHaven uses the gateway URL for guests while allowing a wildcard host
+  listener only with explicit Apple-container subnet rejection.
 
 ## Trusted Verification
 
 - `cargo fmt --check`: passed.
-- `cargo test --locked`: passed with 36 library tests and 2 integration tests.
+- `cargo test --locked`: passed with 41 library tests and 3 integration tests.
 - `cargo clippy --all-targets -- -D warnings`: passed.
 - `cargo run --locked --bin runhaven-check-pins`: passed.
 - `cargo build --locked`: passed.
 - `./init.sh`: passed. The full local harness ran Cargo format, tests, clippy,
   pin policy, and build.
-- Rust source size scan: passed; no Rust source file is over 500 lines.
+- Rust source size scan: passed; no Rust source file is over 500 lines. The
+  current largest file is `src/runhaven/provider/auth_broker.rs` at 499 lines.
 - Direct CLI smokes passed: `target/debug/runhaven agents`,
   `target/debug/runhaven plan shell --workspace . -- /bin/bash -lc pwd`,
   `target/debug/runhaven doctor`, and
@@ -216,6 +233,15 @@ policy, and repo-owned verification route.
   expected refusal, `target/debug/runhaven setup --agent shell`, cleanup checks,
   JSON validation, local Markdown link check, active-doc stale SSH wording scan,
   Rust source size guard, and `git diff --check`.
+- Apple Container release-playbook, script-header, `.gitignore`, and Rust expert
+  review checks passed: Apple Container expert review, Antigravity sandbox
+  research, Rust expert review, script/image header scan, shell syntax checks,
+  `cargo fmt --check`, `cargo test --locked`, `cargo clippy --all-targets -- -D
+  warnings`, `cargo run --locked --bin runhaven-check-pins`, `cargo build
+  --locked`, `scripts/apple_container_smoke.sh --with-provider`,
+  `scripts/apple_container_smoke.sh --with-ssh`, cleanup checks, tracked-ignored
+  check, JSON validation, local Markdown link check, Rust source size guard, and
+  `git diff --check`.
 
 ## Touched Surfaces
 
@@ -232,13 +258,16 @@ policy, and repo-owned verification route.
 - `CONTRIBUTING.md`
 - `docs/`
 - `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`
+- `docs/harness/release/apple-container-update-playbook.md`
 - `docs/TAURI_UI_GUARDRAILS.md`
 - `docs/harness/`
 - `feature_list.json`
 - `images/`
 - `scripts/`
 - `src/`
+- `src/runhaven/cli/app/`
 - `src/runhaven/cli/doctor/`
+- `src/runhaven/provider/runtime/`
 - `tests/`
 - `tests/fixtures/apple_container/`
 
@@ -252,6 +281,6 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Close the Apple `container` release-update playbook gap, then continue the
-accepted backlog items for script purpose headers and a whole-repo Rust expert
-review. Keep verification local while alpha CI is disabled.
+Start Tauri/UI planning from `docs/TAURI_UI_GUARDRAILS.md` and keep local
+verification authoritative while alpha CI is disabled. Keep `--ssh` fail-closed
+until a no-secret non-root Apple `container` smoke proves usable forwarding.

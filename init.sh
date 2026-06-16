@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Run the local macOS verification harness for RunHaven.
+# Checks Rust formatting, tests, clippy, pin policy, and build output.
 set -euo pipefail
 
 echo "== Harness verification for RunHaven =="

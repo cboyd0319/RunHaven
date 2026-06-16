@@ -1,3 +1,5 @@
+# Base RunHaven image template for generic shell agents.
+# Installs pinned Debian packages and prepares the non-root agent user.
 FROM debian:trixie-slim@sha256:4e401d95de7083948053197a9c3913343cd06b706bf15eb6a0c3ccd26f436a0e
 
 ARG DEBIAN_FRONTEND=noninteractive

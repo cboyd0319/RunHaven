@@ -55,15 +55,17 @@ pub trait CodexBrokerUpstream: Send + Sync + 'static {
     ) -> Result<BrokerUpstreamResponse>;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct OpenAIResponsesUpstream {
     host: String,
+    agent: ureq::Agent,
 }
 
 impl Default for OpenAIResponsesUpstream {
     fn default() -> Self {
         Self {
             host: CODEX_BROKER_UPSTREAM_HOST.to_string(),
+            agent: broker_upstream_agent(),
         }
     }
 }
@@ -77,7 +79,7 @@ impl CodexBrokerUpstream for OpenAIResponsesUpstream {
         body: &[u8],
     ) -> Result<BrokerUpstreamResponse> {
         let url = format!("https://{}{}", self.host, path);
-        let mut request = ureq::post(&url);
+        let mut request = self.agent.post(&url);
         for (name, value) in headers {
             request = request.header(name.as_str(), value.as_str());
         }
@@ -109,6 +111,15 @@ impl CodexBrokerUpstream for OpenAIResponsesUpstream {
             body,
         })
     }
+}
+
+fn broker_upstream_agent() -> ureq::Agent {
+    ureq::Agent::config_builder()
+        .timeout_global(Some(Duration::from_secs(
+            CODEX_BROKER_REQUEST_TIMEOUT_SECONDS,
+        )))
+        .build()
+        .into()
 }
 
 #[derive(Clone)]
@@ -417,11 +428,12 @@ fn record_decision(
 
 fn send_error(stream: &mut TcpStream, status: u16, reason: &str) -> Result<()> {
     let body = format!("{status} {reason}\n");
-    write!(
-        stream,
+    let response = format!(
         "HTTP/1.1 {status} {reason}\r\nConnection: close\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\n\r\n{body}",
         body.len()
-    )?;
+    );
+    stream.write_all(response.as_bytes())?;
+    stream.flush()?;
     Ok(())
 }
 
@@ -470,4 +482,18 @@ pub fn parse_content_length(value: Option<&str>) -> Result<Option<usize>> {
         bail!("invalid Content-Length");
     }
     Ok(Some(length as usize))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn openai_upstream_uses_global_request_timeout() {
+        let upstream = OpenAIResponsesUpstream::default();
+        assert_eq!(
+            upstream.agent.config().timeouts().global,
+            Some(Duration::from_secs(CODEX_BROKER_REQUEST_TIMEOUT_SECONDS))
+        );
+    }
 }

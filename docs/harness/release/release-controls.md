@@ -14,6 +14,8 @@ machines. A release cannot rely on chat history or unstated local setup.
   boundary change.
 - Verify package, image, GitHub Action, Debian, npm, Rust/Cargo, and Apple
   `container` pins from primary sources before changing release artifacts.
+- Use `apple-container-update-playbook.md` for Apple `container` runtime,
+  helper image, installer, and Kata kernel pin updates.
 - Produce or review an SBOM before publishing installable artifacts once
   release packaging exists.
 - Record provenance for built artifacts: source commit, build command, builder,

@@ -143,8 +143,8 @@ risk, and next best evidence when a layer cannot run.
 
 | Item | Evidence | Risk | Next Step | Status |
 | --- | --- | --- | --- | --- |
-| Release evidence automation is still manual | Release controls are documented but not automated | Release prep could rely on chat history or ad hoc commands | Design script or command after harness overhaul | accepted |
-| Script purpose headers are not enforced | Maintained scripts exist under the repo root, `scripts/`, and image templates | Contributors may need to inspect script bodies before knowing whether a script is safe or relevant | Add a short top-of-file description to every maintained script and consider a lightweight sensor once the convention is stable | accepted |
+| Release evidence automation is still manual | Release controls and the Apple `container` update playbook are documented but not automated | Release prep could still rely on manually assembled evidence | Consider a release evidence script or command after Tauri/UI planning starts | accepted |
+| Script purpose header sensor is not enforced | Maintained scripts and image templates now carry top-of-file descriptions | New scripts could omit the convention | Add a lightweight sensor only if the convention drifts | debt |
 | Real-agent effectiveness evidence is absent | Repo docs intentionally block effectiveness claims without representative evidence | Structural score could be overclaimed | Define representative tasks before public claims | candidate |
 | Historical evidence includes old local HarnessForge invocation examples | Older evidence rows preserve exact commands | Active docs could copy stale sibling-checkout patterns | Keep active guidance self-contained; do not edit old evidence unless cleaning history is in scope | debt |
 

@@ -57,7 +57,7 @@ rollback.
 | Feedback | `verification-matrix.md`, `sensor-registry.md`, `evaluator-rubric.md`, `evidence-log.md` | Deterministic signals, ownership, and lifecycle before claiming completion |
 | Research | `docs/RESEARCH.md`, `docs/harness/research/sources.md`, `docs/harness/research/source-record.schema.json`, `docs/harness/research/source-record-example.json` | Reviewed provenance and project-owned source records |
 | Scope | `change-contract.md`, `security-boundary-map.md`, `feature-privacy-labels.json` | Problem, non-goals, acceptance, rollback, data, security, permission, and cost boundaries |
-| Lifecycle | `first-agent-task.md`, `clean-state-checklist.md`, `quality-document.md`, `release-controls.md`, `entropy-control.md`, `modularization-plan.md` | Retired first-session harness review record, restart, release readiness, code-health sequencing, and recurring upkeep |
+| Lifecycle | `first-agent-task.md`, `clean-state-checklist.md`, `quality-document.md`, `release-controls.md`, `release/apple-container-update-playbook.md`, `entropy-control.md`, `modularization-plan.md` | Retired first-session harness review record, restart, release readiness, Apple `container` update checks, code-health sequencing, and recurring upkeep |
 
 ## Operating Loop
 

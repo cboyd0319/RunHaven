@@ -48,3 +48,7 @@ and verify the signed installer before changing the minimum supported runtime.
 helper properties with the recorded pins and fails closed on drift. Installer
 SHA-256, signing team ID, and kernel SHA-256 remain release-evidence fields
 unless a separate package or filesystem hash check is added.
+Use
+[`apple-container-update-playbook.md`](harness/release/apple-container-update-playbook.md)
+for Apple `container` runtime, helper image, installer, and Kata kernel pin
+updates.

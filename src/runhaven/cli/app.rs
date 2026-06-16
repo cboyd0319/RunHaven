@@ -196,9 +196,18 @@ fn run_standard_agent(plan: &AgentRunPlan) -> Result<i32> {
         .status();
     let terminal_status = active_run_terminal_status(&run_id);
     let _ = remove_active_run_record(&run_id);
-    let status = status_result?;
     let finished_at = utc_timestamp();
-    let return_code = status.code().unwrap_or(1);
+    let mut command_error = None;
+    let return_code = match status_result {
+        Ok(status) => status.code().unwrap_or(1),
+        Err(error) => {
+            command_error = Some(anyhow::anyhow!(
+                "could not launch agent command {:?}: {error}",
+                plan.command[0]
+            ));
+            1
+        }
+    };
     let git = summarize_git_change(git_before, capture_git_snapshot(&plan.workspace));
     write_run_record(RunRecordInput {
         plan,
@@ -212,6 +221,9 @@ fn run_standard_agent(plan: &AgentRunPlan) -> Result<i32> {
         cleanup: json!({"provider_network": "not-applicable"}),
         git,
     })?;
+    if let Some(error) = command_error {
+        return Err(error);
+    }
     Ok(return_code)
 }
 
@@ -474,21 +486,4 @@ fn require_container_cli() -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn split_agent_args_after_separator() {
-        let args = ["run", "shell", "--", "echo", "--flag"]
-            .into_iter()
-            .map(str::to_string)
-            .collect::<Vec<_>>();
-        assert_eq!(
-            split_agent_args(&args),
-            (
-                vec!["run".to_string(), "shell".to_string()],
-                vec!["echo".to_string(), "--flag".to_string()]
-            )
-        );
-    }
-}
+mod tests;

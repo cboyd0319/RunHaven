@@ -301,11 +301,12 @@ fn read_proxy_request_line(reader: &mut impl Read) -> Result<Option<String>> {
 
 fn send_proxy_response(stream: &mut TcpStream, status: u16, reason: &str) -> Result<()> {
     let body = format!("{status} {reason}\n");
-    write!(
-        stream,
+    let response = format!(
         "HTTP/1.1 {status} {reason}\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{body}",
         body.len()
-    )?;
+    );
+    stream.write_all(response.as_bytes())?;
+    stream.flush()?;
     Ok(())
 }
 
