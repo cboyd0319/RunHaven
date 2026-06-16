@@ -106,6 +106,9 @@ policy, and repo-owned verification route.
   capabilities, and denied-by-default WebView access.
 - Added an accepted backlog item to give every maintained script a short
   top-of-file description explaining what it is and what it does.
+- Added provider-mode troubleshooting guidance that distinguishes allowlist
+  denials from host-side proxy reachability or macOS Local Network privacy
+  failures.
 
 ## Trusted Verification
 
@@ -180,6 +183,12 @@ policy, and repo-owned verification route.
   capabilities, and permissions docs reviewed; pin policy, JSON validation,
   local Markdown link check, active-doc platform/stale-command scan, and
   `git diff --check` passed.
+- Provider local-network/privacy troubleshooting checks passed:
+  `scripts/apple_container_smoke.sh --with-provider`, cleanup checks with
+  `target/debug/runhaven runs active`, `target/debug/runhaven state list`, and
+  `target/debug/runhaven network list`, pin policy, JSON validation, local
+  Markdown link check, active-doc platform/stale-command scan, and
+  `git diff --check` passed.
 
 ## Touched Surfaces
 
@@ -212,7 +221,7 @@ policy, and repo-owned verification route.
 
 ## Next Step
 
-Close the remaining provider local-network/privacy troubleshooting gap, then
-decide whether to do the accepted script-description cleanup or the planned
-Rust expert plus Rust skill repo-wide review next. Keep verification local
-while alpha CI is disabled.
+Decide whether to do the accepted script-description cleanup or the planned
+Rust expert plus Rust skill repo-wide review next. Remaining Apple
+`container` pre-Tauri items are P2 SSH-forwarding smoke coverage and the
+release-update playbook. Keep verification local while alpha CI is disabled.

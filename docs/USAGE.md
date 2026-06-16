@@ -334,6 +334,33 @@ Run `runhaven plan` first. Provider plans show the managed provider network and
 allowed hosts; the exact proxy URL is injected by `runhaven run` after the
 internal-network gateway is inspected.
 
+If provider mode fails, separate allowlist denials from proxy reachability:
+
+- A grouped blocked-host review after the run means the proxy was reachable and
+  denied a hostname by policy.
+- Connection-refused, timeout, or "could not connect to proxy" failures before
+  any blocked-host review usually mean the guest could not reach RunHaven's
+  host-side proxy on the Apple `container` host-only network.
+
+For proxy reachability failures, run:
+
+```bash
+runhaven doctor
+runhaven image doctor shell
+runhaven plan shell --network provider --provider-host example.com
+runhaven egress log --limit 20
+runhaven why host api.openai.com --agent codex
+scripts/apple_container_smoke.sh --with-provider
+container system status
+```
+
+If macOS shows a Local Network privacy prompt for Apple `container` or
+`container-runtime-linux`, allow it and rerun the provider smoke. The prompt is
+not guaranteed to appear for every reachability failure. Do not fix
+reachability by broadening workspace mounts, passing more environment
+variables, or switching to unrestricted internet unless that is the intended
+security tradeoff.
+
 If a provider run tries to reach a host outside the allowlist, RunHaven prints a
 grouped blocked-host review after the agent exits. The review includes the run
 id, host, port, count, denial reason, matched rule, and suggested next action.
