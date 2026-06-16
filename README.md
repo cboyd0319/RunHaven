@@ -27,27 +27,15 @@ Antigravity, Copilot, or a custom agent without casually handing an agent their
 whole Mac. RunHaven does not replace those tools. It wraps them in a repeatable
 container runtime that makes the safer path the default.
 
+RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
+supported runtimes or contributor verification targets.
+
 [Installation](docs/INSTALLATION.md) |
 [Capabilities](docs/CAPABILITIES.md) |
 [Usage](docs/USAGE.md) |
 [Security model](docs/SECURITY_MODEL.md) |
 [Architecture](docs/ARCHITECTURE.md) |
 [Research](docs/RESEARCH.md)
-
-## Status
-
-Alpha / pre-release. RunHaven is usable for local testing, image builds, and
-provider-restricted agent runs, but maintainers have not declared a stable
-release boundary.
-
-RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
-supported runtimes or contributor verification targets.
-
-Use `runhaven plan` before `runhaven run`. Treat the default internet network
-as unrestricted egress inside whatever Apple `container` and your host network
-allow. Use `--network provider` when a run should be restricted to the bundled
-provider host allowlist plus any reviewed fully qualified `--provider-host`
-entries.
 
 ## What It Is
 
