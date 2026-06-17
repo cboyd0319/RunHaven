@@ -37,7 +37,8 @@ controls are still CLI-first.
 [Usage](docs/USAGE.md) |
 [Security model](docs/SECURITY_MODEL.md) |
 [Architecture](docs/ARCHITECTURE.md) |
-[Research](docs/RESEARCH.md)
+[Research](docs/RESEARCH.md) |
+[Harness](docs/harness/README.md)
 
 ## Why RunHaven
 
@@ -111,10 +112,16 @@ setup. See [Usage](docs/USAGE.md) for command-level workflows.
   resource, approval, and permission boundaries for the desktop UI.
 - [Pinning policy](docs/PINNING.md): exact dependency and image pin rules.
 - [Roadmap](docs/ROADMAP.md): planned product and codebase work.
+- [Harness](docs/harness/README.md): lightweight agent startup, state, and
+  verification routing.
 - [Contributing](CONTRIBUTING.md): local checks and review expectations.
 - [Security policy](SECURITY.md): supported security reporting scope.
 
 ## Development
+
+Agent-assisted work starts from three files only: [AGENTS.md](AGENTS.md),
+[feature_list.json](feature_list.json), and [current-state.md](current-state.md).
+Use the harness docs only when a task touches that surface.
 
 Use the smallest relevant check for a change:
 

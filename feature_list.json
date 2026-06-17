@@ -1,714 +1,110 @@
 {
   "$schema": "docs/harness/schemas/feature-list.schema.json",
   "project": "RunHaven",
-  "last_updated": "2026-06-16",
+  "last_updated": "2026-06-17",
   "rules": {
     "single_active_feature": true,
     "passing_requires_evidence": true,
-    "do_not_skip_verification": true
-  },
-  "status_legend": {
-    "not_started": "Work has not begun.",
-    "planned": "Planned but not active.",
-    "active": "The one feature currently being worked.",
-    "blocked": "Progress is stopped by a documented blocker.",
-    "passing": "Verification passed and evidence is recorded."
+    "startup_context_must_stay_small": true
   },
   "features": [
     {
-      "id": "tauri-ui-research",
+      "id": "repo-harness-simplification",
       "priority": 0,
-      "area": "ui",
-      "title": "Tauri/UI research and framework selection",
-      "user_visible_behavior": "RunHaven's first desktop UI will be planned from current Tauri v2 evidence, a deliberate frontend framework choice, comparable product UX research, and beginner-safe interaction flows before any scaffold is added.",
-      "status": "passing",
-      "dependencies": [
-        "rust-cli-conversion",
-        "runtime-hardening-macos-only-boundary",
-        "provider-egress-allowlisting",
-        "run-observability"
-      ],
-      "verification": [
-        "Current official Tauri v2 architecture, command, capability, permission, frontend, and build/test docs are reviewed",
-        "Svelte, React, Solid, and Vue are compared against RunHaven's beginner-safe and maintainability requirements",
-        "Comparable desktop/container/workspace UI patterns are recorded",
-        "Information architecture, screen responsibilities, command contract, capability map, and first scaffold acceptance criteria are documented",
-        "Research was completed before `src-tauri/` and `ui/` scaffold work started"
-      ],
-      "evidence": [
-        "2026-06-16: Tauri/UI research was promoted to the active repo phase with `docs/TAURI_UI_RESEARCH_PLAN.md`; non-UI gates and candidates were consolidated in `docs/NON_UI_BACKLOG.md`.",
-        "2026-06-16: Tauri/UI research completed with a source-backed Tauri v2 architecture decision, Svelte + Vite + TypeScript recommendation, comparable UI analysis, beginner-safe information architecture, typed command contract, capability map, secure-default warning policy, and first scaffold acceptance criteria."
-      ],
-      "notes": "The research phase is complete. Scaffold implementation evidence is tracked separately in `tauri-svelte-first-scaffold`. The target user is non-technical, so the UI must be plain-language, guided, reversible, and fail-closed."
-    },
-    {
-      "id": "tauri-svelte-first-scaffold",
-      "priority": 0,
-      "area": "ui",
-      "title": "Tauri/Svelte first scaffold",
-      "user_visible_behavior": "RunHaven has an alpha desktop shell baseline for setup, dashboard, profile, folder-pick, and run-plan review. Current launch execution is tracked separately in `tauri-launch-execution`.",
-      "status": "passing",
-      "dependencies": [
-        "tauri-ui-research",
-        "rust-cli-conversion",
-        "runtime-hardening-macos-only-boundary",
-        "run-observability"
-      ],
-      "verification": [
-        "`ui/` and `src-tauri/` are organized as separate frontend and desktop-shell roots",
-        "Tauri and frontend direct dependencies are exact-pinned and lockfiles are checked in",
-        "The scaffold introduced narrow read-only command capabilities plus native folder picking; later launch capability work is tracked separately",
-        "The WebView has no generic shell, filesystem, process, HTTP, or Apple `container` bridge",
-        "Frontend helper tests cover secure defaults, warning previews, and read-only preview command paths",
-        "Playwright browser smoke catches blank-page and console-error regressions",
-        "Tauri command tests cover profile listing, plan construction, advanced-choice warnings, and invalid workspace rejection",
-        "`./init.sh` passes with root Rust checks, frontend checks, Tauri Rust checks, and debug no-bundle Tauri build"
-      ],
-      "evidence": [
-        "2026-06-16: Added exact-pinned Svelte + Vite + TypeScript UI under `ui/`, Tauri v2 shell under `src-tauri/`, narrow `main-read` and `folder-pick` capabilities, read-only command contracts, frontend tests, Playwright browser smoke, Tauri command tests, and an updated local harness. `./init.sh` passed after adding the scaffold checks."
-      ],
-      "notes": "This feature records the baseline scaffold. The first mutating launch slice is tracked separately; remaining run-control UI commands still need typed Rust validation, explicit confirmation, and focused tests."
-    },
-    {
-      "id": "tauri-launch-execution",
-      "priority": 0,
-      "area": "ui",
-      "title": "Tauri launch execution",
-      "user_visible_behavior": "The alpha desktop app can start a RunHaven agent run after the user reviews the plan, explicitly confirms launch, and acknowledges every warning.",
-      "status": "passing",
-      "dependencies": [
-        "tauri-svelte-first-scaffold",
-        "rust-cli-conversion",
-        "runtime-hardening-macos-only-boundary",
-        "run-observability"
-      ],
-      "verification": [
-        "`launch_run` uses a typed request and response and reuses the root Rust planner and shared launch runtime",
-        "Launch blocks when setup checks fail",
-        "Launch requires explicit confirmation and every warning code to be acknowledged",
-        "`launch-run` capability grants only `allow-launch-run` and is listed explicitly in Tauri config",
-        "Frontend state stores display options and run ids, not secrets, raw command lines, prompts, raw logs, or workspace contents",
-        "Frontend, Playwright, and Tauri command tests cover the launch confirmation path"
-      ],
-      "evidence": [
-        "2026-06-16: Added shared Rust launch runtime and state-volume lock modules, a typed Tauri `launch_run` command, a separate `launch-run` capability, Svelte launch confirmation controls, frontend command helpers, Rust/frontend/Playwright tests, and docs updates. Focused and broader verification passed before commit."
-      ],
-      "notes": "Live logs, stop, kill, attach, repair, image build, state cleanup, and worktree review controls remain future UI slices. Image and builder readiness are tracked separately in `tauri-image-readiness`; active-run and resource warnings are tracked separately in `tauri-launch-resource-warnings`; live run status is tracked separately in `tauri-live-run-status`."
-    },
-    {
-      "id": "tauri-image-readiness",
-      "priority": 0,
-      "area": "ui",
-      "title": "Tauri image readiness",
-      "user_visible_behavior": "The alpha desktop launch panel shows selected-agent image readiness and Apple builder status, and launch is blocked when the bundled profile image is missing or stale.",
-      "status": "passing",
-      "dependencies": [
-        "tauri-launch-execution",
-        "rust-cli-conversion",
-        "runtime-hardening-macos-only-boundary"
-      ],
-      "verification": [
-        "Image readiness uses structured Rust image-doctor data instead of parsing CLI prose in the frontend",
-        "`get_image_status` is read-only and granted through `main-read`",
-        "The Tauri launch path refuses missing or stale bundled profile images before starting a background run",
-        "Custom image launches remain an explicit advanced path covered by the existing custom-image warning",
-        "Frontend and Playwright coverage prove image readiness appears in the launch panel and gates launch readiness"
-      ],
-      "evidence": [
-        "2026-06-16: Added structured image and builder status reports, typed Tauri `get_image_status`, image readiness launch enforcement, launch-panel readiness UI, and focused Rust/Tauri/frontend/Playwright tests."
-      ],
-      "notes": "Raw log feedback remains separate future work. Active-run and resource warnings are tracked separately in `tauri-launch-resource-warnings`; live run status is tracked separately in `tauri-live-run-status`."
-    },
-    {
-      "id": "tauri-launch-resource-warnings",
-      "priority": 0,
-      "area": "ui",
-      "title": "Tauri launch resource warnings",
-      "user_visible_behavior": "The alpha desktop launch flow warns when other RunHaven runs are active, warns when the selected memory limit plus active runs may be material on the host, and shows a sanitized launch snapshot after start.",
-      "status": "passing",
-      "dependencies": [
-        "tauri-launch-execution",
-        "tauri-image-readiness",
-        "run-observability"
-      ],
-      "verification": [
-        "Dynamic active-run and resource warning codes are computed in Rust plan and launch-confirmation paths",
-        "Launch requires explicit acknowledgement of the active-run and resource warning codes when they apply",
-        "The frontend helper tests cover active-run warning acknowledgement and the launch snapshot payload",
-        "The post-launch UI displays sanitized run metadata only, not raw logs or workspace content",
-        "Playwright coverage proves the launch snapshot renders after the preview launch path"
-      ],
-      "evidence": [
-        "2026-06-16: Added active-run and material-memory warning codes to Tauri plan and launch confirmation, added a typed launch snapshot response, rendered the snapshot after launch, and covered the behavior with Rust/frontend/Playwright tests and browser screenshots."
-      ],
-      "notes": "Raw log snapshot feedback is tracked separately in `tauri-log-snapshot`. Live run status is tracked separately in `tauri-live-run-status`."
-    },
-    {
-      "id": "tauri-live-run-status",
-      "priority": 0,
-      "area": "ui",
-      "title": "Tauri live run status",
-      "user_visible_behavior": "The alpha desktop app can refresh a typed live status snapshot for the latest launched run, showing marker status, container state, resources, image, and network metadata without exposing raw logs or raw Apple inspect payloads.",
-      "status": "passing",
-      "dependencies": [
-        "tauri-launch-execution",
-        "tauri-launch-resource-warnings",
-        "run-observability"
-      ],
-      "verification": [
-        "`get_run_status` uses a typed request and response and is granted only through `main-read`",
-        "The Rust status path reuses the existing sanitized active-run inspect payload",
-        "The Tauri conversion maps only known safe fields and drops raw command, environment, mount, and argument data",
-        "Frontend preview and Playwright coverage prove the run-status card renders after the launch path",
-        "Raw logs remain out of frontend state"
-      ],
-      "evidence": [
-        "2026-06-16: Added `active_run_status_payload`, typed Tauri `get_run_status`, `main-read` permission for that command, frontend status helper, run-status UI, and Rust/frontend/Playwright tests proving sanitized fields and preview rendering."
-      ],
-      "notes": "Raw log snapshot viewing is tracked separately in `tauri-log-snapshot`. Mutating run-control operations remain CLI-first."
-    },
-    {
-      "id": "tauri-log-viewing-design",
-      "priority": 0,
-      "area": "ui",
-      "title": "Tauri raw log viewing design",
-      "user_visible_behavior": "RunHaven has an accepted secure-default plan for desktop log viewing: show status first, then let the user explicitly request a bounded raw output snapshot for one validated active run.",
-      "status": "passing",
-      "dependencies": [
-        "tauri-live-run-status",
-        "run-observability"
-      ],
-      "verification": [
-        "The design treats raw container stdio as sensitive output that can include secrets or workspace content",
-        "Completed-run `runs log` records remain separate from raw active-container output",
-        "The first implementation is bounded snapshot only, not live streaming",
-        "The plan uses a typed Rust command outside `main-read` and a narrow capability instead of a generic Apple `container` bridge",
-        "The frontend may keep only the current visible buffer in component state and must not durably store raw logs",
-        "Apple `container logs` local help and existing RunHaven `runs logs-follow` routing were reviewed"
-      ],
-      "evidence": [
-        "2026-06-16: Added `docs/TAURI_LOG_VIEWING_DESIGN.md` with the accepted `get_log_snapshot` implementation plan, Apple `container logs` constraints, trust boundary, milestones, and verification route."
-      ],
-      "notes": "The first bounded snapshot implementation is tracked separately in `tauri-log-snapshot`. The default UI should not show raw logs automatically or store them durably."
-    },
-    {
-      "id": "tauri-log-snapshot",
-      "priority": 0,
-      "area": "ui",
-      "title": "Tauri raw log snapshot",
-      "user_visible_behavior": "The alpha desktop app lets the user explicitly reveal a bounded latest-output snapshot for the most recently launched active run, after acknowledging that raw output may contain secrets or workspace content.",
-      "status": "passing",
-      "dependencies": [
-        "tauri-log-viewing-design",
-        "tauri-live-run-status",
-        "run-observability"
-      ],
-      "verification": [
-        "`get_log_snapshot` uses a typed request and response and is granted through `run-control`, not `main-read`",
-        "Rust requires `confirm_sensitive_output` before loading raw output",
-        "Rust validates the run id, active marker, and RunHaven-owned container name before invoking Apple `container`",
-        "Rust invokes only `container logs -n`, never omits `-n`, and does not use `--follow` or `--boot`",
-        "Rust drains stdout and stderr with bounded memory and caps the returned text",
-        "The frontend keeps raw output hidden by default and stores only the current visible snapshot in component state",
-        "Frontend, Tauri, root Rust, Playwright, Apple container smoke, and a disposable live active-run snapshot test passed"
-      ],
-      "evidence": [
-        "2026-06-16: Added `active_run_log_snapshot_payload`, typed Tauri `get_log_snapshot`, `run-control` capability, frontend log snapshot helper and panel, confirmation/line/byte/container validation tests, browser coverage, and a live ignored test that read a bounded snapshot from a disposable active Apple container run."
-      ],
-      "notes": "Live streaming, boot logs, completed-run raw logs, save/export, automatic redaction, and terminal attach remain out of scope."
-    },
-    {
-      "id": "rust-cli-conversion",
-      "priority": 1,
-      "area": "platform",
-      "title": "Rust CLI conversion",
-      "user_visible_behavior": "RunHaven is a Rust CLI with exact-pinned Cargo dependencies, repo-owned verification, and the same macOS Apple container safety contract.",
-      "status": "passing",
-      "dependencies": [
-        "repo-harness-operating-layer"
-      ],
-      "verification": [
-        "Python package, scripts, tests, and packaging files are removed",
-        "Cargo crate builds and tests with the locked dependency graph",
-        "Pin policy is enforced by the Rust `runhaven-check-pins` binary",
-        "`runhaven doctor` enforces the reviewed Apple `container` runtime commit and helper pin surface",
-        "Harness docs and current state route contributors through Rust verification"
-      ],
-      "evidence": [
-        "2026-06-16: `cargo fmt --check`, `cargo test --locked`, `cargo clippy --all-targets -- -D warnings`, `cargo run --locked --bin runhaven-check-pins`, `cargo build --locked`, and `./init.sh` passed after the Rust conversion.",
-        "2026-06-16: direct CLI smokes passed for `target/debug/runhaven agents`, `target/debug/runhaven plan shell --workspace . -- /bin/bash -lc pwd`, `target/debug/runhaven doctor`, and `target/debug/runhaven image build shell --dry-run`.",
-        "2026-06-16: `runhaven doctor` gained JSON-backed checks for `container system version --format json` and `container system property list --format json`, failing closed on mismatched runtime commit, builder image, vminit image, or Kata kernel pins.",
-        "2026-06-16: Whole-repo Rust expert review passed after fixes for auth-broker upstream request timeouts, failure-safe run records, Apple gateway bind compatibility with subnet-restricted provider listeners, exact publish policy, and Rust source file-size hygiene."
-      ],
-      "notes": "Historical feature evidence below still records the Python implementation that existed before the 2026-06-16 conversion."
-    },
-    {
-      "id": "runhaven-project-rename",
-      "priority": 1,
-      "area": "identity",
-      "title": "RunHaven project rename",
-      "user_visible_behavior": "The repo, installable package, CLI command, image tags, runtime resource names, docs, and harness metadata consistently use the RunHaven name.",
-      "status": "passing",
-      "dependencies": [
-        "repo-harness-operating-layer"
-      ],
-      "verification": [
-        "Old project, module, and CLI names are absent from tracked text",
-        "Rust crate modules use `runhaven`",
-        "Console command is `runhaven`",
-        "Tests and package build pass",
-        "Harness audit passes"
-      ],
-      "evidence": [
-        "2026-06-14: no-ignore old-name text scan across working tree files outside `.git` returned no matches",
-        "2026-06-14: old-name filename scan across working tree files outside `.git` returned no matches",
-        "2026-06-14: `PYTHONPATH=src python3 -m unittest discover -s tests` passed",
-        "2026-06-14: `python3 scripts/check_pins.py` passed",
-        "2026-06-14: temporary external venv installed pinned dev requirements; ruff, mypy, build, wheel install, and `runhaven agents` passed",
-        "2026-06-14: `python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction"
-      ],
-      "notes": "GitHub repository remote rename is a separate credentialed vendor change and requires explicit approval before execution."
-    },
-    {
-      "id": "repo-harness-operating-layer",
-      "priority": 2,
       "area": "harness",
-      "title": "Repository harness operating layer",
-      "user_visible_behavior": "A new agent can start from repo files, choose one scoped objective, run verification, and leave a clean handoff without relying on chat history.",
+      "title": "Lean repo harness",
+      "user_visible_behavior": "A new agent can start from AGENTS.md, feature_list.json, and current-state.md without loading the whole harness history.",
       "status": "passing",
       "dependencies": [],
       "verification": [
-        "Root instructions route to state, startup, verification, and done criteria",
-        "macOS verification entrypoint runs the full local check set",
-        "Harness docs include manifest, component inventory, verification matrix, evidence log, security map, and lifecycle files",
-        "Harness audit passes the configured threshold"
+        "Root startup instructions name only the three always-read files",
+        "Harness docs preserve the five-subsystem model and use on-demand routing",
+        "Feature and state files are compact enough for every-session reading",
+        "JSON and diff checks pass"
       ],
       "evidence": [
-        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed",
-        "2026-06-14: non-macOS verification entrypoint was removed when the project was clarified as macOS-only",
-        "2026-06-14: `python3 -m harnessforge audit --target . --min-score 85` reported 100/100 after the macOS-only correction",
-        "2026-06-16: Repo harness state was consolidated to current-state.md; progress.md and session-handoff.md were retired from the active startup contract; first-agent review evidence was recorded at docs/harness/evidence/first-agent-review.json; manifest and harness docs were updated to the reviewed current-state contract.",
-        "2026-06-16: Added `docs/harness/release/apple-container-update-playbook.md`, top-of-file descriptions for maintained scripts and image templates, and a refreshed `.gitignore` for Rust/macOS/local RunHaven artifacts.",
-        "2026-06-16: `runhaven-check-pins` now enforces top-of-file descriptions for maintained scripts and bundled image templates."
+        "2026-06-17: Startup, harness skill routing, harness overview, active feature state, current-state handoff, README development guidance, and affected harness docs were compressed to the lightweight five-subsystem model. JSON validation, local Markdown link check, pin policy, stale-reference scans, and git diff checks passed."
       ],
-      "notes": "The active startup contract is AGENTS.md, feature_list.json, current-state.md, and focused docs under docs/harness/."
+      "notes": "Historical evidence remains in docs/harness/evidence/evidence-log.md and product docs. It is not startup context."
     },
     {
-      "id": "runtime-hardening-macos-only-boundary",
-      "priority": 3,
-      "area": "security",
-      "title": "Runtime hardening and macOS-only boundary",
-      "user_visible_behavior": "RunHaven rejects unsafe command inputs by default, exposes explicit unsafe overrides, manages RunHaven state volumes, and only supports macOS 26+ verification.",
+      "id": "tauri-alpha-launch-feedback",
+      "priority": 1,
+      "area": "ui",
+      "title": "Tauri alpha launch feedback",
+      "user_visible_behavior": "The alpha desktop shell supports setup, dashboard, profile selection, folder picking, run-plan review, confirmed launch, image readiness, sanitized live status, and opt-in bounded raw output snapshots.",
       "status": "passing",
       "dependencies": [
-        "repo-harness-operating-layer"
-      ],
-      "verification": [
-        "Unsafe image references, resource values, network modes, workspaces, root users, and root groups are rejected by tests",
-        "TTY and interactive behavior are controllable from the CLI",
-        "RunHaven state listing and prune behavior are tested",
-        "macOS-only local verification entrypoints are enforced; hosted CI is disabled during alpha/pre-release",
-        "Full local verification and harness audit pass"
-      ],
-      "evidence": [
-        "2026-06-14: `PYTHONPATH=src python3.14 -m unittest discover -s tests` ran 34 tests and passed",
-        "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 34 tests and passed",
-        "2026-06-14: `python -m ruff check .` passed in a temporary hardening venv",
-        "2026-06-14: `python -m mypy src scripts` passed in a temporary hardening venv",
-        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed",
-        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven doctor` passed on macOS 26.5.1 arm64 with Apple container 1.0.0",
-        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven state list` passed",
-        "2026-06-14: `PYTHONPATH=src python3.14 -c 'from runhaven.cli import ensure_internal_network; ensure_internal_network(\"runhaven-smoke-20260614-hardening-internal\")'` passed and the temporary network was deleted",
-        "2026-06-14: `PYTHONPATH=src python3.14 -m unittest discover -s tests` ran 39 tests and passed after the follow-up hardening pass",
-        "2026-06-14: `python3.14 scripts/check_pins.py` passed after dynamic image template discovery was added",
-        "2026-06-14: harness audit reported 100/100 after the macOS-only correction",
-        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after the second follow-up hardening pass; the unit suite ran 47 tests",
-        "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 47 tests and passed after the second follow-up hardening pass",
-        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven run --help`, `PYTHONPATH=src python3.14 -m runhaven plan shell --network internal --tty never -- /bin/true`, and `PYTHONPATH=src python3.14 -m runhaven doctor` passed after the second follow-up hardening pass",
-        "2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100 after the second follow-up hardening pass",
-        "2026-06-16: `--ssh` fails closed in planner and CLI paths while Apple `container` 1.0.0 non-root SSH forwarding is blocked; planner, CLI, and Apple container smoke guard checks cover the refusal.",
-        "2026-06-16: Rust expert review fixes keep standard and provider runs failure-safe: command launch failures remove active markers, write failed run records when a run started, and preserve cleanup evidence without widening the runtime boundary.",
-        "2026-06-16: Added `docs/EXTENSION_MCP_BOUNDARY.md` so future extension or MCP support stays deny-by-default and reviewable before implementation."
-      ],
-      "notes": "Runtime and contributor verification are macOS 26+ only."
-    },
-    {
-      "id": "workspace-scope-selection",
-      "priority": 4,
-      "area": "security",
-      "title": "Explicit workspace scope selection",
-      "user_visible_behavior": "`runhaven plan` and `runhaven run` default to mounting the selected current directory, note when it is inside a larger git repository, and expand to the git root only with explicit `--workspace-scope git-root`.",
-      "status": "passing",
-      "dependencies": [
-        "runtime-hardening-macos-only-boundary"
-      ],
-      "verification": [
-        "Default workspace scope keeps a selected git subdirectory mounted without silently broadening to the repo root",
-        "`--workspace-scope git-root` expands a selected git subdirectory to the containing repository root",
-        "`--workspace-scope git-root` fails closed outside a git worktree",
-        "`runhaven plan` prints workspace scope and git-root notes",
-        "Run records and active-run markers include the selected workspace scope without recording commands, arguments, file contents, or secrets"
-      ],
-      "evidence": [
-        "2026-06-15: Focused planner, CLI, and standard-run tests passed after adding explicit workspace scope selection; ruff and mypy also passed on touched Python files.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 160 unit tests, pin check, ruff, mypy, and build after adding workspace scope selection. Manual `runhaven plan` smokes confirmed default current scope and explicit git-root expansion."
-      ],
-      "notes": "The default remains `current` to avoid surprising mount broadening. Use `git-root` only when the agent needs the full repository at `/workspace`."
-    },
-    {
-      "id": "warm-reusable-project-sessions",
-      "priority": 5,
-      "area": "usability",
-      "title": "Warm reusable project sessions",
-      "user_visible_behavior": "`runhaven plan` and `runhaven run` accept `--session NAME` to reuse a named project/profile agent home volume, while `state reset`, `state list --session`, and `state prune --session` provide explicit cleanup paths.",
-      "status": "passing",
-      "dependencies": [
+        "rust-cli-conversion",
         "runtime-hardening-macos-only-boundary",
         "run-observability"
       ],
       "verification": [
-        "`--session NAME` selects a deterministic project/profile/session state volume without changing the workspace mount",
-        "Invalid session names fail before command construction",
-        "Active run markers and completed run records include session and state volume metadata without command lines or secrets",
-        "`state list --session NAME` lists only matching named-session volumes",
-        "`state prune --session NAME --yes` deletes only matching named-session volumes",
-        "`state reset AGENT --workspace PATH --session NAME --yes` deletes exactly the planned project/profile/session volume",
-        "`state reset` without `--yes` prints the planned volume and does not delete it"
+        "Typed Rust commands and narrow Tauri capabilities cover the exposed UI paths",
+        "Frontend and Tauri tests cover launch, readiness, status, and log snapshot behavior",
+        "Raw logs stay hidden by default and are not durably stored in frontend state"
       ],
       "evidence": [
-        "2026-06-15: Red/green focused tests passed for named session planning, invalid session rejection, secret-free run-record session metadata, session-filtered state listing and pruning, and exact `state reset` confirmation behavior.",
-        "2026-06-15: Focused core, planner, state, and standard-run suites passed with 71 tests; compileall, focused ruff, and mypy also passed.",
-        "2026-06-15: Full verification passed with compileall, 183 unit tests, pin check, ruff, mypy, build, JSON validation, Markdown link check, `runhaven run --help`, `runhaven state reset --help`, `runhaven plan shell --session review`, `git diff --check`, and `PYTHON=<temporary-venv-python> ./init.sh` after adding warm reusable sessions."
+        "2026-06-16: Tauri/Svelte scaffold, launch execution, image readiness, resource warnings, live status, raw-log design, and bounded log snapshot slices passed focused Rust, Tauri, frontend, Playwright, and Apple container checks. See docs/harness/evidence/evidence-log.md for command detail."
       ],
-      "notes": "The implicit default session preserves existing per-project/profile volume names. Named sessions reuse only the isolated agent home volume inside the container and do not widen workspace mounts or host credential access. `default` is reserved for the implicit session."
+      "notes": "This compact row replaces the previous per-slice startup ledger. Detailed slice history remains in the evidence log."
     },
     {
-      "id": "provider-egress-allowlisting",
-      "priority": 4,
+      "id": "tauri-stop-run-control",
+      "priority": 0,
+      "area": "ui",
+      "title": "Tauri stop run control",
+      "user_visible_behavior": "The desktop app can stop one validated active RunHaven run only after explicit user confirmation.",
+      "status": "planned",
+      "dependencies": [
+        "tauri-alpha-launch-feedback"
+      ],
+      "verification": [
+        "`stop_run` uses a typed request and response",
+        "Rust validates the run id, active marker, and RunHaven-owned container before mutation",
+        "The command lives behind a narrow run-control capability",
+        "Frontend state does not imply success before the command returns",
+        "Focused Rust, Tauri, frontend, and Playwright checks pass"
+      ],
+      "evidence": [],
+      "notes": "Next product implementation slice. Add kill, attach, repair, image build, state cleanup, network cleanup, and worktree review separately."
+    },
+    {
+      "id": "ssh-forwarding-boundary",
+      "priority": 1,
       "area": "security",
-      "title": "Provider egress allowlisting",
-      "user_visible_behavior": "Internet-enabled agent runs can be restricted to reviewed provider and package endpoints instead of unrestricted egress.",
-      "status": "passing",
-      "dependencies": [
-        "repo-harness-operating-layer",
-        "runtime-hardening-macos-only-boundary"
-      ],
+      "title": "SSH forwarding fails closed",
+      "user_visible_behavior": "`--ssh` refuses before launch until Apple container forwarding is proven usable without raw key mounts or root default user changes.",
+      "status": "blocked",
+      "dependencies": [],
       "verification": [
-        "Threat model updated",
-        "Provider network mode is integrated into normal runs",
-        "Smoke harness proves host allowlist proxy on an internal Apple container network",
-        "Provider allowlist behavior tested",
-        "Runtime smoke proves denied and allowed network paths",
-        "Docs state exact limitations",
-        "Blocked provider hosts are surfaced to the user",
-        "Allowed hosts resolving to unsafe local addresses are denied",
-        "Provider policy decisions are persisted for later review",
-        "Host allowlist decisions can be explained before rerun",
-        "Provider endpoint matrix backs bundled hosts and known explicit-review hosts",
-        "Blocked-host review groups run id, rule, count, reason, and suggested next action",
-        "Live smoke harness can test bundled provider hosts for a selected profile",
-        "Empty allowlist behavior is regression-tested for internet, internal, provider, and proxy policy paths"
+        "Planner and run paths refuse `--ssh`",
+        "No raw SSH key mount is introduced",
+        "A no-secret non-root Apple container smoke is required before unblocking"
       ],
       "evidence": [
-        "2026-06-14: Rendered Apple DocC networking docs with Playwright and checked generated DocC JSON endpoints for `ContainerNetworkService`.",
-        "2026-06-14: Reviewed the complete user-supplied DocC snapshot: 1,022 rendered Markdown pages plus raw DocC JSON, zero fetch failures, and no exact hits for egress or allowlist control terms.",
-        "2026-06-14: Local Apple `container` 1.0.0 CLI help and command reference expose DNS selection, NAT networking, and host-only networks, but no domain egress allowlist flag.",
-        "2026-06-14: Added reserved `--network provider` mode that failed closed at that stage until provider egress enforcement existed.",
-        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed with 49 tests, pin check, ruff, mypy, and build.",
-        "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 49 tests and passed.",
-        "2026-06-14: `python3.14 -m harnessforge audit --target . --min-score 85` reported 100/100.",
-        "2026-06-14: `PYTHONPATH=src python3.14 -m runhaven plan shell --network provider` exited 2 with a fail-closed provider egress message during the reserved-mode stage.",
-        "2026-06-14: `python3 -m json.tool feature_list.json`, `python3 scripts/check_pins.py`, `git diff --check`, local absolute-path leak scan, and `python3.14 -m harnessforge audit --target . --min-score 85` passed after the complete DocC snapshot evidence update.",
-        "2026-06-14: added a standard-library CONNECT allowlist proxy and `scripts/provider_egress_smoke.py`.",
-        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` passed after the provider egress proxy smoke pass; the unit suite ran 56 tests.",
-        "2026-06-14: `PYTHONPATH=src python3.13 -m unittest discover -s tests` ran 56 tests and passed after the provider egress proxy smoke pass.",
-        "2026-06-14: `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8` passed with allowed proxied HTTPS and denied proxied host, proxied IP literal, direct DNS, and direct IP paths.",
-        "2026-06-14: `PYTHONPATH=src python3.14 scripts/provider_egress_smoke.py --timeout 8 --allowed-host api.openai.com --allowed-url https://api.openai.com/ --denied-host example.com` passed.",
-        "2026-06-14: HarnessForge audit was intentionally skipped for the provider egress proxy smoke pass by user instruction because the sibling HarnessForge repo is being worked on.",
-        "2026-06-14: focused CLI tests, ruff, mypy, and diff check passed after aligning CLI help and roadmap wording with the provider proxy state.",
-        "2026-06-14: provider lifecycle integration tests passed for plan construction, runtime proxy injection, provider network cleanup, and proxy env override order.",
-        "2026-06-14: live `runhaven run shell --network provider --provider-host example.com` smoke passed with allowed proxied HTTPS and denied proxied host, proxied IP literal, direct DNS, and direct IP paths; follow-up checks found no leftover provider network or test state volume.",
-        "2026-06-14: focused planner and CLI tests, ruff, and mypy passed after rejecting single-label provider hosts and documenting host-plus-subdomain semantics.",
-        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 60 tests and passed after the provider-host guard cleanup.",
-        "2026-06-14: focused egress, CLI, and plan tests passed after adding blocked-host diagnostics for provider runs.",
-        "2026-06-14: live `runhaven run shell --network provider --provider-host example.com` diagnostic smoke reported denied `iana.org:443`; follow-up cleanup removed the test state volume and found no leftover provider network.",
-        "2026-06-14: `PYTHON=<temporary-venv-python> ./init.sh` and `PYTHONPATH=src python3.13 -m unittest discover -s tests` each ran 63 tests and passed after provider blocked-host diagnostics.",
-        "2026-06-15: focused proxy and CLI tests passed after adding provider DNS unsafe-address rejection, policy logs, and `runhaven why host ...`.",
-        "2026-06-15: `PYTHONPATH=src python3.14 -m unittest discover -s tests` ran 68 tests and passed after provider diagnostics.",
-        "2026-06-15: `ruff check src/runhaven/egress.py src/runhaven/cli.py src/runhaven/plans.py tests/test_egress.py tests/test_cli.py` passed.",
-        "2026-06-15: `uvx --from mypy==2.1.0 mypy src` passed.",
-        "2026-06-15: `python3.14 -m compileall src tests scripts` passed.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 68 unit tests, pin check, ruff, mypy, and build after provider diagnostics.",
-        "2026-06-15: provider endpoint matrix added with source-backed bundled hosts and explicit-review candidates.",
-        "2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 71 tests and passed after provider endpoint matrix integration.",
-        "2026-06-15: `python3 -m compileall src tests scripts`, `python3 -m json.tool feature_list.json`, and `git diff --check` passed after provider endpoint matrix integration.",
-        "2026-06-15: `uvx --from ruff==0.15.17 ruff check .`, `uvx --from mypy==2.1.0 mypy src`, and `python3 scripts/check_pins.py` passed.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 71 unit tests, pin check, ruff, mypy, and build after provider endpoint matrix integration.",
-        "2026-06-15: grouped blocked-host review added with run id, reason, count, matched rule, and suggested next action.",
-        "2026-06-15: provider egress smoke harness added `--agent AGENT` profile-host mode.",
-        "2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 76 tests and passed after grouped blocked-host review and smoke profile support.",
-        "2026-06-15: `python3 -m compileall src tests scripts`, `uvx --from ruff==0.15.17 ruff check .`, `uvx --from mypy==2.1.0 mypy src scripts/provider_egress_smoke.py`, `python3 scripts/check_pins.py`, `python3 -m json.tool feature_list.json`, and `git diff --check` passed.",
-        "2026-06-15: `PYTHONPATH=src python3 scripts/provider_egress_smoke.py --agent codex --timeout 8 --denied-host example.com` passed with proxied `api.openai.com` and `chatgpt.com` allowed, denied host and proxied IP literal blocked, and direct DNS/IP paths blocked.",
-        "2026-06-15: Added empty-allowlist regression coverage for internet, internal, provider, and `EgressPolicy` paths; focused planner and egress tests passed.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 84 unit tests, pin check, ruff, mypy, and build after empty-allowlist regression coverage.",
-        "2026-06-16: Rust `scripts/apple_container_smoke.sh --with-provider` passed on macOS 26.5.1 arm64 with Apple `container` 1.0.0 after fixing the provider CONNECT relay to use blocking accepted/tunnel sockets and preserve tunneled bytes after CONNECT headers.",
-        "2026-06-16: Added fixture tests for Apple `container network inspect` host-only mode, IPv4 gateway, IPv4 subnet, and fail-closed invalid network shapes without requiring live Apple `container` in unit tests.",
-        "2026-06-16: Provider allowlist proxy and Codex API-key broker startup handle Apple `container` 1.0.0's unbindable guest gateway by using a wildcard host listener with explicit Apple-container subnet rejection for off-subnet clients; focused tests and the live provider smoke cover this path."
+        "2026-06-16: Apple container 1.0.0 exposed the forwarded socket to the non-root guest user, but `ssh-add -l` returned permission denied. RunHaven fails closed on `--ssh`."
       ],
-      "notes": "Default internet mode remains unrestricted egress. Provider mode is integrated for normal runs through a managed internal network and host allowlist proxy. Bundled provider hosts now come from the reviewed provider endpoint matrix. Broad path-sensitive, telemetry, update, reporting, and weakly sourced hosts remain explicit `--provider-host` review items. Provider policy decisions are logged for review, and blocked provider targets are grouped after runs with run id, counts, reasons, matched rules, and suggested next actions."
+      "notes": "Do not re-enable without current primary-source/runtime evidence and focused security review."
     },
     {
-      "id": "worktree-run-isolation",
-      "priority": 5,
-      "area": "safety",
-      "title": "Git worktree run isolation and lifecycle",
-      "user_visible_behavior": "`runhaven run AGENT --worktree` creates a RunHaven-owned branch and git worktree for a clean source repository, mounts that worktree for the agent run, leaves the source checkout untouched, and `runs keep`, `runs recover`, `runs recover --json`, `runs merge`, and `runs discard` provide guarded review lifecycle actions with detected project check suggestions.",
-      "status": "passing",
+      "id": "release-readiness",
+      "priority": 2,
+      "area": "release",
+      "title": "Pre-release readiness",
+      "user_visible_behavior": "Before a public release, local verification, Apple container smokes, dependency pins, docs, and security evidence are current.",
+      "status": "planned",
       "dependencies": [
-        "workspace-scope-selection",
-        "run-observability"
+        "tauri-stop-run-control"
       ],
       "verification": [
-        "`runhaven run AGENT --worktree --dry-run` previews source workspace, source repo, and base `HEAD` without creating a worktree",
-        "`runhaven run AGENT --worktree` refuses dirty source repositories before creating a worktree and prints safe next choices",
-        "Worktree runs mount the RunHaven-owned worktree instead of the source checkout",
-        "Run records include worktree source, branch, base `HEAD`, mounted workspace, and exact recovery commands",
-        "The source checkout remains unchanged by the container-mounted worktree",
-        "`runs keep RUN_ID` validates the recorded worktree and prints review actions plus detected project check suggestions without mutating state",
-        "`runs recover RUN_ID` validates the recorded worktree and prints source/worktree status plus manual recovery steps without mutating state",
-        "`runs recover RUN_ID --json` prints the same read-only recovery state, commands, next-step labels, and suggested project checks for automation",
-        "`runs merge RUN_ID` validates the source repository, RunHaven branch, worktree path, worktree branch, and base `HEAD` before applying worktree changes and cleaning up",
-        "Failed pre-cleanup `runs merge RUN_ID` attempts print source, worktree, branch, review, retry, keep, and discard commands without deleting the recorded worktree",
-        "`runs discard RUN_ID` removes only the recorded RunHaven worktree and branch without changing the source checkout"
+        "`./init.sh` passes on macOS 26+",
+        "`runhaven doctor` and relevant Apple container smokes pass",
+        "Pinned dependency and runtime evidence is current",
+        "Security, installation, usage, and release docs are aligned"
       ],
-      "evidence": [
-        "2026-06-15: Focused standard-run tests passed for worktree dry-run preview, isolated worktree mount and run-record recovery metadata, dirty-source refusal, and source checkout preservation.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 163 unit tests, pin check, ruff, mypy, and build after adding worktree run isolation. Manual `runhaven run shell --worktree --dry-run` smoke passed without creating a worktree.",
-        "2026-06-15: Focused worktree lifecycle tests passed for `runs keep`, dirty and committed `runs merge`, stale-source merge refusal, explicit `runs discard`, and non-worktree refusal.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 169 unit tests, pin check, ruff, mypy, and build after adding worktree lifecycle commands.",
-        "2026-06-15: Red/green focused lifecycle test passed for failed merge recovery guidance; adjacent worktree/run-history tests also passed.",
-        "2026-06-15: Full verification passed with compileall, 170 unit tests, pin check, ruff, mypy, JSON validation, Markdown link check, diff check, and `PYTHON=<temporary-venv-python> ./init.sh` after failed merge recovery guidance.",
-        "2026-06-15: Red/green focused lifecycle test passed for `runs recover` manual recovery guidance; adjacent worktree/run-history tests also passed.",
-        "2026-06-15: Full verification passed with compileall, 171 unit tests, pin check, ruff, mypy, JSON validation, Markdown link check, diff check, `runhaven runs --help`, and `PYTHON=<temporary-venv-python> ./init.sh` after adding `runs recover`.",
-        "2026-06-15: Red/green focused tests passed for `runs recover --json` and dirty-source worktree choice guidance; adjacent worktree/run-history tests and compileall passed.",
-        "2026-06-15: Full verification passed with compileall, 172 unit tests, pin check, ruff, mypy, JSON validation, Markdown link check, diff check, `runhaven runs recover --help`, and `PYTHON=<temporary-venv-python> ./init.sh` after adding recovery JSON and dirty-source guidance.",
-        "2026-06-15: Red/green focused tests passed for `runs keep` text project check suggestions and `runs recover --json` structured project check suggestions; adjacent worktree/run-history tests, compileall, ruff, and mypy passed.",
-        "2026-06-15: Full verification passed with compileall, 174 unit tests, pin check, ruff, mypy, build, JSON validation, Markdown link check, `runhaven runs recover --help`, `git diff --check`, and `PYTHON=<temporary-venv-python> ./init.sh` after adding project check suggestions."
-      ],
-      "notes": "`runs merge` intentionally refuses when the source checkout is dirty or no longer at the recorded base commit. Failed pre-cleanup merge steps keep the RunHaven worktree and branch and print recovery commands. `run --worktree` dirty-source refusals print safe next choices before creating any worktree. Project check suggestions are not run automatically. `runs recover` and `runs recover --json` are read-only and do not commit, stash, merge, delete, run checks, or change files."
-    },
-    {
-      "id": "auth-broker-boundary",
-      "priority": 5,
-      "area": "security",
-      "title": "Host-side auth broker boundary",
-      "user_visible_behavior": "`runhaven auth status` and `runhaven auth explain AGENT` describe the credential broker boundary without reading or printing secrets. Codex can opt into a host-side API-key broker with `--network provider --codex-api-key-broker-env NAME`.",
-      "status": "passing",
-      "dependencies": [
-        "provider-egress-allowlisting"
-      ],
-      "verification": [
-        "Static auth broker metadata exists for every bundled profile",
-        "Codex API-key broker reads a named host environment variable only during real runs",
-        "Codex broker injects temporary custom-provider config and a placeholder token into the guest without exposing the raw key",
-        "Codex broker only accepts provider-network clients and forwards Responses API create requests",
-        "Codex broker records secret-free decisions in `runhaven auth log`",
-        "Optional Codex broker smoke harness skips without a key and runs only with an explicit disposable key environment variable",
-        "`runhaven auth status` prints broker status without reading credential stores or environment values",
-        "`runhaven auth explain AGENT` prints profile-specific auth guidance without brokered secrets",
-        "JSON auth output is deterministic and secret-free",
-        "Docs state the Codex prototype status, remaining design-only provider status, trust boundary, non-goals, and future acceptance criteria",
-        "Source ledger records current provider auth references"
-      ],
-      "evidence": [
-        "2026-06-15: Added `src/runhaven/auth_broker.py` with static per-profile broker metadata.",
-        "2026-06-15: Added `runhaven auth status` and `runhaven auth explain AGENT` with optional JSON output.",
-        "2026-06-15: Focused auth CLI tests passed and verified fake `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` values were not printed.",
-        "2026-06-15: Manual `PYTHONPATH=src python3 -m runhaven auth status` and `PYTHONPATH=src python3 -m runhaven auth explain codex` checks passed.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 79 unit tests, pin check, ruff, mypy, and build.",
-        "2026-06-15: Added opt-in Codex API-key broker prototype, focused planner/proxy/CLI tests, and official Codex configuration source notes.",
-        "2026-06-15: Added secret-free Codex broker decision logging, `runhaven auth log`, and optional `scripts/codex_broker_smoke.py` live-smoke harness."
-      ],
-      "notes": "Codex has an opt-in host-side API-key broker prototype. Other agent auth brokers remain design-only. Auth status/explain/log do not inspect credential stores or environment values. `plan` and `run --dry-run` do not read the named Codex API-key environment variable. Broker logs omit token values, request bodies, and environment variable names."
-    },
-    {
-      "id": "run-observability",
-      "priority": 6,
-      "area": "usability",
-      "title": "Secret-free run observability",
-      "user_visible_behavior": "`runhaven runs list`, `runhaven runs show RUN_ID`, `runhaven runs log RUN_ID`, `runhaven runs diff RUN_ID`, `runhaven runs active`, `runhaven runs status RUN_ID`, `runhaven runs attach RUN_ID`, `runhaven runs logs-follow RUN_ID`, `runhaven runs stop RUN_ID`, `runhaven runs kill RUN_ID`, `runhaven runs repair RUN_ID`, and `runhaven runs repair --all` show recent actual agent runs and control active runs without exposing commands or secrets. Repair commands also expose scriptable JSON summaries.",
-      "status": "passing",
-      "dependencies": [
-        "provider-egress-allowlisting",
-        "auth-broker-boundary"
-      ],
-      "verification": [
-        "Actual standard runs append a secret-free record to `runs.jsonl`",
-        "Provider runs append a run record that shares the run id with provider egress and auth broker logs",
-        "Run records summarize provider policy, auth broker, cleanup outcomes, and git workspace changes",
-        "`runhaven runs list` shows recent run summaries",
-        "`runhaven runs show RUN_ID` prints text and JSON for one run",
-        "`runhaven runs log RUN_ID` joins the run record with matching provider policy and auth broker entries",
-        "`runhaven runs diff RUN_ID` prints a live git diff only after recorded metadata still matches the live workspace",
-        "`runhaven runs active` lists currently active RunHaven markers in text and JSON without requiring Apple `container` access",
-        "`runhaven runs status RUN_ID` shows sanitized active marker and live Apple `container inspect` state without raw process arguments, environment, or mounts",
-        "`runhaven runs attach RUN_ID` opens a guarded Apple `container exec` shell or command only for an active RunHaven-owned named container",
-        "`runhaven runs logs-follow RUN_ID` follows recent and live Apple `container logs` output only for an active RunHaven-owned named container",
-        "`runhaven runs stop RUN_ID` stops only an active RunHaven-owned named Apple container",
-        "`runhaven runs kill RUN_ID` hard-stops only an active RunHaven-owned named Apple container and records killed runs as `killed`",
-        "`runhaven runs repair RUN_ID` removes only stale active markers whose recorded RunHaven-owned Apple container is confirmed missing",
-        "`runhaven runs repair --all` applies the same confirmed-missing guard across valid active markers and returns nonzero when any marker cannot be verified",
-        "`runhaven runs repair RUN_ID --json` and `runhaven runs repair --all --json` print secret-free repair results, counts, and exit codes for automation",
-        "Run records and active-run markers omit diffs, file contents, prompts, command lines, agent arguments, environment variable names, environment values, request bodies, and token values"
-      ],
-      "evidence": [
-        "2026-06-15: Focused run-observability CLI tests passed for standard run logging, provider/auth/cleanup summaries, `runs list`, and `runs show --json`.",
-        "2026-06-15: CLI suite, ruff, and mypy passed after adding the run ledger.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 104 unit tests, pin check, ruff, mypy, and build.",
-        "2026-06-15: Focused `runs log` CLI tests passed for joined text and JSON output without secrets.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 106 unit tests, pin check, ruff, mypy, and build after adding `runs log`.",
-        "2026-06-15: Focused git metadata tests first failed because run records had no git object, then passed after recording before and after `HEAD`, dirty state, changed count, and capped relative paths without file contents.",
-        "2026-06-15: `PYTHONPATH=src python3 -m unittest tests.test_cli` ran 42 tests and passed after adding git run metadata.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 108 unit tests, pin check, ruff, mypy, and build after adding git run metadata.",
-        "2026-06-15: Manual `runs show` and `runs log --json` reader smoke passed for a git metadata run record.",
-        "2026-06-15: Focused `runs diff` tests first failed because `diff` was not a valid subcommand; the mixed committed-and-dirty regression then failed until dirty diff assembly included committed changes. The final focused set passed for committed diffs, dirty live diffs, untracked dirty diffs, mixed committed-and-dirty diffs, unavailable metadata refusal, stale `HEAD` refusal, and dirty path-set refusal.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 115 unit tests, pin check, ruff, mypy, and build after adding `runs diff`.",
-        "2026-06-15: Manual `runs diff` smoke passed for a committed git metadata run record.",
-        "2026-06-15: Focused `runs stop` tests first failed because active markers, named containers, and the `stop` subcommand did not exist, then passed after adding active-run markers and Apple `container stop` routing.",
-        "2026-06-15: `PYTHONPATH=src python3 -m unittest discover -s tests` ran 120 tests and passed after adding `runs stop`.",
-        "2026-06-15: Manual `runs stop` smoke passed for a temporary active-run marker with mocked Apple `container stop`.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 120 unit tests, pin check, ruff, mypy, and build after adding `runs stop`.",
-        "2026-06-15: Focused `runs active` tests first failed because `active` was not a valid `runs` subcommand, then passed after adding active-marker text and JSON listing.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 123 unit tests, pin check, ruff, mypy, and build after adding `runs active`.",
-        "2026-06-15: Focused `runs attach` tests first failed because `attach` was not a valid `runs` subcommand, then passed after adding guarded `container exec` attach.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 128 unit tests, pin check, ruff, mypy, and build after adding `runs attach`.",
-        "2026-06-15: Focused `runs logs-follow` tests first failed because `logs-follow` was not a valid `runs` subcommand, then passed after adding guarded Apple `container logs --follow` routing. Local `container logs --help` confirmed the supported command shape.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 132 unit tests, pin check, ruff, mypy, and build after adding `runs logs-follow`.",
-        "2026-06-15: Focused `runs status` tests first failed because `status` was not a valid `runs` subcommand, then passed after adding sanitized Apple `container inspect` status output. Local `container inspect --help` and `container inspect buildkit` confirmed the supported command shape and JSON output.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 136 unit tests, pin check, ruff, mypy, and build after adding `runs status`.",
-        "2026-06-15: Focused `runs kill` tests first failed because `kill` was not a valid `runs` subcommand and kill-requested runs recorded as `failed`, then passed after adding guarded Apple `container kill` routing and killed run records. Local `container kill --help` confirmed the supported command shape.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 140 unit tests, pin check, ruff, mypy, and build after adding `runs kill`. Manual `runs kill` command-construction smoke, JSON validation, Markdown link check, platform scan, and `git diff --check` also passed.",
-        "2026-06-15: Focused `runs repair` tests first failed because `repair` was not a valid `runs` subcommand, then passed after adding fail-closed Apple `container inspect` missing-container verification before stale marker removal. Local `container inspect runhaven-nonexistent-repair-smoke` confirmed the missing-container output.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 144 unit tests, pin check, ruff, mypy, and build after adding `runs repair`. Manual `runs repair` smoke, JSON validation, Markdown link check, platform scan, and `git diff --check` also passed.",
-        "2026-06-15: Focused `runs repair --all` tests first failed because `repair` still required a positional run id and did not accept `--all`, then passed after adding guarded bulk repair.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 148 unit tests, pin check, ruff, mypy, and build after adding `runs repair --all`. Manual `runs repair --all` smoke, JSON validation, Markdown link check, platform scan, and `git diff --check` also passed.",
-        "2026-06-15: Focused repair JSON tests first failed because `runs repair` did not accept `--json`, then passed after adding single-run and bulk repair JSON summaries.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 151 unit tests, pin check, ruff, mypy, and build after adding repair JSON output. Manual `runs repair --json` and `runs repair --all --json` smokes, JSON validation, Markdown link check, platform scan, and `git diff --check` also passed.",
-        "2026-06-16: `scripts/apple_container_smoke.sh` passed after exercising a live active RunHaven container with `runs active`, `runs status`, `runs logs-follow`, `runs stop`, completed run record lookup, and best-effort exact repair cleanup.",
-        "2026-06-16: Added fixture tests for current Apple `container inspect` JSON, source-backed legacy `address`/`gateway` attachment aliases, invalid inspect shapes, and missing-container repair stderr classification. Repair cleanup now treats unrelated `not found` errors as unverified instead of stale-marker removal evidence."
-      ],
-      "notes": "`runs list/show/log/diff/active/status/attach/logs-follow/stop/kill/repair` are the first run dashboard and recovery slices. `runs diff` prints live git output on demand and does not store patches. `runs active` recovers current run ids from secret-free markers. `runs status` uses curated Apple `container inspect` output. `runs attach` uses Apple `container exec` because the pinned local CLI has no installed attach plugin. `runs logs-follow` uses Apple `container logs --follow`. `runs stop`, `runs kill`, and `runs repair` work only for active runs with a current active marker. `runs repair --all` handles multiple valid active markers with the same confirmed-missing guard. Repair JSON output includes only result status, counts, run id, container name, inspect return code, marker removal state, and exit code."
-    },
-    {
-      "id": "guided-first-run-setup",
-      "priority": 7,
-      "area": "usability",
-      "title": "Guided first-run setup",
-      "user_visible_behavior": "`runhaven setup` runs prerequisite checks, prints exact fixes when the host is not ready, shows the next image build, plan, and run commands for a selected agent, and explains workspace, credential, and network choices without mutating the machine.",
-      "status": "passing",
-      "dependencies": [
-        "runtime-hardening-macos-only-boundary"
-      ],
-      "verification": [
-        "`runhaven setup` runs the same prerequisite checks as `doctor`",
-        "`runhaven setup` returns nonzero and prints exact remedies when prerequisites fail",
-        "`runhaven setup --agent AGENT` prints profile-specific image build, plan, and run commands when prerequisites pass",
-        "`runhaven setup` prints local-only, provider-only, package install, and unrestricted internet network guidance",
-        "`runhaven setup` explains smallest-project workspace scope, `/workspace` mounting, avoided credential paths, `--ssh`, and reviewed `--env NAME` usage",
-        "`runhaven why workspace`, `runhaven why network`, and `runhaven why state` explain safety decisions without mutating local resources",
-        "`runhaven setup` does not install, start services, build images, run agents, or mount workspaces"
-      ],
-      "evidence": [
-        "2026-06-15: Focused setup CLI tests first failed because `setup` was not a valid subcommand, then passed after adding the non-mutating guided setup flow.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 154 unit tests, pin check, ruff, mypy, and build after adding `runhaven setup`. Manual `runhaven setup --agent shell` smoke, JSON validation, Markdown link check, platform scan, and `git diff --check` also passed.",
-        "2026-06-15: Focused setup network guidance test first failed because `setup` did not print a network-choice section, then passed after adding local-only, provider-only, package install, and unrestricted internet guidance.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 155 unit tests, pin check, ruff, mypy, and build after adding setup network guidance.",
-        "2026-06-15: Focused setup workspace and credential guidance test first failed because `setup` did not print that section, then passed after adding smallest-project workspace, avoided credential paths, `--ssh`, and reviewed `--env NAME` guidance.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 156 unit tests, pin check, ruff, mypy, and build after adding setup workspace and credential guidance.",
-        "2026-06-16: Focused CLI tests passed for `runhaven why workspace`, `runhaven why network`, and `runhaven why state`; usage docs now include task recipes for read-only review, local-only checks, provider-only runs, worktree review, and state reset."
-      ],
-      "notes": "`setup` intentionally does not call Apple `container system start`, build images, run agents, mount a workspace, read credential stores, or write state."
-    },
-    {
-      "id": "image-network-repair-ux",
-      "priority": 8,
-      "area": "usability",
-      "title": "Image and managed-network repair UX",
-      "user_visible_behavior": "`runhaven image rebuild AGENT` rebuilds a bundled image with explicit repair intent, while `runhaven network list` and `runhaven network prune --yes` help users find and remove only RunHaven-managed Apple container networks.",
-      "status": "passing",
-      "dependencies": [
-        "runtime-hardening-macos-only-boundary",
-        "guided-first-run-setup"
-      ],
-      "verification": [
-        "`runhaven image rebuild AGENT --dry-run` prints the same pinned bundled build command shape as `image build`",
-        "`runhaven network list` filters Apple container networks to RunHaven-managed names only",
-        "`runhaven network prune` previews managed networks and requires `--yes` before deletion",
-        "`runhaven network prune --yes` deletes only RunHaven-managed network names",
-        "User docs state that network pruning does not delete arbitrary Apple-managed networks, workspaces, images, or state volumes"
-      ],
-      "evidence": [
-        "2026-06-15: Focused image rebuild and managed-network tests first failed because `image rebuild` and top-level `network` commands were not valid subcommands, then passed after adding the commands.",
-        "2026-06-15: Focused adjacent CLI tests, compileall for touched files, ruff on touched files, and mypy on touched source files passed after adding image rebuild and managed-network list/prune.",
-        "2026-06-15: `PYTHON=<temporary-venv-python> ./init.sh` passed with compileall, 187 unit tests, pin check, ruff, mypy, and build. Manual `image rebuild --dry-run`, `network list`, and `network prune` smokes, JSON validation, Markdown link check, and `git diff --check` also passed."
-      ],
-      "notes": "`image rebuild` is intentionally an alias for the pinned bundled image build plan, not a health diagnosis command. Network pruning is limited to RunHaven-managed name shapes and requires explicit confirmation."
-    },
-    {
-      "id": "image-doctor-preflight-diagnostics",
-      "priority": 9,
-      "area": "usability",
-      "title": "Image doctor and preflight recovery diagnostics",
-      "user_visible_behavior": "`runhaven image doctor [AGENT]` checks local Apple container image metadata for missing or stale bundled profile images, reports sanitized Apple builder status, reports inactive RunHaven state volumes, and prints rebuild, builder, network, and state-recovery guidance without mutating local resources.",
-      "status": "passing",
-      "dependencies": [
-        "image-network-repair-ux",
-        "guided-first-run-setup"
-      ],
-      "verification": [
-        "`runhaven image doctor AGENT` lists whether the bundled image tag is present",
-        "`runhaven image doctor` checks all bundled profiles and exits nonzero when any selected image is missing or stale",
-        "Bundled image builds include RunHaven profile and source-digest labels",
-        "`runhaven image doctor AGENT` reports stale images when source metadata differs from the checked-out bundled template inputs",
-        "`runhaven image doctor AGENT` reports sanitized `container builder status --format json` state, image, resources, Rosetta mode, start time, and network address without printing mounts or environment",
-        "`runhaven image doctor AGENT` reports inactive RunHaven state volumes for the selected profile without deleting them",
-        "The command reads Apple `container image list --format json` and does not build, delete, mount, or reset resources",
-        "Invalid Apple image-list JSON fails closed with a CLI usage error",
-        "User docs state that the command is read-only and that inactive state volumes can be normal reusable session state"
-      ],
-      "evidence": [
-        "2026-06-15: Focused image doctor tests first failed because `runhaven image doctor` was not a valid subcommand, then passed after adding the read-only command.",
-        "2026-06-15: Focused image doctor checks passed with adjacent CLI tests, compileall for touched files, ruff on touched files, and mypy on touched source files.",
-        "2026-06-15: Full image doctor verification passed: `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 191 unit tests, pin check, ruff, mypy, and build. Manual `image doctor --help` and `image doctor shell` smokes, JSON validation, Markdown link check, and `git diff --check` also passed.",
-        "2026-06-15: Focused stale-image and inactive-state tests first failed because `image doctor` did not check source metadata or state volumes, then passed after adding build source-digest labels, stale detection, and state-volume review.",
-        "2026-06-15: Full image doctor source-metadata verification passed: `PYTHON=<temporary-venv-python> ./init.sh` with compileall, 195 unit tests, pin check, ruff, mypy, and build. Manual `image doctor shell` and `image build shell --dry-run` smokes also passed.",
-        "2026-06-16: Added fixture tests for Apple `container image list --format json`, trusted image-name annotation keys, ignored non-name annotations, and source-digest label fallback paths.",
-        "2026-06-16: Added sanitized builder-status diagnostics from `container builder status --format json`, fixture coverage for running and not-running builder states, and smoke-script assertions that `image doctor shell` reports builder status and resource guidance."
-      ],
-      "notes": "`image doctor` detects missing local image tags, stale source metadata, builder status/resource guidance, and inactive state volumes. State-volume review is not yet workspace-aware because volume names intentionally store only a hashed project id."
-    },
-    {
-      "id": "repo-logo",
-      "priority": 10,
-      "area": "documentation",
-      "title": "Project logo integration",
-      "user_visible_behavior": "The project README displays the maintained repository logo from a tracked asset path.",
-      "status": "passing",
-      "dependencies": [
-        "repo-harness-operating-layer"
-      ],
-      "verification": [
-        "Logo asset is stored under `docs/assets/`",
-        "README references the logo with alt text",
-        "Harness manifest requires the logo asset",
-        "Image dimensions and format are verified"
-      ],
-      "evidence": [
-        "2026-06-14: `magick identify docs/assets/logo.png` reported PNG 512x512",
-        "2026-06-14: visual inspection passed via local image viewer",
-        "2026-06-14: latest harness audit reported 100/100 with the logo in the manifest"
-      ],
-      "notes": "The source download image was normalized to a stripped 512x512 PNG; the original file was not modified."
+      "evidence": [],
+      "notes": "Keep release work separate from feature slices."
     }
   ]
 }

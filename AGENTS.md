@@ -1,50 +1,62 @@
 # AGENTS.md
 
-## Project overview
+## Project
 
-RunHaven is a Rust CLI for running AI coding agents inside
-Apple `container` on macOS 26+.
+RunHaven is a Rust CLI, with an alpha Tauri/Svelte desktop shell, for running
+AI coding agents inside Apple `container` on macOS 26+ on Apple silicon.
 
-Core harness contract: instructions, tools, environment, state, and feedback
-are all required. Keep instructions map-like, tool access sufficient but least
-privileged, environment facts self-describing, state current across sessions,
-and verification commands explicit. Changing instruction files, shell access,
-filesystem scope, git state, startup scripts, verification commands, container
-defaults, provider allowlists, hooks, lint checks, or evaluator loops changes
-the effective agent. Treat those as product changes.
+The product safety boundary matters more than convenience. Do not mount host
+home directories, cloud credential folders, raw SSH keys, browser profiles, or
+arbitrary host environment variables by default. Do not relax container
+isolation, non-root runtime, mount exclusions, read-only root filesystem,
+capability drops, or explicit environment passthrough without a user-approved
+security tradeoff and focused verification.
 
-Startup path:
+## Startup
 
-1. Confirm the working directory and inspect `git status --short --branch`.
-2. Read this file, `feature_list.json`, and `current-state.md`.
-3. Read `README.md` for product, install, usage, or public-doc changes.
-4. Read `docs/harness/README.md` and
-   `docs/harness/authoritative-facts.md` for harness-doc, generated-output,
-   scoring, report, or maintenance-policy changes.
-5. Check `docs/harness/state/roadmap.md` before selecting, deferring, or
-   reshaping backlog, release-prep, or product-scope work.
-6. Check `docs/harness/boundaries/component-inventory.md` before changing CLI
-   modules, image templates, verification routing, or harness files.
-7. For harness-maintenance work, use `.agents/skills/harness/SKILL.md`.
-8. If `docs/harness/state/first-agent-task.md` still exists and is not marked
-   retired, complete or retire it before unrelated feature work.
-9. Pick one current objective before editing.
-
-This repo is harnessed. Keep root instructions short and place durable detail
-in `docs/harness/`.
-
-## Build and test commands
-
-Use the smallest reliable command for the change.
-
-Verification route: use `./init.sh` for full macOS harness verification, and
-use the focused commands below for smaller changes.
-
-Full local verification on macOS 26+:
+1. Confirm the working directory and inspect git state:
 
 ```bash
-./init.sh
+pwd
+git status --short --branch
 ```
+
+2. Read these startup files only:
+
+- `AGENTS.md`
+- `feature_list.json`
+- `current-state.md`
+
+`current-state.md` is this repo's progress and handoff file. Do not recreate
+separate root `progress.md` or `session-handoff.md` files.
+
+3. Load more context only when the task needs it:
+
+- Product, install, usage, or public docs: `README.md` and relevant `docs/`.
+- Security boundary changes: `docs/SECURITY_MODEL.md` and focused tests.
+- CLI, image, provider, Tauri, or frontend changes: inspect that component's
+  manifests, tests, and local modules first.
+- Harness maintenance: `.agents/skills/harness/SKILL.md` and
+  `docs/harness/README.md`.
+
+## Harness Contract
+
+Keep the harness small and useful:
+
+- Instructions: this file is a map, not a manual.
+- Tools: shell, file edits, git, and `init.sh` are enough for normal work.
+- Environment: versions and pins live in manifests, lockfiles, and `pins.toml`.
+- State: `feature_list.json` plus `current-state.md` record status and next
+  steps.
+- Feedback: use explicit checks before claiming completion.
+
+If a harness file is not needed for the current task, do not read it at startup.
+If a harness rule keeps causing context cost without preventing failures,
+delete or compress it.
+
+## Verification
+
+Use the smallest reliable check set for the change.
 
 Focused checks:
 
@@ -54,72 +66,43 @@ cargo test --locked
 cargo clippy --all-targets -- -D warnings
 cargo run --locked --bin runhaven-check-pins
 cargo build --locked
-harnessforge report --target .
-harnessforge audit --target . --min-score 85
+npm --prefix ui run check
+npm --prefix ui test
+npm --prefix ui run test:e2e
+npm --prefix ui run build
+git diff --check
 ```
 
-Use `runhaven doctor` and Apple `container` runtime smokes when changes affect the
-actual macOS container boundary, image templates, agent profiles, or install
-flow.
+Full local verification on macOS 26+:
 
-Before running `harnessforge` commands, install HarnessForge in the current
-development environment or run from an environment where the package is already
-available. Treat HarnessForge as advisory while it is under active development:
-repo-owned files, tests, policy docs, and manual review are authoritative. Do
-not commit machine-specific checkout paths for local tooling.
+```bash
+./init.sh
+```
 
-## Code style guidelines
+Use `runhaven doctor` and Apple `container` smokes only when changes affect the
+actual runtime boundary, image templates, provider behavior, install flow, or
+Tauri launch/run-control behavior.
 
-- Prefer standard library tools and existing crates already pinned in
-  `Cargo.toml`; add crates only when they remove real security or usability
-  risk.
-- Match local code style and file structure. Avoid broad refactors unless they
-  are required for the task.
-- Keep direct dependencies exact-pinned and minimal.
-- Before writing code, stop at the first rung that solves the request: no
-  change, deletion, documentation, configuration, standard library, native
-  platform behavior, existing project dependency, then minimum custom code.
+## Working Rules
+
+- Prefer the smallest correct change: no change, deletion, documentation,
+  configuration, standard library, native platform behavior, existing
+  dependency, then minimum custom code.
+- Match local style and helper APIs.
 - Use exact subprocess argument lists, not executable shell strings, for
   runtime command generation.
-- Use `rg` for repository searches. Keep command output bounded when possible.
+- Keep direct dependencies exact-pinned and minimal.
+- Preserve user changes. Never revert dirty work unless explicitly requested.
+- Use `rg` for repository searches and keep noisy output bounded.
 - Use `apply_patch` for manual edits.
-- Preserve existing user changes. Never revert dirty work unless explicitly
-  requested.
-- Keep project-specific facts in repo docs, not in chat history.
+- Keep project-specific facts in repo docs, not chat history.
+- Do not add Windows or Linux runtime or contributor-verification targets.
 
-## Testing instructions
+## Definition Of Done
 
-- Do not claim done without fresh verification evidence.
-- Add or update focused tests for changed command construction, security
-  boundaries, pins, or docs routing when practical.
-- Record skipped checks with reason and risk in `current-state.md` when the
-  skip changes restart state, blockers, trusted verification, or the next step.
-- Definition Of Done: target behavior or documentation change is complete,
-  acceptance criteria are satisfied, relevant repo-owned checks ran, local
-  Markdown links resolve, harness report/audit were considered when available
-  for harness changes, and the next session can restart from the harness files.
-- End of Session: update `current-state.md` with current state, verification
-  evidence, blockers, touched files, and the recommended next step. Use
-  `docs/harness/state/clean-state-checklist.md` before claiming the session is
-  complete.
-
-## Security considerations
-
-- People run this on personal machines. Optimize for the most secure
-  beginner-safe path first.
-- Never mount host home directories, cloud credential folders, raw SSH keys,
-  browser profiles, or arbitrary host environment variables by default.
-- Do not relax default container isolation, mount exclusions, non-root runtime,
-  read-only root filesystem, capability drops, or explicit env passthrough
-  unless the user explicitly asks for that security tradeoff.
-- Do not imply a boundary is enforced until code, tests, or live Apple
-  `container` behavior prove it.
-- Fail closed or state limitations plainly when a boundary cannot be verified.
-- All package, image, and tool dependencies must use the current stable release
-  and exact pins. If GitHub Actions workflows are reintroduced, actions must
-  use full-length commit SHAs with version comments.
-- If a runtime, package, policy, CVE, release, or vendor claim affects a change,
-  verify it from current primary sources and update `docs/RESEARCH.md` or
-  `docs/harness/research/sources.md`.
-- Do not commit secrets, credentials, private data, machine-specific paths, or
-  long raw command output.
+- Target behavior or documentation change is complete.
+- Relevant checks ran, or skipped checks are named with reason and risk.
+- Security, data-loss, accessibility, and platform-parity requirements were not
+  weakened.
+- `feature_list.json` and `current-state.md` reflect any changed active state.
+- The next session can restart from the three startup files above.

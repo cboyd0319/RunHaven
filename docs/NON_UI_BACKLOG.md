@@ -60,6 +60,6 @@ These are not part of the Tauri/UI research phase.
 
 - Apple Container gap analysis: `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`
 - Product roadmap: `docs/ROADMAP.md`
-- Harness roadmap: `docs/harness/state/roadmap.md`
+- Harness operations: `docs/harness/README.md`
 - Tauri UI guardrails: `docs/TAURI_UI_GUARDRAILS.md`
 - Extension and MCP boundary: `docs/EXTENSION_MCP_BOUNDARY.md`

@@ -1,517 +1,87 @@
 {
-  "version": 1,
-  "generatedBy": "HarnessForge",
-  "generator": {
-    "name": "harnessforge",
-    "version": "0.1.0"
-  },
+  "version": 2,
   "generatedFor": "RunHaven",
-  "detectedStack": "rust",
-  "platformContract": "macos-only",
-  "supportedPlatforms": {
-    "macosOnly": {
-      "macOS": "26+",
-      "architecture": "Apple silicon",
-      "appleContainer": "1.0.0",
-      "note": "RunHaven does not support Windows or Linux runtime or contributor verification targets.",
-      "rust": "1.96.0"
-    }
-  },
-  "platformSourceReview": {
-    "lastReviewed": "2026-06-16",
-    "reviewRequiredBeforePlatformChange": true,
-    "sources": [
-      {
-        "id": "rust-local-toolchain",
-        "url": "https://releases.rs/",
-        "evidence": "Rust 1.96.0 is the pinned local toolchain recorded in rust-toolchain.toml and pins.toml."
-      },
-      {
-        "id": "apple-container-release",
-        "url": "https://github.com/apple/container/releases",
-        "evidence": "RunHaven currently documents Apple container 1.0.0 as the reviewed runtime pin."
-      }
-    ],
-    "note": "Recheck current primary sources before changing platform floors, Rust versions, Apple container assumptions, crate pins, image pins, or reintroducing hosted CI."
-  },
-  "requiredFiles": [
-    "rust-toolchain.toml",
-    "Cargo.lock",
-    "Cargo.toml",
-    "AGENTS.md",
-    "CLAUDE.md",
-    "GEMINI.md",
-    ".github/copilot-instructions.md",
-    "feature_list.json",
-    "current-state.md",
-    "init.sh",
-    "docs/NON_UI_BACKLOG.md",
-    "docs/TAURI_UI_RESEARCH_PLAN.md",
-    "docs/TAURI_UI_GUARDRAILS.md",
-    "docs/TAURI_LOG_VIEWING_DESIGN.md",
-    "ui/package.json",
-    "ui/package-lock.json",
-    "ui/src/app/App.svelte",
-    "ui/src/commands/runhaven.ts",
-    "ui/playwright.config.ts",
-    "ui/e2e/app.spec.ts",
-    "src-tauri/Cargo.toml",
-    "src-tauri/Cargo.lock",
-    "src-tauri/build.rs",
-    "src-tauri/tauri.conf.json",
-    "src-tauri/capabilities/main-read.json",
-    "src-tauri/capabilities/folder-pick.json",
-    "src-tauri/capabilities/launch-run.json",
-    "src-tauri/capabilities/run-control.json",
-    "src-tauri/src/lib.rs",
-    "src-tauri/src/commands/mod.rs",
-    "src-tauri/src/commands/log_snapshot.rs",
-    "src-tauri/src/contracts.rs",
-    "docs/assets/logo.png",
-    "docs/harness/README.md",
-    ".agents/skills/harness/SKILL.md",
-    ".agents/skills/harness/references/repo-harness.md",
-    "docs/harness/authoritative-facts.md",
-    "docs/harness/state/first-agent-task.md",
-    "docs/harness/state/roadmap.md",
-    "docs/harness/boundaries/change-contract.md",
-    "docs/harness/feedback/verification-matrix.md",
-    "docs/harness/feedback/sensor-registry.md",
-    "docs/harness/boundaries/component-inventory.md",
-    "docs/harness/boundaries/dependency-change-policy.md",
-    "docs/harness/boundaries/security-boundary-map.md",
-    "docs/harness/boundaries/feature-privacy-labels.json",
-    "docs/harness/evidence/evidence-log.md",
-    "docs/harness/state/clean-state-checklist.md",
-    "docs/harness/feedback/evaluator-rubric.md",
-    "docs/harness/feedback/quality-document.md",
-    "docs/harness/release/release-controls.md",
-    "docs/harness/release/apple-container-update-playbook.md",
-    "docs/harness/research/source-record.schema.json",
-    "docs/harness/research/source-record-example.json",
-    "docs/harness/research/research-inbox.md",
-    "docs/harness/manifest.json",
-    "docs/harness/research/sources.md",
-    "docs/harness/state/entropy-control.md",
-    "docs/harness/operations/agent-operating-model.md",
-    "docs/harness/operations/multi-agent-orchestration.md",
-    "docs/harness/state/modularization-plan.md",
-    "docs/harness/evidence/first-agent-review.json"
-  ],
-  "requiredHarnessSnippets": {
-    "AGENTS.md": [
-      "Startup",
-      "Core harness contract",
-      "effective agent",
-      "Build and test commands",
-      "Definition Of Done",
-      "feature_list.json",
-      "current-state.md",
-      "first-agent-task.md",
-      "macOS 26+",
-      "For harness-maintenance work"
-    ],
-    ".github/copilot-instructions.md": [
-      "source of truth",
-      "AGENTS.md",
-      "Security model"
-    ],
-    "docs/harness/README.md": [
-      "Five Core Subsystems",
-      "Effective Agent Boundary",
-      "instructions + tools + environment + state + feedback",
-      "Operating Loop",
-      "When To Add Harness",
-      "Assessment And Updates",
-      "Bottleneck And Harness Debt",
-      "first-agent-task.md",
-      "harnessforge report",
-      "harnessforge enhance"
-    ],
-    "docs/NON_UI_BACKLOG.md": [
-      "Required Before UI Implementation",
-      "Accepted Non-UI Polish",
-      "Candidate Work Requiring Design First",
-      "Deferred Until End-Stage Packaging"
-    ],
-    "docs/TAURI_UI_RESEARCH_PLAN.md": [
-      "Decision Summary",
-      "Source Evidence",
-      "Architecture Decision",
-      "Frontend Framework Decision",
-      "Product Principle: Secure Easy Path",
-      "Comparable UI Patterns",
-      "Information Architecture",
-      "Research Outcome",
-      "Command Contract",
-      "Capability Map",
-      "First Scaffold Acceptance Criteria",
-      "Deferred"
-    ],
-    "docs/TAURI_UI_GUARDRAILS.md": [
-      "active UI contract",
-      "WebView as untrusted UI",
-      "main-read",
-      "folder-pick",
-      "Explicit confirmation required"
-    ],
-    "docs/TAURI_LOG_VIEWING_DESIGN.md": [
-      "accepted implementation plan",
-      "bounded snapshot command",
-      "confirm_sensitive_output",
-      "container logs -n",
-      "Snapshot before stream"
-    ],
-    "ui/package.json": [
-      "tauri:build",
-      "@tauri-apps/api",
-      "@tauri-apps/plugin-dialog",
-      "@playwright/test",
-      "@lucide/svelte"
-    ],
-    "ui/playwright.config.ts": [
-      "webServer",
-      "chromium",
-      "127.0.0.1:5173"
-    ],
-    "ui/e2e/app.spec.ts": [
-      "pageerror",
-      "console",
-      "Agent runs",
-      "Launch plan"
-    ],
-    "ui/src/app/App.svelte": [
-      "Launch plan",
-      "Review plan",
-      "AI provider only",
-      "Full internet"
-    ],
-    "ui/src/commands/runhaven.ts": [
-      "get_dashboard_status",
-      "plan_run",
-      "secureNetworkDefault",
-      "warningPreview"
-    ],
-    "src-tauri/tauri.conf.json": [
-      "frontendDist",
-      "main-read",
-      "folder-pick",
-      "csp"
-    ],
-    "src-tauri/capabilities/main-read.json": [
-      "allow-get-setup-status",
-      "allow-list-agents",
-      "allow-get-dashboard-status",
-      "allow-plan-run"
-    ],
-    "src-tauri/capabilities/folder-pick.json": [
-      "dialog:allow-open"
-    ],
-    "src-tauri/src/commands/mod.rs": [
-      "get_setup_status",
-      "get_dashboard_status",
-      "plan_run",
-      "build_plan_response"
-    ],
-    "docs/harness/state/first-agent-task.md": [
-      "First-Agent Harness Improvement Task",
-      "Review status",
-      "fresh-session test",
-      "sensor registry",
-      "security boundary",
-      "Do not overwrite project-owned instructions",
-      "Do not add Windows or Linux"
-    ],
-    "docs/harness/state/roadmap.md": [
-      "Harness Roadmap",
-      "Source And Evidence Weighting",
-      "Smallest Correct Work Gate",
-      "Task Buckets",
-      "Status Lifecycle",
-      "Surface Impact Checklist",
-      "Fresh-Session Test",
-      "Instruction Rule Lifecycle",
-      "Completion Evidence Ladder",
-      "Roadmap Items",
-      "Surfaces In Scope",
-      "Execution Gate",
-      "Done Or Retire When",
-      "current-state.md"
-    ],
-    "docs/harness/boundaries/change-contract.md": [
-      "Problem",
-      "Build Necessity Gate",
-      "Acceptance Criteria",
-      "Verification",
-      "Rollback",
-      "primary-source evidence"
-    ],
-    "docs/harness/feedback/verification-matrix.md": [
-      "Change Type",
-      "Required Checks",
-      "When Checks Cannot Run",
-      "HarnessForge Review Commands",
-      "harnessforge plan --target . --since HEAD",
-      "harnessforge report --target .",
-      "harnessforge verify --target . --json --run",
-      "Agent-Oriented Failure Messages",
-      "structural harness audit"
-    ],
-    "docs/harness/feedback/sensor-registry.md": [
-      "Sensor Registry",
-      "Registered Sensors",
-      "Owner",
-      "Retire When",
-      "Agent-Oriented Failure Feedback",
-      "harnessforge report --target .",
-      "real-agent effectiveness"
-    ],
-    "docs/harness/boundaries/component-inventory.md": [
-      "Component Inventory",
-      "Effective Agent Boundary",
-      "Detected Workspace Markers",
-      "Detected Routing Markers",
-      "Detected Components",
-      "Routing Rules",
-      "macOS 26+"
-    ],
-    "docs/harness/boundaries/dependency-change-policy.md": [
-      "latest stable",
-      "exact pins",
-      "pins.toml",
-      "GitHub Actions"
-    ],
-    "docs/harness/boundaries/security-boundary-map.md": [
-      "Access Boundaries",
-      "Data Boundaries",
-      "Required Checks",
-      "security wins",
-      "Prompt injection",
-      "least privilege"
-    ],
-    "docs/harness/boundaries/feature-privacy-labels.json": [
-      "External AI optional",
-      "Sensitive",
-      "Public-data only"
-    ],
-    "docs/harness/evidence/evidence-log.md": [
-      "Date",
-      "Scope",
-      "Command Or Review"
-    ],
-    "docs/harness/state/clean-state-checklist.md": [
-      "Startup path",
-      "Verification path",
-      "Next Session"
-    ],
-    "docs/harness/feedback/evaluator-rubric.md": [
-      "Correctness",
-      "Verification",
-      "Handoff Readiness"
-    ],
-    "docs/harness/feedback/quality-document.md": [
-      "Quality Document",
-      "Domain Grades",
-      "Harness Subsystem Health",
-      "Benchmark Or Task Evidence"
-    ],
-    "docs/harness/release/release-controls.md": [
-      "Release Controls",
-      "SBOM",
-      "provenance",
-      "Rollback"
-    ],
-    "docs/harness/release/apple-container-update-playbook.md": [
-      "Apple Container Update Playbook",
-      "Pre-Update Evidence",
-      "Required Verification",
-      "Rollback"
-    ],
-    "docs/harness/research/source-record.schema.json": [
-      "HarnessForge Project Source Record",
-      "targetRelativePath"
-    ],
-    "docs/harness/research/source-record-example.json": [
-      "source-record-example",
-      "docs/ARCHITECTURE.md"
-    ],
-    "docs/harness/research/research-inbox.md": [
-      "Research Inbox",
-      "Promotion checklist"
-    ],
-    "docs/harness/state/entropy-control.md": [
-      "Entropy Control",
-      "Regular Assessment",
-      "Correction Loop"
-    ],
-    "docs/harness/authoritative-facts.md": [
-      "Authoritative Facts And Docs Routing",
-      "Boundary Types Covered",
-      "Change-To-Docs Routing",
-      "Fan-Out Budgets"
-    ],
-    ".agents/skills/harness/SKILL.md": [
-      "name: harness",
-      "Zero-Install Rule",
-      "HarnessForge CLI and the HarnessForge GitHub Action are optional",
-      "repo-owned commands",
-      "references/repo-harness.md"
-    ],
-    ".agents/skills/harness/references/repo-harness.md": [
-      "AGENTS.md",
-      "feature_list.json",
-      "first-agent-task.md",
-      "verification-matrix.md",
-      "sensor-registry.md",
-      "evidence-log.md",
-      "HarnessForge CLI and Action outputs as advisory",
-      "current-state.md",
-      "first-agent-review.json"
-    ],
-    "current-state.md": [
-      "Current State",
-      "State Contract",
-      "Trusted Verification",
-      "Touched Surfaces",
-      "Next Step"
-    ],
-    "docs/harness/evidence/first-agent-review.json": [
-      "harnessforge.firstAgentReview.v1",
-      "retired",
-      "freshSession",
-      "taskRetired"
+  "maintainedBy": "RunHaven maintainers",
+  "lastUpdated": "2026-06-17",
+  "purpose": "Compact map of the active RunHaven harness. This file is not startup context.",
+  "platformContract": {
+    "macOS": "26+",
+    "architecture": "Apple silicon",
+    "rust": "1.96.0",
+    "appleContainer": "1.0.0",
+    "unsupported": [
+      "Windows runtime",
+      "Linux runtime",
+      "Windows contributor verification",
+      "Linux contributor verification"
     ]
   },
-  "reviewRequired": [],
+  "startupFiles": [
+    "AGENTS.md",
+    "feature_list.json",
+    "current-state.md"
+  ],
+  "subsystems": {
+    "instructions": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "GEMINI.md",
+      ".github/copilot-instructions.md"
+    ],
+    "tools": [
+      "init.sh",
+      "cargo",
+      "npm --prefix ui",
+      "git",
+      "Apple container smokes when runtime behavior changes"
+    ],
+    "environment": [
+      "Cargo.toml",
+      "Cargo.lock",
+      "src-tauri/Cargo.toml",
+      "src-tauri/Cargo.lock",
+      "ui/package.json",
+      "ui/package-lock.json",
+      "rust-toolchain.toml",
+      "pins.toml",
+      "images/"
+    ],
+    "state": [
+      "feature_list.json",
+      "current-state.md",
+      "docs/ROADMAP.md",
+      "docs/harness/evidence/evidence-log.md"
+    ],
+    "feedback": [
+      "docs/harness/feedback/verification-matrix.md",
+      "cargo run --locked --bin runhaven-check-pins",
+      "./init.sh"
+    ]
+  },
+  "onDemandDocs": {
+    "harnessOverview": "docs/harness/README.md",
+    "verificationRouting": "docs/harness/feedback/verification-matrix.md",
+    "componentBoundaries": "docs/harness/boundaries/component-inventory.md",
+    "securityBoundaries": "docs/harness/boundaries/security-boundary-map.md",
+    "dependencyPolicy": "docs/harness/boundaries/dependency-change-policy.md",
+    "releaseControls": "docs/harness/release/release-controls.md",
+    "appleContainerUpdate": "docs/harness/release/apple-container-update-playbook.md",
+    "historicalEvidence": "docs/harness/evidence/evidence-log.md"
+  },
   "verificationCommands": [
-    "cargo fmt --check",
-    "cargo test --locked",
-    "cargo clippy --all-targets -- -D warnings",
     "cargo run --locked --bin runhaven-check-pins",
-    "cargo build --locked",
+    "python3 -m json.tool feature_list.json >/dev/null",
+    "python3 -m json.tool docs/harness/manifest.json >/dev/null",
+    "git diff --check"
+  ],
+  "optionalOwnerTools": [
     "harnessforge report --target .",
     "harnessforge audit --target . --min-score 85"
   ],
-  "detectedComponents": [
-    ". (Cargo.toml)",
-    "images/antigravity (Containerfile)",
-    "images/base (Containerfile)",
-    "images/claude (Containerfile, package.json)",
-    "images/codex (Containerfile, package.json)",
-    "images/copilot (Containerfile, package.json)",
-    "images/gemini (Containerfile, package.json)"
-  ],
-  "generatedFiles": {
-    ".agents/skills/harness/SKILL.md": {
-      "ownership": "project",
-      "template": "harness-skill.md.tmpl",
-      "templateSha256": "1cf834c6a0977f185ac2a909685b0d5cab6bf4328734325575fde555e937a821",
-      "contentSha256": "b1271963699689d89d653964e312e950ce7d1fd2ad0b2c5ea2f095bb02786bbb",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    ".agents/skills/harness/references/repo-harness.md": {
-      "ownership": "project",
-      "template": "harness-skill-reference.md.tmpl",
-      "templateSha256": "2a6218a0d5538f236dff603638b93be56d818253c40b8195c0ed2687420e6684",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed",
-      "contentSha256": "aefdff991627da4465920237cde31ea95bdede7ea95d91549eae88b4a743317e"
-    },
-    "AGENTS.md": {
-      "ownership": "project",
-      "template": "agents.md.tmpl",
-      "templateSha256": "a4c6151da6eaf46b42a103242f862d112fe13b09b0e178ace026f27c7b9a541e",
-      "contentSha256": "176cbef45364243129b4228b8e2e5086b6fd7061d06915b3a6562365d6c29581",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    "current-state.md": {
-      "ownership": "project",
-      "template": "current-state.md.tmpl",
-      "templateSha256": "c71cb3f71408162e8ab56ee3690cc051d5d6bff409a34280fb5bc0083408367e",
-      "contentSha256": "558a7bda8c5e714bab0f38c8ce393072b09ed681c61ccb481bd6ea51068f6175",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    "docs/harness/README.md": {
-      "ownership": "project",
-      "template": "harness-readme.md.tmpl",
-      "templateSha256": "9b51d82f562314dff27de8bb11584d83eb471cbf5931b12ad31ff6156891b0ae",
-      "contentSha256": "a2b14070f42d64c288e800a2c55d2117fa12b33d7970101a13915ebfc9aec538",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    "docs/harness/evidence/first-agent-review.json": {
-      "ownership": "project",
-      "template": "first-agent-review.json.tmpl",
-      "templateSha256": "d97981f4186d19403b8999df50eace6d2272ded5e0d092e16c7ce18917c08af9",
-      "contentSha256": "c1782b96b92493b735ebdc985cb82f8e8509dd8f90a60cbad983da57683170a1",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    "docs/harness/feedback/quality-document.md": {
-      "ownership": "project",
-      "template": "quality-document.md.tmpl",
-      "templateSha256": "e76b5c48d1c1981eb737d2abe6bee5957df4bc20183343d547d31bdcf67b8d34",
-      "contentSha256": "f1bf15dfccd24699c09b0aef7049c98f8e7d5840ef90284ef471877193791d11",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    "docs/harness/feedback/sensor-registry.md": {
-      "ownership": "project",
-      "template": "sensor-registry.md.tmpl",
-      "templateSha256": "9222688bf7922a23a3768b5fb286faa43309897d7d54aa646e8dd63d9e260132",
-      "contentSha256": "aafe9c7d12f0f0b36237df4f3839024b0772f7cab1f72e2b4f6e34093e1ca2fe",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    "docs/harness/manifest.json": {
-      "ownership": "project",
-      "template": "manifest.json.tmpl",
-      "templateSha256": "c3246e45e22b3c3ac0b364d5a94d771714ebae2360c577db301ba5dec4f49f62",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    "docs/harness/release/release-controls.md": {
-      "ownership": "project",
-      "template": "release-controls.md.tmpl",
-      "templateSha256": "70f692d609f33d44271e253e12d572b669e63b6ab03030bae0878d885d6074b8",
-      "contentSha256": "8d4e6f669c12f56f0067e7e8a65c5c7a00296783235fce3f96f4a876578ea00b",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    "docs/harness/research/source-record-example.json": {
-      "ownership": "project",
-      "template": "source-record-example.json.tmpl",
-      "templateSha256": "ad1f1aa0dabc255a8d7cbec8526e789abc1103dd656582f4a88bec137b0bffa7",
-      "contentSha256": "28e98e5fcf4993f93b261a8e16c73a49284b47ba539d3a941cfebfa85d317f2a",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    "docs/harness/research/source-record.schema.json": {
-      "ownership": "project",
-      "template": "source-record.schema.json.tmpl",
-      "templateSha256": "0998a9a8bec5b3a00d64aacf2fbc0cc3967f5db54a7ec7cb7dbc8c8f7d6006c6",
-      "contentSha256": "1936e6fc345aadbc377d37b5f2fde733e9071a9a8bc2c50af6068767e7560936",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    "docs/harness/state/first-agent-task.md": {
-      "ownership": "project",
-      "template": "first-agent-task.md.tmpl",
-      "templateSha256": "af99dae7653630dcdf21b712ac76cf3c9ab27b9a3857daf10c913778a47fe5f6",
-      "contentSha256": "5869984bf5ae8cf9824f238ce0c994cce44beaa64799f640b9569cefb76630f3",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    },
-    "docs/harness/state/roadmap.md": {
-      "ownership": "project",
-      "template": "roadmap.md.tmpl",
-      "templateSha256": "8381d09eb13b6aff1ea02c8601731e0329574e0b15286069e0a73e60e99bee32",
-      "contentSha256": "7664543b7bba66365d15dc1b259be09afcebe167e4ba82e374e9019334af1eb7",
-      "reviewRequired": false,
-      "writeStatus": "project-owned-reviewed"
-    }
-  }
+  "rules": [
+    "Do not treat this manifest as a required read at startup.",
+    "Do not bulk-load docs/harness for ordinary work.",
+    "Treat optional owner-tool output as advisory until promoted into repo-owned docs, tests, policy, or code.",
+    "Keep startup files compact enough for every-session reading."
+  ]
 }

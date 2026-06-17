@@ -1,545 +1,121 @@
 # Current State
 
-Last Updated: 2026-06-16 UTC
+Last Updated: 2026-06-17 UTC
 
 ## Current Objective
 
-Continue Tauri/UI implementation after the first mutating launch slice. The
-desktop shell now has setup, dashboard, profile, folder-pick, run-plan review,
-and explicitly confirmed launch surfaces. The next implementation should add
-one missing launch-readiness or run-control operation at a time only after typed
-Rust validation, explicit confirmation, narrow capability review, and focused
-tests are in place.
+Next product slice: add the first explicit Tauri run-control operation,
+`stop_run`.
 
-## State Contract
+Scope for that slice:
 
-- `feature_list.json`: machine-readable feature state and durable product
-  evidence.
-- `docs/harness/evidence/evidence-log.md`: meaningful verification, source
-  review, packaging, or harness evidence.
-- `current-state.md`: current objective, trusted verification, touched
-  surfaces, blockers, and next step.
-- Do not recreate separate root `progress.md` or `session-handoff.md` files.
+- one typed Rust command for one validated active run id;
+- explicit user confirmation before mutation;
+- narrow `run-control` capability coverage;
+- frontend state that waits for the command result before implying success;
+- focused Rust, Tauri, frontend, and Playwright checks.
 
-## Product State
+## Startup State Contract
+
+- `AGENTS.md`: root instruction map.
+- `feature_list.json`: compact feature status and next product slice.
+- `current-state.md`: progress, trusted facts, blockers, and handoff.
+
+Do not recreate separate root `progress.md` or `session-handoff.md` files.
+Load deeper docs only when the task touches that surface.
+
+## Product Facts
 
 - RunHaven is a Rust 1.96.0 CLI for running AI coding agents inside Apple
   `container` on macOS 26+ on Apple silicon.
-- The application code is organized as a Cargo crate under `src/runhaven/` with
-  CLI, runtime, provider, image, records, harness, and support modules. Bundled
-  image templates live under top-level `images/`.
-- An alpha desktop scaffold lives under `ui/` and `src-tauri/`. It uses
-  Svelte + Vite + TypeScript and Tauri v2, calls the root Rust library through
-  typed commands, and currently exposes setup/dashboard/profile, native folder
-  picking, run-plan review, and an explicitly confirmed launch path.
-- The old Python package, Python tests, Python scripts, `pyproject.toml`,
-  `.python-version`, and `requirements-dev.txt` have been removed.
+- The CLI is the current working product surface.
+- The alpha desktop shell lives under `ui/` and `src-tauri/`.
 - Windows and Linux are not supported runtime or contributor-verification
   targets.
-- GitHub Actions CI is disabled during alpha/pre-release to avoid hosted-runner
-  cost. Local verification remains authoritative until a maintainer explicitly
-  re-enables CI.
-- Default product safety boundaries remain: no host home mount, no cloud
-  credential folder mount, no raw SSH key mount, no arbitrary environment
-  passthrough, explicit workspace scope, non-root bundled images, and
-  provider egress allowlisting only through reviewed provider mode.
-- HarnessForge output is advisory unless a maintainer promotes a recommendation
-  into repo-owned docs, tests, policy, code, or packaging checks.
+- GitHub Actions CI is disabled during alpha/pre-release. Local verification is
+  authoritative until a maintainer explicitly re-enables CI.
+- Default safety boundaries remain: no host home mount, no cloud credential
+  folder mount, no raw SSH key mount, no arbitrary environment passthrough,
+  explicit workspace scope, non-root bundled images, and provider egress
+  allowlisting only through reviewed provider mode.
 
 ## Latest Verified Work
 
-- Added `docs/NON_UI_BACKLOG.md` as the consolidated backlog for all remaining
-  non-UI gates, accepted polish, candidates, and deferred end-stage packaging
-  work.
-- Added `docs/TAURI_UI_RESEARCH_PLAN.md` as the active research plan for Tauri
-  architecture, frontend framework selection, comparable product analysis, UX
-  questions, information architecture, command contracts, and scaffold gates.
-- Promoted and then validated Tauri/UI research and framework selection in the
-  active harness roadmap.
-- Completed the Tauri/UI research phase. The accepted direction is Tauri v2
-  with Svelte + Vite + TypeScript, npm lockfile, a separate `src-tauri` crate
-  calling the existing Rust library, narrow capabilities, typed command
-  contracts, a read-only first scaffold, and no generic shell/filesystem/process
-  bridge.
-- Added the first Tauri/Svelte scaffold under `ui/` and `src-tauri/` with
-  exact-pinned dependencies, checked-in npm and Cargo lockfiles, typed
-  read-only Rust commands, and narrow `main-read` plus `folder-pick`
-  capabilities.
-- Added a Svelte operational UI for setup checks, active/recent run counts,
-  agent selection, folder selection, secure-default network choices, resource
-  inputs, read-only workspace selection, plan review, and explicit launch
-  confirmation.
-- Added the first mutating desktop slice: typed Tauri `launch_run`, separate
-  `launch-run` capability, shared Rust runtime launch module, shared
-  state-volume lock module, frontend launch helper, confirmation controls, and
-  Playwright preview coverage. Launch requires plan confirmation, every warning
-  acknowledgement, and passing setup checks before it starts a background run.
-- Added the next launch-readiness slice: structured image and builder status
-  from the existing image doctor path, typed Tauri `get_image_status`,
-  `main-read` permission for that command, launch-panel readiness UI, and
-  launch refusal when the selected bundled profile image is missing or stale.
-- Added launch resource warnings and post-launch snapshot feedback. Tauri
-  planning now warns when other RunHaven runs are active and when the selected
-  memory limit plus active runs may be material on the host; launch
-  confirmation rechecks those dynamic warning codes before start. The UI shows
-  a sanitized run snapshot after launch and still keeps raw logs out of
-  frontend state.
-- Added typed live run-status feedback for the Tauri app. `get_run_status`
-  reuses the existing sanitized active-run status payload and returns marker
-  status, container state, resources, image, and network metadata without raw
-  logs, raw Apple inspect payloads, command arguments, environment, or mounts.
-- Added `docs/TAURI_LOG_VIEWING_DESIGN.md` as the accepted raw-log viewing
-  plan. Desktop log viewing should start with status first, then an explicitly
-  requested bounded `get_log_snapshot` for one validated active run. The plan
-  keeps raw logs out of durable frontend storage, rejects automatic redaction
-  promises, and defers live streaming until a separate event/channel design.
-- Implemented the first raw-log snapshot slice. `get_log_snapshot` lives behind
-  `run-control`, requires sensitive-output acknowledgement, validates the run
-  id and RunHaven-owned active container marker before invoking Apple
-  `container`, calls only `container logs -n`, drains stdout/stderr with fixed
-  memory, caps returned text, and renders only the current visible snapshot in
-  Svelte component state.
-- Remaining launch-readiness gaps before the UI launch flow is complete are
-  dedicated run controls. Stop, kill, attach, repair, image build, state
-  cleanup, network cleanup, and worktree review remain CLI-first.
-- Fixed the Svelte 5 blank-page runtime failure by replacing the old
-  `new App(...)` entrypoint with `mount(App, ...)`.
-- Added exact-pinned Playwright browser coverage for the UI shell so runtime
-  errors, console errors, and blank-page regressions are caught by
-  `npm --prefix ui run test:e2e`.
-- Updated the local harness so `./init.sh` now runs frontend npm ci, Svelte
-  typecheck, Vitest, Playwright, Vite build, Tauri Rust fmt/test/clippy, and
-  debug no-bundle Tauri build in addition to the root Rust checks.
-- Added the project-wide secure-easy-path rule: the default and shortest path
-  should be secure; supported advanced choices warn and require confirmation
-  but are not hidden or blocked only because they are advanced.
-- Added non-mutating CLI explainers for `runhaven why workspace PATH`,
-  `runhaven why network MODE`, and `runhaven why state AGENT`; existing
-  `why host` remains the provider-host explainer.
-- Added focused integration tests and usage docs for the expanded `why`
-  commands.
-- Added task recipes for read-only review, local-only checks, provider-only
-  runs, worktree review, and exact state reset.
-- Added `docs/EXTENSION_MCP_BOUNDARY.md` and linked it from the security model
-  so future extension or MCP work has a deny-by-default policy before
-  implementation.
-- Added a `runhaven-check-pins` sensor that enforces top-of-file descriptions
-  for maintained shell scripts and bundled image templates.
-- Updated the active harness roadmap and source-mined UX notes so completed
-  CLI explainers, script-header enforcement, and extension/MCP policy do not
-  keep resurfacing as current backlog.
-- Rebuilt the CLI in Rust with exact-pinned Cargo dependencies and a checked-in
-  `Cargo.lock`.
-- Replaced the Python pin checker with `runhaven-check-pins`.
-- Updated `init.sh`, root docs, installation docs, usage docs, pinning docs,
-  harness docs, component inventory, verification matrix, manifest metadata,
-  and former CI routing for the Rust stack.
-- Kept file organization nested by responsibility instead of flattening the
-  Rust source tree.
-- Split large Rust modules so every Rust source file is under 500 lines; the
-  current largest file is `src/runhaven/provider/auth_broker.rs` at 499 lines.
-- Updated `.gitignore` for Rust build, coverage, profiling, local
-  RunHaven/container, macOS, editor, and pre-Rust Python tooling artifacts.
-- Completed the final active-document accuracy sweep for the Rust conversion
-  across product docs, GitHub instructions, harness boundaries, roadmap,
-  packaging controls, and source-mined ideas.
-- Removed ignored local cleanup artifacts from the working tree, including
-  stale Python cache/build output and `.DS_Store` files.
-- Deduped the main README after the overview refresh so the top-level page now
-  keeps one compact product/value narrative, one quick-start path, and routes
-  detailed feature and command coverage to `docs/CAPABILITIES.md` and
-  `docs/USAGE.md`.
-- Reworked `docs/CAPABILITIES.md` into a scan-friendly overview with compact
-  tables for runtime defaults, profiles, network modes, credentials,
-  sessions/state, observability, and current limits.
-- Corrected the Cargo development command in installation docs to name the
-  `runhaven` binary explicitly.
-- Removed the active GitHub Actions workflow and updated pin-policy and harness
-  guidance so no hosted CI jobs run during alpha/pre-release.
-- Started the Apple Container pre-Tauri coverage review and added
-  `docs/APPLE_CONTAINER_GAP_ANALYSIS.md` as the action ledger for remaining
-  runtime, security, and verification gaps.
-- Added `scripts/apple_container_smoke.sh` as an opt-in local Apple
-  `container` smoke harness. The default path covers `doctor`, shell image
-  readiness, internal read-only workspace behavior, active-run
-  status/logs-follow/stop cleanup, provider planning, and exact cleanup.
-  `--with-provider` adds live provider allowlist and egress-denial coverage.
-  `--with-ssh` is a no-secret live SSH-forwarding connectivity check with a
-  disposable empty `ssh-agent`; it currently exposes an Apple `container` 1.0.0
-  non-root socket permission blocker.
-- Fixed the Rust provider CONNECT proxy relay after the live smoke exposed TLS
-  tunnel failures. Accepted/tunnel sockets are forced back to blocking mode,
-  and CONNECT header reads no longer consume tunneled bytes.
-- Added fixture-backed parser tests for Apple `container` JSON shapes covering
-  image list, network inspect, container inspect, source-backed legacy
-  attachment aliases, invalid shapes, and missing-container repair stderr.
-- Tightened parser behavior found during the fixture pass: image matching now
-  trusts only actual image-name fields instead of all descriptor annotations,
-  and active-run repair no longer removes markers for unrelated `not found`
-  inspect failures.
-- Extended `runhaven doctor` with JSON-backed Apple `container` runtime pin
-  checks. It now fails closed on mismatched runtime commit, builder image,
-  vminit image, or Kata kernel fields from the structured
-  `container system version --format json` and
-  `container system property list --format json` probes.
-- Split the new doctor runtime-pin implementation into
-  `src/runhaven/cli/doctor/runtime_pins.rs` so the main doctor module stays
-  well under the repo's Rust file-size ceiling.
-- Extended `runhaven image doctor` with read-only Apple builder diagnostics
-  from `container builder status --format json`. The output reports sanitized
-  builder state, image, CPU/memory allocation, Rosetta mode, start time, and
-  network address while avoiding builder mounts and environment.
-- Updated `scripts/apple_container_smoke.sh` to assert that
-  `image doctor shell` reports builder status and large-build resource
-  guidance.
-- Added `docs/TAURI_UI_GUARDRAILS.md` as the active UI contract for Tauri
-  resource warnings, approval gates, typed Rust commands, narrow capabilities,
-  and denied-by-default WebView access.
-- Added an accepted backlog item to give every maintained script a short
-  top-of-file description explaining what it is and what it does.
-- Added provider-mode troubleshooting guidance that distinguishes allowlist
-  denials from host-side proxy reachability or macOS Local Network privacy
-  failures.
-- Changed `--ssh` to fail closed in planner and run paths while Apple
-  `container` 1.0.0 non-root SSH forwarding is blocked. The flag stays visible
-  so users get an explicit refusal instead of an implied working private-Git
-  path.
-- Updated `scripts/apple_container_smoke.sh` so the default path verifies
-  `runhaven plan --ssh` refusal, and `--with-ssh` verifies `runhaven run --ssh`
-  refusal before launch.
-- Added `docs/harness/release/apple-container-update-playbook.md` for Apple
-  `container` runtime, helper image, installer, Kata kernel, CLI help, smoke,
-  cleanup, and rollback evidence before future pin changes.
-- Added top-of-file descriptions to every maintained shell script and bundled
-  image template.
-- Ran whole-repo Rust expert review and addressed the findings: auth broker
-  upstream requests now use the configured global timeout, standard and provider
-  launch failures remove active markers and record failed runs when a run
-  started, cleanup failures stay visible in run records, the crate is marked
-  `publish = false`, and tests were moved out of near-limit files to preserve
-  the source-size ceiling.
-- Fixed the provider-mode bind regression exposed by live verification. Apple
-  `container` 1.0.0 reports a guest gateway that is not bindable on macOS, so
-  RunHaven uses the gateway URL for guests while allowing a wildcard host
-  listener only with explicit Apple-container subnet rejection.
+- 2026-06-17: Simplified the repo harness to the lightweight five-subsystem
+  model from the referenced harness-learning material. Startup now routes
+  through only `AGENTS.md`, `feature_list.json`, and `current-state.md`;
+  harness docs are on-demand reference material.
+- 2026-06-16: Implemented the first raw-log snapshot slice. `get_log_snapshot`
+  lives behind `run-control`, requires sensitive-output acknowledgement,
+  validates the run id and RunHaven-owned active container marker, calls only
+  bounded `container logs -n`, and keeps raw output out of durable frontend
+  state.
+- 2026-06-16: Tauri launch flow can confirm launch, check image readiness,
+  show resource warnings, render sanitized run snapshots, and refresh live run
+  status without exposing raw logs or raw Apple inspect payloads.
 
 ## Trusted Verification
 
-- Tauri raw-log design checks: macOS 26.5.1 arm64 host verified,
-  `container --version` returned Apple `container` CLI 1.0.0 build `release`
-  commit `ee848e3`, `container logs --help` confirmed
-  `container logs [--boot] [--follow] [-n <n>] <container-id>`, and the
-  existing `runs logs-follow` path was inspected in
-  `src/runhaven/runtime/active/mod.rs`.
-- Apple Container expert review completed for the log-viewing boundary and
-  supported bounded snapshot before live streaming.
-- Tauri raw-log design docs verification passed: `cargo run --locked --bin
-  runhaven-check-pins`, JSON validation, local Markdown link check, stale-text
-  scan, and `git diff --check`.
-- Tauri raw-log snapshot red checks failed first for missing typed log pieces:
-  `cargo test --manifest-path src-tauri/Cargo.toml --locked log_snapshot -- --nocapture`
-  and `npm --prefix ui test -- --run`.
-- `cargo test --manifest-path src-tauri/Cargo.toml --locked log_snapshot -- --nocapture`:
-  passed with confirmation, line cap, byte cap, invalid run id, and
-  non-RunHaven container validation tests.
-- Live log snapshot proof passed: `scripts/apple_container_smoke.sh`, then an
-  ignored `log_snapshot_reads_live_active_run` test against a disposable active
-  shell container verified a unique marker and `truncated=true` for oversized
-  output.
-- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 16
-  Tauri command tests plus one ignored live test.
-- `cargo fmt --manifest-path src-tauri/Cargo.toml --check`: passed.
-- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`:
-  passed.
-- `cargo test --locked`: passed with 44 library tests and 6 integration tests.
-- `cargo clippy --all-targets --locked -- -D warnings`: passed.
-- `npm --prefix ui test -- --run`: passed with 15 frontend tests.
-- `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
-- `npm --prefix ui run test:e2e`: passed with 2 Chromium tests, including the
-  output reveal preview path.
-- `npm --prefix ui run build`: passed with Vite 8.0.16.
-- Browser screenshot review passed for desktop and mobile log snapshot layouts:
-  `/tmp/runhaven-log-snapshot-desktop.png` and
-  `/tmp/runhaven-log-snapshot-mobile.png`.
-- Tauri launch red checks failed first for missing launch contract pieces:
-  `cargo test --manifest-path src-tauri/Cargo.toml launch_run` and
-  `npm --prefix ui test -- --run`.
-- Tauri image-readiness red checks failed first for missing structured image
-  status pieces: `cargo test --locked profile_image_status`,
-  `cargo test --manifest-path src-tauri/Cargo.toml image_readiness --locked`,
-  and `npm --prefix ui test -- --run`.
-- `cargo test --locked profile_image_status`: passed with 3 image status tests.
-- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 9
-  Tauri command tests.
-- `npm --prefix ui test -- --run`: passed with 11 frontend tests.
-- `npm --prefix ui run test:e2e`: passed with 2 Chromium tests, including the
-  image-readiness launch preview path.
-- `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
-- `cargo test --locked`: passed with 44 library tests and 6 integration tests.
-- `cargo clippy --all-targets --locked -- -D warnings`: passed.
-- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`:
-  passed.
-- `npm --prefix ui run build`: passed with Vite 8.0.16.
-- Browser screenshot review passed for the launch-panel image readiness block:
-  `/tmp/runhaven-image-readiness.png`.
-- `./init.sh`: passed with root Rust fmt/test/clippy/pin/build checks,
-  frontend install/typecheck/unit/build/Playwright checks, Tauri Rust
-  fmt/test/clippy checks, and debug no-bundle Tauri build.
-- `python3 -m json.tool feature_list.json`: passed.
-- `python3 -m json.tool src-tauri/capabilities/main-read.json`: passed.
-- Source-size guard passed; the largest Rust file remains
-  `src/runhaven/provider/auth_broker.rs` at 499 lines.
-- `git diff --check`: passed.
-- Tauri launch resource-warning red checks failed first for missing active-run
-  warnings and missing launch snapshot fields:
-  `cargo test --manifest-path src-tauri/Cargo.toml --locked active_run -- --nocapture`
-  and `npm --prefix ui test -- --run`.
-- `cargo test --manifest-path src-tauri/Cargo.toml --locked active_run -- --nocapture`:
-  passed with 2 focused active-run warning tests.
-- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 11
-  Tauri command tests.
-- `npm --prefix ui test -- --run`: passed with 13 frontend tests.
-- `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
-- `npm --prefix ui run test:e2e`: passed with 2 Chromium tests, including the
-  launch snapshot preview path.
-- `npm --prefix ui run build`: passed with Vite 8.0.16.
-- Browser screenshot review passed for desktop and mobile launch snapshot
-  layouts: `/tmp/runhaven-launch-snapshot-after.png` and
-  `/tmp/runhaven-launch-snapshot-mobile.png`.
-- `./init.sh`: passed with root Rust fmt/test/clippy/pin/build checks,
-  frontend install/typecheck/unit/build/Playwright checks, Tauri Rust
-  fmt/test/clippy checks, and debug no-bundle Tauri build.
-- Tauri live-status red checks failed first for missing typed status pieces:
-  `cargo test --manifest-path src-tauri/Cargo.toml --locked run_status -- --nocapture`
-  and `npm --prefix ui test -- --run`.
-- `cargo test --manifest-path src-tauri/Cargo.toml --locked run_status -- --nocapture`:
-  passed with the sanitized status conversion test.
-- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 12
-  Tauri command tests.
-- `cargo fmt --manifest-path src-tauri/Cargo.toml --check`: passed.
-- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`:
-  passed.
-- `npm --prefix ui test -- --run`: passed with 14 frontend tests.
-- `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
-- `npm --prefix ui run test:e2e`: passed with 2 Chromium tests, including the
-  run-status preview path.
-- `npm --prefix ui run build`: passed with Vite 8.0.16.
-- Browser screenshot review passed for desktop and mobile run-status layouts:
-  `/tmp/runhaven-live-status-desktop.png` and
-  `/tmp/runhaven-live-status-mobile.png`.
-- `./init.sh`: passed with root Rust fmt/test/clippy/pin/build checks,
-  frontend install/typecheck/unit/build/Playwright checks, Tauri Rust
-  fmt/test/clippy checks, and debug no-bundle Tauri build.
-- `python3 -m json.tool feature_list.json`: passed.
-- `python3 -m json.tool src-tauri/capabilities/main-read.json`: passed.
-- Source-size guard passed; the largest Rust file remains
-  `src/runhaven/provider/auth_broker.rs` at 499 lines.
-- `git diff --check`: passed.
-- `cargo fmt`: passed.
-- `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
-- `npm --prefix ui test -- --run`: passed with 1 test file and 9 tests.
-- `npm --prefix ui run build`: passed with Vite 8.0.16.
-- `npm --prefix ui run test:e2e`: passed with 2 Chromium tests, including the
-  preview launch confirmation flow.
-- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 7
-  Tauri command tests.
-- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`:
-  passed.
-- `cargo test --locked`: passed with 41 library tests and 6 integration tests.
-- `cargo fmt --check`: passed.
-- `cargo clippy --all-targets --locked -- -D warnings`: passed.
-- `cargo run --locked --bin runhaven-check-pins`: passed.
-- `npm --prefix ui run tauri:build`: passed and built
-  `src-tauri/target/debug/runhaven-tauri` without bundling.
-- `./init.sh`: initially found one Tauri rustfmt issue, then passed after
-  `cargo fmt --manifest-path src-tauri/Cargo.toml`.
-- JSON validation for `feature_list.json` and `docs/harness/manifest.json`:
-  passed.
-- Local Markdown link check over 51 tracked Markdown files: passed.
-- `git diff --check`: passed.
-- Rust source size guard: passed; no Rust source file under `src/` or
-  `src-tauri/src/` is over 500 lines. The current largest files are
-  `src/runhaven/provider/auth_broker.rs` at 499 lines and
-  `src/runhaven/provider/egress.rs` at 495 lines.
-- `./init.sh`: passed after the harness was extended for the desktop scaffold.
-  It ran root Rust format/tests/clippy/pin policy/build,
-  `npm --prefix ui ci --ignore-scripts`, frontend typecheck/tests/build, Tauri
-  Rust fmt/test/clippy, and `npm --prefix ui run tauri:build`.
-- `npm --prefix ui ci --ignore-scripts`: passed; frontend checks and Tauri
-  build still passed with install scripts disabled.
-- `npm --prefix ui run check`: passed with 0 Svelte errors and 0 warnings.
-- `npm --prefix ui test`: passed with 1 test file and 6 tests.
-- `npm --prefix ui run test:e2e`: passed with 1 Chromium browser test after
-  verifying the dashboard renders without page or console errors.
-- `npm --prefix ui run build`: passed with Vite 8.0.16.
-- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: passed with 4
-  Tauri command tests.
-- `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`:
-  passed.
-- `npm --prefix ui run tauri:build`: passed and built
-  `src-tauri/target/debug/runhaven-tauri` without bundling.
-- `cargo fmt --check`: passed.
-- `cargo test --locked`: passed with 41 library tests and 6 integration tests.
-- `cargo clippy --all-targets -- -D warnings`: passed.
-- `cargo run --locked --bin runhaven-check-pins`: passed.
-- `cargo build --locked`: passed.
-- `./init.sh`: passed. The full local harness ran Cargo format, tests, clippy,
-  pin policy, and build.
-- Rust source size scan: passed; no Rust source file is over 500 lines. The
-  current largest file is `src/runhaven/provider/auth_broker.rs` at 499 lines.
-- Direct CLI smokes passed: `target/debug/runhaven agents`,
-  `target/debug/runhaven plan shell --workspace . -- /bin/bash -lc pwd`,
-  `target/debug/runhaven doctor`, and
-  `target/debug/runhaven image build shell --dry-run`.
-- Expanded `why` CLI smokes passed: `target/debug/runhaven why network
-  provider`, `target/debug/runhaven why workspace .`,
-  `target/debug/runhaven why state shell`, and
-  `target/debug/runhaven why host api.openai.com --agent codex`.
-- Active-doc stale-reference scan: passed for old Python project paths,
-  Python-package guidance, and pre-Rust source paths.
-- Cleanup scan: passed; no Python project artifacts, Python caches, old Python
-  packaging files, or `.DS_Store` files remain outside ignored build output.
-- JSON validation, local Markdown link check, `git diff --check`, and Rust
-  source size guard: passed.
-- README docs checks: pin check, local Markdown link check, platform
-  wording/stale-command scan, duplicate-section scan, `git diff --check`, and
-  CLI `plan` smoke passed.
-- Capabilities docs cleanup checks: pin check, local Markdown link check,
-  platform/stale-command scan, `git diff --check`, `runhaven agents`, and
-  `runhaven plan shell` smokes passed.
-- Current Apple Container host evidence: macOS 26.5.1, arm64,
-  `/usr/local/bin/container`, Apple `container` CLI 1.0.0 build `release`
-  commit `ee848e3`, and `container system status` running.
-- Alpha CI disablement and Apple Container gap-analysis checks passed:
-  `cargo fmt --check`, `cargo test --locked`,
-  `cargo clippy --all-targets -- -D warnings`,
-  `cargo run --locked --bin runhaven-check-pins`, `cargo build --locked`,
-  JSON validation for `feature_list.json` and `docs/harness/manifest.json`,
-  local Markdown link check, active workflow file scan, stale active-CI scan,
-  `cargo run --locked --bin runhaven -- doctor`,
-  `cargo run --locked --bin runhaven -- plan shell --workspace . -- /bin/bash -lc pwd`,
-  `cargo run --locked --bin runhaven -- image build shell --dry-run`,
-  `container system version`, `container system property list`, and
-  `git diff --check`.
-- Apple Container smoke harness checks passed: `bash -n
-  scripts/apple_container_smoke.sh`, `cargo fmt --check`,
-  `cargo test --locked provider::egress -- --nocapture`,
-  `scripts/apple_container_smoke.sh`, and
-  `scripts/apple_container_smoke.sh --with-provider`.
-- Cleanup checks after smoke/debug runs passed: `target/debug/runhaven state
-  list` reported no RunHaven state volumes, `target/debug/runhaven runs active`
-  reported no active runs, and `target/debug/runhaven network list` showed only
-  the shared `runhaven-volume-prep-internal` network.
-- Apple Container JSON parser fixture checks passed: `cargo fmt --check` and
-  `cargo test --locked` ran 22 library tests and 2 integration tests covering
-  the fixture-backed parsers and existing CLI behavior.
-- Apple Container runtime pin enforcement checks passed: Apple Container expert
-  read-only review, `container system version --format json`,
-  `container system property list --format json`, focused doctor parser tests,
-  `cargo fmt --check`, `cargo test --locked`,
-  `cargo clippy --all-targets -- -D warnings`,
-  `cargo run --locked --bin runhaven-check-pins`,
-  `cargo run --locked --bin runhaven -- doctor`,
-  `scripts/apple_container_smoke.sh`, JSON validation, local Markdown link
-  check, Rust source size scan, and `git diff --check`.
-- Apple Container builder diagnostic checks passed: Apple Container CLI/source
-  review, focused image-doctor parser tests, `cargo fmt --check`,
-  `cargo test --locked`, `cargo clippy --all-targets -- -D warnings`,
-  `cargo run --locked --bin runhaven-check-pins`,
-  `cargo run --locked --bin runhaven -- image doctor shell`,
-  `cargo run --locked --bin runhaven -- setup --agent shell`,
-  `scripts/apple_container_smoke.sh`, JSON validation, local Markdown link
-  check, Rust source size scan, and `git diff --check`.
-- Tauri guardrail and backlog-doc checks passed: official Tauri v2 security,
-  capabilities, and permissions docs reviewed; pin policy, JSON validation,
-  local Markdown link check, active-doc platform/stale-command scan, and
-  `git diff --check` passed.
-- Provider local-network/privacy troubleshooting checks passed:
-  `scripts/apple_container_smoke.sh --with-provider`, cleanup checks with
-  `target/debug/runhaven runs active`, `target/debug/runhaven state list`, and
-  `target/debug/runhaven network list`, pin policy, JSON validation, local
-  Markdown link check, active-doc platform/stale-command scan, and
-  `git diff --check` passed.
-- SSH forwarding smoke review found a blocker: Bash syntax check and the
-  default `scripts/apple_container_smoke.sh` path passed, corrected
-  `scripts/apple_container_smoke.sh --with-ssh` failed as expected with
-  `Error connecting to agent: Permission denied`, and cleanup checks found no
-  active runs or RunHaven state volumes. The script now treats that as a failed
-  live SSH smoke instead of passing on socket existence.
-- SSH fail-closed guard checks passed: `cargo fmt --check`,
-  `cargo test --locked ssh_forwarding_fails_closed_until_non_root_runtime_is_verified`,
-  `cargo test --locked plan_ssh_fails_closed_until_runtime_boundary_is_verified`,
-  `cargo test --locked`, `cargo clippy --all-targets -- -D warnings`,
-  `cargo run --locked --bin runhaven-check-pins`, `bash -n
-  scripts/apple_container_smoke.sh`, `scripts/apple_container_smoke.sh`,
-  `scripts/apple_container_smoke.sh --with-ssh`, direct
-  `target/debug/runhaven plan shell --workspace . --ssh -- /bin/bash -lc true`
-  expected refusal, `target/debug/runhaven setup --agent shell`, cleanup checks,
-  JSON validation, local Markdown link check, active-doc stale SSH wording scan,
-  Rust source size guard, and `git diff --check`.
-- Apple Container release-playbook, script-header, `.gitignore`, and Rust expert
-  review checks passed: Apple Container expert review, Antigravity sandbox
-  research, Rust expert review, script/image header scan, shell syntax checks,
-  `cargo fmt --check`, `cargo test --locked`, `cargo clippy --all-targets -- -D
-  warnings`, `cargo run --locked --bin runhaven-check-pins`, `cargo build
-  --locked`, `scripts/apple_container_smoke.sh --with-provider`,
-  `scripts/apple_container_smoke.sh --with-ssh`, cleanup checks, tracked-ignored
-  check, JSON validation, local Markdown link check, Rust source size guard, and
-  `git diff --check`.
-- Tauri/UI research setup checks passed: Antigravity read-only research,
-  current official Tauri/Vite/frontend source review, comparable UI source
-  review, JSON validation for `feature_list.json` and
-  `docs/harness/manifest.json`, local Markdown link check, stale-text scan,
-  `cargo run --locked --bin runhaven-check-pins`, and `git diff --check`.
-- Tauri/UI research completion checks passed: Antigravity read-only research,
-  current official Tauri/Tauri plugin/Vite/Svelte/React/Solid/Vue/comparable UI
-  source review, current npm and Cargo package-version checks, JSON validation,
-  local Markdown link check, stale-text scan, `cargo run --locked --bin
-  runhaven-check-pins`, and `git diff --check`.
-
-## Touched Surfaces
-
-- `.gitignore`
-- `README.md`
-- `current-state.md`
-- `feature_list.json`
-- `init.sh`
-- `pins.toml`
-- `docs/ARCHITECTURE.md`
-- `docs/PINNING.md`
-- `docs/ROADMAP.md`
-- `docs/TAURI_LOG_VIEWING_DESIGN.md`
-- `docs/TAURI_UI_GUARDRAILS.md`
-- `docs/TAURI_UI_RESEARCH_PLAN.md`
-- `docs/harness/boundaries/component-inventory.md`
-- `docs/harness/evidence/evidence-log.md`
-- `docs/harness/feedback/sensor-registry.md`
-- `docs/harness/feedback/verification-matrix.md`
-- `docs/harness/manifest.json`
-- `docs/harness/state/roadmap.md`
-- `src/runhaven/runtime/active/logs.rs`
-- `src/runhaven/harness/pins.rs`
-- `src/runhaven/runtime/launch.rs`
-- `src/runhaven/runtime/lock.rs`
-- `src/runhaven/image/doctor.rs`
-- `src/runhaven/image/doctor/builder.rs`
-- `src-tauri/`
-- `ui/`
+- 2026-06-17 harness simplification checks:
+  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
+    passed.
+  - Local Markdown link check over 52 tracked Markdown files passed.
+  - `cargo run --locked --bin runhaven-check-pins` passed.
+  - `git diff --check` passed.
+  - Stale-reference scans for retired root `progress.md`/`session-handoff.md`,
+    old Python pin-check commands, and old mandatory harness roadmap routing
+    found only intentional archive or historical evidence references.
+  - `./init.sh` was not run because this pass changed documentation, harness
+    instructions, and state only; no runtime code, lockfile, package, image, or
+    Tauri capability behavior changed.
+- 2026-06-16 Tauri raw-log snapshot checks passed:
+  - `cargo test --manifest-path src-tauri/Cargo.toml --locked`
+  - `cargo fmt --manifest-path src-tauri/Cargo.toml --check`
+  - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`
+  - `cargo test --locked`
+  - `cargo clippy --all-targets --locked -- -D warnings`
+  - `npm --prefix ui test -- --run`
+  - `npm --prefix ui run check`
+  - `npm --prefix ui run test:e2e`
+  - `npm --prefix ui run build`
+  - `scripts/apple_container_smoke.sh`
 
 ## Blockers
 
-- Apple `container` 1.0.0 exposes an SSH agent socket to the RunHaven non-root
-  `agent` user with `--ssh`, but the guest cannot use it: `ssh-add -l` returns
-  permission denied. RunHaven now fails closed on `--ssh`; do not re-enable it,
-  mount raw SSH keys, or switch the default agent user to root without explicit
-  security review and no-secret runtime proof.
+- `--ssh` remains fail-closed. Apple `container` 1.0.0 exposes an SSH agent
+  socket to the non-root guest user, but `ssh-add -l` returns permission
+  denied. Do not re-enable SSH forwarding, mount raw SSH keys, or switch the
+  default agent user to root without explicit security review and no-secret
+  runtime proof.
+
+## Touched Surfaces In This Harness Pass
+
+- `AGENTS.md`
+- `.agents/skills/harness/SKILL.md`
+- `.agents/skills/harness/references/repo-harness.md`
+- `README.md`
+- `feature_list.json`
+- `current-state.md`
+- `docs/HARNESS_EVALUATION.md`
+- `docs/NON_UI_BACKLOG.md`
+- `docs/TAURI_LOG_VIEWING_DESIGN.md`
+- `docs/harness/README.md`
+- `docs/harness/manifest.json`
+- `docs/harness/authoritative-facts.md`
+- `docs/harness/boundaries/change-contract.md`
+- `docs/harness/boundaries/component-inventory.md`
+- `docs/harness/feedback/quality-document.md`
+- `docs/harness/feedback/sensor-registry.md`
+- `docs/harness/feedback/verification-matrix.md`
+- `docs/harness/operations/agent-operating-model.md`
+- `docs/harness/release/release-controls.md`
+- `docs/harness/research/sources.md`
+- `docs/harness/state/entropy-control.md`
+- `docs/harness/state/first-agent-task.md`
+- `docs/harness/state/roadmap.md`
+- `docs/harness/evidence/evidence-log.md`
 
 ## Next Step
 
-Add the first explicit run-control operation. Start with `stop_run`: one typed
-Rust command for one validated active run id, separate confirmation, narrow
-capability coverage, frontend button state that does not imply success before
-the command returns, focused tests, and a live smoke only if needed. After that,
-add kill, attach, repair, image build, state cleanup, network cleanup, and
-worktree review one at a time. Keep `--ssh` fail-closed until a no-secret
-non-root Apple `container` smoke proves usable forwarding.
+Implement `tauri-stop-run-control` as the next product slice. Keep every later
+run-control operation separate.

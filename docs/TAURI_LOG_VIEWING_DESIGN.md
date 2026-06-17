@@ -144,8 +144,8 @@ Implementation constraints:
 
 4. Docs and harness state
    - Update `feature_list.json`, `current-state.md`,
-     `docs/TAURI_UI_GUARDRAILS.md`, `docs/ROADMAP.md`, and
-     `docs/harness/state/roadmap.md`.
+     `docs/TAURI_UI_GUARDRAILS.md`, and `docs/ROADMAP.md` when their current
+     contracts change.
    - Record evidence in `docs/harness/evidence/evidence-log.md`.
 
 ## Verification

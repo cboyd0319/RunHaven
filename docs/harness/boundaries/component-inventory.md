@@ -1,7 +1,7 @@
 # Component Inventory
 
 Generated: 2026-06-16
-Reviewed: 2026-06-16
+Reviewed: 2026-06-17
 
 This file records the project boundaries the harness knows about. It is an
 inventory, not permission to mutate every nested surface.
@@ -42,7 +42,7 @@ Treat those changes as product changes with scope, verification, and rollback.
   `docs/CAPABILITIES.md`, `docs/SECURITY_MODEL.md`, `docs/ARCHITECTURE.md`,
   `docs/AUTH_BROKER.md`, `docs/PROVIDER_ENDPOINTS.md`, and `docs/PINNING.md`.
 - Product roadmap: `docs/ROADMAP.md`.
-- Harness roadmap and sensors: `docs/harness/state/roadmap.md` and
+- Harness overview and sensors: `docs/harness/README.md` and
   `docs/harness/feedback/sensor-registry.md`.
 
 ## Detected Components
@@ -61,7 +61,7 @@ Treat those changes as product changes with scope, verification, and rollback.
 | Bundled images | `images/base/`, `images/claude/`, `images/codex/`, `images/gemini/`, `images/antigravity/`, `images/copilot/`, `images/common/` | Keep image tags, npm packages, Debian snapshot inputs, non-root user setup, and source-digest labels pinned and reviewed. |
 | Pin policy | `src/runhaven/harness/pins.rs`, `src/bin/runhaven-check-pins.rs`, `pins.toml`, `Cargo.toml`, `Cargo.lock`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `ui/package.json`, `ui/package-lock.json` | Pin checks are a release gate. Dependency changes and any future workflow or runner changes need primary-source evidence. |
 | Test suite | `tests/` plus module tests | Focused Rust tests cover CLI, plans, egress, images, state, worktrees, auth, and repo policy. |
-| Harness operating layer | `AGENTS.md`, `feature_list.json`, `current-state.md`, `docs/harness/` | Keep root instructions compact and move durable operating detail into focused harness docs. |
+| Harness operating layer | `AGENTS.md`, `feature_list.json`, `current-state.md`, `docs/harness/` | Keep the three startup files compact and load focused harness docs only on demand. |
 | Human documentation | `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/` | Docs are product surfaces. Keep macOS 26+ only support, Apple `container` 1.0.0, security boundaries, and command examples aligned with code. |
 | Project asset | `docs/assets/logo.png` | Required README asset and manifest entry. |
 

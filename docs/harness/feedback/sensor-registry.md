@@ -21,7 +21,7 @@ real-agent effectiveness.
 | `npm --prefix ui run build` | Vite | Verify static frontend assets build for Tauri | Maintainers | Replace if frontend build tooling changes | Frontend UI changes |
 | `npm --prefix ui run tauri:build` | Tauri CLI | Verify the desktop shell config, capabilities, frontend build, and Rust backend compile together without bundling | Maintainers | Replace when desktop packaging flow changes | Tauri config, capabilities, desktop backend, or frontend integration changes |
 | `./init.sh` | macOS local verification entrypoint | Run the full macOS harness verification set in one command | Maintainers | Replace if the repo adopts a different full local verification entrypoint | Release prep, broad changes, or shared behavior changes |
-| `harnessforge report --target .` | HarnessForge unified report | Advisory structural signal for readiness, audit, drift, index, evidence, first-agent task, and platform contract without running target commands | Maintainers | Replace if report evidence moves into a project-owned release command | Harness, release-prep, state, or docs changes when HarnessForge is available |
+| `harnessforge report --target .` | HarnessForge unified report | Optional structural signal for readiness, audit, drift, evidence, and platform contract without running target commands | Maintainers | Replace if report evidence moves into a project-owned release command | Harness, release-prep, state, or docs changes when HarnessForge is available |
 | `harnessforge audit --target . --min-score 85` | HarnessForge structural audit | Advisory structural check for the repo harness floor; repo-owned docs, tests, and maintainer decisions remain authoritative | Maintainers | Replace if a project-owned harness audit supersedes it | Harness changes and release prep when HarnessForge is available |
 | Local Markdown link check | One-off local script or reviewer command over tracked Markdown files | Confirm target-relative doc links resolve after docs changes | Maintainers | Replace if a packaged docs checker is added | Docs, README, harness docs, and roadmap changes |
 | Platform wording scan | `rg` over docs/state for unsupported platform claims | Preserve macOS 26+ only runtime and contributor verification | Maintainers | Replace if platform contract expands by accepted source-backed decision | Docs, future CI, install, runtime, or manifest changes |
@@ -44,8 +44,8 @@ For custom checks, prefer failure messages with:
 ## Promotion Rules
 
 - Do not run commands only because they appear here. Use repo-owned change
-  type guidance first. HarnessForge planning or verification output is
-  advisory while the tool is under active development.
+  type guidance first. Optional structural-review output is advisory unless a
+  maintainer promotes a finding into repo-owned artifacts.
 - Keep owner, source, purpose, and retire conditions current before promoting
   a check into release or automation gates.
 - Remove or replace sensors that no longer catch meaningful regressions.

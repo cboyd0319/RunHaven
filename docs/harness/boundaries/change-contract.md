@@ -55,16 +55,15 @@ user requirements.
 ## Verification
 
 Choose checks from `docs/harness/feedback/verification-matrix.md`; that file
-owns command routing, advisory HarnessForge review commands, and escalation
-rules.
+owns command routing and escalation rules.
 
 Required evidence:
 
 - Command names.
 - Pass or fail result.
 - Any skipped checks, reason, risk, and next best check.
-- Any HarnessForge recommendation adopted into RunHaven must be backed by
-  repo-owned docs, tests, policy, or maintainer decision.
+- Any optional structural-review recommendation adopted into RunHaven must be
+  backed by repo-owned docs, tests, policy, or maintainer decision.
 - Runtime smoke evidence for Apple `container`, provider, image, auth, or
   worktree boundary changes.
 

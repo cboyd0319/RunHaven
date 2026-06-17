@@ -1,61 +1,53 @@
 ---
 name: harness
-description: Use when maintaining, reviewing, or improving this repository's agent harness without requiring HarnessForge to be installed.
+description: Use when maintaining, reviewing, or improving this repository's agent harness.
 ---
 
 # Harness Skill
 
-Status: active for this repository.
+Use this skill for changes to agent instructions, startup files, state,
+verification routing, harness docs, lifecycle handoff, or harness evidence.
 
-Use when changing or reviewing instructions, harness docs, state, verification
-routing, agent tools, CI/workflows, release controls, or evidence.
+## Model
 
-## Zero-Install Rule
+RunHaven uses a lightweight five-part harness:
 
-Maintain the harness from repo files alone. HarnessForge CLI and the HarnessForge GitHub Action are optional owner tools, not contributor prerequisites or project source of truth. Use repo-owned commands, docs, tests, and maintainer decisions first.
+- Instructions: `AGENTS.md`
+- Tools: shell, git, file edits, and `init.sh`
+- Environment: manifests, lockfiles, `rust-toolchain.toml`, and `pins.toml`
+- State: `feature_list.json` and `current-state.md`
+- Feedback: focused checks plus `./init.sh` when the change needs it
 
 ## Startup
 
 1. Read `references/repo-harness.md`.
-2. Load only the repo-root files that match the task surface.
-3. Keep detailed repo facts in repo-owned harness docs, not in this skill.
+2. Read only the startup files or focused harness docs named by the task.
+3. Do not bulk-load `docs/harness/`.
 
-## Operating Rules
+## Rules
 
-- Keep root instructions short; route durable detail into focused docs.
-- Update the authoritative owner first, then only surfaces that need to change.
-- Do not require HarnessForge for ordinary contributor verification.
-- Do not promote HarnessForge report suggestions into project requirements
-  until repo-owned docs, tests, policy, or a maintainer accepts them.
-- Do not add machine-local paths, user-specific tool mandates, personal
-  preferences, autonomous repair workflows, credential rotation, pushes, or PRs.
-- Preserve project-owned instruction files unless enhancement or force behavior
-  is explicit.
-- Treat structural scores as harness-health signals, not real-agent
-  effectiveness evidence.
+- Keep root instructions as a map, not a manual.
+- Prefer deleting stale guidance, merging duplicates, or tightening a check
+  before adding a new harness file.
+- Do not require HarnessForge or any optional owner tool for ordinary
+  contributor verification.
+- Do not add machine-local paths, personal tool mandates, credential rotation,
+  cloud-cost actions, pushes, PRs, or broad automation.
+- Treat structural scores as advisory signals, not proof of agent
+  effectiveness.
+- Record only current state and meaningful verification. Keep raw logs and long
+  history out of startup files.
 
-## Improvement Loop
+## Verification
 
-1. Confirm objective and changed surfaces.
-2. Inspect the real repo before editing generated placeholders.
-3. Prefer deleting stale guidance, merging duplicates, or tightening checks.
-4. Make the smallest harness change that prevents the miss.
-5. Run repo-owned commands from the verification matrix.
-6. Record pass/fail, skipped checks, risk, and next step in evidence or
-   `current-state.md`.
-7. Retire first-agent or review placeholders after accepted guidance moves into
-   durable docs, tests, policy, or state.
-
-## Optional Owner Tools
-
-Use these only when available and relevant:
+For harness-only edits, normally run:
 
 ```bash
-harnessforge report --target .
-harnessforge plan --target . --since HEAD
-harnessforge audit --target . --min-score 85
-harnessforge update --target . --drift-report
+cargo run --locked --bin runhaven-check-pins
+python3 -m json.tool feature_list.json >/dev/null
+git diff --check
 ```
 
-Treat the output as advisory unless the repo owner has adopted HarnessForge or
-the HarnessForge Action as an explicit maintenance gate.
+Add a local Markdown link check when docs links change. Run broader checks only
+when the harness change affects runtime commands, dependency pins, security
+boundaries, release controls, or startup scripts.

@@ -1,34 +1,29 @@
 # Repo Harness Reference
 
-Use this reference after activating the harness skill. Paths are relative to the
-skill root.
+Use this after activating the repo `harness` skill.
 
-## Startup Files
+## Always Small
+
+Startup context is limited to:
 
 - `../../../AGENTS.md`
 - `../../../feature_list.json`
 - `../../../current-state.md`
 
-## Harness Docs
+`current-state.md` is the repo progress and handoff file.
 
-For harness-doc, generated-output, scoring, report, or policy work, read:
+## Load On Demand
 
-- `../../../docs/harness/README.md`
-- `../../../docs/harness/authoritative-facts.md`
+- Harness overview: `../../../docs/harness/README.md`
+- Verification routing: `../../../docs/harness/feedback/verification-matrix.md`
+- Component boundaries: `../../../docs/harness/boundaries/component-inventory.md`
+- Security boundaries: `../../../docs/harness/boundaries/security-boundary-map.md`
+- Release controls: `../../../docs/harness/release/release-controls.md`
+- Historical evidence: `../../../docs/harness/evidence/evidence-log.md`
 
-Then load only the focused file needed for the surface:
+Do not read these unless the task touches that surface.
 
-- `../../../docs/harness/state/first-agent-task.md`
-- `../../../docs/harness/boundaries/component-inventory.md`
-- `../../../docs/harness/boundaries/change-contract.md`
-- `../../../docs/harness/feedback/verification-matrix.md`
-- `../../../docs/harness/feedback/sensor-registry.md`
-- `../../../docs/harness/evidence/evidence-log.md`
-- `../../../docs/harness/evidence/first-agent-review.json`
-- `../../../docs/harness/state/roadmap.md`
+## Optional Owner Tools
 
-## Zero-Install Reminder
-
-Treat HarnessForge CLI and Action outputs as advisory unless the repo owner has
-adopted them as explicit gates. Ordinary contributors should be able to use the
-repo-owned docs and verification commands without installing HarnessForge.
+HarnessForge output is optional and advisory. Repo-owned docs, tests, local
+commands, and maintainer decisions are authoritative for RunHaven.
