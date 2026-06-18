@@ -1,6 +1,6 @@
 # Research And Source Ledger
 
-Last reviewed: 2026-06-16
+Last reviewed: 2026-06-18
 
 This file records sources used for product, security, runtime, and pinning
 decisions. Update it whenever a dependency pin, runtime assumption, security
@@ -197,11 +197,11 @@ Reviewed on 2026-06-15 for the bundled provider endpoint matrix:
   Reviewed for current Antigravity CLI lifecycle context. It does not provide a
   minimal runtime endpoint allowlist.
 
-Pinned package scan on 2026-06-15:
+Pinned package scan on 2026-06-18:
 
 - Scanned npm tarballs matching current image pins:
-  `@anthropic-ai/claude-code@2.1.177`, `@openai/codex@0.139.0`,
-  `@google/gemini-cli@0.46.0`, and `@github/copilot@1.0.62`.
+  `@anthropic-ai/claude-code@2.1.181`, `@openai/codex@0.140.0`,
+  `@google/gemini-cli@0.46.0`, and `@github/copilot@1.0.63`.
 - Package strings were used only as weak supporting evidence. Hosts were not
   promoted to bundled defaults without official source evidence or a future
   live RunHaven smoke.
@@ -238,7 +238,7 @@ Reviewed on 2026-06-16 before adding the pre-implementation UI guardrails:
 
 ## Package And Image Sources
 
-- Rust toolchain and crate versions reviewed on 2026-06-16 with local
+- Rust toolchain and crate versions reviewed on 2026-06-18 with local
   `rustc --version`, `cargo --version`, and `cargo search`:
   <https://crates.io/>
 - Rust release calendar reference:

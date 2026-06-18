@@ -1,6 +1,6 @@
 # Current State
 
-Last Updated: 2026-06-17 UTC
+Last Updated: 2026-06-18 UTC
 
 ## Current Objective
 
@@ -41,6 +41,13 @@ Load deeper docs only when the task touches that surface.
 
 ## Latest Verified Work
 
+- 2026-06-18: Refreshed direct package pins and lockfiles to current stable
+  package-manager releases. Tauri Rust pins moved to `tauri` 2.11.3 and
+  `tauri-build` 2.6.3; frontend `@tauri-apps/api` moved to 2.11.1; bundled
+  image CLIs moved to Claude Code 2.1.181, Codex 0.140.0, and Copilot 1.0.63.
+  Cargo and npm lockfiles were refreshed. Playwright now starts an isolated
+  strict-port RunHaven dev server instead of reusing an unrelated process on
+  port 5173.
 - 2026-06-18: Implemented OWASP-informed local hardening from the Cheat Sheet
   review. Tauri commands now reject oversized IPC fields before planning or
   launch confirmation, and RunHaven cache markers, logs, and locks are created
@@ -60,6 +67,41 @@ Load deeper docs only when the task touches that surface.
 
 ## Trusted Verification
 
+- 2026-06-18 package pin refresh checks:
+  - `rustup check` reported stable `1.96.0` up to date.
+  - `cargo info`, `cargo search`, and `npm view` checked current stable direct
+    package versions.
+  - `cargo update` and `cargo update --manifest-path src-tauri/Cargo.toml`
+    refreshed Cargo lockfiles to the latest Rust 1.96-compatible versions.
+  - `npx -y npm@11.17.0 --prefix <package> install --package-lock-only
+    --ignore-scripts` refreshed UI and bundled-image npm lockfiles.
+  - `npx -y npm@11.17.0 --prefix <package> audit --audit-level=moderate`
+    passed for the UI and bundled-image npm packages.
+  - `cargo update --dry-run --verbose` reported zero remaining root Cargo
+    lockfile updates.
+  - `cargo update --manifest-path src-tauri/Cargo.toml --dry-run --verbose`
+    reported zero remaining Tauri lockfile updates; remaining newer transitive
+    releases are outside upstream semver constraints.
+  - `cargo tree --manifest-path src-tauri/Cargo.toml --locked --target
+    aarch64-apple-darwin -i glib` found no macOS dependency path for `glib`.
+  - `cargo fmt --check` passed.
+  - `cargo fmt --manifest-path src-tauri/Cargo.toml --check` passed.
+  - `cargo run --locked --bin runhaven-check-pins` passed.
+  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
+    passed.
+  - `git diff --check` passed.
+  - `cargo test --locked` passed.
+  - `cargo test --manifest-path src-tauri/Cargo.toml --locked` passed.
+  - `cargo clippy --all-targets --locked -- -D warnings` passed.
+  - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked
+    -- -D warnings` passed.
+  - `npx -y npm@11.17.0 --prefix ui test -- --run` passed.
+  - `npx -y npm@11.17.0 --prefix ui run check` passed.
+  - `npx -y npm@11.17.0 --prefix ui run build` passed.
+  - `npx -y npm@11.17.0 --prefix ui run test:e2e` passed after Playwright was
+    isolated from the unrelated JobSentinel dev server on port 5173.
+  - `cargo build --locked` passed.
+  - `npx -y npm@11.17.0 --prefix ui run tauri:build` passed.
 - 2026-06-18 security hardening checks:
   - Red checks first failed for oversized IPC payloads and default active-run
     marker permissions.

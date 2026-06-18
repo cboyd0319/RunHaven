@@ -1,4 +1,4 @@
-# Current stable pins verified on 2026-06-16.
+# Current stable pins verified on 2026-06-18.
 
 [runhaven]
 version = "0.1.0"
@@ -21,15 +21,15 @@ uuid = "1.23.3"
 tempfile = "3.27.0"
 
 [tauri]
-tauri = "2.11.2"
-tauri-build = "2.6.2"
+tauri = "2.11.3"
+tauri-build = "2.6.3"
 tauri-plugin-dialog = "2.7.1"
 
 [frontend]
 "@playwright/test" = "1.61.0"
 "@lucide/svelte" = "1.20.0"
 "@sveltejs/vite-plugin-svelte" = "7.1.2"
-"@tauri-apps/api" = "2.11.0"
+"@tauri-apps/api" = "2.11.1"
 "@tauri-apps/cli" = "2.11.2"
 "@tauri-apps/plugin-dialog" = "2.7.1"
 svelte = "5.56.3"
@@ -128,17 +128,17 @@ zsh = "5.9-8+b23"
 zsh_common = "5.9-8"
 
 [agent_cli]
-claude_code = "2.1.177"
-codex = "0.139.0"
+claude_code = "2.1.181"
+codex = "0.140.0"
 gemini_cli = "0.46.0"
 antigravity_cli = "1.0.8"
-copilot_cli = "1.0.62"
+copilot_cli = "1.0.63"
 npm = "11.17.0"
 
 [agent_cli_integrity]
-claude_code = "sha512-pbBlT4O36j60k7Zd1aPQlVU1HFFpvFaTTnrsWLAVKdIHK/EcLjVjE/qY8kz9/e62XerK/UhJrZ8GsLaBNQ+6Mw=="
-codex = "sha512-wr2fRE+fzW0CjEbfFsLh1ftarVEcw0CMLWS7QyA0nyOz5qacQPVq3cq2+/U7oEbwm1TOqoi0Fm1nxniB5FkpmA=="
+claude_code = "sha512-C8T7H6qDIZLPzc4VChskMfq2nCjV9DU4zLcHtaK9rlQTt+cFCNPyzZ6FbMWiGQsQ9h4Z7nwdSZNhWEMPvfb5/g=="
+codex = "sha512-FMnN12kJzVPljMTYRydLCNgd0cXXmVasNSfq2PtS42RMEIxoQ3dHtMvmno35hu2tfwrKNAAPCm4s+2PaFTEBGg=="
 gemini_cli = "sha512-+HZtuuDKsL8mvOUWgK08GkrL1BQM4IplaSzxIjAM262FmJFp3Jo/zlHUq9ulRKcvx0agZ4KAzuj7jG9yIAxFBw=="
 antigravity_cli = "sha512-982b344defd2e63b08d4a9ef608a770aba3a92e9a4118d318e0082f29743457e8a16aaf1c00f7c3ade75c2d07aef5a8fa5da660e408cb199b47a8778b31228a0"
-copilot_cli = "sha512-jR2msL2xmLPHvcfnQnIJuaM9oEoL8qcjmsVOkyUrsqBVRGw2HaaFx9yAB4NLR+ub/XrhaIdnV91/4URR59Utbw=="
+copilot_cli = "sha512-e8DRYiWJQc4kepVXsXjC8vpDU2FXS/TfR+Z6p/KAojfcwIUZzKMAfCV5D1lD25hV4CryVH1Z9t7mHqChickj0Q=="
 npm = "sha512-PurxiZexEHDTE4SSaLI3ZrnbAGiZfeyUcQcxcP5D+hfytNAze/D1IzDuInTn9XVLIbAQUnQuSPXJx02LHjLvQw=="

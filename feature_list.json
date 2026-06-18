@@ -1,7 +1,7 @@
 {
   "$schema": "docs/harness/schemas/feature-list.schema.json",
   "project": "RunHaven",
-  "last_updated": "2026-06-17",
+  "last_updated": "2026-06-18",
   "rules": {
     "single_active_feature": true,
     "passing_requires_evidence": true,
