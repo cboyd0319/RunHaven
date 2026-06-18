@@ -102,6 +102,8 @@ Load deeper docs only when the task touches that surface.
     isolated from the unrelated JobSentinel dev server on port 5173.
   - `cargo build --locked` passed.
   - `npx -y npm@11.17.0 --prefix ui run tauri:build` passed.
+  - `cargo run --locked --bin runhaven -- image build <agent> --dry-run`
+    passed for Claude, Codex, Copilot, and Gemini.
 - 2026-06-18 security hardening checks:
   - Red checks first failed for oversized IPC payloads and default active-run
     marker permissions.
