@@ -1,9 +1,9 @@
-use std::fs::{self, File, OpenOptions, TryLockError};
+use std::fs::{File, TryLockError};
 use std::io::Write;
 
 use anyhow::{Context, Result, bail};
 
-use crate::paths::state_lock_path;
+use crate::paths::{open_private_read_write, state_lock_path};
 
 pub struct StateLock {
     file: File,
@@ -17,15 +17,7 @@ impl Drop for StateLock {
 
 pub fn acquire_state_lock(state_volume: &str) -> Result<StateLock> {
     let path = state_lock_path(state_volume);
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    let mut file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .truncate(false)
-        .open(&path)
+    let mut file = open_private_read_write(&path)
         .with_context(|| format!("could not open state lock: {}", path.display()))?;
     match file.try_lock() {
         Ok(()) => {}

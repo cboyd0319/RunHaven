@@ -154,6 +154,46 @@ fn build_plan_response_rejects_invalid_workspace() {
 }
 
 #[test]
+fn build_plan_response_rejects_oversized_ipc_fields() {
+    let (_guard, _cache, _cache_home) = isolated_cache();
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut plan_request = request(workspace.path().to_path_buf());
+    plan_request.workspace_path = "x".repeat(4097);
+
+    let error = build_plan_response(plan_request).expect_err("workspace path cap");
+
+    assert!(error.contains("workspace path"));
+
+    let mut plan_request = request(workspace.path().to_path_buf());
+    plan_request.provider_hosts = vec!["api.openai.com".to_string(); 51];
+
+    let error = build_plan_response(plan_request).expect_err("provider host count cap");
+
+    assert!(error.contains("provider hosts"));
+
+    let mut plan_request = request(workspace.path().to_path_buf());
+    plan_request.env_names = vec!["OPENAI_API_KEY".to_string(); 51];
+
+    let error = build_plan_response(plan_request).expect_err("env name count cap");
+
+    assert!(error.contains("environment variable names"));
+}
+
+#[test]
+fn launch_run_rejects_oversized_warning_confirmations() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let request = LaunchRunRequest {
+        plan: request(workspace.path().to_path_buf()),
+        confirm_launch: true,
+        confirmed_warnings: vec!["full-internet".to_string(); 17],
+    };
+
+    let error = validate_launch_confirmation(&request).expect_err("warning count cap");
+
+    assert!(error.contains("confirmed warning codes"));
+}
+
+#[test]
 fn launch_run_requires_explicit_confirmation() {
     let (_guard, _cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");

@@ -3,12 +3,14 @@ use runhaven::image_doctor::{
     collect_image_status,
 };
 
+use super::{MAX_AGENT_NAME_LEN, validate_text_len};
 use crate::contracts::{
     BuilderStatus, ImageStatusRequest, ImageStatusResponse, ProfileImageStatus,
 };
 
 #[tauri::command]
 pub(crate) fn get_image_status(request: ImageStatusRequest) -> Result<ImageStatusResponse, String> {
+    validate_text_len("agent", &request.agent, MAX_AGENT_NAME_LEN)?;
     collect_image_status(&request.agent)
         .map(image_status_response)
         .map_err(|error| error.to_string())

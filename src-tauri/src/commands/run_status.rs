@@ -1,6 +1,7 @@
 use runhaven::active::active_run_status_payload;
 use serde_json::Value;
 
+use super::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{
     RunStatusContainer, RunStatusNetwork, RunStatusRequest, RunStatusResources, RunStatusResponse,
     RunStatusRun,
@@ -8,6 +9,7 @@ use crate::contracts::{
 
 #[tauri::command]
 pub(crate) fn get_run_status(request: RunStatusRequest) -> Result<RunStatusResponse, String> {
+    validate_text_len("run id", &request.run_id, MAX_RUN_ID_LEN)?;
     active_run_status_payload(&request.run_id)
         .map_err(|error| error.to_string())
         .and_then(run_status_response)

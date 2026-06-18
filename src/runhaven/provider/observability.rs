@@ -1,4 +1,3 @@
-use std::fs::{self, OpenOptions};
 use std::io::Write;
 
 use anyhow::Result;
@@ -8,7 +7,7 @@ use time::format_description::well_known::Rfc3339;
 
 use crate::auth_broker::BrokerDecision;
 use crate::egress::{ProxyDecision, is_ip_literal};
-use crate::paths::{auth_broker_log_path, egress_policy_log_path};
+use crate::paths::{auth_broker_log_path, egress_policy_log_path, open_private_append};
 use crate::plans::AgentRunPlan;
 use crate::provider_endpoints::match_provider_endpoints;
 
@@ -27,11 +26,8 @@ pub fn write_provider_policy_log(
         return Ok(());
     }
     let path = egress_policy_log_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
     let timestamp = utc_timestamp();
-    let mut file = OpenOptions::new().append(true).create(true).open(path)?;
+    let mut file = open_private_append(&path)?;
     for decision in decisions {
         let payload = json!({
             "timestamp": timestamp,
@@ -58,11 +54,8 @@ pub fn write_auth_broker_log(
     return_code: i32,
 ) -> Result<()> {
     let path = auth_broker_log_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
     let timestamp = utc_timestamp();
-    let mut file = OpenOptions::new().append(true).create(true).open(path)?;
+    let mut file = open_private_append(&path)?;
     if decisions.is_empty() {
         let payload = auth_payload(plan, run_id, &timestamp, None, return_code);
         writeln!(file, "{}", serde_json::to_string(&payload)?)?;

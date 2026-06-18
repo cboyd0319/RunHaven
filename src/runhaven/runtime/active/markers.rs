@@ -1,9 +1,10 @@
 use std::fs;
+use std::io::Write;
 
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
 
-use crate::paths::{active_run_path, active_runs_dir};
+use crate::paths::{active_run_path, active_runs_dir, create_private_file};
 use crate::plans::AgentRunPlan;
 use crate::validators::{validate_run_id, validate_runhaven_container_name};
 use crate::worktrees::worktree_record;
@@ -31,14 +32,12 @@ pub fn write_active_run_record(plan: &AgentRunPlan, run_id: &str, started_at: &s
 
 pub fn write_active_run_payload(run_id: &str, payload: Value) -> Result<()> {
     let path = active_run_path(run_id)?;
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
     let temporary = path.with_extension("tmp");
-    fs::write(
-        &temporary,
-        format!("{}\n", serde_json::to_string(&payload)?),
-    )?;
+    {
+        let mut file = create_private_file(&temporary)?;
+        writeln!(file, "{}", serde_json::to_string(&payload)?)?;
+        file.flush()?;
+    }
     fs::rename(temporary, path)?;
     Ok(())
 }
@@ -161,4 +160,80 @@ pub fn read_active_run_records() -> Vec<Value> {
         )
     });
     records
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use crate::paths::TEST_ENV_LOCK;
+    use std::os::unix::fs::PermissionsExt;
+    use std::sync::MutexGuard;
+
+    struct CacheHomeOverride {
+        previous: Option<std::ffi::OsString>,
+    }
+
+    impl CacheHomeOverride {
+        fn set(path: &std::path::Path) -> Self {
+            let previous = std::env::var_os("RUNHAVEN_CACHE_HOME");
+            // SAFETY: tests using this helper hold TEST_ENV_LOCK while mutating the
+            // process environment, and Drop restores the previous value.
+            unsafe {
+                std::env::set_var("RUNHAVEN_CACHE_HOME", path);
+            }
+            Self { previous }
+        }
+    }
+
+    impl Drop for CacheHomeOverride {
+        fn drop(&mut self) {
+            // SAFETY: caller holds TEST_ENV_LOCK until this guard is dropped.
+            unsafe {
+                if let Some(value) = &self.previous {
+                    std::env::set_var("RUNHAVEN_CACHE_HOME", value);
+                } else {
+                    std::env::remove_var("RUNHAVEN_CACHE_HOME");
+                }
+            }
+        }
+    }
+
+    fn isolated_cache() -> (
+        MutexGuard<'static, ()>,
+        tempfile::TempDir,
+        CacheHomeOverride,
+    ) {
+        let guard = TEST_ENV_LOCK.lock().expect("env lock");
+        let cache = tempfile::tempdir().expect("cache");
+        let cache_home = CacheHomeOverride::set(cache.path());
+        (guard, cache, cache_home)
+    }
+
+    #[test]
+    fn active_run_markers_use_owner_only_permissions() {
+        let (_guard, _cache, _cache_home) = isolated_cache();
+
+        write_active_run_payload(
+            "permission-test",
+            json!({
+                "run_id": "permission-test",
+                "container_name": "runhaven-permission-test"
+            }),
+        )
+        .expect("active run marker");
+
+        let dir_mode = fs::metadata(active_runs_dir())
+            .expect("active runs dir")
+            .permissions()
+            .mode()
+            & 0o777;
+        let file_mode = fs::metadata(active_run_path("permission-test").expect("marker path"))
+            .expect("active run file")
+            .permissions()
+            .mode()
+            & 0o777;
+
+        assert_eq!(dir_mode, 0o700);
+        assert_eq!(file_mode, 0o600);
+    }
 }

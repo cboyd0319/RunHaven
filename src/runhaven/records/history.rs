@@ -1,4 +1,4 @@
-use std::fs::{self, OpenOptions};
+use std::fs;
 use std::io::Write;
 use std::path::Path;
 
@@ -14,7 +14,7 @@ pub use diff::runs_diff;
 pub use log::runs_log;
 
 use crate::git::GitChange;
-use crate::paths::runs_log_path;
+use crate::paths::{open_private_append, runs_log_path};
 use crate::plans::AgentRunPlan;
 use crate::worktrees::worktree_record;
 
@@ -33,9 +33,6 @@ pub struct RunRecordInput<'a> {
 
 pub fn write_run_record(input: RunRecordInput<'_>) -> Result<()> {
     let path = runs_log_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
     let mut payload = json!({
         "timestamp": input.finished_at,
         "started_at": input.started_at,
@@ -57,7 +54,7 @@ pub fn write_run_record(input: RunRecordInput<'_>) -> Result<()> {
     if let Some(worktree) = &input.plan.worktree {
         payload["worktree"] = worktree_record(worktree);
     }
-    let mut file = OpenOptions::new().append(true).create(true).open(path)?;
+    let mut file = open_private_append(&path)?;
     writeln!(file, "{}", serde_json::to_string(&payload)?)?;
     Ok(())
 }

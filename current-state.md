@@ -41,6 +41,10 @@ Load deeper docs only when the task touches that surface.
 
 ## Latest Verified Work
 
+- 2026-06-18: Implemented OWASP-informed local hardening from the Cheat Sheet
+  review. Tauri commands now reject oversized IPC fields before planning or
+  launch confirmation, and RunHaven cache markers, logs, and locks are created
+  with owner-only permissions on Unix.
 - 2026-06-17: Simplified the repo harness to the lightweight five-subsystem
   model from the referenced harness-learning material. Startup now routes
   through only `AGENTS.md`, `feature_list.json`, and `current-state.md`;
@@ -56,6 +60,22 @@ Load deeper docs only when the task touches that surface.
 
 ## Trusted Verification
 
+- 2026-06-18 security hardening checks:
+  - Red checks first failed for oversized IPC payloads and default active-run
+    marker permissions.
+  - `cargo fmt --check` passed.
+  - `cargo fmt --manifest-path src-tauri/Cargo.toml --check` passed.
+  - `cargo test --locked` passed.
+  - `cargo test --manifest-path src-tauri/Cargo.toml --locked` passed.
+  - `cargo clippy --all-targets --locked -- -D warnings` passed.
+  - `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked
+    -- -D warnings` passed.
+  - `cargo run --locked --bin runhaven-check-pins` passed.
+  - `npm --prefix ui test -- --run` passed.
+  - `npm --prefix ui run check` passed.
+  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
+    passed.
+  - `git diff --check` passed.
 - 2026-06-17 harness simplification checks:
   - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
     passed.

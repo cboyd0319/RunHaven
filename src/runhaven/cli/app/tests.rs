@@ -1,11 +1,8 @@
 use super::*;
 use std::ffi::OsString;
 use std::fs;
-use std::sync::Mutex;
 
-use crate::paths::{active_run_path, runs_log_path};
-
-static ENV_LOCK: Mutex<()> = Mutex::new(());
+use crate::paths::{TEST_ENV_LOCK, active_run_path, runs_log_path};
 
 struct CacheHomeOverride {
     previous: Option<OsString>,
@@ -14,7 +11,7 @@ struct CacheHomeOverride {
 impl CacheHomeOverride {
     fn set(path: &std::path::Path) -> Self {
         let previous = std::env::var_os("RUNHAVEN_CACHE_HOME");
-        // SAFETY: tests using this helper hold ENV_LOCK while mutating the
+        // SAFETY: tests using this helper hold TEST_ENV_LOCK while mutating the
         // process environment, and Drop restores the previous value.
         unsafe {
             std::env::set_var("RUNHAVEN_CACHE_HOME", path);
@@ -25,7 +22,7 @@ impl CacheHomeOverride {
 
 impl Drop for CacheHomeOverride {
     fn drop(&mut self) {
-        // SAFETY: caller holds ENV_LOCK until this guard is dropped.
+        // SAFETY: caller holds TEST_ENV_LOCK until this guard is dropped.
         unsafe {
             if let Some(value) = &self.previous {
                 std::env::set_var("RUNHAVEN_CACHE_HOME", value);
@@ -53,7 +50,7 @@ fn split_agent_args_after_separator() {
 
 #[test]
 fn standard_run_launch_error_removes_active_marker_and_writes_record() {
-    let _guard = ENV_LOCK.lock().expect("env lock");
+    let _guard = TEST_ENV_LOCK.lock().expect("env lock");
     let cache = tempfile::tempdir().expect("cache");
     let _cache_home = CacheHomeOverride::set(cache.path());
 

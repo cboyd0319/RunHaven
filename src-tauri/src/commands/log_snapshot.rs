@@ -5,6 +5,7 @@ use runhaven::active::{
 };
 use serde_json::Value;
 
+use super::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{LogSnapshotRequest, LogSnapshotResponse};
 
 #[tauri::command]
@@ -16,6 +17,7 @@ pub(crate) fn get_log_snapshot(request: LogSnapshotRequest) -> Result<LogSnapsho
 }
 
 pub(crate) fn validated_lines(request: &LogSnapshotRequest) -> Result<u32, String> {
+    validate_text_len("run id", &request.run_id, MAX_RUN_ID_LEN)?;
     if !request.confirm_sensitive_output {
         return Err(
             "Confirm raw log viewing before loading output that may contain secrets.".to_string(),
