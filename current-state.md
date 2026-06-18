@@ -4,16 +4,20 @@ Last Updated: 2026-06-18 UTC
 
 ## Current Objective
 
-Next product slice: add the first explicit Tauri run-control operation,
-`stop_run`.
+Next release objective: close the `cli-complete-v0.5.0` scope.
 
 Scope for that slice:
 
-- one typed Rust command for one validated active run id;
-- explicit user confirmation before mutation;
-- narrow `run-control` capability coverage;
-- frontend state that waits for the command result before implying success;
-- focused Rust, Tauri, frontend, and Playwright checks.
+- confirm remaining CLI gaps against `docs/V1_RELEASE_PLAN.md`;
+- use `docs/RELEASE_GAP_ANALYSIS.md` as the active v0.5/v1 gap tracker;
+- finish or explicitly defer any CLI-only product behavior before `v0.5.0`;
+- lock CLI docs, output, JSON/data lifecycle, diagnostics, cleanup, and
+  profile support tiers;
+- apply the secure-easy and maintainability gates to every remaining CLI gap;
+- run focused CLI verification and Apple `container` smokes for any claims.
+
+First GUI slice after the `v0.5.0` CLI-complete scope is closed:
+`tauri-stop-run-control`.
 
 ## Startup State Contract
 
@@ -30,6 +34,21 @@ Load deeper docs only when the task touches that surface.
   `container` on macOS 26+ on Apple silicon.
 - The CLI is the current working product surface.
 - The alpha desktop shell lives under `ui/` and `src-tauri/`.
+- `v0.5.0` is now the intended CLI-complete release. All CLI product work
+  should be done by that tag before broad v1 desktop expansion.
+- RunHaven remains alpha/pre-release until after `v0.5.0` is cut.
+- The proposed v1.0.0 release boundary now requires the desktop app to become
+  first-class, with the CLI as the stable backend and automation surface.
+- Above all else, secure defaults must be the easiest path. Supported
+  lower-security choices should warn and require explicit intent; unsupported
+  or hard-boundary violations still fail closed.
+- Apple `container machine` is not the default RunHaven boundary, but explicit
+  or user-managed machine workflows should not be blocked solely because they
+  are less secure. They should warn, require intent, and fail only for concrete
+  unsupported or unsafe states.
+- Every stage must consider file size, modularity, duplication, crate/component
+  organization, standard-library/native/installed-dependency options, exact
+  current-stable pins, and harness state.
 - Windows and Linux are not supported runtime or contributor-verification
   targets.
 - GitHub Actions CI is disabled during alpha/pre-release. Local verification is
@@ -41,6 +60,36 @@ Load deeper docs only when the task touches that surface.
 
 ## Latest Verified Work
 
+- 2026-06-18: Clarified the Container Machine policy across active docs and
+  harness state. Task-scoped `container run` remains the secure-easy default,
+  while explicit or user-managed Apple `container machine` workflows should be
+  warned and require intent rather than blocked solely because they are less
+  secure.
+- 2026-06-18: Ran a full active-doc release-status pass. User-facing docs,
+  roadmap/planning docs, Tauri planning docs, and harness routing now agree
+  that RunHaven remains alpha/pre-release until after `v0.5.0`, `v0.5.0` is
+  CLI-complete, and `v1.0.0` is the first-class desktop release. The README now
+  names both goals directly. Historical evidence remains historical.
+- 2026-06-18: Added `docs/RELEASE_GAP_ANALYSIS.md` as the active v0.5/v1 gap
+  tracker. It records observed CLI command coverage, current desktop command
+  coverage, maintainability pressure, v0.5 blockers, v1 blockers, v1.x
+  deferrals, and immediate next actions. Linked it from README, roadmap,
+  release plan, non-UI backlog, feature state, and harness routing.
+- 2026-06-18: Locked secure-easy and maintainability gates into `AGENTS.md`,
+  `docs/V1_RELEASE_PLAN.md`, `docs/SECURITY_MODEL.md`, and focused harness
+  docs. Future slices must make secure defaults the easiest path, warn and
+  require intent for supported lower-security choices, fail closed on hard
+  boundary violations, avoid deferred large-file debt, remove meaningful
+  duplication, prefer standard/native/installed solutions, keep exact
+  current-stable pins, and update harness state when scope changes.
+- 2026-06-18: Added and revised `docs/V1_RELEASE_PLAN.md` as the proposed
+  durable release ladder. The plan now sets `v0.5.0` as CLI-complete, makes
+  `v1.0.0` a first-class desktop release for the safe beginner workflow, keeps
+  the CLI as the stable backend and automation surface, records missing
+  runtime/data/storage/network/auth/UX/accessibility/performance edge cases,
+  and defines release milestones and verification gates. Linked it from
+  `README.md` and `docs/ROADMAP.md`; added `cli-complete-v0.5.0` and
+  `desktop-first-class-v1` to `feature_list.json`.
 - 2026-06-18: Refreshed direct package pins and lockfiles to current stable
   package-manager releases. Tauri Rust pins moved to `tauri` 2.11.3 and
   `tauri-build` 2.6.3; frontend `@tauri-apps/api` moved to 2.11.1; bundled
@@ -67,6 +116,59 @@ Load deeper docs only when the task touches that surface.
 
 ## Trusted Verification
 
+- 2026-06-18 README and Container Machine policy docs checks:
+  - `sw_vers` reported macOS 26.5.1 build 25F80.
+  - `uname -m` reported `arm64`.
+  - `container --version` reported Apple `container` CLI 1.0.0 commit
+    `ee848e3`.
+  - `container machine --help` passed and showed create, delete, inspect,
+    list, logs, run, set, set-default, and stop subcommands.
+  - Stale hard-block wording scan for old Container Machine policy phrasing
+    passed.
+  - `cargo run --locked --bin runhaven-check-pins` passed.
+  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
+    passed.
+  - Local Markdown link check over 54 Markdown files passed.
+  - `git diff --check` passed.
+- 2026-06-18 v0.5.0/v1.0.0 gap-analysis docs checks:
+  - CLI help smokes passed for top-level `runhaven`, `runs`, `image`,
+    `network`, `state`, `egress`, `auth`, and `why`.
+  - Tauri command/capability scan and source file-size scan completed for
+    gap-analysis evidence.
+  - `cargo run --locked --bin runhaven-check-pins` passed.
+  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
+    passed.
+  - Local Markdown link check over 54 Markdown files passed.
+  - Stale wording scan for old pre-Tauri/release-boundary/package-evidence
+    phrasing passed with only intentional README release-plan link text.
+  - Explicit trailing-whitespace check over changed docs/state files passed.
+  - `git diff --check` passed.
+- 2026-06-18 active-doc release-status checks:
+  - `cargo run --locked --bin runhaven-check-pins` passed.
+  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
+    passed.
+  - Local Markdown link check over 53 Markdown files passed.
+  - Stale wording scans for old pre-Tauri, release-boundary, alpha, `v0.5.0`,
+    and `v1.0.0` phrasing passed with only intentional historical/evidence
+    matches.
+  - Explicit trailing-whitespace check over changed docs/state files passed.
+  - `git diff --check` passed.
+- 2026-06-18 secure-easy and maintainability docs/harness checks:
+  - `cargo run --locked --bin runhaven-check-pins` passed.
+  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
+    passed.
+  - Local Markdown link check over 53 Markdown files passed.
+  - Explicit trailing-whitespace check over the changed docs/state files
+    passed.
+  - `git diff --check` passed.
+- 2026-06-18 v0.5.0/v1.0.0 release-ladder docs checks:
+  - `cargo run --locked --bin runhaven-check-pins` passed.
+  - `git ls-files '*.json' | xargs -n 1 python3 -m json.tool >/dev/null`
+    passed.
+  - Local Markdown link check over 53 Markdown files passed.
+  - Explicit trailing-whitespace check over the changed docs/state files
+    passed.
+  - `git diff --check` passed.
 - 2026-06-18 package pin refresh checks:
   - `rustup check` reported stable `1.96.0` up to date.
   - `cargo info`, `cargo search`, and `npm view` checked current stable direct
@@ -154,32 +256,28 @@ Load deeper docs only when the task touches that surface.
 
 ## Touched Surfaces In This Harness Pass
 
-- `AGENTS.md`
-- `.agents/skills/harness/SKILL.md`
-- `.agents/skills/harness/references/repo-harness.md`
-- `README.md`
-- `feature_list.json`
-- `current-state.md`
-- `docs/HARNESS_EVALUATION.md`
-- `docs/NON_UI_BACKLOG.md`
-- `docs/TAURI_LOG_VIEWING_DESIGN.md`
-- `docs/harness/README.md`
-- `docs/harness/manifest.json`
-- `docs/harness/authoritative-facts.md`
-- `docs/harness/boundaries/change-contract.md`
-- `docs/harness/boundaries/component-inventory.md`
-- `docs/harness/feedback/quality-document.md`
-- `docs/harness/feedback/sensor-registry.md`
-- `docs/harness/feedback/verification-matrix.md`
-- `docs/harness/operations/agent-operating-model.md`
-- `docs/harness/release/release-controls.md`
-- `docs/harness/research/sources.md`
-- `docs/harness/state/entropy-control.md`
-- `docs/harness/state/first-agent-task.md`
-- `docs/harness/state/roadmap.md`
-- `docs/harness/evidence/evidence-log.md`
+- Root docs/state: `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`,
+  `feature_list.json`, and `current-state.md`.
+- Product docs: `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`,
+  `docs/ARCHITECTURE.md`, `docs/CAPABILITIES.md`, `docs/INSTALLATION.md`,
+  `docs/NON_UI_BACKLOG.md`, `docs/ROADMAP.md`, `docs/SECURITY_MODEL.md`,
+  `docs/RELEASE_GAP_ANALYSIS.md`, `docs/TAURI_LOG_VIEWING_DESIGN.md`,
+  `docs/TAURI_UI_GUARDRAILS.md`, `docs/TAURI_UI_RESEARCH_PLAN.md`,
+  `docs/USAGE.md`, and `docs/V1_RELEASE_PLAN.md`.
+- Harness docs: `docs/harness/README.md`,
+  `docs/harness/authoritative-facts.md`,
+  `docs/harness/boundaries/change-contract.md`,
+  `docs/harness/boundaries/component-inventory.md`,
+  `docs/harness/boundaries/security-boundary-map.md`,
+  `docs/harness/evidence/evidence-log.md`,
+  `docs/harness/feedback/verification-matrix.md`, and
+  `docs/harness/release/release-controls.md`.
 
 ## Next Step
 
-Implement `tauri-stop-run-control` as the next product slice. Keep every later
-run-control operation separate.
+Close or explicitly accept the `cli-complete-v0.5.0` scope before broad v1 GUI
+expansion. Apply the secure-easy and maintainability gates to every remaining
+CLI gap. Use `docs/RELEASE_GAP_ANALYSIS.md` for current blockers and
+deferrals, and `docs/V1_RELEASE_PLAN.md` for the durable release contract.
+`tauri-stop-run-control` remains the first GUI slice toward
+`desktop-first-class-v1`, not the whole desktop release requirement.

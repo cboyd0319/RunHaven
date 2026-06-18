@@ -13,14 +13,25 @@ repair, logs, image build, state cleanup, and worktree review remain CLI-first
 until each gets a typed command, explicit confirmation, focused tests, and a
 narrow capability.
 
+Release architecture is two-stage. `v0.5.0` should complete the CLI contract
+and keep the CLI as the stable backend and automation surface. `v1.0.0` should
+make the desktop app the easiest safe path, backed by the same Rust planner,
+validators, records, provider policy, auth metadata, and cleanup rules.
+
 ## Runtime Pattern
 
-Default runs use task-scoped `container run`, not `container machine`.
+Default runs use task-scoped `container run`. Apple `container machine` is an
+advanced, user-chosen path, not the default RunHaven boundary.
 
 Reason: `container machine` is convenient, but its normal workflow maps the
 user's macOS home directory into the guest. That is the wrong beginner default
 for AI agents because it can expose dotfiles, cloud credentials, SSH material,
 and unrelated repositories.
+
+RunHaven should not block explicit or user-managed machine workflows solely
+because they are less secure. If RunHaven adds machine integration, it should
+warn about host-home, credential, persistence, and cleanup tradeoffs and require
+explicit intent before use.
 
 `runhaven run` generates this shape:
 

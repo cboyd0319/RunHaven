@@ -7,6 +7,12 @@ folder-pick, run-plan review, and an explicitly confirmed launch path. This
 document defines the security, resource, and approval boundaries for every
 WebView-controlled RunHaven operation.
 
+Current release context: the desktop app remains alpha while RunHaven closes
+the `v0.5.0` CLI-complete milestone. `v1.0.0` requires the desktop app to
+become the first-class safe path, but each new desktop command still needs
+typed Rust inputs, explicit confirmation where mutating, focused tests, and a
+narrow Tauri capability.
+
 ## Source Evidence
 
 - Tauri v2 security docs, reviewed 2026-06-16:
@@ -149,15 +155,19 @@ Explicit confirmation required:
 - SSH-forwarding attempts while disabled;
 - environment passthrough.
 
-Blocked until a dedicated design exists:
+Not exposed in the desktop UI until a dedicated design exists:
 
 - Apple `container system stop`;
 - Apple `container` install, update, or uninstall;
 - registry login, logout, push, or credential edits;
-- machine creation, deletion, or mutation;
+- managed `container machine` creation, deletion, mutation, or attachment;
 - image deletion outside RunHaven-managed rebuild flows;
 - volume deletion outside RunHaven-managed state commands;
 - updater, signing, notarization, or release publication.
+
+User-managed `container machine` workflows are not blocked solely because they
+are less secure. They are outside the current desktop scope until RunHaven has
+a warned, explicit, target-validated flow.
 
 ## Command Contract
 

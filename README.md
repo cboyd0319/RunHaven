@@ -15,30 +15,47 @@
 > RunHaven has not been deployed and has no external users yet. CLI contracts,
 > container and image layouts, run-record formats, provider allowlists, auth
 > broker behavior, and docs may change without backward-compatibility
-> guarantees until maintainers declare an explicit release boundary.
+> guarantees. RunHaven remains alpha/pre-release through the `v0.5.0`
+> CLI-complete milestone.
 
 RunHaven is a Rust CLI, with an early Tauri/Svelte desktop shell, for running
 Claude Code, Codex, Gemini, Antigravity, Copilot, or custom coding agents
-inside Apple `container` on macOS 26+. It does not replace those tools; it
-gives them a repeatable local boundary so the safer path is easier to choose.
+inside Apple `container` on macOS 26+. It does not replace those tools. It
+gives them a repeatable local boundary so the secure path is easier to choose.
 
 RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
 supported runtimes or contributor verification targets.
 
-The CLI is the current working product surface. The desktop scaffold under
-`ui/` and `src-tauri/` is alpha UI work: it reads setup, dashboard, profile,
-folder-pick, and run-plan state, and it has a first explicitly confirmed
-launch path with sanitized live run status plus opt-in bounded raw output
-snapshots. Stop, kill, repair, image build, state cleanup, and worktree review
-controls are still CLI-first.
+## At A Glance
 
-[Installation](docs/INSTALLATION.md) |
-[Capabilities](docs/CAPABILITIES.md) |
-[Usage](docs/USAGE.md) |
-[Security model](docs/SECURITY_MODEL.md) |
-[Architecture](docs/ARCHITECTURE.md) |
-[Research](docs/RESEARCH.md) |
-[Harness](docs/harness/README.md)
+| Area | Current state |
+| --- | --- |
+| Status | Alpha/pre-release through the `v0.5.0` CLI-complete milestone. No deployed release or external users yet. |
+| Product surface | The CLI is the current working product surface. |
+| Desktop app | The Tauri/Svelte shell can read setup, dashboard, profile, folder-pick, and run-plan state. It supports confirmed launch, image readiness, sanitized live status, and opt-in bounded raw output snapshots. |
+| Still CLI-first | Stop, kill, repair, image build, state cleanup, and worktree review controls. |
+| Runtime | Apple `container` 1.0.0 on macOS 26+ with Apple silicon. |
+| Safety posture | Mount one selected workspace, isolate agent home state, avoid ambient host credentials, and keep hard security boundaries fail-closed. |
+
+## Release Targets
+
+| Target | Release boundary |
+| --- | --- |
+| `v0.5.0` | CLI complete: command set, docs, JSON and local data decisions, runtime smokes, profile support tiers, diagnostics, cleanup, and security boundaries are finished and verified. RunHaven remains alpha/pre-release until after this milestone. |
+| `v1.0.0` | First-class desktop release: the Tauri app becomes the easiest safe path for setup, image readiness and rebuild, planning, launch, live status, bounded output, stop, kill, repair, diagnostics, worktree review, cleanup, accessibility, signing, notarization, and release provenance. |
+| `v1.x` | Post-v1 expansion: broader provider policy, non-Codex brokers, updater or installer management, MCP or extension workflows, and other work that should not block a secure desktop v1. |
+
+## Product Rule
+
+The secure path must be the easy path. Secure defaults should be the shortest
+workflow. Supported lower-security choices should warn and require explicit
+intent. Unsupported, invalid, or hard-boundary violations still fail closed.
+That includes Apple `container machine`: it is not the default RunHaven
+boundary, but explicit or user-managed machine workflows should be warned, not
+blocked solely because they are less secure.
+
+Start with [Installation](docs/INSTALLATION.md), [Capabilities](docs/CAPABILITIES.md),
+[Usage](docs/USAGE.md), or the [Security model](docs/SECURITY_MODEL.md).
 
 ## Why RunHaven
 
@@ -93,29 +110,16 @@ setup. See [Usage](docs/USAGE.md) for command-level workflows.
 
 ## Documentation
 
-- [Installation](docs/INSTALLATION.md): requirements, local install, first run,
-  and verification.
-- [Capabilities](docs/CAPABILITIES.md): feature overview, defaults, limits, and
-  network modes.
-- [Usage](docs/USAGE.md): command-level workflows and examples.
-- [Security model](docs/SECURITY_MODEL.md): trust boundary, safe defaults, and
-  current risks.
-- [Provider endpoints](docs/PROVIDER_ENDPOINTS.md): reviewed provider host
-  matrix.
-- [Auth broker](docs/AUTH_BROKER.md): Codex API-key broker prototype and
-  future broker criteria.
-- [Architecture](docs/ARCHITECTURE.md): runtime pattern, profiles, networking,
-  records, and broker model.
-- [Apple Container gap analysis](docs/APPLE_CONTAINER_GAP_ANALYSIS.md):
-  pre-Tauri runtime, security, and verification gaps.
-- [Tauri UI guardrails](docs/TAURI_UI_GUARDRAILS.md):
-  resource, approval, and permission boundaries for the desktop UI.
-- [Pinning policy](docs/PINNING.md): exact dependency and image pin rules.
-- [Roadmap](docs/ROADMAP.md): planned product and codebase work.
-- [Harness](docs/harness/README.md): lightweight agent startup, state, and
-  verification routing.
-- [Contributing](CONTRIBUTING.md): local checks and review expectations.
-- [Security policy](SECURITY.md): supported security reporting scope.
+Use the smallest doc that matches the question:
+
+| Need | Start here |
+| --- | --- |
+| Install and run | [Installation](docs/INSTALLATION.md), [Capabilities](docs/CAPABILITIES.md), [Usage](docs/USAGE.md) |
+| Security and runtime boundary | [Security model](docs/SECURITY_MODEL.md), [Provider endpoints](docs/PROVIDER_ENDPOINTS.md), [Apple Container gap analysis](docs/APPLE_CONTAINER_GAP_ANALYSIS.md) |
+| Architecture and auth | [Architecture](docs/ARCHITECTURE.md), [Auth broker](docs/AUTH_BROKER.md), [Research](docs/RESEARCH.md) |
+| Desktop UI | [Tauri UI guardrails](docs/TAURI_UI_GUARDRAILS.md), [Tauri log viewing design](docs/TAURI_LOG_VIEWING_DESIGN.md), [Tauri UI research plan](docs/TAURI_UI_RESEARCH_PLAN.md) |
+| Release planning | [Roadmap](docs/ROADMAP.md), [v0.5.0/v1.0.0 release plan](docs/V1_RELEASE_PLAN.md), [Release gap analysis](docs/RELEASE_GAP_ANALYSIS.md), [Pinning policy](docs/PINNING.md) |
+| Project operations | [Harness](docs/harness/README.md), [Contributing](CONTRIBUTING.md), [Security policy](SECURITY.md) |
 
 ## Development
 

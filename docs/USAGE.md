@@ -8,6 +8,10 @@ Install RunHaven and Apple `container` first:
 RunHaven development and runtime verification require macOS 26+ on Apple
 silicon. Windows and Linux are not supported.
 
+RunHaven is alpha/pre-release until after the `v0.5.0` CLI-complete milestone.
+The commands below describe the current CLI surface; CLI behavior may still
+change before `v0.5.0`.
+
 ## Guided Setup
 
 ```bash

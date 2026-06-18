@@ -42,6 +42,8 @@ Treat those changes as product changes with scope, verification, and rollback.
   `docs/CAPABILITIES.md`, `docs/SECURITY_MODEL.md`, `docs/ARCHITECTURE.md`,
   `docs/AUTH_BROKER.md`, `docs/PROVIDER_ENDPOINTS.md`, and `docs/PINNING.md`.
 - Product roadmap: `docs/ROADMAP.md`.
+- Release ladder and gap analysis: `docs/V1_RELEASE_PLAN.md` and
+  `docs/RELEASE_GAP_ANALYSIS.md`.
 - Harness overview and sensors: `docs/harness/README.md` and
   `docs/harness/feedback/sensor-registry.md`.
 

@@ -1,25 +1,40 @@
 # Non-UI Backlog
 
-Last updated: 2026-06-16
+Last updated: 2026-06-18
 
-Status: durable backlog for work that is not Tauri/UI implementation.
+Status: durable backlog for CLI-complete, runtime, evidence, and product-scope
+work that is not direct Tauri/UI implementation.
 
 RunHaven's Rust CLI is the current product core. This file keeps remaining
-non-UI work explicit so Tauri/UI implementation can proceed without losing
-known runtime, evidence, and product-scope items.
+non-UI work explicit so the `v0.5.0` CLI-complete milestone can close before
+broad `v1.0.0` desktop expansion.
+
+RunHaven remains alpha/pre-release until after `v0.5.0`. After `v0.5.0`, new
+CLI product features should be avoided unless they are bug fixes, security
+fixes, release pin updates, documentation corrections, or internal GUI support
+that preserves CLI semantics.
 
 ## Ongoing Runtime Evidence Gates
 
-These were the pre-UI gates. UI work has started, so keep them as recurring
-runtime evidence gates before broadening launch, run-control, image, state, or
-network UI surfaces.
+These started as pre-UI gates. UI work has started, so keep them as recurring
+runtime evidence gates before broadening CLI claims or desktop launch,
+run-control, image, state, cleanup, worktree, or network surfaces.
 
 | Item | Status | Why It Matters | Action | Done When |
 | --- | --- | --- | --- | --- |
 | Fresh Apple `container` default smoke | recurring before broader UI runtime controls | Unit tests cannot prove installed Apple `container` runtime behavior or JSON shapes. | Run `scripts/apple_container_smoke.sh` on macOS 26+ with Apple `container` 1.0.0. | Smoke exits 0 and cleanup evidence shows no unexpected active runs, state volumes, or managed networks. |
 | Fresh provider-mode smoke | recurring before provider-sensitive UI changes | Provider mode depends on host-only networking, gateway/subnet inspect output, proxy binding, egress denial, and cleanup. | Run `scripts/apple_container_smoke.sh --with-provider`. | Allowed provider HTTPS works, denied proxy/direct egress fails, and no provider network is left behind. |
 | SSH forwarding decision | blocked | Apple `container --ssh` exposes a socket, but the default non-root guest cannot use it on the current pinned runtime. | Keep `--ssh` fail-closed unless a no-secret smoke proves `ssh-add -l` from the non-root guest. | Either documented as intentionally unsupported for the UI, or re-enabled with tests/docs after a passing no-secret runtime proof. |
-| Final local verification pass | recurring before commits that broaden runtime control | UI work should continue from a clean, verified CLI core. | Run `./init.sh` or the smallest equivalent complete check set for the changed surface, JSON validation, Markdown link check, Rust source-size guard, and `git diff --check`. | All relevant checks pass and current-state evidence is updated. |
+| Final local verification pass | recurring before commits that broaden runtime control | Desktop work should build on a clean, verified CLI core. | Run `./init.sh` or the smallest equivalent complete check set for the changed surface, JSON validation, Markdown link check, maintainability review for touched files, and `git diff --check`. | All relevant checks pass and current-state evidence is updated. |
+
+## v0.5.0 CLI-Complete Closure
+
+| Item | Status | Scope | Smallest Next Step |
+| --- | --- | --- | --- |
+| CLI command and docs contract | planned | Confirm `setup`, `doctor`, `agents`, `plan`, `run`, image, network, state, auth, why, egress, runs, and worktree docs match current behavior. | Audit `docs/USAGE.md`, CLI help, and focused tests before tagging `v0.5.0`. |
+| JSON and local data lifecycle decision | planned | Decide which CLI JSON outputs and local record files are stable, schema-versioned, or explicitly best-effort. | Record the decision in `docs/V1_RELEASE_PLAN.md`, `docs/USAGE.md`, or a focused data-lifecycle doc only if needed. |
+| Profile support tiers | planned | Distinguish bundled image availability, basic CLI starts, provider mode support, interactive auth path, and brokered auth. | Add the support matrix to active docs before `v0.5.0`. |
+| CLI maintainability check | planned | Avoid large-file, duplication, crate-organization, or dependency debt before desktop work scales. | Review touched CLI modules against `docs/harness/state/modularization-plan.md` and update state with findings. |
 
 ## Accepted Non-UI Polish
 
@@ -48,18 +63,21 @@ problem, user outcome, security boundary, and verification are clear.
 | Read-only context overlays | candidate | What docs, skills, prompts, or project memory can be mounted read-only without exposing host secrets? | Prefer explicit overlays over host-home mounts. |
 | Shared planner/policy objects | candidate | Which CLI planning data should become reusable by future Rust API and UI commands? | Avoid duplicating parser, docs, and UI state logic. |
 
-## Deferred Until End-Stage Packaging
+## Deferred Until v1 Desktop Packaging
 
-These are not part of the Tauri/UI research phase.
+These are not part of `v0.5.0` CLI-complete scope, but signed/notarized
+desktop artifacts and provenance are required before calling the desktop release
+`v1.0.0`.
 
 | Item | Status | Notes |
 | --- | --- | --- |
-| Signing, notarization, updater, SBOM, provenance, installer, and publication automation | deferred | Keep out of the current phase until the UI direction and product surface are stable. |
+| Signing, notarization, SBOM, provenance, installer, and publication automation | v1 packaging | Required for the `v1.0.0` desktop release artifact, except automatic updater support can remain a v1.x feature if release notes state manual updates clearly. |
 
 ## Source Links
 
 - Apple Container gap analysis: `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`
 - Product roadmap: `docs/ROADMAP.md`
+- Release gap analysis: `docs/RELEASE_GAP_ANALYSIS.md`
 - Harness operations: `docs/harness/README.md`
 - Tauri UI guardrails: `docs/TAURI_UI_GUARDRAILS.md`
 - Extension and MCP boundary: `docs/EXTENSION_MCP_BOUNDARY.md`

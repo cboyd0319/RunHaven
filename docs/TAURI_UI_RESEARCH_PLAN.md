@@ -1,11 +1,17 @@
 # Tauri UI Research Plan
 
-Last updated: 2026-06-16
+Last updated: 2026-06-18
 
 Status: research complete. The first Tauri/Svelte scaffold started from this
 plan with setup, dashboard, profile, folder-pick, and run-plan review surfaces.
 The first mutating slice, `launch_run`, is now implemented behind explicit
 plan and warning confirmation plus its own `launch-run` capability.
+
+Current release context: RunHaven remains alpha/pre-release until after the
+`v0.5.0` CLI-complete milestone. This document records the accepted Tauri
+research decision and alpha UI plan. The durable release ladder lives in
+[`V1_RELEASE_PLAN.md`](V1_RELEASE_PLAN.md): after `v0.5.0`, `v1.0.0` should
+make the desktop app the first-class safe path.
 
 Goal: build the easiest safe desktop experience for people with little or no
 technical background to run AI coding agents inside Apple `container`.
@@ -56,9 +62,9 @@ Reviewed on 2026-06-16.
 | DevPod | DevPod Desktop starts workspace creation from a repo, local path, or image and hides provider setup behind guided modals: <https://devpod.sh/docs/developing-in-workspaces/create-a-workspace> |
 | GitHub Desktop | GitHub Desktop centers branch changes, diffs, selective commits, and discard recovery: <https://docs.github.com/en/desktop/making-changes-in-a-branch/committing-and-reviewing-changes-to-your-project-in-github-desktop> |
 
-Current package and tool evidence from local commands on 2026-06-16:
+Package and tool evidence from local commands at research time on 2026-06-16:
 
-| Package or tool | Current observed stable |
+| Package or tool | Observed stable on 2026-06-16 |
 | --- | --- |
 | Node | `v26.3.0` |
 | npm | `11.16.0` |
@@ -82,10 +88,13 @@ Current package and tool evidence from local commands on 2026-06-16:
 | `eslint` | `10.5.0` |
 | `prettier` | `3.8.4` |
 
-At scaffold time, version checks were re-run and exact stable versions were
-hard-pinned in `ui/package.json`, `ui/package-lock.json`,
-`src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock`. Do not use caret, tilde,
-wildcard, or unpinned plugin versions.
+At scaffold time and later pin-refresh passes, version checks were re-run and
+exact stable versions were hard-pinned in `ui/package.json`,
+`ui/package-lock.json`, `src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock`.
+Treat the table above as historical research evidence. Current dependency
+truth lives in the manifests and lockfiles, with source evidence routed through
+`docs/RESEARCH.md` and `pins.toml`. Do not use caret, tilde, wildcard, or
+unpinned plugin versions.
 
 ## Architecture Decision
 
@@ -362,8 +371,9 @@ Initial plugin permissions:
 
 ## First Scaffold And Launch Slice Acceptance Criteria
 
-The first scaffold and first launch slice are acceptable only while all of
-these remain true:
+The first scaffold and first launch slice were acceptable only while all of
+these remained true, and future desktop slices should keep the same guardrails
+unless `docs/V1_RELEASE_PLAN.md` records a narrower release decision:
 
 1. `docs/TAURI_UI_RESEARCH_PLAN.md` remains the accepted research source.
 2. `docs/TAURI_UI_GUARDRAILS.md` is still accurate.
@@ -388,7 +398,7 @@ these remain true:
     typecheck/unit/browser/build checks, Tauri Rust checks, local Markdown link
     check, pin policy, and `git diff --check`.
 
-The scaffold used the current stable equivalent of:
+The scaffold used the then-current stable equivalent of:
 
 ```bash
 npm create vite@latest ui -- --template svelte-ts
@@ -418,6 +428,10 @@ Tauri was added manually so the repo keeps the planned `ui/` plus
   proves local Svelte state and small components are insufficient.
 
 ## Milestones For The UI Implementation Phase
+
+The early scaffold and launch milestones below are now historical status for
+the alpha desktop. The active v1 desktop milestone sequence is in
+[`V1_RELEASE_PLAN.md`](V1_RELEASE_PLAN.md).
 
 1. Scaffold only:
    - add `ui/`, `src-tauri/`, exact pins, lockfiles, and no mutating commands;

@@ -42,14 +42,44 @@ Do not use this gate to cut input validation at trust boundaries, data-loss
 prevention, security, privacy, accessibility, platform contract, or explicit
 user requirements.
 
+## Secure Easy Path Gate
+
+Design the secure path as the default and easiest path. Supported lower-security
+choices should show plain-language warnings and require explicit intent, but
+should not be hidden or blocked only because they are less secure. Unsupported,
+invalid, or hard-boundary violations still fail closed.
+
+## Maintainability Gate
+
+Before editing and before completion, check the touched surfaces:
+
+- Files, modules, crates, Tauri commands, frontend components, and harness docs
+  stay cohesive and reasonably reviewable.
+- Meaningful duplication is deleted or collapsed into existing helpers where
+  that improves clarity.
+- New abstractions, configuration, dependencies, or files are justified by real
+  repeated behavior, not speculation.
+- Standard library, native platform behavior, and already-installed
+  dependencies were considered before adding custom code.
+- Direct dependency, package, runtime, and image pins stay exact-pinned to
+  current stable sources; transitive dependencies stay locked.
+- Unneeded code, generated files, docs, config, and harness surface are removed.
+
+If a touched file is already too large or hard to review, include a local split
+or deletion in the same scope unless deferral is explicit, small, and recorded.
+
 ## Acceptance Criteria
 
 - The requested behavior or harness improvement is visible in repo files.
 - Security-sensitive changes preserve fail-closed defaults.
+- Secure defaults remain the easiest path; supported lower-security choices are
+  explicit and warned.
 - macOS 26+ on Apple silicon remains the only runtime and contributor
   verification target.
 - Project-owned instructions remain compact and route durable detail into
   focused docs.
+- File size, modularity, duplication, dependency use, and crate/component
+  organization were considered for touched surfaces.
 - Relevant feature, current-state, evidence, and roadmap state agree.
 
 ## Verification

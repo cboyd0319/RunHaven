@@ -5,16 +5,17 @@ Status: draft
 Use this file to make agent-visible security, privacy, permission, and cost
 boundaries explicit before work touches risky surfaces.
 
-People run project commands on personal machines. The product rule is: choose
-the most secure and easiest behavior for every edge case. If those conflict,
-security wins and the tool must explain the safe next step.
+People run project commands on personal machines. The product rule is: make
+the secure path the default and easiest path. Supported lower-security choices
+should warn and require explicit intent; unsupported, invalid, or hard-boundary
+violations still fail closed and must explain the safe next step.
 
 ## Access Boundaries
 
 | Boundary | Current Owner | Rule |
 | --- | --- | --- |
 | Local repository files | Project maintainers | Agents must preserve user changes and avoid destructive git operations unless explicitly approved. |
-| Host filesystem | `runhaven` CLI and Apple `container` | Default runs mount only the selected workspace and a project-scoped agent home volume. Host home directories, raw SSH keys, browser profiles, and cloud credential folders stay unmounted. Do not replace this with `container machine` defaults that map the host user or home directory into the guest. |
+| Host filesystem | `runhaven` CLI and Apple `container` | Default runs mount only the selected workspace and a project-scoped agent home volume. Host home directories, raw SSH keys, browser profiles, and cloud credential folders stay unmounted. Do not replace the default path with `container machine` defaults that map the host user or home directory into the guest. Explicit or user-managed machine workflows should warn and require intent rather than be blocked solely because they are less secure. |
 | Git worktrees | `runhaven` CLI | `run --worktree` requires a clean source git repository, creates a RunHaven-owned branch and worktree under the cache root, mounts that worktree for the agent, and keeps it for explicit user review. Dirty source checkouts fail before worktree creation and print choices to commit or stash, run without `--worktree`, or start from a clean clone or git worktree. `runs keep`, `runs recover`, `runs merge`, and `runs discard` validate the recorded RunHaven-owned worktree and branch before acting; recover and recover JSON output are read-only, suggested project checks are not run automatically, merge refuses dirty or moved source checkouts, and discard removes only the recorded worktree and branch. |
 | Agent state volume | `runhaven` CLI | Per-project/profile/session state is locked during a run so concurrent agents cannot attach the same named volume. Named sessions reuse only the isolated agent home volume inside the container and do not widen workspace mounts. `state reset` and session-filtered `state prune` delete only RunHaven-managed home volumes. |
 | Generated paths | Project maintainers | Generated paths must remain inside the repository after symlink resolution. Unsafe path inputs are rejected. |

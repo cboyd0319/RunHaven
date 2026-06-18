@@ -51,7 +51,7 @@
     },
     {
       "id": "tauri-stop-run-control",
-      "priority": 0,
+      "priority": 1,
       "area": "ui",
       "title": "Tauri stop run control",
       "user_visible_behavior": "The desktop app can stop one validated active RunHaven run only after explicit user confirmation.",
@@ -67,7 +67,50 @@
         "Focused Rust, Tauri, frontend, and Playwright checks pass"
       ],
       "evidence": [],
-      "notes": "Next product implementation slice. Add kill, attach, repair, image build, state cleanup, network cleanup, and worktree review separately."
+      "notes": "First GUI implementation slice after the CLI-complete v0.5.0 scope is closed or explicitly accepted. Add broader run recovery, image, diagnostics, cleanup, and worktree review as separate GUI slices."
+    },
+    {
+      "id": "cli-complete-v0.5.0",
+      "priority": 0,
+      "area": "cli",
+      "title": "CLI-complete v0.5.0 release",
+      "user_visible_behavior": "By v0.5.0, all intended CLI product behavior is complete, documented, and verified. Later v1 work focuses on the first-class desktop app without expanding CLI scope except bug fixes, security fixes, release pin updates, documentation corrections, and internal GUI support that preserves CLI semantics.",
+      "status": "planned",
+      "dependencies": [],
+      "verification": [
+        "All planned CLI product commands and user docs are complete",
+        "Secure CLI defaults are the easiest path, with supported lower-security choices explicit and warned",
+        "Stable CLI output, JSON, and local data lifecycle decisions are recorded",
+        "CLI crates and modules remain cohesive with no known large-file or duplication debt deferred to v1",
+        "Runtime, provider, auth, worktree, cleanup, and SSH fail-closed checks pass",
+        "Profile support tiers are recorded from CLI evidence",
+        "No v1-blocking CLI feature work remains after the v0.5.0 tag"
+      ],
+      "evidence": [],
+      "notes": "Durable scope is tracked in docs/V1_RELEASE_PLAN.md; open gaps are tracked in docs/RELEASE_GAP_ANALYSIS.md. RunHaven remains alpha/pre-release until after this milestone. After v0.5.0, keep CLI changes contract-preserving unless a security or bug-fix exception is explicit."
+    },
+    {
+      "id": "desktop-first-class-v1",
+      "priority": 2,
+      "area": "ui",
+      "title": "First-class desktop v1 surface",
+      "user_visible_behavior": "For v1.0.0, the desktop app is the primary safe path for setup, image readiness and rebuild, planning, launch, live status, bounded output, stop, kill, repair, diagnostics, worktree review, and safe cleanup.",
+      "status": "planned",
+      "dependencies": [
+        "cli-complete-v0.5.0",
+        "tauri-stop-run-control"
+      ],
+      "verification": [
+        "Tauri commands remain typed, bounded, and capability-scoped",
+        "The desktop app covers the complete beginner-safe workflow without requiring CLI knowledge",
+        "The secure path is the easiest default and supported lower-security choices are explicit, warned, and recoverable",
+        "Frontend, Tauri, and shared planner modules remain cohesive with duplication removed during each slice",
+        "Every mutating desktop operation previews the exact target and requires explicit confirmation",
+        "Frontend, Tauri, accessibility, visual, and Apple container smoke checks pass",
+        "The release artifact is signed, notarized, checksummed, and backed by provenance"
+      ],
+      "evidence": [],
+      "notes": "Durable scope is tracked in docs/V1_RELEASE_PLAN.md; open gaps are tracked in docs/RELEASE_GAP_ANALYSIS.md. Keep each command family in separate slices. Apple container machine is not the default boundary, but explicit or user-managed machine workflows should warn and require intent rather than be blocked solely because they are less secure."
     },
     {
       "id": "ssh-forwarding-boundary",
@@ -89,22 +132,23 @@
     },
     {
       "id": "release-readiness",
-      "priority": 2,
+      "priority": 3,
       "area": "release",
       "title": "Pre-release readiness",
       "user_visible_behavior": "Before a public release, local verification, Apple container smokes, dependency pins, docs, and security evidence are current.",
       "status": "planned",
       "dependencies": [
-        "tauri-stop-run-control"
+        "desktop-first-class-v1"
       ],
       "verification": [
         "`./init.sh` passes on macOS 26+",
         "`runhaven doctor` and relevant Apple container smokes pass",
         "Pinned dependency and runtime evidence is current",
+        "Secure-easy defaults, maintainability review, dependency pinning, and harness state are current",
         "Security, installation, usage, and release docs are aligned"
       ],
       "evidence": [],
-      "notes": "Keep release work separate from feature slices."
+      "notes": "Keep release work separate from feature slices. RunHaven remains alpha/pre-release until after v0.5.0. Durable proposed v1.0.0 boundary requires a first-class desktop app and is tracked in docs/V1_RELEASE_PLAN.md; open gaps are tracked in docs/RELEASE_GAP_ANALYSIS.md."
     }
   ]
 }

@@ -36,7 +36,7 @@ is reference material, not mandatory startup context.
 | Component ownership | `boundaries/component-inventory.md` |
 | Security or privacy boundary | `boundaries/security-boundary-map.md` |
 | Dependency, pin, or workflow change | `boundaries/dependency-change-policy.md` |
-| Release preparation | `release/release-controls.md` |
+| Release ladder, gap analysis, or release preparation | `../V1_RELEASE_PLAN.md`, `../RELEASE_GAP_ANALYSIS.md`, then `release/release-controls.md` |
 | Apple `container` pin update | `release/apple-container-update-playbook.md` |
 | Historical verification | `evidence/evidence-log.md` |
 

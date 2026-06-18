@@ -442,6 +442,9 @@ the installed CLI, or the Apple source tree.
 - Use task-scoped `container run` instead of `container machine` for beginner
   AI-agent workloads. The wrapper must mount only the intended workspace and
   project-scoped agent home volume.
+- Do not block explicit or user-managed `container machine` workflows solely
+  because they are less secure. Treat them as advanced paths that need clear
+  warning, user intent, and target validation before any RunHaven integration.
 - Do not mount macOS home directories, cloud credential directories, browser
   profiles, or raw SSH keys by default.
 - Pass secrets only by explicit environment variable name with `--env NAME`;

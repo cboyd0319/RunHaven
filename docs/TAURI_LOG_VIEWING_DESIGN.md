@@ -6,6 +6,11 @@ RunHaven should make live agent output visible in the desktop app without
 turning the WebView into a generic terminal, filesystem reader, or persistent
 log store.
 
+Current release context: this is alpha desktop behavior while RunHaven closes
+the `v0.5.0` CLI-complete milestone. The bounded snapshot pattern remains part
+of the `v1.0.0` first-class desktop requirement because raw output can contain
+workspace content or secrets.
+
 There are two different log surfaces and the UI must keep them separate:
 
 - completed-run records from `runs log`, which join RunHaven run metadata with

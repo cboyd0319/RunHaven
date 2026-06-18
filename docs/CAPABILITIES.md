@@ -7,6 +7,11 @@ protects by default, and where the current limits are.
 RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
 supported runtimes or contributor verification targets.
 
+RunHaven remains alpha/pre-release until after `v0.5.0`. The CLI is the
+current working product surface. `v0.5.0` should finish and verify the CLI
+contract; `v1.0.0` should make the Tauri desktop app the first-class safe path
+for less-technical users.
+
 For command walkthroughs, use [Usage](USAGE.md). For the full security boundary,
 use [Security model](SECURITY_MODEL.md).
 
