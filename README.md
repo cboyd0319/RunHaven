@@ -18,7 +18,7 @@
 > guarantees. RunHaven remains alpha/pre-release through the `v0.5.0`
 > CLI-complete milestone.
 
-RunHaven is a Rust CLI, with an early Tauri/Svelte desktop shell, for running
+RunHaven is a Rust CLI, with an alpha Tauri/Svelte desktop shell, for running
 Claude Code, Codex, Gemini, Antigravity, Copilot, or custom coding agents
 inside Apple `container` on macOS 26+. It does not replace those tools. It
 gives them a repeatable local boundary so the secure path is easier to choose.
@@ -132,6 +132,7 @@ Use the smallest relevant check for a change:
 ```bash
 cargo fmt --check
 cargo test --locked
+cargo clippy --all-targets -- -D warnings
 cargo run --locked --bin runhaven-check-pins
 npm --prefix ui run check
 npm --prefix ui test
