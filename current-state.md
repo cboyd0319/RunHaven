@@ -77,9 +77,25 @@ evidence and a recorded reason.
   the failure mode; deeper `docs/harness/` material is on-demand reference.
 - Exactly one feature is `active` in `feature_list.json` to hold scope; the
   `active` row is the current slice, distinct from `planned` work.
+- The `glib` advisory GHSA-wrw7-89jp-8q8g is treated as not-affected because
+  `glib` enters only through Tauri's Linux GTK backend and is absent from the
+  macOS build graph; it is capped at 0.18.x by `gtk 0.18.2`. Dependabot alert
+  was dismissed as "not used" on 2026-06-24. Rationale in `docs/PINNING.md`.
 
 ## Latest Verified Work
 
+- 2026-06-24: Ran a full dependency pin audit triggered by the `glib`
+  Dependabot alert. Confirmed every Cargo, npm, image-CLI, base-image, and
+  Debian pin is hard-pinned and that `.github/workflows/` is empty (no actions
+  to pin). Brought the 10 pins behind latest stable to current: `time`
+  0.3.49->0.3.51; ui `@lucide/svelte` 1.21.0, `svelte` 5.56.4,
+  `@playwright/test` 1.61.1, `@tauri-apps/cli` 2.11.3, `svelte-check` 4.7.1,
+  `vite` 8.1.0; bundled CLIs Claude Code 2.1.190, Codex 0.142.0, Copilot
+  1.0.64, Gemini CLI 0.47.0 (integrity hashes regenerated). Refreshed Cargo and
+  npm lockfiles. The `glib` alert was dismissed as not-affected (macOS-only;
+  Linux-GTK-only transitive dep capped at 0.18.x). Verified with root and Tauri
+  fmt/test/clippy, image dry-run builds, ui ci/check/test/build/e2e,
+  `tauri:build`, pin check, JSON validation, and `git diff --check`.
 - 2026-06-24: Applied a harness gap-analysis pass against the
   learn-harness-engineering course. Added a `feature_list.json` status_legend
   and marked the single current slice `active`; added a startup baseline gate to
@@ -285,17 +301,18 @@ evidence and a recorded reason.
   default agent user to root without explicit security review and no-secret
   runtime proof.
 
-## Touched Surfaces In This Harness Pass
+## Touched Surfaces In This Pass
 
-- Root docs/state: `AGENTS.md`, `feature_list.json`, and `current-state.md`.
-- Harness docs: `docs/harness/boundaries/change-contract.md`,
-  `docs/harness/boundaries/security-boundary-map.md`,
-  `docs/harness/feedback/verification-matrix.md`,
-  `docs/harness/feedback/sensor-registry.md`,
-  `docs/harness/feedback/quality-document.md`, and
-  `docs/harness/state/roadmap.md`.
-- Tauri code: `src-tauri/src/capability_guard.rs` (new) and
-  `src-tauri/src/lib.rs` (test module declaration).
+- Pins/manifests/lockfiles: `Cargo.toml`, `Cargo.lock`, `src-tauri/Cargo.lock`,
+  `pins.toml`, `ui/package.json`, `ui/package-lock.json`, and
+  `images/{claude,codex,copilot,gemini}/package.json` plus their lockfiles.
+- Docs/state: `docs/PINNING.md` (glib not-affected note), `current-state.md`.
+- External: dismissed Dependabot alert #1 (`glib`) as not-affected on GitHub.
+
+Prior harness gap-analysis pass (also 2026-06-24) touched `AGENTS.md`,
+`feature_list.json`, the change-contract/security-boundary/verification-matrix/
+sensor-registry/quality-document/roadmap harness docs, and added
+`src-tauri/src/capability_guard.rs`.
 
 ## Next Step
 

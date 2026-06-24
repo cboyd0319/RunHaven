@@ -47,6 +47,20 @@ The current reviewed pins are recorded in [`pins.toml`](../pins.toml).
 The source record for current-version checks is
 [`RESEARCH.md`](RESEARCH.md).
 
+## Known Advisories
+
+- GHSA-wrw7-89jp-8q8g (`glib` < 0.20.0, `VariantStrIter` iterator
+  unsoundness): not applicable. `glib` is pulled only through Tauri's Linux
+  GTK backend (`glib 0.18` &larr; `gtk 0.18.2` &larr;
+  `webkit2gtk`/`wry`/`tao`/`muda` &larr; `tauri-runtime-wry 2.11.3`) and is
+  absent from the macOS `aarch64-apple-darwin` build graph
+  (`cargo tree --manifest-path src-tauri/Cargo.toml -i glib` prints nothing on
+  the host target), so no macOS build or shipped artifact compiles the
+  vulnerable code. It is capped at 0.18.x by `gtk 0.18.2`; the patched 0.20.0
+  needs a newer gtk-rs generation Tauri does not yet use. The Dependabot alert
+  was dismissed as "not used" on 2026-06-24. Revisit if Tauri advances its
+  Linux GTK stack or if a macOS dependency path to `glib` ever appears.
+
 Apple `container` runtime helper images and the default Kata kernel are managed
 by Apple `container`, not by this repo. Record observed values in `pins.toml`
 and verify the signed installer before changing the minimum supported runtime.

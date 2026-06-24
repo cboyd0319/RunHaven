@@ -2,6 +2,6 @@
   "name": "runhaven-codex-image",
   "private": true,
   "dependencies": {
-    "@openai/codex": "0.140.0"
+    "@openai/codex": "0.142.0"
   }
 }

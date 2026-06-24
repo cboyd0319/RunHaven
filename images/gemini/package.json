@@ -2,7 +2,7 @@
   "name": "runhaven-gemini-image",
   "private": true,
   "dependencies": {
-    "@google/gemini-cli": "0.46.0"
+    "@google/gemini-cli": "0.47.0"
   },
   "allowScripts": {
     "@github/keytar@7.10.6": true,

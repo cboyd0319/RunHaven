@@ -2,6 +2,6 @@
   "name": "runhaven-copilot-image",
   "private": true,
   "dependencies": {
-    "@github/copilot": "1.0.63"
+    "@github/copilot": "1.0.64"
   }
 }

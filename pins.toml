@@ -1,4 +1,4 @@
-# Current stable pins verified on 2026-06-18.
+# Current stable pins verified on 2026-06-24.
 
 [runhaven]
 version = "0.1.0"
@@ -14,7 +14,7 @@ regex = "1.12.4"
 serde = "1.0.228"
 serde_json = "1.0.150"
 sha2 = "0.11.0"
-time = "0.3.49"
+time = "0.3.51"
 toml = "1.1.2"
 ureq = "3.3.0"
 uuid = "1.23.3"
@@ -26,16 +26,16 @@ tauri-build = "2.6.3"
 tauri-plugin-dialog = "2.7.1"
 
 [frontend]
-"@playwright/test" = "1.61.0"
-"@lucide/svelte" = "1.20.0"
+"@playwright/test" = "1.61.1"
+"@lucide/svelte" = "1.21.0"
 "@sveltejs/vite-plugin-svelte" = "7.1.2"
 "@tauri-apps/api" = "2.11.1"
-"@tauri-apps/cli" = "2.11.2"
+"@tauri-apps/cli" = "2.11.3"
 "@tauri-apps/plugin-dialog" = "2.7.1"
-svelte = "5.56.3"
-svelte-check = "4.6.0"
+svelte = "5.56.4"
+svelte-check = "4.7.1"
 typescript = "6.0.3"
-vite = "8.0.16"
+vite = "8.1.0"
 vitest = "4.1.9"
 
 [apple_container]
@@ -128,17 +128,17 @@ zsh = "5.9-8+b23"
 zsh_common = "5.9-8"
 
 [agent_cli]
-claude_code = "2.1.181"
-codex = "0.140.0"
-gemini_cli = "0.46.0"
+claude_code = "2.1.190"
+codex = "0.142.0"
+gemini_cli = "0.47.0"
 antigravity_cli = "1.0.8"
-copilot_cli = "1.0.63"
+copilot_cli = "1.0.64"
 npm = "11.17.0"
 
 [agent_cli_integrity]
-claude_code = "sha512-C8T7H6qDIZLPzc4VChskMfq2nCjV9DU4zLcHtaK9rlQTt+cFCNPyzZ6FbMWiGQsQ9h4Z7nwdSZNhWEMPvfb5/g=="
-codex = "sha512-FMnN12kJzVPljMTYRydLCNgd0cXXmVasNSfq2PtS42RMEIxoQ3dHtMvmno35hu2tfwrKNAAPCm4s+2PaFTEBGg=="
-gemini_cli = "sha512-+HZtuuDKsL8mvOUWgK08GkrL1BQM4IplaSzxIjAM262FmJFp3Jo/zlHUq9ulRKcvx0agZ4KAzuj7jG9yIAxFBw=="
+claude_code = "sha512-J+0teG/jcjkgCQryQWAg0eJm38fCFOMJ6YlsthXMFH1S+DnWtRpmMqTfXwus5amhDhTA/9T6vMtB3kUSwgsGnw=="
+codex = "sha512-c7WftbRyE4zOLJV5p73mcGn4jVK3FmK84Q65hrZrXboZzLPDWRfbFedCbsIjU4PJS/kvgyMPhv7dH4/nhXzUyg=="
+gemini_cli = "sha512-cg0Y3X2bwJD7lyjD6lodyR6VeNXDmzqC7JqjZKf6cYVIImIwdPX5ARgOewOnkEufb3MwZe9SRl4G49IfdEvCuQ=="
 antigravity_cli = "sha512-982b344defd2e63b08d4a9ef608a770aba3a92e9a4118d318e0082f29743457e8a16aaf1c00f7c3ade75c2d07aef5a8fa5da660e408cb199b47a8778b31228a0"
-copilot_cli = "sha512-e8DRYiWJQc4kepVXsXjC8vpDU2FXS/TfR+Z6p/KAojfcwIUZzKMAfCV5D1lD25hV4CryVH1Z9t7mHqChickj0Q=="
+copilot_cli = "sha512-Dch34NNBWjWlkEUxrC4CkDFunQs5cRmkEEO/PR6Lqj23zzwDwzJUxWA/6K28EokfoPhc9hLyPsCbS9rQ9v2TFA=="
 npm = "sha512-PurxiZexEHDTE4SSaLI3ZrnbAGiZfeyUcQcxcP5D+hfytNAze/D1IzDuInTn9XVLIbAQUnQuSPXJx02LHjLvQw=="
