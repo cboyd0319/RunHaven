@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod capability_guard;
 mod commands;
 mod contracts;
 

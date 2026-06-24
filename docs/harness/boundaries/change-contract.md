@@ -64,6 +64,9 @@ Before editing and before completion, check the touched surfaces:
 - Direct dependency, package, runtime, and image pins stay exact-pinned to
   current stable sources; transitive dependencies stay locked.
 - Unneeded code, generated files, docs, config, and harness surface are removed.
+- Verify the target behavior before in-scope refactors of the path you just
+  changed. A refactor moves the verified/unverified boundary and can silently
+  break a path that only happened to work.
 
 If a touched file is already too large or hard to review, include a local split
 or deletion in the same scope unless deferral is explicit, small, and recorded.
@@ -76,6 +79,8 @@ or deletion in the same scope unless deferral is explicit, small, and recorded.
   explicit and warned.
 - macOS 26+ on Apple silicon remains the only runtime and contributor
   verification target.
+- New or changed custom failure messages name what failed, the boundary that
+  matters, and where to repair it, per `docs/harness/feedback/sensor-registry.md`.
 - Project-owned instructions remain compact and route durable detail into
   focused docs.
 - File size, modularity, duplication, dependency use, and crate/component

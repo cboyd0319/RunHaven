@@ -41,7 +41,11 @@ git status --short --branch
 `current-state.md` is this repo's progress and handoff file. Do not recreate
 separate root `progress.md` or `session-handoff.md` files.
 
-3. Load more context only when the task needs it:
+3. Before stacking new work on a surface that may already be broken, run its
+   smallest check from `docs/harness/feedback/verification-matrix.md`. Fix a
+   broken baseline before adding new changes.
+
+4. Load more context only when the task needs it:
 
 - Product, install, usage, or public docs: `README.md` and relevant `docs/`.
 - Security boundary changes: `docs/SECURITY_MODEL.md` and focused tests.

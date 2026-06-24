@@ -1,6 +1,6 @@
 # Current State
 
-Last Updated: 2026-06-18 UTC
+Last Updated: 2026-06-24 UTC
 
 ## Current Objective
 
@@ -58,8 +58,39 @@ Load deeper docs only when the task touches that surface.
   explicit workspace scope, non-root bundled images, and provider egress
   allowlisting only through reviewed provider mode.
 
+## Key Decisions
+
+Durable rationale that compaction tends to lose. Change these only with new
+evidence and a recorded reason.
+
+- Default boundary is task-scoped `container run`, not `container machine`,
+  because machine workflows map the host user, home, and credentials into the
+  guest. Machine use is warned and explicit, not blocked.
+- `--ssh` fails closed because Apple `container` 1.0.0 exposed the forwarded
+  socket to the non-root guest but `ssh-add -l` returned permission denied;
+  enabling it would need a raw key mount or a root default user. Reopen only
+  with a no-secret runtime proof.
+- CI stays disabled during alpha because local macOS 26 verification is
+  authoritative and hosted CI cannot exercise the Apple `container` boundary.
+  Re-enable only by explicit maintainer decision.
+- The harness is a three-file startup contract because bulk startup context was
+  the failure mode; deeper `docs/harness/` material is on-demand reference.
+- Exactly one feature is `active` in `feature_list.json` to hold scope; the
+  `active` row is the current slice, distinct from `planned` work.
+
 ## Latest Verified Work
 
+- 2026-06-24: Applied a harness gap-analysis pass against the
+  learn-harness-engineering course. Added a `feature_list.json` status_legend
+  and marked the single current slice `active`; added a startup baseline gate to
+  `AGENTS.md`; added this Key Decisions section; added a boundary-journey table
+  and independent-evaluator routing to `security-boundary-map.md`; added
+  verify-before-refactor and agent-oriented-error gates to `change-contract.md`;
+  defined a representative task set in `quality-document.md` and linked it from
+  `roadmap.md`; and added a mechanical `capability_guard` test that fails closed
+  if a Tauri capability grants a host bridge. Tauri tests (incl. the capability
+  guard), pin check, JSON validation, Markdown link check, and diff checks
+  passed.
 - 2026-06-18: Clarified the Container Machine policy across active docs and
   harness state. Task-scoped `container run` remains the secure-easy default,
   while explicit or user-managed Apple `container machine` workflows should be
@@ -256,22 +287,15 @@ Load deeper docs only when the task touches that surface.
 
 ## Touched Surfaces In This Harness Pass
 
-- Root docs/state: `AGENTS.md`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`,
-  `feature_list.json`, and `current-state.md`.
-- Product docs: `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`,
-  `docs/ARCHITECTURE.md`, `docs/CAPABILITIES.md`, `docs/INSTALLATION.md`,
-  `docs/NON_UI_BACKLOG.md`, `docs/ROADMAP.md`, `docs/SECURITY_MODEL.md`,
-  `docs/RELEASE_GAP_ANALYSIS.md`, `docs/TAURI_LOG_VIEWING_DESIGN.md`,
-  `docs/TAURI_UI_GUARDRAILS.md`, `docs/TAURI_UI_RESEARCH_PLAN.md`,
-  `docs/USAGE.md`, and `docs/V1_RELEASE_PLAN.md`.
-- Harness docs: `docs/harness/README.md`,
-  `docs/harness/authoritative-facts.md`,
-  `docs/harness/boundaries/change-contract.md`,
-  `docs/harness/boundaries/component-inventory.md`,
+- Root docs/state: `AGENTS.md`, `feature_list.json`, and `current-state.md`.
+- Harness docs: `docs/harness/boundaries/change-contract.md`,
   `docs/harness/boundaries/security-boundary-map.md`,
-  `docs/harness/evidence/evidence-log.md`,
-  `docs/harness/feedback/verification-matrix.md`, and
-  `docs/harness/release/release-controls.md`.
+  `docs/harness/feedback/verification-matrix.md`,
+  `docs/harness/feedback/sensor-registry.md`,
+  `docs/harness/feedback/quality-document.md`, and
+  `docs/harness/state/roadmap.md`.
+- Tauri code: `src-tauri/src/capability_guard.rs` (new) and
+  `src-tauri/src/lib.rs` (test module declaration).
 
 ## Next Step
 

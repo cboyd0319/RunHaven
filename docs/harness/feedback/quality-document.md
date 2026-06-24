@@ -1,6 +1,6 @@
 # Quality Document
 
-Last Updated: 2026-06-17
+Last Updated: 2026-06-24
 
 This is a periodic repo health snapshot. It is not startup context.
 
@@ -25,12 +25,31 @@ This is a periodic repo health snapshot. It is not startup context.
 | State | `feature_list.json` and `current-state.md` are compact startup files | Current objective, blocker, or trusted evidence changes |
 | Feedback | Verification matrix, pin check, tests, and smokes are mapped by change type | Repeated misses or new release gates |
 
+## Representative Task Set
+
+Keep/remove decisions about a harness component should be measured, not guessed.
+Before removing or merging a component, run this small fixed task set with the
+component present, then again with it removed, and compare whether an agent can
+still start, stay in scope, verify, and hand off cleanly:
+
+1. Cold start: from the three startup files only, name the project, the current
+   active slice, the active blocker, and the first check to run.
+2. CLI plan dry-run: produce a `runhaven plan` for a default run and confirm the
+   mount, user, network, and image boundary read as expected.
+3. Security-boundary edit: make a small change behind one boundary journey and
+   route it to the correct checks from `verification-matrix.md`.
+4. Docs/harness edit: change one harness doc and select the smallest correct
+   check set without bulk-loading `docs/harness/`.
+
+Removal is safe only when the task set still passes without the component.
+
 ## Cleanup Rule
 
 At least monthly, review one harness component. Keep it when it prevents
-repeated failures. Compress, merge, or delete it when it adds context cost
-without improving verification, restartability, scope control, or security
-review.
+repeated failures or when the representative task set degrades without it.
+Compress, merge, or delete it when the task set still passes without it and it
+adds context cost without improving verification, restartability, scope control,
+or security review.
 
-Structural scores are not proof of real-agent effectiveness. Use
-representative task evidence before making effectiveness claims.
+Structural scores are not proof of real-agent effectiveness. Use the
+representative task set above as evidence before making effectiveness claims.

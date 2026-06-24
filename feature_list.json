@@ -1,11 +1,19 @@
 {
   "$schema": "docs/harness/schemas/feature-list.schema.json",
   "project": "RunHaven",
-  "last_updated": "2026-06-18",
+  "last_updated": "2026-06-24",
   "rules": {
     "single_active_feature": true,
     "passing_requires_evidence": true,
     "startup_context_must_stay_small": true
+  },
+  "status_legend": {
+    "not_started": "Identified but no work or acceptance criteria committed yet.",
+    "planned": "Scoped and queued; not the current active slice.",
+    "active": "The single in-progress slice. Only one feature may be active at a time.",
+    "blocked": "Cannot proceed until a recorded blocker clears.",
+    "passing": "Complete and backed by recorded verification evidence.",
+    "done": "Closed and archived; retained only for dependency context."
   },
   "features": [
     {
@@ -23,7 +31,8 @@
         "JSON and diff checks pass"
       ],
       "evidence": [
-        "2026-06-17: Startup, harness skill routing, harness overview, active feature state, current-state handoff, README development guidance, and affected harness docs were compressed to the lightweight five-subsystem model. JSON validation, local Markdown link check, pin policy, stale-reference scans, and git diff checks passed."
+        "2026-06-17: Startup, harness skill routing, harness overview, active feature state, current-state handoff, README development guidance, and affected harness docs were compressed to the lightweight five-subsystem model. JSON validation, local Markdown link check, pin policy, stale-reference scans, and git diff checks passed.",
+        "2026-06-24: Harness gap-analysis pass against the learn-harness-engineering course closed the remaining missed mechanisms: a status_legend plus a single `active` slice make single_active_feature checkable; a startup baseline gate, decision-rationale capture, boundary-journey table, independent evaluator routing for security changes, agent-oriented-error and verify-before-refactor gates, a representative task set for cleanup decisions, and a mechanical Tauri capability-scope guard test. Tauri tests (incl. the capability guard), pin check, JSON validation, and git diff checks passed."
       ],
       "notes": "Historical evidence remains in docs/harness/evidence/evidence-log.md and product docs. It is not startup context."
     },
@@ -75,7 +84,7 @@
       "area": "cli",
       "title": "CLI-complete v0.5.0 release",
       "user_visible_behavior": "By v0.5.0, all intended CLI product behavior is complete, documented, and verified. Later v1 work focuses on the first-class desktop app without expanding CLI scope except bug fixes, security fixes, release pin updates, documentation corrections, and internal GUI support that preserves CLI semantics.",
-      "status": "planned",
+      "status": "active",
       "dependencies": [],
       "verification": [
         "All planned CLI product commands and user docs are complete",
@@ -87,7 +96,7 @@
         "No v1-blocking CLI feature work remains after the v0.5.0 tag"
       ],
       "evidence": [],
-      "notes": "Durable scope is tracked in docs/V1_RELEASE_PLAN.md; open gaps are tracked in docs/RELEASE_GAP_ANALYSIS.md. RunHaven remains alpha/pre-release until after this milestone. After v0.5.0, keep CLI changes contract-preserving unless a security or bug-fix exception is explicit."
+      "notes": "Durable scope is tracked in docs/V1_RELEASE_PLAN.md; open gaps are tracked in docs/RELEASE_GAP_ANALYSIS.md. RunHaven remains alpha/pre-release until after this milestone. After v0.5.0, keep CLI changes contract-preserving unless a security or bug-fix exception is explicit. Must not change while active: the default security boundary (no host home, credential, or raw SSH key mount; non-root images; provider egress allowlist) and existing stable CLI output and JSON contracts."
     },
     {
       "id": "desktop-first-class-v1",

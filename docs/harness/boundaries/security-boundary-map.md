@@ -49,6 +49,21 @@ violations still fail closed and must explain the safe next step.
   prompts, retrieval, tools, runtime boundaries, or data flows, update the
   threat model and record verification evidence in `docs/harness/evidence/evidence-log.md`.
 
+## Boundary Journeys
+
+These are the load-bearing security outcomes. Each must stay green; a change
+that touches one is not done until its proving check passes.
+
+| Journey | Observable pass criteria | Proving check |
+| --- | --- | --- |
+| Default run mount isolation | A default `run` mounts only the selected workspace and the project agent-home volume; host home, raw SSH keys, browser profiles, and cloud credential folders stay unmounted | `runhaven plan` inspection plus `scripts/apple_container_smoke.sh` |
+| Provider egress deny | A provider run blocks a non-allowlisted host and explains the safe next step | Provider egress smoke (`scripts/apple_container_smoke.sh --with-provider`) |
+| Provider network cleanup | The managed internal network and host CONNECT proxy are torn down after the run, leaving no RunHaven network behind | `scripts/apple_container_smoke.sh --with-provider` cleanup assertion |
+| Worktree fail-closed | `run --worktree` on a dirty source repo refuses before creating a branch or worktree and prints recovery choices | Worktree planner/CLI tests |
+| SSH fail-closed | `--ssh` refuses before launch with no raw key mount and no root default user | Planner/CLI `--ssh` tests; `scripts/apple_container_smoke.sh --with-ssh` when changing the guard |
+| State volume lock | Concurrent runs cannot attach the same named agent-home volume | State lock tests |
+| WebView capability scope | Tauri capabilities grant only RunHaven `allow-*` command permissions plus vetted plugin permissions; no host bridge (`shell`, `fs`, `http`, `process`, `os`) | `capability_guard` test in `src-tauri` |
+
 ## Required Checks
 
 Use the smallest relevant checks from `verification-matrix.md` plus human review
@@ -58,3 +73,8 @@ operations, and release automation.
 For runtime-boundary changes, also run `runhaven doctor`, `runhaven plan`, and a focused
 Apple `container` smoke that proves the claimed mount, user, network, or
 filesystem behavior.
+
+For changes to mounts, credentials, network egress, or Tauri capabilities, run
+an independent `evaluator-rubric.md` pass from clean context rather than
+self-review. Self-review on security-boundary changes tends to approve its own
+assumptions.

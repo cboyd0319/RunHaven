@@ -12,7 +12,7 @@ changes a security boundary.
 | README or docs-only change | pin check; local Markdown link check when links changed; platform wording scan when support wording changed; `git diff --check` |
 | Rust code | `cargo fmt --check`; focused `cargo test` target; `cargo test --locked`; `cargo clippy --all-targets -- -D warnings`; maintainability check for touched modules and duplication |
 | Frontend UI | `npm --prefix ui run check`; `npm --prefix ui test`; `npm --prefix ui run test:e2e`; `npm --prefix ui run build`; relevant Tauri command tests; maintainability check for touched components and adapters |
-| Tauri shell | Frontend checks plus `cargo fmt --manifest-path src-tauri/Cargo.toml --check`; `cargo test --manifest-path src-tauri/Cargo.toml --locked`; `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`; capability review |
+| Tauri shell | Frontend checks plus `cargo fmt --manifest-path src-tauri/Cargo.toml --check`; `cargo test --manifest-path src-tauri/Cargo.toml --locked` (includes the `capability_guard` scope test); `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`; capability review |
 | CLI command construction | Rust checks plus focused CLI and planning tests |
 | Code organization or modularity | Focused tests for moved behavior; stale import/reference scan with `rg`; relevant Rust, Tauri, or frontend checks; verify duplicated logic was deleted or intentionally kept |
 | Apple `container` runtime boundary | Rust checks plus `runhaven doctor`, `runhaven plan`, and a focused runtime smoke proving the claimed mount, user, network, or filesystem behavior |

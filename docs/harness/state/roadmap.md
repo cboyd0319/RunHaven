@@ -26,7 +26,7 @@ Do not read this file at startup unless the task is harness maintenance.
 | Lean startup contract | validated | Agents start from three compact files and load deeper docs only when needed. | Keep startup files short during future edits. |
 | Harness historical evidence | validated | Long evidence remains available in `docs/harness/evidence/evidence-log.md` without being mandatory startup context. | Add only compact rows for meaningful verification. |
 | Verification routing | validated | `docs/harness/feedback/verification-matrix.md` maps change type to focused checks. | Keep command lists current when tooling changes. |
-| Real-agent effectiveness evidence | candidate | Claims about agent quality should be backed by representative tasks, not structural audit alone. | Define a small task set before making public effectiveness claims. |
+| Real-agent effectiveness evidence | defined | A fixed representative task set now lives in `docs/harness/feedback/quality-document.md` and gates harness keep/remove decisions. | Run the task set before/after removing a component; record before public effectiveness claims. |
 
 ## Fresh-Session Check
 
