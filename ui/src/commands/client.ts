@@ -4,7 +4,10 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { isLaunchReady, warningPreview } from "./plan";
 import type {
   AgentProfile,
+  AuthLogResponse,
+  AuthStatusResponse,
   DashboardStatus,
+  EgressLogResponse,
   ImageStatusResponse,
   LaunchRunRequest,
   LaunchRunResponse,
@@ -260,6 +263,22 @@ export async function repairRun(runId: string): Promise<RepairRunResponse> {
     containerName: "preview",
     status: "removed",
     markerRemoved: true
+  }));
+}
+
+export async function getEgressLog(): Promise<EgressLogResponse> {
+  return call("get_egress_log", {}, () => ({ entries: [] }));
+}
+
+export async function getAuthLog(): Promise<AuthLogResponse> {
+  return call("get_auth_log", {}, () => ({ entries: [] }));
+}
+
+export async function getAuthStatus(): Promise<AuthStatusResponse> {
+  return call("get_auth_status", {}, () => ({
+    status: "preview",
+    runtime: "preview",
+    profiles: [{ name: "codex", status: "api-key-prototype" }]
   }));
 }
 

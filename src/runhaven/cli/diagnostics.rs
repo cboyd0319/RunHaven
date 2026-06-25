@@ -124,20 +124,26 @@ pub fn read_auth_broker_log(limit: usize) -> Result<Vec<Value>> {
     read_jsonl(&auth_broker_log_path(), limit)
 }
 
-pub fn auth_status(json_output: bool) -> Result<i32> {
-    let profiles = auth_broker_profiles();
-    let payload = json!({
+/// Secret-free auth broker status payload, shared by the CLI `auth status` and
+/// the Tauri `get_auth_status` command. Reports the broker status, runtime, the
+/// per-profile broker tiers, and explicit "nothing inspected/printed" flags.
+pub fn auth_status_payload() -> Value {
+    json!({
         "status": AUTH_BROKER_STATUS,
         "runtime": AUTH_BROKER_RUNTIME,
         "credential_stores_inspected": false,
         "environment_values_inspected": false,
         "secrets_printed": false,
-        "profiles": profiles,
-    });
+        "profiles": auth_broker_profiles(),
+    })
+}
+
+pub fn auth_status(json_output: bool) -> Result<i32> {
     if json_output {
-        println!("{}", serde_json::to_string_pretty(&payload)?);
+        println!("{}", serde_json::to_string_pretty(&auth_status_payload())?);
         return Ok(0);
     }
+    let profiles = auth_broker_profiles();
     println!("Auth broker: {AUTH_BROKER_STATUS}");
     println!("Runtime: {AUTH_BROKER_RUNTIME}");
     println!("Credential stores inspected: no");

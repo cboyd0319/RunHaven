@@ -105,6 +105,18 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-25: Added desktop diagnostics (partial V1-G5): read-only, secret-free
+  `get_egress_log`, `get_auth_log`, and `get_auth_status` behind the `main-read`
+  capability. `read_egress_policy_log`/`read_auth_broker_log` back the logs; a new
+  shared `auth_status_payload` core backs both the CLI `auth status` and the Tauri
+  command. Responses map only metadata (host/port/decision/reason/count,
+  method/path/upstream-status) and intentionally omit workspace paths, mirroring
+  the CLI text output. A self-contained `DiagnosticsPanel` fetches and renders
+  them on demand, keeping `App.svelte` lean. `why` explanations, blocked-host
+  review, and auth explain remain CLI-only. Verified: main `cargo test` (49),
+  Tauri `cargo test` (30, incl. 3 diagnostics mapper tests + `capability_guard`)/
+  clippy, svelte-check, 15 unit tests, build, and Playwright e2e (3, incl. a
+  diagnostics load test).
 - 2026-06-25: Completed the V1-G3 desktop run-control surface by adding GUI
   `kill_run` and `repair_run`, mirroring `stop_run`. Shared library cores
   `kill_active_run` and `repair_active_run` validate the run id, active marker,
@@ -467,6 +479,12 @@ evidence and a recorded reason.
 
 ## Touched Surfaces In This Pass
 
+- tauri-diagnostics: `src/runhaven/cli/diagnostics.rs` (`auth_status_payload`
+  core); `src-tauri/src/commands/diagnostics.rs` (new), `commands/mod.rs`,
+  `lib.rs`, `build.rs`, `contracts.rs`, `capabilities/main-read.json`;
+  `ui/src/commands/{types.ts,client.ts}`,
+  `ui/src/components/DiagnosticsPanel.svelte` (new, self-contained),
+  `ui/src/app/App.svelte`, `ui/e2e/app.spec.ts`.
 - tauri-kill-repair-run-control: `src/runhaven/runtime/active/mod.rs`
   (`kill_active_run` + thin `runs_kill`), `active/repair.rs` (`repair_active_run`);
   `src-tauri/src/commands/run_control.rs` (kill_run/repair_run + tests),
@@ -515,12 +533,13 @@ evidence and a recorded reason.
 
 `cli-complete-v0.5.0` is `passing` (all contract gaps closed, secure-by-default
 network, all CLI surfaces confirmed in `docs/CLI_SURFACE_COVERAGE.md`). The
-desktop phase is underway: the maintainability split (milestone 1 / V1-G10) and
-the full desktop run-control surface (V1-G3: stop, kill, repair) are done. Next
-desktop slices, as separate features: the maintenance slice (image rebuild,
-state/network cleanup; V1-G2/G6) and the diagnostics slice (`why`, egress, auth;
-V1-G5), then worktree review (V1-G7). A terminal UI (TUI) is deferred until well
-after the desktop app ships.
+desktop phase is underway: the maintainability split (milestone 1 / V1-G10), the
+full run-control surface (V1-G3: stop, kill, repair), and read-only diagnostics
+(partial V1-G5: egress + auth logs/status) are done. Next desktop slices, as
+separate features: the maintenance slice (image rebuild, state/network cleanup;
+V1-G2/G6), finishing V1-G5 (`why` explanations + blocked-host review + auth
+explain), then worktree review (V1-G7). A terminal UI (TUI) is deferred until
+well after the desktop app ships.
 Tagged `v0.5.0` release notes are cut at the release-readiness step. Use
 `docs/RELEASE_GAP_ANALYSIS.md` for status and `docs/V1_RELEASE_PLAN.md` for the
 durable release contract.

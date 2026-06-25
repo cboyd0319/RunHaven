@@ -54,3 +54,13 @@ test("reviews and starts a preview run", async ({ page }) => {
   await page.getByRole("button", { name: "Repair marker" }).click();
   await expect(page.getByText(/Stale marker cleared for preview-/)).toBeVisible();
 });
+
+test("loads secret-free diagnostics", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByRole("heading", { name: "Diagnostics" })).toBeVisible();
+  await page.getByRole("button", { name: "Load diagnostics" }).click();
+  await expect(page.getByRole("heading", { name: "Auth broker status" })).toBeVisible();
+  await expect(page.getByText("codex: api-key-prototype")).toBeVisible();
+  await expect(page.getByText("No provider egress decisions recorded.")).toBeVisible();
+});

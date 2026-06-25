@@ -18,6 +18,7 @@ use crate::contracts::{
     RunPlanRequest, RunPlanResponse, RunSummary, SetupStatus, StartedRunSnapshot,
 };
 
+pub(crate) mod diagnostics;
 pub(crate) mod image_status;
 pub(crate) mod log_snapshot;
 pub(crate) mod run_control;

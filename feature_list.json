@@ -104,6 +104,27 @@
       "notes": "Run-control mutations (stop/kill/repair) all share one validated library core per action and the narrow run-control capability. Image, state/network cleanup, diagnostics, and worktree review remain separate GUI slices."
     },
     {
+      "id": "tauri-diagnostics",
+      "priority": 1,
+      "area": "ui",
+      "title": "Tauri secret-free diagnostics",
+      "user_visible_behavior": "The desktop app shows provider egress decisions and auth broker status/log for RunHaven runs, read-only and without secrets or workspace paths.",
+      "status": "passing",
+      "dependencies": [
+        "tauri-alpha-launch-feedback"
+      ],
+      "verification": [
+        "get_egress_log, get_auth_log, and get_auth_status are read-only and return only metadata (no secrets, no workspace paths)",
+        "Commands live behind the read-only main-read capability",
+        "Structured responses map from existing JSONL records and the auth status payload",
+        "Focused Rust, Tauri, frontend, and Playwright checks pass"
+      ],
+      "evidence": [
+        "2026-06-25: Added read-only get_egress_log, get_auth_log, and get_auth_status behind the main-read capability. read_egress_policy_log/read_auth_broker_log back the logs; a new shared auth_status_payload core backs both the CLI auth status and the Tauri command. Responses map only metadata fields (host/port/decision/reason/count, method/path/upstream-status) and intentionally omit workspace paths, mirroring the CLI text output. A self-contained DiagnosticsPanel fetches and renders them on demand, keeping App.svelte lean. Verified: main cargo test (49), Tauri cargo test (30, incl. 3 diagnostics mapper tests + capability_guard)/clippy, svelte-check, 15 unit tests, build, and Playwright e2e (3, incl. a diagnostics load test)."
+      ],
+      "notes": "Partial V1-G5: egress log and auth status/log are exposed. why host/workspace/network/state explanations, blocked-host review, and auth explain remain separate GUI slices."
+    },
+    {
       "id": "cli-complete-v0.5.0",
       "priority": 0,
       "area": "cli",

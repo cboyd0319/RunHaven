@@ -7,6 +7,7 @@
   import LastLaunchPanel from "../components/LastLaunchPanel.svelte";
   import RunStatusPanel from "../components/RunStatusPanel.svelte";
   import RunOutputPanel from "../components/RunOutputPanel.svelte";
+  import DiagnosticsPanel from "../components/DiagnosticsPanel.svelte";
   import {
     chooseProjectFolder,
     defaultRunPlanRequest,
@@ -463,4 +464,6 @@
   {#if lastLaunch}
     <RunOutputPanel bind:logAcknowledged {logLoading} {logError} {logSnapshot} onLoad={loadLogSnapshot} />
   {/if}
+
+  <DiagnosticsPanel />
 </main>

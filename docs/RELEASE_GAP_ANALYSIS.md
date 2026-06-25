@@ -62,14 +62,15 @@ Observed desktop command families:
 
 - implemented alpha commands: setup status, agent list, dashboard status,
   image status, run status, plan run, launch run, bounded log snapshot, stop
-  run, kill run, and repair run;
-- active capabilities: `main-read`, `folder-pick`, `launch-run`, and
-  `run-control` (`allow-get-log-snapshot`, `allow-stop-run`, `allow-kill-run`,
+  run, kill run, repair run, egress log, auth status, and auth log;
+- active capabilities: `main-read` (read-only status, planning, and secret-free
+  diagnostics), `folder-pick`, `launch-run`, and `run-control`
+  (`allow-get-log-snapshot`, `allow-stop-run`, `allow-kill-run`,
   `allow-repair-run`);
 - missing first-class desktop families: image
-  build/rebuild, worktree review, state cleanup, network cleanup, egress log,
-  auth log, why diagnostics, maintenance actions, profile support matrix, and
-  release packaging.
+  build/rebuild, worktree review, state cleanup, network cleanup, `why`
+  explanations and blocked-host review, auth explain, maintenance actions,
+  profile support matrix, and release packaging.
 
 Observed maintainability pressure:
 
@@ -192,7 +193,7 @@ accessibility, and release-trust work remains.
 | V1-G2 | Desktop image build/rebuild | Desktop shows image status but does not build or rebuild images. | Missing/stale bundled images can be rebuilt from explicit UI action with builder status and confirmation. | Tauri command tests; frontend tests; image dry-run/build smoke where appropriate. |
 | V1-G3 | Desktop run control | Done: the desktop app can stop, hard-stop (`kill_run`), and repair (`repair_run`) one validated RunHaven run behind `run-control`, each confirm-gated with exact target preview. | GUI can stop, hard-stop, and repair one validated RunHaven run with exact target preview and confirmation. | Rust/Tauri command tests, capability review, Playwright, Apple container smoke for run-control paths. |
 | V1-G4 | Desktop recovery after app quit/crash/host interruption | Release plan names this as unproven. | App quit, force quit, crash, sleep, reboot, stale active marker, and leftover container guidance is verified or documented in the GUI. | Manual lifecycle smokes plus focused tests for stale-marker repair guidance. |
-| V1-G5 | Desktop diagnostics | CLI has `why`, egress logs, and auth logs; desktop does not expose them. | GUI exposes `why host/workspace/network/state`, blocked-host review, egress log summaries, auth status/explain/log, and safe next actions without raw secrets. | Tauri command tests; frontend tests; secret-output review. |
+| V1-G5 | Desktop diagnostics | Partial: egress log and auth status/log are exposed read-only behind `main-read` (`get_egress_log`, `get_auth_log`, `get_auth_status`), secret-free and without workspace paths. `why` explanations, blocked-host review, and auth explain remain CLI-only. | GUI exposes `why host/workspace/network/state`, blocked-host review, egress log summaries, auth status/explain/log, and safe next actions without raw secrets. | Tauri command tests; frontend tests; secret-output review. |
 | V1-G6 | Desktop state/network cleanup | CLI has state and network cleanup; desktop cleanup is missing. | GUI previews exact RunHaven-owned state volumes and networks, then resets/prunes only after explicit confirmation. | Tauri tests, frontend tests, destructive-target validation tests. |
 | V1-G7 | Desktop worktree review | CLI has diff, keep, recover, merge, discard; desktop does not. | GUI makes dirty repo choices clear before launch and supports diff/review/keep/recover/merge/discard for RunHaven-owned worktrees. | Worktree tests, Tauri tests, frontend tests, data-loss review. |
 | V1-G8 | Desktop profile support tiers | Not yet a first-class UI surface. | GUI clearly distinguishes image availability, CLI start support, provider mode support, auth path, and known limits per profile. | Profile matrix docs, frontend tests, profile dry-runs/smokes. |

@@ -206,3 +206,47 @@ export type RepairRunResponse = {
   status: string;
   markerRemoved: boolean;
 };
+
+export type EgressLogEntry = {
+  timestamp: string;
+  profile: string;
+  decision: string;
+  host: string;
+  port: number;
+  count: number;
+  reason: string;
+  matchedRule: string;
+  runId: string;
+};
+
+export type EgressLogResponse = {
+  entries: EgressLogEntry[];
+};
+
+export type AuthLogEntry = {
+  timestamp: string;
+  profile: string;
+  broker: string;
+  decision: string;
+  method: string;
+  path: string;
+  upstreamStatus: number | null;
+  count: number;
+  reason: string;
+  runId: string;
+};
+
+export type AuthLogResponse = {
+  entries: AuthLogEntry[];
+};
+
+export type AuthProfileStatus = {
+  name: string;
+  status: string;
+};
+
+export type AuthStatusResponse = {
+  status: string;
+  runtime: string;
+  profiles: AuthProfileStatus[];
+};
