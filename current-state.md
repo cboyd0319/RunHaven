@@ -85,6 +85,12 @@ evidence and a recorded reason.
   behavior is treated as not shipped. Boring-over-clever and the edge-case
   tiebreaker (between equally small standard-library options, take the one
   correct on edge cases) resolve style and algorithm choices.
+- The `GitSnapshot`/`GitChange` `available` field is a serde enum tag that
+  serializes as the string "true"/"false", never a JSON boolean. Read serialized
+  git values with `git_value_available` (or match the typed enum); never
+  `Value::as_bool` on `available`. Reading it as a bool silently broke every
+  worktree run, diff, and merge until 2026-06-25. The `dirty`, `changed`, and
+  `truncated` fields are real booleans.
 - The default `--network` mode is profile-aware so the secure path is also the
   default path (2026-06-25 user directive: the secure path must be the easiest
   path, inform rather than block, do not restrict where a restriction cannot be
@@ -99,6 +105,22 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-25: Produced documented evidence that every CLI surface is tested.
+  Added `scripts/cli_surface_check.sh`, a repeatable live breadth check that
+  exercises every command family (agents, doctor, setup, plan, run,
+  run --worktree, image build/rebuild/doctor, network list/prune,
+  state list/reset/prune, runs list/show/log/diff/keep/recover/merge/discard/
+  active/status/attach/kill/repair, egress log, auth status/explain/log, why
+  host/workspace/network/state) and self-cleans. It found a real bug: the
+  `GitSnapshot`/`GitChange` `available` serde tag serializes as the string
+  "true"/"false", but four sites read it with `Value::as_bool` (always None),
+  silently breaking `run --worktree`, `runs diff`, and `runs merge` for every
+  clean repo. Fixed with a canonical `git_value_available` reader plus typed
+  `GitSnapshot` enum matches in the worktree code, with a regression test.
+  Coverage is indexed in `docs/CLI_SURFACE_COVERAGE.md`. Final evidence on macOS
+  27.0: `cli_surface_check.sh` 39/39, `apple_container_smoke.sh --with-provider
+  --with-ssh` passed, and both crates green on fmt/test/clippy plus pins, JSON,
+  and diff checks.
 - 2026-06-25: Made the network mode secure-by-default per the user directive
   that the secure path must be the easiest path. `--network` is now optional and
   resolves profile-aware in `make_run_plan` via `default_network_mode`: provider
@@ -410,6 +432,14 @@ evidence and a recorded reason.
 
 ## Touched Surfaces In This Pass
 
+- CLI surface verification + git-availability bug fix (code): new
+  `scripts/cli_surface_check.sh`; `src/runhaven/support/git.rs`
+  (`git_value_available`); `src/runhaven/runtime/worktrees/mod.rs` and
+  `merge.rs` (typed `GitSnapshot` matches + regression test);
+  `src/runhaven/records/history.rs` and `records/history/diff.rs` (canonical
+  reader). Docs: new `docs/CLI_SURFACE_COVERAGE.md`, `docs/harness/evidence/evidence-log.md`,
+  `docs/harness/feedback/verification-matrix.md`, `README.md` (docs index),
+  `feature_list.json`, and this state file.
 - Secure-by-default network (code): `src/runhaven/cli/args.rs` (`--network`
   optional), `src/runhaven/runtime/plans/validation.rs` (`default_network_mode`),
   `mod.rs` (re-export + focused test), `src/runhaven/cli/app.rs` (resolve default
@@ -431,8 +461,10 @@ evidence and a recorded reason.
 
 ## Next Step
 
-`cli-complete-v0.5.0` is `passing`: all contract gaps closed and the network
-default is now secure-by-default. Begin the desktop phase with the
+`cli-complete-v0.5.0` is `passing`: all contract gaps closed, the network
+default is now secure-by-default, and every CLI surface is confirmed live by
+`scripts/cli_surface_check.sh` (39/39) plus the Apple `container` smoke, indexed
+in `docs/CLI_SURFACE_COVERAGE.md`. Begin the desktop phase with the
 `tauri-stop-run-control` slice toward `desktop-first-class-v1`. A terminal UI
 (TUI) is deferred until well after the desktop app ships. Tagged `v0.5.0` release
 notes are cut at the release-readiness step. Use `docs/RELEASE_GAP_ANALYSIS.md`

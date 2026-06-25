@@ -118,7 +118,7 @@ Use the smallest doc that matches the question:
 | Security and runtime boundary | [Security model](docs/SECURITY_MODEL.md), [Provider endpoints](docs/PROVIDER_ENDPOINTS.md), [Apple Container gap analysis](docs/APPLE_CONTAINER_GAP_ANALYSIS.md) |
 | Architecture and auth | [Architecture](docs/ARCHITECTURE.md), [Auth broker](docs/AUTH_BROKER.md), [Research](docs/RESEARCH.md) |
 | Desktop UI | [Tauri UI guardrails](docs/TAURI_UI_GUARDRAILS.md), [Tauri log viewing design](docs/TAURI_LOG_VIEWING_DESIGN.md), [Tauri UI research plan](docs/TAURI_UI_RESEARCH_PLAN.md) |
-| Release planning | [Roadmap](docs/ROADMAP.md), [v0.5.0/v1.0.0 release plan](docs/V1_RELEASE_PLAN.md), [Release gap analysis](docs/RELEASE_GAP_ANALYSIS.md), [Pinning policy](docs/PINNING.md) |
+| Release planning | [Roadmap](docs/ROADMAP.md), [v0.5.0/v1.0.0 release plan](docs/V1_RELEASE_PLAN.md), [Release gap analysis](docs/RELEASE_GAP_ANALYSIS.md), [CLI surface coverage](docs/CLI_SURFACE_COVERAGE.md), [Pinning policy](docs/PINNING.md) |
 | Project operations | [Harness](docs/harness/README.md), [Contributing](CONTRIBUTING.md), [Security policy](SECURITY.md) |
 
 ## Development

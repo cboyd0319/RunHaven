@@ -14,6 +14,7 @@ changes a security boundary.
 | Frontend UI | `npm --prefix ui run check`; `npm --prefix ui test`; `npm --prefix ui run test:e2e`; `npm --prefix ui run build`; relevant Tauri command tests; maintainability check for touched components and adapters |
 | Tauri shell | Frontend checks plus `cargo fmt --manifest-path src-tauri/Cargo.toml --check`; `cargo test --manifest-path src-tauri/Cargo.toml --locked` (includes the `capability_guard` scope test); `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`; capability review |
 | CLI command construction | Rust checks plus focused CLI and planning tests |
+| Full CLI surface confirmation | `scripts/cli_surface_check.sh` (breadth: every command family); `scripts/apple_container_smoke.sh --with-provider --with-ssh` (depth: provider egress denial and SSH fail-closed); coverage indexed in `docs/CLI_SURFACE_COVERAGE.md` |
 | Code organization or modularity | Focused tests for moved behavior; stale import/reference scan with `rg`; relevant Rust, Tauri, or frontend checks; verify duplicated logic was deleted or intentionally kept |
 | Apple `container` runtime boundary | Rust checks plus `runhaven doctor`, `runhaven plan`, and a focused runtime smoke proving the claimed mount, user, network, or filesystem behavior |
 | Provider egress or endpoint policy | Focused egress/provider tests; source review for endpoint changes; `scripts/apple_container_smoke.sh --with-provider` when behavior changes and the host is available |
