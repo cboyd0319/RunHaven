@@ -46,9 +46,14 @@ Load deeper docs only when the task touches that surface.
   or user-managed machine workflows should not be blocked solely because they
   are less secure. They should warn, require intent, and fail only for concrete
   unsupported or unsafe states.
-- Every stage must consider file size, modularity, duplication, crate/component
-  organization, standard-library/native/installed-dependency options, exact
-  current-stable pins, and harness state.
+- All current and future development is DRY and documentation-first. Walk the
+  build-necessity ladder (YAGNI, standard library, native platform,
+  already-installed dependency, one clear line, then minimum custom code),
+  prefer boring over clever, remove meaningful duplication, and ship docs in the
+  same slice as the behavior. Every stage also considers file size, modularity,
+  crate/component organization, exact current-stable pins, and harness state.
+  `AGENTS.md` Working Rules and `docs/harness/boundaries/change-contract.md`
+  hold the canonical gate.
 - Windows and Linux are not supported runtime or contributor-verification
   targets.
 - GitHub Actions CI is disabled during alpha/pre-release. Local verification is
@@ -77,6 +82,13 @@ evidence and a recorded reason.
   the failure mode; deeper `docs/harness/` material is on-demand reference.
 - Exactly one feature is `active` in `feature_list.json` to hold scope; the
   `active` row is the current slice, distinct from `planned` work.
+- All development is DRY and documentation-first by standing rule (2026-06-24
+  user directive), not a per-slice decision. The build-necessity ladder in
+  `AGENTS.md` Working Rules and the `change-contract.md` Build Necessity Gate are
+  the single canonical source; documentation-is-product means an undocumented
+  behavior is treated as not shipped. Boring-over-clever and the edge-case
+  tiebreaker (between equally small standard-library options, take the one
+  correct on edge cases) resolve style and algorithm choices.
 - The `glib` advisory GHSA-wrw7-89jp-8q8g is treated as not-affected because
   `glib` enters only through Tauri's Linux GTK backend and is absent from the
   macOS build graph; it is capped at 0.18.x by `gtk 0.18.2`. Dependabot alert
@@ -84,6 +96,19 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-24: Locked the DRY and documentation-first development rule into the
+  harness per user directive. Reframed the `AGENTS.md` build-necessity bullet as
+  the named DRY ladder (YAGNI, standard library, native platform, installed
+  dependency, one line, then minimum custom code) and added
+  documentation-is-product and boring-over-clever principles; aligned the
+  `change-contract.md` Build Necessity Gate rungs plus acceptance criteria with
+  the same wording and the edge-case tiebreaker; added a doc-ships-with-behavior
+  and ladder-applied check to the `AGENTS.md` Definition Of Done; recorded the
+  standing rule in Product Facts and Key Decisions. Kept one canonical gate
+  (no ladder copy/paste) so the change is itself DRY. Docs-only change: verified
+  with `git diff --check` (clean) and confirmed the referenced gate path
+  resolves; no code, JSON, or pins changed, so cargo/JSON/pin checks were not
+  run.
 - 2026-06-24: Ran a repo-wide docs accuracy audit across all 54 tracked
   Markdown files against the canonical current state. Root, core-product, and
   most harness docs were already accurate. Fixed: `docs/RESEARCH.md` reframed
@@ -314,14 +339,19 @@ evidence and a recorded reason.
 
 ## Touched Surfaces In This Pass
 
-- Docs accuracy: `docs/RESEARCH.md`,
-  `docs/harness/state/modularization-plan.md`,
-  `.agents/skills/harness/references/repo-harness.md`, plus this state file and
-  `docs/harness/evidence/evidence-log.md`.
+- DRY/documentation-first rule lock-in: `AGENTS.md` (Working Rules, Definition
+  Of Done), `docs/harness/boundaries/change-contract.md` (Build Necessity Gate,
+  Acceptance Criteria), `CONTRIBUTING.md` (new Development Principles section;
+  folded the overlapping duplication bullet), plus this state file. Kept the
+  rule canonical in the harness and surfaced once in `CONTRIBUTING.md` rather
+  than copied across docs (DRY + YAGNI).
 
-Earlier 2026-06-24 passes (already committed): dependency pin refresh
+Earlier 2026-06-24 passes (already committed): the docs accuracy audit
+(`docs/RESEARCH.md`, `docs/harness/state/modularization-plan.md`,
+`.agents/skills/harness/references/repo-harness.md`, this state file,
+`docs/harness/evidence/evidence-log.md`); the dependency pin refresh
 (`Cargo.toml`/`pins.toml`/ui + image manifests and lockfiles, `docs/PINNING.md`
-glib note, dismissed Dependabot alert #1) and the harness gap-analysis pass
+glib note, dismissed Dependabot alert #1); and the harness gap-analysis pass
 (`AGENTS.md`, `feature_list.json`, the change-contract/security-boundary/
 verification-matrix/sensor-registry/quality-document/roadmap harness docs, and
 `src-tauri/src/capability_guard.rs`).

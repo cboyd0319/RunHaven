@@ -13,6 +13,25 @@ focused on making the desktop app the easiest safe path.
 RunHaven only supports macOS 26+ on Apple silicon. Do not add Windows or Linux
 runtime or contributor-verification surfaces.
 
+## Development Principles
+
+All development is DRY and documentation-first:
+
+- Walk the build-necessity ladder and stop at the first rung that fits: does it
+  need to exist at all (YAGNI), does the standard library do it, does a native
+  platform feature cover it, does an already-installed dependency solve it, can
+  it be one clear line, then minimum custom code. Never add a dependency for
+  what a few lines do.
+- Documentation is product: an undocumented behavior does not exist, so docs
+  ship in the same change as the behavior.
+- Prefer boring over clever, and remove meaningful duplication instead of
+  copy/paste or deferred large-file cleanup. Between two standard-library
+  options of similar size, take the one correct on edge cases.
+
+[AGENTS.md](AGENTS.md) Working Rules and
+[the change contract](docs/harness/boundaries/change-contract.md) hold the full
+gate, including the security and correctness carve-outs.
+
 ## Local Checks
 
 Full local harness verification:
@@ -44,9 +63,8 @@ cargo build --locked
   should warn and require explicit intent.
 - Keep dependencies current stable and hard-pinned. Updating a package means
   changing the exact version or digest in source control.
-- Keep files, modules, crates, Tauri commands, and frontend components
-  cohesive. Remove meaningful duplication instead of deferring large-file
-  cleanup.
+- Keep files, modules, crates, Tauri commands, and frontend components cohesive
+  so security-sensitive paths stay reviewable.
 - Add or update tests for every change to command construction.
 - Keep host secrets out of generated commands unless the user explicitly passes
   a variable name with `--env`.

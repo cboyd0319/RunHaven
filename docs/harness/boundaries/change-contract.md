@@ -27,16 +27,24 @@ Non-goals:
 
 ## Build Necessity Gate
 
-Before implementation, stop at the first rung that satisfies the problem:
+Before implementation, stop at the first rung that satisfies the problem. This
+gate is DRY: do not write what a higher rung already gives you.
 
-1. No change.
+1. No change. Does this need to exist at all (YAGNI)?
 2. Deletion or simplification.
-3. Documentation or configuration.
-4. Standard library.
-5. Native macOS or Apple `container` behavior.
-6. Existing project dependency.
-7. One clear local change.
-8. Minimum new code or harness surface.
+3. Documentation or configuration. Documentation is product: an undocumented
+   behavior does not exist, so its doc ships in the same slice.
+4. Standard library. Between two standard-library options of similar size, take
+   the one correct on edge cases; lazy means writing less code, not picking the
+   flimsier algorithm.
+5. Native macOS, Apple `container`, web-platform, or schema behavior
+   (`<input type="date">` over a picker library, CSS over JS, a DB or schema
+   constraint over app code).
+6. Already-installed project dependency. Never add a new dependency for what a
+   few lines can do.
+7. One clear local change; one line when that stays clear.
+8. Minimum new code or harness surface. Boring over clever: clever is what
+   someone has to decode at 3am.
 
 Do not use this gate to cut input validation at trust boundaries, data-loss
 prevention, security, privacy, accessibility, platform contract, or explicit
@@ -74,6 +82,8 @@ or deletion in the same scope unless deferral is explicit, small, and recorded.
 ## Acceptance Criteria
 
 - The requested behavior or harness improvement is visible in repo files.
+- Any changed behavior ships its documentation in the same slice; an
+  undocumented behavior is treated as not shipped.
 - Security-sensitive changes preserve fail-closed defaults.
 - Secure defaults remain the easiest path; supported lower-security choices are
   explicit and warned.

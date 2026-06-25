@@ -100,9 +100,23 @@ Tauri launch/run-control behavior.
 
 ## Working Rules
 
-- Prefer the smallest correct change: no change, deletion, documentation,
-  configuration, standard library, native platform behavior, existing
-  dependency, then minimum custom code.
+- All current and future development is DRY. Walk the build-necessity ladder
+  and stop at the first rung that satisfies the request: (1) does it need to
+  exist at all (YAGNI); (2) does the standard library do it; (3) does a native
+  platform feature cover it (`<input type="date">` over a picker library, CSS
+  over JS, a schema or DB constraint over app code); (4) does an
+  already-installed dependency solve it, and never add a new one for what a few
+  lines can do; (5) can it be one clear line. Then write the minimum custom
+  code that works. `docs/harness/boundaries/change-contract.md` holds the full
+  gate, including the security and correctness carve-outs.
+- Documentation is product: if a behavior is not documented it does not exist.
+  Ship the doc change in the same slice as the behavior.
+- Boring over clever: choose the obvious construct, because clever is what
+  someone has to decode at 3am. Between two standard-library options of similar
+  size, take the one correct on edge cases; lazy means writing less code, not
+  picking the flimsier algorithm.
+- Eliminate meaningful duplication everywhere. Prefer deletion or one small
+  shared helper over copy/paste, but do not add speculative abstractions.
 - Think before coding: define success criteria, surface uncertainty, and name
   meaningful tradeoffs before implementation.
 - Design workflows so the secure path is the default and easiest path; make
@@ -112,8 +126,6 @@ Tauri launch/run-control behavior.
   If a touched file is already difficult to review or would become so, split it
   along existing boundaries in the same slice instead of creating large-file
   debt.
-- Eliminate meaningful duplication. Prefer deletion or small shared helpers
-  over copy/paste, but do not add speculative abstractions.
 - Use exact subprocess argument lists, not executable shell strings, for
   runtime command generation.
 - Keep direct dependencies, package manifests, runtime pins, and image package
@@ -133,6 +145,11 @@ Tauri launch/run-control behavior.
 ## Definition Of Done
 
 - Target behavior or documentation change is complete.
+- Any changed behavior ships its documentation in the same slice; an
+  undocumented behavior is treated as not done.
+- The DRY build-necessity ladder was applied: no higher rung (no change,
+  deletion, documentation, standard library, native platform, installed
+  dependency, one line) already covered the work.
 - Relevant checks ran, or skipped checks are named with reason and risk.
 - Security, data-loss, accessibility, and platform-parity requirements were not
   weakened.
