@@ -5,7 +5,7 @@ use runhaven::active::{
 };
 use serde_json::Value;
 
-use super::{MAX_RUN_ID_LEN, validate_text_len};
+use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{LogSnapshotRequest, LogSnapshotResponse};
 
 #[tauri::command]

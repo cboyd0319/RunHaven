@@ -15,25 +15,17 @@ use serde_json::Value;
 
 use crate::contracts::{
     AgentProfileSummary, CheckStatus, DashboardStatus, LaunchRunRequest, LaunchRunResponse,
-    PlanWarning, RunPlanRequest, RunPlanResponse, RunSummary, SetupStatus, StartedRunSnapshot,
+    RunPlanRequest, RunPlanResponse, RunSummary, SetupStatus, StartedRunSnapshot,
 };
 
 pub(crate) mod image_status;
 pub(crate) mod log_snapshot;
 pub(crate) mod run_status;
+mod validation;
+mod warnings;
 
-pub(super) const MAX_AGENT_NAME_LEN: usize = 64;
-pub(super) const MAX_RUN_ID_LEN: usize = 128;
-const MAX_WORKSPACE_PATH_LEN: usize = 4096;
-const MAX_SHORT_FIELD_LEN: usize = 64;
-const MAX_SESSION_NAME_LEN: usize = 128;
-const MAX_IMAGE_REF_LEN: usize = 512;
-const MAX_PROVIDER_HOST_LEN: usize = 253;
-const MAX_ENV_NAME_LEN: usize = 128;
-const MAX_WARNING_CODE_LEN: usize = 64;
-const MAX_PROVIDER_HOSTS: usize = 50;
-const MAX_ENV_NAMES: usize = 50;
-const MAX_CONFIRMED_WARNINGS: usize = 16;
+use validation::{validate_launch_request_bounds, validate_plan_request_bounds};
+use warnings::plan_warnings;
 
 #[tauri::command]
 pub(crate) fn get_setup_status() -> SetupStatus {
@@ -253,87 +245,6 @@ fn validate_launch_confirmation(request: &LaunchRunRequest) -> Result<(), String
     Ok(())
 }
 
-fn validate_launch_request_bounds(request: &LaunchRunRequest) -> Result<(), String> {
-    validate_plan_request_bounds(&request.plan)?;
-    validate_string_list(
-        "confirmed warning codes",
-        &request.confirmed_warnings,
-        MAX_CONFIRMED_WARNINGS,
-        MAX_WARNING_CODE_LEN,
-    )
-}
-
-fn validate_plan_request_bounds(request: &RunPlanRequest) -> Result<(), String> {
-    validate_text_len("agent", &request.agent, MAX_AGENT_NAME_LEN)?;
-    validate_text_len(
-        "workspace path",
-        &request.workspace_path,
-        MAX_WORKSPACE_PATH_LEN,
-    )?;
-    validate_text_len("network mode", &request.network_mode, MAX_SHORT_FIELD_LEN)?;
-    validate_text_len(
-        "workspace scope",
-        &request.workspace_scope,
-        MAX_SHORT_FIELD_LEN,
-    )?;
-    validate_optional_text_len(
-        "session name",
-        request.session_name.as_deref(),
-        MAX_SESSION_NAME_LEN,
-    )?;
-    validate_text_len("cpu limit", &request.cpus, MAX_SHORT_FIELD_LEN)?;
-    validate_text_len("memory limit", &request.memory, MAX_SHORT_FIELD_LEN)?;
-    validate_optional_text_len("image", request.image.as_deref(), MAX_IMAGE_REF_LEN)?;
-    validate_text_len("user", &request.user, MAX_SHORT_FIELD_LEN)?;
-    validate_string_list(
-        "provider hosts",
-        &request.provider_hosts,
-        MAX_PROVIDER_HOSTS,
-        MAX_PROVIDER_HOST_LEN,
-    )?;
-    validate_string_list(
-        "environment variable names",
-        &request.env_names,
-        MAX_ENV_NAMES,
-        MAX_ENV_NAME_LEN,
-    )
-}
-
-pub(super) fn validate_text_len(label: &str, value: &str, max_len: usize) -> Result<(), String> {
-    if value.len() > max_len {
-        return Err(format!("{label} is too long; maximum is {max_len} bytes"));
-    }
-    Ok(())
-}
-
-fn validate_optional_text_len(
-    label: &str,
-    value: Option<&str>,
-    max_len: usize,
-) -> Result<(), String> {
-    if let Some(value) = value {
-        validate_text_len(label, value, max_len)?;
-    }
-    Ok(())
-}
-
-fn validate_string_list(
-    label: &str,
-    values: &[String],
-    max_count: usize,
-    max_len: usize,
-) -> Result<(), String> {
-    if values.len() > max_count {
-        return Err(format!(
-            "{label} has too many entries; maximum is {max_count}"
-        ));
-    }
-    for value in values {
-        validate_text_len(label, value, max_len)?;
-    }
-    Ok(())
-}
-
 fn validate_bundled_image_ready(request: &RunPlanRequest) -> Result<(), String> {
     if request
         .image
@@ -425,103 +336,6 @@ fn non_empty(value: Option<String>) -> Option<String> {
 
 fn active_run_count() -> usize {
     read_active_run_records().len()
-}
-
-fn plan_warnings(request: &RunPlanRequest, active_run_count: usize) -> Vec<PlanWarning> {
-    let mut warnings = Vec::new();
-    if active_run_count > 0 {
-        warnings.push(warning(
-            "active-runs",
-            &active_runs_warning_message(active_run_count),
-        ));
-    }
-    if active_run_count > 0 && material_memory_request(&defaulted(&request.memory, "4g")) {
-        warnings.push(warning(
-            "resource-memory",
-            "This memory limit plus active runs may be material on the host. macOS memory pressure is not measured yet.",
-        ));
-    }
-    if request.network_mode == "internet" {
-        warnings.push(warning(
-            "full-internet",
-            "Full internet lets the agent reach unrestricted network destinations from inside the container.",
-        ));
-    }
-    if request.allow_sensitive_workspace {
-        warnings.push(warning(
-            "sensitive-workspace",
-            "The selected folder may contain private files. The agent can read files inside that folder.",
-        ));
-    }
-    if request.allow_root_user || matches!(request.user.as_str(), "root" | "0") {
-        warnings.push(warning(
-            "root-user",
-            "The agent will run as root inside the container, weakening normal container guardrails.",
-        ));
-    }
-    if !request.env_names.is_empty() {
-        warnings.push(warning(
-            "environment",
-            "Environment variable names are passed into the run. Values are never shown in the UI.",
-        ));
-    }
-    if request
-        .image
-        .as_deref()
-        .is_some_and(|image| !image.trim().is_empty())
-    {
-        warnings.push(warning(
-            "custom-image",
-            "Custom images are outside the bundled RunHaven image set.",
-        ));
-    }
-    if !request.provider_hosts.is_empty() {
-        warnings.push(warning(
-            "provider-host",
-            "Additional provider hosts allow that host and its subdomains in provider-only mode.",
-        ));
-    }
-    warnings
-}
-
-fn active_runs_warning_message(active_run_count: usize) -> String {
-    let noun = if active_run_count == 1 { "run" } else { "runs" };
-    let verb = if active_run_count == 1 {
-        "exists"
-    } else {
-        "exist"
-    };
-    format!(
-        "{active_run_count} active RunHaven {noun} already {verb}. Starting another run starts another Apple container VM."
-    )
-}
-
-fn material_memory_request(memory: &str) -> bool {
-    const TWO_GIB: u64 = 2 * 1024 * 1024 * 1024;
-    memory_bytes(memory).is_some_and(|bytes| bytes >= TWO_GIB)
-}
-
-fn memory_bytes(memory: &str) -> Option<u64> {
-    let memory = memory.trim();
-    if memory.is_empty() {
-        return None;
-    }
-    let suffix = memory.chars().last()?;
-    let (digits, multiplier) = match suffix {
-        'K' | 'k' => (&memory[..memory.len() - suffix.len_utf8()], 1024),
-        'M' | 'm' => (&memory[..memory.len() - suffix.len_utf8()], 1024_u64.pow(2)),
-        'G' | 'g' => (&memory[..memory.len() - suffix.len_utf8()], 1024_u64.pow(3)),
-        'T' | 't' => (&memory[..memory.len() - suffix.len_utf8()], 1024_u64.pow(4)),
-        _ => (memory, 1),
-    };
-    digits.parse::<u64>().ok()?.checked_mul(multiplier)
-}
-
-fn warning(code: &str, message: &str) -> PlanWarning {
-    PlanWarning {
-        code: code.to_string(),
-        message: message.to_string(),
-    }
 }
 
 #[cfg(test)]

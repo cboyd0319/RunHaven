@@ -3,7 +3,7 @@ use runhaven::image_doctor::{
     collect_image_status,
 };
 
-use super::{MAX_AGENT_NAME_LEN, validate_text_len};
+use super::validation::{MAX_AGENT_NAME_LEN, validate_text_len};
 use crate::contracts::{
     BuilderStatus, ImageStatusRequest, ImageStatusResponse, ProfileImageStatus,
 };
