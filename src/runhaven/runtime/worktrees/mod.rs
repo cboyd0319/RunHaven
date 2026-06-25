@@ -14,7 +14,7 @@ pub use commands::{
 };
 pub use merge::ensure_source_ready_for_merge;
 
-use crate::git::{capture_git_snapshot, git_head, git_repo_root};
+use crate::git::{GitSnapshot, capture_git_snapshot, git_head, git_repo_root};
 use crate::paths::worktrees_dir;
 use crate::plans::{WorkspaceScope, WorktreeRun, apply_workspace_scope, validate_workspace};
 use crate::records::find_run_record;
@@ -136,25 +136,20 @@ pub fn require_git_head(repo_root: &Path) -> Result<String> {
 }
 
 pub fn ensure_clean_source_repo(repo_root: &Path) -> Result<()> {
-    let snapshot = capture_git_snapshot(repo_root);
-    let value = serde_json::to_value(&snapshot)?;
-    if value.get("available").and_then(Value::as_bool) != Some(true) {
-        let reason = value.get("reason").and_then(Value::as_str).unwrap_or("");
-        bail!(
+    match capture_git_snapshot(repo_root) {
+        GitSnapshot::Unavailable { reason, .. } => bail!(
             "could not inspect source git worktree{}",
             if reason.is_empty() {
                 String::new()
             } else {
                 format!(": {reason}")
             }
-        );
-    }
-    if value.get("dirty").and_then(Value::as_bool) == Some(true) {
-        bail!(
+        ),
+        GitSnapshot::Available { dirty: true, .. } => bail!(
             "--worktree requires a clean source git worktree.\nOptions:\n1. Commit or stash source changes, then retry with --worktree.\n2. Run without --worktree to use the source checkout directly.\n3. Start from a clean clone or git worktree if you want isolation."
-        );
+        ),
+        GitSnapshot::Available { .. } => Ok(()),
     }
-    Ok(())
 }
 
 pub fn recovery_commands(
@@ -371,4 +366,39 @@ pub(super) fn git_bytes(
         );
     }
     Ok(output.stdout)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::Command;
+
+    fn git(repo: &Path, args: &[&str]) {
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(repo)
+            .args(args)
+            .status()
+            .expect("git available");
+        assert!(status.success(), "git {args:?} failed");
+    }
+
+    #[test]
+    fn ensure_clean_source_repo_accepts_clean_and_rejects_dirty() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let repo = dir.path();
+        git(repo, &["init", "-q"]);
+        git(repo, &["config", "user.email", "test@example.com"]);
+        git(repo, &["config", "user.name", "test"]);
+        std::fs::write(repo.join("seed.txt"), "base").expect("write seed");
+        git(repo, &["add", "seed.txt"]);
+        git(repo, &["commit", "-qm", "seed"]);
+        let repo_root = repo.canonicalize().expect("canonicalize");
+
+        ensure_clean_source_repo(&repo_root).expect("clean repo must be accepted");
+
+        std::fs::write(repo_root.join("dirty.txt"), "x").expect("write dirty");
+        let error = ensure_clean_source_repo(&repo_root).expect_err("dirty repo must be rejected");
+        assert!(error.to_string().contains("clean source git worktree"));
+    }
 }

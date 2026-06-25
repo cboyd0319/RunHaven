@@ -4,7 +4,7 @@ use anyhow::{Result, bail};
 use serde_json::Value;
 
 use super::find_run_record;
-use crate::git::{capture_git_snapshot, git_snapshot_paths, run_git_diff};
+use crate::git::{capture_git_snapshot, git_snapshot_paths, git_value_available, run_git_diff};
 use crate::validators::require_string;
 
 pub fn runs_diff(run_id: &str) -> Result<i32> {
@@ -12,7 +12,7 @@ pub fn runs_diff(run_id: &str) -> Result<i32> {
     let git = record
         .get("git")
         .ok_or_else(|| anyhow::anyhow!("git metadata is unavailable for run {run_id}"))?;
-    if git.get("available").and_then(Value::as_bool) != Some(true) {
+    if !git_value_available(git) {
         let reason = git.get("reason").and_then(Value::as_str).unwrap_or("");
         bail!(
             "git metadata is unavailable for run {run_id}{}",
@@ -54,7 +54,7 @@ pub fn runs_diff(run_id: &str) -> Result<i32> {
         bail!("recorded workspace no longer exists; refusing live diff");
     }
     let current = serde_json::to_value(capture_git_snapshot(Path::new(workspace)))?;
-    if current.get("available").and_then(Value::as_bool) != Some(true) {
+    if !git_value_available(&current) {
         bail!("recorded workspace is no longer a git worktree; refusing live diff");
     }
     if current.get("repo_root").and_then(Value::as_str) != Some(repo_root) {

@@ -2,24 +2,24 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::{Result, bail};
-use serde_json::Value;
 
 use super::{WorktreeLifecycle, git_bytes, git_checked, git_stdout};
-use crate::git::{capture_git_snapshot, parse_git_status_entries, safe_repo_path};
+use crate::git::{GitSnapshot, capture_git_snapshot, parse_git_status_entries, safe_repo_path};
 
 pub fn ensure_source_ready_for_merge(lifecycle: &WorktreeLifecycle) -> Result<()> {
     let current_head = git_stdout(&lifecycle.source_repo_root, &["rev-parse", "HEAD"])?;
     if current_head != lifecycle.base_head {
         bail!("source repository HEAD changed since the worktree run; refusing merge");
     }
-    let snapshot = serde_json::to_value(capture_git_snapshot(&lifecycle.source_repo_root))?;
-    if snapshot.get("available").and_then(Value::as_bool) != Some(true) {
-        bail!("could not inspect source repository before merge");
+    match capture_git_snapshot(&lifecycle.source_repo_root) {
+        GitSnapshot::Unavailable { .. } => {
+            bail!("could not inspect source repository before merge")
+        }
+        GitSnapshot::Available { dirty: true, .. } => {
+            bail!("source repository has uncommitted changes; refusing merge")
+        }
+        GitSnapshot::Available { .. } => Ok(()),
     }
-    if snapshot.get("dirty").and_then(Value::as_bool) == Some(true) {
-        bail!("source repository has uncommitted changes; refusing merge");
-    }
-    Ok(())
 }
 
 pub(super) fn merge_worktree_changes(lifecycle: &WorktreeLifecycle) -> Result<()> {

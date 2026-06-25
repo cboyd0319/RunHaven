@@ -13,7 +13,7 @@ mod log;
 pub use diff::runs_diff;
 pub use log::runs_log;
 
-use crate::git::GitChange;
+use crate::git::{GitChange, git_value_available};
 use crate::paths::{open_private_append, runs_log_path};
 use crate::plans::AgentRunPlan;
 use crate::worktrees::worktree_record;
@@ -258,7 +258,7 @@ pub fn print_run_record(record: &Value) {
 }
 
 pub fn format_git_summary(git: &Value) -> String {
-    if git.get("available").and_then(Value::as_bool) != Some(true) {
+    if !git_value_available(git) {
         let reason = git
             .get("reason")
             .and_then(Value::as_str)

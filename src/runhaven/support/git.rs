@@ -223,6 +223,14 @@ pub fn summarize_git_change(before: GitSnapshot, after: GitSnapshot) -> GitChang
     }
 }
 
+/// True when a serialized `GitSnapshot` or `GitChange` reports availability.
+///
+/// The `available` field is the serde enum tag, which serializes as the string
+/// "true"/"false", not a JSON boolean. Read it as a string, never `as_bool`.
+pub fn git_value_available(value: &serde_json::Value) -> bool {
+    value.get("available").and_then(serde_json::Value::as_str) == Some("true")
+}
+
 pub fn git_snapshot_paths(value: &serde_json::Value) -> Result<Vec<String>> {
     let paths = value
         .get("paths")
