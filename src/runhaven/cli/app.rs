@@ -135,6 +135,7 @@ fn setup(agent: &str) -> Result<i32> {
 fn plan_run(args: &RunArgs, agent_args: Vec<String>) -> Result<i32> {
     let plan = make_run_plan(args, agent_args, None, None, None)?;
     print_run_plan(&plan);
+    eprint_security_notices(&plan);
     Ok(0)
 }
 
@@ -172,9 +173,11 @@ fn run_agent(
     }
     if dry_run {
         print_run_plan(&plan);
+        eprint_security_notices(&plan);
         return Ok(0);
     }
 
+    eprint_security_notices(&plan);
     launch_run_plan(&plan)
 }
 
@@ -410,6 +413,19 @@ fn print_run_plan(plan: &AgentRunPlan) {
     }
     println!("Run:");
     println!("  {}", plan.shell_command());
+}
+
+fn eprint_security_notices(plan: &AgentRunPlan) {
+    if plan.security_notices.is_empty() {
+        return;
+    }
+    eprintln!("Security notices:");
+    for notice in &plan.security_notices {
+        eprintln!("  - {notice}");
+    }
+    eprintln!(
+        "Choose RunHaven's secure defaults (non-root agent, internal or provider network, no extra env, hosts, or custom image) to clear these notices."
+    );
 }
 
 fn network_mode(value: &str) -> Result<NetworkMode> {

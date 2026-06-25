@@ -72,12 +72,19 @@ selected workspace, non-root bundled image, no host credential mounts, no
 arbitrary environment passthrough, no raw SSH keys, explicit network choice,
 and visible plan output.
 
-Supported advanced choices should warn but not hide or block. When a user
-intentionally chooses full internet access, a sensitive workspace, root inside
-the container, a custom image, environment passthrough, an additional provider
-host, Apple `container machine`, worktree merge or discard, state deletion,
-network pruning, or hard-stop recovery, RunHaven should show the tradeoff in
-plain language and require an explicit confirmation.
+Supported advanced choices warn but do not hide or block. Lower-security run
+configuration (a sensitive workspace, a custom or root `--user`, a custom image,
+`--env` passthrough, or an additional provider host) requires an explicit flag
+and prints plain-language `Security notices` at plan and run time so the tradeoff
+is visible. Destructive resource operations (state deletion, network pruning,
+worktree merge or discard, hard-stop recovery) require explicit confirmation such
+as `--yes`. Apple `container machine` use is warned and explicit rather than
+blocked.
+
+The `internet` network mode is the one lower-security choice still active by
+default rather than behind an explicit flag. It prints a security notice and
+remains a candidate for a stricter default before `v1.0.0`; choose `--network
+internal` or `--network provider` for the restricted path today.
 
 Unsupported, invalid, or nonfunctional paths still fail closed. Examples include
 failed setup checks, invalid input, missing confirmations, unsupported platform

@@ -216,6 +216,56 @@ pub fn network_egress_summary(
     }
 }
 
+/// Plain-language notices for every lower-security choice active in a run.
+///
+/// Secure defaults produce no notices; each supported but less-secure option
+/// adds one line so the tradeoff is visible at plan and run time.
+pub fn security_notices(options: &RunOptions) -> Vec<String> {
+    let mut notices = Vec::new();
+    if options.network == NetworkMode::Internet {
+        notices.push(
+            "Unrestricted internet egress is enabled (the default network mode); untrusted workspace code can reach any host. Use --network internal or --network provider to restrict egress."
+                .to_string(),
+        );
+    }
+    if !options.env.is_empty() {
+        notices.push(format!(
+            "Host environment variable(s) {} are exposed to the agent and can be read by workspace code; prefer --network provider or internal to limit exfiltration.",
+            options.env.join(", ")
+        ));
+    }
+    if uses_root_identity(&options.user) {
+        notices.push(
+            "The agent runs as root inside the container, which weakens the non-root isolation boundary."
+                .to_string(),
+        );
+    } else if options.user != "agent" {
+        notices.push(format!(
+            "The agent runs as container user {:?} instead of the default non-root agent user.",
+            options.user
+        ));
+    }
+    if !options.provider_hosts.is_empty() {
+        notices.push(format!(
+            "The provider allowlist is widened with: {}; each added host increases what the agent can reach.",
+            options.provider_hosts.join(", ")
+        ));
+    }
+    if options.allow_sensitive_workspace {
+        notices.push(
+            "--allow-sensitive-workspace permits mounting broad or credential-bearing host paths at /workspace."
+                .to_string(),
+        );
+    }
+    if options.image.is_some() {
+        notices.push(
+            "A custom --image is used; it may not follow RunHaven's non-root, read-only-root hardening."
+                .to_string(),
+        );
+    }
+    notices
+}
+
 pub fn uses_root_identity(user: &str) -> bool {
     user.split(':')
         .any(|part| part == "root" || part.parse::<u32>().is_ok_and(|id| id == 0))

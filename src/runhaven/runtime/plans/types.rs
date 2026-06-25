@@ -129,6 +129,7 @@ pub struct AgentRunPlan {
     pub image: String,
     pub provider_allowed_hosts: Vec<String>,
     pub codex_api_key_broker_env: Option<String>,
+    pub security_notices: Vec<String>,
 }
 
 impl AgentRunPlan {

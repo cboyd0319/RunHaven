@@ -45,7 +45,9 @@ explicit intent before use.
 - explicit environment passthrough only
 - `--ssh` fails closed until Apple `container` non-root forwarding is verified
 - interactive TTY allocation when requested or attached to a terminal
-- explicit unsafe overrides for sensitive workspaces and root agent execution
+- explicit lower-security overrides (sensitive workspace, custom or root
+  `--user`, custom `--image`, extra `--provider-host`, `--env`), each printed as
+  a plain-language security notice at plan and run time
 
 Before a non-root bundled agent starts, `runhaven` prepares the per-project home
 volume in a short-lived root container so `/home/agent` is writable by UID/GID
@@ -155,7 +157,9 @@ markers.
 for the named container, and prints only curated state, image, resource, and
 network fields.
 `runhaven runs attach RUN_ID` reads one marker and calls Apple `container exec`
-to start a guarded shell or command in the active container. `runhaven runs
+to start a guarded shell or command in the active container, defaulting to the
+non-root `agent` user in `/workspace` with `--user`, `--allow-root-user`,
+`--workdir`, and `--tty` overrides. `runhaven runs
 logs-follow RUN_ID` reads one marker and calls Apple `container logs --follow`
 for recent and live container output. `runhaven runs stop RUN_ID` reads one
 marker and calls Apple `container stop` for the named container. `runhaven runs

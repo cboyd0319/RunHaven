@@ -17,8 +17,8 @@ pub use types::{
 };
 pub use validation::{
     apply_workspace_scope, network_egress_summary, normalize_provider_hosts, normalize_session,
-    provider_hosts_for_options, sensitive_workspace_paths, uses_root_identity, validate_env_name,
-    validate_image_reference, validate_resource_options, validate_workspace,
+    provider_hosts_for_options, security_notices, sensitive_workspace_paths, uses_root_identity,
+    validate_env_name, validate_image_reference, validate_resource_options, validate_workspace,
 };
 
 use crate::session_state::state_volume_name;
@@ -214,6 +214,8 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     command.push(image.clone());
     command.extend(agent_command);
 
+    let security_notices = security_notices(&options);
+
     Ok(AgentRunPlan {
         command,
         preflight,
@@ -236,6 +238,7 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
         image,
         provider_allowed_hosts,
         codex_api_key_broker_env: options.codex_api_key_broker_env,
+        security_notices,
     })
 }
 
@@ -289,6 +292,11 @@ mod tests {
         );
         assert_eq!(plan.network_mode, NetworkMode::Internet);
         assert!(plan.egress_summary.contains("unrestricted internet"));
+        assert!(
+            plan.security_notices
+                .iter()
+                .any(|notice| notice.contains("Unrestricted internet egress"))
+        );
     }
 
     #[test]
@@ -322,9 +330,84 @@ mod tests {
             plan.provider_allowed_hosts
                 .contains(&"api.example.com".to_string())
         );
+        assert!(
+            plan.security_notices
+                .iter()
+                .any(|notice| notice.contains("widened"))
+        );
 
         options.provider_hosts = vec!["127.0.0.1".to_string()];
         assert!(build_run_plan(options).is_err());
+    }
+
+    #[test]
+    fn security_notices_track_lower_security_choices() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let base = || RunOptions {
+            profile: get_profile("shell").expect("profile"),
+            workspace: workspace.path().to_path_buf(),
+            agent_args: vec![
+                "/bin/bash".to_string(),
+                "-lc".to_string(),
+                "true".to_string(),
+            ],
+            image: None,
+            cpus: "4".to_string(),
+            memory: "4g".to_string(),
+            network: NetworkMode::Internal,
+            workspace_scope: WorkspaceScope::Current,
+            session: None,
+            read_only_workspace: false,
+            ssh: false,
+            env: Vec::new(),
+            user: "agent".to_string(),
+            interactive: false,
+            tty: false,
+            allow_sensitive_workspace: false,
+            allow_root_user: false,
+            provider_hosts: Vec::new(),
+            codex_api_key_broker_env: None,
+            worktree: None,
+            run_id: None,
+        };
+
+        let secure = build_run_plan(base()).expect("secure plan");
+        assert!(
+            secure.security_notices.is_empty(),
+            "secure defaults should emit no notices, got {:?}",
+            secure.security_notices
+        );
+
+        let mut env_options = base();
+        env_options.env = vec!["ANTHROPIC_API_KEY".to_string()];
+        let env_plan = build_run_plan(env_options).expect("env plan");
+        assert!(
+            env_plan
+                .security_notices
+                .iter()
+                .any(|notice| notice.contains("ANTHROPIC_API_KEY"))
+        );
+
+        let mut root_options = base();
+        root_options.user = "root".to_string();
+        root_options.allow_root_user = true;
+        let root_plan = build_run_plan(root_options).expect("root plan");
+        assert!(
+            root_plan
+                .security_notices
+                .iter()
+                .any(|notice| notice.contains("runs as root"))
+        );
+
+        let mut image_options = base();
+        image_options.image = Some("example.com/custom:1.0".to_string());
+        let image_plan = build_run_plan(image_options).expect("image plan");
+        assert!(
+            image_plan
+                .security_notices
+                .iter()
+                .any(|notice| notice.contains("custom --image"))
+        );
     }
 
     #[test]

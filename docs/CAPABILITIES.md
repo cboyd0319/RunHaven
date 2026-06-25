@@ -59,6 +59,25 @@ repository at `/workspace`.
 
 Use `shell` with `--image IMAGE` when you want to run another agent image.
 
+## Profile Support Matrix
+
+Every bundled profile builds an image and starts through `runhaven run PROFILE`.
+They differ in provider-network backing and authentication support tiers.
+
+| Profile | Provider hosts | Interactive auth | Headless broker | Key limit |
+| --- | --- | --- | --- | --- |
+| `claude` | Bundled: `api.anthropic.com`, `claude.ai`, `platform.claude.com` | Claude.ai browser login or API key in isolated state | Design-only | No broker; pass `ANTHROPIC_API_KEY` with `--env` for headless use |
+| `codex` | Bundled: `api.openai.com`, `chatgpt.com` | ChatGPT or OpenAI sign-in in isolated state | Prototype: `--codex-api-key-broker-env`, Responses API (`/v1/responses`) only | Broker is a create-only prototype |
+| `gemini` | Partial: only `generativelanguage.googleapis.com` bundled; `accounts.google.com` and Vertex hosts are candidates | Google account browser login or API key | Design-only | Browser login and Vertex need extra `--provider-host` entries |
+| `copilot` | Bundled: seven `githubcopilot.com` hosts | GitHub OAuth device flow in isolated state | Design-only | `github.com` and `api.github.com` are path-specific, not bundled |
+| `antigravity` | None bundled (CLI is a build-time download) | Not yet established | None | Most limited: no runtime hosts, auth path undefined |
+| `shell` | None | Decided by the custom image | None | Generic base for custom images; you supply image and credentials |
+
+"Design-only" means no credential broker is wired yet, so headless use relies on
+isolated login state or an explicit `--env NAME`. See
+[Provider endpoints](PROVIDER_ENDPOINTS.md) and [Auth broker](AUTH_BROKER.md)
+for the source-backed detail.
+
 ## Network Modes
 
 | Mode | Use it for | Egress behavior |
@@ -76,6 +95,26 @@ Provider mode is intentionally stricter than internet mode. Some login,
 telemetry, package-registry, update, or provider feature-path hosts may need
 review before being added. Use the
 [provider endpoint matrix](PROVIDER_ENDPOINTS.md) for that review.
+
+## Lower-Security Overrides
+
+Secure defaults are the easiest path. Every supported choice that lowers
+security below those defaults is an explicit flag, and both `runhaven plan` and
+`runhaven run` print plain-language `Security notices` to standard error for
+each active one. Hard-boundary violations still fail closed.
+
+| Override | What it lowers | Default |
+| --- | --- | --- |
+| `--network internet` | Unrestricted outbound egress with no domain allowlist. This is the current default mode, so it is the one override active without a flag. | default mode |
+| `--env NAME` | Exposes one host environment variable to the agent; a secret there can be read by workspace code. `NAME=value` is rejected. | none |
+| `--user USER` / `--allow-root-user` | Runs the agent as a different or root container user instead of the non-root `agent` user. Root or UID 0 fails closed without `--allow-root-user`. | `agent` |
+| `--provider-host HOST` | Widens the provider allowlist with one reviewed fully qualified host. | bundled hosts only |
+| `--allow-sensitive-workspace` | Permits mounting broad or credential-bearing host paths at `/workspace`. Sensitive paths fail closed without it. | rejected |
+| `--image IMAGE` | Runs a custom image that may not follow the bundled non-root, read-only-root hardening. | bundled profile image |
+| `--ssh` | Would forward the SSH agent socket. Currently fails closed; see the [security model](SECURITY_MODEL.md). | disabled |
+
+The notices clear when you run with secure defaults. `runhaven why network MODE`,
+`why workspace PATH`, and `why host HOST` explain each decision in more detail.
 
 ## Workspace And Git Safety
 
@@ -105,12 +144,14 @@ RunHaven does not mount raw SSH keys, browser profiles, cloud credential
 folders, provider login caches, or arbitrary host environment variables by
 default.
 
-| Opt-in | What it does |
+| Credential mechanism | What it does |
 | --- | --- |
-| `--ssh` | Currently fails closed until Apple `container` non-root SSH forwarding is verified. |
-| `--env NAME` | Passes one reviewed host environment variable by name. `NAME=value` is rejected. |
-| `--codex-api-key-broker-env NAME` | Enables the Codex API-key broker prototype for provider-network Codex runs. |
+| `--codex-api-key-broker-env NAME` | Enables the Codex API-key broker prototype for provider-network Codex runs, keeping the raw key on the host. |
 | `runhaven auth status` / `runhaven auth explain AGENT` | Explains current broker boundaries without reading or printing secrets. |
+
+Pass a single reviewed host variable with `--env NAME`, or forward SSH with
+`--ssh` (currently fails closed). Both are lower-security choices that print a
+security notice; see [Lower-security overrides](#lower-security-overrides).
 
 ## Sessions And State
 
@@ -142,6 +183,26 @@ Run records do not store diffs, file contents, prompts, command lines, agent
 arguments, attach commands, environment variable names, environment values,
 request bodies, or token values. Live container logs may still contain whatever
 the agent process printed during the run.
+
+### Local Record Files
+
+RunHaven keeps three append-only JSON Lines files under its cache directory
+(`RUNHAVEN_CACHE_HOME`, otherwise `~/Library/Caches/runhaven/`), created with
+owner-only permissions:
+
+| File | Holds |
+| --- | --- |
+| `runs.jsonl` | One record per completed run: ids, profile, workspace path, network mode, return code, and provider/auth summaries. |
+| `egress-policy.jsonl` | Provider proxy allow/deny decisions with target host and port. |
+| `auth-broker.jsonl` | Codex broker allow/deny decisions with method and upstream path. |
+
+These on-disk record shapes are best-effort and pre-stable: they carry no schema
+version and may change before `v1.0.0`, so do not parse them as a stable
+contract yet. The `--json` output of `runs`, `egress log`, and `auth log` is the
+supported read path. The files are append-only with no rotation or size cap, so
+they grow over time; delete a file to reset that history. They store metadata
+only (paths, hostnames, decisions) and never secrets, tokens, request bodies, or
+command arguments.
 
 ## Current Limits
 

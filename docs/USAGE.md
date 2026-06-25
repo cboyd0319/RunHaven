@@ -105,6 +105,12 @@ The plan prints:
 - any preflight command
 - the exact `container run` command
 
+If the run uses any lower-security choice (unrestricted `internet` networking,
+`--env`, a non-default or root `--user`, an extra `--provider-host`, a custom
+`--image`, or `--allow-sensitive-workspace`), `plan` and `run` also print
+plain-language `Security notices` to standard error. See
+[Lower-security overrides](CAPABILITIES.md#lower-security-overrides).
+
 ## Run an Agent
 
 ```bash
@@ -149,6 +155,10 @@ Pass a custom command after `--` when needed:
 ```bash
 runhaven runs attach <run-id> -- pwd
 ```
+
+Override the attached process with `--user USER` (root also needs
+`--allow-root-user`), `--workdir DIR` (default `/workspace`), or
+`--tty always|never|auto` (default `auto`).
 
 Follow recent active-run output without opening a shell:
 
