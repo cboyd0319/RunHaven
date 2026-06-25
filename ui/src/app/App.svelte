@@ -1,8 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ClipboardCheck, FileText, FolderOpen, Play, RefreshCw, ShieldCheck } from "@lucide/svelte";
+  import { ClipboardCheck, FolderOpen, RefreshCw } from "@lucide/svelte";
   import StatusPill from "../components/StatusPill.svelte";
-  import Metric from "../components/Metric.svelte";
+  import SetupChecksPanel from "../components/SetupChecksPanel.svelte";
+  import PlanReviewPanel from "../components/PlanReviewPanel.svelte";
+  import LastLaunchPanel from "../components/LastLaunchPanel.svelte";
+  import RunStatusPanel from "../components/RunStatusPanel.svelte";
+  import RunOutputPanel from "../components/RunOutputPanel.svelte";
   import {
     chooseProjectFolder,
     defaultRunPlanRequest,
@@ -14,7 +18,6 @@
     launchRun,
     planRun,
     secureNetworkDefault,
-    type AgentProfile,
     type DashboardStatus,
     type ImageStatusResponse,
     type LogSnapshotResponse,
@@ -173,10 +176,6 @@
     launchMessage = "";
   }
 
-  function warningConfirmed(code: string): boolean {
-    return confirmedWarnings.includes(code);
-  }
-
   function setWarningConfirmation(code: string, checked: boolean) {
     const next = new Set(confirmedWarnings);
     if (checked) {
@@ -216,13 +215,6 @@
       launching = false;
     }
   }
-
-  function formatMemory(bytes: number | null): string {
-    if (bytes === null) {
-      return "unknown";
-    }
-    return `${Math.round(bytes / 1024 ** 2)} MiB`;
-  }
 </script>
 
 <svelte:head>
@@ -257,37 +249,7 @@
   </section>
 
   <section class="grid">
-    <section class="panel setup-panel">
-      <div class="section-heading">
-        <ShieldCheck size={20} />
-        <h2>Setup checks</h2>
-      </div>
-
-      {#if loading}
-        <p class="muted">Loading status...</p>
-      {:else}
-        <dl class="metrics">
-          <Metric label="Blockers" value={String(dashboard?.setup.blockerCount ?? 0)} />
-          <Metric label="Active runs" value={String(dashboard?.activeRuns.length ?? 0)} />
-          <Metric label="Recent runs" value={String(dashboard?.recentRuns.length ?? 0)} />
-        </dl>
-
-        <div class="check-list">
-          {#each dashboard?.setup.checks ?? [] as check}
-            <article>
-              <StatusPill ok={check.ok} label={check.ok ? "OK" : "Fix"} />
-              <div>
-                <h3>{check.name}</h3>
-                <p>{check.detail}</p>
-                {#if !check.ok}
-                  <p class="remedy">{check.remedy}</p>
-                {/if}
-              </div>
-            </article>
-          {/each}
-        </div>
-      {/if}
-    </section>
+    <SetupChecksPanel {loading} {dashboard} />
 
     <section class="panel launch-panel">
       <div class="section-heading">
@@ -420,150 +382,28 @@
   </section>
 
   {#if plan}
-    <section class="panel plan-panel">
-      <h2>Plan review</h2>
-      <dl class="plan-grid">
-        <Metric label="Agent" value={plan.profile} />
-        <Metric label="Project" value={plan.workspace} />
-        <Metric label="Agent memory" value={plan.stateVolume} />
-        <Metric label="Network" value={plan.networkMode} />
-        <Metric label="Image" value={plan.image} />
-        <Metric label="Preflight steps" value={String(plan.preflightCount)} />
-      </dl>
-
-      {#if plan.workspaceScopeNote}
-        <p class="notice">{plan.workspaceScopeNote}</p>
-      {/if}
-
-      <p class="egress">{plan.egressSummary}</p>
-
-      {#if plan.warnings.length > 0}
-        <div class="warning-list">
-          {#each plan.warnings as warning}
-            <p>{warning.message}</p>
-          {/each}
-        </div>
-      {/if}
-
-      <div class="launch-confirmation">
-        <label class="choice">
-          <input type="checkbox" bind:checked={launchConfirmation} />
-          <span>I reviewed this plan and want to start this run.</span>
-        </label>
-
-        {#if plan.warnings.length > 0}
-          <div class="warning-confirmations">
-            {#each plan.warnings as warning}
-              <label class="choice warning-choice">
-                <input
-                  type="checkbox"
-                  checked={warningConfirmed(warning.code)}
-                  on:change={(event) => setWarningConfirmation(warning.code, event.currentTarget.checked)}
-                  aria-label={`Confirm ${warning.code} warning`}
-                />
-                <span>{warning.message}</span>
-              </label>
-            {/each}
-          </div>
-        {/if}
-
-        {#if dashboard && !dashboard.setup.ok}
-          <p class="muted">Fix setup blockers before launching a run.</p>
-        {/if}
-        {#if !launchImageReady}
-          <p class="muted">Fix image readiness before launching a run.</p>
-        {/if}
-
-        <button class="primary launch-button" type="button" disabled={!launchReady || launching} on:click={startRun}>
-          <Play size={18} />
-          <span>{launching ? "Launching..." : "Launch run"}</span>
-        </button>
-      </div>
-    </section>
+    <PlanReviewPanel
+      {plan}
+      bind:launchConfirmation
+      {confirmedWarnings}
+      {launchReady}
+      {launching}
+      setupOk={Boolean(dashboard?.setup.ok)}
+      {launchImageReady}
+      onConfirmWarning={setWarningConfirmation}
+      onStart={startRun}
+    />
   {/if}
 
   {#if lastLaunch}
-    <section class="panel last-launch-panel">
-      <h2>Last launch</h2>
-      <dl class="plan-grid">
-        <Metric label="Run" value={lastLaunch.snapshot.runId} />
-        <Metric label="Status" value={lastLaunch.snapshot.status} />
-        <Metric label="Agent" value={lastLaunch.snapshot.profile} />
-        <Metric label="Project" value={lastLaunch.snapshot.workspace} />
-        <Metric label="State volume" value={lastLaunch.snapshot.stateVolume} />
-        <Metric label="Network" value={lastLaunch.snapshot.networkMode} />
-        <Metric label="Container" value={lastLaunch.snapshot.containerName} />
-      </dl>
-    </section>
+    <LastLaunchPanel {lastLaunch} />
   {/if}
 
   {#if lastLaunch}
-    <section class="panel run-status-panel" aria-live="polite">
-      <h2>Run status</h2>
-      {#if runStatusLoading}
-        <p class="muted">Refreshing status...</p>
-      {:else if runStatus}
-        <dl class="plan-grid">
-          <Metric label="Marker status" value={runStatus.run.status} />
-          <Metric label="Container state" value={runStatus.container.state} />
-          <Metric label="Image" value={runStatus.container.image ?? "-"} />
-          <Metric label="Started" value={runStatus.container.startedAt ?? "-"} />
-          <Metric label="CPU" value={runStatus.container.resources.cpus ?? "unknown"} />
-          <Metric label="Memory" value={formatMemory(runStatus.container.resources.memoryBytes)} />
-        </dl>
-        {#if runStatus.container.networks.length > 0}
-          <div class="status-list">
-            {#each runStatus.container.networks as network}
-              <p>
-                {network.network ?? "network"}
-                {#if network.ipv4Address}
-                  <span>ipv4={network.ipv4Address}</span>
-                {/if}
-                {#if network.hostname}
-                  <span>host={network.hostname}</span>
-                {/if}
-              </p>
-            {/each}
-          </div>
-        {/if}
-      {:else if runStatusError}
-        <p class="notice">{runStatusError}</p>
-      {/if}
-    </section>
+    <RunStatusPanel {runStatus} {runStatusLoading} {runStatusError} />
   {/if}
 
   {#if lastLaunch}
-    <section class="panel run-output-panel" aria-live="polite">
-      <h2>Run output</h2>
-      <p class="sensitive-note">Raw output can include secrets or workspace content.</p>
-      <div class="log-actions">
-        <label class="choice">
-          <input type="checkbox" bind:checked={logAcknowledged} />
-          <span>Show raw container output for this run.</span>
-        </label>
-        <button
-          class="secondary"
-          type="button"
-          disabled={!logAcknowledged || logLoading}
-          on:click={loadLogSnapshot}
-        >
-          <FileText size={18} />
-          <span>{logLoading ? "Loading..." : "View latest output"}</span>
-        </button>
-      </div>
-      {#if logError}
-        <p class="notice">{logError}</p>
-      {/if}
-      {#if logSnapshot}
-        <div class="log-meta">
-          <span>{logSnapshot.returnedLines} lines returned</span>
-          <span>{logSnapshot.requestedLines} lines requested</span>
-          {#if logSnapshot.truncated}
-            <span>truncated</span>
-          {/if}
-        </div>
-        <pre class="log-output">{logSnapshot.text || "No output returned."}</pre>
-      {/if}
-    </section>
+    <RunOutputPanel bind:logAcknowledged {logLoading} {logError} {logSnapshot} onLoad={loadLogSnapshot} />
   {/if}
 </main>
