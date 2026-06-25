@@ -13,6 +13,7 @@ pub fn run() {
             commands::image_status::get_image_status,
             commands::run_status::get_run_status,
             commands::log_snapshot::get_log_snapshot,
+            commands::run_control::stop_run,
             commands::plan_run,
             commands::launch_run,
         ])

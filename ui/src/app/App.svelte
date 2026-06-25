@@ -18,6 +18,7 @@
     launchRun,
     planRun,
     secureNetworkDefault,
+    stopRun,
     type DashboardStatus,
     type ImageStatusResponse,
     type LogSnapshotResponse,
@@ -47,6 +48,9 @@
   let logAcknowledged = false;
   let logLoading = false;
   let logError = "";
+  let stopping = false;
+  let stopError = "";
+  let stopMessage = "";
   let error = "";
 
   $: selectedAgent = dashboard?.agents.find((agent) => agent.name === request.agent);
@@ -135,6 +139,24 @@
       logError = cause instanceof Error ? cause.message : String(cause);
     } finally {
       logLoading = false;
+    }
+  }
+
+  async function stopActiveRun() {
+    if (!lastLaunch) {
+      return;
+    }
+    stopping = true;
+    stopError = "";
+    stopMessage = "";
+    try {
+      const result = await stopRun(lastLaunch.runId);
+      stopMessage = `Stop requested for ${result.runId}.`;
+      await loadRunStatus(lastLaunch.runId);
+    } catch (cause) {
+      stopError = cause instanceof Error ? cause.message : String(cause);
+    } finally {
+      stopping = false;
     }
   }
 
@@ -400,7 +422,15 @@
   {/if}
 
   {#if lastLaunch}
-    <RunStatusPanel {runStatus} {runStatusLoading} {runStatusError} />
+    <RunStatusPanel
+      {runStatus}
+      {runStatusLoading}
+      {runStatusError}
+      {stopping}
+      {stopError}
+      {stopMessage}
+      onStop={stopActiveRun}
+    />
   {/if}
 
   {#if lastLaunch}

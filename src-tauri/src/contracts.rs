@@ -247,3 +247,18 @@ pub(crate) struct LaunchRunResponse {
     pub network_mode: String,
     pub snapshot: StartedRunSnapshot,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StopRunRequest {
+    pub run_id: String,
+    pub confirm_stop: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StopRunResponse {
+    pub run_id: String,
+    pub container_name: String,
+    pub status: String,
+}

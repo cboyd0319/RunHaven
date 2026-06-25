@@ -40,4 +40,9 @@ test("reviews and starts a preview run", async ({ page }) => {
   await page.getByLabel("Show raw container output for this run.").check();
   await page.getByRole("button", { name: "View latest output" }).click();
   await expect(page.getByText("Preview log line")).toBeVisible();
+
+  await expect(page.getByRole("button", { name: "Stop run" })).toBeDisabled();
+  await page.getByLabel("Confirm stopping this run.").check();
+  await page.getByRole("button", { name: "Stop run" }).click();
+  await expect(page.getByText(/Stop requested for preview-/)).toBeVisible();
 });

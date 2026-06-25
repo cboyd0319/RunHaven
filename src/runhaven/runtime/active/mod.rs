@@ -20,7 +20,7 @@ pub use markers::{
 pub use repair::runs_repair;
 
 use crate::plans::{uses_root_identity, validate_resource_options};
-use crate::validators::{require_string, validate_runhaven_container_name};
+use crate::validators::{require_string, validate_run_id, validate_runhaven_container_name};
 use inspect::{
     load_container_inspect, print_runs_status, public_active_run_record,
     summarize_container_inspect,
@@ -126,7 +126,14 @@ pub fn runs_logs_follow(run_id: &str, lines: u32) -> Result<i32> {
         .unwrap_or(1))
 }
 
-pub fn runs_stop(run_id: &str) -> Result<i32> {
+/// Validate and stop one active RunHaven run, returning a structured outcome.
+///
+/// Shared by the CLI `runs_stop` and the Tauri `stop_run` command so both go
+/// through the same run-id, active-marker, and RunHaven-owned-container checks
+/// before any mutation. The payload carries `run_id`, `container_name`, and the
+/// `container stop` `return_code`.
+pub fn stop_active_run(run_id: &str) -> Result<Value> {
+    validate_run_id(run_id)?;
     let record = find_active_run_record(run_id)?;
     let container_name = require_string(
         record.get("container_name"),
@@ -137,12 +144,31 @@ pub fn runs_stop(run_id: &str) -> Result<i32> {
     let status = Command::new("container")
         .args(["stop", container_name])
         .status()?;
+    let code = status.code().unwrap_or(1);
     if !status.success() {
         let _ = markers::clear_active_run_stop_requested(run_id, &record);
-        return Ok(status.code().unwrap_or(1));
     }
-    println!("Stop requested for run {run_id} ({container_name}).");
-    Ok(0)
+    Ok(json!({
+        "run_id": run_id,
+        "container_name": container_name,
+        "return_code": code,
+    }))
+}
+
+pub fn runs_stop(run_id: &str) -> Result<i32> {
+    let payload = stop_active_run(run_id)?;
+    let code = payload
+        .get("return_code")
+        .and_then(Value::as_i64)
+        .unwrap_or(1) as i32;
+    if code == 0 {
+        let container = payload
+            .get("container_name")
+            .and_then(Value::as_str)
+            .unwrap_or("-");
+        println!("Stop requested for run {run_id} ({container}).");
+    }
+    Ok(code)
 }
 
 pub fn runs_kill(run_id: &str) -> Result<i32> {

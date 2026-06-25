@@ -64,7 +64,7 @@
       "area": "ui",
       "title": "Tauri stop run control",
       "user_visible_behavior": "The desktop app can stop one validated active RunHaven run only after explicit user confirmation.",
-      "status": "active",
+      "status": "passing",
       "dependencies": [
         "tauri-alpha-launch-feedback"
       ],
@@ -76,7 +76,8 @@
         "Focused Rust, Tauri, frontend, and Playwright checks pass"
       ],
       "evidence": [
-        "2026-06-25: Completed the v1 desktop maintainability split (milestone 1 / V1-G10) as the prerequisite before adding GUI controls. Split src-tauri/src/commands/mod.rs (528 -> 342) into validation.rs and warnings.rs; split ui/src/commands/runhaven.ts (543) into types.ts/client.ts/plan.ts behind a barrel; split ui/src/app/App.svelte (569 -> 409) into setup/plan-review/last-launch/run-status/run-output panel components. Behavior preserved; Tauri tests (19)/clippy, svelte-check, 15 unit tests, build, and Playwright e2e (2) pass. Implementation of stop_run is the next step."
+        "2026-06-25: Completed the v1 desktop maintainability split (milestone 1 / V1-G10) as the prerequisite before adding GUI controls. Split src-tauri/src/commands/mod.rs (528 -> 342) into validation.rs and warnings.rs; split ui/src/commands/runhaven.ts (543) into types.ts/client.ts/plan.ts behind a barrel; split ui/src/app/App.svelte (569 -> 409) into setup/plan-review/last-launch/run-status/run-output panel components. Behavior preserved; Tauri tests (19)/clippy, svelte-check, 15 unit tests, build, and Playwright e2e (2) pass.",
+        "2026-06-25: Implemented stop_run. A shared library core `stop_active_run` validates the run id, active marker, and RunHaven-owned container before calling `container stop`, and backs both the CLI `runs_stop` and the typed Tauri `stop_run` command (StopRunRequest/StopRunResponse). stop_run requires confirm_stop, lives behind the narrow `run-control` capability (`allow-stop-run`, added to build.rs and run-control.json; capability_guard confirms it is an allow-* scope), and the RunStatusPanel shows a confirm checkbox plus Stop button whose success state is set only after the command returns. Verified: main `cargo test` (49), Tauri `cargo test` (23, incl. 4 new stop_run tests + capability_guard)/clippy, svelte-check, 15 unit tests, build, and Playwright e2e (2, extended to stop a preview run)."
       ],
       "notes": "First GUI implementation slice after the CLI-complete v0.5.0 scope is closed or explicitly accepted. Add broader run recovery, image, diagnostics, cleanup, and worktree review as separate GUI slices."
     },

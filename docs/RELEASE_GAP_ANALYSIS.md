@@ -61,10 +61,11 @@ Observed CLI command families:
 Observed desktop command families:
 
 - implemented alpha commands: setup status, agent list, dashboard status,
-  image status, run status, plan run, launch run, and bounded log snapshot;
+  image status, run status, plan run, launch run, bounded log snapshot, and
+  stop run;
 - active capabilities: `main-read`, `folder-pick`, `launch-run`, and
-  `run-control`;
-- missing first-class desktop families: stop, kill, repair, image
+  `run-control` (`allow-get-log-snapshot`, `allow-stop-run`);
+- missing first-class desktop families: kill, repair, image
   build/rebuild, worktree review, state cleanup, network cleanup, egress log,
   auth log, why diagnostics, maintenance actions, profile support matrix, and
   release packaging.
@@ -188,7 +189,7 @@ accessibility, and release-trust work remains.
 | --- | --- | --- | --- | --- |
 | V1-G1 | Desktop setup and prerequisite path | Desktop can read setup/dashboard state. | A less-technical user can understand exact missing prerequisites, image readiness, builder status, and next action without using the CLI. | Frontend tests, Tauri tests, Playwright, minimum-window review. |
 | V1-G2 | Desktop image build/rebuild | Desktop shows image status but does not build or rebuild images. | Missing/stale bundled images can be rebuilt from explicit UI action with builder status and confirmation. | Tauri command tests; frontend tests; image dry-run/build smoke where appropriate. |
-| V1-G3 | Desktop run control | Desktop has launch, live status, and bounded raw output snapshot; stop/kill/repair are CLI-first. | GUI can stop, hard-stop, and repair one validated RunHaven run with exact target preview and confirmation. | Rust/Tauri command tests, capability review, Playwright, Apple container smoke for run-control paths. |
+| V1-G3 | Desktop run control | Desktop has launch, live status, bounded raw output snapshot, and confirmed stop (`stop_run` behind `run-control`); kill and repair are still CLI-first. | GUI can stop, hard-stop, and repair one validated RunHaven run with exact target preview and confirmation. | Rust/Tauri command tests, capability review, Playwright, Apple container smoke for run-control paths. |
 | V1-G4 | Desktop recovery after app quit/crash/host interruption | Release plan names this as unproven. | App quit, force quit, crash, sleep, reboot, stale active marker, and leftover container guidance is verified or documented in the GUI. | Manual lifecycle smokes plus focused tests for stale-marker repair guidance. |
 | V1-G5 | Desktop diagnostics | CLI has `why`, egress logs, and auth logs; desktop does not expose them. | GUI exposes `why host/workspace/network/state`, blocked-host review, egress log summaries, auth status/explain/log, and safe next actions without raw secrets. | Tauri command tests; frontend tests; secret-output review. |
 | V1-G6 | Desktop state/network cleanup | CLI has state and network cleanup; desktop cleanup is missing. | GUI previews exact RunHaven-owned state volumes and networks, then resets/prunes only after explicit confirmation. | Tauri tests, frontend tests, destructive-target validation tests. |

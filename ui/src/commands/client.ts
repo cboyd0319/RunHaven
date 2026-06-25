@@ -13,7 +13,8 @@ import type {
   RunPlanRequest,
   RunPlanResponse,
   RunStatusResponse,
-  SetupStatus
+  SetupStatus,
+  StopRunResponse
 } from "./types";
 
 const mockAgents: AgentProfile[] = [
@@ -233,6 +234,14 @@ export async function launchRun(request: LaunchRunRequest): Promise<LaunchRunRes
       snapshot
     };
   });
+}
+
+export async function stopRun(runId: string): Promise<StopRunResponse> {
+  return call("stop_run", { request: { runId, confirmStop: true } }, () => ({
+    runId,
+    containerName: "preview",
+    status: "stop-requested"
+  }));
 }
 
 export async function chooseProjectFolder(): Promise<string | null> {

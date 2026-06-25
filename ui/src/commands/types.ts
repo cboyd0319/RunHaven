@@ -187,3 +187,9 @@ export type LaunchRunResponse = {
   networkMode: string;
   snapshot: StartedRunSnapshot;
 };
+
+export type StopRunResponse = {
+  runId: string;
+  containerName: string;
+  status: string;
+};

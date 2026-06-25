@@ -105,6 +105,17 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-25: Implemented `tauri-stop-run-control`, the first v1 desktop GUI
+  feature. Added a shared library core `stop_active_run` that validates the run
+  id, active marker, and RunHaven-owned container before `container stop`, and
+  backs both the CLI `runs_stop` and the typed Tauri `stop_run` command. The
+  command requires `confirm_stop`, lives behind the narrow `run-control`
+  capability (`allow-stop-run` added to `build.rs` and `run-control.json`;
+  `capability_guard` confirms it is an `allow-*` scope), and `RunStatusPanel`
+  shows a confirm checkbox plus a Stop button whose success state is set only
+  after the command returns. Verified: main `cargo test` (49), Tauri `cargo test`
+  (23, incl. 4 new `stop_run` tests + `capability_guard`)/clippy, svelte-check,
+  15 unit tests, build, and Playwright e2e (2, extended to stop a preview run).
 - 2026-06-25: Completed the v1 desktop maintainability split (milestone 1 /
   V1-G10) before adding GUI controls. Split `src-tauri/src/commands/mod.rs`
   (528 -> 342) into `validation.rs` (bounds validators) and `warnings.rs` (plan
@@ -443,6 +454,12 @@ evidence and a recorded reason.
 
 ## Touched Surfaces In This Pass
 
+- tauri-stop-run-control: `src/runhaven/runtime/active/mod.rs` (`stop_active_run`
+  core + thin `runs_stop`); `src-tauri/src/commands/run_control.rs` (new),
+  `commands/mod.rs`, `lib.rs`, `build.rs`, `contracts.rs`,
+  `capabilities/run-control.json`; `ui/src/commands/{types.ts,client.ts}`,
+  `ui/src/components/RunStatusPanel.svelte`, `ui/src/app/App.svelte`,
+  `ui/e2e/app.spec.ts`.
 - Desktop maintainability split (v1 milestone 1): `src-tauri/src/commands/`
   (`mod.rs`, new `validation.rs`, new `warnings.rs`, sibling import updates);
   `ui/src/commands/` (`runhaven.ts` barrel, new `types.ts`/`client.ts`/`plan.ts`);
@@ -479,11 +496,12 @@ evidence and a recorded reason.
 
 `cli-complete-v0.5.0` is `passing` (all contract gaps closed, secure-by-default
 network, all CLI surfaces confirmed in `docs/CLI_SURFACE_COVERAGE.md`). The
-desktop phase has begun: the maintainability split (milestone 1 / V1-G10) is
-done, and `tauri-stop-run-control` is the active slice. Next: implement the
-typed `stop_run` Tauri command behind a narrow run-control capability with exact
-target preview and explicit confirmation, plus Rust/Tauri/frontend/Playwright
-tests. A terminal UI (TUI) is deferred until well after the desktop app ships.
+desktop phase is underway: the maintainability split (milestone 1 / V1-G10) and
+`tauri-stop-run-control` (first GUI feature) are both done. Next desktop slices,
+as separate features: GUI kill and repair (completing V1-G3), then the
+maintenance slice (image rebuild, state/network cleanup) and diagnostics slice
+(`why`, egress, auth). A terminal UI (TUI) is deferred until well after the
+desktop app ships.
 Tagged `v0.5.0` release notes are cut at the release-readiness step. Use
 `docs/RELEASE_GAP_ANALYSIS.md` for status and `docs/V1_RELEASE_PLAN.md` for the
 durable release contract.

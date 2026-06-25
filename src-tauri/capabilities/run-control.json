@@ -3,5 +3,5 @@
   "identifier": "run-control",
   "description": "Sensitive active-run access for one validated RunHaven run at a time.",
   "windows": ["main"],
-  "permissions": ["allow-get-log-snapshot"]
+  "permissions": ["allow-get-log-snapshot", "allow-stop-run"]
 }

@@ -7,6 +7,7 @@ fn main() {
             "get_image_status",
             "get_run_status",
             "get_log_snapshot",
+            "stop_run",
             "plan_run",
             "launch_run",
         ]),

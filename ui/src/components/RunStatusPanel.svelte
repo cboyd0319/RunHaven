@@ -5,6 +5,12 @@
   export let runStatus: RunStatusResponse | null;
   export let runStatusLoading: boolean;
   export let runStatusError: string;
+  export let stopping: boolean;
+  export let stopError: string;
+  export let stopMessage: string;
+  export let onStop: () => void;
+
+  let stopConfirmed = false;
 
   function formatMemory(bytes: number | null): string {
     if (bytes === null) {
@@ -44,5 +50,28 @@
     {/if}
   {:else if runStatusError}
     <p class="notice">{runStatusError}</p>
+  {/if}
+
+  {#if runStatus}
+    <div class="run-control">
+      <label class="choice">
+        <input type="checkbox" bind:checked={stopConfirmed} />
+        <span>Confirm stopping this run.</span>
+      </label>
+      <button
+        class="secondary"
+        type="button"
+        disabled={!stopConfirmed || stopping}
+        on:click={onStop}
+      >
+        <span>{stopping ? "Stopping..." : "Stop run"}</span>
+      </button>
+      {#if stopMessage}
+        <p class="notice success" role="status">{stopMessage}</p>
+      {/if}
+      {#if stopError}
+        <p class="notice" role="alert">{stopError}</p>
+      {/if}
+    </div>
   {/if}
 </section>

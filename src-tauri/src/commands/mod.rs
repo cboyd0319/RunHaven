@@ -20,6 +20,7 @@ use crate::contracts::{
 
 pub(crate) mod image_status;
 pub(crate) mod log_snapshot;
+pub(crate) mod run_control;
 pub(crate) mod run_status;
 mod validation;
 mod warnings;
