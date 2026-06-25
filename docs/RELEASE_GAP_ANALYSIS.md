@@ -274,11 +274,11 @@ accessibility, and release-trust work remains.
 
 ## Immediate Next Actions
 
-1. Implement `tauri-stop-run-control` as the first v1 desktop slice now that the
-   v0.5.0 CLI-complete scope is closed.
-2. Split the largest desktop files (`src-tauri/src/commands/mod.rs`,
-   `ui/src/commands/runhaven.ts`, `ui/src/app/App.svelte`) before adding many
-   new v1 GUI command families.
+1. Done (2026-06-25): split the largest desktop files
+   (`src-tauri/src/commands/mod.rs` into validation/warnings; `runhaven.ts` into
+   types/client/plan behind a barrel; `App.svelte` into panel components).
+2. Implement `tauri-stop-run-control` (active slice) as the first v1 desktop
+   feature now that the maintainability split is done.
 3. Cut tagged `v0.5.0` release notes at the release-readiness step.
 
 ## Decision Log

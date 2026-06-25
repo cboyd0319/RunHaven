@@ -64,7 +64,7 @@
       "area": "ui",
       "title": "Tauri stop run control",
       "user_visible_behavior": "The desktop app can stop one validated active RunHaven run only after explicit user confirmation.",
-      "status": "planned",
+      "status": "active",
       "dependencies": [
         "tauri-alpha-launch-feedback"
       ],
@@ -75,7 +75,9 @@
         "Frontend state does not imply success before the command returns",
         "Focused Rust, Tauri, frontend, and Playwright checks pass"
       ],
-      "evidence": [],
+      "evidence": [
+        "2026-06-25: Completed the v1 desktop maintainability split (milestone 1 / V1-G10) as the prerequisite before adding GUI controls. Split src-tauri/src/commands/mod.rs (528 -> 342) into validation.rs and warnings.rs; split ui/src/commands/runhaven.ts (543) into types.ts/client.ts/plan.ts behind a barrel; split ui/src/app/App.svelte (569 -> 409) into setup/plan-review/last-launch/run-status/run-output panel components. Behavior preserved; Tauri tests (19)/clippy, svelte-check, 15 unit tests, build, and Playwright e2e (2) pass. Implementation of stop_run is the next step."
+      ],
       "notes": "First GUI implementation slice after the CLI-complete v0.5.0 scope is closed or explicitly accepted. Add broader run recovery, image, diagnostics, cleanup, and worktree review as separate GUI slices."
     },
     {
