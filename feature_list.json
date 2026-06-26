@@ -193,6 +193,27 @@
       "notes": "OAuth and subscription logins are out of broker scope and use isolated in-container state; RunHaven never reads host ~/.claude.json or Keychain. A host-side OAuth-token broker was researched 2026-06-26 and decided against (provider terms forbid relaying subscription/OAuth credentials, subscription tokens are not drop-in bearers, and it would cross the read-host-creds boundary); the isolated-login UX is the follow-up candidate in NON_UI_BACKLOG.md. Canonical broker doc: docs/AUTH_BROKER.md."
     },
     {
+      "id": "oauth-isolated-login",
+      "priority": 1,
+      "area": "provider",
+      "title": "Easy OAuth isolated login",
+      "user_visible_behavior": "OAuth and subscription logins (Claude Pro/Max, ChatGPT, Google, GitHub) work by logging in once inside the sandbox with no host credentials mounted. --auth-scope agent (default) shares one login per agent across all projects so you log in once; --auth-scope project isolates it per workspace.",
+      "status": "active",
+      "dependencies": [
+        "multi-provider-broker"
+      ],
+      "verification": [
+        "--auth-scope agent produces one shared per-agent state volume; project keeps per-workspace isolation",
+        "The shared-login security tradeoff is documented and the per-project opt-out is available",
+        "OAuth login is verified to work and persist inside a RunHaven sandbox",
+        "Focused Rust, Tauri, and live-runtime checks pass"
+      ],
+      "evidence": [
+        "2026-06-26: Live-verified that a Claude Max subscription OAuth login works end to end inside a RunHaven sandbox (provider mode; login hosts api.anthropic.com/claude.ai/platform.claude.com allowlisted; no host creds mounted). Telemetry/registry hosts (Datadog, raw.githubusercontent.com, registry.npmjs.org) were correctly blocked and the agent still ran. Added --auth-scope <agent|project> (default agent): agent shares one per-agent home volume (runhaven-<agent>-shared-home) across all workspaces so the login is done once; project keeps the per-workspace volume. Documented the shared-login tradeoff in SECURITY_MODEL/USAGE/CAPABILITIES. Verified: cargo fmt, cargo test --locked (59 lib incl. a new auth-scope test + 6 integration), clippy -D warnings, Tauri test (30) and clippy."
+      ],
+      "notes": "Remaining easy-OAuth work: allowlist the OAuth login/refresh hosts for Codex (auth.openai.com), Copilot (github.com, api.github.com), and Gemini (verify; account login retired 2026-06-18) so their in-sandbox login reaches the auth endpoints; a `runhaven login <agent>` helper that auto-opens the URL in the host browser and uses device-code flow where supported to cut the copy/paste friction the user flagged; and quieting the gateway-bind warning that fires every provider run on this runtime. The shared-login could emit a one-time notice on first volume creation. Tracked in docs/NON_UI_BACKLOG.md."
+    },
+    {
       "id": "desktop-first-class-v1",
       "priority": 4,
       "area": "ui",

@@ -74,6 +74,39 @@ impl TryFrom<&str> for WorkspaceScope {
     }
 }
 
+/// Where an agent's login and state volume live, so an OAuth login can be done
+/// once and reused.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AuthScope {
+    /// One login per agent, reused across every workspace (log in once).
+    #[default]
+    Agent,
+    /// A login isolated to this workspace (the per-workspace default state).
+    Project,
+}
+
+impl AuthScope {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Agent => "agent",
+            Self::Project => "project",
+        }
+    }
+}
+
+impl TryFrom<&str> for AuthScope {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &str) -> Result<Self> {
+        match value {
+            "agent" => Ok(Self::Agent),
+            "project" => Ok(Self::Project),
+            _ => bail!("invalid auth scope: {value:?} (use agent or project)"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct WorktreeRun {
     pub source_workspace: PathBuf,
@@ -96,6 +129,7 @@ pub struct RunOptions {
     pub network: NetworkMode,
     pub workspace_scope: WorkspaceScope,
     pub session: Option<String>,
+    pub auth_scope: AuthScope,
     pub read_only_workspace: bool,
     pub ssh: bool,
     pub env: Vec<String>,

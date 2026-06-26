@@ -95,6 +95,12 @@ pub(super) struct RunArgs {
         help = "named reusable project session for the agent home volume"
     )]
     pub(super) session: Option<String>,
+    #[arg(
+        long,
+        default_value = "agent",
+        help = "agent reuses one login per agent across all your projects (log in once); project isolates the login to this workspace"
+    )]
+    pub(super) auth_scope: String,
     #[arg(long, help = "override the profile image")]
     pub(super) image: Option<String>,
     #[arg(long, default_value = "4", help = "virtual CPUs for the container")]

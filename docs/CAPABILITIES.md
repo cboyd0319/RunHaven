@@ -155,6 +155,7 @@ default.
 | Credential mechanism | What it does |
 | --- | --- |
 | `--api-key-broker-env NAME` | Enables the host-side API-key broker for provider-network Codex, Claude, or Gemini runs, keeping the raw key on the host (old name `--codex-api-key-broker-env` still works as an alias). |
+| `--auth-scope agent\|project` | `agent` (default) shares one login per agent across all your projects so an OAuth login is done once; `project` isolates the login to this workspace's own volume. |
 | `runhaven auth status` / `runhaven auth explain AGENT` | Explains current broker boundaries without reading or printing secrets. |
 
 Pass a single reviewed host variable with `--env NAME`, or forward SSH with

@@ -11,7 +11,7 @@ pub use resources::{
     strip_remainder_separator, volume_mount,
 };
 pub use types::{
-    AgentRunPlan, CONTAINER_PATH, DEFAULT_ENV_PASSTHROUGH, NetworkMode, RunOptions,
+    AgentRunPlan, AuthScope, CONTAINER_PATH, DEFAULT_ENV_PASSTHROUGH, NetworkMode, RunOptions,
     SUPPORTED_NETWORK_MODES, SUPPORTED_WORKSPACE_SCOPES, VOLUME_PREP_IMAGE, VOLUME_PREP_NETWORK,
     WorkspaceScope, WorktreeRun,
 };
@@ -22,7 +22,7 @@ pub use validation::{
     validate_workspace,
 };
 
-use crate::session_state::state_volume_name;
+use crate::session_state::{shared_state_volume_name, state_volume_name};
 use crate::validators::validate_run_id;
 
 const SSH_FORWARDING_DISABLED_MESSAGE: &str = "SSH forwarding is disabled: Apple container 1.0.0 exposes the forwarded socket to RunHaven's non-root agent user, but ssh-add -l returns permission denied. Do not mount raw SSH keys or run the agent as root; track docs/APPLE_CONTAINER_GAP_ANALYSIS.md.";
@@ -71,11 +71,16 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     let provider_allowed_hosts = provider_hosts_for_options(&options)?;
     let session = normalize_session(options.session.as_deref())?;
     let project_id = project_identifier(&workspace);
-    let state_volume = state_volume_name(
-        options.profile.name,
-        &project_id,
-        options.session.as_deref(),
-    )?;
+    // Per-agent (shared) auth scope keeps one login per agent across every
+    // workspace; per-project keeps the isolated per-workspace volume.
+    let state_volume = match options.auth_scope {
+        AuthScope::Agent => shared_state_volume_name(options.profile.name),
+        AuthScope::Project => state_volume_name(
+            options.profile.name,
+            &project_id,
+            options.session.as_deref(),
+        )?,
+    };
     let container_name = safe_resource_name(&format!(
         "runhaven-{}-{project_id}-run",
         options.profile.name
@@ -277,6 +282,7 @@ mod tests {
             network: NetworkMode::Internet,
             workspace_scope: WorkspaceScope::Current,
             session: None,
+            auth_scope: AuthScope::Project,
             read_only_workspace: false,
             ssh: false,
             env: Vec::new(),
@@ -329,6 +335,7 @@ mod tests {
             network: NetworkMode::Internal,
             workspace_scope: WorkspaceScope::Current,
             session: None,
+            auth_scope: AuthScope::Project,
             read_only_workspace: false,
             ssh: false,
             env: Vec::new(),
@@ -364,6 +371,47 @@ mod tests {
     }
 
     #[test]
+    fn auth_scope_agent_shares_one_volume_across_workspaces() {
+        let volume_for = |scope: AuthScope| {
+            let workspace = tempfile::tempdir().expect("workspace");
+            build_run_plan(RunOptions {
+                profile: get_profile("shell").expect("profile"),
+                workspace: workspace.path().to_path_buf(),
+                agent_args: vec![
+                    "/bin/bash".to_string(),
+                    "-lc".to_string(),
+                    "true".to_string(),
+                ],
+                image: None,
+                cpus: "4".to_string(),
+                memory: "4g".to_string(),
+                network: NetworkMode::Internal,
+                workspace_scope: WorkspaceScope::Current,
+                session: None,
+                auth_scope: scope,
+                read_only_workspace: false,
+                ssh: false,
+                env: Vec::new(),
+                user: "agent".to_string(),
+                interactive: false,
+                tty: false,
+                allow_sensitive_workspace: false,
+                allow_root_user: false,
+                provider_hosts: Vec::new(),
+                api_key_broker_env: None,
+                worktree: None,
+                run_id: None,
+            })
+            .expect("plan")
+            .state_volume
+        };
+        // Agent scope: one shared per-agent volume, independent of the workspace.
+        assert_eq!(volume_for(AuthScope::Agent), "runhaven-shell-shared-home");
+        // Project scope: a per-workspace volume, never the shared one.
+        assert_ne!(volume_for(AuthScope::Project), "runhaven-shell-shared-home");
+    }
+
+    #[test]
     fn provider_plan_normalizes_extra_hosts_and_rejects_ip_literals() {
         let workspace = tempfile::tempdir().expect("workspace");
         let mut options = RunOptions {
@@ -376,6 +424,7 @@ mod tests {
             network: NetworkMode::Provider,
             workspace_scope: WorkspaceScope::Current,
             session: None,
+            auth_scope: AuthScope::Project,
             read_only_workspace: false,
             ssh: false,
             env: Vec::new(),
@@ -421,6 +470,7 @@ mod tests {
             network: NetworkMode::Internal,
             workspace_scope: WorkspaceScope::Current,
             session: None,
+            auth_scope: AuthScope::Project,
             read_only_workspace: false,
             ssh: false,
             env: Vec::new(),
@@ -507,6 +557,7 @@ mod tests {
             network: NetworkMode::Internet,
             workspace_scope: WorkspaceScope::Current,
             session: None,
+            auth_scope: AuthScope::Project,
             read_only_workspace: false,
             ssh: true,
             env: Vec::new(),

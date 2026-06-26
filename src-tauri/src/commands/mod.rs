@@ -7,7 +7,8 @@ use runhaven::doctor::collect_checks;
 use runhaven::image_doctor::collect_image_status;
 use runhaven::launch::{launch_run_plan, new_run_id};
 use runhaven::plans::{
-    AgentRunPlan, NetworkMode, RunOptions, WorkspaceScope, build_run_plan, normalize_provider_hosts,
+    AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
+    normalize_provider_hosts,
 };
 use runhaven::profiles::{get_profile, profiles};
 use runhaven::records::read_run_records;
@@ -175,6 +176,7 @@ fn build_agent_run_plan(
         network,
         workspace_scope,
         session: non_empty(request.session_name.clone()),
+        auth_scope: AuthScope::Agent,
         read_only_workspace: request.read_only_workspace,
         ssh: false,
         env: request.env_names.clone(),

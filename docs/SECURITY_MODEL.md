@@ -55,6 +55,16 @@ failure mode understandable for non-technical users. Named sessions selected
 with `--session NAME` reuse only the isolated `/home/agent` volume; they do not
 widen workspace mounts or host credential access. `state reset` and
 session-filtered `state prune` delete RunHaven-managed home volumes only.
+
+By default (`--auth-scope agent`) an agent's home volume, including its login,
+is shared across all your projects (`runhaven-<agent>-shared-home`), so an OAuth
+or subscription login is done once and reused everywhere. This trades isolation
+for convenience: a workspace you run could read or alter that shared login,
+though in `provider` mode the egress allowlist still blocks exfiltrating the
+credential off the host. Use `--auth-scope project` to isolate a project's login
+and state to its own per-workspace volume. The shared volume is removed by
+`state prune` like any other RunHaven home volume.
+
 `network list` and `network prune --yes` operate only on RunHaven-managed
 Apple `container` network names and do not delete arbitrary Apple-managed or
 user-created networks.

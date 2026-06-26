@@ -20,7 +20,7 @@ use crate::images::build_image_plan;
 use crate::launch::run_standard_agent;
 use crate::launch::{launch_run_plan, require_container_cli};
 use crate::plans::{
-    AgentRunPlan, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
+    AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
     default_network_mode,
 };
 use crate::profiles::{get_profile, profiles};
@@ -242,6 +242,8 @@ fn state_command(command: StateCommand) -> Result<i32> {
                 network: NetworkMode::Internet,
                 workspace_scope: workspace_scope(&workspace_scope_value)?,
                 session,
+                // State reset targets the per-workspace volume as before.
+                auth_scope: AuthScope::Project,
                 read_only_workspace: false,
                 ssh: false,
                 env: Vec::new(),
@@ -367,6 +369,7 @@ fn make_run_plan(
         network,
         workspace_scope: workspace_scope(&args.workspace_scope)?,
         session: args.session.clone(),
+        auth_scope: AuthScope::try_from(args.auth_scope.as_str())?,
         read_only_workspace: args.read_only_workspace,
         ssh: args.ssh,
         env: args.env.clone(),

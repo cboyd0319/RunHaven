@@ -212,9 +212,15 @@ decisions: method, sanitized path, allow/deny outcome, reason, upstream status,
 count, and run id. It never records request bodies, token values, or environment
 variable names.
 
-For non-Codex providers, authenticate inside the isolated agent state volume
-when the provider supports interactive login. Use `--env NAME` only when a
-headless run deliberately needs one token value inside the guest.
+OAuth and subscription logins (Claude Pro/Max, ChatGPT sign-in, Google, GitHub)
+work without a broker: run the agent and complete the login once inside the
+sandbox. No host credentials are mounted; the login lives in the agent's home
+volume. By default (`--auth-scope agent`) that volume is shared across all your
+projects, so you log in once per agent and every later run reuses it; pass
+`--auth-scope project` to keep a project's login isolated to its own volume. The
+in-sandbox login shows a URL and code to open in your host browser (there is no
+browser inside the container). Use `--env NAME` only when a headless run
+deliberately needs one token value inside the guest.
 
 ## Read-Only Review
 

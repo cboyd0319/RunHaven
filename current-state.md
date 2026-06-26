@@ -121,6 +121,21 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Started the `oauth-isolated-login` slice (easy OAuth; the product's
+  target audience uses subscription/OAuth logins, not API keys). Live-verified
+  that a Claude Max subscription OAuth login works end to end inside a RunHaven
+  sandbox: provider mode with the login hosts (`api.anthropic.com`, `claude.ai`,
+  `platform.claude.com`) allowlisted, no host credentials mounted; telemetry and
+  registry hosts were correctly blocked and the agent still ran. The OAuth path
+  is the isolated in-container login (not a broker; brokering is ToS-forbidden).
+  Built the first piece: `--auth-scope <agent|project>` (default `agent`) shares
+  one per-agent home volume (`runhaven-<agent>-shared-home`) across all
+  workspaces so the login is done once; `project` keeps the per-workspace volume.
+  Documented the shared-login tradeoff in `SECURITY_MODEL`/`USAGE`/`CAPABILITIES`.
+  Verified: cargo fmt, `cargo test --locked` (59 lib incl. a new auth-scope test
+  + 6 integration), clippy `-D warnings`, Tauri test (30) and clippy. One UX
+  friction the user flagged: the in-sandbox login requires copy/pasting the URL
+  to the browser and the code back; remaining work cuts that (see Next Step).
 - 2026-06-26: Completed the `multi-provider-broker` slice (branch
   `runtime-security-hardening`, not yet merged). Generalized the Codex API-key
   broker into a provider-agnostic core (`ProviderBrokerProfile`: upstream host,
@@ -595,16 +610,23 @@ Codex, Claude, and Gemini (Copilot stays design-only). All work is on the
 unmerged `runtime-security-hardening` branch (now carrying hardening, the broker,
 and the TUI plan docs).
 
-The OAuth-brokering research is concluded (2026-06-26): do not build a host-side
-OAuth-token broker for any provider. Three independent reasons: provider terms
-forbid relaying subscription/OAuth credentials, the subscription token is not a
-drop-in bearer (different host or client impersonation), and a broker would have
-to read host login state. OAuth and subscription logins stay on the isolated
-in-container path. The follow-up work is the isolated-login UX (allowlist each
-provider's OAuth login/refresh hosts after live verification, headless
-device-code login, token persistence in `/home/agent`), a design-first candidate
-in `docs/NON_UI_BACKLOG.md`. Also noted: Gemini's free Code Assist OAuth path
-stopped serving 2026-06-18.
+The OAuth-brokering research concluded (2026-06-26): no host-side OAuth broker
+(provider ToS, subscription token is not a drop-in bearer, would read host login
+state). OAuth stays on the isolated in-container login, which is now the active
+`oauth-isolated-login` slice (the product's target audience uses OAuth, so easy
+OAuth is the priority). Done: once-per-agent auth via `--auth-scope` (verified;
+Claude OAuth proven live). Remaining easy-OAuth work:
+1. Allowlist the OAuth login/refresh hosts for the other agents so their
+   in-sandbox login reaches the auth endpoints: Codex `auth.openai.com`; Copilot
+   `github.com` + `api.github.com`; Gemini `accounts.google.com` +
+   `oauth2.googleapis.com` (verify each against the live CLI; Gemini account
+   login retired 2026-06-18, so the API-key broker stays its path). This widens
+   the provider allowlist, so it is source-backed + per-host verified.
+2. A `runhaven login <agent>` helper that auto-opens the auth URL in the host
+   browser and uses device-code flow where supported, to cut the copy/paste
+   friction the user flagged.
+3. Quiet the gateway-bind warning that fires every provider run on this runtime,
+   and consider a one-time shared-login notice on first volume creation.
 
 Then, the remaining non-UI roadmap:
 1. Other design-first candidates from `docs/NON_UI_BACKLOG.md` (custom profile

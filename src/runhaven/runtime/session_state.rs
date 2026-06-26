@@ -41,6 +41,14 @@ pub fn state_volume_name(
     Ok(format!("{prefix}{visible}{suffix}"))
 }
 
+/// Per-agent state volume shared across every workspace, so an OAuth login is
+/// done once and reused everywhere (`AuthScope::Agent`). The literal `shared`
+/// segment never collides with the hex `project_id` used by per-workspace
+/// volumes.
+pub fn shared_state_volume_name(profile_name: &str) -> String {
+    format!("runhaven-{profile_name}-shared-home")
+}
+
 pub fn session_digest(session: &str) -> String {
     let mut digest = Sha256::new();
     digest.update(session.as_bytes());

@@ -66,6 +66,7 @@ fn standard_run_launch_error_removes_active_marker_and_writes_record() {
         network: NetworkMode::Internet,
         workspace_scope: WorkspaceScope::Current,
         session: None,
+        auth_scope: AuthScope::Project,
         read_only_workspace: false,
         ssh: false,
         env: Vec::new(),
