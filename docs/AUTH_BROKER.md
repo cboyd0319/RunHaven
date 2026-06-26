@@ -104,9 +104,24 @@ reuse it; your host login is never touched. For this to work, the provider
 allowlist must permit the OAuth login and token-refresh hosts, not only the API
 host.
 
-A host-side OAuth-token broker is not implemented: it would require RunHaven to
-read your host credential store, and a subscription token may not be valid
-against the raw API the way a key is. It is tracked for research, not built.
+A host-side OAuth-token broker was researched (2026-06-26) and decided against
+for every provider, for three independent reasons:
+
+- Provider terms forbid it. Anthropic, OpenAI, Google, and GitHub all prohibit
+  relaying subscription or OAuth credentials through third-party tools, and
+  several actively detect and block it.
+- The subscription token is not a drop-in bearer. Unlike an API key, an
+  OAuth/subscription token targets a different host (ChatGPT and Google login
+  route to separate endpoints) or requires impersonating the official client
+  (Claude's subscription token is rejected on the API path without
+  client-specific headers and an identity system prompt).
+- It would cross the boundary. A broker would have to read your host credential
+  store or impersonate the official client, which RunHaven does not do.
+
+So OAuth and subscription logins stay on the isolated-in-container path; the
+work there is allowlisting each provider's login and token-refresh hosts and a
+smooth headless login, not a broker. Tracked in
+[`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md).
 
 ## Smoke Coverage
 
@@ -153,9 +168,12 @@ default just to learn paths. A host-side broker keeps the model clean:
   `generativelanguage.googleapis.com` with a base-URL redirect. The redirect env
   is currently undocumented upstream and version-fragile; re-verify per CLI
   version. Vertex AI and Google account login are not brokered.
-- Copilot CLI is design-only and not brokered: it exchanges the GitHub token for
-  a short-lived, dynamically-routed Copilot API host, which cannot be brokered
-  without TLS interception. Use isolated in-container login state.
+- Copilot CLI is design-only and not brokered. The Copilot API host is bounded
+  (`*.githubcopilot.com`) and could be pinned, so this is not a hard technical
+  block, but brokering is still the wrong call: GitHub's terms forbid proxying
+  Copilot, the credential is a GitHub OAuth token exchanged at an undocumented
+  endpoint, and a broker would have to read the host token store. Use isolated
+  in-container login state; the GitHub device flow works headlessly.
 - Antigravity auth and runtime endpoint sources remain incomplete, so no broker
   behavior is planned until official sources are reviewed.
 

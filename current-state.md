@@ -595,12 +595,16 @@ Codex, Claude, and Gemini (Copilot stays design-only). All work is on the
 unmerged `runtime-security-hardening` branch (now carrying hardening, the broker,
 and the TUI plan docs).
 
-Per the user directive "broker now, then research OAuth brokering next," the
-immediate next slice is the OAuth-brokering research: investigate whether a
-host-side OAuth-token broker is viable and safe (provider OAuth/subscription
-token semantics, refresh, ToS, and the boundary cost of reading host login state
-like `~/.claude.json` or the Keychain). Today OAuth and subscription logins use
-isolated in-container state, which is the documented safe path.
+The OAuth-brokering research is concluded (2026-06-26): do not build a host-side
+OAuth-token broker for any provider. Three independent reasons: provider terms
+forbid relaying subscription/OAuth credentials, the subscription token is not a
+drop-in bearer (different host or client impersonation), and a broker would have
+to read host login state. OAuth and subscription logins stay on the isolated
+in-container path. The follow-up work is the isolated-login UX (allowlist each
+provider's OAuth login/refresh hosts after live verification, headless
+device-code login, token persistence in `/home/agent`), a design-first candidate
+in `docs/NON_UI_BACKLOG.md`. Also noted: Gemini's free Code Assist OAuth path
+stopped serving 2026-06-18.
 
 Then, the remaining non-UI roadmap:
 1. Other design-first candidates from `docs/NON_UI_BACKLOG.md` (custom profile
