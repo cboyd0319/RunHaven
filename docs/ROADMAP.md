@@ -33,7 +33,7 @@ The active release gap tracker lives in
 | Remaining non-UI product scope | Promote one design-first candidate at a time from `NON_UI_BACKLOG.md` (custom profiles, MCP allowlists, path-aware host policy, workflow files, and similar), preserving CLI semantics and default safety. | Planned |
 | CLI public release | Release-readiness for the hardened CLI product: full local verification, Apple `container` smokes, current pins, docs, and security evidence. | Planned |
 | Desktop app (roadmap end) | First-class desktop release: the Tauri app becomes the easiest safe path for setup, image readiness/rebuild, planning, launch, live status, bounded output, stop, kill, repair, diagnostics, worktree review, cleanup, accessibility, signed/notarized artifact, and provenance. Version label open. | Deferred to the very end (2026-06-26 directive) |
-| Terminal UI (after desktop) | Terminal UI (TUI) over the same planner and policy objects as the CLI and desktop app. | Deferred; after the desktop app |
+| Terminal UI (after desktop) | Terminal UI (TUI) over the same planner and policy objects as the CLI and desktop app. When it ships, the TUI becomes the default interface for interactive terminal use (a bare `runhaven` on a TTY); the CLI stays the complete explicit and automation surface, and non-interactive or explicit-subcommand use bypasses the TUI. Design intent in `docs/plans/ratatui-brand-graphics.md`. | Deferred; after the desktop app |
 
 Design rule for every phase: the secure path must be the easy path. Supported
 lower-security choices should warn and require explicit intent; unsupported or
