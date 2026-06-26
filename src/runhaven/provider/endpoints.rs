@@ -13,7 +13,8 @@ pub struct ProviderEndpoint {
 pub fn bundled_provider_hosts(profile: &str) -> &'static [&'static str] {
     match profile {
         "claude" => &["api.anthropic.com", "claude.ai", "platform.claude.com"],
-        "codex" => &["api.openai.com", "chatgpt.com"],
+        // auth.openai.com is the Codex device-login + token-refresh host.
+        "codex" => &["api.openai.com", "chatgpt.com", "auth.openai.com"],
         "gemini" => &["generativelanguage.googleapis.com"],
         "copilot" => &[
             "api.githubcopilot.com",
@@ -23,6 +24,11 @@ pub fn bundled_provider_hosts(profile: &str) -> &'static [&'static str] {
             "githubcopilot.com",
             "copilot-proxy.githubusercontent.com",
             "origin-tracker.githubusercontent.com",
+            // github.com is the device-login host and api.github.com is the
+            // Copilot token-exchange host. github.com is broad (a deliberate
+            // egress widening for the copilot profile).
+            "github.com",
+            "api.github.com",
         ],
         _ => &[],
     }
@@ -116,6 +122,14 @@ pub static PROVIDER_ENDPOINTS: &[ProviderEndpoint] = &[
         note: "",
     },
     ProviderEndpoint {
+        profile: "codex",
+        host: "auth.openai.com",
+        status: "bundled",
+        purpose: "Codex device-code login and OAuth token refresh.",
+        evidence: &["https://developers.openai.com/codex/auth"],
+        note: "`runhaven login codex` runs `codex login --device-auth`; the account must allow device-code login.",
+    },
+    ProviderEndpoint {
         profile: "gemini",
         host: "generativelanguage.googleapis.com",
         status: "bundled",
@@ -202,17 +216,17 @@ pub static PROVIDER_ENDPOINTS: &[ProviderEndpoint] = &[
     ProviderEndpoint {
         profile: "copilot",
         host: "github.com",
-        status: "candidate",
-        purpose: "GitHub login and Copilot web paths.",
+        status: "bundled",
+        purpose: "GitHub device-flow login (github.com/login/device) for `runhaven login copilot`.",
         evidence: &["https://docs.github.com/en/copilot/reference/copilot-allowlist-reference"],
-        note: "Not bundled because RunHaven currently cannot restrict this host to /login or /copilot.",
+        note: "Deliberate egress widening: RunHaven cannot yet restrict this host to /login, so the whole host is allowed for the Copilot login flow.",
     },
     ProviderEndpoint {
         profile: "copilot",
         host: "api.github.com",
-        status: "candidate",
-        purpose: "GitHub user and Copilot user-management API paths.",
+        status: "bundled",
+        purpose: "Copilot token exchange (api.github.com/user, /copilot_internal).",
         evidence: &["https://docs.github.com/en/copilot/reference/copilot-allowlist-reference"],
-        note: "Not bundled because RunHaven currently cannot restrict this host to specific API paths.",
+        note: "Deliberate egress widening: RunHaven cannot yet restrict this host to specific API paths.",
     },
 ];

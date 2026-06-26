@@ -1,7 +1,9 @@
 # Auth Broker
 
-Status: host-side API-key broker for Codex, Claude, and Gemini. Copilot and
-Antigravity remain design-only.
+Status: host-side API-key broker for Codex, Claude, and Gemini, plus
+`runhaven login` for Claude (host setup-token), Codex, and Copilot (in-sandbox
+device flow). Antigravity login is not yet wired. No Copilot or Antigravity
+API-key broker is planned.
 
 RunHaven exposes two auth inspection commands:
 
@@ -123,22 +125,42 @@ work there is allowlisting each provider's login and token-refresh hosts and a
 smooth headless login, not a broker. Tracked in
 [`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md).
 
-### `runhaven login claude` (warned opt-in)
+### `runhaven login`
 
-Claude Code has no in-container device login at the pinned version, so an
-in-sandbox login requires pasting a code back. For a zero-friction alternative,
-`runhaven login claude` runs Anthropic's official `claude setup-token` on your
-host (this needs Claude Code installed on the host), captures the resulting
-token, and stores it `0600` in the RunHaven cache. `runhaven run claude` then
-injects it into the sandbox env at run time.
+`runhaven login <agent>` signs you in once and later runs reuse it. The shape
+depends on what each CLI supports.
 
-This is an explicit, warned opt-in, not the default. Unlike the isolated-login
-default, the guest then holds a usable token, so it is the lower-isolation
-choice. The token is never written into your `~/.claude`, never appears in the
-printed `plan` or on a command line (it is passed by name-only `--env` from the
-RunHaven process environment), and in `provider` network mode the egress
-allowlist keeps it from leaving Anthropic's hosts. Clear it any time with
-`runhaven login claude --clear`.
+**Codex and Copilot (in-sandbox device login).** `runhaven login codex` and
+`runhaven login copilot` run the CLI's own device-code login once inside the
+sandbox, on the agent's shared home volume (`--auth-scope agent`). The CLI
+prints a URL; you approve in your browser and it polls to completion (Codex has
+no code to paste back; Copilot uses `github.com/login/device` with a code). The
+credential lands only in that isolated volume and later runs reuse it; RunHaven
+never sees the token, so this stays the default-isolation path. The login runs
+in `provider` mode, so the egress allowlist must include each provider's login
+and refresh hosts: `auth.openai.com` for Codex, and `github.com` plus
+`api.github.com` for Copilot (a deliberate widening, RunHaven cannot yet
+path-restrict those GitHub hosts). Codex needs the account "Allow device code
+login" setting on. Clear a login with `runhaven login <agent> --clear`, which
+deletes that shared home volume.
+
+**Claude (host setup-token, warned opt-in).** Claude Code has no in-container
+device login at the pinned version, so an in-sandbox login would need a code
+pasted back. For a zero-friction alternative, `runhaven login claude` runs
+Anthropic's official `claude setup-token` on your host (this needs Claude Code
+installed on the host), captures the resulting token, and stores it `0600` in
+the RunHaven cache. `runhaven run claude` then injects it into the sandbox env
+at run time. This is an explicit, warned opt-in, not the default: unlike the
+isolated-login default, the guest then holds a usable token. The token is never
+written into your `~/.claude`, never appears in the printed `plan` or on a
+command line (it is passed by name-only `--env` from the RunHaven process
+environment), and in `provider` mode the egress allowlist keeps it from leaving
+Anthropic's hosts. Clear it with `runhaven login claude --clear`.
+
+**Antigravity** is not yet wired into `runhaven login`. Log in by running
+`runhaven run antigravity` and completing the Google login on first run; its
+runtime auth hosts are still being verified before a pinned allowlist. Gemini
+uses the API-key broker.
 
 ## Smoke Coverage
 
@@ -190,7 +212,8 @@ default just to learn paths. A host-side broker keeps the model clean:
   block, but brokering is still the wrong call: GitHub's terms forbid proxying
   Copilot, the credential is a GitHub OAuth token exchanged at an undocumented
   endpoint, and a broker would have to read the host token store. Use isolated
-  in-container login state; the GitHub device flow works headlessly.
+  in-container login state; the GitHub device flow works headlessly and
+  `runhaven login copilot` runs it for you.
 - Antigravity auth and runtime endpoint sources remain incomplete, so no broker
   behavior is planned until official sources are reviewed.
 

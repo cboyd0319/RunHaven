@@ -1,24 +1,35 @@
-//! `runhaven login <agent>`: acquire a provider login once, host-side, so runs
-//! reuse it without re-authenticating.
+//! `runhaven login <agent>`: acquire a provider login once so runs reuse it
+//! without re-authenticating. Two shapes, by what each CLI supports:
 //!
-//! Today this implements the Claude path. Claude Code has no in-container
-//! device-code login at the pinned version, so an in-sandbox login requires
-//! pasting a code back. Instead `runhaven login claude` runs Anthropic's
-//! official `claude setup-token` on the host (where the browser and localhost
-//! callback work), stores the resulting OAuth token `0600` in the RunHaven
-//! cache, and later runs inject it into the sandbox env at run time only. The
-//! token is a usable credential, so this is an explicit, warned opt-in: the
-//! guest then holds a token, and provider-network egress keeps it from leaving
-//! the provider's hosts.
+//! - Claude: no in-container device login at the pinned version, so an
+//!   in-sandbox login would need a code pasted back. Instead `runhaven login
+//!   claude` runs Anthropic's official `claude setup-token` on the host (where
+//!   the browser and localhost callback work), stores the resulting OAuth token
+//!   `0600` in the RunHaven cache, and later runs inject it into the sandbox env
+//!   at run time only. The token is a usable credential, so this is an explicit,
+//!   warned opt-in: the guest then holds a token, and provider-network egress
+//!   keeps it from leaving the provider's hosts.
+//! - Codex and Copilot: device-code flows that print a URL and poll to
+//!   completion. `runhaven login <agent>` runs the CLI's own login command once
+//!   inside the sandbox on the agent's shared home volume (`--auth-scope
+//!   agent`), so the credential stays in that isolated volume and later runs
+//!   reuse it. RunHaven never holds the token.
 
-use std::io::{Read, Write};
+use std::io::{IsTerminal, Read, Write};
 use std::process::{Command, Stdio};
 
 use anyhow::{Context, Result, bail};
 
 use crate::doctor::find_on_path;
-use crate::paths::{create_private_file, ensure_private_parent, oauth_token_path};
-use crate::plans::AgentRunPlan;
+use crate::launch::launch_run_plan;
+use crate::paths::{
+    create_private_file, ensure_private_parent, login_workspace_dir, oauth_token_path,
+};
+use crate::plans::{
+    AgentRunPlan, AuthScope, RunOptions, WorkspaceScope, build_run_plan, default_network_mode,
+};
+use crate::profiles::get_profile;
+use crate::session_state::shared_state_volume_name;
 
 /// Agents whose login RunHaven can store host-side as an OAuth token and inject
 /// into the guest at run time. Maps the agent to the env var its CLI reads.
@@ -32,13 +43,47 @@ fn token_env_var(agent: &str) -> Option<&'static str> {
 pub fn login(agent: &str) -> Result<i32> {
     match agent {
         "claude" => login_claude(),
+        "codex" | "copilot" => {
+            let args = sandbox_login_command(agent).expect("codex/copilot have a login command");
+            login_in_sandbox(agent, args, sandbox_login_guidance(agent))
+        }
         other => bail!(
             "runhaven login does not yet support {other:?}. Run the agent and log in inside the sandbox, or use --api-key-broker-env for an API key."
         ),
     }
 }
 
+/// The agent's own login command, run inside the sandbox for a device-code flow.
+fn sandbox_login_command(agent: &str) -> Option<&'static [&'static str]> {
+    match agent {
+        "codex" => Some(&["codex", "login", "--device-auth"]),
+        "copilot" => Some(&["copilot", "login"]),
+        _ => None,
+    }
+}
+
+fn sandbox_login_guidance(agent: &str) -> &'static str {
+    match agent {
+        "codex" => {
+            "Logging in to Codex inside the sandbox. Open the URL it prints and sign in; there is no code to paste back. Your OpenAI account must allow device-code login. The login persists in the agent's shared home volume, so later runs reuse it."
+        }
+        "copilot" => {
+            "Logging in to Copilot inside the sandbox. Open https://github.com/login/device, enter the code it prints, and approve. The login persists in the agent's shared home volume, so later runs reuse it."
+        }
+        _ => "Logging in inside the sandbox. The login persists in the agent's shared home volume.",
+    }
+}
+
 pub fn logout(agent: &str) -> Result<i32> {
+    match agent {
+        // Codex and Copilot keep their login in the shared home volume, not a
+        // host token file; clearing it means removing that volume.
+        "codex" | "copilot" => logout_shared_volume(agent),
+        _ => logout_host_token(agent),
+    }
+}
+
+fn logout_host_token(agent: &str) -> Result<i32> {
     let path = oauth_token_path(agent);
     if path.exists() {
         std::fs::remove_file(&path)
@@ -48,6 +93,58 @@ pub fn logout(agent: &str) -> Result<i32> {
         eprintln!("No stored {agent} login to clear.");
     }
     Ok(0)
+}
+
+fn logout_shared_volume(agent: &str) -> Result<i32> {
+    let volume = shared_state_volume_name(agent);
+    let status = Command::new("container")
+        .args(["volume", "delete", &volume])
+        .status()
+        .with_context(|| format!("could not run container volume delete {volume}"))?;
+    if status.success() {
+        eprintln!("Cleared the {agent} login (deleted the shared home volume {volume}).");
+    } else {
+        // The most common reason is that no login volume exists yet.
+        eprintln!("No {agent} login volume to clear ({volume}).");
+    }
+    Ok(0)
+}
+
+/// Run an agent's own login command once inside the sandbox, on its shared home
+/// volume (`--auth-scope agent`), in `provider` network mode so the egress
+/// allowlist permits the login and token-refresh hosts. Stdio is inherited, so
+/// the device-flow URL (and any code prompt) reaches the terminal directly and
+/// the credential lands in the isolated volume; RunHaven never sees the token.
+fn login_in_sandbox(agent: &str, login_args: &[&'static str], guidance: &str) -> Result<i32> {
+    let profile = get_profile(agent)?;
+    let network = default_network_mode(&profile);
+    let tty = std::io::stdin().is_terminal() && std::io::stdout().is_terminal();
+    eprintln!("{guidance}");
+    let plan = build_run_plan(RunOptions {
+        profile,
+        workspace: login_workspace_dir()?,
+        agent_args: login_args.iter().map(|s| (*s).to_string()).collect(),
+        image: None,
+        cpus: "4".to_string(),
+        memory: "4g".to_string(),
+        network,
+        workspace_scope: WorkspaceScope::Current,
+        session: None,
+        auth_scope: AuthScope::Agent,
+        read_only_workspace: true,
+        ssh: false,
+        env: Vec::new(),
+        user: "agent".to_string(),
+        interactive: true,
+        tty,
+        allow_sensitive_workspace: false,
+        allow_root_user: false,
+        provider_hosts: Vec::new(),
+        api_key_broker_env: None,
+        worktree: None,
+        run_id: None,
+    })?;
+    launch_run_plan(&plan)
 }
 
 fn login_claude() -> Result<i32> {
@@ -146,6 +243,28 @@ mod tests {
         let out = format!("Starting login...\n{placeholder}\n");
         assert_eq!(extract_token(&out).as_deref(), Some(placeholder));
         assert!(extract_token("no token here\n").is_none());
+    }
+
+    #[test]
+    fn sandbox_login_commands_invoke_the_cli_device_flow() {
+        assert_eq!(
+            sandbox_login_command("codex"),
+            Some(&["codex", "login", "--device-auth"][..])
+        );
+        assert_eq!(
+            sandbox_login_command("copilot"),
+            Some(&["copilot", "login"][..])
+        );
+        assert_eq!(sandbox_login_command("claude"), None);
+    }
+
+    #[test]
+    fn login_and_refresh_hosts_are_in_the_provider_allowlist() {
+        use crate::provider_endpoints::bundled_provider_hosts;
+        // Without these the in-sandbox login is blocked by provider egress.
+        assert!(bundled_provider_hosts("codex").contains(&"auth.openai.com"));
+        assert!(bundled_provider_hosts("copilot").contains(&"github.com"));
+        assert!(bundled_provider_hosts("copilot").contains(&"api.github.com"));
     }
 
     #[test]

@@ -54,6 +54,15 @@ pub fn oauth_token_path(agent: &str) -> PathBuf {
         .join(format!("{agent}-oauth-token"))
 }
 
+/// A stable empty workspace for `runhaven login`. The in-sandbox login does not
+/// operate on a project, but a run plan requires a workspace, so it is mounted
+/// read-only from here instead of exposing the user's current directory.
+pub fn login_workspace_dir() -> Result<PathBuf> {
+    let dir = runhaven_cache_root().join("login-workspace");
+    ensure_private_dir(&dir)?;
+    Ok(dir)
+}
+
 pub fn ensure_private_dir(path: &Path) -> Result<()> {
     fs::create_dir_all(path)?;
     restrict_dir_permissions(path)?;
