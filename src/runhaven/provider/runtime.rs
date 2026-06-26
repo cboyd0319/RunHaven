@@ -8,8 +8,7 @@ use crate::active::{
     active_run_terminal_status, remove_active_run_record, write_active_run_record,
 };
 use crate::auth_broker::{
-    CODEX_BROKER_PLACEHOLDER_ENV, CODEX_BROKER_PLACEHOLDER_VALUE, CODEX_BROKER_PROVIDER_ID,
-    CodexApiKeyBrokerProxy,
+    CodexApiKeyBrokerProxy, GuestRedirect, ProviderBrokerProfile, broker_profile_for_agent,
 };
 use crate::egress::{EgressPolicy, ThreadedAllowlistProxy};
 use crate::git::{capture_git_snapshot, summarize_git_change};
@@ -34,7 +33,7 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
     if plan.provider_allowed_hosts.is_empty() {
         bail!("provider network plan is missing provider hosts");
     }
-    let codex_api_key = require_codex_api_key_broker_secret(plan)?;
+    let broker_secret = require_api_key_broker_secret(plan)?;
     let mut provider_network_created = false;
     let mut proxy: Option<ThreadedAllowlistProxy> = None;
     let mut proxy_thread = None;
@@ -74,22 +73,25 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
         proxy_thread = Some(thread::spawn(move || proxy_clone.serve_forever()));
         proxy = Some(provider_proxy);
 
-        let command = if let Some(api_key) = codex_api_key {
-            let codex_broker = create_codex_api_key_broker(api_key, &network_info)?;
-            let broker_url = format!(
-                "http://{}:{}/v1",
+        let command = if let Some((broker_profile, api_key)) = broker_secret {
+            let key_broker = create_api_key_broker(broker_profile, api_key, &network_info)?;
+            // Bare base URL; the guest-config step appends any provider-specific
+            // path segment (Codex expects a /v1 suffix; Claude and Gemini append
+            // the full path themselves).
+            let broker_base_url = format!(
+                "http://{}:{}",
                 network_info.ipv4_gateway,
-                codex_broker.server_addr()?.port()
+                key_broker.server_addr()?.port()
             );
-            let broker_clone = codex_broker.clone();
+            let broker_clone = key_broker.clone();
             broker_thread = Some(thread::spawn(move || broker_clone.serve_forever()));
-            broker = Some(codex_broker);
+            broker = Some(key_broker);
             let command = with_provider_proxy_environment(
                 plan,
                 &proxy_url,
                 &[network_info.ipv4_gateway.as_str()],
             );
-            with_codex_api_key_broker_config(&command, plan, &broker_url)?
+            with_api_key_broker_config(&command, plan, broker_profile, &broker_base_url)?
         } else {
             with_provider_proxy_environment(plan, &proxy_url, &[])
         };
@@ -189,19 +191,27 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
     }
 }
 
-pub fn require_codex_api_key_broker_secret(plan: &AgentRunPlan) -> Result<Option<String>> {
+pub fn require_api_key_broker_secret(
+    plan: &AgentRunPlan,
+) -> Result<Option<(ProviderBrokerProfile, String)>> {
     let Some(name) = &plan.codex_api_key_broker_env else {
         return Ok(None);
     };
+    let Some(profile) = broker_profile_for_agent(&plan.profile_name) else {
+        bail!(
+            "the {} profile has no API-key broker; remove --api-key-broker-env",
+            plan.profile_name
+        );
+    };
     let value = std::env::var(name).unwrap_or_default();
     if value.trim().is_empty() {
-        bail!("{name} is not set on the host; export it before using --codex-api-key-broker-env");
+        bail!("{name} is not set on the host; export it before using --api-key-broker-env");
     }
-    Ok(Some(value))
+    Ok(Some((profile, value)))
 }
 
 pub fn validate_runtime_auth_broker_environment(plan: &AgentRunPlan) -> Result<()> {
-    require_codex_api_key_broker_secret(plan).map(|_| ())
+    require_api_key_broker_secret(plan).map(|_| ())
 }
 
 pub fn with_provider_proxy_environment(
@@ -239,46 +249,69 @@ pub fn with_provider_proxy_environment(
     command
 }
 
-pub fn with_codex_api_key_broker_config(
+pub fn with_api_key_broker_config(
     command: &[String],
     plan: &AgentRunPlan,
+    profile: ProviderBrokerProfile,
     broker_base_url: &str,
 ) -> Result<Vec<String>> {
     let image_index = command
         .iter()
         .position(|arg| arg == &plan.image)
         .expect("image in command");
-    if command.get(image_index + 1).map(String::as_str) != Some("codex") {
-        bail!("Codex API key broker requires the agent command to start with codex");
+    // The guest always receives only the placeholder key value; the real key
+    // stays host-side in the broker.
+    let placeholder_env = format!("{}={}", profile.placeholder_env, profile.placeholder_value);
+    match profile.guest_redirect {
+        GuestRedirect::CodexCustomProvider {
+            provider_id,
+            wire_api,
+        } => {
+            if command.get(image_index + 1).map(String::as_str) != Some("codex") {
+                bail!("the Codex API key broker requires the agent command to start with codex");
+            }
+            let broker_environment = ["--env".to_string(), placeholder_env];
+            let mut command_with_env = command[..image_index].to_vec();
+            command_with_env.extend(broker_environment.clone());
+            command_with_env.extend(command[image_index..].to_vec());
+            let codex_index = image_index + broker_environment.len() + 1;
+            // Codex's base_url convention expects the API-version segment.
+            let base_url = format!("{broker_base_url}/v1");
+            let config = vec![
+                "-c".to_string(),
+                format!("model_provider=\"{provider_id}\""),
+                "-c".to_string(),
+                format!("model_providers.{provider_id}.name=\"{}\"", profile.label),
+                "-c".to_string(),
+                format!("model_providers.{provider_id}.base_url=\"{base_url}\""),
+                "-c".to_string(),
+                format!(
+                    "model_providers.{provider_id}.env_key=\"{}\"",
+                    profile.placeholder_env
+                ),
+                "-c".to_string(),
+                format!("model_providers.{provider_id}.wire_api=\"{wire_api}\""),
+            ];
+            let mut result = command_with_env[..=codex_index].to_vec();
+            result.extend(config);
+            result.extend(command_with_env[codex_index + 1..].to_vec());
+            Ok(result)
+        }
+        GuestRedirect::EnvRedirect { base_url_env } => {
+            // Claude and Gemini honor a base-URL env var; point it at the broker
+            // and hand the guest only the placeholder key.
+            let injected = [
+                "--env".to_string(),
+                format!("{base_url_env}={broker_base_url}"),
+                "--env".to_string(),
+                placeholder_env,
+            ];
+            let mut result = command[..image_index].to_vec();
+            result.extend(injected);
+            result.extend(command[image_index..].to_vec());
+            Ok(result)
+        }
     }
-    let broker_environment = [
-        "--env".to_string(),
-        format!("{CODEX_BROKER_PLACEHOLDER_ENV}={CODEX_BROKER_PLACEHOLDER_VALUE}"),
-    ];
-    let mut command_with_env = command[..image_index].to_vec();
-    command_with_env.extend(broker_environment.clone());
-    command_with_env.extend(command[image_index..].to_vec());
-    let codex_index = image_index + broker_environment.len() + 1;
-    let config = vec![
-        "-c".to_string(),
-        format!("model_provider=\"{CODEX_BROKER_PROVIDER_ID}\""),
-        "-c".to_string(),
-        format!(
-            "model_providers.{CODEX_BROKER_PROVIDER_ID}.name=\"RunHaven OpenAI API-key broker\""
-        ),
-        "-c".to_string(),
-        format!("model_providers.{CODEX_BROKER_PROVIDER_ID}.base_url=\"{broker_base_url}\""),
-        "-c".to_string(),
-        format!(
-            "model_providers.{CODEX_BROKER_PROVIDER_ID}.env_key=\"{CODEX_BROKER_PLACEHOLDER_ENV}\""
-        ),
-        "-c".to_string(),
-        format!("model_providers.{CODEX_BROKER_PROVIDER_ID}.wire_api=\"responses\""),
-    ];
-    let mut result = command_with_env[..=codex_index].to_vec();
-    result.extend(config);
-    result.extend(command_with_env[codex_index + 1..].to_vec());
-    Ok(result)
 }
 
 pub fn cleanup_provider_network(plan: &AgentRunPlan) -> Result<Value> {
@@ -318,27 +351,34 @@ pub fn create_provider_proxy(
     }
 }
 
-pub fn create_codex_api_key_broker(
+pub fn create_api_key_broker(
+    profile: ProviderBrokerProfile,
     api_key: String,
     network_info: &InternalNetworkInfo,
 ) -> Result<CodexApiKeyBrokerProxy> {
     let subnets = vec![network_info.ipv4_subnet.clone()];
-    match CodexApiKeyBrokerProxy::bind((&network_info.ipv4_gateway, 0), api_key.clone(), &subnets) {
+    match CodexApiKeyBrokerProxy::bind_for_profile(
+        (&network_info.ipv4_gateway, 0),
+        profile,
+        api_key.clone(),
+        &subnets,
+    ) {
         Ok(broker) => Ok(broker),
         Err(_) => {
             eprintln!(
-                "Warning: could not bind the Codex API key broker to the Apple \
-                 container gateway {}; binding to all host interfaces instead. \
-                 Off-subnet clients are still rejected, but avoid running untrusted \
-                 services on this host while a run is active.",
-                network_info.ipv4_gateway
+                "Warning: could not bind the {} to the Apple container gateway {}; \
+                 binding to all host interfaces instead. Off-subnet clients are still \
+                 rejected, but avoid running untrusted services on this host while a run \
+                 is active.",
+                profile.label, network_info.ipv4_gateway
             );
-            CodexApiKeyBrokerProxy::bind(("0.0.0.0", 0), api_key, &subnets).with_context(|| {
-                format!(
-                    "could not bind Codex API key broker for Apple container gateway {}",
-                    network_info.ipv4_gateway
-                )
-            })
+            CodexApiKeyBrokerProxy::bind_for_profile(("0.0.0.0", 0), profile, api_key, &subnets)
+                .with_context(|| {
+                    format!(
+                        "could not bind {} for Apple container gateway {}",
+                        profile.label, network_info.ipv4_gateway
+                    )
+                })
         }
     }
 }

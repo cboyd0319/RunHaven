@@ -109,8 +109,12 @@ fn codex_broker_wildcard_bind_rejects_clients_outside_container_subnet() {
         ipv4_gateway: "192.0.2.1".to_string(),
         ipv4_subnet: "192.0.2.0/24".to_string(),
     };
-    let broker =
-        create_codex_api_key_broker("test-key".to_string(), &info).expect("wildcard broker");
+    let broker = create_api_key_broker(
+        crate::auth_broker::CODEX_BROKER,
+        "test-key".to_string(),
+        &info,
+    )
+    .expect("wildcard broker");
     assert!(broker.server_addr().unwrap().ip().is_unspecified());
     let broker_thread = {
         let broker = broker.clone();
@@ -130,4 +134,82 @@ fn codex_broker_wildcard_bind_rejects_clients_outside_container_subnet() {
 
     broker.shutdown();
     broker_thread.join().expect("broker thread");
+}
+
+fn broker_plan(profile_name: &str, agent: &str) -> AgentRunPlan {
+    let image = "runhaven/base:0.1.0";
+    AgentRunPlan {
+        command: vec![
+            "container".to_string(),
+            "run".to_string(),
+            image.to_string(),
+            agent.to_string(),
+        ],
+        preflight: Vec::new(),
+        workspace: std::path::PathBuf::from("/tmp/ws"),
+        state_volume: "vol".to_string(),
+        session: "default".to_string(),
+        container_name: "runhaven-test-run".to_string(),
+        profile_name: profile_name.to_string(),
+        workspace_scope: crate::plans::WorkspaceScope::Current,
+        workspace_scope_note: None,
+        worktree: None,
+        run_id: None,
+        network_name: Some("runhaven-test-internal".to_string()),
+        network_mode: crate::plans::NetworkMode::Provider,
+        egress_summary: String::new(),
+        image: image.to_string(),
+        provider_allowed_hosts: vec!["example.com".to_string()],
+        codex_api_key_broker_env: Some("PROVIDER_KEY".to_string()),
+        security_notices: Vec::new(),
+    }
+}
+
+#[test]
+fn claude_broker_redirects_base_url_and_gives_guest_only_placeholder() {
+    let plan = broker_plan("claude", "claude");
+    let result = with_api_key_broker_config(
+        &plan.command,
+        &plan,
+        crate::auth_broker::CLAUDE_BROKER,
+        "http://192.0.2.1:8080",
+    )
+    .expect("claude broker config");
+    let joined = result.join(" ");
+    assert!(joined.contains("ANTHROPIC_BASE_URL=http://192.0.2.1:8080"));
+    assert!(joined.contains("ANTHROPIC_API_KEY=runhaven-broker-placeholder"));
+    // The host key env var name never enters the guest command; the broker reads
+    // it host-side and the guest sees only the placeholder.
+    assert!(!joined.contains("PROVIDER_KEY"));
+}
+
+#[test]
+fn gemini_broker_redirects_base_url() {
+    let plan = broker_plan("gemini", "gemini");
+    let result = with_api_key_broker_config(
+        &plan.command,
+        &plan,
+        crate::auth_broker::GEMINI_BROKER,
+        "http://192.0.2.1:8080",
+    )
+    .expect("gemini broker config");
+    let joined = result.join(" ");
+    assert!(joined.contains("GOOGLE_GEMINI_BASE_URL=http://192.0.2.1:8080"));
+    assert!(joined.contains("GEMINI_API_KEY=runhaven-broker-placeholder"));
+}
+
+#[test]
+fn codex_broker_injects_custom_provider_with_v1_base() {
+    let plan = broker_plan("codex", "codex");
+    let result = with_api_key_broker_config(
+        &plan.command,
+        &plan,
+        crate::auth_broker::CODEX_BROKER,
+        "http://192.0.2.1:8080",
+    )
+    .expect("codex broker config");
+    let joined = result.join(" ");
+    assert!(joined.contains("base_url=\"http://192.0.2.1:8080/v1\""));
+    assert!(joined.contains("RUNHAVEN_CODEX_BROKER_TOKEN=runhaven-broker-placeholder"));
+    assert!(joined.contains("wire_api=\"responses\""));
 }
