@@ -6,10 +6,9 @@ use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
 use crate::auth_broker::BrokerDecision;
-use crate::egress::{ProxyDecision, is_ip_literal};
+use crate::egress::ProxyDecision;
 use crate::paths::{auth_broker_log_path, egress_policy_log_path, open_private_append};
 use crate::plans::AgentRunPlan;
-use crate::provider_endpoints::match_provider_endpoints;
 
 pub fn utc_timestamp() -> String {
     OffsetDateTime::now_utc()
@@ -112,7 +111,7 @@ fn auth_payload(
 pub fn print_provider_blocked_host_review(
     plan: &AgentRunPlan,
     decisions: &[ProxyDecision],
-    run_id: &str,
+    _run_id: &str,
 ) {
     let denials = decisions
         .iter()
@@ -121,57 +120,22 @@ pub fn print_provider_blocked_host_review(
     if denials.is_empty() {
         return;
     }
+    // A calm, plain-language notice. RunHaven is primarily for less-technical
+    // people, so the default does not dump hostnames or a per-host "review"; the
+    // full per-host detail stays available in `runhaven egress log`.
     let total = denials.iter().map(|decision| decision.count).sum::<usize>();
-    let plural = if total == 1 { "request" } else { "requests" };
-    eprintln!(
-        "RunHaven provider proxy blocked {total} CONNECT {plural} across {} target(s).",
-        denials.len()
-    );
-    eprintln!("Run id: {run_id}");
-    eprintln!("Review:");
-    for decision in denials {
-        let matched_rule = if decision.matched_rule.is_empty() {
-            "-"
-        } else {
-            &decision.matched_rule
-        };
-        eprintln!(
-            "  - {}:{}  count={}  reason={}  rule={}",
-            decision.host, decision.port, decision.count, decision.reason, matched_rule
-        );
-        eprintln!(
-            "    Next action: {}",
-            provider_denial_next_action(plan, decision)
-        );
-    }
-    eprintln!("Recent policy log: runhaven egress log --limit 20");
-}
-
-pub fn provider_denial_next_action(plan: &AgentRunPlan, decision: &ProxyDecision) -> String {
-    let host = &decision.host;
-    if is_ip_literal(host) {
-        return "IP literal targets cannot be allowed; use a reviewed provider hostname."
-            .to_string();
-    }
-    match decision.reason.as_str() {
-        "port-not-allowed" => {
-            return "provider mode only allows HTTPS CONNECT on port 443.".to_string();
-        }
-        "unsafe-resolved-address" => {
-            return "do not add an override; the allowed host resolved to a non-public address."
-                .to_string();
-        }
-        "dns-resolution-failed" => {
-            return "check DNS or provider availability before changing the allowlist.".to_string();
-        }
-        _ => {}
-    }
-    let explanation = format!("runhaven why host {host} --agent {}", plan.profile_name);
-    if !match_provider_endpoints(host, Some(&plan.profile_name)).is_empty() {
-        format!(
-            "{explanation}; rerun with --provider-host {host} only if the documented purpose matches."
-        )
+    let destinations = denials.len();
+    let attempts = if total == 1 { "attempt" } else { "attempts" };
+    let places = if destinations == 1 {
+        "destination"
     } else {
-        format!("{explanation}; add --provider-host {host} only after source review.")
-    }
+        "destinations"
+    };
+    let agent = &plan.profile_name;
+    eprintln!(
+        "RunHaven kept {agent} inside its provider's network and blocked {destinations} other {places} ({total} {attempts}) to protect your data."
+    );
+    eprintln!(
+        "If {agent} seemed to miss something, run `runhaven egress log` to see what was blocked."
+    );
 }

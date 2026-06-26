@@ -69,10 +69,10 @@ fn sandbox_login_command(agent: &str) -> Option<&'static [&'static str]> {
 fn sandbox_login_guidance(agent: &str) -> &'static str {
     match agent {
         "codex" => {
-            "Logging in to Codex inside the sandbox. Open the URL it prints and sign in; there is no code to paste back. Your OpenAI account must allow device-code login. The login persists in the agent's shared home volume, so later runs reuse it."
+            "Logging in to Codex inside the sandbox. Open the URL it prints and sign in; there is no code to paste back. Codex needs device-code login enabled on your OpenAI account; if it refuses, turn it on in ChatGPT under Settings then Security, and re-run. The login persists in the agent's shared home volume, so later runs reuse it."
         }
         "copilot" => {
-            "Logging in to Copilot inside the sandbox. Open https://github.com/login/device, enter the code it prints, and approve. The login persists in the agent's shared home volume, so later runs reuse it."
+            "Logging in to Copilot inside the sandbox. Open https://github.com/login/device, enter the code it prints, and approve. When it asks whether to store the token in a plaintext config file, answer y: in the sandbox that file lives in the isolated volume, not on your Mac. The login persists in the agent's shared home volume, so later runs reuse it."
         }
         "antigravity" => {
             "Logging in to Antigravity inside the sandbox. agy has no separate login command, so this starts agy and it prompts a Google sign-in on first run: open the URL it prints, approve in your browser, and follow any code prompt. Once you are in the agy session, type /exit to leave. The login persists in the agent's shared home volume, so later runs reuse it."
