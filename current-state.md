@@ -614,19 +614,35 @@ The OAuth-brokering research concluded (2026-06-26): no host-side OAuth broker
 (provider ToS, subscription token is not a drop-in bearer, would read host login
 state). OAuth stays on the isolated in-container login, which is now the active
 `oauth-isolated-login` slice (the product's target audience uses OAuth, so easy
-OAuth is the priority). Done: once-per-agent auth via `--auth-scope` (verified;
-Claude OAuth proven live). Remaining easy-OAuth work:
-1. Allowlist the OAuth login/refresh hosts for the other agents so their
-   in-sandbox login reaches the auth endpoints: Codex `auth.openai.com`; Copilot
-   `github.com` + `api.github.com`; Gemini `accounts.google.com` +
-   `oauth2.googleapis.com` (verify each against the live CLI; Gemini account
-   login retired 2026-06-18, so the API-key broker stays its path). This widens
-   the provider allowlist, so it is source-backed + per-host verified.
-2. A `runhaven login <agent>` helper that auto-opens the auth URL in the host
-   browser and uses device-code flow where supported, to cut the copy/paste
-   friction the user flagged.
-3. Quiet the gateway-bind warning that fires every provider run on this runtime,
-   and consider a one-time shared-login notice on first volume creation.
+OAuth is the priority). Done: once-per-agent auth via `--auth-scope` (verified; Claude OAuth proven
+live). THE FOCUSED NEXT EFFORT is the `runhaven login <agent>` command (per-agent
+login flows researched and the approach decided 2026-06-26 with the user; full
+detail in AgentMemory). It is security-sensitive (host token storage + run-time
+injection, broad allowlist widening) and needs live per-agent smokes, so build
+carefully:
+
+- Claude (the user's agent): setup-token opt-in. `runhaven login claude` runs
+  Anthropic's official `claude setup-token` on the host (requires host `claude`),
+  captures `CLAUDE_CODE_OAUTH_TOKEN`, stores it `0600` in the RunHaven cache; runs
+  then inject it as `--env CLAUDE_CODE_OAUTH_TOKEN` at run time only (never in the
+  printed `plan`), behind the opt-in, with a security notice (the guest then
+  holds a usable token; provider-mode egress blocks exfiltration). Add a
+  logout/clear path. Claude has no in-container device flow, so this is the
+  zero-friction path the user chose.
+- Codex + Copilot: clean device-flow login (no PTY). `runhaven login` runs the
+  login command in the sandbox (`codex login --device-auth`; `copilot login`),
+  captures stdout, auto-opens the device URL on the host, shows the one-time
+  code, and lets the CLI poll. Allowlist additions (source-backed, per-host
+  verified): codex += `auth.openai.com`; copilot += `github.com` +
+  `api.github.com` (note: `github.com` is broad/path-sensitive, a deliberate
+  egress widening for the copilot profile, document it). Each needs a live login
+  smoke.
+- Gemini: account login retired 2026-06-18 and its OAuth is fragile, so the
+  API-key broker stays its path (no OAuth login).
+
+Also fold in: quiet the gateway-bind warning that fires every provider run on
+this runtime, and consider a one-time shared-login notice on first shared-volume
+creation.
 
 Then, the remaining non-UI roadmap:
 1. Other design-first candidates from `docs/NON_UI_BACKLOG.md` (custom profile
