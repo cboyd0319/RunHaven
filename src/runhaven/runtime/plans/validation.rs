@@ -135,12 +135,14 @@ pub fn sensitive_workspace_paths() -> (Vec<PathBuf>, Vec<PathBuf>) {
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."));
     let home = home.canonicalize().unwrap_or(home);
-    let root_paths = ["/", "/Users", "/private", "/var"]
-        .iter()
-        .map(PathBuf::from)
-        .chain([home.clone()])
-        .filter_map(|path| path.canonicalize().ok())
-        .collect::<Vec<_>>();
+    let root_paths = [
+        "/", "/Users", "/private", "/var", "/usr", "/bin", "/sbin", "/opt",
+    ]
+    .iter()
+    .map(PathBuf::from)
+    .chain([home.clone()])
+    .filter_map(|path| path.canonicalize().ok())
+    .collect::<Vec<_>>();
     let secret_paths = vec![
         PathBuf::from("/Applications"),
         PathBuf::from("/Library"),
@@ -355,4 +357,36 @@ fn valid_user_part(value: &str, allow_name: bool) -> bool {
         && value
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-'))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn system_roots_are_sensitive_workspace_roots() {
+        let (root_paths, _secret) = sensitive_workspace_paths();
+        // Each system root that resolves on the host must be a blocked root.
+        for root in ["/usr", "/bin", "/sbin"] {
+            if let Ok(canon) = Path::new(root).canonicalize() {
+                assert!(
+                    root_paths.contains(&canon),
+                    "{root} ({canon:?}) should be a sensitive workspace root"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn validate_workspace_blocks_system_root_without_override() {
+        let usr = Path::new("/usr").canonicalize().expect("/usr resolves");
+        assert!(
+            validate_workspace(&usr, false).is_err(),
+            "/usr must require --allow-sensitive-workspace"
+        );
+        assert!(
+            validate_workspace(&usr, true).is_ok(),
+            "/usr is allowed with the explicit override"
+        );
+    }
 }

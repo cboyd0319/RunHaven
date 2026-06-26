@@ -1,7 +1,7 @@
 {
   "$schema": "docs/harness/schemas/feature-list.schema.json",
   "project": "RunHaven",
-  "last_updated": "2026-06-25",
+  "last_updated": "2026-06-26",
   "rules": {
     "single_active_feature": true,
     "passing_requires_evidence": true,
@@ -149,15 +149,39 @@
       "notes": "Durable scope is tracked in docs/V1_RELEASE_PLAN.md; open gaps are tracked in docs/RELEASE_GAP_ANALYSIS.md. RunHaven remains alpha/pre-release until after this milestone. After v0.5.0, keep CLI changes contract-preserving unless a security or bug-fix exception is explicit. Must not change while active: the default security boundary (no host home, credential, or raw SSH key mount; non-root images; provider egress allowlist) and existing stable CLI output and JSON contracts."
     },
     {
+      "id": "runtime-security-hardening",
+      "priority": 1,
+      "area": "runtime",
+      "title": "Apple container runtime and security hardening",
+      "user_visible_behavior": "The Apple `container` boundary (task-scoped runs, provider egress, image lifecycle, state/network cleanup) is re-verified on the current host and audited for correctness and security gaps, with real findings fixed under test, before any new product surface.",
+      "status": "passing",
+      "dependencies": [
+        "cli-complete-v0.5.0"
+      ],
+      "verification": [
+        "Recurring runtime evidence gates pass on macOS 26+ (scripts/apple_container_smoke.sh --with-provider --with-ssh and runhaven doctor)",
+        "A focused security/correctness audit of src/runhaven/runtime, provider, and image is recorded against docs/APPLE_CONTAINER_GAP_ANALYSIS.md",
+        "Real findings are fixed in focused slices with regression tests; deferred items are recorded with reason and risk",
+        "No default security boundary is weakened (no host home, credential, or raw SSH key mount; non-root images; provider egress allowlist)"
+      ],
+      "evidence": [
+        "2026-06-26: Ran a two-lens security/correctness audit of the Apple container boundary (apple-container-expert + security-audit, cross-referenced against the upstream Apple source clone at /Users/c/Documents/GitHub/apple-container). Core boundary verified sound: non-root agent, read-only rootfs, cap-drop ALL on the agent run, single workspace+state mounts, explicit env only, fail-closed validation, canonicalized path checks (no ../ or symlink bypass), exact/dot-boundary allowlist, SSRF/DNS-rebind defense, hostOnly network replacement (not additive), provider teardown on error paths, run-control ownership validation, JSON fail-closed, secrets absent from all logs. Empirically confirmed finding #1 (Medium) with a scoped live probe on macOS 27.0: a hostOnly guest opened raw TCP to a host listener on the gateway while direct internet egress was refused; Apple container 1.0.0 has no per-port guest-to-host firewalling, so it is remediated by a SECURITY_MODEL.md caveat + guidance with an in-guest eBPF filter logged design-first in NON_UI_BACKLOG.md.",
+        "2026-06-26: Fixed the directly-fixable findings under test. #2: the short-lived state-volume-prep root container now sets --cap-drop ALL and re-adds only CHOWN/FOWNER/DAC_OVERRIDE (verified against upstream RuntimeService.effectiveCapabilities that drop-ALL-then-add yields exactly those three; live smoke confirmed volume prep still succeeds). #4: added /usr,/bin,/sbin,/opt to sensitive_workspace_paths so they require --allow-sensitive-workspace. #5: the provider proxy and Codex broker now warn on the 0.0.0.0 bind fallback (off-subnet clients are still rejected). Documented #1 and the broker usable-not-readable / suffix-wildcard notes (#6) in SECURITY_MODEL.md. Verified: cargo fmt, cargo test --locked (52 unit incl. 3 new + 6 integration), clippy -D warnings, git diff --check, and scripts/apple_container_smoke.sh on macOS 27.0. Work is on branch runtime-security-hardening."
+      ],
+      "notes": "Led the near-term roadmap per the 2026-06-26 directive that defers all GUI/UI work to the very end. Used the upstream Apple source checkout at /Users/c/Documents/GitHub/apple-container/ as source-map evidence. Design-first follow-ups now live in NON_UI_BACKLOG.md: proxy-side credential injection for non-Codex providers (#3) and the in-guest eBPF egress filter for finding #1. The P2 SSH fail-closed item is tracked separately as ssh-forwarding-boundary and stays blocked pending an upstream non-root socket fix."
+    },
+    {
       "id": "desktop-first-class-v1",
-      "priority": 2,
+      "priority": 4,
       "area": "ui",
-      "title": "First-class desktop v1 surface",
-      "user_visible_behavior": "For v1.0.0, the desktop app is the primary safe path for setup, image readiness and rebuild, planning, launch, live status, bounded output, stop, kill, repair, diagnostics, worktree review, and safe cleanup.",
+      "title": "First-class desktop surface (deferred to roadmap end)",
+      "user_visible_behavior": "The desktop app is the primary safe path for setup, image readiness and rebuild, planning, launch, live status, bounded output, stop, kill, repair, diagnostics, worktree review, and safe cleanup.",
       "status": "planned",
       "dependencies": [
         "cli-complete-v0.5.0",
-        "tauri-stop-run-control"
+        "tauri-stop-run-control",
+        "runtime-security-hardening",
+        "release-readiness"
       ],
       "verification": [
         "Tauri commands remain typed, bounded, and capability-scoped",
@@ -169,7 +193,7 @@
         "The release artifact is signed, notarized, checksummed, and backed by provenance"
       ],
       "evidence": [],
-      "notes": "Durable scope is tracked in docs/V1_RELEASE_PLAN.md; open gaps are tracked in docs/RELEASE_GAP_ANALYSIS.md. Keep each command family in separate slices. Apple container machine is not the default boundary, but explicit or user-managed machine workflows should warn and require intent rather than be blocked solely because they are less secure."
+      "notes": "Deferred to the very end of the roadmap per the 2026-06-26 directive that pushes all GUI/UI work last; runtime/security hardening, remaining non-UI product scope, and a CLI-based public release come first. Shipped GUI slices (tauri-stop-run-control, tauri-kill-repair-run-control, tauri-diagnostics) stay passing and are re-sequenced, not reverted. The version label is no longer locked to v1.0.0. Durable scope is tracked in docs/V1_RELEASE_PLAN.md; open gaps are tracked in docs/RELEASE_GAP_ANALYSIS.md. Keep each command family in separate slices. Apple container machine is not the default boundary, but explicit or user-managed machine workflows should warn and require intent rather than be blocked solely because they are less secure."
     },
     {
       "id": "ssh-forwarding-boundary",
@@ -191,13 +215,14 @@
     },
     {
       "id": "release-readiness",
-      "priority": 3,
+      "priority": 2,
       "area": "release",
-      "title": "Pre-release readiness",
+      "title": "Pre-release readiness (CLI-based public release)",
       "user_visible_behavior": "Before a public release, local verification, Apple container smokes, dependency pins, docs, and security evidence are current.",
       "status": "planned",
       "dependencies": [
-        "desktop-first-class-v1"
+        "cli-complete-v0.5.0",
+        "runtime-security-hardening"
       ],
       "verification": [
         "`./init.sh` passes on macOS 26+",
@@ -207,7 +232,7 @@
         "Security, installation, usage, and release docs are aligned"
       ],
       "evidence": [],
-      "notes": "Keep release work separate from feature slices. RunHaven remains alpha/pre-release until after v0.5.0. Durable proposed v1.0.0 boundary requires a first-class desktop app and is tracked in docs/V1_RELEASE_PLAN.md; open gaps are tracked in docs/RELEASE_GAP_ANALYSIS.md."
+      "notes": "Keep release work separate from feature slices. RunHaven remains alpha/pre-release until after v0.5.0. Per the 2026-06-26 directive, this gates a CLI-based public release that comes before the deferred desktop/TUI work; the desktop release is a later, separate milestone (desktop-first-class-v1). Open gaps are tracked in docs/RELEASE_GAP_ANALYSIS.md; the durable release contract in docs/V1_RELEASE_PLAN.md is superseded on sequencing by this directive."
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Current State
 
-Last Updated: 2026-06-25 UTC
+Last Updated: 2026-06-26 UTC
 
 ## Current Objective
 
@@ -8,9 +8,14 @@ The `cli-complete-v0.5.0` scope is complete and verified (`passing` in
 `feature_list.json`). RunHaven remains alpha/pre-release until the `v0.5.0` tag is
 cut at the release-readiness step.
 
-Next phase: build the first-class desktop app toward `desktop-first-class-v1`,
-starting with the `tauri-stop-run-control` slice. A terminal UI (TUI) is deferred
-until well after the desktop app ships.
+Next phase (2026-06-26 user directive): all GUI/UI work, both the Tauri desktop
+app and the terminal UI (TUI), moves to the very end of the roadmap. Runtime and
+security hardening of the Apple `container` boundary leads now, ahead of any new
+feature surface. The already-shipped desktop run-control and diagnostics slices
+stay `passing`; no GUI work is reverted, only re-sequenced behind the non-UI
+hardening, remaining product scope, and release work. The
+`runtime-security-hardening` audit-and-fix slice is `passing` (branch
+`runtime-security-hardening`, not yet merged); no feature is currently `active`.
 
 ## Startup State Contract
 
@@ -30,11 +35,15 @@ Load deeper docs only when the task touches that surface.
 - `v0.5.0` is now the intended CLI-complete release. All CLI product work
   should be done by that tag before broad v1 desktop expansion.
 - RunHaven remains alpha/pre-release until after `v0.5.0` is cut.
-- The proposed v1.0.0 release boundary now requires the desktop app to become
-  first-class, with the CLI as the stable backend and automation surface.
-- The product sequence is CLI-complete (`v0.5.0`), then the first-class desktop
-  app (`v1.0.0`), then a terminal UI (TUI) much later over the same planner and
-  policy objects (2026-06-24 user directive).
+- All GUI/UI work is deferred to the very end of the roadmap (2026-06-26 user
+  directive), superseding the prior `v1.0.0` = first-class-desktop boundary. The
+  CLI stays the product surface through the near-term releases; the desktop app
+  and TUI are the final roadmap phase. The version label for the desktop release
+  is open and not locked to `v1.0.0`.
+- The product sequence is CLI-complete (`v0.5.0`), then runtime/security
+  hardening of the Apple `container` boundary, then remaining non-UI product
+  scope and a CLI-based public release, then (at the very end) the first-class
+  desktop app and a terminal UI (TUI) over the same planner and policy objects.
 - Above all else, secure defaults must be the easiest path. Supported
   lower-security choices should warn and require explicit intent; unsupported
   or hard-boundary violations still fail closed.
@@ -64,6 +73,13 @@ Load deeper docs only when the task touches that surface.
 Durable rationale that compaction tends to lose. Change these only with new
 evidence and a recorded reason.
 
+- All GUI/UI work (desktop app and TUI) is deferred to the very end of the
+  roadmap, and runtime/security hardening leads the near-term work (2026-06-26
+  user directive). This reverses the prior sequence where `v1.0.0` was the
+  first-class desktop release. Rationale: harden and complete the non-UI product
+  and its release before building the heavier desktop/TUI surfaces and the
+  signing/notarization path. Already-shipped GUI slices stay `passing`; they are
+  re-sequenced, not reverted. Reopen only with a new user directive.
 - Default boundary is task-scoped `container run`, not `container machine`,
   because machine workflows map the host user, home, and credentials into the
   guest. Machine use is warned and explicit, not blocked.
@@ -105,6 +121,24 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Completed the `runtime-security-hardening` audit-and-fix slice
+  (branch `runtime-security-hardening`, not yet merged). Ran a two-lens audit
+  (apple-container-expert + security-audit) cross-referenced against the upstream
+  Apple source clone; the core boundary verified sound. Empirically confirmed
+  audit finding #1 (Medium) with a scoped live probe on macOS 27.0: a hostOnly
+  guest opened raw TCP to a host listener on the gateway while direct internet
+  egress was refused. Apple `container` 1.0.0 has no per-port guest-to-host
+  firewalling, so #1 is remediated by a `SECURITY_MODEL.md` caveat plus guidance,
+  with an in-guest eBPF egress filter logged design-first. Fixed under test: #2
+  the state-volume-prep root container now drops all caps and re-adds only
+  CHOWN/FOWNER/DAC_OVERRIDE (live smoke confirmed prep still works); #4 added
+  `/usr`, `/bin`, `/sbin`, `/opt` to `sensitive_workspace_paths`; #5 the provider
+  proxy and Codex broker warn on the `0.0.0.0` bind fallback. Also ran a
+  competitive landscape scan (clones under `~/Documents/GitHub/`: `sand`,
+  `container-use`, `agent-sandbox`) and recorded borrowed ideas in
+  `NON_UI_BACKLOG.md`. Verified: cargo fmt, `cargo test --locked` (52 unit incl.
+  3 new + 6 integration), clippy `-D warnings`, `git diff --check`, and
+  `scripts/apple_container_smoke.sh` on macOS 27.0.
 - 2026-06-25: Added desktop diagnostics (partial V1-G5): read-only, secret-free
   `get_egress_log`, `get_auth_log`, and `get_auth_status` behind the `main-read`
   capability. `read_egress_policy_log`/`read_auth_broker_log` back the logs; a new
@@ -531,15 +565,29 @@ evidence and a recorded reason.
 
 ## Next Step
 
-`cli-complete-v0.5.0` is `passing` (all contract gaps closed, secure-by-default
-network, all CLI surfaces confirmed in `docs/CLI_SURFACE_COVERAGE.md`). The
-desktop phase is underway: the maintainability split (milestone 1 / V1-G10), the
-full run-control surface (V1-G3: stop, kill, repair), and read-only diagnostics
-(partial V1-G5: egress + auth logs/status) are done. Next desktop slices, as
-separate features: the maintenance slice (image rebuild, state/network cleanup;
-V1-G2/G6), finishing V1-G5 (`why` explanations + blocked-host review + auth
-explain), then worktree review (V1-G7). A terminal UI (TUI) is deferred until
-well after the desktop app ships.
-Tagged `v0.5.0` release notes are cut at the release-readiness step. Use
+`cli-complete-v0.5.0` and the `runtime-security-hardening` audit-and-fix slice are
+both `passing`. The hardening branch `runtime-security-hardening` is not yet merged
+to `main`. Per the 2026-06-26 directive, all GUI/UI work stays deferred to the very
+end.
+
+Immediate decision: merge/commit the `runtime-security-hardening` branch, then pick
+the next non-UI slice. Candidates, in rough order:
+1. Proxy-side credential injection for non-Codex providers (audit #3 / borrowed
+   from `agent-sandbox`): extend the host-side broker so Claude/Gemini/Copilot
+   keys stop entering the guest. Highest security value; design-first.
+2. Other design-first candidates from `docs/NON_UI_BACKLOG.md` (custom profile
+   schema, path-aware host policy, the in-guest eBPF egress filter for finding #1),
+   promoted one at a time through the design gate.
+3. Release-readiness for a CLI-based public release once the near-term product
+   scope is settled.
+The known open blocker is P2 SSH fail-closed (`ssh-forwarding-boundary`), which
+needs an upstream non-root socket fix.
+
+Deferred to the very end (do not start without a new directive): the desktop
+maintenance slice (image rebuild, state/network cleanup), the V1-G5 read-only
+diagnostics remainder (`why` explanations + blocked-host review + auth explain),
+worktree review (V1-G7), and the TUI. Shipped GUI slices stay `passing`.
+
+Tagged release notes are cut at the release-readiness step. Use
 `docs/RELEASE_GAP_ANALYSIS.md` for status and `docs/V1_RELEASE_PLAN.md` for the
-durable release contract.
+durable release contract (now superseded on sequencing by this directive).

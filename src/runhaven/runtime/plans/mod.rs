@@ -148,6 +148,18 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
             "run".to_string(),
             "--rm".to_string(),
             "--init".to_string(),
+            // Drop all capabilities, then re-add only the three the home-volume
+            // ownership setup needs: CHOWN (chown), FOWNER (chmod a non-owned
+            // path), DAC_OVERRIDE (mkdir into the 1000-owned home). The runtime
+            // resolves drop-ALL then add, so this yields exactly those three.
+            "--cap-drop".to_string(),
+            "ALL".to_string(),
+            "--cap-add".to_string(),
+            "CHOWN".to_string(),
+            "--cap-add".to_string(),
+            "FOWNER".to_string(),
+            "--cap-add".to_string(),
+            "DAC_OVERRIDE".to_string(),
             "--read-only".to_string(),
             "--no-dns".to_string(),
             "--network".to_string(),
@@ -298,6 +310,57 @@ mod tests {
                 .iter()
                 .any(|notice| notice.contains("Unrestricted internet egress"))
         );
+    }
+
+    #[test]
+    fn volume_prep_container_drops_caps_to_minimum() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let plan = build_run_plan(RunOptions {
+            profile: get_profile("shell").expect("profile"),
+            workspace: workspace.path().to_path_buf(),
+            agent_args: vec![
+                "/bin/bash".to_string(),
+                "-lc".to_string(),
+                "true".to_string(),
+            ],
+            image: None,
+            cpus: "4".to_string(),
+            memory: "4g".to_string(),
+            network: NetworkMode::Internal,
+            workspace_scope: WorkspaceScope::Current,
+            session: None,
+            read_only_workspace: false,
+            ssh: false,
+            env: Vec::new(),
+            user: "agent".to_string(),
+            interactive: false,
+            tty: false,
+            allow_sensitive_workspace: false,
+            allow_root_user: false,
+            provider_hosts: Vec::new(),
+            codex_api_key_broker_env: None,
+            worktree: None,
+            run_id: None,
+        })
+        .expect("plan");
+
+        // The short-lived root home-volume prep container must drop all caps and
+        // re-add only the three the ownership setup needs.
+        let prep = plan
+            .preflight
+            .iter()
+            .find(|cmd| cmd.windows(2).any(|w| w == ["--user", "root"]))
+            .expect("volume-prep container present");
+        assert!(prep.windows(2).any(|w| w == ["--cap-drop", "ALL"]));
+        for cap in ["CHOWN", "FOWNER", "DAC_OVERRIDE"] {
+            assert!(
+                prep.windows(2).any(|w| w == ["--cap-add", cap]),
+                "volume-prep missing --cap-add {cap}"
+            );
+        }
+        // The agent run keeps cap-drop ALL with no capability re-adds.
+        assert!(plan.command.windows(2).any(|w| w == ["--cap-drop", "ALL"]));
+        assert!(!plan.command.iter().any(|arg| arg == "--cap-add"));
     }
 
     #[test]

@@ -1,8 +1,17 @@
 # RunHaven v0.5.0/v1.0.0 Release Plan
 
-Last updated: 2026-06-18
+Last updated: 2026-06-26
 
-Status: proposed durable release ladder.
+Status: proposed durable release ladder. Sequencing superseded 2026-06-26.
+
+> Sequencing update (2026-06-26 user directive): all GUI/UI work, the Tauri
+> desktop app and the terminal UI (TUI), is deferred to the very end of the
+> roadmap. Runtime/security hardening of the Apple `container` boundary,
+> remaining non-UI product scope, and a CLI-based public release come first. The
+> desktop design content below stays valid as the final roadmap phase; only its
+> position changed, and the `v1.0.0` label is no longer locked to the desktop
+> release. The current sequence of record is `current-state.md` and
+> `docs/ROADMAP.md`. Already-shipped desktop slices stay complete and verified.
 
 ## Problem
 

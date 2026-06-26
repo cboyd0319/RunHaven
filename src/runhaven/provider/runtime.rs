@@ -301,6 +301,13 @@ pub fn create_provider_proxy(
     match ThreadedAllowlistProxy::bind((&network_info.ipv4_gateway, 0), policy.clone(), &subnets) {
         Ok(proxy) => Ok(proxy),
         Err(_) => {
+            eprintln!(
+                "Warning: could not bind the provider allowlist proxy to the Apple \
+                 container gateway {}; binding to all host interfaces instead. \
+                 Off-subnet clients are still rejected, but avoid running untrusted \
+                 services on this host while a run is active.",
+                network_info.ipv4_gateway
+            );
             ThreadedAllowlistProxy::bind(("0.0.0.0", 0), policy, &subnets).with_context(|| {
                 format!(
                     "could not bind provider allowlist proxy for Apple container gateway {}",
@@ -319,6 +326,13 @@ pub fn create_codex_api_key_broker(
     match CodexApiKeyBrokerProxy::bind((&network_info.ipv4_gateway, 0), api_key.clone(), &subnets) {
         Ok(broker) => Ok(broker),
         Err(_) => {
+            eprintln!(
+                "Warning: could not bind the Codex API key broker to the Apple \
+                 container gateway {}; binding to all host interfaces instead. \
+                 Off-subnet clients are still rejected, but avoid running untrusted \
+                 services on this host while a run is active.",
+                network_info.ipv4_gateway
+            );
             CodexApiKeyBrokerProxy::bind(("0.0.0.0", 0), api_key, &subnets).with_context(|| {
                 format!(
                     "could not bind Codex API key broker for Apple container gateway {}",

@@ -1,18 +1,23 @@
 # Non-UI Backlog
 
-Last updated: 2026-06-18
+Last updated: 2026-06-26
 
 Status: durable backlog for CLI-complete, runtime, evidence, and product-scope
-work that is not direct Tauri/UI implementation.
+work that is not direct Tauri/UI implementation. Per the 2026-06-26 directive
+that defers all GUI/UI work to the very end, this is now the primary near-term
+backlog: runtime/security hardening leads, then promotion of design-first
+non-UI product candidates one at a time, then a CLI-based public release.
 
 RunHaven's Rust CLI is the current product core. This file keeps remaining
-non-UI work explicit so the `v0.5.0` CLI-complete milestone can close before
-broad `v1.0.0` desktop expansion.
+non-UI work explicit so the CLI product can be hardened and rounded out before
+the deferred desktop/TUI surfaces.
 
-RunHaven remains alpha/pre-release until after `v0.5.0`. After `v0.5.0`, new
-CLI product features should be avoided unless they are bug fixes, security
-fixes, release pin updates, documentation corrections, or internal GUI support
-that preserves CLI semantics.
+RunHaven remains alpha/pre-release until after `v0.5.0`. The post-`v0.5.0`
+contract-preserving guard (bug fixes, security fixes, pin updates, doc
+corrections, internal GUI support only) is relaxed by this directive for
+deliberately promoted non-UI product candidates below: promote one at a time
+through its design gate, preserving CLI semantics and default safety, rather
+than treating it as cleanup.
 
 ## Ongoing Runtime Evidence Gates
 
@@ -62,6 +67,26 @@ problem, user outcome, security boundary, and verification are clear.
 | Strict workflow files | candidate | What schema allows repeatable setup/main/teardown inside Apple `container` without host-side surprises? | Reject unknown fields; persist workflow hash and state. |
 | Read-only context overlays | candidate | What docs, skills, prompts, or project memory can be mounted read-only without exposing host secrets? | Prefer explicit overlays over host-home mounts. |
 | Shared planner/policy objects | candidate | Which CLI planning data should become reusable by future Rust API and UI commands? | Avoid duplicating parser, docs, and UI state logic. |
+
+## Borrowed Ideas From Competitive Scan (2026-06-26)
+
+A landscape scan of similar agent-sandbox projects surfaced these candidates.
+Each still requires the design gate above before implementation; provenance is
+recorded for evidence, not endorsement. Source clones for inspection live under
+`~/Documents/GitHub/` (`sand`, `container-use`, `agent-sandbox`).
+
+| Idea | Source | Fit / Extends | Risk Note |
+| --- | --- | --- | --- |
+| Proxy-side credential injection (guest never holds the API key) | `agent-sandbox` (MIT) | Extends "Local proxy option for model credentials"; the host CONNECT proxy injects secrets into matched egress. | Highest-value security upgrade; verify current Codex broker key exposure first. |
+| Profile / AgentRequirements intersection resolver | `sand` (Apache-2.0) | Extends "Custom profile file support"; agent declares needs, profile declares permits, resolver hands the minimum, profiles never persist secrets. | Must preserve pinned images and default mount/network/state boundaries. |
+| In-box eBPF/DNS egress allowlist (default-on) | `sand` | Defense in depth under the host CONNECT proxy; the only real lever for the 2026-06-26 audit finding #1 (a hostOnly guest can raw-TCP host services on the gateway, since Apple `container` 1.0.0 has no per-port guest-to-host firewalling). | Keep default-on; `sand` ships it opt-in, which RunHaven should not copy. Heavyweight: needs `sand`'s custom init image plus a BTF-enabled kernel, incompatible with the pinned stock runtime, so design-first only. |
+| Sanitized read-only policy file inside the box | `agent-sandbox` | Lets the agent read the effective allowlist/mounts and self-correct on a blocked host. | Must stay metadata-only: no secrets, no host paths. |
+| APFS copy-on-write workspace clone | `sand` | Instant disposable workspace, host dir never mutated, free discard of a failed run. | Apple-silicon/APFS-native; verify interaction with the read-only workspace mount model. |
+| Fine-grained PAT + git-askpass shim | `agent-sandbox` | Narrowly scoped token via askpass instead of mounting `~/.ssh` or full credentials. | Preserve the no-raw-SSH-key default. |
+
+Anti-patterns confirmed out of scope (peers do these; RunHaven already refuses
+them): privileged/nested containers, open egress by default, host-home or
+credential-store mounts, and documenting an insecure escape hatch as the fix.
 
 ## Deferred Until v1 Desktop Packaging
 

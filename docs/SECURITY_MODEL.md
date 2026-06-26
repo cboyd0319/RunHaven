@@ -162,6 +162,19 @@ targets are grouped after provider runs with run id, count, denial reason,
 matched rule, and suggested next action so users can review missing endpoints
 without weakening the default policy.
 
+Host-only networks block guest egress to the internet, but they do not firewall
+the host's own listening ports. A guest on an `internal` or `provider` network
+can open a raw TCP connection to any service bound to the host on the Apple
+`container` gateway address or `0.0.0.0`, for example a local dev server, a
+database, or another tool's proxy. Apple `container` 1.0.0 has no per-port
+guest-to-host firewalling, so this is a runtime limitation, not a
+misconfiguration. It was empirically confirmed on 2026-06-26 (macOS 27.0): a
+guest retrieved a sentinel from a host listener on the gateway while its direct
+internet egress was refused. Treat the host as reachable from active runs and do
+not bind sensitive services to `0.0.0.0` or the gateway interface while a run is
+active. An in-guest egress filter could close this as defense in depth; it is
+tracked as a design-first item in [`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md).
+
 Provider runs also append allowed and denied CONNECT policy decisions to a
 RunHaven cache log. `runhaven egress log` shows recent decisions, including the
 matched rule, denial reason, count, profile, workspace, and run id. `runhaven
@@ -220,8 +233,13 @@ The host-side auth broker currently has an opt-in Codex API-key prototype. It
 keeps the raw API key in the RunHaven host process and gives the guest only a
 placeholder token plus temporary Codex custom-provider config. Broker decisions
 are logged without request bodies, token values, or environment variable names.
-Other providers remain design-only, and credentials can still reach the guest
-through isolated in-agent login state or explicit `--env NAME` passthrough. Use
+Even with the broker the credential is usable, not readable: a compromised guest
+cannot read the key but can still spend through it within the pinned host and
+path the broker forwards to. Other providers remain design-only, and their
+credentials can still reach the guest through isolated in-agent login state or
+explicit `--env NAME` passthrough; extending the host-side broker to those
+providers (so the key stops entering the guest) is the tracked upgrade path in
+[`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md). Use
 [`AUTH_BROKER.md`](AUTH_BROKER.md) for the current boundary and non-goals.
 
 The selected agent still controls what it reads inside `/workspace` and
