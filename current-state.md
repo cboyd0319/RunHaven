@@ -134,6 +134,22 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Non-technical UX pass on login/run output (the "much easier"
+  thread, after the four-agent set). (1) `launch_run_plan` now preflights the
+  agent image (`image_doctor::image_is_built`) and fails with "Build it once
+  with: runhaven image build <agent>" instead of the cryptic
+  `registry-1.docker.io 401`. (2) Login guidance anticipates the two verified
+  friction points: Codex points to ChatGPT Settings then Security for device-code
+  login; Copilot pre-warns that the plaintext-keychain prompt should be answered
+  `y` because the file lives in the isolated volume. (3) The end-of-run
+  blocked-host output is now a calm two-line plain-language notice ("RunHaven
+  kept <agent> inside its provider's network and blocked N other destinations to
+  protect your data; run `runhaven egress log` ...") instead of a per-host
+  technical dump; detail stays in `runhaven egress log`, and the now-dead
+  `provider_denial_next_action` was removed. Verified: fmt, `cargo test --locked`
+  (66 lib + 6 integration), clippy `-D warnings`, `git diff --check`. Remaining
+  UX: the auto-updating signed provider-policy file (post-alpha, the bigger
+  lift), and a live look at the new messages on the user's machine.
 - 2026-06-26: Added narrow domain-family allowlist patterns (step 1 of the
   lower-friction egress design). The egress matcher now accepts maintainer-
   curated `*-name.domain.tld` wildcard patterns, anchored so the wildcard can
