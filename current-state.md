@@ -133,9 +133,9 @@ evidence and a recorded reason.
   `src/runhaven/runtime/login.rs` + `paths::oauth_token_path`, wired into the
   standard and provider run paths; docs in `AUTH_BROKER`/`USAGE`. Verified: cargo
   fmt, `cargo test --locked` (61 lib incl. 2 new login tests + 6 integration),
-  clippy `-D warnings`, Tauri builds and clippy. Live test pending: the user runs
-  `runhaven login claude` to confirm the setup-token output parses and the
-  injected token authenticates a run.
+  clippy `-D warnings`, Tauri builds and clippy. Live-verified 2026-06-26:
+  `runhaven login claude` stored the token and `runhaven run claude` came up
+  authenticated with no login prompt (zero friction).
 - 2026-06-26: Started the `oauth-isolated-login` slice (easy OAuth; the product's
   target audience uses subscription/OAuth logins, not API keys). Live-verified
   that a Claude Max subscription OAuth login works end to end inside a RunHaven
@@ -636,8 +636,8 @@ detail in AgentMemory). It is security-sensitive (host token storage + run-time
 injection, broad allowlist widening) and needs live per-agent smokes, so build
 carefully:
 
-- Claude (the user's agent): setup-token opt-in. BUILT 2026-06-26 (live test
-  pending). `runhaven login claude` runs
+- Claude (the user's agent): setup-token opt-in. BUILT and live-verified
+  2026-06-26 (run came up authenticated, zero friction). `runhaven login claude` runs
   Anthropic's official `claude setup-token` on the host (requires host `claude`),
   captures `CLAUDE_CODE_OAUTH_TOKEN`, stores it `0600` in the RunHaven cache; runs
   then inject it as `--env CLAUDE_CODE_OAUTH_TOKEN` at run time only (never in the
