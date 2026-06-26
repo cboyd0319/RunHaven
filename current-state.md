@@ -118,9 +118,33 @@ evidence and a recorded reason.
   `glib` enters only through Tauri's Linux GTK backend and is absent from the
   macOS build graph; it is capped at 0.18.x by `gtk 0.18.2`. Dependabot alert
   was dismissed as "not used" on 2026-06-24. Rationale in `docs/PINNING.md`.
+- Provider egress should be low-friction for non-technical users without
+  weakening the boundary (2026-06-26 user direction: RunHaven is primarily for
+  less-technical people; the user must manage no hosts and see no hostnames). The
+  agreed model: trust each agent's own provider expressed as a few stable
+  domain-family patterns, not individual hosts; keep default-deny so data-egress
+  hosts (`storage.googleapis.com`, etc.) stay closed by simply never being in an
+  allow-pattern; degrade gracefully when an optional host is blocked; and
+  eventually ship the per-agent policy as signed, auto-updating data so new
+  provider endpoints need no release or user action. Step 1 (narrow
+  `*-name.domain.tld` family patterns in the egress matcher, anchored to one
+  registrable domain) is built and used for Antigravity. Remaining: graceful
+  degradation, plain-language foreign-host messaging, and the auto-updating
+  policy. This is still an allowlist (default-deny); it just speaks in families.
 
 ## Latest Verified Work
 
+- 2026-06-26: Added narrow domain-family allowlist patterns (step 1 of the
+  lower-friction egress design). The egress matcher now accepts maintainer-
+  curated `*-name.domain.tld` wildcard patterns, anchored so the wildcard can
+  only expand a subdomain label inside one registrable domain (must start with
+  `-` or `.` and carry a >=2-dot tail; `*-foo.com` is rejected at construction).
+  Applied to Antigravity: the exact `daily-cloudcode-pa` pin became
+  `*-cloudcode-pa.googleapis.com`, so any Google Cloud Code channel/region prefix
+  is covered without a re-pin while `storage` and other googleapis.com services
+  stay denied. Tests: positive (daily-/us- allowed), negative-exfil (storage
+  denied), construction guard (cross-domain rejected). Verified: fmt, `cargo test
+  --locked` (65 lib + 6 integration), clippy `-D warnings`, `git diff --check`.
 - 2026-06-26: Built and live-verified `runhaven login antigravity`, completing
   the user's four-agent set (Claude, Codex, Copilot, Antigravity). agy has no
   login subcommand, so `runhaven login antigravity` runs agy, whose first run
