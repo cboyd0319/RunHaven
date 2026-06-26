@@ -8,7 +8,7 @@ use crate::active::{
     active_run_terminal_status, remove_active_run_record, write_active_run_record,
 };
 use crate::auth_broker::{
-    CodexApiKeyBrokerProxy, GuestRedirect, ProviderBrokerProfile, broker_profile_for_agent,
+    ApiKeyBrokerProxy, GuestRedirect, ProviderBrokerProfile, broker_profile_for_agent,
 };
 use crate::egress::{EgressPolicy, ThreadedAllowlistProxy};
 use crate::git::{capture_git_snapshot, summarize_git_change};
@@ -37,7 +37,7 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
     let mut provider_network_created = false;
     let mut proxy: Option<ThreadedAllowlistProxy> = None;
     let mut proxy_thread = None;
-    let mut broker: Option<CodexApiKeyBrokerProxy> = None;
+    let mut broker: Option<ApiKeyBrokerProxy> = None;
     let mut broker_thread = None;
     let run_id = plan
         .run_id
@@ -152,9 +152,7 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
         .as_ref()
         .map(ThreadedAllowlistProxy::policy_decisions)
         .unwrap_or_default();
-    let auth_decisions = broker
-        .as_ref()
-        .map(CodexApiKeyBrokerProxy::broker_decisions);
+    let auth_decisions = broker.as_ref().map(ApiKeyBrokerProxy::broker_decisions);
     let record_result = if let Some(code) = return_code
         && let (Some(started), Some(finished), Some(git)) =
             (started_at.as_deref(), finished_at.as_deref(), git)
@@ -194,7 +192,7 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
 pub fn require_api_key_broker_secret(
     plan: &AgentRunPlan,
 ) -> Result<Option<(ProviderBrokerProfile, String)>> {
-    let Some(name) = &plan.codex_api_key_broker_env else {
+    let Some(name) = &plan.api_key_broker_env else {
         return Ok(None);
     };
     let Some(profile) = broker_profile_for_agent(&plan.profile_name) else {
@@ -355,9 +353,9 @@ pub fn create_api_key_broker(
     profile: ProviderBrokerProfile,
     api_key: String,
     network_info: &InternalNetworkInfo,
-) -> Result<CodexApiKeyBrokerProxy> {
+) -> Result<ApiKeyBrokerProxy> {
     let subnets = vec![network_info.ipv4_subnet.clone()];
-    match CodexApiKeyBrokerProxy::bind_for_profile(
+    match ApiKeyBrokerProxy::bind_for_profile(
         (&network_info.ipv4_gateway, 0),
         profile,
         api_key.clone(),
@@ -372,7 +370,7 @@ pub fn create_api_key_broker(
                  is active.",
                 profile.label, network_info.ipv4_gateway
             );
-            CodexApiKeyBrokerProxy::bind_for_profile(("0.0.0.0", 0), profile, api_key, &subnets)
+            ApiKeyBrokerProxy::bind_for_profile(("0.0.0.0", 0), profile, api_key, &subnets)
                 .with_context(|| {
                     format!(
                         "could not bind {} for Apple container gateway {}",

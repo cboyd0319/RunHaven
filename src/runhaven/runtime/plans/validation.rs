@@ -199,7 +199,7 @@ pub fn normalize_session(session: Option<&str>) -> Result<String> {
 pub fn network_egress_summary(
     network: NetworkMode,
     provider_allowed_hosts: &[String],
-    codex_api_key_broker: bool,
+    api_key_broker: bool,
 ) -> String {
     match network {
         NetworkMode::Internet => {
@@ -211,8 +211,8 @@ pub fn network_egress_summary(
                 "provider allowlist egress through runtime proxy: {}",
                 provider_allowed_hosts.join(", ")
             );
-            if codex_api_key_broker {
-                summary.push_str("; Codex API key broker enabled");
+            if api_key_broker {
+                summary.push_str("; API key broker enabled");
             }
             summary
         }

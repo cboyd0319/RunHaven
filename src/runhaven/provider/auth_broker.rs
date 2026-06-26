@@ -49,7 +49,7 @@ pub struct BrokerDecision {
     pub count: usize,
 }
 
-pub trait CodexBrokerUpstream: Send + Sync + 'static {
+pub trait BrokerUpstream: Send + Sync + 'static {
     fn send(
         &self,
         method: &str,
@@ -60,18 +60,18 @@ pub trait CodexBrokerUpstream: Send + Sync + 'static {
 }
 
 #[derive(Clone)]
-pub struct OpenAIResponsesUpstream {
+pub struct HttpsUpstream {
     host: String,
     agent: ureq::Agent,
 }
 
-impl Default for OpenAIResponsesUpstream {
+impl Default for HttpsUpstream {
     fn default() -> Self {
         Self::for_host(CODEX_BROKER_UPSTREAM_HOST)
     }
 }
 
-impl OpenAIResponsesUpstream {
+impl HttpsUpstream {
     /// HTTPS upstream pinned to a provider host. The sender is host-agnostic
     /// (`https://{host}{path}`); only the broker profile decides the host.
     fn for_host(host: &str) -> Self {
@@ -82,7 +82,7 @@ impl OpenAIResponsesUpstream {
     }
 }
 
-impl CodexBrokerUpstream for OpenAIResponsesUpstream {
+impl BrokerUpstream for HttpsUpstream {
     fn send(
         &self,
         _method: &str,
@@ -135,7 +135,7 @@ fn broker_upstream_agent() -> ureq::Agent {
 }
 
 #[derive(Clone)]
-pub struct CodexApiKeyBrokerProxy {
+pub struct ApiKeyBrokerProxy {
     listener: Arc<TcpListener>,
     state: Arc<BrokerState>,
     shutdown: Arc<AtomicBool>,
@@ -144,14 +144,14 @@ pub struct CodexApiKeyBrokerProxy {
 struct BrokerState {
     api_key: String,
     profile: ProviderBrokerProfile,
-    upstream: Arc<dyn CodexBrokerUpstream>,
+    upstream: Arc<dyn BrokerUpstream>,
     allowed_client_networks: Vec<IpNet>,
     decisions: Mutex<BTreeMap<BrokerDecisionKey, usize>>,
 }
 
 type BrokerDecisionKey = (String, String, String, String, Option<u16>);
 
-impl CodexApiKeyBrokerProxy {
+impl ApiKeyBrokerProxy {
     pub fn bind(
         address: (&str, u16),
         api_key: String,
@@ -166,7 +166,7 @@ impl CodexApiKeyBrokerProxy {
         api_key: String,
         allowed_client_subnets: &[String],
     ) -> Result<Self> {
-        let upstream = Arc::new(OpenAIResponsesUpstream::for_host(profile.upstream_host));
+        let upstream = Arc::new(HttpsUpstream::for_host(profile.upstream_host));
         Self::bind_with_upstream(address, profile, api_key, allowed_client_subnets, upstream)
     }
 
@@ -175,7 +175,7 @@ impl CodexApiKeyBrokerProxy {
         profile: ProviderBrokerProfile,
         api_key: String,
         allowed_client_subnets: &[String],
-        upstream: Arc<dyn CodexBrokerUpstream>,
+        upstream: Arc<dyn BrokerUpstream>,
     ) -> Result<Self> {
         if api_key.trim().is_empty() {
             bail!("{} requires a host API key", profile.label);
@@ -511,7 +511,7 @@ mod tests {
 
     #[test]
     fn openai_upstream_uses_global_request_timeout() {
-        let upstream = OpenAIResponsesUpstream::default();
+        let upstream = HttpsUpstream::default();
         assert_eq!(
             upstream.agent.config().timeouts().global,
             Some(Duration::from_secs(CODEX_BROKER_REQUEST_TIMEOUT_SECONDS))

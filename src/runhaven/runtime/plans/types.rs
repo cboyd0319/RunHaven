@@ -105,7 +105,7 @@ pub struct RunOptions {
     pub allow_sensitive_workspace: bool,
     pub allow_root_user: bool,
     pub provider_hosts: Vec<String>,
-    pub codex_api_key_broker_env: Option<String>,
+    pub api_key_broker_env: Option<String>,
     pub worktree: Option<WorktreeRun>,
     pub run_id: Option<String>,
 }
@@ -128,7 +128,7 @@ pub struct AgentRunPlan {
     pub egress_summary: String,
     pub image: String,
     pub provider_allowed_hosts: Vec<String>,
-    pub codex_api_key_broker_env: Option<String>,
+    pub api_key_broker_env: Option<String>,
     pub security_notices: Vec<String>,
 }
 

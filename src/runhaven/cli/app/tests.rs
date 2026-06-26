@@ -75,7 +75,7 @@ fn standard_run_launch_error_removes_active_marker_and_writes_record() {
         allow_sensitive_workspace: false,
         allow_root_user: false,
         provider_hosts: Vec::new(),
-        codex_api_key_broker_env: None,
+        api_key_broker_env: None,
         worktree: None,
         run_id: Some(run_id.to_string()),
     })

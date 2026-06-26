@@ -160,7 +160,7 @@ fn broker_plan(profile_name: &str, agent: &str) -> AgentRunPlan {
         egress_summary: String::new(),
         image: image.to_string(),
         provider_allowed_hosts: vec!["example.com".to_string()],
-        codex_api_key_broker_env: Some("PROVIDER_KEY".to_string()),
+        api_key_broker_env: Some("PROVIDER_KEY".to_string()),
         security_notices: Vec::new(),
     }
 }

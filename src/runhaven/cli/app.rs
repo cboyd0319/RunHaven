@@ -251,7 +251,7 @@ fn state_command(command: StateCommand) -> Result<i32> {
                 allow_sensitive_workspace,
                 allow_root_user: false,
                 provider_hosts: Vec::new(),
-                codex_api_key_broker_env: None,
+                api_key_broker_env: None,
                 worktree: None,
                 run_id: None,
             })?;
@@ -376,7 +376,7 @@ fn make_run_plan(
         allow_sensitive_workspace: args.allow_sensitive_workspace,
         allow_root_user: args.allow_root_user,
         provider_hosts: args.provider_host.clone(),
-        codex_api_key_broker_env: args.codex_api_key_broker_env.clone(),
+        api_key_broker_env: args.api_key_broker_env.clone(),
         worktree,
         run_id,
     })
@@ -408,7 +408,7 @@ fn print_run_plan(plan: &AgentRunPlan) {
             "Provider egress is limited to these hosts. For package installs or other hosts, add --provider-host HOST or use --network internet."
         );
     }
-    if let Some(name) = &plan.codex_api_key_broker_env {
+    if let Some(name) = &plan.api_key_broker_env {
         println!(
             "Codex API key broker: enabled from host environment variable {name}; value is not printed or planned."
         );

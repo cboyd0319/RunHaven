@@ -122,10 +122,11 @@ pub(super) struct RunArgs {
     pub(super) provider_host: Vec<String>,
     #[arg(
         long,
+        alias = "codex-api-key-broker-env",
         value_name = "NAME",
-        help = "Codex-only: read this host environment variable at run time and broker OpenAI Responses API requests without placing the raw value in the guest"
+        help = "read this host environment variable at run time and broker the selected agent's API requests (Codex, Claude, Gemini) without placing the raw value in the guest"
     )]
-    pub(super) codex_api_key_broker_env: Option<String>,
+    pub(super) api_key_broker_env: Option<String>,
     #[arg(
         long,
         help = "mount the workspace read-only so the agent can inspect but not edit it"

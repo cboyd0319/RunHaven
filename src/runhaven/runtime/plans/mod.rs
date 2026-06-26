@@ -51,7 +51,7 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     for name in &options.env {
         validate_env_name(name)?;
     }
-    if let Some(name) = &options.codex_api_key_broker_env {
+    if let Some(name) = &options.api_key_broker_env {
         validate_env_name(name)?;
         if options.profile.name != "codex" {
             bail!("Codex API key broker requires codex profile");
@@ -219,7 +219,7 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
             .map(|s| (*s).to_string())
             .collect();
     }
-    if options.codex_api_key_broker_env.is_some()
+    if options.api_key_broker_env.is_some()
         && agent_command.first().map(String::as_str) != Some("codex")
     {
         bail!("Codex API key broker requires the agent command to start with codex");
@@ -246,11 +246,11 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
         egress_summary: network_egress_summary(
             options.network,
             &provider_allowed_hosts,
-            options.codex_api_key_broker_env.is_some(),
+            options.api_key_broker_env.is_some(),
         ),
         image,
         provider_allowed_hosts,
-        codex_api_key_broker_env: options.codex_api_key_broker_env,
+        api_key_broker_env: options.api_key_broker_env,
         security_notices,
     })
 }
@@ -286,7 +286,7 @@ mod tests {
             allow_sensitive_workspace: false,
             allow_root_user: false,
             provider_hosts: Vec::new(),
-            codex_api_key_broker_env: None,
+            api_key_broker_env: None,
             worktree: None,
             run_id: None,
         })
@@ -338,7 +338,7 @@ mod tests {
             allow_sensitive_workspace: false,
             allow_root_user: false,
             provider_hosts: Vec::new(),
-            codex_api_key_broker_env: None,
+            api_key_broker_env: None,
             worktree: None,
             run_id: None,
         })
@@ -385,7 +385,7 @@ mod tests {
             allow_sensitive_workspace: false,
             allow_root_user: false,
             provider_hosts: vec!["API.Example.COM.".to_string()],
-            codex_api_key_broker_env: None,
+            api_key_broker_env: None,
             worktree: None,
             run_id: None,
         };
@@ -430,7 +430,7 @@ mod tests {
             allow_sensitive_workspace: false,
             allow_root_user: false,
             provider_hosts: Vec::new(),
-            codex_api_key_broker_env: None,
+            api_key_broker_env: None,
             worktree: None,
             run_id: None,
         };
@@ -516,7 +516,7 @@ mod tests {
             allow_sensitive_workspace: false,
             allow_root_user: false,
             provider_hosts: Vec::new(),
-            codex_api_key_broker_env: None,
+            api_key_broker_env: None,
             worktree: None,
             run_id: None,
         })

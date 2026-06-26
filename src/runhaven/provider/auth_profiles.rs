@@ -2,8 +2,8 @@ use anyhow::{Result, bail};
 use serde::Serialize;
 
 pub const DESIGN_ONLY_AUTH_BROKER_STATUS: &str = "design-only";
-pub const CODEX_API_KEY_BROKER_STATUS: &str = "api-key-prototype";
-pub const AUTH_BROKER_STATUS: &str = "codex-api-key-prototype";
+pub const CODEX_API_KEY_BROKER_STATUS: &str = "api-key-broker";
+pub const AUTH_BROKER_STATUS: &str = "api-key-broker (codex, claude, gemini)";
 pub const AUTH_BROKER_RUNTIME: &str = "macOS 26+ with Apple container only";
 pub const CODEX_BROKER_PLACEHOLDER_ENV: &str = "RUNHAVEN_CODEX_BROKER_TOKEN";
 
@@ -47,42 +47,44 @@ pub fn get_auth_broker_profile(name: &str) -> Result<AuthBrokerProfile> {
         },
         "claude" => AuthBrokerProfile {
             name: "claude",
-            status: DESIGN_ONLY_AUTH_BROKER_STATUS,
+            status: CODEX_API_KEY_BROKER_STATUS,
             supported_auth: &[
-                "Claude.ai browser login",
-                "Anthropic API key",
-                "Claude Code apiKeyHelper script",
-                "Bedrock, Vertex, Azure, or Foundry provider auth",
+                "Anthropic API key through --api-key-broker-env NAME (brokered host-side)",
+                "Claude.ai or subscription OAuth login (use isolated state, not the broker)",
+                "Bedrock, Vertex, Azure, or Foundry provider auth (not brokered)",
             ],
             host_keeps: &[
-                "future broker-owned Claude credential material",
-                "future broker helper output cache, if a rotating helper is implemented",
+                "the host environment variable value named by --api-key-broker-env",
+                "the API key is injected as x-api-key only into brokered host requests to api.anthropic.com",
             ],
             guest_receives: &[
-                "nothing brokered by RunHaven today",
-                "current runs expose credentials only through isolated agent state or explicit --env NAME",
+                "a placeholder ANTHROPIC_API_KEY value",
+                "ANTHROPIC_BASE_URL pointed at the broker on the RunHaven provider network",
             ],
-            current_safe_path: "Authenticate inside the isolated Claude state volume when interactive, or pass ANTHROPIC_API_KEY by name only for a deliberate headless run.",
-            notes: &[],
+            current_safe_path: "Use --network provider --api-key-broker-env ANTHROPIC_API_KEY for a headless API-key run. For OAuth or subscription login, authenticate inside the isolated Claude state volume; RunHaven never reads your host ~/.claude.json or Keychain.",
+            notes: &[
+                "The broker covers the API-key path only; OAuth and subscription logins use isolated in-container state.",
+                "The raw host API key is never placed in the container command or guest environment.",
+            ],
         },
         "codex" => AuthBrokerProfile {
             name: "codex",
             status: CODEX_API_KEY_BROKER_STATUS,
             supported_auth: &[
-                "OpenAI API key through --codex-api-key-broker-env NAME",
+                "OpenAI API key through --api-key-broker-env NAME",
                 "ChatGPT browser sign-in",
                 "OpenAI API key sign-in",
                 "Codex access token from a trusted environment",
             ],
             host_keeps: &[
-                "host environment variable value named by --codex-api-key-broker-env",
+                "host environment variable value named by --api-key-broker-env",
                 "the API key is injected only into brokered host requests to api.openai.com",
             ],
             guest_receives: &[
                 "RUNHAVEN_CODEX_BROKER_TOKEN placeholder token value",
                 "temporary Codex custom provider config pointing at the broker on the RunHaven provider network",
             ],
-            current_safe_path: "Use --network provider --codex-api-key-broker-env OPENAI_API_KEY for a headless API-key run, or authenticate inside isolated Codex state when using browser login.",
+            current_safe_path: "Use --network provider --api-key-broker-env OPENAI_API_KEY for a headless API-key run, or authenticate inside isolated Codex state when using browser login.",
             notes: &[
                 "The prototype supports Codex Responses API requests only.",
                 "The raw host API key is never placed in the container command or guest environment.",
@@ -107,29 +109,30 @@ pub fn get_auth_broker_profile(name: &str) -> Result<AuthBrokerProfile> {
             ],
             current_safe_path: "Use Copilot's login inside isolated state when interactive, or pass COPILOT_GITHUB_TOKEN by name only after choosing the narrowest token scope.",
             notes: &[
-                "GitHub and API hosts remain path-sensitive and explicit until a broker can avoid broad host access.",
+                "No host-side broker: Copilot exchanges the GitHub token for a short-lived, dynamically-routed Copilot API host, which cannot be brokered without TLS interception. Use isolated in-container login state instead.",
             ],
         },
         "gemini" => AuthBrokerProfile {
             name: "gemini",
-            status: DESIGN_ONLY_AUTH_BROKER_STATUS,
+            status: CODEX_API_KEY_BROKER_STATUS,
             supported_auth: &[
-                "Google account login",
-                "Gemini API key",
-                "Vertex AI Application Default Credentials",
-                "Vertex AI service account JSON key",
-                "Vertex AI Google Cloud API key",
+                "Gemini API key through --api-key-broker-env NAME (brokered host-side)",
+                "Google account OAuth login (use isolated state, not the broker)",
+                "Vertex AI ADC, service-account JSON, or Cloud API key (not brokered)",
             ],
             host_keeps: &[
-                "future broker-owned Gemini API key or Vertex credential material",
-                "no service account JSON is copied into the guest by default",
+                "the host environment variable value named by --api-key-broker-env",
+                "the API key is injected as x-goog-api-key only into brokered host requests to generativelanguage.googleapis.com",
             ],
             guest_receives: &[
-                "nothing brokered by RunHaven today",
-                "current runs expose credentials only through isolated agent state or explicit --env NAME",
+                "a placeholder GEMINI_API_KEY value",
+                "GOOGLE_GEMINI_BASE_URL pointed at the broker on the RunHaven provider network",
             ],
-            current_safe_path: "Use an isolated Gemini login or pass GEMINI_API_KEY by name only; do not mount Google Cloud ADC or service-account files into the guest by default.",
-            notes: &[],
+            current_safe_path: "Use --network provider --api-key-broker-env GEMINI_API_KEY for a headless API-key run. For Google account login, authenticate inside the isolated Gemini state volume; do not mount Google Cloud ADC or service-account files into the guest.",
+            notes: &[
+                "The broker base-URL env (GOOGLE_GEMINI_BASE_URL) is currently undocumented upstream and version-fragile; re-verify per Gemini CLI version.",
+                "The raw host API key is never placed in the container command or guest environment.",
+            ],
         },
         "shell" => AuthBrokerProfile {
             name: "shell",
