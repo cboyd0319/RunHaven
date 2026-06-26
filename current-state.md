@@ -722,16 +722,29 @@ evidence and a recorded reason.
 
 ## Next Step
 
-`cli-complete-v0.5.0` and the `runtime-security-hardening` slice are both
-`passing` and merged to `main` (2026-06-26), including the four-agent
-`runhaven login` work, the lower-friction egress family-pattern step, the
-non-technical UX pass, and a full repo docs and README refresh. Per the
-2026-06-26 directive, all GUI/UI work stays deferred to the very end.
+`cli-complete-v0.5.0`, `runtime-security-hardening`, `multi-provider-broker`, and
+`oauth-isolated-login` are all `passing` and on `main` (2026-06-26). No feature
+is currently `active`. Per the 2026-06-26 directive, all GUI/UI work stays
+deferred to the very end, so the next slice is non-UI product scope toward the
+`v0.5.0` CLI-complete milestone.
 
-The `multi-provider-broker` slice is now `passing`: the API-key broker covers
-Codex, Claude, and Gemini (Copilot stays design-only). All work is on the
-unmerged `runtime-security-hardening` branch (now carrying hardening, the broker,
-and the TUI plan docs).
+Candidate next slices (see `docs/NON_UI_BACKLOG.md` v0.5.0 closure):
+
+- CLI command and docs contract audit: confirm every command's help, docs, and
+  behavior agree before tagging `v0.5.0`. The docs were just refreshed, so this
+  is a focused verification, not a rewrite.
+- Profile support tiers: a complete, accurate per-agent support matrix (bundled
+  image, basic start, provider mode, interactive login, brokered auth). The
+  login work makes this fully answerable now.
+- CLI maintainability check on this session's touched surfaces (`login.rs`,
+  `endpoints.rs`, `egress.rs`, `observability.rs`, `launch.rs`) for size,
+  duplication, and organization debt before more scope lands.
+- JSON and local-data lifecycle decision (which CLI outputs are stable,
+  schema-versioned, or best-effort).
+
+Separate design-first candidate, not a `v0.5.0` blocker: the signed
+auto-updating provider policy (the last piece of the lower-friction egress
+design).
 
 The OAuth-brokering research concluded (2026-06-26): no host-side OAuth broker
 (provider ToS, subscription token is not a drop-in bearer, would read host login
