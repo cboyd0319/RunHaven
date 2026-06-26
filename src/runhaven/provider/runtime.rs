@@ -346,13 +346,12 @@ pub fn create_provider_proxy(
     match ThreadedAllowlistProxy::bind((&network_info.ipv4_gateway, 0), policy.clone(), &subnets) {
         Ok(proxy) => Ok(proxy),
         Err(_) => {
-            eprintln!(
-                "Warning: could not bind the provider allowlist proxy to the Apple \
-                 container gateway {}; binding to all host interfaces instead. \
-                 Off-subnet clients are still rejected, but avoid running untrusted \
-                 services on this host while a run is active.",
-                network_info.ipv4_gateway
-            );
+            // The gateway IP is not bindable at proxy-bind time on Apple
+            // container 1.0.0 (the vmnet interface only comes up once a container
+            // attaches), so this 0.0.0.0 fallback is the expected path here, not
+            // an error worth warning on each run. The off-subnet client filter
+            // still rejects connections from outside the container subnet; see
+            // docs/SECURITY_MODEL.md.
             ThreadedAllowlistProxy::bind(("0.0.0.0", 0), policy, &subnets).with_context(|| {
                 format!(
                     "could not bind provider allowlist proxy for Apple container gateway {}",
@@ -377,13 +376,9 @@ pub fn create_api_key_broker(
     ) {
         Ok(broker) => Ok(broker),
         Err(_) => {
-            eprintln!(
-                "Warning: could not bind the {} to the Apple container gateway {}; \
-                 binding to all host interfaces instead. Off-subnet clients are still \
-                 rejected, but avoid running untrusted services on this host while a run \
-                 is active.",
-                profile.label, network_info.ipv4_gateway
-            );
+            // Same expected 0.0.0.0 fallback as the provider proxy (the gateway
+            // is not bindable at bind time on this runtime); the off-subnet
+            // client filter still applies. See docs/SECURITY_MODEL.md.
             ApiKeyBrokerProxy::bind_for_profile(("0.0.0.0", 0), profile, api_key, &subnets)
                 .with_context(|| {
                     format!(
