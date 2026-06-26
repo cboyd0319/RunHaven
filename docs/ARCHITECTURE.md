@@ -208,18 +208,19 @@ runhaven auth explain codex
 
 `src/runhaven/provider/auth_profiles.rs` records per-profile auth surfaces,
 current safe paths, and broker notes. `src/runhaven/provider/auth_broker.rs`
-owns the Codex Responses API broker. `runhaven auth` reads static metadata
-only. It does not inspect Keychain, browser profiles, provider login caches,
-cloud credential files, or environment values. During a real Codex run with
-`--codex-api-key-broker-env`, the host process reads only the named environment
-variable, starts a subnet-restricted broker on the provider network, and
-injects temporary Codex custom-provider overrides into the guest. Broker
-decisions are written to `auth-broker.jsonl` under the RunHaven cache root. The
-log records method, sanitized path, allow/deny outcome, reason, upstream
-status, count, and run id; it does not record request bodies, token values, or
-environment variable names. Optional real Codex non-interactive smokes should
-use a disposable API key and the normal `runhaven run codex --network provider
---codex-api-key-broker-env NAME` path.
+owns the host-side API-key broker for Codex, Claude, and Gemini. `runhaven auth`
+reads static metadata only. It does not inspect Keychain, browser profiles,
+provider login caches, cloud credential files, or environment values. During a
+real run with `--api-key-broker-env`, the host process reads only the named
+environment variable, starts a subnet-restricted broker on the provider network,
+and redirects the guest at the broker (Codex custom-provider config, or an
+`ANTHROPIC_BASE_URL` / `GOOGLE_GEMINI_BASE_URL` env). Broker decisions are
+written to `auth-broker.jsonl` under the RunHaven cache root. The log records
+method, sanitized path, allow/deny outcome, reason, upstream status, count, and
+run id; it does not record request bodies, token values, or environment variable
+names. Optional real non-interactive smokes should use a disposable API key and
+the normal `runhaven run AGENT --network provider --api-key-broker-env NAME`
+path.
 
 The broker shape is:
 

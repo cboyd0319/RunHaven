@@ -66,10 +66,10 @@ They differ in provider-network backing and authentication support tiers.
 
 | Profile | Provider hosts | Interactive auth | Headless broker | Key limit |
 | --- | --- | --- | --- | --- |
-| `claude` | Bundled: `api.anthropic.com`, `claude.ai`, `platform.claude.com` | Claude.ai browser login or API key in isolated state | Design-only | No broker; pass `ANTHROPIC_API_KEY` with `--env` for headless use |
-| `codex` | Bundled: `api.openai.com`, `chatgpt.com` | ChatGPT or OpenAI sign-in in isolated state | Prototype: `--codex-api-key-broker-env`, Responses API (`/v1/responses`) only | Broker is a create-only prototype |
-| `gemini` | Partial: only `generativelanguage.googleapis.com` bundled; `accounts.google.com` and Vertex hosts are candidates | Google account browser login or API key | Design-only | Browser login and Vertex need extra `--provider-host` entries |
-| `copilot` | Bundled: seven `githubcopilot.com` hosts | GitHub OAuth device flow in isolated state | Design-only | `github.com` and `api.github.com` are path-specific, not bundled |
+| `claude` | Bundled: `api.anthropic.com`, `claude.ai`, `platform.claude.com` | Claude.ai or subscription login in isolated state | API-key broker: `--api-key-broker-env`, `x-api-key` via `ANTHROPIC_BASE_URL` | API key brokered host-side; OAuth and subscription logins use isolated state |
+| `codex` | Bundled: `api.openai.com`, `chatgpt.com` | ChatGPT or OpenAI sign-in in isolated state | API-key broker: `--api-key-broker-env`, Responses API (`/v1/responses`) | Key brokered host-side; ChatGPT sign-in uses isolated state |
+| `gemini` | Partial: only `generativelanguage.googleapis.com` bundled; `accounts.google.com` and Vertex hosts are candidates | Google account login or API key in isolated state | API-key broker: `--api-key-broker-env`, `x-goog-api-key` via base-URL redirect | Redirect env is undocumented upstream and version-fragile; Vertex and account login are not brokered |
+| `copilot` | Bundled: seven `githubcopilot.com` hosts | GitHub OAuth device flow in isolated state | Design-only (cannot be brokered cleanly) | Token exchange + dynamically-routed API host; use isolated state |
 | `antigravity` | None bundled (CLI is a build-time download) | Not yet established | None | Most limited: no runtime hosts, auth path undefined |
 | `shell` | None | Decided by the custom image | None | Generic base for custom images; you supply image and credentials |
 
@@ -154,7 +154,7 @@ default.
 
 | Credential mechanism | What it does |
 | --- | --- |
-| `--codex-api-key-broker-env NAME` | Enables the Codex API-key broker prototype for provider-network Codex runs, keeping the raw key on the host. |
+| `--api-key-broker-env NAME` | Enables the host-side API-key broker for provider-network Codex, Claude, or Gemini runs, keeping the raw key on the host (old name `--codex-api-key-broker-env` still works as an alias). |
 | `runhaven auth status` / `runhaven auth explain AGENT` | Explains current broker boundaries without reading or printing secrets. |
 
 Pass a single reviewed host variable with `--env NAME`, or forward SSH with

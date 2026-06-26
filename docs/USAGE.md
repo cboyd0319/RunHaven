@@ -170,10 +170,12 @@ runhaven runs logs-follow <run-id> --lines 50
 RunHaven allocates an interactive TTY when attached to a terminal. Use
 `--tty never` for non-interactive automation.
 
-Broker a Codex API key without placing the raw value in the guest:
+Broker an API key (Codex, Claude, or Gemini) without placing the raw value in
+the guest:
 
 ```bash
-runhaven run codex --network provider --codex-api-key-broker-env OPENAI_API_KEY
+runhaven run codex  --network provider --api-key-broker-env OPENAI_API_KEY
+runhaven run claude --network provider --api-key-broker-env ANTHROPIC_API_KEY
 ```
 
 Pass a host environment variable by name only when the run deliberately needs
@@ -609,7 +611,7 @@ Run an optional Codex broker smoke only with a disposable OpenAI API key:
 ```bash
 export RUNHAVEN_CODEX_SMOKE_API_KEY=...
 runhaven run codex --network provider \
-  --codex-api-key-broker-env RUNHAVEN_CODEX_SMOKE_API_KEY -- \
+  --api-key-broker-env RUNHAVEN_CODEX_SMOKE_API_KEY -- \
   codex --version
 ```
 

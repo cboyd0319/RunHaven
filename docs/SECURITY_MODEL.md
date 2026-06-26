@@ -229,17 +229,19 @@ release-note, update, plugin marketplace, and broad path-sensitive hosts may
 fail until an additional fully qualified host is reviewed and passed with
 `--provider-host`.
 
-The host-side auth broker currently has an opt-in Codex API-key prototype. It
-keeps the raw API key in the RunHaven host process and gives the guest only a
-placeholder token plus temporary Codex custom-provider config. Broker decisions
-are logged without request bodies, token values, or environment variable names.
-Even with the broker the credential is usable, not readable: a compromised guest
-cannot read the key but can still spend through it within the pinned host and
-path the broker forwards to. Other providers remain design-only, and their
-credentials can still reach the guest through isolated in-agent login state or
-explicit `--env NAME` passthrough; extending the host-side broker to those
-providers (so the key stops entering the guest) is the tracked upgrade path in
-[`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md). Use
+The host-side auth broker covers the API-key path for Codex, Claude, and Gemini
+through `--api-key-broker-env NAME`. It keeps the raw API key in the RunHaven
+host process and gives the guest only a placeholder key plus a base-URL redirect
+at the broker (Codex custom-provider config, or `ANTHROPIC_BASE_URL` /
+`GOOGLE_GEMINI_BASE_URL`). Broker decisions are logged without request bodies,
+token values, or environment variable names. Even with the broker the credential
+is usable, not readable: a compromised guest cannot read the key but can still
+spend through it within the pinned host and path the broker forwards to. The
+broker is for API keys only; OAuth and subscription logins (and Copilot, which
+cannot be brokered without TLS interception) use isolated in-container state, and
+RunHaven never reads your host `~/.claude.json` or Keychain. `--env NAME` remains
+an explicit fallback that places a token in the guest. See
+[`AUTH_BROKER.md`](AUTH_BROKER.md). Use
 [`AUTH_BROKER.md`](AUTH_BROKER.md) for the current boundary and non-goals.
 
 The selected agent still controls what it reads inside `/workspace` and

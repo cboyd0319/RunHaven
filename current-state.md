@@ -121,6 +121,26 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Completed the `multi-provider-broker` slice (branch
+  `runtime-security-hardening`, not yet merged). Generalized the Codex API-key
+  broker into a provider-agnostic core (`ProviderBrokerProfile`: upstream host,
+  path matcher, credential-injection strategy, guest redirect) and wired Codex,
+  Claude, and Gemini brokers into the run orchestration. The real host key stays
+  host-side for every provider; the guest gets only a placeholder plus a base-URL
+  redirect (Codex custom-provider config; Claude `ANTHROPIC_BASE_URL` with
+  `x-api-key`; Gemini `GOOGLE_GEMINI_BASE_URL` with `x-goog-api-key`). Renamed
+  `--codex-api-key-broker-env` to `--api-key-broker-env` (old name kept as an
+  alias) and the field/types; flipped Claude/Gemini `auth_profiles` from
+  design-only to the api-key-broker status; Copilot stays design-only (token
+  exchange + dynamic API host cannot be brokered without TLS interception). OAuth
+  and subscription logins stay out of broker scope and use isolated in-container
+  state; RunHaven never reads host `~/.claude.json` or the Keychain. Docs updated:
+  `AUTH_BROKER.md`, `SECURITY_MODEL.md`, `ARCHITECTURE.md`, `CAPABILITIES.md`,
+  `USAGE.md`. Verified: cargo fmt, `cargo test --locked` (58 lib incl. 3 new
+  broker-config tests + 6 integration), clippy `-D warnings`, Tauri `cargo test`
+  (30) and clippy. Claude/Gemini live redirect needs a real provider key on the
+  target CLI version (unit and fail-closed tested here). Commits 4f11716,
+  b5cf193, 2d696e2 plus docs.
 - 2026-06-26: Completed the `runtime-security-hardening` audit-and-fix slice
   (branch `runtime-security-hardening`, not yet merged). Ran a two-lens audit
   (apple-container-expert + security-audit) cross-referenced against the upstream
@@ -570,18 +590,28 @@ both `passing`. The hardening branch `runtime-security-hardening` is not yet mer
 to `main`. Per the 2026-06-26 directive, all GUI/UI work stays deferred to the very
 end.
 
-Immediate decision: merge/commit the `runtime-security-hardening` branch, then pick
-the next non-UI slice. Candidates, in rough order:
-1. Proxy-side credential injection for non-Codex providers (audit #3 / borrowed
-   from `agent-sandbox`): extend the host-side broker so Claude/Gemini/Copilot
-   keys stop entering the guest. Highest security value; design-first.
-2. Other design-first candidates from `docs/NON_UI_BACKLOG.md` (custom profile
+The `multi-provider-broker` slice is now `passing`: the API-key broker covers
+Codex, Claude, and Gemini (Copilot stays design-only). All work is on the
+unmerged `runtime-security-hardening` branch (now carrying hardening, the broker,
+and the TUI plan docs).
+
+Per the user directive "broker now, then research OAuth brokering next," the
+immediate next slice is the OAuth-brokering research: investigate whether a
+host-side OAuth-token broker is viable and safe (provider OAuth/subscription
+token semantics, refresh, ToS, and the boundary cost of reading host login state
+like `~/.claude.json` or the Keychain). Today OAuth and subscription logins use
+isolated in-container state, which is the documented safe path.
+
+Then, the remaining non-UI roadmap:
+1. Other design-first candidates from `docs/NON_UI_BACKLOG.md` (custom profile
    schema, path-aware host policy, the in-guest eBPF egress filter for finding #1),
    promoted one at a time through the design gate.
-3. Release-readiness for a CLI-based public release once the near-term product
+2. Release-readiness for a CLI-based public release once the near-term product
    scope is settled.
-The known open blocker is P2 SSH fail-closed (`ssh-forwarding-boundary`), which
-needs an upstream non-root socket fix.
+Also pending: deciding how the `runtime-security-hardening` branch lands on
+`main` (it now holds several distinct slices). The known open blocker is P2 SSH
+fail-closed (`ssh-forwarding-boundary`), which needs an upstream non-root socket
+fix. A Claude/Gemini broker live smoke needs a real provider API key.
 
 Deferred to the very end (do not start without a new directive): the desktop
 maintenance slice (image rebuild, state/network cleanup), the V1-G5 read-only

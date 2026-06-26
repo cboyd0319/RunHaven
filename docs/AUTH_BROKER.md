@@ -1,13 +1,13 @@
 # Auth Broker
 
-Status: Codex API-key broker prototype. Other agent auth brokers remain design
-only.
+Status: host-side API-key broker for Codex, Claude, and Gemini. Copilot and
+Antigravity remain design-only.
 
 RunHaven exposes two auth inspection commands:
 
 ```bash
 runhaven auth status
-runhaven auth explain codex
+runhaven auth explain claude
 ```
 
 These commands are intentionally safe to run. They do not inspect Keychain,
@@ -40,87 +40,124 @@ Sensitive:
 - Google Cloud ADC and service account JSON files
 - GitHub, Copilot, OpenAI, Anthropic, Gemini, and Claude credentials
 
-## Codex API-Key Broker
+## API-Key Broker
 
-Codex can use an explicit host-side API-key broker:
+Codex, Claude, and Gemini support an explicit host-side API-key broker. The
+host environment variable is named once; the real key stays on the host and the
+guest is redirected at the broker:
 
 ```bash
-runhaven run codex --network provider --codex-api-key-broker-env OPENAI_API_KEY
+runhaven run codex  --network provider --api-key-broker-env OPENAI_API_KEY
+runhaven run claude --network provider --api-key-broker-env ANTHROPIC_API_KEY
+runhaven run gemini --network provider --api-key-broker-env GEMINI_API_KEY
 ```
 
-Current behavior:
+`--api-key-broker-env` resolves the broker from the selected profile. (The old
+`--codex-api-key-broker-env` name still works as an alias.)
+
+Per provider, the broker pins one upstream host, injects the real credential
+host-side, and points the guest at the broker:
+
+| Provider | Upstream host | Credential injected host-side | Guest redirect |
+| --- | --- | --- | --- |
+| Codex | `api.openai.com` | `Authorization: Bearer` | Codex custom-provider config (`/v1`) |
+| Claude | `api.anthropic.com` | `x-api-key` + `anthropic-version` | `ANTHROPIC_BASE_URL` |
+| Gemini | `generativelanguage.googleapis.com` | `x-goog-api-key` | `GOOGLE_GEMINI_BASE_URL` |
+
+Current behavior, for every brokered provider:
 
 - no host credential store is read
 - the named host environment variable is read only for a real run, never for
   `plan`, `run --dry-run`, `auth status`, or `auth explain`
 - the raw API key is not copied into the guest environment or container command
-- the guest receives a placeholder `RUNHAVEN_CODEX_BROKER_TOKEN` value and
-  temporary Codex custom-provider overrides pointing at the broker
+- the guest receives only a placeholder key value plus the broker base-URL
+  redirect above
 - the broker binds to the RunHaven provider network, restricts clients to that
-  Apple `container` subnet, and forwards only Codex Responses API create
-  requests to `api.openai.com`
+  Apple `container` subnet, and forwards only the provider's allowed request
+  paths to the pinned upstream host
+- the broker strips any guest-sent copy of the injected credential headers
+  before injecting the real value
 - after a brokered run, `runhaven auth log` records only method, sanitized path,
   decision, reason, upstream status, count, and run id
-- no token is printed in plan, status, JSON, or diagnostic output
-- no token value, request body, or environment variable name is stored in the
-  auth broker log
-- interactive login inside the isolated agent home volume remains available
-  when the agent supports it
+- no token is printed in plan, status, JSON, or diagnostic output, and no token
+  value, request body, or environment variable name is stored in the log
 
-Other providers remain design-only. `--env NAME` is still available as an
-explicit fallback when a user deliberately wants a token value inside the guest,
-but it is not the preferred Codex headless path.
+`--env NAME` is still available as an explicit fallback when a user deliberately
+wants a token value inside the guest, but it is not the preferred headless path.
 
 Provider egress controls are separate. `--network provider` limits CONNECT
-targets by host, records policy decisions, and groups blocked-host reviews.
-It does not authenticate to the provider and it does not see HTTPS URL paths.
+targets by host, records policy decisions, and groups blocked-host reviews. It
+does not authenticate to the provider and it does not see HTTPS URL paths.
+
+## OAuth And Subscription Logins
+
+The broker is for API keys only. If you sign in with OAuth or a subscription
+(Claude.ai or Claude Pro/Max, ChatGPT sign-in for Codex, a Google account for
+Gemini, GitHub OAuth for Copilot), the broker does not apply.
+
+RunHaven deliberately does not mount or read your host login state:
+`~/.claude.json`, the macOS Keychain, browser profiles, and cloud credential
+files stay on the host. For an OAuth or subscription agent, authenticate once
+inside the container's persistent state volume (`/home/agent`, per profile,
+workspace, and session). The tokens live in that isolated volume and later runs
+reuse it; your host login is never touched. For this to work, the provider
+allowlist must permit the OAuth login and token-refresh hosts, not only the API
+host.
+
+A host-side OAuth-token broker is not implemented: it would require RunHaven to
+read your host credential store, and a subscription token may not be valid
+against the raw API the way a key is. It is tracked for research, not built.
 
 ## Smoke Coverage
 
-Run a real non-interactive Codex request through the broker only with a
-disposable OpenAI API key:
+Codex broker behavior is live-verified on macOS 26+ with Apple `container` using
+a disposable OpenAI API key:
 
 ```bash
 export RUNHAVEN_CODEX_SMOKE_API_KEY=...
 runhaven run codex --network provider \
-  --codex-api-key-broker-env RUNHAVEN_CODEX_SMOKE_API_KEY -- \
+  --api-key-broker-env RUNHAVEN_CODEX_SMOKE_API_KEY -- \
   codex --version
 ```
 
-The key value is inherited by the host process only; it is not placed on the
-command line or inside the guest environment.
+The Claude and Gemini broker paths are covered by unit tests (credential
+injection, path matching, placeholder-only guest config). Their live redirect
+(`ANTHROPIC_BASE_URL` over the broker, Gemini's currently undocumented
+`GOOGLE_GEMINI_BASE_URL`) must be confirmed with a real provider API key on the
+target CLI version before being treated as proven. The key value is inherited by
+the host process only; it is never placed on the command line or inside the
+guest environment.
 
 ## Why Host-Side
 
 A plain HTTPS CONNECT proxy sees the destination host and port, not the request
 path inside the TLS stream. RunHaven should not intercept provider TLS by
-default just to learn paths.
-
-For broad path-sensitive hosts such as `github.com` and `api.github.com`, the
-safer long-term pattern is a provider-specific host-side broker:
+default just to learn paths. A host-side broker keeps the model clean:
 
 - the host owns the sensitive provider credential
-- the guest asks for a narrow provider action or short-lived run credential
+- the guest asks for a narrow provider action through a pinned host and path
 - RunHaven audits the request and fails closed when the policy is not explicit
-- the guest does not receive broad host credentials by default
+- the guest does not receive a usable credential
 
 ## Provider Notes
 
-Current source-backed auth surfaces:
-
-- Codex supports ChatGPT sign-in, OpenAI API-key sign-in, trusted access tokens
-  for some automation, custom model providers, command-line configuration
-  overrides, and the Responses API. The RunHaven prototype uses only the
-  API-key plus custom-provider path.
-- Claude Code supports Claude.ai credentials, Claude API credentials, cloud
-  provider auth, API key or bearer-token environment variables, and
-  `apiKeyHelper`.
-- Gemini CLI supports Google login, Gemini API keys, and Vertex AI auth through
-  ADC, service account JSON, or Google Cloud API keys.
-- Copilot CLI supports OAuth device login, environment-token auth, GitHub CLI
-  fallback, and BYOK provider environment variables.
-- Antigravity auth and minimal runtime endpoint sources remain incomplete, so
-  no broker behavior is planned for it until official sources are reviewed.
+- Codex supports ChatGPT sign-in, OpenAI API-key sign-in, trusted access tokens,
+  custom model providers, and the Responses API. The broker uses the API-key
+  plus custom-provider path (`/v1/responses`).
+- Claude Code supports Claude.ai or subscription OAuth, the Anthropic API key,
+  cloud provider auth, and `apiKeyHelper`. The broker uses the API-key path:
+  `x-api-key` to `api.anthropic.com` with an `ANTHROPIC_BASE_URL` redirect.
+  OAuth and subscription logins use isolated in-container state.
+- Gemini CLI supports Google login, the Gemini API key, and Vertex AI auth. The
+  broker uses the Gemini API-key path: `x-goog-api-key` to
+  `generativelanguage.googleapis.com` with a base-URL redirect. The redirect env
+  is currently undocumented upstream and version-fragile; re-verify per CLI
+  version. Vertex AI and Google account login are not brokered.
+- Copilot CLI is design-only and not brokered: it exchanges the GitHub token for
+  a short-lived, dynamically-routed Copilot API host, which cannot be brokered
+  without TLS interception. Use isolated in-container login state.
+- Antigravity auth and runtime endpoint sources remain incomplete, so no broker
+  behavior is planned until official sources are reviewed.
 
 The reviewed source links are recorded in
 [`RESEARCH.md`](RESEARCH.md#agent-runtime-sources).
@@ -133,6 +170,7 @@ The broker design does not allow:
 - browser profile or cookie reads
 - mounting `~/.config`, cloud credential folders, SSH material, or the macOS
   home directory
+- reading host login state such as `~/.claude.json` to broker OAuth tokens
 - copying Google ADC or service account JSON files into the guest by default
 - implicit `--env` passthrough
 - printing token values or credential file contents
@@ -141,8 +179,9 @@ The broker design does not allow:
 
 ## Remaining Acceptance Criteria
 
-Before this can become a default path, or before another provider gets a real
-broker, the implementation must satisfy all relevant criteria:
+Codex, Claude, and Gemini brokers exist today. Before another provider gets a
+real broker, or before any broker becomes a default path, the implementation
+must satisfy all relevant criteria:
 
 - explicit user opt-in for each provider account or credential source
 - provider-specific policy tied to the endpoint matrix

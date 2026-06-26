@@ -171,6 +171,28 @@
       "notes": "Led the near-term roadmap per the 2026-06-26 directive that defers all GUI/UI work to the very end. Used the upstream Apple source checkout at /Users/c/Documents/GitHub/apple-container/ as source-map evidence. Design-first follow-ups now live in NON_UI_BACKLOG.md: proxy-side credential injection for non-Codex providers (#3) and the in-guest eBPF egress filter for finding #1. The P2 SSH fail-closed item is tracked separately as ssh-forwarding-boundary and stays blocked pending an upstream non-root socket fix."
     },
     {
+      "id": "multi-provider-broker",
+      "priority": 1,
+      "area": "provider",
+      "title": "Multi-provider API-key credential broker",
+      "user_visible_behavior": "The host-side API-key broker covers Codex, Claude, and Gemini via --api-key-broker-env: the real key stays host-side and the guest is redirected at the broker with only a placeholder. Copilot stays design-only; OAuth and subscription logins use isolated in-container state.",
+      "status": "passing",
+      "dependencies": [
+        "runtime-security-hardening"
+      ],
+      "verification": [
+        "The broker is provider-agnostic (ProviderBrokerProfile: upstream host, path matcher, credential-injection strategy, guest redirect) with explicit Codex, Claude, and Gemini profiles",
+        "The real host key never enters the guest command or environment for any provider; the guest receives only a placeholder plus a base-URL redirect",
+        "Copilot has no broker profile (token exchange + dynamic API host); auth_profiles records the blocker",
+        "Focused tests cover per-provider injection, path matching, and guest config; Codex behavior preserved; main and Tauri checks pass",
+        "Docs (AUTH_BROKER, SECURITY_MODEL, ARCHITECTURE, CAPABILITIES, USAGE) reflect the multi-provider broker, the --api-key-broker-env flag, and the OAuth-vs-API-key distinction"
+      ],
+      "evidence": [
+        "2026-06-26: Generalized the Codex API-key broker into a provider-agnostic core and wired Codex, Claude, and Gemini brokers into the run orchestration. ProviderBrokerProfile drives upstream host, path matcher, credential injection (Bearer / x-api-key+anthropic-version / x-goog-api-key), and guest redirect (Codex custom-provider config with /v1; Claude/Gemini ANTHROPIC_BASE_URL / GOOGLE_GEMINI_BASE_URL). Renamed --codex-api-key-broker-env to --api-key-broker-env (old name kept as alias) and the field/types accordingly; flipped Claude/Gemini auth_profiles from design-only to api-key-broker; Copilot stays design-only (cannot be brokered without TLS interception). Verified: cargo fmt, cargo test --locked (58 lib incl. 3 new broker-config tests + 6 integration), clippy -D warnings, Tauri cargo test (30) and clippy. Claude/Gemini live redirect needs a real provider key on the target CLI version (unit + fail-closed tested here). Branch runtime-security-hardening, commits 4f11716, b5cf193, 2d696e2 plus docs."
+      ],
+      "notes": "OAuth and subscription logins are out of broker scope and use isolated in-container state; RunHaven never reads host ~/.claude.json or Keychain. A host-side OAuth-token broker is the next research item. Canonical broker doc: docs/AUTH_BROKER.md."
+    },
+    {
       "id": "desktop-first-class-v1",
       "priority": 4,
       "area": "ui",
