@@ -25,6 +25,15 @@ pub fn auth_broker_profiles() -> Vec<AuthBrokerProfile> {
         .collect()
 }
 
+/// Whether RunHaven has a host-side API-key broker for this agent. Codex,
+/// Claude, and Gemini are brokered today; Copilot and Antigravity are
+/// design-only. Unknown agents are not brokered.
+pub fn is_brokered(name: &str) -> bool {
+    get_auth_broker_profile(name)
+        .map(|profile| profile.status == CODEX_API_KEY_BROKER_STATUS)
+        .unwrap_or(false)
+}
+
 pub fn get_auth_broker_profile(name: &str) -> Result<AuthBrokerProfile> {
     let profile = match name {
         "antigravity" => AuthBrokerProfile {
@@ -163,4 +172,19 @@ fn profile_names() -> &'static [&'static str] {
         "gemini",
         "shell",
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn is_brokered_matches_the_api_key_broker_agents() {
+        for agent in ["claude", "codex", "gemini"] {
+            assert!(is_brokered(agent), "{agent} should be brokered");
+        }
+        for agent in ["copilot", "antigravity", "shell", "unknown"] {
+            assert!(!is_brokered(agent), "{agent} should not be brokered");
+        }
+    }
 }

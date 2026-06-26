@@ -136,6 +136,19 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Profile support tiers (a `v0.5.0` CLI-complete closure item, on
+  `main`, committed locally). Made the per-agent support matrix code-derived so
+  it cannot drift: `runhaven agents` now prints sign-in path (`runhaven login`
+  vs in-sandbox vs n/a), default network (provider/internet), and API-key broker
+  (yes/no) per agent, sourced from `login::supports_login`,
+  `default_network_mode`, and `auth_profiles::is_brokered`. Fixed the stale
+  `CAPABILITIES.md` matrix (codex now lists `auth.openai.com`; copilot lists the
+  `githubcopilot.com` hosts plus `github.com`/`api.github.com`; added the
+  `runhaven login` mentions) and pointed it at `runhaven agents`; updated
+  `CLI_SURFACE_COVERAGE.md` and marked the `NON_UI_BACKLOG.md` item done. Tests
+  assert the login set {claude, codex, copilot, antigravity} and the broker set
+  {claude, codex, gemini}. Verified: cargo fmt, `cargo test --locked` (68 lib +
+  6 integration), clippy `-D warnings`, doc scans and `git diff --check` clean.
 - 2026-06-26: Full repo docs and README refresh, then merged the
   `runtime-security-hardening` branch to `main`. Rewrote `README.md` (added the
   `runhaven login` sign-in story for all four agents, plain-language egress

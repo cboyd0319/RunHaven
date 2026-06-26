@@ -38,7 +38,7 @@ run-control, image, state, cleanup, worktree, or network surfaces.
 | --- | --- | --- | --- |
 | CLI command and docs contract | planned | Confirm `setup`, `doctor`, `agents`, `plan`, `run`, image, network, state, auth, why, egress, runs, and worktree docs match current behavior. | Audit `docs/USAGE.md`, CLI help, and focused tests before tagging `v0.5.0`. |
 | JSON and local data lifecycle decision | planned | Decide which CLI JSON outputs and local record files are stable, schema-versioned, or explicitly best-effort. | Record the decision in `docs/V1_RELEASE_PLAN.md`, `docs/USAGE.md`, or a focused data-lifecycle doc only if needed. |
-| Profile support tiers | planned | Distinguish bundled image availability, basic CLI starts, provider mode support, interactive auth path, and brokered auth. | Add the support matrix to active docs before `v0.5.0`. |
+| Profile support tiers | done (2026-06-26) | Distinguish bundled image availability, basic CLI starts, provider mode support, interactive auth path, and brokered auth. | `runhaven agents` now prints the code-derived tier summary (sign-in path, default network, API-key broker) and the `CAPABILITIES.md` matrix carries the source-backed detail. |
 | CLI maintainability check | planned | Avoid large-file, duplication, crate-organization, or dependency debt before desktop work scales. | Review touched CLI modules against `docs/harness/state/modularization-plan.md` and update state with findings. |
 
 ## Accepted Non-UI Polish

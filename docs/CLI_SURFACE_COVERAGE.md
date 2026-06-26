@@ -17,7 +17,7 @@ Last full run: 2026-06-25 on macOS 27.0 (build 26A5368g), Apple `container`
 
 | Command family | Confirmed by | Notes |
 | --- | --- | --- |
-| `agents` | surface check | lists the six bundled profiles |
+| `agents` | surface check | lists the six bundled profiles with their support tiers (sign-in path, default network, API-key broker) |
 | `doctor` | surface check + smoke | host prerequisites green on macOS 27.0 |
 | `setup` | surface check | first-run guidance |
 | `plan` | surface check + smoke | provider/internet defaults and security notices |

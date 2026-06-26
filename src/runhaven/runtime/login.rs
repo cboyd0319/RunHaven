@@ -54,6 +54,12 @@ pub fn login(agent: &str) -> Result<i32> {
     }
 }
 
+/// Whether `runhaven login <agent>` can sign this agent in: Claude via the host
+/// setup-token, and Codex/Copilot/Antigravity via an in-sandbox login.
+pub fn supports_login(agent: &str) -> bool {
+    token_env_var(agent).is_some() || sandbox_login_command(agent).is_some()
+}
+
 /// The command to run inside the sandbox to log in. Codex and Copilot have
 /// device-code login subcommands; Antigravity (agy) has no login subcommand, so
 /// it runs the agent, which prompts a Google sign-in on first run.
@@ -285,6 +291,22 @@ mod tests {
         assert!(policy.allows("daily-cloudcode-pa.googleapis.com", 443));
         assert!(policy.allows("us-cloudcode-pa.googleapis.com", 443));
         assert!(!policy.allows("storage.googleapis.com", 443));
+    }
+
+    #[test]
+    fn supports_login_matches_the_four_login_agents() {
+        for agent in ["claude", "codex", "copilot", "antigravity"] {
+            assert!(
+                supports_login(agent),
+                "{agent} should support runhaven login"
+            );
+        }
+        for agent in ["gemini", "shell", "unknown"] {
+            assert!(
+                !supports_login(agent),
+                "{agent} should not support runhaven login"
+            );
+        }
     }
 
     #[test]

@@ -111,20 +111,55 @@ fn dispatch(cli: Cli, agent_args: Vec<String>) -> Result<i32> {
 
 fn list_agents() -> Result<i32> {
     let agents = profiles();
-    let width = agents
+    let name_width = agents
         .iter()
         .map(|profile| profile.name.len())
         .max()
-        .unwrap_or(0);
-    for profile in agents {
+        .unwrap_or(0)
+        .max("AGENT".len());
+    println!(
+        "{:<name_width$}  {:<14}  {:<8}  {:<6}  DESCRIPTION",
+        "AGENT",
+        "SIGN-IN",
+        "NETWORK",
+        "BROKER",
+        name_width = name_width
+    );
+    for profile in &agents {
         println!(
-            "{:<width$}  {}",
+            "{:<name_width$}  {:<14}  {:<8}  {:<6}  {}",
             profile.name,
+            agent_sign_in(profile.name),
+            default_network_mode(profile).as_str(),
+            agent_broker(profile.name),
             profile.description,
-            width = width
+            name_width = name_width
         );
     }
     Ok(0)
+}
+
+/// How a user signs this agent in: a `runhaven login` command, an in-sandbox
+/// login at first run, or not applicable (the generic shell profile).
+fn agent_sign_in(name: &str) -> &'static str {
+    if crate::login::supports_login(name) {
+        "runhaven login"
+    } else if name == "shell" {
+        "n/a"
+    } else {
+        "in-sandbox"
+    }
+}
+
+/// Whether the host-side API-key broker covers this agent.
+fn agent_broker(name: &str) -> &'static str {
+    if name == "shell" {
+        "n/a"
+    } else if crate::auth_profiles::is_brokered(name) {
+        "yes"
+    } else {
+        "no"
+    }
 }
 
 fn doctor() -> Result<i32> {
