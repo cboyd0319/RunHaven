@@ -4,9 +4,13 @@ Last Updated: 2026-06-26 UTC
 
 ## Current Objective
 
-The `cli-complete-v0.5.0` scope is complete and verified (`passing` in
-`feature_list.json`). RunHaven remains alpha/pre-release until the `v0.5.0` tag is
-cut at the release-readiness step.
+The `v0.5.0` CLI-complete pre-release was cut and published on 2026-06-26 (first
+release; pre-1.0, CLI only). The runhaven CLI crate is at `0.5.0`
+(`runhaven --version` = 0.5.0), `git tag v0.5.0`, GitHub pre-release; image
+template tags stay `0.1.0` (built locally, unchanged). The alpha period has
+ended; RunHaven is now a pre-1.0 pre-release. `cli-complete-v0.5.0` and
+`release-readiness` are `passing`. The next phase is the terminal UI (TUI), then
+the rest of the deferred GUI work.
 
 Next phase (2026-06-26 user directive): all GUI/UI work, both the Tauri desktop
 app and the terminal UI (TUI), moves to the very end of the roadmap. Runtime and
@@ -136,6 +140,19 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Cut and published the `v0.5.0` CLI-complete pre-release. Closed
+  V05-G4 (Apple container smokes, default plus `--with-provider` and
+  `--with-ssh`, passed on the current code, validating the egress wildcard
+  matcher and SSH fail-closed) and V05-G8 (`CHANGELOG.md` release notes, README
+  pre-release caution, feature_list and current-state closure). Bumped the
+  runhaven CLI crate `0.1.0` to `0.5.0` (`runhaven --version` = 0.5.0); src-tauri
+  rebuilt against it (30 Tauri tests pass); both `Cargo.lock` files updated; image
+  template tags stay `0.1.0` (built locally, unchanged). Pushed `main` to origin,
+  tagged `v0.5.0`, pushed the tag, and published a GitHub pre-release. This closes
+  all eight v0.5.0 gap-analysis blockers. Verified: cargo fmt, `cargo test
+  --locked` (69 lib + 6 integration), clippy `-D warnings`, src-tauri tests (30),
+  Apple container smokes, `cli_surface_check.sh` 39/39, doc scans, `git diff
+  --check`.
 - 2026-06-26: Closed the last two `v0.5.0` CLI-complete items (on `main`,
   committed locally), so all four closure items are now done. JSON and local-data
   lifecycle: recorded an explicit decision in `V1_RELEASE_PLAN.md` (Data, Storage,

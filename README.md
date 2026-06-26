@@ -10,10 +10,12 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > [!CAUTION]
-> **Alpha / pre-release.** RunHaven has no deployed release and no external
-> users yet. CLI contracts, container and image layouts, run-record formats,
-> provider allowlists, auth-broker behavior, and docs can change without
-> backward-compatibility guarantees through the `v0.5.0` CLI-complete milestone.
+> **Pre-release: `v0.5.0`, CLI-complete.** This is RunHaven's first release, a
+> pre-1.0, CLI-only pre-release. The CLI is the product surface; the desktop app
+> and terminal UI are deferred to a later phase. CLI contracts, container and
+> image layouts, run-record formats, provider allowlists, auth-broker behavior,
+> and `--json` outputs may still change without backward-compatibility
+> guarantees before `v1.0.0`.
 
 RunHaven is a Rust CLI (with an alpha Tauri/Svelte desktop shell) for running
 Claude Code, Codex, Gemini, Antigravity, Copilot, or custom coding agents inside
