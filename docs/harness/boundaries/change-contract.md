@@ -28,7 +28,10 @@ Non-goals:
 ## Build Necessity Gate
 
 Before implementation, stop at the first rung that satisfies the problem. This
-gate is DRY: do not write what a higher rung already gives you.
+gate is DRY: do not write what a higher rung already gives you. Search first:
+`rg` for an existing function, helper, type, command, or component that already
+covers this. AI-written code trends toward duplication (write-everything-twice),
+so reuse or extend an existing definition before regenerating a near-duplicate.
 
 1. No change. Does this need to exist at all (YAGNI)?
 2. Deletion or simplification.
@@ -67,6 +70,10 @@ Before editing and before completion, check the touched surfaces:
   that improves clarity.
 - New abstractions, configuration, dependencies, or files are justified by real
   repeated behavior, not speculation.
+- Simplification preserves behavior and clarity. Do not remove a helpful
+  abstraction, a clear name, or a clear-but-clever solution only to cut lines;
+  simplify only when the result stays at least as clear and as debuggable. Lean
+  means less code, not flimsier structure.
 - Standard library, native platform behavior, and already-installed
   dependencies were considered before adding custom code.
 - Direct dependency, package, runtime, and image pins stay exact-pinned to
@@ -109,6 +116,10 @@ Required evidence:
 - Any skipped checks, reason, risk, and next best check.
 - Any optional structural-review recommendation adopted into RunHaven must be
   backed by repo-owned docs, tests, policy, or maintainer decision.
+- For non-trivial logic, name the edge cases and add a focused check that fails
+  before the fix. AI-written code can read correctly in isolation while skipping
+  edge cases and breaking only on integration, so prove the path rather than
+  assume it.
 - Runtime smoke evidence for Apple `container`, provider, image, auth, or
   worktree boundary changes.
 
