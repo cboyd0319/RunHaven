@@ -656,9 +656,8 @@ carefully:
 - Gemini: account login retired 2026-06-18 and its OAuth is fragile, so the
   API-key broker stays its path (no OAuth login).
 
-Also fold in: quiet the gateway-bind warning that fires every provider run on
-this runtime, and consider a one-time shared-login notice on first shared-volume
-creation.
+The per-run gateway-bind warning is now quieted (commit b8f5b1e). Optional: a
+one-time shared-login notice on first shared-volume creation.
 
 Then, the remaining non-UI roadmap:
 1. Other design-first candidates from `docs/NON_UI_BACKLOG.md` (custom profile
