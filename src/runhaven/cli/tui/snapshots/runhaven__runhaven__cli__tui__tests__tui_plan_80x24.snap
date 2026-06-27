@@ -1,0 +1,28 @@
+---
+source: src/runhaven/cli/tui/mod.rs
+expression: snapshot
+---
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                  Review Plan                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ Boundary ────────────────────────────────────────────────────────────────────┐
+│Workspace mount: /workspace -> /workspace                                     │
+│Agent home state: runhaven-codex-shared-home -> /home/agent                   │
+│Network mode: provider                                                        │
+│Egress: provider allowlist egress through runtime proxy: api.openai.com       │
+│Provider hosts: api.openai.com                                                │
+│Will not mount: host home, cloud credential folders, raw SSH keys, browser    │
+│profiles.                                                                     │
+│                                                                              │
+│CLI: runhaven run codex --workspace /workspace --network provider             │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+                 enter confirm · w workspace · esc back · q quit
+               RunHaven shows the exact CLI command before launch.

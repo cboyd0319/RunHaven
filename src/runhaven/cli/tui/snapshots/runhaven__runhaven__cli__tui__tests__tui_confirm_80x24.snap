@@ -1,0 +1,28 @@
+---
+source: src/runhaven/cli/tui/mod.rs
+expression: snapshot
+---
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                Confirm Launch                                │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ Launch ──────────────────────────────────────────────────────────────────────┐
+│Mount: /workspace -> /workspace                                               │
+│Network: provider                                                             │
+│Egress: provider allowlist egress through runtime proxy: api.openai.com       │
+│                                                                              │
+│CLI: runhaven run codex --workspace /workspace --network provider             │
+│                                                                              │
+│This plan has security notices. Type run to launch.                           │
+│confirm: ru                                                                   │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+                       type run · enter launch · esc back
+               RunHaven shows the exact CLI command before launch.

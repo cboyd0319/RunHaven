@@ -149,7 +149,7 @@ The reusable spine. Vendor the foundation primitives (`render`, `key_hint`,
 - RunHaven-authored rotating tooltips that teach shortcuts and the security
   model.
 
-### Phase 2 — The launcher flow
+### Phase 2 — The launcher flow (complete)
 
 The directory-and-provider front door.
 
@@ -233,5 +233,11 @@ phase as they arise.
   `p` toggles it for the session, `RUNHAVEN_TUI_PET=0` starts with it hidden,
   reduced-motion keeps it visible but static, and line-mode omits it. The copied
   QA evidence for the pet lives in `docs/assets/cubby-pet/`.
-- Next: Phase 2 launcher flow: workspace picker, agent/provider picker, plan and
-  egress review, confirm-launch modal, and launching a real run.
+- Complete: Phase 2 launcher flow. The TUI now has a workspace picker with
+  simple fuzzy filtering and typed paths, keeps the existing agent picker, builds
+  `AgentRunPlan` through RunHaven's shared planner, renders the workspace mount,
+  state volume, network mode, provider egress posture, explicit non-mounts, and
+  equivalent CLI command, requires typed confirmation for plans with security
+  notices, restores the terminal, and launches through `launch_run_plan`.
+- Next: Phase 3 run management: live run dashboard, streaming egress ledger,
+  bounded log viewer, and stop/kill/repair controls.

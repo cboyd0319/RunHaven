@@ -11,13 +11,11 @@ release-readiness are `passing`. The TUI has been re-sequenced by the
 2026-06-26 user directive into a first-class reference implementation to build
 now; the Tauri desktop app remains deferred to the roadmap end.
 
-TUI Phase 1 is complete: the validated Cubby Codex pet package is embedded, the
-home banner uses Codex animation timing plus the Codex Kitty/iTerm2/Sixel image
-overlay path with a half-block fallback, `p` and `RUNHAVEN_TUI_PET=0` control
-pet visibility, reduced-motion keeps Cubby static, and RunHaven-authored
-tooltips rotate in the footer. Next is Phase 2 from
-`docs/plans/tui-build-plan.md`: launcher flow (workspace picker, provider
-picker, plan and egress review, confirm-launch modal, and launching a real run).
+TUI Phase 2 is complete: the TUI can choose a workspace, choose an agent, review
+the shared `AgentRunPlan` boundary, type-confirm lower-security plans, restore
+the terminal, and launch through `launch_run_plan`. Next is Phase 3 from
+`docs/plans/tui-build-plan.md`: run management (live dashboard, streaming egress
+ledger, bounded log viewer, and stop/kill/repair controls).
 
 ## Startup State Contract
 
@@ -202,6 +200,21 @@ evidence and a recorded reason.
   validation, copied metadata path sanitation, iTerm2 3.6.11 PTY launch/quit
   smoke, and `git diff --check`. Branch:
   `terminal-ui-build-plan`. Next: Phase 2 launcher flow.
+- 2026-06-27: TUI Phase 2 launcher flow. Added `tui/launcher.rs` for
+  workspace-picker and plan-review state, `tui/widgets.rs` for shared drawing
+  helpers, and `tui/tests.rs` to keep `tui/mod.rs` small enough to review. The
+  TUI now opens a workspace picker with simple fuzzy filtering and typed paths
+  (`w`), keeps the agent picker as the provider selector, builds a review from
+  the shared `AgentRunPlan`, shows the workspace mount, state volume, network
+  mode, provider egress posture, explicit non-mounts, and equivalent CLI command,
+  requires typing `run` only when the shared planner emits security notices,
+  restores the terminal, and launches through `launch_run_plan`. Accepted `.snap`
+  files stay tracked as golden baselines; `.gitignore` now ignores only
+  `*.snap.new`. Verified after implementation: `cargo fmt --check`, `cargo test
+  --locked tui` (159 TUI-filtered tests), `cargo clippy --all-targets --locked
+  -- -D warnings`, `cargo test --locked`, `cargo run --locked --bin
+  runhaven-check-pins`, iTerm2 3.6.11 PTY review-screen smoke, and `git diff
+  --check`. Branch: `terminal-ui-build-plan`. Next: Phase 3 run management.
 - 2026-06-26: Vendored codex's pet/image rendering stack under
   `src/runhaven/cli/tui/codex/` (Apache-2.0, with attribution), covering the
   three pillars: the high-fidelity hero/image tier (`terminal_detection.rs`,

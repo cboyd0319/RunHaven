@@ -80,3 +80,4 @@ container-logs/
 *.bak
 *.orig
 *.rej
+*.snap.new

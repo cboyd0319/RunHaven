@@ -20,11 +20,20 @@ a launcher and manager over the same agents and run planner as the CLI:
 runhaven
 ```
 
-The TUI is early: today it is a navigable agent picker (up/down to move, enter
-to open a per-agent detail view, esc to go back); workspace selection, plan and
-egress review, and the run dashboard land in later slices. Cubby, the RunHaven
-pet, is visible by default. Press `p` to hide or show it for the current
-session. Set `RUNHAVEN_TUI_PET=0` to start with the pet hidden.
+The TUI is early: today it is a guided launcher. Use up/down to choose an
+agent, `w` to choose a workspace, `r` to review the run boundary, enter to move
+through detail/review/confirm, and esc to go back. The review screen is built
+from the same planner as `runhaven plan`: it shows the workspace mount, state
+volume, network mode, provider egress posture, explicit non-mounts such as host
+home and credential folders, and the equivalent CLI command. Confirming a plan
+restores the terminal and launches the same run path as `runhaven run`.
+
+Lower-security plans show the existing security notices and require typing
+`run` before launch. Secure-default plans launch with enter from the confirm
+screen. The live run dashboard lands in a later slice.
+
+Cubby, the RunHaven pet, is visible by default. Press `p` to hide or show it for
+the current session. Set `RUNHAVEN_TUI_PET=0` to start with the pet hidden.
 
 On terminals with Kitty graphics, Sixel, or iTerm2 3.6+ support, Cubby can use a
 high-resolution image overlay; otherwise it falls back to a terminal-safe
