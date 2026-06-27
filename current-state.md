@@ -219,18 +219,33 @@ local `codex_protocol::user_input` compatibility module for the byte-range text
 element types used by the textarea. The upstream deterministic textarea tests
 run by default; the snapshot and randomized stress tests remain opt-in with the
 same `codex-vendored-tests` policy as the other upstream snapshot goldens.
-The full Codex `BottomPane` and `ChatComposer` remain the next source-first
-integration target.
 
 TUI capabilities-doc follow-up: `docs/plans/codex-tui-capabilities.md` now
 locks the full local Codex TUI capability survey into repo docs. Use it as the
 source map before custom TUI work. It confirms Codex already has mature terminal
 runtime, bottom-pane/composer, keymap, selection popup, approval, markdown,
 diff, streaming, history-cell, session, status, pet, terminal-title, and
-VT100/snapshot-test systems. For RunHaven, the next source-first target remains
-the full Codex `BottomPane` and `ChatComposer`, followed by runtime/event-stream
-alignment, streaming/history cells, approval surfaces, status, sessions, and
-terminal UI regression tests.
+VT100/snapshot-test systems.
+
+TUI architecture correction: the deeper read of
+`/Users/c/Downloads/codex-tui-capabilities.md` showed that the full
+`ChatComposer` is not the next isolated seam unless RunHaven only uses the small
+`public_widgets::ComposerInput` wrapper. Native Codex TUI behavior is built as
+`Tui` runtime plus `App` event loop plus `ChatWidget` plus `BottomPane`, with
+`app_server_session.rs` owning typed client calls so transport plumbing stays out
+of `App` and `ChatWidget`. For RunHaven, the next source-first target is the
+terminal runtime/event stream and typed app-server facade pattern, then the full
+ChatWidget/BottomPane path, followed by streaming/history cells, approval
+surfaces, status, sessions, and terminal UI regression tests. Host-reaching
+Codex RPCs such as remote filesystem, MCP, and IDE actions stay fail-closed
+unless a RunHaven security design explicitly promotes them.
+
+Strategy decision: RunHaven is following the capability guide's Strategy C path,
+a Codex-compatible client, because its domain is close to Codex's
+agent/thread/turn/session model. Strategy B, extracting a small TUI kit, is only
+a temporary compile bridge for low-coupling modules such as `ComposerInput`,
+wrapping, diff rendering, or selection helpers. It is not the product
+architecture.
 
 Verified:
 
@@ -312,6 +327,17 @@ Latest harness review:
   spec files. Verified with pin check, JSON validation, typography scan over
   changed files, and `git diff --check`.
 
+Latest TUI strategy review:
+
+- 2026-06-27: Fully read `/Users/c/Downloads/codex-tui-capabilities.md` and
+  checked the conclusion against local Codex source entrypoints for
+  `app_server_session`, `App`, `ChatWidget`, `BottomPane`, `Tui`,
+  `TuiEventStream`, and `FrameRequester`. Decision: RunHaven should follow the
+  Strategy C compatible-client path, with Strategy B limited to temporary
+  bridges and low-coupling helpers. Verified with `jq empty feature_list.json`,
+  `git diff --check`, and a no-em-dash typography scan over changed docs/state
+  files.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -321,8 +347,12 @@ Latest harness review:
 Continue TUI integration from the Codex-vendored source baseline. Keep using
 source-first Codex modules for app shell, bottom pane, status line, native pet,
 resume/session, keymap, tooltips, and terminal-title behavior before writing
-custom RunHaven TUI code. The next practical slice is the full Codex
-`BottomPane`/`ChatComposer` path for the launch confirmation surface, then real
-launch execution from the confirmation step once the command path stays
-planner-owned and inspectable. Feed RunHaven-specific surfaces from the shared
-`RunHavenComponentPayload` contracts instead of ad hoc screen structs.
+custom RunHaven TUI code. The next practical slice is the Codex terminal
+runtime/event-stream alignment plus the typed app-server facade pattern for
+planner, launch, status, interrupt, history, diagnostics, and session calls.
+Treat this as a Strategy C Codex-compatible-client slice, not a permanent
+Strategy B widget-kit extraction. After that, adapt the native
+`App`/`ChatWidget`/`BottomPane` path and then wire real launch execution from
+the confirmation step once the command path stays planner-owned and inspectable.
+Feed RunHaven-specific surfaces from the shared `RunHavenComponentPayload`
+contracts instead of ad hoc screen structs.

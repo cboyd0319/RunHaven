@@ -61,8 +61,23 @@ editor primitive through the same temporary facade. This gives the confirmation
 field Codex text editing, cursor placement, and Vim-keymap coverage without
 adopting the full chat composer yet. Paste is intentionally ignored for the
 lower-security typed confirmation phrase so the extra intent still means
-typing. The full Codex `BottomPane` and `ChatComposer` remain the next
-source-first target.
+typing.
+
+The deeper Codex capability review corrected the next seam: the full
+`ChatComposer` is not an isolated widget target unless RunHaven only uses the
+small `public_widgets::ComposerInput` wrapper. The native Codex path is the
+terminal runtime, `App` event loop, `ChatWidget`, `BottomPane`, and
+`app_server_session.rs` typed facade working together. The next source-first
+work should therefore align the runtime/event loop and typed app-server seam
+before wiring real launch execution through the chat/composer path.
+
+This means RunHaven is taking the capability guide's Strategy C path, a
+Codex-compatible client, not Strategy B as the product architecture. Strategy B
+remains acceptable only as a temporary compile bridge for low-coupling modules
+while the source-first runtime, app-server facade, and native shell are adapted.
+RunHaven's domain is close enough to Codex's agent/thread/turn/session model to
+reuse more of the native app, but the RunHaven security boundary still controls
+which app-server calls are exposed.
 
 The first RunHaven product card over that Codex picker is now active. The
 temporary `app_shell.rs` no longer draws its own agent list; it hosts a
@@ -102,17 +117,25 @@ Immediate integration order:
 
 1. Keep vendored Codex source compiling in small slices.
 2. Define presentation-neutral RunHaven UI payloads from existing domain data.
-3. Continue replacing temporary shell glue with Codex app-shell, bottom-pane,
-   footer, status, title, and keymap pieces while keeping RunHaven domain data
-   isolated under `tui/runhaven/`. Footer and terminal-title basics are now
-   active; launch confirmation now uses Codex `TextArea`, but real launch
-   execution is not wired yet.
-4. Adapt Codex bottom pane, status line, key handling, title, pets, tooltips,
-   and render lifecycle where they fit the RunHaven product.
-5. Wire real launch execution from the confirmation step only after the
-   Codex-native bottom pane/runtime path is clear and the command remains owned
-   by RunHaven's planner.
-6. Remove vendored code only after recording why removal is better than leaving
+3. Follow the capability guide's Strategy C path by adapting a
+   Codex-compatible client shape, not a permanent small TUI-kit extraction.
+4. Adapt the Codex terminal runtime and event loop: `Tui`, `TuiEventStream`,
+   `FrameRequester`, raw-mode restore, bracketed paste, focus, job control, and
+   redraw scheduling.
+5. Adapt the Codex app-server facade pattern before inventing RunHaven transport
+   glue. The facade should own typed planner, launch, status, interrupt,
+   history, diagnostics, and session calls. Host-reaching Codex RPCs such as
+   remote filesystem, MCP, and IDE actions stay fail-closed unless a RunHaven
+   security design explicitly promotes them.
+6. Continue replacing temporary shell glue with Codex `App`, `ChatWidget`,
+   `BottomPane`, footer, status, title, keymap, pets, and tooltips while keeping
+   RunHaven domain data isolated under `tui/runhaven/`. Footer and
+   terminal-title basics are now active; launch confirmation now uses Codex
+   `TextArea`, but real launch execution is not wired yet.
+7. Wire real launch execution from the confirmation step only after the
+   Codex-native runtime, app-server facade, and bottom-pane path are clear and
+   the command remains owned by RunHaven's planner.
+8. Remove vendored code only after recording why removal is better than leaving
    it and adapting it.
 
 ## Audience and principles
@@ -205,7 +228,7 @@ terminal image overlay ownership.
 | `wrapping.rs` (+ `width`, `line_truncation`) | foundation | URL-aware, unicode-correct wrapping/truncation |
 | `bottom_pane/list_selection_view.rs` + helpers | staged foundation | native Codex selection list, tab, search, wrapping, side-content, and footer behavior; currently behind a RunHaven facade while the full bottom pane is adapted |
 | `bottom_pane/textarea.rs` + `textarea/vim.rs` | staged foundation | native Codex text editor for the Step 4 confirmation phrase; deterministic upstream tests run by default, snapshot/randomized tests stay opt-in |
-| `bottom_pane/chat_composer.rs` + `public_widgets/composer_input.rs` | evaluate next | full Codex composer and public wrapper; likely next step after TextArea so RunHaven stops hand-routing prompt-like input |
+| `bottom_pane/chat_composer.rs` + `public_widgets/composer_input.rs` | evaluate through runtime/app-server seam | `ComposerInput` is the Strategy B standalone wrapper; full `ChatComposer` belongs with the Strategy C Codex-compatible path: `App`, `ChatWidget`, `BottomPane`, event loop, and app-server facade |
 | `terminal_hyperlinks.rs` | foundation | OSC 8 clickable paths and URLs |
 | `selection_list.rs` | foundation | reusable selection primitive for the pickers |
 | `clipboard` (OSC 52) | foundation | copy the equivalent CLI command, a path, a run receipt |
@@ -230,8 +253,9 @@ terminal image overlay ownership.
 | `keymap.rs` (6176 lines) | superseded by evaluation row above | full rebindable-keybinding config is probably too broad, but command vocabulary and conflict handling should be evaluated |
 | `file_search.rs` | skip | codex-event glue; use a fuzzy crate (e.g. `nucleo`) directly |
 | `get_git_diff` | skip | uses `codex_git_utils`; RunHaven has its own git handling |
-| chat domain (chatwidget, markdown_stream, transcript, token_usage, model_catalog) | skip | agent chat runs inside the container, not in the TUI; still review renderer and streaming patterns before rebuilding equivalent output surfaces |
-| app-server / MCP / IDE backend | skip | codex backend, not applicable |
+| chat domain (`App`, `ChatWidget`, markdown_stream, transcript, token_usage, model_catalog) | evaluate through native Codex path | do not rebuild chat/thread plumbing; adapt the native shell and typed app-server seam where it fits RunHaven, then map RunHaven run/session data into those surfaces |
+| `app_server_session.rs` typed facade | evaluate next | major Codex TUI seam for keeping typed client calls out of `App` and `ChatWidget`; adapt the facade pattern before inventing RunHaven transport glue, but keep remote filesystem, MCP, IDE, and other host-reaching RPCs fail-closed unless a RunHaven security design explicitly permits them |
+| MCP / IDE backend | skip unless promoted by security design | Codex product backend surfaces are not RunHaven defaults; review only after the boundary and user outcome are clear |
 
 Dependencies added for vendored code are pure-Rust and exact-pinned: `base64`,
 `image` (png+webp); the foundation adds text-layout crates (`unicode-width`,

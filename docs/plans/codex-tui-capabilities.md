@@ -11,6 +11,15 @@ adapt, keep staged, or cull. It is intentionally broader than RunHaven's current
 implementation so future TUI work starts from evidence instead of rebuilding
 custom behavior.
 
+RunHaven decision: treat Strategy C, a Codex-compatible client, as the target
+architecture because RunHaven is itself an agent/session/turn product. Strategy
+B, a small TUI kit extraction, is fallback-only for temporary compile bridges or
+isolated low-coupling helpers. Do not let Strategy B become the product
+architecture unless this plan is explicitly changed. Host-reaching Codex RPCs
+such as remote filesystem, MCP, IDE, plugin, connector, and broad app-server
+actions stay fail-closed unless RunHaven's security model explicitly promotes
+them.
+
 ## Scope
 
 This document summarizes the open source `codex-tui` crate under:
