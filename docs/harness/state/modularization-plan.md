@@ -32,11 +32,14 @@ the behavior harder to follow.
 
 Current largest Rust files in `src/` (2026-06-27):
 
-- `src/runhaven/cli/tui/mod.rs`: about 748 lines, TUI orchestration.
 - `src/runhaven/cli/tui/runs.rs`: about 648 lines, run dashboard state.
 - `src/runhaven/cli/tui/pet.rs`: about 642 lines, Cubby pet rendering.
+- `src/runhaven/cli/tui/mod.rs`: about 604 lines, TUI orchestration after
+  input handling moved to `tui/input.rs`.
 - `src/runhaven/provider/runtime.rs`: about 580 lines, provider run lifecycle.
 - `src/runhaven/runtime/plans/mod.rs`: about 584 lines, run plan construction.
+- `src/runhaven/cli/tui/history.rs`: about 544 lines, TUI history and
+  diagnostics state.
 - `src/runhaven/provider/egress.rs`: about 525 lines, synchronous CONNECT proxy.
 - `src/runhaven/provider/auth_broker.rs`: about 512 lines, API-key broker
   lifecycle.

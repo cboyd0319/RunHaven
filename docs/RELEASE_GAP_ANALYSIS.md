@@ -83,18 +83,22 @@ Observed TUI command families:
 
 - implemented development surfaces: bare-TTY launch, agent detail, workspace
   picker, plan review, type-confirm launch, active-run dashboard, bounded log
-  snapshot viewer, stop, hard-stop, and stale-marker repair;
-- current open TUI family: Phase 4 history and diagnostics (run history,
-  per-run diff review, egress/auth diagnostics, terminal/render capability
-  probe, and TUI doctor remediation).
+  snapshot viewer, stop, hard-stop, stale-marker repair, run history, per-run
+  diff review, egress/auth diagnostics, terminal/render capability probe, and
+  TUI doctor remediation;
+- current open TUI family: Phase 5 polish (guided onboarding, notifications,
+  accessibility polish, themes, final snapshot coverage, and architecture
+  finalization).
 
 Observed maintainability pressure:
 
-- `src/runhaven/cli/tui/mod.rs`: approximately 748 lines.
 - `src/runhaven/cli/tui/runs.rs`: approximately 648 lines.
 - `src/runhaven/cli/tui/pet.rs`: approximately 642 lines.
+- `src/runhaven/cli/tui/mod.rs`: approximately 604 lines after input handling
+  moved to `tui/input.rs`.
 - `src/runhaven/provider/runtime.rs`: approximately 580 lines.
 - `src/runhaven/runtime/plans/mod.rs`: approximately 584 lines.
+- `src/runhaven/cli/tui/history.rs`: approximately 544 lines.
 - `src/runhaven/provider/egress.rs`: approximately 525 lines.
 - `src/runhaven/provider/auth_broker.rs`: approximately 512 lines.
 - `src/runhaven/cli/app.rs`: approximately 499 lines after the organization

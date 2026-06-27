@@ -10,6 +10,11 @@ use crate::runhaven::support::git::{
 use crate::runhaven::support::validators::require_string;
 
 pub fn runs_diff(run_id: &str) -> Result<i32> {
+    print!("{}", run_diff_text(run_id)?);
+    Ok(0)
+}
+
+pub fn run_diff_text(run_id: &str) -> Result<String> {
     let record = find_run_record(run_id)?;
     let git = record
         .get("git")
@@ -71,9 +76,9 @@ pub fn runs_diff(run_id: &str) -> Result<i32> {
         );
     }
     if !after_dirty && before_head == after_head {
-        println!("No git changes recorded for this run.");
-        return Ok(0);
+        return Ok("No git changes recorded for this run.\n".to_string());
     }
+    let mut output = String::new();
     let mut printed = false;
     if before_head != after_head {
         let diff = run_git_diff(
@@ -92,7 +97,7 @@ pub fn runs_diff(run_id: &str) -> Result<i32> {
             .collect::<Vec<_>>(),
         )?;
         if !diff.is_empty() {
-            print!("{}", ensure_newline(&diff));
+            output.push_str(&ensure_newline(&diff));
             printed = true;
         }
     }
@@ -110,14 +115,14 @@ pub fn runs_diff(run_id: &str) -> Result<i32> {
         command.extend(after_paths);
         let diff = run_git_diff(&command)?;
         if !diff.is_empty() {
-            print!("{}", ensure_newline(&diff));
+            output.push_str(&ensure_newline(&diff));
             printed = true;
         }
     }
     if !printed {
-        println!("No git diff output for recorded changes.");
+        output.push_str("No git diff output for recorded changes.\n");
     }
-    Ok(0)
+    Ok(output)
 }
 
 fn ensure_newline(value: &str) -> String {

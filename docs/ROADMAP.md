@@ -95,10 +95,11 @@ current-stable pins, and keep the harness state current.
 
 ## Active Terminal UI Build
 
-- Current phase: Phase 4 history and diagnostics from
+- Current phase: Phase 5 polish from
   [`docs/plans/tui-build-plan.md`](plans/tui-build-plan.md).
 - Complete phases: scaffold, agent picker, Cubby mascot, Phase 0 foundation,
-  Phase 1 brand/pet, Phase 2 launcher, Phase 3 run management.
+  Phase 1 brand/pet, Phase 2 launcher, Phase 3 run management, Phase 4 history
+  and diagnostics.
 - The TUI consumes shared Rust data APIs, not CLI prose: planner data from
   `runtime/plans`, active-run control from `runtime/active`, host readiness from
   `doctor.rs`, secret-free diagnostics from `diagnostics.rs`, auth posture from

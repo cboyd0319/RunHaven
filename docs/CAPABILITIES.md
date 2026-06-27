@@ -24,7 +24,7 @@ use [Security model](SECURITY_MODEL.md).
 | Network modes | Secure profile-aware default (provider allowlist where the agent's hosts are bundled, otherwise internet), plus local-only internal networking and explicit override. |
 | Workspace safety | Current-directory mounts by default, explicit git-root expansion, sensitive-path rejection, and optional RunHaven-owned git worktrees. |
 | Credentials | No host home, raw SSH key, browser profile, cloud credential folder, or arbitrary environment passthrough by default. |
-| Observability | Secret-free run records, active-run controls, provider policy logs, auth broker status, TUI run dashboard/log snapshots, and recovery commands. |
+| Observability | Secret-free run records, active-run controls, provider policy logs, auth broker status, TUI run dashboard/log snapshots, history/diff review, diagnostics, doctor checks, and recovery commands. |
 | Cleanup | Focused image, state-volume, network, and worktree recovery for resources RunHaven owns. |
 
 ## Runtime Defaults

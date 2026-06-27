@@ -8,7 +8,7 @@ use crate::runhaven::provider::egress::ProxyDecision;
 mod diff;
 mod log;
 
-pub use diff::runs_diff;
+pub use diff::{run_diff_text, runs_diff};
 pub use log::runs_log;
 
 use crate::runhaven::runtime::plans::AgentRunPlan;

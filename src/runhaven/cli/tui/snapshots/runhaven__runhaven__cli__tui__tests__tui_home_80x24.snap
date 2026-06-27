@@ -1,5 +1,6 @@
 ---
 source: src/runhaven/cli/tui/tests.rs
+assertion_line: 463
 expression: snapshot
 ---
    ▄▀▀▀▀▀▀▀▀▀▄
@@ -24,5 +25,5 @@ expression: snapshot
 │  gemini        Gemini CLI with project-scoped home state.                    │
 │  shell         Generic shell profile for custom agent images.                │
 └──────────────────────────────────────────────────────────────────────────────┘
-      w workspace · enter inspect · r review · d dashboard · p pet · q quit
+w workspace · enter inspect · r review · d dashboard · h history · g diagnost...
                RunHaven shows the exact CLI command before launch.

@@ -33,7 +33,7 @@ login is never read or mounted.
 | Surface | Status | Use it for |
 | --- | --- | --- |
 | CLI | `v0.5.0` pre-release, complete for the current command contract | Automation, explicit commands, recovery, diagnostics, and the stable backend for every UI. |
-| Terminal UI | Active development in this checkout | Guided launch, plan review, active-run dashboard, bounded log snapshots, and stop/kill/repair from a bare interactive `runhaven`. |
+| Terminal UI | Active development in this checkout | Guided launch, plan review, active-run dashboard, bounded log snapshots, stop/kill/repair, run history and diff review, diagnostics, and doctor checks from a bare interactive `runhaven`. |
 | Desktop app | Alpha scaffold | Typed setup, launch, status, bounded logs, run control, and diagnostics. More maintenance and worktree flows remain CLI-first. |
 
 ## Why RunHaven
@@ -95,9 +95,9 @@ Or open the terminal UI on an interactive terminal:
 runhaven
 ```
 
-The TUI is a guided launcher and run dashboard over the same Rust backend. It
-does not replace the CLI: subcommands, pipes, and redirected invocations still
-use the CLI directly.
+The TUI is a guided launcher, run dashboard, history/diff viewer, diagnostics
+surface, and doctor view over the same Rust backend. It does not replace the
+CLI: subcommands, pipes, and redirected invocations still use the CLI directly.
 
 Use the smallest project directory the agent needs. RunHaven mounts that
 directory at `/workspace`, not your whole home directory. See
@@ -166,9 +166,10 @@ runhaven network list
 runhaven image doctor
 ```
 
-The TUI dashboard exposes active-run status, bounded log snapshots, and
-stop/kill/repair over the same validated cores. Worktree review, image rebuild,
-state cleanup, and network cleanup remain CLI-first today.
+The TUI exposes active-run status, bounded log snapshots, stop/kill/repair, run
+history, diff review, diagnostics, and doctor checks over the same validated
+cores. Worktree merge/discard, image rebuild, state cleanup, and network cleanup
+remain CLI-first today.
 
 ## Status and roadmap
 

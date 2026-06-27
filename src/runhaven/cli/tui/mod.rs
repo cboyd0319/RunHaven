@@ -7,7 +7,7 @@
 //! Later slices add the run dashboard and history/diagnostics surfaces.
 
 use anyhow::Result;
-use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
+use ratatui::crossterm::event::{self, Event, KeyEventKind};
 use ratatui::layout::{Constraint, Layout};
 use ratatui::text::{Line, Text};
 use ratatui::widgets::{Block, List, ListState, Paragraph};
@@ -23,6 +23,9 @@ use crate::runhaven::runtime::profiles::{AgentProfile, profiles};
 mod codex;
 mod color;
 mod event_loop;
+mod history;
+mod history_views;
+mod input;
 mod launcher;
 mod mascot;
 mod pet;
@@ -65,6 +68,10 @@ enum Screen {
     Runs,
     Logs,
     Control,
+    History,
+    HistoryDetail,
+    Diagnostics,
+    Doctor,
 }
 
 #[derive(Debug)]
@@ -78,6 +85,7 @@ struct App {
     list: ListState,
     launcher: launcher::LauncherState,
     run_manager: runs::RunManagerState,
+    history: history::HistoryState,
     settings: TuiSettings,
     palette: Palette,
     screen: Screen,
@@ -114,6 +122,7 @@ impl App {
             list,
             launcher: launcher::LauncherState::new(workspace),
             run_manager: runs::RunManagerState::default(),
+            history: history::HistoryState::new(settings, pet_image_protocol),
             settings,
             palette,
             screen: Screen::Home,
@@ -144,178 +153,6 @@ impl App {
             if let Some(tick) = ticker.tick(Instant::now()) {
                 self.on_tick(tick);
             }
-        }
-    }
-
-    /// Handle a key press. Returns `Some(action)` to leave the TUI, `None` to continue.
-    fn handle_key(&mut self, code: KeyCode) -> Option<TuiAction> {
-        match self.screen {
-            Screen::Home => match code {
-                KeyCode::Char('q') | KeyCode::Esc => return Some(TuiAction::Exit(0)),
-                KeyCode::Down | KeyCode::Char('j') => self.select_next(),
-                KeyCode::Up | KeyCode::Char('k') => self.select_previous(),
-                KeyCode::Enter | KeyCode::Char('l') => self.screen = Screen::Detail,
-                KeyCode::Char('r') => self.open_plan_review(),
-                KeyCode::Char('d') => self.open_run_dashboard(),
-                KeyCode::Char('w') => {
-                    self.launcher.open_workspace_picker();
-                    self.screen = Screen::Workspace;
-                }
-                KeyCode::Char('p') => self.toggle_pet(),
-                _ => {}
-            },
-            Screen::Detail => match code {
-                KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
-                KeyCode::Enter | KeyCode::Char('r') => self.open_plan_review(),
-                KeyCode::Char('d') => self.open_run_dashboard(),
-                KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('h') => {
-                    self.screen = Screen::Home;
-                }
-                _ => {}
-            },
-            Screen::Workspace => match code {
-                KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
-                KeyCode::Esc => self.screen = Screen::Home,
-                KeyCode::Down | KeyCode::Char('j') => self.launcher.workspace_picker.select_next(),
-                KeyCode::Up | KeyCode::Char('k') => {
-                    self.launcher.workspace_picker.select_previous()
-                }
-                KeyCode::Backspace => self.launcher.workspace_picker.pop_query_char(),
-                KeyCode::Enter => {
-                    if let Err(error) = self.launcher.confirm_workspace_selection() {
-                        self.launcher.plan_error = Some(error.to_string());
-                    }
-                    self.screen = Screen::Home;
-                }
-                KeyCode::Char(ch) => self.launcher.workspace_picker.push_query_char(ch),
-                _ => {}
-            },
-            Screen::Plan => match code {
-                KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
-                KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('h') => {
-                    self.screen = Screen::Home
-                }
-                KeyCode::Char('w') => {
-                    self.launcher.open_workspace_picker();
-                    self.screen = Screen::Workspace;
-                }
-                KeyCode::Enter if self.launcher.review.is_some() => {
-                    self.launcher.confirm_input.clear();
-                    self.screen = Screen::Confirm;
-                }
-                _ => {}
-            },
-            Screen::Confirm => match code {
-                KeyCode::Char('q') | KeyCode::Esc => self.screen = Screen::Plan,
-                KeyCode::Backspace => {
-                    self.launcher.confirm_input.pop();
-                }
-                KeyCode::Enter if self.launcher.confirm_ready() => {
-                    let plan = self.launcher.launch_plan()?;
-                    return Some(TuiAction::Launch(Box::new(plan)));
-                }
-                KeyCode::Char(ch) if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' => {
-                    self.launcher.confirm_input.push(ch);
-                }
-                _ => {}
-            },
-            Screen::Runs => match code {
-                KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
-                KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('h') => {
-                    self.screen = Screen::Home
-                }
-                KeyCode::Down | KeyCode::Char('j') => self.run_manager.select_next(),
-                KeyCode::Up | KeyCode::Char('k') => self.run_manager.select_previous(),
-                KeyCode::Char('r') => self.run_manager.refresh_dashboard(),
-                KeyCode::Char('l') | KeyCode::Enter => {
-                    self.run_manager.refresh_logs();
-                    self.screen = Screen::Logs;
-                }
-                KeyCode::Char('s') => self.begin_run_control(runs::RunControlAction::Stop),
-                KeyCode::Char('x') => self.begin_run_control(runs::RunControlAction::Kill),
-                KeyCode::Char('e') => self.begin_run_control(runs::RunControlAction::Repair),
-                _ => {}
-            },
-            Screen::Logs => match code {
-                KeyCode::Esc if self.run_manager.logs.search_editing => {
-                    self.run_manager.logs.finish_search()
-                }
-                KeyCode::Enter if self.run_manager.logs.search_editing => {
-                    self.run_manager.logs.finish_search()
-                }
-                KeyCode::Backspace if self.run_manager.logs.search_editing => {
-                    self.run_manager.logs.pop_search_char()
-                }
-                KeyCode::Char(ch) if self.run_manager.logs.search_editing => {
-                    self.run_manager.logs.push_search_char(ch)
-                }
-                KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
-                KeyCode::Esc | KeyCode::Char('h') => self.screen = Screen::Runs,
-                KeyCode::Char('r') => self.run_manager.refresh_logs(),
-                KeyCode::Up | KeyCode::Char('k') => self.run_manager.logs.scroll_up(),
-                KeyCode::Down | KeyCode::Char('j') => self.run_manager.logs.scroll_down(),
-                KeyCode::Char('t') => self.run_manager.logs.follow_tail(),
-                KeyCode::Char('/') => self.run_manager.logs.begin_search(),
-                _ => {}
-            },
-            Screen::Control => match code {
-                KeyCode::Char('q') | KeyCode::Esc => self.screen = Screen::Runs,
-                KeyCode::Backspace => {
-                    if let Some(dialog) = &mut self.run_manager.control {
-                        dialog.input.pop();
-                    }
-                }
-                KeyCode::Enter => {
-                    if let Err(error) = self.run_manager.execute_control() {
-                        self.run_manager.message = Some(error.to_string());
-                    }
-                    self.screen = Screen::Runs;
-                }
-                KeyCode::Char(ch) if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' => {
-                    if let Some(dialog) = &mut self.run_manager.control {
-                        dialog.input.push(ch);
-                    }
-                }
-                _ => {}
-            },
-        }
-        None
-    }
-
-    fn select_next(&mut self) {
-        if self.agents.is_empty() {
-            return;
-        }
-        let next = self.list.selected().unwrap_or(0) + 1;
-        self.list.select(Some(next.min(self.agents.len() - 1)));
-    }
-
-    fn select_previous(&mut self) {
-        let current = self.list.selected().unwrap_or(0);
-        self.list.select(Some(current.saturating_sub(1)));
-    }
-
-    fn selected(&self) -> Option<&AgentProfile> {
-        self.list.selected().and_then(|i| self.agents.get(i))
-    }
-
-    fn open_plan_review(&mut self) {
-        if let Some(agent) = self.selected().cloned() {
-            self.launcher.build_review(&agent);
-            self.screen = Screen::Plan;
-        }
-    }
-
-    fn open_run_dashboard(&mut self) {
-        self.run_manager.refresh_dashboard();
-        self.screen = Screen::Runs;
-    }
-
-    fn begin_run_control(&mut self, action: runs::RunControlAction) {
-        if let Err(error) = self.run_manager.begin_control(action) {
-            self.run_manager.message = Some(error.to_string());
-        } else {
-            self.screen = Screen::Control;
         }
     }
 
@@ -360,6 +197,25 @@ impl App {
             Screen::Control => {
                 run_views::render_control(frame, &self.run_manager, self.settings, self.palette)
             }
+            Screen::History => {
+                history_views::render_history(frame, &self.history, self.settings, self.palette)
+            }
+            Screen::HistoryDetail => history_views::render_history_detail(
+                frame,
+                &self.history,
+                self.settings,
+                self.palette,
+            ),
+            Screen::Diagnostics => {
+                history_views::render_diagnostics(frame, &self.history, self.settings, self.palette)
+            }
+            Screen::Doctor => history_views::render_doctor(
+                frame,
+                &self.history,
+                self.settings,
+                self.palette,
+                self.ticks,
+            ),
         }
     }
 
@@ -475,7 +331,7 @@ impl App {
         render_footer(
             frame,
             footer,
-            "w workspace · enter inspect · r review · d dashboard · p pet · q quit",
+            "w workspace · enter inspect · r review · d dashboard · h history · g diagnostics · p pet · q quit",
             tooltips::tip_for_tick(self.ticks),
             self.palette,
         );

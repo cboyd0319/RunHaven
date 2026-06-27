@@ -1,0 +1,29 @@
+---
+source: src/runhaven/cli/tui/tests.rs
+assertion_line: 586
+expression: snapshot
+---
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                    Doctor                                    │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ Checks ──────────────────────────────────────────────────────────────────────┐
+│| Prerequisites: 1/2 checks need attention                                    │
+│ok macOS: 26.0                                                                │
+│fix Apple container CLI: not found on PATH                                    │
+│remedy: Install Apple container 1.0.0 and run `container system start`.       │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+                   r rerun | g diagnostics | esc home | q quit
+       Doctor checks are read-only and point to the smallest remediation.

@@ -261,6 +261,11 @@ phase as they arise.
   `provider/auth_profiles.rs`, and run history behind `records/` with
   `records/run_history.rs` plus `records/io.rs`. Internal `src/runhaven` imports
   use explicit ownership paths instead of the crate-root compatibility facade.
-- Next: Phase 4 history and diagnostics: run history, per-run diff review,
-  egress/auth diagnostics, terminal/render capability probe, and TUI doctor
-  remediation.
+- Complete: Phase 4 history and diagnostics. The TUI now has run history (`h`),
+  per-run diff review, diagnostics (`g`) for egress/auth metadata and terminal
+  render capabilities, and a doctor screen (`d` from diagnostics) with
+  prerequisite checks plus inline remediation. Diff review uses the shared
+  `records::run_diff_text` API; diagnostics and doctor consume
+  `diagnostics.rs` and `doctor.rs` data rather than CLI prose.
+- Next: Phase 5 polish: guided onboarding, notifications, accessibility
+  polish, themes, final snapshot coverage, and architecture finalization.

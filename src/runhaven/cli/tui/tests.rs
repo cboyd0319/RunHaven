@@ -1,6 +1,7 @@
 use super::*;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
+use ratatui::crossterm::event::KeyCode;
 use ratatui::style::Color;
 use tempfile::tempdir;
 
@@ -96,6 +97,87 @@ fn fake_egress() -> Vec<runs::EgressDecision> {
             count: "1".to_string(),
         },
     ]
+}
+
+fn fake_history_record() -> history::RunHistorySummary {
+    history::RunHistorySummary {
+        run_id: "run-20260627".to_string(),
+        profile: "codex".to_string(),
+        workspace: "/Users/example/project".to_string(),
+        network: "provider".to_string(),
+        status: "succeeded".to_string(),
+        return_code: "0".to_string(),
+        timestamp: "2026-06-27T00:00:00Z".to_string(),
+        provider_denied: 1,
+        auth_denied: 0,
+        cleanup: "removed".to_string(),
+        git_summary: "Git: changed=true before=1111111 after=2222222 files=2".to_string(),
+    }
+}
+
+fn seed_history(app: &mut App) {
+    app.history.records = vec![fake_history_record()];
+    app.history.diagnostics.auth_status = history::AuthStatusSummary {
+        status: "available".to_string(),
+        runtime: "host broker".to_string(),
+        credential_stores_inspected: false,
+        environment_values_inspected: false,
+        secrets_printed: false,
+        profiles: vec![
+            history::AuthProfileSummary {
+                agent: "codex".to_string(),
+                broker: "yes".to_string(),
+                status: "api-key-broker".to_string(),
+            },
+            history::AuthProfileSummary {
+                agent: "copilot".to_string(),
+                broker: "no".to_string(),
+                status: "isolated-login".to_string(),
+            },
+        ],
+    };
+    app.history.diagnostics.terminal = history::TerminalProbe {
+        color: "enabled".to_string(),
+        motion: "animated".to_string(),
+        line_mode: "disabled".to_string(),
+        pet_image: "kitty graphics".to_string(),
+    };
+    app.history.diagnostics.egress = vec![history::DiagnosticEgressEntry {
+        timestamp: "2026-06-27T00:00:01Z".to_string(),
+        profile: "codex".to_string(),
+        decision: "denied".to_string(),
+        host: "example.invalid".to_string(),
+        port: "443".to_string(),
+        count: "1".to_string(),
+        reason: "not-in-allowlist".to_string(),
+        run_id: "run-20260627".to_string(),
+    }];
+    app.history.diagnostics.auth = vec![history::DiagnosticAuthEntry {
+        timestamp: "2026-06-27T00:00:02Z".to_string(),
+        profile: "codex".to_string(),
+        broker: "codex-api-key".to_string(),
+        decision: "allowed".to_string(),
+        method: "POST".to_string(),
+        path: "/v1/responses".to_string(),
+        upstream_status: "200".to_string(),
+        count: "2".to_string(),
+        reason: "profile-match".to_string(),
+        run_id: "run-20260627".to_string(),
+    }];
+    app.history.doctor.checks = vec![
+        history::DoctorCheckSummary {
+            name: "macOS".to_string(),
+            ok: true,
+            detail: "26.0".to_string(),
+            remedy: "Use a macOS 26+ host.".to_string(),
+        },
+        history::DoctorCheckSummary {
+            name: "Apple container CLI".to_string(),
+            ok: false,
+            detail: "not found on PATH".to_string(),
+            remedy: "Install Apple container 1.0.0 and run `container system start`.".to_string(),
+        },
+    ];
 }
 
 fn seed_dashboard(app: &mut App) {
@@ -221,6 +303,37 @@ fn dashboard_opens_from_home_and_returns() {
     assert!(matches!(app.screen, Screen::Runs));
     app.handle_key(KeyCode::Esc);
     assert!(matches!(app.screen, Screen::Home));
+}
+
+#[test]
+fn history_and_diagnostics_screens_are_reachable() {
+    let mut app = test_app();
+
+    app.handle_key(KeyCode::Char('h'));
+    assert!(matches!(app.screen, Screen::History));
+    app.handle_key(KeyCode::Char('g'));
+    assert!(matches!(app.screen, Screen::Diagnostics));
+    app.handle_key(KeyCode::Char('d'));
+    assert!(matches!(app.screen, Screen::Doctor));
+    app.handle_key(KeyCode::Char('g'));
+    assert!(matches!(app.screen, Screen::Diagnostics));
+    app.handle_key(KeyCode::Esc);
+    assert!(matches!(app.screen, Screen::Home));
+}
+
+#[test]
+fn history_detail_scrolls_loaded_diff() {
+    let mut app = test_app();
+    seed_history(&mut app);
+    app.history.detail.set_diff("one\ntwo\nthree\n".to_string());
+    app.screen = Screen::HistoryDetail;
+
+    app.handle_key(KeyCode::Down);
+    assert_eq!(app.history.detail.scroll, 1);
+    app.handle_key(KeyCode::Up);
+    assert_eq!(app.history.detail.scroll, 0);
+    app.handle_key(KeyCode::Esc);
+    assert!(matches!(app.screen, Screen::History));
 }
 
 #[test]
@@ -432,4 +545,44 @@ fn control_snapshot_80x24() {
     app.screen = Screen::Control;
     let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
     insta::assert_snapshot!("tui_control_80x24", snapshot);
+}
+
+#[test]
+fn history_snapshot_80x24() {
+    let mut app = test_app();
+    seed_history(&mut app);
+    app.screen = Screen::History;
+    let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
+    insta::assert_snapshot!("tui_history_80x24", snapshot);
+}
+
+#[test]
+fn history_detail_snapshot_80x24() {
+    let mut app = test_app();
+    seed_history(&mut app);
+    app.history.detail.set_diff(
+        "diff --git a/file.txt b/file.txt\n--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-old\n+new\n"
+            .to_string(),
+    );
+    app.screen = Screen::HistoryDetail;
+    let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
+    insta::assert_snapshot!("tui_history_detail_80x24", snapshot);
+}
+
+#[test]
+fn diagnostics_snapshot_80x24() {
+    let mut app = test_app();
+    seed_history(&mut app);
+    app.screen = Screen::Diagnostics;
+    let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
+    insta::assert_snapshot!("tui_diagnostics_80x24", snapshot);
+}
+
+#[test]
+fn doctor_snapshot_80x24() {
+    let mut app = test_app();
+    seed_history(&mut app);
+    app.screen = Screen::Doctor;
+    let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
+    insta::assert_snapshot!("tui_doctor_80x24", snapshot);
 }

@@ -11,15 +11,16 @@ release-readiness are `passing`. The TUI has been re-sequenced by the
 2026-06-26 user directive into a first-class reference implementation to build
 now; the Tauri desktop app remains deferred to the roadmap end.
 
-TUI Phase 3 and the pre-Phase 4 organization/docs lock are complete: the TUI
-can choose a workspace, choose an agent, review the shared `AgentRunPlan`
-boundary, type-confirm lower-security plans, restore the terminal, launch
-through `launch_run_plan`, open a live run dashboard, show sanitized run status
-and provider egress decisions, view explicit bounded log snapshots, and run
-stop/kill/repair through typed-confirm controls. Next is Phase 4 from
-`docs/plans/tui-build-plan.md`: history and diagnostics (run history, diff
-review, egress/auth diagnostics, terminal/render capability probe, and TUI
-doctor remediation).
+TUI Phase 4 is complete: the TUI can choose a workspace, choose an agent, review
+the shared `AgentRunPlan` boundary, type-confirm lower-security plans, restore
+the terminal, launch through `launch_run_plan`, open a live run dashboard, show
+sanitized run status and provider egress decisions, view explicit bounded log
+snapshots, run stop/kill/repair through typed-confirm controls, review run
+history and per-run diffs, inspect egress/auth diagnostics plus terminal render
+capabilities, and run doctor prerequisite checks with inline remediation. Next
+is Phase 5 from `docs/plans/tui-build-plan.md`: guided onboarding,
+notifications, accessibility polish, themes, final snapshot coverage, and
+architecture finalization.
 
 ## Startup State Contract
 
@@ -169,6 +170,26 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-27: TUI Phase 4 history and diagnostics. Added
+  `src/runhaven/cli/tui/history.rs` and `history_views.rs` for run history,
+  per-run diff review, diagnostics, terminal capability reporting, and doctor
+  remediation screens. Added a shared `records::run_diff_text` API so the TUI
+  consumes diff text as data while `runhaven runs diff` preserves its existing
+  output. Home now exposes `h` for history and `g` for diagnostics; diagnostics
+  opens doctor with `d`. Split input/navigation handling into `tui/input.rs`,
+  bringing `tui/mod.rs` back down to about 604 lines. The diagnostics screen
+  uses only the shared
+  secret-free diagnostics readers/status payload, and doctor uses shared
+  `doctor::collect_checks`. Added VT100 snapshots for history, run diff,
+  diagnostics, and doctor screens, plus focused navigation/state tests.
+  Verified: `cargo fmt --check`, `cargo test --locked tui` (181 TUI-filtered
+  tests), `cargo test --locked` (252 lib tests + 6 integration tests), `cargo
+  clippy --all-targets --locked -- -D warnings`, `cargo test --manifest-path
+  src-tauri/Cargo.toml --locked` (30 passed, 1 ignored), `cargo clippy
+  --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins`, JSON validation, typography
+  scan, `git diff --check`, and a bounded PTY launch/key smoke with `h`, `g`,
+  `q`. Branch: `terminal-ui-build-plan`. Next: Phase 5 polish.
 - 2026-06-27: Pre-Phase 4 organization/docs lock. Moved shared doctor logic to
   `src/runhaven/doctor.rs`, secret-free diagnostics data to
   `src/runhaven/diagnostics.rs`, run history behind the `records/` facade
@@ -186,7 +207,7 @@ evidence and a recorded reason.
   build, and `git diff --check`), stale-reference scan, typography scan, and
   read-only code-reviewer approval. Live Apple `container` smokes were not rerun
   because this pass did not change runtime boundary behavior. Branch:
-  `terminal-ui-build-plan`. Next: Phase 4 history and diagnostics.
+  `terminal-ui-build-plan`. Phase 4 completed in the following TUI slice.
 - 2026-06-27: TUI Phase 0 foundation. Added the reusable TUI settings/theme
   layer (`NO_COLOR`, `RUNHAVEN_TUI_REDUCED_MOTION=1`,
   `RUNHAVEN_TUI_LINE_MODE=1`, dark/light palette seam), a synchronous
@@ -249,8 +270,8 @@ evidence and a recorded reason.
   --locked -- -D warnings`, `cargo test --locked` (241 lib + 6 integration),
   `cargo run --locked --bin runhaven-check-pins`, and a PTY smoke that opened
   `runhaven`, pressed `d`, rendered the no-active-runs dashboard, and exited
-  cleanly. Branch: `terminal-ui-build-plan`. Next: Phase 4 history and
-  diagnostics.
+  cleanly. Branch: `terminal-ui-build-plan`. Phase 4 completed in a later
+  slice.
 - 2026-06-26: Vendored codex's pet/image rendering stack under
   `src/runhaven/cli/tui/codex/` (Apache-2.0, with attribution), covering the
   three pillars: the high-fidelity hero/image tier (`terminal_detection.rs`,

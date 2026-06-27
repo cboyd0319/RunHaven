@@ -1,0 +1,29 @@
+---
+source: src/runhaven/cli/tui/tests.rs
+assertion_line: 577
+expression: snapshot
+---
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                  Diagnostics                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ Auth Status ─────────────────────────────────────────────────────────────────┐
+│Auth broker: available runtime=host broker                                    │
+│Credential stores inspected=false env values inspected=false secrets          │
+│printed=false                                                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ Terminal ────────────────────────────────────────────────────────────────────┐
+│Color: enabled  motion: animated                                              │
+│Line mode: disabled  pet image: kitty graphics                                │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ Egress Log ──────────────────────────────────────────────────────────────────┐
+│codex denied example.invalid:443 count=1 reason=not-in-allowlist run=run-     │
+│20260627                                                                      │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ Auth Log ────────────────────────────────────────────────────────────────────┐
+│codex codex-api-key allowed POST /v1/responses status=200 count=2 run=run-    │
+└──────────────────────────────────────────────────────────────────────────────┘
+              r refresh | d doctor | h history | esc home | q quit
+     Diagnostics show metadata only, not secrets or workspace file contents.
