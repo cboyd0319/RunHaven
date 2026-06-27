@@ -1117,10 +1117,30 @@ Codex terminal title helper. The motion, shimmer, terminal palette, and bounded
 terminal probe helpers now compile and pass focused tests too. Shared Codex
 style and text helpers now compile as well: line truncation, text formatting,
 URL-aware wrapping, render line utilities, and terminal-palette-aware styles.
-The picker currently uses a staged bottom-pane selection contract until the
-full Codex bottom-pane view is adapted. For each removal, record why removal is
-better than leaving and adapting. Keep the reference-implementation requirement
-in view because this TUI setup will guide several sibling projects.
+The dbt-wizard comparison doc is useful as production evidence: copy the
+architecture move of stable product payloads feeding shared renderers, not the
+dbt product shape or Codex chat ontology. The first RunHaven-owned seam is
+`src/runhaven/ui_contracts.rs`, starting with `LaunchPlanData` derived from
+`AgentRunPlan`. The picker currently uses a staged bottom-pane selection
+contract until the full Codex bottom-pane view is adapted. For each removal,
+record why removal is better than leaving and adapting. Keep the
+reference-implementation requirement in view because this TUI setup will guide
+several sibling projects.
+
+Current branch note: `runtime-security-hardening` was fast-forwarded to match
+`main` before this slice, then kept as the active working branch. Verification
+for the UI contract slice passed:
+
+- `cargo fmt --check`
+- `cargo test --locked ui_contracts --quiet`
+- `cargo check --locked --quiet`
+- `cargo test --locked tui --quiet`
+- `cargo test --locked --quiet`
+- `cargo clippy --all-targets --locked -- -D warnings`
+- `cargo run --locked --bin runhaven-check-pins --quiet`
+- `jq empty feature_list.json`
+- `git diff --check`
+- em dash scan on touched files
 
 Do not publish a release from the interim vendor-reset state. After the TUI is
 fully integrated, verified, and confirmed, do a full release bump to `v0.6.0`

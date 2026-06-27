@@ -19,6 +19,31 @@ pure functions of that data. This is already why the agent detail screen reuses
 auth posture labels from `provider/auth_profiles.rs` and `default_network_mode`
 instead of restating them.
 
+## Product Contract Seam
+
+RunHaven should use the same high-level move that made dbt-wizard's Codex TUI
+integration production-ready: domain truth becomes a stable product payload,
+then terminal and desktop renderers draw that payload.
+
+For RunHaven, the first seam is:
+
+```text
+RunHaven planner/state/records
+  -> src/runhaven/ui_contracts.rs
+  -> Ratatui widgets in src/runhaven/cli/tui/
+  -> optional Tauri or React renderers from the same payloads
+```
+
+The contract layer is RunHaven-owned and presentation-neutral. It must not
+depend on Ratatui, Codex protocol types, Codex app-server types, or CLI prose
+parsing. It may expose only data the CLI already treats as safe to show, such
+as the selected agent, workspace path, state volume name, network posture,
+provider hosts, safety notes, and the exact command the TUI will run.
+
+Start with `LaunchPlanData` built from `AgentRunPlan`, then add active-run,
+history, diagnostics, and diff payloads as those screens are reattached to the
+vendored shell.
+
 ## Codex Source First
 
 The TUI implementation vendors first from the official local Codex source at
@@ -55,11 +80,17 @@ Do not parse CLI prose or import shared data from `cli/app.rs`.
 
 ## Current module map
 
-The current split is the reference shape:
+The pre-reset custom TUI split remains useful design history, but it is not the
+active source shape during the Codex vendor reset. The active source under
+`src/runhaven/cli/tui/` is a Codex source snapshot plus a staged `mod.rs`
+adapter that keeps the crate buildable while integration proceeds.
+
+Target ownership for the rebuilt source remains:
 
 | Module | Ownership |
 | --- | --- |
-| `mod.rs` | TUI entrypoint, app state, render dispatch, shared home/detail rendering, terminal overlay lifecycle. |
+| `mod.rs` | Temporary RunHaven entrypoint during vendor integration; replace staged contracts with adapted Codex app-shell pieces as they come online. |
+| `ui_contracts.rs` | Presentation-neutral RunHaven payloads shared by TUI widgets and any future desktop renderer. |
 | `input.rs` | Keyboard navigation and action routing. Keep key behavior testable here instead of scattering it through draw code. |
 | `theme.rs`, `color.rs`, `event_loop.rs` | Domain-agnostic settings, palettes, color math, and deterministic tick timing. |
 | `widgets.rs`, `tooltips.rs` | Shared draw helpers and RunHaven-authored footer tips. Widgets draw data; they do not query the domain. |

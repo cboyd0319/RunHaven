@@ -7,3 +7,4 @@ pub mod provider;
 pub mod records;
 pub mod runtime;
 pub mod support;
+pub mod ui_contracts;

@@ -20,6 +20,28 @@ This TUI is also the **reference implementation** for several sibling projects,
 so it is built fully and right now, not as a deferred minimal launcher. That goal
 drives the architecture below.
 
+## Current Reset State
+
+The earlier custom TUI phases below are historical design evidence. The active
+source has now been reset to a Codex TUI source baseline in
+`src/runhaven/cli/tui/`, with a staged RunHaven `mod.rs` adapter that keeps the
+crate buildable and fails closed for bare interactive launch.
+
+The dbt-wizard comparison note shows the right production pattern: keep a
+coherent terminal app substrate, add a narrow product payload seam, and render
+domain-specific cards from that seam. RunHaven should copy that architecture
+move, not the dbt product shape and not Codex chat ontology.
+
+Immediate integration order:
+
+1. Keep vendored Codex source compiling in small slices.
+2. Define presentation-neutral RunHaven UI payloads from existing domain data.
+3. Rebuild the RunHaven app shell around those payloads.
+4. Adapt Codex bottom pane, status line, key handling, title, pets, tooltips,
+   and render lifecycle where they fit the RunHaven product.
+5. Remove vendored code only after recording why removal is better than leaving
+   it and adapting it.
+
 ## Audience and principles
 
 - Built for less-technical people who sign in with OAuth or a subscription, not

@@ -15,6 +15,30 @@ projects. Keep the architecture clear enough to reuse: source-first Codex
 vendoring, thin RunHaven product adapters, shared data contracts, documented
 culling decisions, and user-facing copy that non-technical users can understand.
 
+## Comparison Evidence
+
+The dbt-wizard comparison note at
+`/Users/c/Downloads/runhaven-dbt-wizard-codex-tui-direction.md` is useful
+evidence, not a product direction to copy wholesale.
+
+The lesson to carry forward is:
+
+- Copy the architecture move: domain truth becomes a stable UI payload, then
+  shared renderers draw it.
+- Do not copy the dbt or Codex chat product shape unless RunHaven intentionally
+  becomes a Codex chat fork.
+- Keep Codex source as the base for terminal infrastructure: render lifecycle,
+  status line patterns, bottom pane behavior, key handling, terminal image
+  support, pets, text wrapping, styling, and related generic TUI behavior.
+- Keep RunHaven as the product model: profiles, launch plans, active runs,
+  run history, diagnostics, egress policy, auth posture, and safety boundaries.
+- Build a small RunHaven UI contract seam before wiring product screens into
+  the vendored app shell.
+
+That means the next integration layer is presentation-neutral RunHaven payloads,
+starting with launch-plan data from `AgentRunPlan`. Ratatui widgets and any
+future Tauri/React surface should consume the same payload shape.
+
 ## Source
 
 Primary source:
