@@ -193,6 +193,7 @@ impl App {
                 KeyCode::Char('d') => self.open_run_dashboard(),
                 KeyCode::Char('h') => self.open_history(),
                 KeyCode::Char('g') => self.open_diagnostics(),
+                KeyCode::Char('p') => self.toggle_pet(),
                 _ => {}
             },
         }

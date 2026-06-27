@@ -58,6 +58,57 @@ If a new screen needs shared data, add the data API outside `cli/` first. If a
 new draw helper has no RunHaven dependency, keep it in the framework modules so
 it remains extractable later.
 
+## Wizard and action model
+
+RunHaven launch is a wizard, not a menu tree: choose agent, choose workspace,
+review boundary, confirm launch. Keep that stepper visible on launch-path
+screens, keep the next safe action visible on Home, and keep broad destinations
+in the guide/actions surface.
+
+Rules:
+
+- Show the current task and step before listing actions.
+- Keep footer actions local to the current screen. Do not make Home carry every
+  global destination.
+- Use task labels (`review plan`, `choose workspace`, `open dashboard`) instead
+  of vague nouns.
+- Group non-launch actions by job in the guide: prepare, run, review, diagnose,
+  display.
+- Keep destructive run controls inside their own screen with explicit typed
+  confirmation.
+- Keep `?`/F1 as the discoverable guide route and `q` as the consistent quit.
+
+## Primary user flows
+
+Design screens from flows, not from available commands:
+
+| Flow | Entry | Exit |
+| --- | --- | --- |
+| Launch | Home or Guide | Confirm restores the terminal and launches through the shared runtime path. |
+| Monitor | Home, Guide, or after a launch record exists | Dashboard, bounded logs, or a typed run-control result. |
+| Review | Home, Guide, or Dashboard notice | History list and selected run diff. |
+| Diagnose | Home, Guide, or History | Diagnostics and doctor checks with inline remediation. |
+| Display/accessibility | Guide or environment variables | Cubby visibility, reduced motion, line mode, no-color, light/dark palette. |
+
+When adding a screen, name its flow, entry point, success state, and escape path
+before adding key bindings. If a destination does not serve one of these flows,
+do not put it in the Home footer. If two flows need the same data, move the data
+API outside `cli/` and let each screen render it through its own adapter.
+
+## Agent CLI reference conventions
+
+Stock agent CLIs use a few patterns RunHaven should keep, adapted to its
+launcher role:
+
+- Put product identity, version, selected agent, workspace, and ready state near
+  the top, not hidden in help.
+- Keep the mascot compact and identity-oriented. It should help recognition, not
+  push the workflow below the fold.
+- Keep the bottom strip for immediate commands and current context.
+- Use contextual tips sparingly, and prefer facts the user can act on.
+- Do not copy the chat prompt as RunHaven's primary model. RunHaven's primary
+  model is launch, monitor, review, and diagnose over the shared runtime data.
+
 ## Cards
 
 Render structured data as self-contained "cards" in two shapes:

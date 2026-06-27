@@ -25,6 +25,10 @@ home, or press `?`/F1 from the main screens to open the guide again. Use up/down
 to choose an agent, `w` to choose a workspace, `r` to review the run boundary,
 `d` to open the dashboard, `h` to review run history and diffs, `g` to open
 diagnostics, enter to move through detail/review/confirm, and esc to go back.
+The launch path is a four-step wizard: choose agent, choose workspace, review
+the boundary, then confirm launch. The Home banner keeps Cubby as the animated
+hero/pet and uses the space beside it for at-a-glance context: launch stepper,
+selected agent, workspace, network mode, default boundary, and next safe action.
 
 The review screen is built from the same planner as `runhaven plan`: it shows
 the workspace mount, state volume, network mode, provider egress posture,

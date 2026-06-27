@@ -1,29 +1,18 @@
 ---
 source: src/runhaven/cli/tui/tests.rs
-assertion_line: 513
 expression: snapshot
 ---
-         ▄▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄
-       ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄
-      ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀       RunHaven
-      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀       v0.5.0
-      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀       run agents in a safe haven
-      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-      ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-       ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄
-      ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄
-     ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄
-    ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄
-   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-     ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+    ▄▀▀▀▀▀▀▀▀▀▀▀▄
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    RunHaven v0.5.0
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    launch: [1 agent] > 2 workspace > 3 review > 4 confirm
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    agent: antigravity  network: provider
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    workspace: /workspace
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀    boundary: /workspace only  no host home/creds
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀      next: r review plan  d dashboard  h history
+  ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄
+  ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+  ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 ┌ Launcher ────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │workspace: /workspace                                                                                                 │
 │agent: antigravity  default network: provider                                                                         │
@@ -36,6 +25,16 @@ expression: snapshot
 │  copilot       GitHub Copilot CLI with COPILOT_HOME isolated per project.                                            │
 │  gemini        Gemini CLI with project-scoped home state.                                                            │
 │  shell         Generic shell profile for custom agent images.                                                        │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-       ? guide · w workspace · enter inspect · r review · d dashboard · h history · g diagnostics · p pet · q quit
+                     up/down select · enter inspect · r review plan · w workspace · ? guide · q quit
                                    RunHaven shows the exact CLI command before launch.

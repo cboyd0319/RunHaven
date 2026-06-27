@@ -1,10 +1,11 @@
 ---
-source: src/runhaven/cli/tui/mod.rs
+source: src/runhaven/cli/tui/tests.rs
 expression: snapshot
 ---
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                                Confirm Launch                                │
 └──────────────────────────────────────────────────────────────────────────────┘
+1 agent > 2 workspace > 3 review > [4 confirm]
 ┌ Launch ──────────────────────────────────────────────────────────────────────┐
 │Mount: /workspace -> /workspace                                               │
 │Network: provider                                                             │
@@ -14,7 +15,6 @@ expression: snapshot
 │                                                                              │
 │This plan has security notices. Type run to launch.                           │
 │confirm: ru                                                                   │
-│                                                                              │
 │                                                                              │
 │                                                                              │
 │                                                                              │

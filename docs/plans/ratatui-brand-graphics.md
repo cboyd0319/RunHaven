@@ -42,6 +42,12 @@ command output:
 
 If a screen does not help answer one of these, it does not earn its place.
 
+Implemented Home direction: Cubby remains the single animated hero/mascot/pet,
+but its Home footprint is capped to roughly half of the previous banner height.
+The space beside Cubby is an at-a-glance context panel showing the selected
+agent, workspace, network mode, default boundary, next safe action, and the
+launch wizard stepper.
+
 ## Default Terminal Entry Point
 
 When RunHaven is used interactively from a terminal, the TUI is the default. A

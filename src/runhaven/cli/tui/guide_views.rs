@@ -10,22 +10,26 @@ pub(super) fn render_guide(frame: &mut Frame, settings: TuiSettings, palette: Pa
     render_screen_title(frame, header, "RunHaven Guide", settings, palette);
 
     let mut lines = Vec::new();
-    for line in [
-        "Start with the smallest workspace the agent needs. RunHaven mounts that one directory at /workspace.",
-        "Pick an agent, then review the plan before launch. The plan shows the workspace, state volume, network mode, egress posture, and equivalent CLI command.",
+    let guide_lines = [
+        "Launch is a four-step wizard: agent, workspace, review boundary, confirm launch.",
+        "Home shows Cubby plus the selected agent, workspace, network, boundary, and next safe action.",
+        "Footers list only actions for the current screen. Use ? or F1 to return here.",
         "Secure-default plans launch with enter. Lower-security choices require typing run.",
-        "Use d for the active-run dashboard, h for completed run history and diffs, and g for diagnostics. The CLI remains available for scripts, pipes, recovery, and worktree merge/discard.",
-        "Accessibility controls: NO_COLOR disables color, RUNHAVEN_TUI_REDUCED_MOTION=1 keeps motion static, RUNHAVEN_TUI_LINE_MODE=1 uses a text-first layout, and RUNHAVEN_TUI_COLOR_MODE=light or dark selects the palette.",
-    ] {
+        "Side flows: d dashboard/logs, h history/diffs, and g diagnostics/doctor.",
+        "Display: p toggles Cubby. USAGE documents NO_COLOR, reduced motion, line mode, and light/dark palette environment controls.",
+    ];
+    for (index, line) in guide_lines.iter().enumerate() {
         push_wrapped_line(&mut lines, line, palette.text(), body.width as usize);
-        lines.push(ratatui::text::Line::from(""));
+        if index + 1 < guide_lines.len() {
+            lines.push(ratatui::text::Line::from(""));
+        }
     }
 
-    render_screen_body(frame, body, " First Run ", lines, settings, palette);
+    render_screen_body(frame, body, " Actions ", lines, settings, palette);
     render_footer(
         frame,
         footer,
-        "w workspace | r review | d dashboard | h history | g diagnostics | esc home",
+        "w workspace · r review · d dash · h history · g diag · p pet · esc home",
         "Every TUI action maps back to a named CLI command.",
         palette,
     );

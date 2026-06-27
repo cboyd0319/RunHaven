@@ -178,6 +178,20 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-27: TUI design-review polish. Kept Cubby as the single animated
+  hero/mascot/pet, capped the Home mascot to about half of the previous display
+  height, restored versioned identity in the Home banner, and replaced the old
+  right-side brand copy with at-a-glance launch context: four-step wizard,
+  selected agent, network, workspace, boundary, and next safe action. Added a
+  compact launch stepper to workspace, review, and confirm screens; shortened
+  Home and guide footers around screen-local actions; made `p` discoverable from
+  the guide; and documented the wizard/user-flow/action model plus stock agent
+  CLI reference conventions in the TUI architecture guide. Updated README,
+  USAGE, the brand graphics plan, `feature_list.json`, and affected VT100
+  snapshots. Verified: `cargo fmt --check`, `cargo test --locked tui` (189
+  TUI-filtered tests), `cargo clippy --all-targets --locked -- -D warnings`,
+  JSON validation, typography scan, and `git diff --check`. Branch:
+  `terminal-ui-build-plan`.
 - 2026-06-27: TUI Phase 5 polish and final build-plan closeout. Added
   `src/runhaven/cli/tui/guide_views.rs` for the RunHaven Guide, opens it first
   when the run-record log is missing or empty, and routes `?`/F1 to it from the

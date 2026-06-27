@@ -206,8 +206,34 @@ fn home_banner_shows_mascot_and_brand() {
         }
     }
     assert!(text.contains("RunHaven"), "brand text missing");
+    assert!(text.contains("launch: [1 agent]"), "launch stepper missing");
+    assert!(text.contains("agent: antigravity"), "agent context missing");
+    assert!(
+        text.contains("workspace: /workspace"),
+        "workspace context missing"
+    );
+    assert!(
+        text.contains("boundary: /workspace only"),
+        "boundary context missing"
+    );
+    assert!(text.contains("next: r review plan"), "next action missing");
     let blocks = text.matches('\u{2580}').count() + text.matches('\u{2584}').count();
     assert!(blocks > 40, "expected mascot half-blocks, got {blocks}");
+}
+
+#[test]
+fn home_banner_context_prefers_active_run_next_action() {
+    let mut app = test_app();
+    app.run_manager.runs = vec![fake_run()];
+
+    let context = app.home_banner_context();
+
+    assert!(context.iter().any(|line| line.starts_with("RunHaven v")));
+    assert!(
+        context
+            .iter()
+            .any(|line| line.contains("d dashboard (1 active)"))
+    );
 }
 
 #[test]
@@ -339,6 +365,18 @@ fn guide_routes_to_primary_workflows() {
     app.screen = Screen::Guide;
     app.handle_key(KeyCode::Char('d'));
     assert!(matches!(app.screen, Screen::Runs));
+}
+
+#[test]
+fn guide_can_toggle_cubby_display() {
+    let mut app = test_app();
+    app.screen = Screen::Guide;
+
+    assert!(app.settings.pet_enabled);
+    app.handle_key(KeyCode::Char('p'));
+    assert!(!app.settings.pet_enabled);
+    app.handle_key(KeyCode::Char('p'));
+    assert!(app.settings.pet_enabled);
 }
 
 #[test]

@@ -45,9 +45,9 @@ mod widgets;
 use event_loop::{Tick, Ticker};
 use theme::{MotionMode, Palette, TuiSettings};
 use widgets::{
-    agent_list_item, layout, plan_review_lines, push_wrapped_line, render_banner, render_footer,
-    render_launcher_summary, render_line_banner, render_screen_body, render_screen_title,
-    workspace_candidate_item,
+    LaunchStep, agent_list_item, launch_stepper_text, layout, plan_review_lines, push_wrapped_line,
+    render_banner, render_footer, render_launch_stepper, render_launcher_summary,
+    render_line_banner, render_screen_body, render_screen_title, workspace_candidate_item,
 };
 
 /// Launch the terminal UI. The terminal is restored on exit and on panic.
@@ -239,26 +239,29 @@ impl App {
 
     fn render_home(&mut self, frame: &mut Frame) {
         // Reserve rows for the agent list and footer, then show the largest
-        // Cubby hero that still fits the banner.
+        // Cubby hero that still fits the banner without dominating the screen.
         const RESERVED_ROWS: u16 = 15;
         let available = frame.area().height.saturating_sub(RESERVED_ROWS);
+        let mascot_max_rows = available.saturating_add(1) / 2;
         let brand_min_width = 22;
         let mascot_columns = frame.area().width.saturating_sub(brand_min_width);
         let pet_size = (self.settings.pet_enabled && !self.settings.line_mode)
             .then(|| {
                 self.pet
                     .as_ref()
-                    .and_then(|pet| pet.size_for_area(available, mascot_columns))
+                    .and_then(|pet| pet.size_for_area(mascot_max_rows, mascot_columns))
             })
             .flatten();
         let fallback_hero =
             (self.settings.pet_enabled && !self.settings.line_mode && pet_size.is_none())
-                .then(|| mascot::hero_for_area(available, mascot_columns))
+                .then(|| mascot::hero_for_area(mascot_max_rows, mascot_columns))
                 .flatten();
+        let banner_context = self.home_banner_context();
         let banner_height = pet_size
             .map(|size| size.rows)
             .or_else(|| fallback_hero.map(mascot::HeroSprite::cell_height))
-            .unwrap_or(4);
+            .unwrap_or(5)
+            .max(banner_context.len() as u16);
 
         let [banner, body, footer] = Layout::vertical([
             Constraint::Length(banner_height),
@@ -279,8 +282,14 @@ impl App {
                 .ok()
             });
             if let Some(pet_lines) = pet_lines {
-                let mascot_area =
-                    render_banner(frame, banner, size.columns, pet_lines, self.palette);
+                let mascot_area = render_banner(
+                    frame,
+                    banner,
+                    size.columns,
+                    pet_lines,
+                    &banner_context,
+                    self.palette,
+                );
                 if let (Some(pet), Some(protocol)) = (self.pet.as_ref(), self.pet_image_protocol) {
                     self.pending_pet_draw = pet.draw_request(
                         mascot_area,
@@ -289,16 +298,17 @@ impl App {
                         protocol,
                     );
                 }
-            } else if let Some(hero) = mascot::hero_for_area(available, mascot_columns) {
+            } else if let Some(hero) = mascot::hero_for_area(mascot_max_rows, mascot_columns) {
                 render_banner(
                     frame,
                     banner,
                     hero.cell_width(),
                     hero.lines_with_color(self.settings.color_enabled),
+                    &banner_context,
                     self.palette,
                 );
             } else {
-                render_line_banner(frame, banner, self.palette);
+                render_line_banner(frame, banner, &banner_context, self.palette);
             }
         } else if let Some(hero) = fallback_hero {
             render_banner(
@@ -306,10 +316,11 @@ impl App {
                 banner,
                 hero.cell_width(),
                 hero.lines_with_color(self.settings.color_enabled),
+                &banner_context,
                 self.palette,
             );
         } else {
-            render_line_banner(frame, banner, self.palette);
+            render_line_banner(frame, banner, &banner_context, self.palette);
         }
 
         let workspace_rows = if self.settings.line_mode { 3 } else { 5 };
@@ -349,7 +360,7 @@ impl App {
         render_footer(
             frame,
             footer,
-            "? guide · w workspace · enter inspect · r review · d dashboard · h history · g diagnostics · p pet · q quit",
+            "up/down select · enter inspect · r review plan · w workspace · ? guide · q quit",
             self.home_tip(),
             self.palette,
         );
@@ -361,6 +372,35 @@ impl App {
         } else {
             tooltips::tip_for_tick(self.ticks)
         }
+    }
+
+    fn home_banner_context(&self) -> Vec<String> {
+        let (agent, network) = self.selected().map_or_else(
+            || ("none".to_string(), "-".to_string()),
+            |agent| {
+                (
+                    agent.name.to_string(),
+                    default_network_mode(agent).as_str().to_string(),
+                )
+            },
+        );
+        let next = if self.run_manager.runs.is_empty() {
+            "next: r review plan  d dashboard  h history".to_string()
+        } else {
+            format!(
+                "next: d dashboard ({} active)  h history",
+                self.run_manager.runs.len()
+            )
+        };
+
+        vec![
+            format!("RunHaven v{}", env!("CARGO_PKG_VERSION")),
+            format!("launch: {}", launch_stepper_text(LaunchStep::Agent)),
+            format!("agent: {agent}  network: {network}"),
+            format!("workspace: {}", self.launcher.workspace.display()),
+            "boundary: /workspace only  no host home/creds".to_string(),
+            next,
+        ]
     }
 
     fn render_detail(&self, frame: &mut Frame) {
@@ -415,6 +455,9 @@ impl App {
             self.palette,
         );
 
+        let [stepper_area, body] =
+            Layout::vertical([Constraint::Length(1), Constraint::Min(0)]).areas(body);
+        render_launch_stepper(frame, stepper_area, LaunchStep::Workspace, self.palette);
         let [query_area, list_area] =
             Layout::vertical([Constraint::Length(3), Constraint::Min(0)]).areas(body);
         let query = if self.launcher.workspace_picker.query().is_empty() {
@@ -475,6 +518,9 @@ impl App {
         let [header, body, footer] = layout(frame);
         render_screen_title(frame, header, "Review Plan", self.settings, self.palette);
 
+        let [stepper_area, body] =
+            Layout::vertical([Constraint::Length(1), Constraint::Min(0)]).areas(body);
+        render_launch_stepper(frame, stepper_area, LaunchStep::Review, self.palette);
         let lines = if let Some(review) = &self.launcher.review {
             plan_review_lines(review, body.width as usize, self.palette)
         } else {
@@ -525,6 +571,9 @@ impl App {
         let [header, body, footer] = layout(frame);
         render_screen_title(frame, header, "Confirm Launch", self.settings, self.palette);
 
+        let [stepper_area, body] =
+            Layout::vertical([Constraint::Length(1), Constraint::Min(0)]).areas(body);
+        render_launch_stepper(frame, stepper_area, LaunchStep::Confirm, self.palette);
         let mut lines = Vec::new();
         if let Some(review) = &self.launcher.review {
             push_wrapped_line(

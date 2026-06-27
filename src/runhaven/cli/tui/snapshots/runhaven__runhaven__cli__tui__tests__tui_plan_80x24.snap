@@ -1,10 +1,11 @@
 ---
-source: src/runhaven/cli/tui/mod.rs
+source: src/runhaven/cli/tui/tests.rs
 expression: snapshot
 ---
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                                  Review Plan                                 │
 └──────────────────────────────────────────────────────────────────────────────┘
+1 agent > 2 workspace > [3 review] > 4 confirm
 ┌ Boundary ────────────────────────────────────────────────────────────────────┐
 │Workspace mount: /workspace -> /workspace                                     │
 │Agent home state: runhaven-codex-shared-home -> /home/agent                   │
@@ -15,7 +16,6 @@ expression: snapshot
 │profiles.                                                                     │
 │                                                                              │
 │CLI: runhaven run codex --workspace /workspace --network provider             │
-│                                                                              │
 │                                                                              │
 │                                                                              │
 │                                                                              │

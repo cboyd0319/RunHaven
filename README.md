@@ -95,10 +95,10 @@ Or open the terminal UI on an interactive terminal:
 runhaven
 ```
 
-The TUI is a guided launcher, first-run guide, run dashboard, history/diff
-viewer, diagnostics surface, and doctor view over the same Rust backend. It does
-not replace the CLI: subcommands, pipes, and redirected invocations still use
-the CLI directly.
+The TUI is a four-step launch wizard, first-run guide, run dashboard,
+history/diff viewer, diagnostics surface, and doctor view over the same Rust
+backend. It does not replace the CLI: subcommands, pipes, and redirected
+invocations still use the CLI directly.
 
 Use the smallest project directory the agent needs. RunHaven mounts that
 directory at `/workspace`, not your whole home directory. See
@@ -193,8 +193,9 @@ The roadmap now separates the active TUI build from the later desktop release
   roadmap and state files; keep runtime evidence current when the boundary is
   touched.
 - **First-class terminal UI, build plan complete:** a bare interactive
-  `runhaven` opens a guided launcher and run manager over the shared planner and
-  policy. The CLI stays the complete explicit and automation surface.
+  `runhaven` opens the four-step launch wizard and run manager over the shared
+  planner and policy. The CLI stays the complete explicit and automation
+  surface.
 - **Remaining non-UI scope and CLI public release:** promote one design-first
   item at a time without weakening CLI semantics or default safety.
 - **First-class desktop app, later:** the Tauri app becomes the easiest safe

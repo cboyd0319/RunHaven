@@ -10,40 +10,116 @@ use super::{launcher, runs};
 use crate::runhaven::runtime::plans::default_network_mode;
 use crate::runhaven::runtime::profiles::AgentProfile;
 
-/// The home banner: Cubby on the left, brand and tagline on the right.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum LaunchStep {
+    Agent,
+    Workspace,
+    Review,
+    Confirm,
+}
+
+const LAUNCH_STEPS: &[(LaunchStep, &str)] = &[
+    (LaunchStep::Agent, "agent"),
+    (LaunchStep::Workspace, "workspace"),
+    (LaunchStep::Review, "review"),
+    (LaunchStep::Confirm, "confirm"),
+];
+
+pub(super) fn launch_stepper_text(current: LaunchStep) -> String {
+    LAUNCH_STEPS
+        .iter()
+        .enumerate()
+        .map(|(index, (step, label))| {
+            let text = format!("{} {label}", index + 1);
+            if *step == current {
+                format!("[{text}]")
+            } else {
+                text
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" > ")
+}
+
+pub(super) fn render_launch_stepper(
+    frame: &mut Frame,
+    area: Rect,
+    current: LaunchStep,
+    palette: Palette,
+) {
+    let mut spans = Vec::new();
+    for (index, (step, label)) in LAUNCH_STEPS.iter().enumerate() {
+        if index > 0 {
+            spans.push(Span::styled(" > ", palette.muted()));
+        }
+        let style = if *step == current {
+            palette.accent()
+        } else {
+            palette.text()
+        };
+        let text = format!("{} {label}", index + 1);
+        let text = if *step == current {
+            format!("[{text}]")
+        } else {
+            text
+        };
+        spans.push(Span::styled(text, style));
+    }
+    frame.render_widget(Paragraph::new(Line::from(spans)), area);
+}
+
+/// The home banner: Cubby on the left, at-a-glance launch context on the right.
 pub(super) fn render_banner(
     frame: &mut Frame,
     area: Rect,
     mascot_width: u16,
     mascot_lines: Vec<Line<'static>>,
+    context_lines: &[String],
     palette: Palette,
 ) -> Rect {
     let [mascot_area, brand_area] =
         Layout::horizontal([Constraint::Length(mascot_width + 2), Constraint::Min(0)]).areas(area);
 
     frame.render_widget(Paragraph::new(mascot_lines), mascot_area);
-
-    // Vertically center the brand against the mascot.
-    let brand = [
-        Line::styled("RunHaven", palette.accent()),
-        Line::styled(format!("v{}", env!("CARGO_PKG_VERSION")), palette.muted()),
-        Line::from(""),
-        Line::styled("run agents in a safe haven", palette.muted()),
-    ];
-    let pad = area.height.saturating_sub(brand.len() as u16) / 2;
-    let mut lines = vec![Line::from(""); pad as usize];
-    lines.extend(brand);
-    frame.render_widget(Paragraph::new(lines), brand_area);
+    render_banner_context(frame, brand_area, context_lines, palette);
     mascot_area
 }
 
-pub(super) fn render_line_banner(frame: &mut Frame, area: Rect, palette: Palette) {
-    let lines = vec![
-        Line::styled("RunHaven", palette.accent()),
-        Line::styled(format!("v{}", env!("CARGO_PKG_VERSION")), palette.muted()),
-        Line::styled("run agents in a safe haven", palette.muted()),
-    ];
-    frame.render_widget(Paragraph::new(lines), area);
+fn render_banner_context(
+    frame: &mut Frame,
+    area: Rect,
+    context_lines: &[String],
+    palette: Palette,
+) {
+    let available = area.height as usize;
+    let mut lines: Vec<_> = context_lines
+        .iter()
+        .take(available)
+        .enumerate()
+        .map(|(index, line)| {
+            let style = if index == 0 || line.starts_with("next:") {
+                palette.accent()
+            } else if line.starts_with("boundary:") {
+                palette.muted()
+            } else {
+                palette.text()
+            };
+            Line::styled(truncate_to_width(line, area.width as usize), style)
+        })
+        .collect();
+    let pad = area.height.saturating_sub(lines.len() as u16) / 2;
+    let mut padded = vec![Line::from(""); pad as usize];
+    padded.append(&mut lines);
+    frame.render_widget(Paragraph::new(padded), area);
+}
+
+pub(super) fn render_line_banner(
+    frame: &mut Frame,
+    area: Rect,
+    context_lines: &[String],
+    palette: Palette,
+) {
+    render_banner_context(frame, area, context_lines, palette);
 }
 
 pub(super) fn render_launcher_summary(

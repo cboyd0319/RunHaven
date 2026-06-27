@@ -1,29 +1,28 @@
 ---
 source: src/runhaven/cli/tui/tests.rs
-assertion_line: 597
 expression: snapshot
 ---
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                                RunHaven Guide                                │
 └──────────────────────────────────────────────────────────────────────────────┘
-┌ First Run ───────────────────────────────────────────────────────────────────┐
-│Start with the smallest workspace the agent needs. RunHaven mounts that one   │
-│directory at /workspace.                                                      │
+┌ Actions ─────────────────────────────────────────────────────────────────────┐
+│Launch is a four-step wizard: agent, workspace, review boundary, confirm      │
+│launch.                                                                       │
 │                                                                              │
-│Pick an agent, then review the plan before launch. The plan shows the         │
-│workspace, state volume, network mode, egress posture, and equivalent CLI     │
-│command.                                                                      │
+│Home shows Cubby plus the selected agent, workspace, network, boundary, and   │
+│next safe action.                                                             │
+│                                                                              │
+│Footers list only actions for the current screen. Use ? or F1 to return       │
+│here.                                                                         │
 │                                                                              │
 │Secure-default plans launch with enter. Lower-security choices require        │
 │typing run.                                                                   │
 │                                                                              │
-│Use d for the active-run dashboard, h for completed run history and diffs,    │
-│and g for diagnostics. The CLI remains available for scripts, pipes,          │
-│recovery, and worktree merge/discard.                                         │
+│Side flows: d dashboard/logs, h history/diffs, and g diagnostics/doctor.      │
 │                                                                              │
-│Accessibility controls: NO_COLOR disables color,                              │
-│RUNHAVEN_TUI_REDUCED_MOTION=1 keeps motion static, RUNHAVEN_TUI_LINE_MODE=1   │
-│uses a text-first layout, and RUNHAVEN_TUI_COLOR_MODE=light or dark selects   │
+│Display: p toggles Cubby. USAGE documents NO_COLOR, reduced motion, line      │
+│mode, and light/dark palette environment controls.                            │
+│                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
-   w workspace | r review | d dashboard | h history | g diagnostics | esc home
+     w workspace · r review · d dash · h history · g diag · p pet · esc home
                Every TUI action maps back to a named CLI command.
