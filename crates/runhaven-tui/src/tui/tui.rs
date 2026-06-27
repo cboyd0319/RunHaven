@@ -95,23 +95,30 @@ fn should_emit_notification(condition: NotificationCondition, terminal_focused: 
 
 impl Drop for Tui {
     fn drop(&mut self) {
-        if let Err(err) = self.clear_ambient_pet_image() {
-            tracing::debug!(error = %err, "failed to clear ambient pet image on TUI drop");
+        if let Err(err) = self.clear_pet_images() {
+            tracing::debug!(error = %err, "failed to clear pet images on TUI drop");
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::io::Result;
     use std::io::Write as _;
 
+    use super::RestoreMode;
+    use super::TerminalHandoffOps;
+    use super::TerminalHandoffSession;
     use super::clear_for_viewport_change;
     use super::should_emit_notification;
+    use super::with_restored_terminal_session;
     use crate::custom_terminal::Terminal as CustomTerminal;
     use crate::test_backend::VT100Backend;
     use codex_config::types::NotificationCondition;
     use ratatui::layout::Position;
     use ratatui::layout::Rect;
+    use std::sync::Arc;
+    use std::sync::Mutex;
 
     #[test]
     fn unfocused_notification_condition_is_suppressed_when_focused() {
@@ -176,6 +183,153 @@ mod tests {
             !rows.iter().skip(1).any(|row| row.contains("stale")),
             "expected stale cells inside the new viewport to be cleared, rows: {rows:?}"
         );
+    }
+
+    #[tokio::test]
+    async fn with_restored_full_pauses_restores_and_resumes_terminal() {
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let mut session = FakeHandoffSession::new(/*alt_screen_active*/ false, events.clone());
+        let mut ops = FakeHandoffOps::new(events.clone());
+
+        let output =
+            with_restored_terminal_session(&mut session, RestoreMode::Full, &mut ops, || async {
+                events.lock().expect("events").push("child".to_string());
+                std::result::Result::<&'static str, &'static str>::Ok("done")
+            })
+            .await
+            .expect("child output");
+
+        assert_eq!(output, "done");
+        assert!(!session.alt_screen_active);
+        assert_eq!(
+            events.lock().expect("events").as_slice(),
+            [
+                "pause_events",
+                "restore:Full",
+                "stderr:pause",
+                "child",
+                "stderr:resume",
+                "set_modes",
+                "flush_input",
+                "resume_events",
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn with_restored_reenters_alt_screen_and_resumes_after_child_error() {
+        let events = Arc::new(Mutex::new(Vec::new()));
+        let mut session = FakeHandoffSession::new(/*alt_screen_active*/ true, events.clone());
+        let mut ops = FakeHandoffOps::new(events.clone());
+
+        let output =
+            with_restored_terminal_session(&mut session, RestoreMode::Full, &mut ops, || async {
+                events.lock().expect("events").push("child".to_string());
+                std::result::Result::<(), &'static str>::Err("missing child")
+            })
+            .await;
+
+        assert_eq!(output, Err("missing child"));
+        assert!(session.alt_screen_active);
+        assert_eq!(
+            events.lock().expect("events").as_slice(),
+            [
+                "pause_events",
+                "leave_alt_screen",
+                "restore:Full",
+                "stderr:pause",
+                "child",
+                "stderr:resume",
+                "set_modes",
+                "flush_input",
+                "enter_alt_screen",
+                "resume_events",
+            ]
+        );
+    }
+
+    struct FakeHandoffSession {
+        alt_screen_active: bool,
+        events: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl FakeHandoffSession {
+        fn new(alt_screen_active: bool, events: Arc<Mutex<Vec<String>>>) -> Self {
+            Self {
+                alt_screen_active,
+                events,
+            }
+        }
+
+        fn push(&self, event: &str) {
+            self.events.lock().expect("events").push(event.to_string());
+        }
+    }
+
+    impl TerminalHandoffSession for FakeHandoffSession {
+        fn pause_events(&mut self) {
+            self.push("pause_events");
+        }
+
+        fn resume_events(&mut self) {
+            self.push("resume_events");
+        }
+
+        fn is_alt_screen_active(&self) -> bool {
+            self.alt_screen_active
+        }
+
+        fn leave_alt_screen(&mut self) -> Result<()> {
+            self.push("leave_alt_screen");
+            self.alt_screen_active = false;
+            Ok(())
+        }
+
+        fn enter_alt_screen(&mut self) -> Result<()> {
+            self.push("enter_alt_screen");
+            self.alt_screen_active = true;
+            Ok(())
+        }
+    }
+
+    struct FakeHandoffOps {
+        events: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl FakeHandoffOps {
+        fn new(events: Arc<Mutex<Vec<String>>>) -> Self {
+            Self { events }
+        }
+
+        fn push(&self, event: impl Into<String>) {
+            self.events.lock().expect("events").push(event.into());
+        }
+    }
+
+    impl TerminalHandoffOps for FakeHandoffOps {
+        fn restore(&mut self, mode: RestoreMode) -> Result<()> {
+            self.push(format!("restore:{mode:?}"));
+            Ok(())
+        }
+
+        fn pause_stderr(&mut self) -> Result<()> {
+            self.push("stderr:pause");
+            Ok(())
+        }
+
+        fn resume_stderr(&mut self) -> Result<()> {
+            self.push("stderr:resume");
+            Ok(())
+        }
+
+        fn set_modes(&mut self) -> Result<()> {
+            self.push("set_modes");
+            Ok(())
+        }
+
+        fn flush_input(&mut self) {
+            self.push("flush_input");
+        }
     }
 }
 
@@ -338,6 +492,115 @@ impl RestoreMode {
             RestoreMode::KeepRaw => restore_keep_raw(),
         }
     }
+}
+
+trait TerminalHandoffSession {
+    fn pause_events(&mut self);
+    fn resume_events(&mut self);
+    fn is_alt_screen_active(&self) -> bool;
+    fn leave_alt_screen(&mut self) -> Result<()>;
+    fn enter_alt_screen(&mut self) -> Result<()>;
+}
+
+trait TerminalHandoffOps {
+    fn restore(&mut self, mode: RestoreMode) -> Result<()>;
+    fn pause_stderr(&mut self) -> Result<()>;
+    fn resume_stderr(&mut self) -> Result<()>;
+    fn set_modes(&mut self) -> Result<()>;
+    fn flush_input(&mut self);
+}
+
+struct RealTerminalHandoffOps;
+
+impl TerminalHandoffOps for RealTerminalHandoffOps {
+    fn restore(&mut self, mode: RestoreMode) -> Result<()> {
+        mode.restore()
+    }
+
+    fn pause_stderr(&mut self) -> Result<()> {
+        terminal_stderr::pause()
+    }
+
+    fn resume_stderr(&mut self) -> Result<()> {
+        terminal_stderr::resume()
+    }
+
+    fn set_modes(&mut self) -> Result<()> {
+        set_modes()
+    }
+
+    fn flush_input(&mut self) {
+        flush_terminal_input_buffer();
+    }
+}
+
+impl TerminalHandoffSession for Tui {
+    fn pause_events(&mut self) {
+        Tui::pause_events(self);
+    }
+
+    fn resume_events(&mut self) {
+        Tui::resume_events(self);
+    }
+
+    fn is_alt_screen_active(&self) -> bool {
+        Tui::is_alt_screen_active(self)
+    }
+
+    fn leave_alt_screen(&mut self) -> Result<()> {
+        Tui::leave_alt_screen(self)
+    }
+
+    fn enter_alt_screen(&mut self) -> Result<()> {
+        Tui::enter_alt_screen(self)
+    }
+}
+
+async fn with_restored_terminal_session<S, O, R, F, Fut>(
+    session: &mut S,
+    mode: RestoreMode,
+    ops: &mut O,
+    f: F,
+) -> R
+where
+    S: TerminalHandoffSession,
+    O: TerminalHandoffOps,
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = R>,
+{
+    // Pause crossterm events to avoid stdin conflicts with external program `f`.
+    session.pause_events();
+
+    // Leave alt screen if active to avoid conflicts with external program `f`.
+    let was_alt_screen = session.is_alt_screen_active();
+    if was_alt_screen {
+        let _ = session.leave_alt_screen();
+    }
+
+    if let Err(err) = ops.restore(mode) {
+        tracing::warn!("failed to restore terminal modes before external program: {err}");
+    }
+    if let Err(err) = ops.pause_stderr() {
+        tracing::warn!("failed to restore terminal stderr before external program: {err}");
+    }
+
+    let output = f().await;
+
+    if let Err(err) = ops.resume_stderr() {
+        tracing::warn!("failed to suppress terminal stderr after external program: {err}");
+    }
+    if let Err(err) = ops.set_modes() {
+        tracing::warn!("failed to re-enable terminal modes after external program: {err}");
+    }
+    // After the external program `f` finishes, reset terminal state and flush any buffered keypresses.
+    ops.flush_input();
+
+    if was_alt_screen {
+        let _ = session.enter_alt_screen();
+    }
+
+    session.resume_events();
+    output
 }
 
 /// Flush the underlying stdin buffer to clear any input that may be buffered at the terminal level.
@@ -657,39 +920,8 @@ impl Tui {
         F: FnOnce() -> Fut,
         Fut: Future<Output = R>,
     {
-        // Pause crossterm events to avoid stdin conflicts with external program `f`.
-        self.pause_events();
-
-        // Leave alt screen if active to avoid conflicts with external program `f`.
-        let was_alt_screen = self.is_alt_screen_active();
-        if was_alt_screen {
-            let _ = self.leave_alt_screen();
-        }
-
-        if let Err(err) = mode.restore() {
-            tracing::warn!("failed to restore terminal modes before external program: {err}");
-        }
-        if let Err(err) = terminal_stderr::pause() {
-            tracing::warn!("failed to restore terminal stderr before external program: {err}");
-        }
-
-        let output = f().await;
-
-        if let Err(err) = terminal_stderr::resume() {
-            tracing::warn!("failed to suppress terminal stderr after external program: {err}");
-        }
-        if let Err(err) = set_modes() {
-            tracing::warn!("failed to re-enable terminal modes after external program: {err}");
-        }
-        // After the external program `f` finishes, reset terminal state and flush any buffered keypresses.
-        flush_terminal_input_buffer();
-
-        if was_alt_screen {
-            let _ = self.enter_alt_screen();
-        }
-
-        self.resume_events();
-        output
+        let mut ops = RealTerminalHandoffOps;
+        with_restored_terminal_session(self, mode, &mut ops, f).await
     }
 
     /// Emit a desktop notification now if the terminal is unfocused.
@@ -1013,6 +1245,29 @@ impl Tui {
             &mut self.ambient_pet_image_state,
             /*request*/ None,
         )
+    }
+
+    pub fn clear_pet_picker_preview_image(
+        &mut self,
+    ) -> std::result::Result<(), crate::pets::PetImageRenderError> {
+        if let Err(err) = ensure_virtual_terminal_processing() {
+            return Err(crate::pets::PetImageRenderError::Terminal(err));
+        }
+
+        crate::pets::render_pet_picker_preview_image(
+            self.terminal.backend_mut(),
+            &mut self.pet_picker_preview_image_state,
+            /*request*/ None,
+        )
+    }
+
+    pub fn clear_pet_images(
+        &mut self,
+    ) -> std::result::Result<(), crate::pets::PetImageRenderError> {
+        let ambient_result = self.clear_ambient_pet_image();
+        let preview_result = self.clear_pet_picker_preview_image();
+        ambient_result?;
+        preview_result
     }
 
     /// Draw a frame using the resize-reflow viewport and history insertion rules.

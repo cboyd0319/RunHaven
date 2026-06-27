@@ -49,11 +49,11 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 368.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 369.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 12.
-- Copied Codex files with local edits: 25.
+- RunHaven-only files: 13.
+- Copied Codex files with local edits: 26.
 
 RunHaven-only files:
 
@@ -68,6 +68,7 @@ runhaven/launch_wizard.rs
 runhaven/mod.rs
 runhaven/protocol.rs
 runhaven/service.rs
+runhaven/terminal_handoff.rs
 terminal_detection.rs
 terminal_tests.rs
 ```
@@ -76,6 +77,7 @@ Copied Codex files with local edits:
 
 ```text
 app/pets.rs
+app.rs
 bottom_pane/footer.rs
 bottom_pane/list_selection_view.rs
 bottom_pane/mod.rs
@@ -161,11 +163,18 @@ Local integration exceptions:
   this phase. It routes supported bootstrap, agent-catalog, and workspace
   validation calls into the RunHaven facade and returns typed unsupported errors
   for method families that are not promoted into the RunHaven security model.
+- `runhaven/terminal_handoff.rs` is the local Phase 4 smoke hook. It proves
+  Codex `Tui::with_restored` can release terminal ownership for a harmless
+  foreground child and restore afterward without wiring real agent launch.
 - `tui.rs` now compiles as `codex_runtime` under the temporary RunHaven module
-  entrypoint. The local edits only adapt nested module paths and the Ratatui
-  backend error bound for RunHaven's pinned dependency set.
+  entrypoint. The local edits adapt nested module paths, the Ratatui backend
+  error bound, deterministic terminal-handoff tests, and combined ambient plus
+  picker-preview pet image cleanup for RunHaven's pinned dependency set.
 - `tui/event_stream.rs` uses local `super::job_control` paths because
-  `tui.rs` is nested as `codex_runtime` during integration.
+  `tui.rs` is nested as `codex_runtime` during integration, and keeps a
+  deterministic pause/drop/resume regression for foreground handoff.
+- `app.rs` uses the combined pet-image cleanup helper during native app
+  shutdown so ambient and picker-preview image state are both cleared.
 - `custom_terminal.rs`, `insert_history.rs`, `terminal_hyperlinks.rs`, and
   `test_backend.rs` keep Codex runtime behavior with Ratatui 0.30 compatibility
   edits for color conversion, backend error bounds, scrolling-region test

@@ -764,5 +764,9 @@ pub(crate) mod codex_runtime;
 pub use codex_runtime::FrameRequester;
 
 pub fn run() -> Result<i32> {
+    if let Some(exit_code) = runhaven::terminal_handoff::run_smoke_from_env()? {
+        return Ok(exit_code);
+    }
+
     app_shell::run()
 }

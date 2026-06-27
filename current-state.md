@@ -308,6 +308,9 @@ Latest TUI smoke verification:
 - `cargo test -p runhaven-tui --locked runhaven::service -- --nocapture`
 - `cargo test -p runhaven-tui --locked runhaven::launch_wizard -- --nocapture`
 - `cargo test -p runhaven-tui --locked app_shell::tests::shell_confirm_enter_shows_disabled_launch_notice_without_launching -- --nocapture`
+- `cargo test -p runhaven-tui --locked codex_runtime::tests::with_restored -- --nocapture`
+- `cargo test -p runhaven-tui --locked codex_runtime::event_stream::tests::paused_broker_drops_source_until_resume -- --nocapture`
+- `cargo test -p runhaven-tui --locked runhaven::terminal_handoff -- --nocapture`
 - `cargo check -p runhaven-tui --locked`
 - `cargo test -p runhaven-tui --locked --quiet`
 - `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`
@@ -338,6 +341,14 @@ Latest TUI smoke verification:
   Enter to open confirmation, Enter to confirm the read-only notice, `b` to
   return to review, and `q` to quit; the terminal title changed through Choose
   agent, Review plan, and Confirm launch, then cleared on exit.
+- `RUNHAVEN_TUI_HANDOFF_SMOKE=success cargo run --locked --bin runhaven` in a
+  PTY; Codex runtime initialized, cleared the managed title before handoff,
+  restored terminal ownership around `/usr/bin/printf`, printed the harmless
+  child marker, and exited 0.
+- `RUNHAVEN_TUI_HANDOFF_SMOKE=error cargo run --locked --bin runhaven` in a
+  PTY; Codex runtime initialized, cleared the managed title before handoff,
+  restored terminal ownership after the missing child failed to start, surfaced
+  `terminal handoff child failed to start`, and exited 2.
 
 Latest harness review:
 
@@ -436,14 +447,30 @@ Latest TUI Phase 2 backend facade:
   `scripts/compare-codex-tui.sh`, `cargo run --locked --bin runhaven-check-pins --quiet`,
   JSON validation, ASCII and whitespace scans, and `git diff --check`.
 
+Latest TUI Phase 4 terminal handoff:
+
+- 2026-06-27: Completed Phase 4 of the Strategy C plan without wiring real
+  agent launch. `Tui::with_restored(...)` now has deterministic sequencing tests
+  for normal and alt-screen handoff, including child-error resume. The event
+  broker has a pause/drop/resume regression to prove events sent while the
+  source is dropped do not leak into the resumed TUI. Added the local
+  `runhaven/terminal_handoff.rs` smoke hook, gated by
+  `RUNHAVEN_TUI_HANDOFF_SMOKE=success|error`, which initializes the Codex
+  runtime, clears managed terminal title and pet image state before handoff,
+  runs only a harmless foreground child or an intentional missing child, restores
+  terminal ownership, and exits. Ambient and picker-preview pet image state now
+  share a combined cleanup helper, including native `App` shutdown. Current
+  vendor audit: 894 upstream files, 369 RunHaven files, 356 common paths, 538
+  upstream `.snap` files external by default, 13 RunHaven-only files, and 26
+  copied Codex files with local edits.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
 
 ## Next Step
 
-Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 3:
-compile the dormant runtime spine with the smallest protocol/utility surface.
-Then prove terminal handoff, and only then adapt the native
-`App`/`BottomPane`/`ChatWidget` path. Foreground launch remains read-only until
-the UI thread owns terminal restore and `launch_run_plan`.
+Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 5:
+adapt the native `App` and `BottomPane` path. Foreground launch remains
+read-only until the native Codex app loop owns terminal restore and
+`launch_run_plan` is wired through the UI thread.

@@ -528,4 +528,27 @@ mod tests {
             other => panic!("expected key event, got {other:?}"),
         }
     }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn paused_broker_drops_source_until_resume() {
+        let (broker, handle, _draw_tx, draw_rx, terminal_focused) = setup();
+        let mut stream = make_stream(broker.clone(), draw_rx, terminal_focused);
+
+        broker.pause_events();
+        handle.send(Ok(Event::Key(KeyEvent::new(
+            KeyCode::Char('x'),
+            KeyModifiers::NONE,
+        ))));
+        broker.resume_events();
+        let expected_key = KeyEvent::new(KeyCode::Char('r'), KeyModifiers::NONE);
+        handle.send(Ok(Event::Key(expected_key)));
+
+        let event = timeout(Duration::from_millis(100), stream.next())
+            .await
+            .expect("timed out waiting for resumed event");
+        match event {
+            Some(TuiEvent::Key(key)) => assert_eq!(key, expected_key),
+            other => panic!("expected resumed key event, got {other:?}"),
+        }
+    }
 }

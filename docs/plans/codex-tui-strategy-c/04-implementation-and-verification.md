@@ -190,6 +190,15 @@ Phase gate:
 Do not wire `runhaven/launch/prepare` to foreground
 `launch_run_plan` until this gate passes.
 
+Status 2026-06-27: complete. `Tui::with_restored(...)` now has deterministic
+sequencing tests for normal and alt-screen handoff, including child-error
+resume. The event broker has a pause/drop/resume regression. The env-gated
+`RUNHAVEN_TUI_HANDOFF_SMOKE=success|error` path initializes the Codex runtime,
+clears managed title and pet image state before handoff, runs only a harmless
+foreground child or an intentional missing child, restores terminal ownership,
+and exits without wiring real agent launch. Ambient and picker-preview pet image
+state now share a combined cleanup helper, including native `App` shutdown.
+
 ### Phase 5: Adapt `App` And `BottomPane`
 
 Make the real app loop active and move from the staging shell to Codex terminal
