@@ -140,6 +140,13 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Captured TUI architecture patterns in
+  `docs/plans/tui-architecture.md` (study of the Codex `ratatui` TUI): the
+  planner and policy objects are the single source of truth; adapters build and
+  widgets only draw; fixed-size vs width-aware cards with bounded lists; shared
+  draw helpers; a palette and color-mode module; the TUI and the Tauri app share
+  data rather than duplicated logic; branding stays separate from functional
+  cards; per-card `TestBackend` fixtures. These guide the upcoming slices.
 - 2026-06-26: TUI slice 2 (agent picker). The home screen is a navigable agent
   list (up/down or j/k, clamped) via a ratatui `ListState`; enter opens a
   per-agent detail screen (description, image, support tiers) and esc/backspace
