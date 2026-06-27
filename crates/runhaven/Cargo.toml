@@ -1,0 +1,23 @@
+[package]
+name = "runhaven"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+default-run = "runhaven"
+description = "Run AI coding agents inside Apple container on macOS."
+keywords = ["ai-agents", "apple-container", "macos", "runhaven", "sandbox", "security"]
+
+[lints]
+workspace = true
+
+[dependencies]
+runhaven-cli.workspace = true
+runhaven-core.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

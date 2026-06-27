@@ -1,6 +1,6 @@
 #[cfg(test)]
-use runhaven::active::log_snapshot_payload_from_stdout;
-use runhaven::active::{
+use runhaven_core::runtime::active::log_snapshot_payload_from_stdout;
+use runhaven_core::runtime::active::{
     DEFAULT_LOG_SNAPSHOT_LINES, active_run_log_snapshot_payload, validate_log_snapshot_lines,
 };
 use serde_json::Value;

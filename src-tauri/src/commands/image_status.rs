@@ -1,4 +1,4 @@
-use runhaven::image_doctor::{
+use runhaven_core::image::doctor::{
     BuilderStatusSummary, ImageStatusReport, ProfileImageStatus as CoreProfileImageStatus,
     collect_image_status,
 };

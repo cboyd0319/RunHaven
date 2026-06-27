@@ -1,0 +1,34 @@
+[package]
+name = "runhaven-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "RunHaven runtime, provider, records, image, and shared contracts."
+
+[lints]
+workspace = true
+
+[features]
+default = []
+test-support = []
+
+[dependencies]
+anyhow.workspace = true
+idna.workspace = true
+ipnet.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+time.workspace = true
+toml.workspace = true
+ureq.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

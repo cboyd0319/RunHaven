@@ -51,10 +51,10 @@ runtime, provider, image, SSH, and cleanup claims still require focused Apple
   files under `Sources/ContainerCommands/`, `Sources/ContainerResource/`, and
   `Sources/Services/NetworkVmnet/`, plus
   `Sources/ContainerOS/LocalNetworkPrivacy.swift`.
-- RunHaven implementation evidence: `src/runhaven/runtime/plans/`,
-  `src/runhaven/provider/runtime.rs`, `src/runhaven/runtime/network.rs`,
-  `src/runhaven/runtime/active/`, `src/runhaven/image/`,
-  `src/runhaven/doctor.rs`, and product docs under `docs/`.
+- RunHaven implementation evidence: `crates/runhaven-core/src/runtime/plans/`,
+  `crates/runhaven-core/src/provider/runtime.rs`, `crates/runhaven-core/src/runtime/network.rs`,
+  `crates/runhaven-core/src/runtime/active/`, `crates/runhaven-core/src/image/`,
+  `crates/runhaven-core/src/doctor.rs`, and product docs under `docs/`.
 
 The local Apple source checkout was treated as source-map evidence. The
 installed CLI help and RunHaven pins are the release-specific evidence for
@@ -64,21 +64,21 @@ Apple `container` 1.0.0 behavior.
 
 | Surface | Current Coverage | Primary Evidence |
 | --- | --- | --- |
-| Host prerequisites | `runhaven doctor` checks macOS, Apple silicon, installed CLI, pinned Apple `container` version, service status, runtime commit, builder image, vminit image, and Kata kernel pin surface. | `src/runhaven/doctor.rs`, `src/runhaven/doctor/runtime_pins.rs` |
-| Task-scoped runs | `runhaven plan` builds a `container run` command with `--rm`, `--init`, `--read-only`, `--tmpfs /tmp`, `--cap-drop ALL`, CPU/memory limits, one workspace mount, one state volume, explicit env passthrough, and non-root bundled image defaults. | `src/runhaven/runtime/plans/mod.rs` |
-| Sensitive mounts | Home directories, cloud credential folders, browser profiles, raw SSH keys, and broad system paths are rejected unless explicitly allowed. | `src/runhaven/runtime/plans/validation.rs`, `docs/SECURITY_MODEL.md` |
-| State volume preparation | Non-root home volume ownership is prepared by a short-lived root container on an internal network with DNS disabled. | `src/runhaven/runtime/plans/mod.rs`, `src/runhaven/provider/runtime.rs` |
-| Internal networks | Local-only runs create or reuse host-only Apple `container` networks and reject existing non-host-only networks. | `src/runhaven/provider/runtime.rs` |
-| Provider egress | Provider mode creates a managed host-only network, inspects gateway/subnet, starts a subnet-restricted host-side CONNECT proxy, injects proxy env vars with the Apple gateway URL, logs decisions, and deletes the managed provider network after the run. On Apple `container` 1.0.0 the gateway is not a bindable macOS address, so tests and live smokes cover wildcard listener binding plus off-subnet client rejection. | `src/runhaven/provider/runtime.rs`, `src/runhaven/provider/egress.rs` |
-| Active run control | `runs status`, `attach`, `logs-follow`, `stop`, `kill`, and `repair` route through Apple `container inspect`, `exec`, `logs`, `stop`, and `kill` with RunHaven-owned container-name validation. | `src/runhaven/runtime/active/` |
-| Image lifecycle | `image build` uses Apple `container build` with source-digest labels. `image doctor` reads Apple image, builder status, and volume listings without mutating resources. | `src/runhaven/image/build.rs`, `src/runhaven/image/doctor.rs` |
-| Managed cleanup | `network list/prune`, `state list/prune/reset`, and repair commands operate on RunHaven-owned names only. | `src/runhaven/runtime/network.rs`, `src/runhaven/runtime/state.rs` |
+| Host prerequisites | `runhaven doctor` checks macOS, Apple silicon, installed CLI, pinned Apple `container` version, service status, runtime commit, builder image, vminit image, and Kata kernel pin surface. | `crates/runhaven-core/src/doctor.rs`, `crates/runhaven-core/src/doctor/runtime_pins.rs` |
+| Task-scoped runs | `runhaven plan` builds a `container run` command with `--rm`, `--init`, `--read-only`, `--tmpfs /tmp`, `--cap-drop ALL`, CPU/memory limits, one workspace mount, one state volume, explicit env passthrough, and non-root bundled image defaults. | `crates/runhaven-core/src/runtime/plans/mod.rs` |
+| Sensitive mounts | Home directories, cloud credential folders, browser profiles, raw SSH keys, and broad system paths are rejected unless explicitly allowed. | `crates/runhaven-core/src/runtime/plans/validation.rs`, `docs/SECURITY_MODEL.md` |
+| State volume preparation | Non-root home volume ownership is prepared by a short-lived root container on an internal network with DNS disabled. | `crates/runhaven-core/src/runtime/plans/mod.rs`, `crates/runhaven-core/src/provider/runtime.rs` |
+| Internal networks | Local-only runs create or reuse host-only Apple `container` networks and reject existing non-host-only networks. | `crates/runhaven-core/src/provider/runtime.rs` |
+| Provider egress | Provider mode creates a managed host-only network, inspects gateway/subnet, starts a subnet-restricted host-side CONNECT proxy, injects proxy env vars with the Apple gateway URL, logs decisions, and deletes the managed provider network after the run. On Apple `container` 1.0.0 the gateway is not a bindable macOS address, so tests and live smokes cover wildcard listener binding plus off-subnet client rejection. | `crates/runhaven-core/src/provider/runtime.rs`, `crates/runhaven-core/src/provider/egress.rs` |
+| Active run control | `runs status`, `attach`, `logs-follow`, `stop`, `kill`, and `repair` route through Apple `container inspect`, `exec`, `logs`, `stop`, and `kill` with RunHaven-owned container-name validation. | `crates/runhaven-core/src/runtime/active/` |
+| Image lifecycle | `image build` uses Apple `container build` with source-digest labels. `image doctor` reads Apple image, builder status, and volume listings without mutating resources. | `crates/runhaven-core/src/image/build.rs`, `crates/runhaven-core/src/image/doctor.rs` |
+| Managed cleanup | `network list/prune`, `state list/prune/reset`, and repair commands operate on RunHaven-owned names only. | `crates/runhaven-core/src/runtime/network.rs`, `crates/runhaven-core/src/runtime/state.rs` |
 | Tauri planning guardrails | Future WebView control is scoped to typed Rust commands, narrow Tauri capabilities, visible run resources, and explicit approval gates before mutating Apple `container` operations. | `docs/TAURI_UI_GUARDRAILS.md` |
 | Provider troubleshooting | Usage docs distinguish policy denials from host-side proxy reachability failures and name the safe provider-smoke commands to collect before changing security posture. | `docs/USAGE.md`, `scripts/apple_container_smoke.sh` |
-| SSH forwarding fail-closed guard | `runhaven plan --ssh` and `runhaven run --ssh` refuse before launch. The local smoke harness verifies the refusal without using real keys. Live no-secret connectivity remains blocked for the default non-root agent user on the current pinned Apple `container` runtime. | `src/runhaven/runtime/plans/mod.rs`, `tests/cli.rs`, `scripts/apple_container_smoke.sh`, `docs/USAGE.md` |
+| SSH forwarding fail-closed guard | `runhaven plan --ssh` and `runhaven run --ssh` refuse before launch. The local smoke harness verifies the refusal without using real keys. Live no-secret connectivity remains blocked for the default non-root agent user on the current pinned Apple `container` runtime. | `crates/runhaven-core/src/runtime/plans/mod.rs`, `crates/runhaven/tests/cli.rs`, `scripts/apple_container_smoke.sh`, `docs/USAGE.md` |
 | Apple `container` release-update playbook | Runtime pin updates have a repo-owned checklist for source review, installer signature and checksum evidence, helper images, Kata kernel, CLI help diffs, docs, tests, smokes, cleanup, and rollback. | `docs/harness/release/apple-container-update-playbook.md` |
 | Opt-in live smoke | `scripts/apple_container_smoke.sh` proves the internal runtime path by default and adds provider egress coverage with `--with-provider`; it is intentionally local-only while alpha CI is disabled. | `scripts/apple_container_smoke.sh`, `docs/harness/feedback/verification-matrix.md` |
-| JSON parser fixtures | Trimmed fixtures cover Apple `container` 1.0.0 image list, network inspect, container inspect, source-backed legacy inspect attachment aliases, and missing-container stderr classification without requiring live Apple `container` in unit tests. | `tests/fixtures/apple_container/`, `src/runhaven/image/doctor.rs`, `src/runhaven/provider/runtime.rs`, `src/runhaven/runtime/active/` |
+| JSON parser fixtures | Trimmed fixtures cover Apple `container` 1.0.0 image list, network inspect, container inspect, source-backed legacy inspect attachment aliases, and missing-container stderr classification without requiring live Apple `container` in unit tests. | `crates/runhaven-core/tests/fixtures/apple_container/`, `crates/runhaven-core/src/image/doctor.rs`, `crates/runhaven-core/src/provider/runtime.rs`, `crates/runhaven-core/src/runtime/active/` |
 | Machine default avoidance | RunHaven defaults to task-scoped `container run`, not `container machine`, because machine defaults can mount the host home directory read-write. Explicit or user-managed machine workflows should warn and require intent, not be blocked solely because they are less secure. | `docs/ARCHITECTURE.md`, Apple `docs/container-machine.md` |
 
 ## Intentional Decisions

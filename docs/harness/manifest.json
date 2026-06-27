@@ -2,7 +2,7 @@
   "version": 2,
   "generatedFor": "RunHaven",
   "maintainedBy": "RunHaven maintainers",
-  "lastUpdated": "2026-06-17",
+  "lastUpdated": "2026-06-27",
   "purpose": "Compact map of the active RunHaven harness. This file is not startup context.",
   "platformContract": {
     "macOS": "26+",
@@ -38,8 +38,8 @@
     "environment": [
       "Cargo.toml",
       "Cargo.lock",
+      "crates/",
       "src-tauri/Cargo.toml",
-      "src-tauri/Cargo.lock",
       "ui/package.json",
       "ui/package-lock.json",
       "rust-toolchain.toml",

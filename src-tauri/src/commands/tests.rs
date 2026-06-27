@@ -1,51 +1,15 @@
 use std::path::PathBuf;
-use std::sync::{Mutex, MutexGuard};
 
 use super::*;
 use crate::contracts::LogSnapshotRequest;
-use runhaven::active::write_active_run_payload;
+use runhaven_core::runtime::active::write_active_run_payload;
+use runhaven_core::support::paths::{CacheRootOverride, override_cache_root_for_tests};
 use serde_json::json;
 
-static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-struct CacheHomeOverride {
-    previous: Option<std::ffi::OsString>,
-}
-
-impl CacheHomeOverride {
-    fn set(path: &std::path::Path) -> Self {
-        let previous = std::env::var_os("RUNHAVEN_CACHE_HOME");
-        // SAFETY: tests using this helper hold ENV_LOCK while mutating the
-        // process environment, and Drop restores the previous value.
-        unsafe {
-            std::env::set_var("RUNHAVEN_CACHE_HOME", path);
-        }
-        Self { previous }
-    }
-}
-
-impl Drop for CacheHomeOverride {
-    fn drop(&mut self) {
-        // SAFETY: caller holds ENV_LOCK until this guard is dropped.
-        unsafe {
-            if let Some(value) = &self.previous {
-                std::env::set_var("RUNHAVEN_CACHE_HOME", value);
-            } else {
-                std::env::remove_var("RUNHAVEN_CACHE_HOME");
-            }
-        }
-    }
-}
-
-fn isolated_cache() -> (
-    MutexGuard<'static, ()>,
-    tempfile::TempDir,
-    CacheHomeOverride,
-) {
-    let guard = ENV_LOCK.lock().expect("env lock");
+fn isolated_cache() -> (tempfile::TempDir, CacheRootOverride) {
     let cache = tempfile::tempdir().expect("cache");
-    let cache_home = CacheHomeOverride::set(cache.path());
-    (guard, cache, cache_home)
+    let cache_home = override_cache_root_for_tests(cache.path());
+    (cache, cache_home)
 }
 
 fn request(workspace: PathBuf) -> RunPlanRequest {
@@ -94,7 +58,7 @@ fn lists_agent_profiles_without_secrets() {
 
 #[test]
 fn build_plan_response_uses_existing_runhaven_planner() {
-    let (_guard, _cache, _cache_home) = isolated_cache();
+    let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
     let response = build_plan_response(request(workspace.path().to_path_buf())).expect("plan");
     assert_eq!(response.profile, "codex");
@@ -105,7 +69,7 @@ fn build_plan_response_uses_existing_runhaven_planner() {
 
 #[test]
 fn build_plan_response_warns_for_supported_advanced_choices() {
-    let (_guard, _cache, _cache_home) = isolated_cache();
+    let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
     let mut request = request(workspace.path().to_path_buf());
     request.network_mode = "internet".to_string();
@@ -131,7 +95,7 @@ fn build_plan_response_warns_for_supported_advanced_choices() {
 
 #[test]
 fn build_plan_response_warns_for_active_runs_and_material_memory() {
-    let (_guard, _cache, _cache_home) = isolated_cache();
+    let (_cache, _cache_home) = isolated_cache();
     write_active_run("active-warning-run");
     let workspace = tempfile::tempdir().expect("workspace");
 
@@ -155,7 +119,7 @@ fn build_plan_response_rejects_invalid_workspace() {
 
 #[test]
 fn build_plan_response_rejects_oversized_ipc_fields() {
-    let (_guard, _cache, _cache_home) = isolated_cache();
+    let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
     let mut plan_request = request(workspace.path().to_path_buf());
     plan_request.workspace_path = "x".repeat(4097);
@@ -195,7 +159,7 @@ fn launch_run_rejects_oversized_warning_confirmations() {
 
 #[test]
 fn launch_run_requires_explicit_confirmation() {
-    let (_guard, _cache, _cache_home) = isolated_cache();
+    let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
     let request = LaunchRunRequest {
         plan: request(workspace.path().to_path_buf()),
@@ -210,7 +174,7 @@ fn launch_run_requires_explicit_confirmation() {
 
 #[test]
 fn launch_run_requires_each_warning_confirmation() {
-    let (_guard, _cache, _cache_home) = isolated_cache();
+    let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
     let mut plan = request(workspace.path().to_path_buf());
     plan.network_mode = "internet".to_string();
@@ -227,7 +191,7 @@ fn launch_run_requires_each_warning_confirmation() {
 
 #[test]
 fn launch_run_requires_active_run_warning_confirmation() {
-    let (_guard, _cache, _cache_home) = isolated_cache();
+    let (_cache, _cache_home) = isolated_cache();
     write_active_run("active-launch-run");
     let workspace = tempfile::tempdir().expect("workspace");
     let request = LaunchRunRequest {
@@ -243,7 +207,7 @@ fn launch_run_requires_active_run_warning_confirmation() {
 
 #[test]
 fn launch_run_response_uses_reserved_run_id_without_starting() {
-    let (_guard, _cache, _cache_home) = isolated_cache();
+    let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
     let response = build_launch_response(
         request(workspace.path().to_path_buf()),
@@ -261,7 +225,7 @@ fn launch_run_response_uses_reserved_run_id_without_starting() {
 
 #[test]
 fn launch_run_blocks_missing_bundled_image() {
-    let (_guard, _cache, _cache_home) = isolated_cache();
+    let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
     let request = request(workspace.path().to_path_buf());
 
@@ -281,7 +245,7 @@ fn launch_run_blocks_missing_bundled_image() {
 
 #[test]
 fn launch_run_allows_custom_image_without_bundled_image_check() {
-    let (_guard, _cache, _cache_home) = isolated_cache();
+    let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
     let mut request = request(workspace.path().to_path_buf());
     request.image = Some("example/custom:1.0.0".to_string());
@@ -404,7 +368,7 @@ fn log_snapshot_rejects_invalid_run_id_before_container_access() {
 
 #[test]
 fn log_snapshot_rejects_non_runhaven_container_names() {
-    let (_guard, _cache, _cache_home) = isolated_cache();
+    let (_cache, _cache_home) = isolated_cache();
     write_active_run_payload(
         "bad-container-log-run",
         json!({

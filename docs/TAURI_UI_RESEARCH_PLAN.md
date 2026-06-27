@@ -89,7 +89,8 @@ Package and tool evidence from local commands at research time on 2026-06-16:
 
 At scaffold time and later pin-refresh passes, version checks were re-run and
 exact stable versions were hard-pinned in `ui/package.json`,
-`ui/package-lock.json`, `src-tauri/Cargo.toml`, and `src-tauri/Cargo.lock`.
+`ui/package-lock.json`, `src-tauri/Cargo.toml`, and the workspace
+`Cargo.lock`.
 Treat the table above as historical research evidence. Current dependency
 truth lives in the manifests and lockfiles, with source evidence routed through
 `docs/RESEARCH.md` and `pins.toml`. Do not use caret, tilde, wildcard, or
@@ -123,12 +124,12 @@ src-tauri/
     lib.rs
 ```
 
-The existing Rust CLI stays organized under `src/runhaven/`. The Tauri crate
-depends on the root crate with a path dependency and calls reusable Rust
-functions directly. If a CLI-only path must be reused temporarily, the Rust
-backend may call fixed internal functions or exact argument builders, but the
-WebView must never receive a generic shell, process, filesystem, HTTP, or Apple
-`container` bridge.
+The Rust code now lives in workspace crates. The Tauri crate is a workspace
+member and depends on `runhaven-core`, then exposes narrow typed commands to the
+WebView. If a CLI-only path must be reused temporarily, the Rust backend may
+call fixed internal functions or exact argument builders, but the WebView must
+never receive a generic shell, process, filesystem, HTTP, or Apple `container`
+bridge.
 
 Do not package the CLI as a Tauri sidecar for the first pass. A sidecar would
 duplicate command parsing, make typed errors harder, and pressure the project

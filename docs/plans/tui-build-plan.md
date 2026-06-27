@@ -24,7 +24,7 @@ drives the architecture below.
 
 The earlier custom TUI phases below are historical design evidence. The active
 source has now been reset to a Codex TUI source baseline in
-`src/runhaven/cli/tui/`, with a staged RunHaven `mod.rs` adapter that keeps the
+`crates/runhaven-tui/src/tui/`, with a staged RunHaven `mod.rs` adapter that keeps the
 crate buildable. A bare interactive `runhaven` now opens a temporary read-only
 launch preview while the full Codex app shell and bottom pane are adapted.
 
@@ -74,7 +74,7 @@ so the reusable core can later be extracted into a shared crate without dragging
 RunHaven specifics:
 
 ```
-src/runhaven/cli/tui/
+crates/runhaven-tui/src/tui/
   codex/        vendored, attributed codex primitives (third-party; see below)
   <framework>   domain-agnostic core: theme/ColorMode, the event+tick loop, the
                 widget/card system, key hints, tooltips, the snapshot test harness
@@ -266,9 +266,9 @@ TUI rather than printed text:
   status/log cores and the provider runtime writes egress decision deltas during
   provider-mode execution.
 - Phase 4 (history, diagnostics) needs run records and the egress/auth logs as
-  data. Complete: `src/runhaven/records/` exposes a real facade over
-  `run_history` and JSONL IO, `src/runhaven/diagnostics.rs` owns secret-free log
-  readers/status payloads, and `src/runhaven/doctor.rs` owns shared host
+  data. Complete: `crates/runhaven-core/src/records/` exposes a real facade over
+  `run_history` and JSONL IO, `crates/runhaven-core/src/diagnostics.rs` owns secret-free log
+  readers/status payloads, and `crates/runhaven-core/src/doctor.rs` owns shared host
   readiness checks. TUI Phase 4 consumes those data modules, not CLI prose.
 
 Any structured output the TUI needs that the CLI does not yet expose is a CLI gap
@@ -286,7 +286,7 @@ phase as they arise.
   backend; and `insta` snapshots for the current home/detail screens at multiple
   sizes.
 - Complete: Phase 1 brand. The launcher loads the validated Cubby Codex pet
-  package from `src/runhaven/cli/tui/assets/cubby/`, drives the idle loop with
+  package from `crates/runhaven-tui/src/tui/assets/cubby/`, drives the idle loop with
   Codex animation timing, renders the current atlas frame as a half-block
   fallback, and emits the Codex Kitty/iTerm2/Sixel image overlay after the
   ratatui draw when the terminal supports it. Cubby is visible by default,
@@ -307,11 +307,13 @@ phase as they arise.
   and stale-marker repair use plain typed-confirm screens over the existing
   validated run-control cores.
 - Complete: pre-Phase 4 organization lock. Shared TUI data dependencies now
-  live outside CLI presentation: host readiness in `doctor.rs`, secret-free
-  diagnostics in `diagnostics.rs`, auth posture labels in
-  `provider/auth_profiles.rs`, and run history behind `records/` with
-  `records/run_history.rs` plus `records/io.rs`. Internal `src/runhaven` imports
-  use explicit ownership paths instead of the crate-root compatibility facade.
+  live outside CLI presentation: host readiness in
+  `crates/runhaven-core/src/doctor.rs`, secret-free diagnostics in
+  `crates/runhaven-core/src/diagnostics.rs`, auth posture labels in
+  `crates/runhaven-core/src/provider/auth_profiles.rs`, and run history behind
+  `crates/runhaven-core/src/records/` with `records/run_history.rs` plus
+  `records/io.rs`. The workspace now uses crate ownership boundaries instead
+  of a root compatibility facade.
 - Complete: Phase 4 history and diagnostics. The TUI now has run history (`h`),
   per-run diff review, diagnostics (`g`) for egress/auth metadata and terminal
   render capabilities, and a doctor screen (`d` from diagnostics) with

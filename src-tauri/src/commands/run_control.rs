@@ -1,4 +1,4 @@
-use runhaven::active::{kill_active_run, repair_active_run, stop_active_run};
+use runhaven_core::runtime::active::{kill_active_run, repair_active_run, stop_active_run};
 use serde_json::Value;
 
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};

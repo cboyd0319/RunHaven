@@ -430,9 +430,9 @@ only where the support matrix claims verified provider/auth behavior.
 Verification:
 
 ```bash
-cargo fmt --manifest-path src-tauri/Cargo.toml --check
-cargo test --manifest-path src-tauri/Cargo.toml --locked
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+cargo fmt --check
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
 npm --prefix ui run check
 npm --prefix ui test
 npm --prefix ui run test:e2e
@@ -455,9 +455,9 @@ git diff --check
 Verification:
 
 ```bash
-cargo fmt --manifest-path src-tauri/Cargo.toml --check
-cargo test --manifest-path src-tauri/Cargo.toml --locked
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+cargo fmt --check
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
 npm --prefix ui run check
 npm --prefix ui test
 npm --prefix ui run test:e2e
@@ -481,7 +481,7 @@ Verification:
 
 ```bash
 cargo test --locked worktree
-cargo test --manifest-path src-tauri/Cargo.toml --locked
+cargo test --workspace --locked
 npm --prefix ui test
 npm --prefix ui run test:e2e
 git diff --check
@@ -502,7 +502,7 @@ Verification:
 
 ```bash
 cargo test --locked
-cargo test --manifest-path src-tauri/Cargo.toml --locked
+cargo test --workspace --locked
 npm --prefix ui run check
 npm --prefix ui test
 npm --prefix ui run test:e2e

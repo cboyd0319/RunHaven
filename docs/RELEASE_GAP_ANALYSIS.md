@@ -93,21 +93,14 @@ Observed TUI command families:
 
 Observed maintainability pressure:
 
-- `src/runhaven/cli/tui/runs.rs`: approximately 648 lines.
-- `src/runhaven/cli/tui/pet.rs`: approximately 642 lines.
-- `src/runhaven/cli/tui/mod.rs`: approximately 604 lines after input handling
-  moved to `tui/input.rs`.
-- `src/runhaven/provider/runtime.rs`: approximately 580 lines.
-- `src/runhaven/runtime/plans/mod.rs`: approximately 584 lines.
-- `src/runhaven/cli/tui/history.rs`: approximately 544 lines.
-- `src/runhaven/provider/egress.rs`: approximately 525 lines.
-- `src/runhaven/provider/auth_broker.rs`: approximately 512 lines.
-- `src/runhaven/cli/app.rs`: approximately 499 lines after the organization
-  pass.
+- The old custom TUI size list was superseded by the Codex vendor reset and the
+  workspace crate split.
+- Current source-size and crate-boundary guidance lives in
+  `docs/harness/state/modularization-plan.md`.
 
-The TUI files are allowed to exceed the soft size guard while phases are being
-built, but touched files must split along screen/framework boundaries when a
-new phase would make review harder. Provider/runtime files remain security
+Vendored Codex TUI files are allowed to exceed the local soft size guard while
+the baseline is being integrated, but culling or splitting decisions must be
+recorded. Provider/runtime files remain security
 boundaries and should be split only by clear ownership.
 
 ## Release Definitions

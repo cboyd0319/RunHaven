@@ -21,7 +21,8 @@ and a narrow Tauri capability.
   <https://v2.tauri.app/security/capabilities/>
 - Tauri v2 permissions docs, reviewed 2026-06-16:
   <https://v2.tauri.app/security/permissions/>
-- Current RunHaven CLI behavior, verified from `src/runhaven/`,
+- Current RunHaven CLI behavior, verified from `crates/runhaven-core/`,
+  `crates/runhaven-cli/`,
   `docs/ARCHITECTURE.md`, `docs/SECURITY_MODEL.md`, and
   `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`.
 

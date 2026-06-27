@@ -1,22 +1,29 @@
 [package]
 name = "runhaven-tauri"
-version = "0.1.0"
-edition = "2024"
-license = "MIT"
-publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
 description = "RunHaven Tauri desktop shell."
-authors = ["Chad Boyd"]
 build = "build.rs"
 
+[lints]
+workspace = true
+
 [build-dependencies]
-tauri-build = { version = "=2.6.3", features = [] }
+tauri-build.workspace = true
 
 [dependencies]
-runhaven = { path = ".." }
-serde = { version = "=1.0.228", features = ["derive"] }
-serde_json = "=1.0.150"
-tauri = { version = "=2.11.3", features = [] }
-tauri-plugin-dialog = "=2.7.1"
+runhaven-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri.workspace = true
+tauri-plugin-dialog.workspace = true
 
 [dev-dependencies]
-tempfile = "=3.27.0"
+runhaven-core = { workspace = true, features = ["test-support"] }
+tempfile.workspace = true

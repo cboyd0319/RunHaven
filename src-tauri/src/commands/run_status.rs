@@ -1,4 +1,4 @@
-use runhaven::active::active_run_status_payload;
+use runhaven_core::runtime::active::active_run_status_payload;
 use serde_json::Value;
 
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};

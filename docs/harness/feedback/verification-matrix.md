@@ -10,9 +10,9 @@ changes a security boundary.
 | --- | --- |
 | Harness docs, instructions, or state | `cargo run --locked --bin runhaven-check-pins`; JSON validation for changed JSON; local Markdown link check when links changed; `git diff --check` |
 | README or docs-only change | pin check; local Markdown link check when links changed; platform wording scan when support wording changed; `git diff --check` |
-| Rust code | `cargo fmt --check`; focused `cargo test` target; `cargo test --locked`; `cargo clippy --all-targets -- -D warnings`; maintainability check for touched modules and duplication |
+| Rust code | `cargo fmt --check`; focused `cargo test` target; `cargo test --workspace --locked`; `cargo clippy --workspace --all-targets --locked -- -D warnings`; maintainability check for touched modules and duplication |
 | Frontend UI | `npm --prefix ui run check`; `npm --prefix ui test`; `npm --prefix ui run test:e2e`; `npm --prefix ui run build`; relevant Tauri command tests; maintainability check for touched components and adapters |
-| Tauri shell | Frontend checks plus `cargo fmt --manifest-path src-tauri/Cargo.toml --check`; `cargo test --manifest-path src-tauri/Cargo.toml --locked` (includes the `capability_guard` scope test); `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings`; capability review |
+| Tauri shell | Frontend checks plus `cargo fmt --check`; `cargo test --workspace --locked` (includes the `capability_guard` scope test); `cargo clippy --workspace --all-targets --locked -- -D warnings`; capability review |
 | CLI command construction | Rust checks plus focused CLI and planning tests |
 | Full CLI surface confirmation | `scripts/cli_surface_check.sh` (breadth: every command family); `scripts/apple_container_smoke.sh --with-provider --with-ssh` (depth: provider egress denial and SSH fail-closed); coverage indexed in `docs/CLI_SURFACE_COVERAGE.md` |
 | Code organization or modularity | Focused tests for moved behavior; stale import/reference scan with `rg`; relevant Rust, Tauri, or frontend checks; verify duplicated logic was deleted or intentionally kept |
@@ -26,10 +26,10 @@ changes a security boundary.
 
 ```bash
 cargo fmt --check
-cargo test --locked
-cargo clippy --all-targets -- -D warnings
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo run --locked --bin runhaven-check-pins
-cargo build --locked
+cargo build --workspace --locked
 npm --prefix ui run check
 npm --prefix ui test
 npm --prefix ui run test:e2e

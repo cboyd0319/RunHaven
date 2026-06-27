@@ -2,16 +2,16 @@ use std::collections::HashSet;
 use std::path::PathBuf;
 use std::thread;
 
-use runhaven::active::read_active_run_records;
-use runhaven::doctor::collect_checks;
-use runhaven::image_doctor::collect_image_status;
-use runhaven::launch::{launch_run_plan, new_run_id};
-use runhaven::plans::{
+use runhaven_core::doctor::collect_checks;
+use runhaven_core::image::doctor::collect_image_status;
+use runhaven_core::records::read_run_records;
+use runhaven_core::runtime::active::read_active_run_records;
+use runhaven_core::runtime::launch::{launch_run_plan, new_run_id};
+use runhaven_core::runtime::plans::{
     AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
     normalize_provider_hosts,
 };
-use runhaven::profiles::{get_profile, profiles};
-use runhaven::records::read_run_records;
+use runhaven_core::runtime::profiles::{get_profile, profiles};
 use serde_json::Value;
 
 use crate::contracts::{

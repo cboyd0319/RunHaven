@@ -47,7 +47,7 @@ Primary source:
 /Users/c/Documents/GitHub/codex/codex-rs/tui/src/
 ```
 
-The intent is to fully replace the current custom `src/runhaven/cli/tui/` tree
+The intent is to fully replace the current custom `crates/runhaven-tui/src/tui/` tree
 with vendored Codex TUI source, then make RunHaven changes from that baseline.
 
 Local Codex configuration evidence:
@@ -146,7 +146,7 @@ RunHaven boundary that any final TUI must keep.
 
 ## After Vendoring
 
-After `src/runhaven/cli/tui/` is replaced with the vendored source, review the
+After `crates/runhaven-tui/src/tui/` is replaced with the vendored source, review the
 vendored baseline against this wishlist.
 
 Then make decisions in this order:
@@ -183,7 +183,7 @@ has better evidence.
 
 ### Upstream Codex Snapshot Goldens
 
-Decision: remove copied `*.snap` files under `src/runhaven/cli/tui/`.
+Decision: remove copied `*.snap` files under `crates/runhaven-tui/src/tui/`.
 
 Why removal is better than leaving and adapting:
 
@@ -253,7 +253,7 @@ Why leaving and adapting is better than removing:
 - The full Codex bottom pane currently imports app-server, protocol, skills,
   plugin, file-search, and chat-composer surfaces that are not needed to verify
   pet discovery.
-- The staged contract in `src/runhaven/cli/tui/mod.rs` mirrors the Codex data
+- The staged contract in `crates/runhaven-tui/src/tui/mod.rs` mirrors the Codex data
   types the picker returns: `SelectionItem`, `SelectionViewParams`, callbacks,
   side content sizing, event sender, and the standard popup hint.
 - `pets/picker.rs` and `pets/preview.rs` stay compiled and tested. They are not
@@ -307,7 +307,7 @@ Why leaving and adapting is better than removing:
 - `terminal_probe.rs` preserves Codex's short startup probes for default colors,
   cursor position, and keyboard enhancement support.
 - RunHaven keeps the Codex motion primitive boundary test, but points it at
-  `src/runhaven/cli/tui/` and uses RunHaven's existing `regex` dependency
+  `crates/runhaven-tui/src/tui/` and uses RunHaven's existing `regex` dependency
   instead of Codex's `codex_utils_cargo_bin` test helper.
 - The Unix default-color requery path uses the vendored bounded terminal probe
   instead of Codex's fork-only crossterm color-query helpers. Revisit this only
@@ -333,7 +333,7 @@ Why leaving and adapting is better than removing:
 
 ### Earlier RunHaven Zork Implementation
 
-Decision: leave `src/runhaven/cli/tui/zork/` absent from the raw Codex vendor
+Decision: leave `crates/runhaven-tui/src/tui/zork/` absent from the raw Codex vendor
 baseline.
 
 Why removal is acceptable for the baseline:
@@ -362,7 +362,7 @@ The first milestone is a clean vendor baseline:
 ## Known Integration Gaps
 
 - The first compile gap after the reset was RunHaven's missing module entrypoint.
-  `src/runhaven/cli/tui/mod.rs` now keeps the crate buildable and dispatches to
+  `crates/runhaven-tui/src/tui/mod.rs` now keeps the crate buildable and dispatches to
   a temporary RunHaven-owned read-only launch preview while the vendored Codex
   entrypoint is adapted.
 - The lower native pet runtime, terminal protocol detection, frame extraction,

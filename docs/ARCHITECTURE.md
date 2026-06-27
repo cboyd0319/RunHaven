@@ -9,8 +9,8 @@ The TUI opens for a bare `runhaven` on an interactive terminal and reuses the
 same planner, profiles, records, diagnostics, run-control, and provider policy
 as the CLI. Piped, redirected, or explicit-subcommand use stays on the CLI.
 
-The Tauri scaffold lives under `src-tauri/` and `ui/`. The Tauri crate depends
-on the root Rust library and exposes typed commands for setup, dashboard,
+The Tauri scaffold lives under `src-tauri/` and `ui/`. The Tauri crate is a
+workspace member, depends on `runhaven-core`, and exposes typed commands for setup, dashboard,
 profile, folder-pick, run-plan review, confirmed launch, run status, bounded
 log snapshots, stop, kill, repair, and secret-free diagnostics. It does not
 expose a shell, filesystem, process, HTTP, or Apple `container` bridge to
@@ -26,24 +26,20 @@ validators, records, provider policy, auth metadata, and cleanup rules.
 
 ## Source Organization
 
-Rust source under `src/runhaven/` is organized by ownership boundary:
+Rust source is split by ownership boundary across workspace crates:
 
-| Module | Owns |
+| Crate or directory | Owns |
 | --- | --- |
-| `cli/` | Clap schema, command dispatch, CLI text rendering, setup guide, and the TUI screens. It does not own runtime, policy, or persistence truth. |
-| `doctor.rs`, `doctor/` | Host prerequisite checks, Apple `container` pin checks, and shared readiness data for CLI, Tauri, TUI, and runtime preflight. |
-| `diagnostics.rs` | Secret-free shared diagnostics data: provider egress log readers, auth broker log readers, and auth status payloads. Human explanations and CLI prose stay in `cli/diagnostics.rs`. |
-| `image/` | Bundled image context materialization, image build plans, image doctor, and builder diagnostics. |
-| `provider/` | Provider egress policy, host-side proxy runtime, auth broker runtime, auth profile metadata, endpoint records, and provider/auth observability writes. |
-| `records/` | Completed-run ledger facade, generic JSONL reading, run-history records, log joins, and diff routing. Run history lives under `records/run_history.rs` and `records/run_history/`; `records/history` is only a compatibility re-export. |
-| `runtime/` | Plan construction, launch, login, active-run control, state volumes, state locks, networks, profiles, sessions, and worktrees. |
-| `support/` | Small shared helpers with no CLI ownership: git, paths, project-check suggestions, shell formatting, and validators. |
-| `harness/` | Repo pin policy logic used by local checks. |
+| `crates/runhaven/` | Binary entrypoints only: `runhaven` and `runhaven-check-pins`. It does not contain shared library truth. |
+| `crates/runhaven-core/` | Runtime, provider egress, auth broker metadata, records, image handling, doctor checks, diagnostics, support helpers, pin-policy logic, and shared UI contracts. |
+| `crates/runhaven-cli/` | Clap schema, command dispatch, CLI text rendering, setup guide, and human presentation. It depends on core data instead of owning runtime, policy, or persistence truth. |
+| `crates/runhaven-tui/` | Codex-vendored terminal UI source plus RunHaven TUI adapters. It consumes core UI contracts and runtime data. |
+| `src-tauri/` | Desktop Rust shell. It depends on `runhaven-core` and exposes narrow typed commands to the untrusted WebView. |
+| `ui/` | Svelte frontend for the alpha desktop shell. |
 
-The flat exports in `src/lib.rs` are a compatibility facade for Tauri and any
-external callers. Internal `src/runhaven` code imports explicit
-`crate::runhaven::...` paths so reviews can see which boundary a dependency
-crosses.
+The `runhaven` package is binary-only. Do not reintroduce a root compatibility
+facade; shared behavior belongs in `runhaven-core`, and presentation belongs in
+the CLI, TUI, or Tauri layer that renders it.
 
 ## Runtime Pattern
 
@@ -237,8 +233,8 @@ runhaven auth status
 runhaven auth explain codex
 ```
 
-`src/runhaven/provider/auth_profiles.rs` records per-profile auth surfaces,
-current safe paths, and broker notes. `src/runhaven/provider/auth_broker.rs`
+`crates/runhaven-core/src/provider/auth_profiles.rs` records per-profile auth surfaces,
+current safe paths, and broker notes. `crates/runhaven-core/src/provider/auth_broker.rs`
 owns the host-side API-key broker for Codex, Claude, and Gemini. `runhaven auth`
 reads static metadata only. It does not inspect Keychain, browser profiles,
 provider login caches, cloud credential files, or environment values. During a

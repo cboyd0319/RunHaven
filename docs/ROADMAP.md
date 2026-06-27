@@ -143,8 +143,8 @@ current-stable pins, and keep the harness state current.
 
 ## Pre-Release Codebase Health Gates
 
-- Rust conversion and modularization completed with source organized under
-  `src/runhaven/` by ownership boundary.
+- Rust conversion and modularization completed with source organized into
+  workspace crates by ownership boundary.
 - keep source size and cohesion checks active so command surfaces, policy logic,
   run-state handling, and verification helpers remain reviewable.
 - review touched Rust, Tauri, and frontend files for duplication and

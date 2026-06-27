@@ -6,12 +6,13 @@ are no active CI action dependencies to pin.
 
 ## Required Pins
 
-- Rust direct dependencies use exact `=` versions in `Cargo.toml`.
-- Tauri Rust direct dependencies use exact `=` versions in
-  `src-tauri/Cargo.toml`.
+- Rust direct dependencies use exact `=` versions in root
+  `Cargo.toml` workspace dependencies.
+- Workspace member crates, including `src-tauri`, consume those pinned
+  dependencies through `workspace = true`.
 - Rust toolchain version is pinned in `rust-toolchain.toml` and `pins.toml`.
-- `Cargo.lock` is checked in for reproducible CLI builds.
-- `src-tauri/Cargo.lock` is checked in for reproducible desktop-shell builds.
+- `Cargo.lock` is checked in for reproducible workspace builds, including the
+  CLI, TUI, core library, and Tauri shell.
 - Frontend direct dependencies use exact versions in `ui/package.json`, and
   `ui/package-lock.json` is checked in.
 - If GitHub Actions workflows are reintroduced, actions must use immutable
@@ -54,8 +55,8 @@ The source record for current-version checks is
   GTK backend (`glib 0.18` &larr; `gtk 0.18.2` &larr;
   `webkit2gtk`/`wry`/`tao`/`muda` &larr; `tauri-runtime-wry 2.11.3`) and is
   absent from the macOS `aarch64-apple-darwin` build graph
-  (`cargo tree --manifest-path src-tauri/Cargo.toml -i glib` prints nothing on
-  the host target), so no macOS build or shipped artifact compiles the
+  (`cargo tree --locked -p runhaven-tauri --target aarch64-apple-darwin -i glib`
+  prints nothing on the host target), so no macOS build or shipped artifact compiles the
   vulnerable code. It is capped at 0.18.x by `gtk 0.18.2`; the patched 0.20.0
   needs a newer gtk-rs generation Tauri does not yet use. The Dependabot alert
   was dismissed as "not used" on 2026-06-24. Revisit if Tauri advances its

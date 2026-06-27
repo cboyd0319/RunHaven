@@ -1,4 +1,6 @@
-use runhaven::diagnostics::{auth_status_payload, read_auth_broker_log, read_egress_policy_log};
+use runhaven_core::diagnostics::{
+    auth_status_payload, read_auth_broker_log, read_egress_policy_log,
+};
 use serde_json::Value;
 
 use crate::contracts::{

@@ -1,6 +1,6 @@
 # TUI Architecture Patterns
 
-Reference guidance for the RunHaven terminal UI (`src/runhaven/cli/tui/` and its
+Reference guidance for the RunHaven terminal UI (`crates/runhaven-tui/src/tui/` and its
 submodules), drawn from studying the Codex `ratatui` TUI and adapting its
 component approach to RunHaven's launcher and manager domain.
 
@@ -29,8 +29,8 @@ For RunHaven, the first seam is:
 
 ```text
 RunHaven planner/state/records
-  -> src/runhaven/ui_contracts.rs
-  -> Ratatui widgets in src/runhaven/cli/tui/
+  -> crates/runhaven-core/src/ui_contracts.rs
+  -> Ratatui widgets in crates/runhaven-tui/src/tui/
   -> optional Tauri or React renderers from the same payloads
 ```
 
@@ -82,7 +82,7 @@ Do not parse CLI prose or import shared data from `cli/app.rs`.
 
 The pre-reset custom TUI split remains useful design history, but it is not the
 active source shape during the Codex vendor reset. The active source under
-`src/runhaven/cli/tui/` is a Codex source snapshot plus a staged `mod.rs`
+`crates/runhaven-tui/src/tui/` is a Codex source snapshot plus a staged `mod.rs`
 adapter that keeps the crate buildable while integration proceeds.
 
 Target ownership for the rebuilt source remains:

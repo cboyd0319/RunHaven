@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run the local macOS verification harness for RunHaven.
-# Checks Rust formatting, TUI snapshots, tests, clippy, pin policy,
-# harness state, frontend, Tauri, diff hygiene, and build output.
+# Checks Rust formatting, TUI snapshots, workspace tests, clippy, pin policy,
+# harness state, frontend, Tauri packaging, diff hygiene, and build output.
 set -euo pipefail
 
 echo "== Harness verification for RunHaven =="
@@ -32,14 +32,14 @@ fi
 echo "== cargo fmt --check =="
 cargo fmt --check
 
-echo "== cargo test --locked tui =="
-cargo test --locked tui
+echo "== cargo test --workspace --locked tui =="
+cargo test --workspace --locked tui
 
-echo "== cargo test --locked =="
-cargo test --locked
+echo "== cargo test --workspace --locked =="
+cargo test --workspace --locked
 
-echo "== cargo clippy --all-targets -- -D warnings =="
-cargo clippy --all-targets -- -D warnings
+echo "== cargo clippy --workspace --all-targets --locked -- -D warnings =="
+cargo clippy --workspace --all-targets --locked -- -D warnings
 
 echo "== cargo run --locked --bin runhaven-check-pins =="
 cargo run --locked --bin runhaven-check-pins
@@ -72,24 +72,15 @@ if [ -f "ui/package.json" ]; then
 
   echo "== npm --prefix ui run test:e2e =="
   npm --prefix ui run test:e2e
+
+  if [ -f "src-tauri/Cargo.toml" ]; then
+    echo "== npm --prefix ui run tauri:build =="
+    npm --prefix ui run tauri:build
+  fi
 fi
 
-if [ -f "src-tauri/Cargo.toml" ]; then
-  echo "== cargo fmt --manifest-path src-tauri/Cargo.toml --check =="
-  cargo fmt --manifest-path src-tauri/Cargo.toml --check
-
-  echo "== cargo test --manifest-path src-tauri/Cargo.toml --locked =="
-  cargo test --manifest-path src-tauri/Cargo.toml --locked
-
-  echo "== cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings =="
-  cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
-
-  echo "== npm --prefix ui run tauri:build =="
-  npm --prefix ui run tauri:build
-fi
-
-echo "== cargo build --locked =="
-cargo build --locked
+echo "== cargo build --workspace --locked =="
+cargo build --workspace --locked
 
 echo "== git diff --check =="
 git diff --check
