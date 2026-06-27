@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run the local macOS verification harness for RunHaven.
-# Checks Rust formatting, tests, clippy, pin policy, harness state,
-# frontend, Tauri, diff hygiene, and build output.
+# Checks Rust formatting, TUI snapshots, tests, clippy, pin policy,
+# harness state, frontend, Tauri, diff hygiene, and build output.
 set -euo pipefail
 
 echo "== Harness verification for RunHaven =="
@@ -31,6 +31,9 @@ fi
 
 echo "== cargo fmt --check =="
 cargo fmt --check
+
+echo "== cargo test --locked tui =="
+cargo test --locked tui
 
 echo "== cargo test --locked =="
 cargo test --locked

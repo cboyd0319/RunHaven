@@ -12,17 +12,20 @@ use ratatui::layout::{Constraint, Layout};
 use ratatui::text::{Line, Text};
 use ratatui::widgets::{Block, List, ListState, Paragraph};
 use ratatui::{DefaultTerminal, Frame};
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use crate::runhaven::provider::auth_profiles::{agent_broker, agent_sign_in};
 use crate::runhaven::runtime::launch::launch_run_plan;
 use crate::runhaven::runtime::plans::{AgentRunPlan, default_network_mode};
 use crate::runhaven::runtime::profiles::{AgentProfile, profiles};
+use crate::runhaven::support::paths::runs_log_path;
 
 mod codex;
 mod color;
 mod event_loop;
+mod guide_views;
 mod history;
 mod history_views;
 mod input;
@@ -72,6 +75,7 @@ enum Screen {
     HistoryDetail,
     Diagnostics,
     Doctor,
+    Guide,
 }
 
 #[derive(Debug)]
@@ -96,12 +100,17 @@ struct App {
     pet_image_protocol: Option<codex::image_protocol::ImageProtocol>,
     pending_pet_draw: Option<pet::PetImageDraw>,
     pet_image_state: pet::PetImageRenderState,
+    lighthouse: bool,
 }
 
 impl App {
     fn new() -> Self {
         let workspace = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        Self::with_settings_and_workspace(TuiSettings::from_env(), workspace)
+        let mut app = Self::with_settings_and_workspace(TuiSettings::from_env(), workspace);
+        if Self::should_start_with_guide(&runs_log_path()) {
+            app.screen = Screen::Guide;
+        }
+        app
     }
 
     fn with_settings_and_workspace(settings: TuiSettings, workspace: PathBuf) -> Self {
@@ -133,6 +142,14 @@ impl App {
             pet_image_protocol,
             pending_pet_draw: None,
             pet_image_state: pet::PetImageRenderState::default(),
+            lighthouse: false,
+        }
+    }
+
+    fn should_start_with_guide(runs_log: &Path) -> bool {
+        match fs::metadata(runs_log) {
+            Ok(metadata) => metadata.len() == 0,
+            Err(error) => error.kind() == std::io::ErrorKind::NotFound,
         }
     }
 
@@ -216,6 +233,7 @@ impl App {
                 self.palette,
                 self.ticks,
             ),
+            Screen::Guide => guide_views::render_guide(frame, self.settings, self.palette),
         }
     }
 
@@ -331,10 +349,18 @@ impl App {
         render_footer(
             frame,
             footer,
-            "w workspace · enter inspect · r review · d dashboard · h history · g diagnostics · p pet · q quit",
-            tooltips::tip_for_tick(self.ticks),
+            "? guide · w workspace · enter inspect · r review · d dashboard · h history · g diagnostics · p pet · q quit",
+            self.home_tip(),
             self.palette,
         );
+    }
+
+    fn home_tip(&self) -> &'static str {
+        if self.lighthouse {
+            "Lighthouse mode: keep the workspace bounded and the provider channel visible."
+        } else {
+            tooltips::tip_for_tick(self.ticks)
+        }
     }
 
     fn render_detail(&self, frame: &mut Frame) {

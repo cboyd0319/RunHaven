@@ -309,6 +309,11 @@ fn dashboard_opens_from_home_and_returns() {
 fn history_and_diagnostics_screens_are_reachable() {
     let mut app = test_app();
 
+    app.handle_key(KeyCode::Char('?'));
+    assert!(matches!(app.screen, Screen::Guide));
+    app.handle_key(KeyCode::Esc);
+    assert!(matches!(app.screen, Screen::Home));
+
     app.handle_key(KeyCode::Char('h'));
     assert!(matches!(app.screen, Screen::History));
     app.handle_key(KeyCode::Char('g'));
@@ -319,6 +324,48 @@ fn history_and_diagnostics_screens_are_reachable() {
     assert!(matches!(app.screen, Screen::Diagnostics));
     app.handle_key(KeyCode::Esc);
     assert!(matches!(app.screen, Screen::Home));
+}
+
+#[test]
+fn guide_routes_to_primary_workflows() {
+    let mut app = test_app();
+    app.screen = Screen::Guide;
+
+    app.handle_key(KeyCode::Char('g'));
+    assert!(matches!(app.screen, Screen::Diagnostics));
+    app.screen = Screen::Guide;
+    app.handle_key(KeyCode::Char('h'));
+    assert!(matches!(app.screen, Screen::History));
+    app.screen = Screen::Guide;
+    app.handle_key(KeyCode::Char('d'));
+    assert!(matches!(app.screen, Screen::Runs));
+}
+
+#[test]
+fn first_run_guide_depends_on_run_history_log() {
+    let dir = tempdir().expect("tempdir");
+    let runs_log = dir.path().join("runs.jsonl");
+
+    assert!(App::should_start_with_guide(&runs_log));
+
+    std::fs::write(&runs_log, "").expect("write empty run log");
+    assert!(App::should_start_with_guide(&runs_log));
+
+    std::fs::write(&runs_log, "{\"run_id\":\"rh-test\"}\n").expect("write run log");
+    assert!(!App::should_start_with_guide(&runs_log));
+}
+
+#[test]
+fn lighthouse_mode_is_hidden_home_only_toggle() {
+    let mut app = test_app();
+
+    assert!(!app.lighthouse);
+    app.handle_key(KeyCode::Char('~'));
+    assert!(app.lighthouse);
+    assert!(app.home_tip().contains("Lighthouse mode"));
+    app.screen = Screen::Guide;
+    app.handle_key(KeyCode::Char('~'));
+    assert!(app.lighthouse);
 }
 
 #[test]
@@ -439,6 +486,28 @@ fn line_mode_uses_text_banner_without_mascot_blocks() {
 }
 
 #[test]
+fn phase_five_screens_render_in_line_mode() {
+    let settings = TuiSettings {
+        line_mode: true,
+        ..TuiSettings::default()
+    };
+    let mut app = App::with_settings_and_workspace(settings, PathBuf::from("/workspace"));
+    seed_history(&mut app);
+    let mut terminal = Terminal::new(TestBackend::new(80, 24)).expect("terminal");
+
+    for screen in [
+        Screen::Guide,
+        Screen::History,
+        Screen::HistoryDetail,
+        Screen::Diagnostics,
+        Screen::Doctor,
+    ] {
+        app.screen = screen;
+        terminal.draw(|frame| app.render(frame)).expect("render");
+    }
+}
+
+#[test]
 fn tick_updates_app_clock_state() {
     let mut app = test_app();
     app.on_tick(Tick {
@@ -545,6 +614,14 @@ fn control_snapshot_80x24() {
     app.screen = Screen::Control;
     let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
     insta::assert_snapshot!("tui_control_80x24", snapshot);
+}
+
+#[test]
+fn guide_snapshot_80x24() {
+    let mut app = test_app();
+    app.screen = Screen::Guide;
+    let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
+    insta::assert_snapshot!("tui_guide_80x24", snapshot);
 }
 
 #[test]

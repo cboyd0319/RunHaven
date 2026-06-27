@@ -48,7 +48,20 @@ pub(super) fn render_runs(
     }
     frame.render_stateful_widget(run_list, runs_area, &mut run_state);
 
-    let mut status_lines = if run_manager.runs.is_empty() {
+    let notifications = run_manager.notifications();
+    let mut status_lines = Vec::new();
+    if !notifications.is_empty() {
+        for notification in notifications {
+            push_wrapped_line(
+                &mut status_lines,
+                format!("Notice: {notification}"),
+                palette.accent(),
+                status_area.width as usize,
+            );
+        }
+        status_lines.push(Line::from(""));
+    }
+    status_lines.extend(if run_manager.runs.is_empty() {
         let mut lines = Vec::new();
         push_wrapped_line(
             &mut lines,
@@ -64,7 +77,7 @@ pub(super) fn render_runs(
             status_area.width as usize,
             palette,
         )
-    };
+    });
     if let Some(message) = &run_manager.message {
         status_lines.push(Line::from(""));
         push_wrapped_line(

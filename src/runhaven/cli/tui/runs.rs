@@ -419,6 +419,51 @@ impl RunManagerState {
         self.refresh_dashboard();
         Ok(())
     }
+
+    pub(crate) fn notifications(&self) -> Vec<String> {
+        let mut notifications = Vec::new();
+        if let Some(error) = &self.status_error {
+            notifications.push(format!("Status needs attention: {error}"));
+        }
+        if let Some(status) = &self.status {
+            let marker = status.marker_status.to_ascii_lowercase();
+            let container = status.container_state.to_ascii_lowercase();
+            if marker.contains("stop-requested") || marker.contains("kill-requested") {
+                notifications.push(
+                    "Run control is in progress; refresh status before sending another control."
+                        .to_string(),
+                );
+            }
+            if container.contains("exited")
+                || container.contains("stopped")
+                || container.contains("not found")
+            {
+                notifications.push(
+                    "Run may be done or stale; review logs/history, then repair the marker if needed."
+                        .to_string(),
+                );
+            }
+            if marker.contains("repair") || marker.contains("stale") {
+                notifications.push(
+                    "Active marker may be stale; use repair after confirming the container is gone."
+                        .to_string(),
+                );
+            }
+        }
+        if let Some(snapshot) = &self.logs.snapshot {
+            let lower = snapshot.text.to_ascii_lowercase();
+            if lower.contains("waiting for input")
+                || lower.contains("press enter")
+                || lower.contains("device code")
+            {
+                notifications.push(
+                    "Output may be waiting for input; use the CLI attach path for interactive input."
+                        .to_string(),
+                );
+            }
+        }
+        notifications
+    }
 }
 
 pub(crate) fn egress_decisions_for_run(entries: &[Value], run_id: &str) -> Vec<EgressDecision> {
@@ -644,5 +689,40 @@ mod tests {
         let visible = viewer.visible_lines(20, 2);
         assert_eq!(visible.len(), 2);
         assert!(visible[1].matched);
+    }
+
+    #[test]
+    fn notifications_detect_done_and_waiting_states() {
+        let mut manager = RunManagerState {
+            status: Some(RunStatus {
+                marker_status: "running".to_string(),
+                container_state: "exited".to_string(),
+                started_at: "-".to_string(),
+                image: "-".to_string(),
+                resources: "-".to_string(),
+                networks: Vec::new(),
+            }),
+            ..RunManagerState::default()
+        };
+        manager.logs.set_snapshot(LogSnapshot {
+            text: "Device code login is waiting for input. Press enter.".to_string(),
+            returned_lines: 1,
+            requested_lines: 1,
+            truncated: false,
+            warnings: Vec::new(),
+        });
+
+        let notifications = manager.notifications();
+
+        assert!(
+            notifications
+                .iter()
+                .any(|message| message.contains("done or stale"))
+        );
+        assert!(
+            notifications
+                .iter()
+                .any(|message| message.contains("waiting for input"))
+        );
     }
 }

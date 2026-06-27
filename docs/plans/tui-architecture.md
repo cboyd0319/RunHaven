@@ -1,12 +1,14 @@
 # TUI Architecture Patterns
 
-Design guidance for the RunHaven terminal UI (`src/runhaven/cli/tui/` and its
+Reference guidance for the RunHaven terminal UI (`src/runhaven/cli/tui/` and its
 submodules), drawn from studying the Codex `ratatui` TUI and adapting its
 component approach to RunHaven's launcher and manager domain.
 
 RunHaven's TUI is not an agent chat; the agent's own chat runs inside the
-container. The TUI renders RunHaven's own data: profiles, run plans, egress
-policy, and run status. These patterns keep that rendering clean as it grows.
+container. The TUI renders RunHaven's own data: profiles, run plans, run records,
+egress policy, auth broker metadata, doctor checks, and active-run status. These
+patterns keep that rendering clean as it grows and make the implementation a
+reference for sibling projects.
 
 ## Single source of truth
 
@@ -35,6 +37,27 @@ diagnostics in `diagnostics.rs`, run records in `records/`, auth posture labels
 in `provider/auth_profiles.rs`, and active-run control in `runtime/active/`.
 Do not parse CLI prose or import shared data from `cli/app.rs`.
 
+## Current module map
+
+The current split is the reference shape:
+
+| Module | Ownership |
+| --- | --- |
+| `mod.rs` | TUI entrypoint, app state, render dispatch, shared home/detail rendering, terminal overlay lifecycle. |
+| `input.rs` | Keyboard navigation and action routing. Keep key behavior testable here instead of scattering it through draw code. |
+| `theme.rs`, `color.rs`, `event_loop.rs` | Domain-agnostic settings, palettes, color math, and deterministic tick timing. |
+| `widgets.rs`, `tooltips.rs` | Shared draw helpers and RunHaven-authored footer tips. Widgets draw data; they do not query the domain. |
+| `launcher.rs` | Workspace picker, plan review, confirm state, and launch-plan construction over the shared planner. |
+| `runs.rs`, `run_views.rs` | Active-run state, egress/log/control adapters, dashboard notices, and dashboard/log/control rendering. |
+| `history.rs`, `history_views.rs` | Run history, diff review, diagnostics, terminal capability, doctor state, and their views. |
+| `guide_views.rs` | First-run and help guide. It routes users to existing workflows; it does not own product logic. |
+| `pet.rs`, `mascot.rs`, `mascot/`, `codex/` | Branding, Cubby pet rendering, and attributed Codex-derived terminal graphics primitives. |
+| `snapshot.rs`, `test_backend.rs` | VT100 snapshot harness used by screen regression tests. |
+
+If a new screen needs shared data, add the data API outside `cli/` first. If a
+new draw helper has no RunHaven dependency, keep it in the framework modules so
+it remains extractable later.
+
 ## Cards
 
 Render structured data as self-contained "cards" in two shapes:
@@ -57,10 +80,12 @@ pad-or-truncate that clips to the available width. The existing shared three-row
 
 ## Palette and color mode
 
-When theming arrives, put it in one `tui` palette module: a `ColorMode`
-(Dark or Light) detected from the terminal background, a `Palette`, status
-colors, and progress thresholds. Honor the mode you detect; a `ColorMode::Light`
-that returns the dark palette is a bug, not a feature.
+Theme state lives in `theme.rs`: `TuiSettings`, `ColorMode`, `MotionMode`, and
+`Palette`. `NO_COLOR`, `RUNHAVEN_TUI_REDUCED_MOTION=1`,
+`RUNHAVEN_TUI_LINE_MODE=1`, `RUNHAVEN_TUI_PET=0`, and
+`RUNHAVEN_TUI_COLOR_MODE=light|dark` are the supported environment switches.
+Honor the selected mode; a `ColorMode::Light` that returns the dark palette is a
+bug, not a feature.
 
 ## The TUI and the desktop app share data, not duplicated logic
 
@@ -91,6 +116,9 @@ data plumbing, the static counterpart to the animated pet (the lifecycle mark in
 
 ## Parity and tests
 
-For each card, keep a fixture and a test that renders it with `TestBackend`
-without panicking, and assert the data mapping. This is cheap and catches layout
-regressions and bad data handling early.
+For each card or screen, keep a fixture and a test that renders it with
+`TestBackend` without panicking, and assert the data mapping. The current VT100
+snapshot set covers the guide, home, detail, workspace, plan, confirm,
+dashboard, logs, control, history, history detail, diagnostics, and doctor
+screens. Keep snapshots deterministic: inject settings, workspace paths, records,
+and tick state instead of depending on local machine state.

@@ -11,13 +11,13 @@
 
 > [!CAUTION]
 > **Pre-release: `v0.5.0`, CLI-complete.** The latest cut is a pre-1.0,
-> CLI-only pre-release. This checkout adds an unreleased terminal UI over
+> CLI-only pre-release. This checkout includes an unreleased terminal UI over
 > the same planner, run records, diagnostics, and run-control cores. The desktop
 > app remains alpha. Container and image layouts, run-record formats, provider
 > allowlists, auth-broker behavior, TUI behavior, desktop behavior, and `--json`
 > outputs may still change before a stable release.
 
-RunHaven is a Rust CLI with an in-progress terminal UI and an alpha
+RunHaven is a Rust CLI with an unreleased terminal UI and an alpha
 Tauri/Svelte desktop shell for running Claude Code, Codex, Gemini, Antigravity,
 Copilot, or custom coding agents inside Apple `container` on macOS 26+ (Apple
 silicon only). It does not replace those tools. It gives them a repeatable local
@@ -33,7 +33,7 @@ login is never read or mounted.
 | Surface | Status | Use it for |
 | --- | --- | --- |
 | CLI | `v0.5.0` pre-release, complete for the current command contract | Automation, explicit commands, recovery, diagnostics, and the stable backend for every UI. |
-| Terminal UI | Active development in this checkout | Guided launch, plan review, active-run dashboard, bounded log snapshots, stop/kill/repair, run history and diff review, diagnostics, and doctor checks from a bare interactive `runhaven`. |
+| Terminal UI | Build-plan complete in this checkout, unreleased | Guided launch, first-run guide, plan review, active-run dashboard, bounded log snapshots, stop/kill/repair, run history and diff review, diagnostics, and doctor checks from a bare interactive `runhaven`. |
 | Desktop app | Alpha scaffold | Typed setup, launch, status, bounded logs, run control, and diagnostics. More maintenance and worktree flows remain CLI-first. |
 
 ## Why RunHaven
@@ -95,9 +95,10 @@ Or open the terminal UI on an interactive terminal:
 runhaven
 ```
 
-The TUI is a guided launcher, run dashboard, history/diff viewer, diagnostics
-surface, and doctor view over the same Rust backend. It does not replace the
-CLI: subcommands, pipes, and redirected invocations still use the CLI directly.
+The TUI is a guided launcher, first-run guide, run dashboard, history/diff
+viewer, diagnostics surface, and doctor view over the same Rust backend. It does
+not replace the CLI: subcommands, pipes, and redirected invocations still use
+the CLI directly.
 
 Use the smallest project directory the agent needs. RunHaven mounts that
 directory at `/workspace`, not your whole home directory. See
@@ -166,17 +167,17 @@ runhaven network list
 runhaven image doctor
 ```
 
-The TUI exposes active-run status, bounded log snapshots, stop/kill/repair, run
-history, diff review, diagnostics, and doctor checks over the same validated
-cores. Worktree merge/discard, image rebuild, state cleanup, and network cleanup
-remain CLI-first today.
+The TUI exposes active-run status, bounded log snapshots, stop/kill/repair,
+run-done and waiting-for-input notices, run history, diff review, diagnostics,
+and doctor checks over the same validated cores. Worktree merge/discard, image
+rebuild, state cleanup, and network cleanup remain CLI-first today.
 
 ## Status and roadmap
 
 RunHaven is alpha/pre-release. `v0.5.0` is the CLI-only pre-release already cut.
-Current development is building the TUI as a first-class reference
-implementation over the same CLI backend. The Tauri/Svelte desktop shell is
-alpha: it can read setup, dashboard, profile, folder-pick, and run-plan state
+This checkout now contains the completed TUI build-plan implementation as a
+first-class reference over the same CLI backend. The Tauri/Svelte desktop shell
+is alpha: it can read setup, dashboard, profile, folder-pick, and run-plan state
 and supports confirmed launch, image readiness, sanitized live status, bounded
 output snapshots, stop, kill, repair, and secret-free diagnostics. Image build,
 state cleanup, network cleanup, and worktree review remain CLI-first.
@@ -191,9 +192,9 @@ The roadmap now separates the active TUI build from the later desktop release
 - **Runtime and security hardening:** completed slices are recorded in the
   roadmap and state files; keep runtime evidence current when the boundary is
   touched.
-- **First-class terminal UI, active:** a bare interactive `runhaven` opens a
-  guided launcher and run manager over the shared planner and policy. The CLI
-  stays the complete explicit and automation surface.
+- **First-class terminal UI, build plan complete:** a bare interactive
+  `runhaven` opens a guided launcher and run manager over the shared planner and
+  policy. The CLI stays the complete explicit and automation surface.
 - **Remaining non-UI scope and CLI public release:** promote one design-first
   item at a time without weakening CLI semantics or default safety.
 - **First-class desktop app, later:** the Tauri app becomes the easiest safe

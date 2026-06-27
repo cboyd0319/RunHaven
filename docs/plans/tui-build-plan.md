@@ -100,11 +100,11 @@ which is TUI-safe. Stick to source for the terminal-specific hard parts.
 | `selection_list.rs` | foundation | reusable selection primitive for the pickers |
 | `clipboard` (OSC 52) | foundation | copy the equivalent CLI command, a path, a run receipt |
 | `color.rs` | Phase 0 (with theme) | pure color math (light/dark, blend, distance) |
-| `diff_render.rs` + `diff_model.rs` | vendor at Phase 4 | "what did the agent change" run/worktree diff |
+| `diff_render.rs` + `diff_model.rs` | evaluated at Phase 4, not vendored | RunHaven uses its own `records::run_diff_text` data path and text diff view rather than pulling Codex git helpers |
 | `pager_overlay.rs` | evaluated at Phase 3, not vendored | upstream transcript/chat overlay is tied to Codex history cells, keymaps, and app events; RunHaven ships a dedicated bounded log viewer instead |
-| `status_indicator_widget.rs` / throbber | Phase 4 or 5 if needed | spinners during waits |
-| `onboarding/` | reference at Phase 5 | guided first-run pattern (build our own) |
-| `notifications/` | Phase 5 | run-done / waiting-for-input alerts |
+| `status_indicator_widget.rs` / throbber | not vendored | doctor and diagnostics remain static/plain until a real async spinner is needed |
+| `onboarding/` | referenced at Phase 5, not vendored | RunHaven ships its own first-run guide over the shared planner/run surfaces |
+| `notifications/` | referenced at Phase 5, not vendored | RunHaven ships dashboard notices from active-run state and bounded log snapshots |
 | `markdown_render.rs` / `markdown.rs` | reference | rich help/remediation (or `pulldown-cmark` directly) |
 | `terminal_palette.rs` / `terminal_probe.rs` | reference (heavy) | true terminal-aware default colors |
 | `tooltips.{rs,txt}` | reference only | idea is great; write RunHaven's own tips + a ~10-line picker |
@@ -175,21 +175,26 @@ The directory-and-provider front door.
   destructive surfaces), routed through the existing validated run-control
   cores.
 
-### Phase 4 - History and diagnostics
+### Phase 4 - History and diagnostics (complete)
 
 - Run history with per-run records and "what changed" diff review
   (`diff_render`).
 - Diagnostics: egress log, auth status, and a terminal/render capability probe.
 - `doctor`: prerequisite checks with spinners and inline remediation.
 
-### Phase 5 - Polish
+### Phase 5 - Polish (complete)
 
-- Guided onboarding (first-run).
-- Run-done / waiting-for-input notifications.
-- Full accessibility pass: `NO_COLOR`, reduced-motion, colorblind-safe, line-mode
-  fallback verified.
-- Themes; the lighthouse easter egg (per the brand doc's guardrails).
-- Complete snapshot coverage; the architecture doc finalized as the reference
+- Guided onboarding: a fresh cache opens the RunHaven Guide first, and `?`/F1
+  opens it later from the main screens.
+- Run-done / waiting-for-input notifications: the dashboard surfaces explicit
+  notices for stale/done runs, control transitions, status errors, and output
+  that appears to be waiting for interactive input.
+- Full accessibility pass: `NO_COLOR`, reduced-motion, colorblind-safe palettes,
+  line-mode fallback, and `RUNHAVEN_TUI_COLOR_MODE=light|dark` are documented
+  and covered by focused render tests.
+- Themes and lighthouse easter egg: light/dark palette selection is implemented,
+  and the restrained safe-harbor lighthouse mode is a Home-only footer reveal.
+- Complete snapshot coverage; the architecture doc is finalized as the reference
   guide for sibling projects.
 
 ## Reference-quality bar (every phase)
@@ -214,11 +219,10 @@ TUI rather than printed text:
   status/log cores and the provider runtime writes egress decision deltas during
   provider-mode execution.
 - Phase 4 (history, diagnostics) needs run records and the egress/auth logs as
-  data. Complete prerequisite: `src/runhaven/records/` now exposes a real
-  facade over `run_history` and JSONL IO, `src/runhaven/diagnostics.rs` owns
-  secret-free log readers/status payloads, and `src/runhaven/doctor.rs` owns
-  shared host readiness checks. TUI Phase 4 should consume those data modules,
-  not CLI prose.
+  data. Complete: `src/runhaven/records/` exposes a real facade over
+  `run_history` and JSONL IO, `src/runhaven/diagnostics.rs` owns secret-free log
+  readers/status payloads, and `src/runhaven/doctor.rs` owns shared host
+  readiness checks. TUI Phase 4 consumes those data modules, not CLI prose.
 
 Any structured output the TUI needs that the CLI does not yet expose is a CLI gap
 to close in the shared library, not text to re-parse. These are surfaced per
@@ -267,5 +271,10 @@ phase as they arise.
   prerequisite checks plus inline remediation. Diff review uses the shared
   `records::run_diff_text` API; diagnostics and doctor consume
   `diagnostics.rs` and `doctor.rs` data rather than CLI prose.
-- Next: Phase 5 polish: guided onboarding, notifications, accessibility
-  polish, themes, final snapshot coverage, and architecture finalization.
+- Complete: Phase 5 polish. A fresh cache starts on the RunHaven Guide and
+  `?`/F1 opens it later; the dashboard emits plain notices for status errors,
+  control transitions, stale/done runs, and output that appears to be waiting for
+  input; accessibility controls cover no-color, reduced-motion, line-mode, and
+  explicit light/dark palette selection; VT100 snapshots now cover guide,
+  launcher, dashboard, logs, control, history, diagnostics, and doctor screens;
+  and the architecture guide is finalized around the framework/screen seam.

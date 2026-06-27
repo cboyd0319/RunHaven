@@ -20,9 +20,12 @@ a launcher and manager over the same agents and run planner as the CLI:
 runhaven
 ```
 
-The TUI is a guided launcher plus live run dashboard. Use up/down to choose an
-agent, `w` to choose a workspace, `r` to review the run boundary, `d` to open
-the dashboard, enter to move through detail/review/confirm, and esc to go back.
+On a fresh RunHaven cache, the TUI opens the guide first. Press esc to return to
+home, or press `?`/F1 from the main screens to open the guide again. Use up/down
+to choose an agent, `w` to choose a workspace, `r` to review the run boundary,
+`d` to open the dashboard, `h` to review run history and diffs, `g` to open
+diagnostics, enter to move through detail/review/confirm, and esc to go back.
+
 The review screen is built from the same planner as `runhaven plan`: it shows
 the workspace mount, state volume, network mode, provider egress posture,
 explicit non-mounts such as host home and credential folders, and the
@@ -45,6 +48,12 @@ Stop, hard-stop, and stale-marker repair are available from the dashboard with
 container and requires typing the action phrase before RunHaven calls the same
 validated run-control core used by the CLI.
 
+Completed-run history and per-run diff review are available with `h`.
+Diagnostics are available with `g` and show provider egress metadata, auth
+broker metadata, terminal rendering capability, and a doctor screen with inline
+remediation. The dashboard also surfaces plain notices when a run looks done,
+stale, in control-transition, or likely waiting for interactive input.
+
 Cubby, the RunHaven pet, is visible by default. Press `p` to hide or show it for
 the current session. Set `RUNHAVEN_TUI_PET=0` to start with the pet hidden.
 
@@ -52,9 +61,10 @@ On terminals with Kitty graphics, Sixel, or iTerm2 3.6+ support, Cubby can use a
 high-resolution image overlay; otherwise it falls back to a terminal-safe
 half-block sprite. `NO_COLOR` disables color, `RUNHAVEN_TUI_REDUCED_MOTION=1`
 keeps Cubby static, and `RUNHAVEN_TUI_LINE_MODE=1` starts a simpler text-first
-layout without the pet. The CLI stays the complete, scriptable surface: any
-subcommand, or a piped or redirected invocation, uses the CLI directly and never
-opens the TUI. Press `q` to quit.
+layout without the pet. `RUNHAVEN_TUI_COLOR_MODE=light` or `dark` selects the
+palette. The CLI stays the complete, scriptable surface: any subcommand, or a
+piped or redirected invocation, uses the CLI directly and never opens the TUI.
+Press `q` to quit.
 
 ## Guided Setup
 

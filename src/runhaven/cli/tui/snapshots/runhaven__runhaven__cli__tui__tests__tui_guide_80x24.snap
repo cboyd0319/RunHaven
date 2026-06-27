@@ -1,0 +1,29 @@
+---
+source: src/runhaven/cli/tui/tests.rs
+assertion_line: 597
+expression: snapshot
+---
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                RunHaven Guide                                │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ First Run ───────────────────────────────────────────────────────────────────┐
+│Start with the smallest workspace the agent needs. RunHaven mounts that one   │
+│directory at /workspace.                                                      │
+│                                                                              │
+│Pick an agent, then review the plan before launch. The plan shows the         │
+│workspace, state volume, network mode, egress posture, and equivalent CLI     │
+│command.                                                                      │
+│                                                                              │
+│Secure-default plans launch with enter. Lower-security choices require        │
+│typing run.                                                                   │
+│                                                                              │
+│Use d for the active-run dashboard, h for completed run history and diffs,    │
+│and g for diagnostics. The CLI remains available for scripts, pipes,          │
+│recovery, and worktree merge/discard.                                         │
+│                                                                              │
+│Accessibility controls: NO_COLOR disables color,                              │
+│RUNHAVEN_TUI_REDUCED_MOTION=1 keeps motion static, RUNHAVEN_TUI_LINE_MODE=1   │
+│uses a text-first layout, and RUNHAVEN_TUI_COLOR_MODE=light or dark selects   │
+└──────────────────────────────────────────────────────────────────────────────┘
+   w workspace | r review | d dashboard | h history | g diagnostics | esc home
+               Every TUI action maps back to a named CLI command.

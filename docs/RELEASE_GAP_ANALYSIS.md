@@ -18,11 +18,12 @@ RunHaven remains alpha/pre-release. `v0.5.0` is the CLI-complete pre-release
 already cut.
 
 Sequencing update: the 2026-06-26 directive deferred GUI/UI work to the end of
-the roadmap. On 2026-06-27, the terminal UI was pulled forward and is now active
-as the reference TUI for sibling projects. The v1 desktop gap rows below stay
-valid for the later desktop phase; they are re-sequenced, not removed, and the
-desktop release version label is no longer locked to `v1.0.0`. The sequence of
-record is `current-state.md` and `docs/ROADMAP.md`.
+the roadmap. On 2026-06-27, the terminal UI was pulled forward as the reference
+TUI for sibling projects, and its build plan is complete in this checkout. The
+v1 desktop gap rows below stay valid for the later desktop phase; they are
+re-sequenced, not removed, and the desktop release version label is no longer
+locked to `v1.0.0`. The sequence of record is `current-state.md` and
+`docs/ROADMAP.md`.
 
 Above all else, the secure path must be the easy path. Secure defaults should
 be the shortest workflow. Supported lower-security choices should warn and
@@ -81,14 +82,14 @@ Observed desktop command families:
 
 Observed TUI command families:
 
-- implemented development surfaces: bare-TTY launch, agent detail, workspace
+- implemented development surfaces: bare-TTY launch, fresh-cache guide, `?`/F1
+  guide, agent detail, workspace
   picker, plan review, type-confirm launch, active-run dashboard, bounded log
   snapshot viewer, stop, hard-stop, stale-marker repair, run history, per-run
   diff review, egress/auth diagnostics, terminal/render capability probe, and
   TUI doctor remediation;
-- current open TUI family: Phase 5 polish (guided onboarding, notifications,
-  accessibility polish, themes, final snapshot coverage, and architecture
-  finalization).
+- Phase 5 polish completed dashboard notices, accessibility switches, light/dark
+  palette selection, final snapshot coverage, and architecture finalization.
 
 Observed maintainability pressure:
 

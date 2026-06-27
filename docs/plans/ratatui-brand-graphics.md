@@ -10,10 +10,10 @@ security boundary made visible, with motion and graphics used only where they
 communicate real state.
 
 This plan lives in the RunHaven repo at `docs/plans/ratatui-brand-graphics.md`.
-It is a parked vision document. The TUI sits at the very end of the roadmap (see
-`docs/ROADMAP.md`), after the CLI public release and the desktop app, so nothing
-here is active scope. It exists to capture the full idea space now so the future
-build starts from a clear target.
+It started as a vision document and now records the design target and follow-up
+idea bank for the active TUI implementation. The build sequence and completion
+status live in `docs/plans/tui-build-plan.md`; this document stays focused on
+experience, brand, motion, and guardrails.
 
 Capability facts below (crate versions, terminal support) were verified on
 2026-06-26 and are point-in-time. Re-verify against current sources before any
@@ -372,6 +372,12 @@ Recommended signature easter egg, the lighthouse:
 - Why it fits: it ties the brand name to the security metaphor (the light is the
   boundary that keeps a run from drifting onto your machine), it stays calm, and
   it rewards curiosity without getting in the way.
+
+Implemented Phase 5 version: the safe-harbor idea is intentionally restrained as
+a Home-only footer mode toggled by `~`. It does not run on confirmation,
+destructive, doctor, diagnostics, or history screens; it does not override
+reduced-motion or line-mode behavior; and it keeps the message focused on a
+bounded workspace and visible provider channel.
 
 Other ideas worth keeping in the bank:
 

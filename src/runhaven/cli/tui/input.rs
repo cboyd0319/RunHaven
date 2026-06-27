@@ -9,6 +9,7 @@ impl App {
         match self.screen {
             Screen::Home => match code {
                 KeyCode::Char('q') | KeyCode::Esc => return Some(TuiAction::Exit(0)),
+                KeyCode::Char('?') | KeyCode::F(1) => self.screen = Screen::Guide,
                 KeyCode::Down | KeyCode::Char('j') => self.select_next(),
                 KeyCode::Up | KeyCode::Char('k') => self.select_previous(),
                 KeyCode::Enter | KeyCode::Char('l') => self.screen = Screen::Detail,
@@ -21,10 +22,12 @@ impl App {
                     self.screen = Screen::Workspace;
                 }
                 KeyCode::Char('p') => self.toggle_pet(),
+                KeyCode::Char('~') => self.lighthouse = !self.lighthouse,
                 _ => {}
             },
             Screen::Detail => match code {
                 KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
+                KeyCode::Char('?') | KeyCode::F(1) => self.screen = Screen::Guide,
                 KeyCode::Enter | KeyCode::Char('r') => self.open_plan_review(),
                 KeyCode::Char('d') => self.open_run_dashboard(),
                 KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('h') => {
@@ -80,6 +83,7 @@ impl App {
             },
             Screen::Runs => match code {
                 KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
+                KeyCode::Char('?') | KeyCode::F(1) => self.screen = Screen::Guide,
                 KeyCode::Esc | KeyCode::Backspace | KeyCode::Char('h') => {
                     self.screen = Screen::Home
                 }
@@ -139,6 +143,7 @@ impl App {
             },
             Screen::History => match code {
                 KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
+                KeyCode::Char('?') | KeyCode::F(1) => self.screen = Screen::Guide,
                 KeyCode::Esc | KeyCode::Backspace => self.screen = Screen::Home,
                 KeyCode::Down | KeyCode::Char('j') => self.history.select_next(),
                 KeyCode::Up | KeyCode::Char('k') => self.history.select_previous(),
@@ -159,6 +164,7 @@ impl App {
             },
             Screen::Diagnostics => match code {
                 KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
+                KeyCode::Char('?') | KeyCode::F(1) => self.screen = Screen::Guide,
                 KeyCode::Esc | KeyCode::Backspace => self.screen = Screen::Home,
                 KeyCode::Char('r') => {
                     self.history
@@ -170,8 +176,22 @@ impl App {
             },
             Screen::Doctor => match code {
                 KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
+                KeyCode::Char('?') | KeyCode::F(1) => self.screen = Screen::Guide,
                 KeyCode::Esc | KeyCode::Backspace => self.screen = Screen::Home,
                 KeyCode::Char('r') => self.history.refresh_doctor(),
+                KeyCode::Char('g') => self.open_diagnostics(),
+                _ => {}
+            },
+            Screen::Guide => match code {
+                KeyCode::Char('q') => return Some(TuiAction::Exit(0)),
+                KeyCode::Esc | KeyCode::Backspace => self.screen = Screen::Home,
+                KeyCode::Char('w') => {
+                    self.launcher.open_workspace_picker();
+                    self.screen = Screen::Workspace;
+                }
+                KeyCode::Char('r') | KeyCode::Enter => self.open_plan_review(),
+                KeyCode::Char('d') => self.open_run_dashboard(),
+                KeyCode::Char('h') => self.open_history(),
                 KeyCode::Char('g') => self.open_diagnostics(),
                 _ => {}
             },
