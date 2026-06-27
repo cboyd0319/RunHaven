@@ -8,7 +8,7 @@ use std::time::Instant;
 use ratatui::style::Stylize;
 use ratatui::text::Span;
 
-use crate::shimmer::shimmer_spans;
+use crate::tui::shimmer::shimmer_spans;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum MotionMode {
@@ -119,20 +119,18 @@ mod tests {
 
     #[test]
     fn animation_primitives_are_only_used_by_motion_module() {
-        let direct_spinner = regex_lite::Regex::new(r"(^|[^A-Za-z0-9_])spinner\s*\(").unwrap();
-        let direct_shimmer =
-            regex_lite::Regex::new(r"(^|[^A-Za-z0-9_])shimmer_spans\s*\(").unwrap();
-        let lib_rs = codex_utils_cargo_bin::find_resource!("src/lib.rs")
-            .expect("failed to locate TUI source");
-        let src_dir = lib_rs.parent().expect("lib.rs should have a parent");
+        let direct_spinner = regex::Regex::new(r"(^|[^A-Za-z0-9_])spinner\s*\(").unwrap();
+        let direct_shimmer = regex::Regex::new(r"(^|[^A-Za-z0-9_])shimmer_spans\s*\(").unwrap();
+        let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/runhaven/cli/tui");
 
         let mut source_files = Vec::new();
-        collect_rust_files(src_dir, &mut source_files).expect("failed to collect TUI source files");
+        collect_rust_files(&src_dir, &mut source_files)
+            .expect("failed to collect TUI source files");
 
         let mut violations = Vec::new();
         for path in source_files {
             let relative_path = path
-                .strip_prefix(src_dir)
+                .strip_prefix(&src_dir)
                 .expect("source file should be under src")
                 .to_string_lossy()
                 .replace('\\', "/");
@@ -146,13 +144,13 @@ mod tests {
                 let code = line.split_once("//").map_or(line, |(code, _)| code);
                 if direct_spinner.is_match(code) {
                     violations.push(format!(
-                        "{relative_path}:{} contains a direct `spinner(...)` call; use crate::motion instead",
+                        "{relative_path}:{} contains a direct `spinner(...)` call; use crate::tui::motion instead",
                         line_number + 1
                     ));
                 }
                 if direct_shimmer.is_match(code) {
                     violations.push(format!(
-                        "{relative_path}:{} contains a direct `shimmer_spans(...)` call; use crate::motion instead",
+                        "{relative_path}:{} contains a direct `shimmer_spans(...)` call; use crate::tui::motion instead",
                         line_number + 1
                     ));
                 }

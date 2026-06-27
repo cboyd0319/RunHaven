@@ -1,6 +1,9 @@
 use anyhow::Result;
 
 #[allow(dead_code)]
+pub(crate) mod color;
+
+#[allow(dead_code)]
 pub(crate) mod app_event {
     #[derive(Debug, Clone, PartialEq, Eq)]
     #[allow(clippy::enum_variant_names)]
@@ -169,6 +172,8 @@ pub(crate) mod bottom_pane {
 
 #[allow(dead_code, unused_imports)]
 pub(crate) mod key_hint;
+#[allow(dead_code)]
+pub(crate) mod motion;
 #[allow(dead_code, unused_imports)]
 pub(crate) mod pets;
 #[allow(dead_code)]
@@ -224,7 +229,13 @@ pub(crate) mod render {
     }
 }
 #[allow(dead_code)]
+pub(crate) mod shimmer;
+#[allow(dead_code)]
 pub(crate) mod terminal_detection;
+#[allow(dead_code)]
+pub(crate) mod terminal_palette;
+#[allow(dead_code)]
+pub(crate) mod terminal_probe;
 #[allow(dead_code)]
 pub(crate) mod terminal_title;
 

@@ -1,7 +1,8 @@
-use crate::color::perceptual_distance;
-use codex_terminal_detection::TerminalName;
-use codex_terminal_detection::terminal_info;
 use ratatui::style::Color;
+
+use crate::tui::color::perceptual_distance;
+use crate::tui::terminal_detection::TerminalName;
+use crate::tui::terminal_detection::terminal_info;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StdoutColorLevel {
@@ -107,7 +108,7 @@ pub fn default_bg() -> Option<(u8, u8, u8)> {
 
 #[cfg(any(unix, windows))]
 pub(crate) fn set_default_colors_from_startup_probe(
-    colors: Option<crate::terminal_probe::DefaultColors>,
+    colors: Option<crate::tui::terminal_probe::DefaultColors>,
 ) {
     imp::set_default_colors_from_startup_probe(colors);
 }
@@ -115,9 +116,6 @@ pub(crate) fn set_default_colors_from_startup_probe(
 #[cfg(all(unix, not(test)))]
 mod imp {
     use super::DefaultColors;
-    use crossterm::style::Color as CrosstermColor;
-    use crossterm::style::query_background_color;
-    use crossterm::style::query_foreground_color;
     use std::sync::Mutex;
     use std::sync::OnceLock;
 
@@ -157,7 +155,7 @@ mod imp {
     }
 
     pub(super) fn set_default_colors_from_startup_probe(
-        colors: Option<crate::terminal_probe::DefaultColors>,
+        colors: Option<crate::tui::terminal_probe::DefaultColors>,
     ) {
         if let Ok(mut cache) = default_colors_cache().lock() {
             cache.value = colors.map(|colors| DefaultColors {
@@ -175,18 +173,7 @@ mod imp {
                 return;
             }
 
-            // Focus events arrive after crossterm's event stream is active. Requery through
-            // crossterm here so unrelated input stays in crossterm's skipped-event queue instead
-            // of being consumed by the bounded startup probe's direct tty reads.
-            let fg = query_foreground_color()
-                .ok()
-                .flatten()
-                .and_then(color_to_tuple);
-            let bg = query_background_color()
-                .ok()
-                .flatten()
-                .and_then(color_to_tuple);
-            cache.value = fg.zip(bg).map(|(fg, bg)| DefaultColors { fg, bg });
+            cache.value = query_default_colors();
             cache.attempted = true;
         }
     }
@@ -197,20 +184,13 @@ mod imp {
     /// collapses I/O errors and missing responses into the same fallback path used for terminals
     /// that simply do not support OSC 10/11 queries.
     fn query_default_colors() -> Option<DefaultColors> {
-        crate::terminal_probe::default_colors(crate::terminal_probe::DEFAULT_TIMEOUT)
+        crate::tui::terminal_probe::default_colors(crate::tui::terminal_probe::DEFAULT_TIMEOUT)
             .ok()
             .flatten()
             .map(|colors| DefaultColors {
                 fg: colors.fg,
                 bg: colors.bg,
             })
-    }
-
-    fn color_to_tuple(color: CrosstermColor) -> Option<(u8, u8, u8)> {
-        match color {
-            CrosstermColor::Rgb { r, g, b } => Some((r, g, b)),
-            _ => None,
-        }
     }
 }
 
@@ -256,7 +236,7 @@ mod imp {
     }
 
     pub(super) fn set_default_colors_from_startup_probe(
-        colors: Option<crate::terminal_probe::DefaultColors>,
+        colors: Option<crate::tui::terminal_probe::DefaultColors>,
     ) {
         if let Ok(mut cache) = default_colors_cache().lock() {
             cache.value = colors.map(|colors| DefaultColors {
@@ -270,7 +250,7 @@ mod imp {
     pub(super) fn requery_default_colors() {}
 
     fn query_default_colors() -> Option<DefaultColors> {
-        crate::terminal_probe::default_colors(crate::terminal_probe::DEFAULT_TIMEOUT)
+        crate::tui::terminal_probe::default_colors(crate::tui::terminal_probe::DEFAULT_TIMEOUT)
             .ok()
             .flatten()
             .map(|colors| DefaultColors {
@@ -290,7 +270,7 @@ mod imp {
 
     #[cfg(any(unix, windows))]
     pub(super) fn set_default_colors_from_startup_probe(
-        _colors: Option<crate::terminal_probe::DefaultColors>,
+        _colors: Option<crate::tui::terminal_probe::DefaultColors>,
     ) {
     }
 

@@ -270,6 +270,25 @@ Why leaving and adapting is better than removing:
 - The app-shell pass can decide when RunHaven sets or clears titles; this slice
   only preserves the safe low-level helper.
 
+### Codex Motion, Palette, And Terminal Probe
+
+Decision: compile and test Codex's motion helpers, shimmer renderer, terminal
+palette helpers, and bounded terminal probe.
+
+Why leaving and adapting is better than removing:
+
+- Motion and reduced-motion behavior are part of the expected Codex TUI feel.
+- Shimmer uses the terminal palette helpers so light and dark terminals get
+  theme-aware color behavior instead of a RunHaven-only color path.
+- `terminal_probe.rs` preserves Codex's short startup probes for default colors,
+  cursor position, and keyboard enhancement support.
+- RunHaven keeps the Codex motion primitive boundary test, but points it at
+  `src/runhaven/cli/tui/` and uses RunHaven's existing `regex` dependency
+  instead of Codex's `codex_utils_cargo_bin` test helper.
+- The Unix default-color requery path uses the vendored bounded terminal probe
+  instead of Codex's fork-only crossterm color-query helpers. Revisit this only
+  if RunHaven adopts Codex's pinned crossterm fork for the full app shell.
+
 ### Earlier RunHaven Zork Implementation
 
 Decision: leave `src/runhaven/cli/tui/zork/` absent from the raw Codex vendor
@@ -311,6 +330,8 @@ The first milestone is a clean vendor baseline:
 - Codex's `render/renderable.rs` now compiles and passes its tests through the
   RunHaven adapter.
 - Codex's terminal title helper now compiles and passes its tests.
+- Codex's motion, shimmer, terminal palette, and terminal probe helpers now
+  compile and pass their focused tests.
 - The copied Codex source still has crate-root assumptions from the upstream
   `codex-tui` crate. The next integration work is to adapt those assumptions
   into RunHaven product adapters without culling useful Codex surfaces early.

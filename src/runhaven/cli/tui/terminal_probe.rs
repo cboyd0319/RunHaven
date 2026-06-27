@@ -885,6 +885,7 @@ fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
 }
 
 #[cfg(any(unix, windows))]
+#[allow(unused_imports)]
 pub(crate) use imp::*;
 
 #[cfg(test)]

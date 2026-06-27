@@ -54,6 +54,15 @@ Local integration exceptions:
   `WidgetRef` implementation.
 - `terminal_title.rs` is compiled as a vendored app-shell helper. It keeps
   Codex's OSC title sanitization rules intact.
+- `motion.rs`, `shimmer.rs`, `color.rs`, `terminal_palette.rs`, and
+  `terminal_probe.rs` are compiled as the Codex motion and terminal-theme
+  foundation. Their module paths point through `crate::tui`.
+- `motion.rs` keeps the Codex animation-primitive boundary test, pointed at
+  `src/runhaven/cli/tui/` and using RunHaven's existing `regex` dependency
+  instead of Codex's crate-root test helper.
+- `terminal_palette.rs` uses the vendored bounded terminal probe for Unix
+  default-color requery because RunHaven has not adopted Codex's pinned
+  crossterm fork with color-query helpers.
 
 Known integration gap:
 
