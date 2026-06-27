@@ -338,21 +338,32 @@ Latest TUI strategy review:
   `git diff --check`, and a no-em-dash typography scan over changed docs/state
   files.
 
+Latest Strategy C plan import:
+
+- 2026-06-27: Imported the split Strategy C plan from
+  `/Users/c/Downloads/runhaven-codex-tui-strategy-c/` into
+  `docs/plans/codex-tui-strategy-c/`. Read all five plan files and ran
+  read-only adversarial, Rust architecture, and Rust test-architecture reviews.
+  The repo copy incorporates the review fixes: do not broadly add Codex backend
+  crates as workspace authorities; compile the dormant runtime spine before
+  terminal handoff; keep `launch_wizard.rs` UI-owned while the service returns
+  payloads/events; keep upstream `.snap` files external by default; add
+  deterministic facade, fail-closed, terminal handoff, workspace-gate, and
+  snapshot-matrix requirements; prepare foreground launch through the facade but
+  execute `launch_run_plan` on the UI thread only after terminal restore; keep
+  the hidden Zork easter egg as a future RunHaven-owned Codex-shaped view.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
 
 ## Next Step
 
-Continue TUI integration from the Codex-vendored source baseline. Keep using
-source-first Codex modules for app shell, bottom pane, status line, native pet,
-resume/session, keymap, tooltips, and terminal-title behavior before writing
-custom RunHaven TUI code. The next practical slice is the Codex terminal
-runtime/event-stream alignment plus the typed app-server facade pattern for
-planner, launch, status, interrupt, history, diagnostics, and session calls.
-Treat this as a Strategy C Codex-compatible-client slice, not a permanent
-Strategy B widget-kit extraction. After that, adapt the native
-`App`/`ChatWidget`/`BottomPane` path and then wire real launch execution from
-the confirmation step once the command path stays planner-owned and inspectable.
-Feed RunHaven-specific surfaces from the shared `RunHavenComponentPayload`
-contracts instead of ad hoc screen structs.
+Continue TUI integration from `docs/plans/codex-tui-strategy-c/`, starting with
+Phase 0 vendor-baseline locking. After that, stop growing `app_shell.rs` by
+moving direct core calls into a RunHaven TUI service that returns payloads and
+events while `launch_wizard.rs` stays UI-owned. Then build the Codex-shaped
+backend facade, compile the dormant runtime spine with the smallest
+protocol/utility surface, prove terminal handoff, and only then adapt the
+native `App`/`BottomPane`/`ChatWidget` path. Foreground launch remains
+read-only until the UI thread owns terminal restore and `launch_run_plan`.

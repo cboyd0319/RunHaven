@@ -261,85 +261,37 @@ Dependencies added for vendored code are pure-Rust and exact-pinned: `base64`,
 `image` (png+webp); the foundation adds text-layout crates (`unicode-width`,
 `url`, `textwrap` as needed). No C dependencies.
 
-## Build phases
+## Active Strategy C Phases
 
-Each phase ships at the reference-quality bar (below). Phases are sequenced so
-later screens build on earlier foundations.
+The active execution plan is now split under
+`docs/plans/codex-tui-strategy-c/`. That plan supersedes the old custom
+Ratatui phase list in this document. The old phases are historical design
+evidence only; do not use them as current completion status.
 
-### Phase 0 - Foundation (complete)
+Current phase order:
 
-The reusable spine. Vendor the foundation primitives (`render`, `key_hint`,
-`wrapping`, `terminal_hyperlinks`, `selection_list`, OSC 52 clipboard). Build:
+1. Lock the vendor baseline.
+2. Stop growing the temporary shell.
+3. Build the Codex-shaped backend facade.
+4. Compile the dormant runtime spine.
+5. Prove terminal handoff before real foreground launch.
+6. Adapt `App` and `BottomPane`.
+7. Adapt `ChatWidget` transcript and status.
+8. Reattach RunHaven product screens.
+9. Cull or stub unsupported Codex product features.
 
-- the theme system: `color.rs` plus a `Palette` and `ColorMode` (dark/light
-  detection), honoring `NO_COLOR` and a reduced-motion switch;
-- the event + tick loop (RunHaven's own, `event::poll`-driven, supporting
-  animation, replacing codex's tokio `FrameRequester`);
-- the VT100 + `insta` snapshot test harness used by every later screen.
+Key corrections from the Strategy C review:
 
-### Phase 1 - Brand complete (complete)
-
-- Header logo: render `docs/assets/logo.png` through the Codex-derived terminal
-  image overlay path on graphics terminals, with a half-block fallback on plain
-  terminals.
-- Native Cubby pet: the idle loop (blink, spark pulse) is driven by
-  `codex::animation` and the Phase 0 tick loop, with Codex-derived ambient
-  placement/rendering where supported and half-block fallback everywhere else.
-  Cubby is enabled and visible by default on safe/idle surfaces; `p` and
-  `RUNHAVEN_TUI_PET=0` hide the pet without hiding the logo. Reduced-motion keeps
-  Cubby visible but static.
-- RunHaven-authored rotating tooltips that teach shortcuts and the security
-  model. Evaluate Codex's tooltip timing/suppression/accessibility behavior
-  before replacing them.
-
-### Phase 2 - The launcher flow (complete)
-
-The directory-and-provider front door.
-
-- Workspace/folder picker (fuzzy search) so a user points RunHaven at their
-  project.
-- Agent/provider picker (extends the existing home list).
-- Plan + egress review card: the defining security screen, what the run mounts,
-  the network mode, the provider hosts it may reach, and what it explicitly will
-  not touch (host home, credentials), built from RunHaven's planner/policy.
-- Confirm-launch modal: names the exact mounts, network mode, and egress posture;
-  type-to-confirm only for less-secure choices.
-- Launch a real run.
-
-### Phase 3 - Run management (complete)
-
-- Live run dashboard: active run list, sanitized live status, resource summary,
-  network attachments, and a streaming egress ledger backed by the provider
-  runtime's decision-delta flusher.
-- Bounded log viewer: explicit active-run log snapshots with search, scrolling,
-  tail-following, and ANSI parsing through `vt100` so escape sequences are not
-  replayed into the user's terminal.
-- Stop / kill / repair with plain typed-confirm screens (no motion on
-  destructive surfaces), routed through the existing validated run-control
-  cores.
-
-### Phase 4 - History and diagnostics (complete)
-
-- Run history with per-run records and "what changed" diff review
-  (`diff_render`).
-- Diagnostics: egress log, auth status, and a terminal/render capability probe.
-- `doctor`: prerequisite checks with spinners and inline remediation.
-
-### Phase 5 - Polish (complete)
-
-- Guided onboarding: a fresh cache opens the RunHaven Guide first, and `?`/F1
-  opens it later from the main screens.
-- Run-done / waiting-for-input notifications: the dashboard surfaces explicit
-  notices for stale/done runs, control transitions, status errors, and output
-  that appears to be waiting for interactive input.
-- Full accessibility pass: `NO_COLOR`, reduced-motion, colorblind-safe palettes,
-  line-mode fallback, and `RUNHAVEN_TUI_COLOR_MODE=light|dark` are documented
-  and covered by focused render tests.
-- Themes and Zork easter egg: light/dark palette selection is implemented, and
-  the hidden Home-only `~` screen runs the bundled MIT-licensed Zork I story
-  through an attributed Ferrif-derived Z-machine.
-- Complete snapshot coverage; the architecture doc is finalized as the reference
-  guide for sibling projects.
+- `app_shell.rs` and staged `mod.rs` are compile bridges, not architecture.
+- `launch_wizard.rs` stays UI-owned. The RunHaven service returns payloads and
+  events; the UI turns them into views.
+- Foreground launch is prepared through the typed facade, but the UI loop owns
+  terminal restore and `launch_run_plan`.
+- Broad Codex backend crates are not default workspace members or runtime
+  authorities. Prefer narrow adapters plus the smallest protocol/utility crates
+  required by the next compiled slice.
+- Upstream `.snap` files remain external by default in the local Codex checkout.
+  RunHaven snapshots are generated only for wired RunHaven behavior.
 
 ## Reference-quality bar (every phase)
 
@@ -353,83 +305,33 @@ The directory-and-provider front door.
 - Vendored code attributed; new dependencies pure-Rust and exact-pinned.
 - The framework / screen seam kept clean so the core stays extractable.
 
-## Dependencies on RunHaven domain APIs
+## Dependencies On RunHaven Domain APIs
 
-Some phases need RunHaven's own planner/run code to expose structured data to the
-TUI rather than printed text:
+The Strategy C TUI must consume structured data from `runhaven-core`, not CLI
+text:
 
-- Phase 2 (plan/egress review, confirm) needs the resolved run plan, mounts,
-  network mode, and egress allow-set as structured values.
-- Phase 3 (dashboard, egress ledger) needs a live run-status and
-  network-decision stream. Complete: the TUI consumes the existing active-run
-  status/log cores and the provider runtime writes egress decision deltas during
-  provider-mode execution.
-- Phase 4 (history, diagnostics) needs run records and the egress/auth logs as
-  data. Complete: `crates/runhaven-core/src/records/` exposes a real facade over
-  `run_history` and JSONL IO, `crates/runhaven-core/src/diagnostics.rs` owns secret-free log
-  readers/status payloads, and `crates/runhaven-core/src/doctor.rs` owns shared host
-  readiness checks. TUI Phase 4 consumes those data modules, not CLI prose.
+- planner data: resolved run plan, mounts, state volume, network mode, provider
+  hosts, auth scope, security notices, and exact command arguments
+- run control data: active run records, status payloads, log snapshots, stop,
+  kill, and repair results
+- records data: run history, run detail, and `records::run_diff_text`
+- diagnostics data: egress log, auth broker log, auth status, terminal
+  capability facts, and doctor checks
 
-Any structured output the TUI needs that the CLI does not yet expose is a CLI gap
-to close in the shared library, not text to re-parse. These are surfaced per
-phase as they arise.
+Any structured output the TUI needs that `runhaven-core` does not yet expose is
+a shared-library gap to close. Do not parse CLI prose in the TUI.
 
-## Status
+## Current Status
 
-- Vendored: the pet/image rendering core (`tui/codex/`: terminal detection, image
-  protocol, sixel, pet model, frames, catalog, animation timing) with attribution
-  and the `base64`/`image` deps.
-- Complete: Phase 0 foundation primitives. The TUI now has a theme/settings
-  layer with `NO_COLOR`, reduced-motion, and line-mode switches; a synchronous
-  `event::poll` tick loop; Codex-derived color helpers; a Codex-derived VT100
-  backend; and `insta` snapshots for the current home/detail screens at multiple
-  sizes.
-- Complete: Phase 1 brand. The launcher loads the validated Cubby Codex pet
-  package from `crates/runhaven-tui/src/tui/assets/cubby/`, drives the idle loop with
-  Codex animation timing, renders the current atlas frame as a half-block
-  fallback, and emits the Codex Kitty/iTerm2/Sixel image overlay after the
-  ratatui draw when the terminal supports it. Cubby is visible by default,
-  `p` toggles it for the session, `RUNHAVEN_TUI_PET=0` starts with it hidden,
-  reduced-motion keeps it visible but static, and line-mode omits it. The copied
-  QA evidence for the pet lives in `docs/assets/cubby-pet/`.
-- Complete: Phase 2 launcher flow. The TUI now has a workspace picker with
-  simple fuzzy filtering and typed paths, keeps the existing agent picker, builds
-  `AgentRunPlan` through RunHaven's shared planner, renders the workspace mount,
-  state volume, network mode, provider egress posture, explicit non-mounts, and
-  equivalent CLI command, requires typed confirmation for plans with security
-  notices, restores the terminal, and launches through `launch_run_plan`.
-- Complete: Phase 3 run management. The TUI now has a run dashboard (`d`) with
-  active runs, sanitized status/resource/network details, and a provider egress
-  ledger; provider-mode runs stream egress decisions to the JSONL log as deltas
-  while the run is active; logs open as explicit bounded snapshots with search,
-  scroll, tail-following, and ANSI parsing through `vt100`; and stop, hard-stop,
-  and stale-marker repair use plain typed-confirm screens over the existing
-  validated run-control cores.
-- Complete: pre-Phase 4 organization lock. Shared TUI data dependencies now
-  live outside CLI presentation: host readiness in
-  `crates/runhaven-core/src/doctor.rs`, secret-free diagnostics in
-  `crates/runhaven-core/src/diagnostics.rs`, auth posture labels in
-  `crates/runhaven-core/src/provider/auth_profiles.rs`, and run history behind
-  `crates/runhaven-core/src/records/` with `records/run_history.rs` plus
-  `records/io.rs`. The workspace now uses crate ownership boundaries instead
-  of a root compatibility facade.
-- Complete: Phase 4 history and diagnostics. The TUI now has run history (`h`),
-  per-run diff review, diagnostics (`g`) for egress/auth metadata and terminal
-  render capabilities, and a doctor screen (`d` from diagnostics) with
-  prerequisite checks plus inline remediation. Diff review uses the shared
-  `records::run_diff_text` API; diagnostics and doctor consume
-  `diagnostics.rs` and `doctor.rs` data rather than CLI prose.
-- Complete: Phase 5 polish. A fresh cache starts on the RunHaven Guide and
-  `?`/F1 opens it later; the dashboard emits plain notices for status errors,
-  control transitions, stale/done runs, and output that appears to be waiting for
-  input; accessibility controls cover no-color, reduced-motion, line-mode, and
-  explicit light/dark palette selection; VT100 snapshots now cover guide,
-  launcher, dashboard, logs, control, history, diagnostics, and doctor screens;
-  and the architecture guide is finalized around the framework/screen seam.
-- Complete: post-polish Zork easter egg. The Home-only `~` screen runs the
-  bundled MIT-licensed Zork I story through a vendored, attributed
-  Ferrif-derived Z-machine. The implementation adds no new Cargo dependencies,
-  runs in-process only, performs no subprocess/network/workspace/container
-  access, validates the bundled story by exact length and SHA-256, and constrains
-  save/restore to one private RunHaven cache slot with Quetzal/IFF validation
-  before restore.
+- The source copy is broad enough for Strategy C, but the live TUI is still a
+  staged shell.
+- Active staged pieces: native Cubby pet package from
+  `docs/assets/installed-pet/cubby/`, Codex pet/image renderer, terminal title,
+  footer, `ListSelectionView`, `TextArea`, launch picker, read-only review, and
+  read-only confirmation.
+- Not yet active: Codex `Tui` runtime ownership, `App` loop, `BottomPane`,
+  `ChatWidget`, typed app-server facade, workspace picker, policy mutation,
+  foreground launch, dashboard, history, diagnostics, and Zork.
+- Foreground launch remains disabled in the TUI until terminal handoff is
+  proven and `launch_run_plan` runs from the UI thread after Codex terminal
+  restore.

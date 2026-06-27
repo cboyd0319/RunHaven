@@ -18,6 +18,8 @@ RunHaven keeps attribution in `THIRD_PARTY_NOTICES.md` and
 
 This is a baseline copy before RunHaven product integration. It intentionally
 keeps Codex TUI structure first, then RunHaven will adapt the parts it needs.
+The active Strategy C integration plan lives in
+`docs/plans/codex-tui-strategy-c/`.
 
 Local exclusions in this baseline:
 
@@ -79,5 +81,10 @@ Known integration gap:
 - The copied Codex crate source still uses Codex crate/module assumptions.
   RunHaven integration will adapt entrypoints, module paths, dependencies, and
   product data in later commits.
-- The launch picker is still a read-only preview. Review, workspace, policy,
-  and final launch screens still need to be reattached to the Codex shell.
+- The launch picker, read-only review, and confirmation screen are staged in
+  `app_shell.rs`, not the real Codex `App` loop. Workspace selection, policy
+  changes, and final foreground launch still need to be reattached through the
+  Codex-shaped runtime and typed backend facade.
+- Foreground launch must be prepared by the RunHaven service but executed by the
+  UI loop only after Codex terminal restore. Backend service tasks must not own
+  raw terminal state.
