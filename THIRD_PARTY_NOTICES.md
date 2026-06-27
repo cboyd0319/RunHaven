@@ -6,9 +6,10 @@ upstream licenses require.
 ## openai/codex (Apache-2.0)
 
 RunHaven vendors source code from [openai/codex](https://github.com/openai/codex),
-specifically the `codex-rs/tui` pet modules and the `codex-rs/terminal-detection`
-crate. That code is licensed under the Apache License, Version 2.0. The full
-license text is in [`licenses/codex-Apache-2.0.txt`](licenses/codex-Apache-2.0.txt).
+specifically the `codex-rs/tui` pet, rendering, color, and test-backend modules
+and the `codex-rs/terminal-detection` crate. That code is licensed under the
+Apache License, Version 2.0. The full license text is in
+[`licenses/codex-Apache-2.0.txt`](licenses/codex-Apache-2.0.txt).
 
 The upstream `NOTICE` file, carried forward verbatim:
 
@@ -35,6 +36,8 @@ sources listed below:
 | `src/runhaven/cli/tui/codex/frames.rs` | `codex-rs/tui/src/pets/frames.rs` |
 | `src/runhaven/cli/tui/codex/catalog.rs` | `codex-rs/tui/src/pets/catalog.rs` |
 | `src/runhaven/cli/tui/codex/animation.rs` | `codex-rs/tui/src/pets/ambient.rs` (animation-timing extract only) |
+| `src/runhaven/cli/tui/color.rs` | `codex-rs/tui/src/color.rs` |
+| `src/runhaven/cli/tui/test_backend.rs` | `codex-rs/tui/src/test_backend.rs` |
 
 ### Modifications
 
@@ -60,3 +63,7 @@ limited to integration plumbing, not behavior of the copied logic:
   and `current_animation_frame` in `animation.rs`, `Pet::load_with_codex_home`
   and `Pet::frame_cache_key` in `model.rs`, `prepare_png_frames` in `frames.rs`,
   and the frame/spritesheet dimension constants in `catalog.rs`.
+- `color.rs` is copied as a small pure helper module; RunHaven clamps `blend`
+  alpha values and currently uses it through the TUI theme layer.
+- `test_backend.rs` is copied as a test-only VT100 backend and updated for
+  ratatui 0.30.2's `Backend::Error` associated type and RunHaven's module path.

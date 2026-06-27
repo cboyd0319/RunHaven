@@ -1,0 +1,28 @@
+---
+source: src/runhaven/cli/tui/mod.rs
+expression: snapshot
+---
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                  antigravity                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ Agent ───────────────────────────────────────────────────────────────────────┐
+│Google Antigravity CLI with project-scoped home state.                        │
+│                                                                              │
+│image:           runhaven/antigravity:0.1.0                                   │
+│sign-in:         runhaven login                                               │
+│default network: provider                                                     │
+│api-key broker:  no                                                           │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+                                esc back · q quit

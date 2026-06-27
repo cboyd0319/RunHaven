@@ -1,0 +1,28 @@
+---
+source: src/runhaven/cli/tui/mod.rs
+expression: snapshot
+---
+      ▄▄▄▄▄▄▄▄▄▄▄▄
+    ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      RunHaven
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      v0.5.0
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      run agents in a safe haven
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+    ▄▄▀▀▀▀▀▀▀▀▀▀▀▄▄
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+  ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+┌ Agents ──────────────────────────────────────────────────────────────────────┐
+│> antigravity   Google Antigravity CLI with project-scoped home state.        │
+│  claude        Claude Code with state isolated under /home/agent/.claude.    │
+│  codex         OpenAI Codex CLI with workspace-write sandboxing inside the...│
+│  copilot       GitHub Copilot CLI with COPILOT_HOME isolated per project.    │
+│  gemini        Gemini CLI with project-scoped home state.                    │
+│  shell         Generic shell profile for custom agent images.                │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+                      up/down move · enter select · q quit

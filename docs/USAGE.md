@@ -22,9 +22,12 @@ runhaven
 
 The TUI is early: today it is a navigable agent picker (up/down to move, enter to
 open a per-agent detail view, esc to go back); workspace selection, plan and
-egress review, and the run dashboard land in later slices. The CLI stays the
-complete, scriptable surface: any subcommand, or a piped or redirected
-invocation, uses the CLI directly and never opens the TUI. Press `q` to quit.
+egress review, and the run dashboard land in later slices. It already honors
+terminal accessibility basics: `NO_COLOR` disables color, `RUNHAVEN_TUI_REDUCED_MOTION=1`
+uses reduced-motion mode, and `RUNHAVEN_TUI_LINE_MODE=1` starts a simpler
+text-first layout. The CLI stays the complete, scriptable surface: any
+subcommand, or a piped or redirected invocation, uses the CLI directly and never
+opens the TUI. Press `q` to quit.
 
 ## Guided Setup
 

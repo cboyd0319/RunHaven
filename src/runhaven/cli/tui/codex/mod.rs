@@ -39,6 +39,30 @@ pub(crate) mod frames;
 #[allow(dead_code, clippy::all, clippy::pedantic)]
 pub(crate) mod animation;
 
+// TUI framework foundation vendored from codex-rs/tui (Apache-2.0). See
+// THIRD_PARTY_NOTICES.md for sources and modifications. These carry a broader
+// allow set than the pet modules: the foundation was written against a ratatui
+// git fork, so against published ratatui 0.30.2 it has unused fork-era imports
+// and one deprecated `Cell::skip` access that would otherwise fail
+// `clippy -D warnings` while the code is unused.
+#[allow(dead_code, unused, deprecated, clippy::all, clippy::pedantic)]
+pub(crate) mod render;
+
+#[allow(dead_code, unused, deprecated, clippy::all, clippy::pedantic)]
+pub(crate) mod key_hint;
+
+#[allow(dead_code, unused, deprecated, clippy::all, clippy::pedantic)]
+pub(crate) mod wrapping;
+
+#[allow(dead_code, unused, deprecated, clippy::all, clippy::pedantic)]
+pub(crate) mod terminal_hyperlinks;
+
+#[allow(dead_code, unused, deprecated, clippy::all, clippy::pedantic)]
+pub(crate) mod selection_list;
+
+#[allow(dead_code, unused, deprecated, clippy::all, clippy::pedantic)]
+pub(crate) mod clipboard;
+
 /// Resolve a built-in pet spritesheet path under a Codex/RunHaven home.
 ///
 /// Codex defines this in `tui/src/pets/mod.rs` (which RunHaven does not vendor)

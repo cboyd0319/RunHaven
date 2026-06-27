@@ -1,27 +1,20 @@
 # Current State
 
-Last Updated: 2026-06-26 UTC
+Last Updated: 2026-06-27 UTC
 
 ## Current Objective
 
-The `v0.5.0` CLI-complete pre-release was cut and published on 2026-06-26 (first
-release; pre-1.0, CLI only). The runhaven CLI crate is at `0.5.0`
-(`runhaven --version` = 0.5.0), `git tag v0.5.0`, GitHub pre-release; image
-template tags stay `0.1.0` (built locally, unchanged). The alpha period has
-ended; RunHaven is now a pre-1.0 pre-release. `cli-complete-v0.5.0` and
-`release-readiness` are `passing`. The next phase is the terminal UI (TUI), then
-the rest of the deferred GUI work.
+The active feature is `terminal-ui`. The `v0.5.0` CLI-complete pre-release was
+cut and published on 2026-06-26 (first release; pre-1.0, CLI only). Runtime and
+security hardening, multi-provider broker work, isolated OAuth login, and
+release-readiness are `passing`. The TUI has been re-sequenced by the
+2026-06-26 user directive into a first-class reference implementation to build
+now; the Tauri desktop app remains deferred to the roadmap end.
 
-Next phase (2026-06-26 user directive): all GUI/UI work, both the Tauri desktop
-app and the terminal UI (TUI), moves to the very end of the roadmap. Runtime and
-security hardening of the Apple `container` boundary leads now, ahead of any new
-feature surface. The already-shipped desktop run-control and diagnostics slices
-stay `passing`; no GUI work is reverted, only re-sequenced behind the non-UI
-hardening, remaining product scope, and release work. The
-`runtime-security-hardening` slice is `passing` and was merged to `main`
-2026-06-26 (with the four-agent `runhaven login` work, the egress family-pattern
-step, the non-technical UX pass, and a full docs and README refresh); no feature
-is currently `active`.
+TUI Phase 0 is complete: foundation primitives, theme/settings, synchronous tick
+loop, VT100 snapshot harness, and accessibility switches. Next is Phase 1 from
+`docs/plans/tui-build-plan.md`: brand complete (high-resolution Cubby image
+tier, animated/static pet policy, and RunHaven-authored rotating tooltips).
 
 ## Startup State Contract
 
@@ -41,15 +34,13 @@ Load deeper docs only when the task touches that surface.
 - `v0.5.0` is now the intended CLI-complete release. All CLI product work
   should be done by that tag before broad v1 desktop expansion.
 - RunHaven remains alpha/pre-release until after `v0.5.0` is cut.
-- All GUI/UI work is deferred to the very end of the roadmap (2026-06-26 user
-  directive), superseding the prior `v1.0.0` = first-class-desktop boundary. The
-  CLI stays the product surface through the near-term releases; the desktop app
-  and TUI are the final roadmap phase. The version label for the desktop release
-  is open and not locked to `v1.0.0`.
-- The product sequence is CLI-complete (`v0.5.0`), then runtime/security
-  hardening of the Apple `container` boundary, then remaining non-UI product
-  scope and a CLI-based public release, then (at the very end) the first-class
-  desktop app and a terminal UI (TUI) over the same planner and policy objects.
+- The TUI is now active and first-class per the 2026-06-26 user directive. The
+  desktop app remains deferred to the roadmap end. The version label for the
+  desktop release is open and not locked to `v1.0.0`.
+- The product sequence is CLI-complete (`v0.5.0`), runtime/security hardening of
+  the Apple `container` boundary, remaining non-UI product scope and release
+  readiness, then the active terminal UI over the same planner and policy
+  objects, with the first-class desktop app still deferred.
 - Above all else, secure defaults must be the easiest path. Supported
   lower-security choices should warn and require explicit intent; unsupported
   or hard-boundary violations still fail closed.
@@ -147,9 +138,52 @@ evidence and a recorded reason.
   adapt codex's Kitty-graphics overlay approach (Apache-2.0, with attribution),
   defaulting to the portable half-block sprite when no graphics protocol is
   present. Codex is Apache-2.0, so adapting its code is permitted.
+- The RunHaven TUI is now a first-class, reference-quality, reusable
+  implementation, built out fully now, not a deferred minimal launcher
+  (2026-06-26 user directive). It will be the reference TUI for several of the
+  user's other projects, so it is architected with a clean seam: a domain-
+  agnostic TUI framework (theme/ColorMode, layout, widgets, input, animation,
+  the vendored codex primitives, the snapshot test harness) that can later be
+  extracted into a shared crate, plus RunHaven-specific screens on top that own
+  the domain (profiles, plans, egress, runs). This re-sequences the TUI ahead of
+  the prior "all GUI/UI deferred to end of roadmap" framing for the TUI
+  specifically (the desktop app deferral is unchanged). The TUI is the guided
+  front door: a bare `runhaven` on a TTY opens it so a non-technical user picks a
+  working directory and an AI provider, sees what a run will and will not touch,
+  and launches, with no command or hostname to manage. Build phases: 0 foundation
+  (primitives + theme + tick loop + test harness), 1 brand (hero image tier +
+  animated pet + tooltips), 2 launcher flow (workspace picker + plan/egress
+  review + confirm-launch), 3 run management (dashboard + log viewer + run
+  control), 4 history + diagnostics (diff review + egress/auth/capability +
+  doctor), 5 polish (onboarding, notifications, accessibility, themes, easter
+  egg, snapshot coverage, docs). Reference-quality bar every phase: snapshot
+  tests, keyboard-complete with visible hints, plain language, accessibility
+  (NO_COLOR, reduced-motion, colorblind-safe, line-mode), attribution for
+  vendored code, framework/screen seam kept clean. The Cubby pet is visible and
+  animated by default (delight is the default, not opt-in, to make RunHaven
+  approachable to less-technical users); a user toggle turns it off, reduced-
+  motion keeps it visible but static, and the restraint rule keeps animation off
+  confirmation/destructive screens. Master build plan in
+  `docs/plans/tui-build-plan.md`; patterns in `docs/plans/tui-architecture.md`;
+  brand/graphics in `docs/plans/ratatui-brand-graphics.md`.
 
 ## Latest Verified Work
 
+- 2026-06-27: TUI Phase 0 foundation. Added the reusable TUI settings/theme
+  layer (`NO_COLOR`, `RUNHAVEN_TUI_REDUCED_MOTION=1`,
+  `RUNHAVEN_TUI_LINE_MODE=1`, dark/light palette seam), a synchronous
+  `event::poll` tick loop with deterministic ticker tests, Codex-derived
+  `color.rs`, a Codex-derived VT100 test backend, and an `insta` snapshot harness
+  with accepted home/detail snapshots at 80x24 and 120x36. The current screens
+  now render through the palette, Cubby has a no-color shape fallback, and the
+  80-column agent list truncates with an ASCII affordance instead of clipping
+  mid-word. New exact-pinned pure-Rust dev deps: `insta =1.48.0`
+  (`default-features = false`) and `vt100 =0.16.2`; pin checking now covers them.
+  Docs updated in `USAGE.md`, `THIRD_PARTY_NOTICES.md`, and
+  `docs/plans/tui-build-plan.md`. Verified: `cargo fmt --check`, `cargo test
+  --locked tui` (135 TUI-filtered tests), `cargo clippy --all-targets --locked
+  -- -D warnings`, `cargo run --locked --bin runhaven-check-pins`, and `git diff
+  --check`. Branch: `terminal-ui-build-plan`. Next: Phase 1 brand complete.
 - 2026-06-26: Vendored codex's pet/image rendering stack under
   `src/runhaven/cli/tui/codex/` (Apache-2.0, with attribution), covering the
   three pillars: the high-fidelity hero/image tier (`terminal_detection.rs`,

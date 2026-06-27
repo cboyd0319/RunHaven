@@ -59,8 +59,9 @@ fn check_cargo_against_ledger(root: &Path, pins: &Value) -> Vec<String> {
         failures.push("pins.toml: missing [rust] dependency pins".to_string());
         return failures;
     };
+    let rust_dev_deps = ["insta", "tempfile", "vt100"];
     for (name, pinned) in rust_pins {
-        if matches!(name.as_str(), "toolchain" | "edition" | "tempfile") {
+        if name == "toolchain" || name == "edition" || rust_dev_deps.contains(&name.as_str()) {
             continue;
         }
         let expected = pinned.as_str().unwrap_or_default();
@@ -74,12 +75,14 @@ fn check_cargo_against_ledger(root: &Path, pins: &Value) -> Vec<String> {
     let Some(dev_deps) = cargo.get("dev-dependencies").and_then(Value::as_table) else {
         return failures;
     };
-    if let Some(expected) = rust_pins.get("tempfile").and_then(Value::as_str)
-        && dev_deps.get("tempfile").and_then(dependency_version) != Some(format!("={expected}"))
-    {
-        failures.push(format!(
-            "Cargo.toml: dev dependency tempfile must be pinned as ={expected}"
-        ));
+    for name in rust_dev_deps {
+        if let Some(expected) = rust_pins.get(name).and_then(Value::as_str)
+            && dev_deps.get(name).and_then(dependency_version) != Some(format!("={expected}"))
+        {
+            failures.push(format!(
+                "Cargo.toml: dev dependency {name} must be pinned as ={expected}"
+            ));
+        }
     }
     failures
 }

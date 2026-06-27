@@ -43,17 +43,33 @@ impl HeroSprite {
 
     /// The sprite as half-block lines: the foreground colors the top pixel of a
     /// cell, the background colors the bottom.
+    #[allow(dead_code)]
     pub fn lines(&self) -> Vec<Line<'static>> {
+        self.lines_with_color(true)
+    }
+
+    /// Render the same sprite without terminal colors for `NO_COLOR` and line
+    /// capture paths. Shape remains visible, but color-dependent detail is gone.
+    pub fn lines_with_color(&self, color_enabled: bool) -> Vec<Line<'static>> {
         let mut lines = Vec::with_capacity((self.pixel_rows / 2) as usize);
         let mut row = 0;
         while row + 1 < self.pixel_rows {
             let mut spans = Vec::with_capacity(self.width as usize);
             for col in 0..self.width {
-                let (symbol, style) = match (self.pixel(row, col), self.pixel(row + 1, col)) {
-                    (None, None) => (" ", Style::default()),
-                    (Some(top), None) => ("\u{2580}", Style::default().fg(top)),
-                    (None, Some(bottom)) => ("\u{2584}", Style::default().fg(bottom)),
-                    (Some(top), Some(bottom)) => ("\u{2580}", Style::default().fg(top).bg(bottom)),
+                let (symbol, style) = match (
+                    self.pixel(row, col),
+                    self.pixel(row + 1, col),
+                    color_enabled,
+                ) {
+                    (None, None, _) => (" ", Style::default()),
+                    (Some(_), None, false) => ("\u{2580}", Style::default()),
+                    (None, Some(_), false) => ("\u{2584}", Style::default()),
+                    (Some(_), Some(_), false) => ("\u{2588}", Style::default()),
+                    (Some(top), None, true) => ("\u{2580}", Style::default().fg(top)),
+                    (None, Some(bottom), true) => ("\u{2584}", Style::default().fg(bottom)),
+                    (Some(top), Some(bottom), true) => {
+                        ("\u{2580}", Style::default().fg(top).bg(bottom))
+                    }
                 };
                 spans.push(Span::styled(symbol, style));
             }
@@ -116,6 +132,23 @@ mod tests {
             assert_eq!(lines.len() as u16, hero.cell_height());
             for line in &lines {
                 assert_eq!(line.spans.len() as u16, hero.cell_width());
+            }
+        }
+    }
+
+    #[test]
+    fn no_color_lines_keep_shape_without_color() {
+        for hero in sprites::HEROES {
+            let lines = hero.lines_with_color(false);
+            let non_space = lines
+                .iter()
+                .flat_map(|line| &line.spans)
+                .filter(|span| span.content.as_ref() != " ")
+                .count();
+            assert!(non_space > 0);
+            for span in lines.iter().flat_map(|line| &line.spans) {
+                assert_eq!(span.style.fg, None);
+                assert_eq!(span.style.bg, None);
             }
         }
     }
