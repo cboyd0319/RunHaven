@@ -69,6 +69,12 @@ and writes sanitized terminal titles with the vendored `terminal_title.rs`
 helper. The product-specific data still lives under `tui/runhaven/`; the footer
 and terminal-title mechanics stay Codex-owned.
 
+The current launch wizard now includes the Step 4 confirmation screen. Enter on
+the review step opens confirmation, the exact planner command stays visible,
+and plans marked `confirm_required` require typing `launch` before confirmation.
+This slice is still read-only: confirmation shows an acknowledgement and does
+not start a container, run preflight commands, or write launch state.
+
 Temporary visual check for the native Codex pet renderer:
 
 ```bash
@@ -88,10 +94,14 @@ Immediate integration order:
 3. Continue replacing temporary shell glue with Codex app-shell, bottom-pane,
    footer, status, title, and keymap pieces while keeping RunHaven domain data
    isolated under `tui/runhaven/`. Footer and terminal-title basics are now
-   active; the next launch flow slice is the final confirmation screen.
+   active; launch confirmation is now present, but real launch execution is not
+   wired yet.
 4. Adapt Codex bottom pane, status line, key handling, title, pets, tooltips,
    and render lifecycle where they fit the RunHaven product.
-5. Remove vendored code only after recording why removal is better than leaving
+5. Wire real launch execution from the confirmation step only after the
+   Codex-native bottom pane/runtime path is clear and the command remains owned
+   by RunHaven's planner.
+6. Remove vendored code only after recording why removal is better than leaving
    it and adapting it.
 
 ## Audience and principles

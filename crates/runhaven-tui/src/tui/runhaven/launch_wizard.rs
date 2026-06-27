@@ -51,6 +51,8 @@ pub(crate) struct LaunchWizardView {
     selected_idx: Arc<AtomicUsize>,
     picker: ListSelectionView,
     screen: LaunchWizardScreen,
+    confirm_input: String,
+    confirm_notice: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,7 +70,10 @@ struct AgentDecisionVm {
 enum LaunchWizardScreen {
     ChooseAgent,
     ReviewPlan,
+    ConfirmLaunch,
 }
+
+const CONFIRM_PHRASE: &str = "launch";
 
 impl LaunchWizardView {
     pub(crate) fn new(
@@ -102,6 +107,8 @@ impl LaunchWizardView {
             selected_idx,
             picker,
             screen: LaunchWizardScreen::ChooseAgent,
+            confirm_input: String::new(),
+            confirm_notice: None,
         }
     }
 
@@ -109,6 +116,7 @@ impl LaunchWizardView {
         match self.screen {
             LaunchWizardScreen::ChooseAgent => self.handle_picker_key(key),
             LaunchWizardScreen::ReviewPlan => self.handle_review_key(key),
+            LaunchWizardScreen::ConfirmLaunch => self.handle_confirm_key(key),
         }
     }
 
@@ -129,8 +137,68 @@ impl LaunchWizardView {
             KeyCode::Char('b') if key.modifiers == KeyModifiers::NONE => {
                 self.screen = LaunchWizardScreen::ChooseAgent;
             }
+            KeyCode::Enter => self.open_confirm(),
             _ => {}
         }
+    }
+
+    fn handle_confirm_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc => self.screen = LaunchWizardScreen::ReviewPlan,
+            KeyCode::Char('b') if key.modifiers == KeyModifiers::NONE => {
+                self.screen = LaunchWizardScreen::ReviewPlan;
+            }
+            KeyCode::Backspace if self.confirm_input.is_empty() => {
+                self.screen = LaunchWizardScreen::ReviewPlan;
+            }
+            KeyCode::Backspace => {
+                self.confirm_input.pop();
+                self.confirm_notice = None;
+            }
+            KeyCode::Enter => self.confirm_current_plan(),
+            KeyCode::Char(ch)
+                if self.selected_plan_requires_typed_confirmation()
+                    && accepts_confirmation_char(key.modifiers, ch)
+                    && self.confirm_input.len() < 32 =>
+            {
+                self.confirm_input.push(ch.to_ascii_lowercase());
+                self.confirm_notice = None;
+            }
+            _ => {}
+        }
+    }
+
+    fn open_confirm(&mut self) {
+        if self.selected_plan().is_none() {
+            return;
+        }
+        self.confirm_input.clear();
+        self.confirm_notice = None;
+        self.screen = LaunchWizardScreen::ConfirmLaunch;
+    }
+
+    fn confirm_current_plan(&mut self) {
+        let Some(plan) = self.selected_plan() else {
+            self.confirm_notice = Some("Plan could not be built.".to_string());
+            return;
+        };
+
+        if plan.confirm_required && self.confirm_input.trim() != CONFIRM_PHRASE {
+            self.confirm_notice = Some(format!("Type {CONFIRM_PHRASE} before confirming."));
+            return;
+        }
+
+        self.confirm_notice = Some("Confirmed. TUI launch is still disabled.".to_string());
+    }
+
+    fn selected_plan(&self) -> Option<&LaunchPlanData> {
+        selected_decision(&self.decisions, &self.selected_idx)
+            .and_then(|decision| decision.plan.as_ref().ok())
+    }
+
+    fn selected_plan_requires_typed_confirmation(&self) -> bool {
+        self.selected_plan()
+            .is_some_and(|plan| plan.confirm_required)
     }
 
     pub(crate) fn is_cancelled(&self) -> bool {
@@ -165,6 +233,10 @@ impl LaunchWizardView {
 
     pub(crate) fn is_reviewing(&self) -> bool {
         self.screen == LaunchWizardScreen::ReviewPlan
+    }
+
+    pub(crate) fn is_confirming(&self) -> bool {
+        self.screen == LaunchWizardScreen::ConfirmLaunch
     }
 
     pub(crate) fn footer_status_line(&self) -> Line<'static> {
@@ -211,6 +283,7 @@ impl LaunchWizardView {
         match self.screen {
             LaunchWizardScreen::ChooseAgent => "Choose agent",
             LaunchWizardScreen::ReviewPlan => "Review plan",
+            LaunchWizardScreen::ConfirmLaunch => "Confirm launch",
         }
     }
 }
@@ -224,6 +297,13 @@ impl Renderable for LaunchWizardView {
                 selected_idx: Arc::clone(&self.selected_idx),
             }
             .render(area, buf),
+            LaunchWizardScreen::ConfirmLaunch => ConfirmLaunch {
+                decisions: Arc::clone(&self.decisions),
+                selected_idx: Arc::clone(&self.selected_idx),
+                confirm_input: self.confirm_input.clone(),
+                confirm_notice: self.confirm_notice.clone(),
+            }
+            .render(area, buf),
         }
     }
 
@@ -233,6 +313,13 @@ impl Renderable for LaunchWizardView {
             LaunchWizardScreen::ReviewPlan => ReviewPlan {
                 decisions: Arc::clone(&self.decisions),
                 selected_idx: Arc::clone(&self.selected_idx),
+            }
+            .desired_height(width),
+            LaunchWizardScreen::ConfirmLaunch => ConfirmLaunch {
+                decisions: Arc::clone(&self.decisions),
+                selected_idx: Arc::clone(&self.selected_idx),
+                confirm_input: self.confirm_input.clone(),
+                confirm_notice: self.confirm_notice.clone(),
             }
             .desired_height(width),
         }
@@ -545,6 +632,90 @@ impl Renderable for ReviewPlan {
 }
 
 #[derive(Clone)]
+struct ConfirmLaunch {
+    decisions: Arc<Vec<AgentDecisionVm>>,
+    selected_idx: Arc<AtomicUsize>,
+    confirm_input: String,
+    confirm_notice: Option<String>,
+}
+
+impl ConfirmLaunch {
+    fn selected(&self) -> Option<&AgentDecisionVm> {
+        selected_decision(&self.decisions, &self.selected_idx)
+    }
+
+    fn lines(&self) -> Vec<Line<'static>> {
+        let Some(decision) = self.selected() else {
+            return vec![
+                Line::from(vec![
+                    Span::styled("RunHaven", selected_row_style()),
+                    Span::raw(format!(" v{}  ", env!("CARGO_PKG_VERSION"))),
+                    Span::styled("Step 4/4: Confirm launch", boundary_style()),
+                ]),
+                Line::from("No agent plan is selected."),
+                confirm_footer_line(),
+            ];
+        };
+
+        let mut lines = vec![
+            Line::from(vec![
+                Span::styled("RunHaven", selected_row_style()),
+                Span::raw(format!(" v{}  ", env!("CARGO_PKG_VERSION"))),
+                Span::styled("Step 4/4: Confirm launch", boundary_style()),
+            ]),
+            Line::from("Final check before launch."),
+            Line::from(""),
+            label_value("Agent", decision.agent.name.clone(), accent_style()),
+            label_value(
+                "Network",
+                decision.network_label.clone(),
+                decision.network_style(),
+            ),
+            label_value(
+                "Boundary",
+                decision.boundary_label.clone(),
+                boundary_style(),
+            ),
+            label_value("Host home", "not mounted", safe_style()),
+            label_value("Credentials", "not mounted by default", safe_style()),
+        ];
+
+        match &decision.plan {
+            Ok(plan) => append_confirm_plan_lines(
+                &mut lines,
+                plan,
+                self.confirm_input.as_str(),
+                self.confirm_notice.as_deref(),
+            ),
+            Err(message) => {
+                lines.push(Line::from(""));
+                lines.push(Line::from(vec![Span::styled(
+                    "Plan could not be built.",
+                    danger_style(),
+                )]));
+                lines.push(Line::from(message.clone()));
+            }
+        }
+
+        lines.push(Line::from(""));
+        lines.push(confirm_footer_line());
+        lines
+    }
+}
+
+impl Renderable for ConfirmLaunch {
+    fn render(&self, area: Rect, buf: &mut Buffer) {
+        Clear.render(area, buf);
+        let content = render_menu_surface(area, buf);
+        paragraph(self.lines()).render(content, buf);
+    }
+
+    fn desired_height(&self, width: u16) -> u16 {
+        paragraph(self.lines()).line_count(width.saturating_sub(4).max(1)) as u16 + 2
+    }
+}
+
+#[derive(Clone)]
 struct PlanPreview {
     decisions: Arc<Vec<AgentDecisionVm>>,
     selected_idx: Arc<AtomicUsize>,
@@ -648,6 +819,57 @@ fn append_review_plan_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanDat
     append_not_shared_lines(lines, plan);
     append_provider_host_lines(lines, plan, 6);
     append_safety_note_lines(lines, plan, 4);
+}
+
+fn append_confirm_plan_lines(
+    lines: &mut Vec<Line<'static>>,
+    plan: &LaunchPlanData,
+    confirm_input: &str,
+    confirm_notice: Option<&str>,
+) {
+    lines.push(Line::from(""));
+    if plan.confirm_required {
+        lines.push(Line::from(vec![Span::styled(
+            "This plan needs typed confirmation.",
+            warning_style(),
+        )]));
+        lines.push(Line::from(vec![
+            Span::raw("Type "),
+            Span::styled(CONFIRM_PHRASE, selected_row_style()),
+            Span::raw(", then press Enter."),
+        ]));
+        lines.push(Line::from("This preview will not start the container yet."));
+        lines.push(label_value(
+            "Typed",
+            if confirm_input.is_empty() {
+                "<nothing>".to_string()
+            } else {
+                confirm_input.to_string()
+            },
+            muted_but_readable_style(),
+        ));
+    } else {
+        lines.push(Line::from(
+            "Press Enter to confirm. This preview will not start the container yet.",
+        ));
+    }
+
+    if let Some(notice) = confirm_notice {
+        let style = if notice.starts_with("Confirmed") {
+            safe_style()
+        } else {
+            warning_style()
+        };
+        lines.push(Line::from(vec![Span::styled(notice.to_string(), style)]));
+    }
+
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![Span::styled(
+        "Exact command",
+        selected_row_style(),
+    )]));
+    lines.push(Line::from(plan.command.clone()));
+    append_safety_note_lines(lines, plan, 3);
 }
 
 fn append_plan_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData) {
@@ -757,8 +979,25 @@ fn review_footer_line() -> Line<'static> {
         key_hint::plain(KeyCode::Char('b')).into(),
         Span::raw(" or "),
         key_hint::plain(KeyCode::Esc).into(),
-        Span::raw(" goes back. q quits. Launch confirmation comes next."),
+        Span::raw(" goes back. "),
+        key_hint::plain(KeyCode::Enter).into(),
+        Span::raw(" opens confirmation. q quits."),
     ])
+}
+
+fn confirm_footer_line() -> Line<'static> {
+    Line::from(vec![
+        key_hint::plain(KeyCode::Char('b')).into(),
+        Span::raw(" or "),
+        key_hint::plain(KeyCode::Esc).into(),
+        Span::raw(" goes back. "),
+        key_hint::plain(KeyCode::Enter).into(),
+        Span::raw(" confirms. q quits."),
+    ])
+}
+
+fn accepts_confirmation_char(modifiers: KeyModifiers, ch: char) -> bool {
+    matches!(modifiers, KeyModifiers::NONE | KeyModifiers::SHIFT) && ch.is_ascii_alphanumeric()
 }
 
 fn network_label(plan: &LaunchPlanData) -> String {
@@ -793,6 +1032,8 @@ fn workspace_title(workspace: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
     use runhaven_core::ui_contracts::LaunchBoundaryData;
     use runhaven_core::ui_contracts::LaunchNetworkData;
 
@@ -800,6 +1041,17 @@ mod tests {
         AgentLaunchPreview {
             agent: agent(name),
             plan: Ok(plan(name)),
+        }
+    }
+
+    fn confirm_required_preview(name: &str) -> AgentLaunchPreview {
+        let mut plan = plan(name);
+        plan.confirm_required = true;
+        plan.safety_notes
+            .push("This plan uses a less safe launch option.".to_string());
+        AgentLaunchPreview {
+            agent: agent(name),
+            plan: Ok(plan),
         }
     }
 
@@ -861,6 +1113,29 @@ mod tests {
         KeyEvent::new(code, KeyModifiers::NONE)
     }
 
+    fn modified_key(code: KeyCode, modifiers: KeyModifiers) -> KeyEvent {
+        KeyEvent::new(code, modifiers)
+    }
+
+    fn render_to_text(view: &LaunchWizardView, width: u16, height: u16) -> String {
+        let mut terminal = Terminal::new(TestBackend::new(width, height)).expect("test terminal");
+        terminal
+            .draw(|frame| view.render(frame.area(), frame.buffer_mut()))
+            .expect("draw");
+        terminal
+            .backend()
+            .buffer()
+            .content()
+            .chunks(width as usize)
+            .map(|row| {
+                row.iter()
+                    .map(ratatui::buffer::Cell::symbol)
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
     #[test]
     fn enter_on_ready_plan_opens_review() {
         let mut view = LaunchWizardView::new(
@@ -911,6 +1186,146 @@ mod tests {
     }
 
     #[test]
+    fn review_enter_opens_confirm_step_and_keeps_selected_agent() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![ready_preview("codex"), ready_preview("claude")],
+            None,
+        );
+        view.handle_key(key(KeyCode::Down));
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+
+        assert!(view.is_confirming());
+        assert_eq!(view.selected_agent_name(), Some("claude"));
+        assert!(view.terminal_title().contains("Confirm launch"));
+    }
+
+    #[test]
+    fn confirm_back_keys_return_to_review() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![ready_preview("codex")],
+            None,
+        );
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+
+        assert!(view.is_confirming());
+        view.handle_key(key(KeyCode::Backspace));
+
+        assert!(view.is_reviewing());
+
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Esc));
+
+        assert!(view.is_reviewing());
+    }
+
+    #[test]
+    fn secure_plan_confirm_enter_sets_disabled_launch_notice() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![ready_preview("codex")],
+            None,
+        );
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+
+        assert!(view.is_confirming());
+        assert_eq!(
+            view.confirm_notice.as_deref(),
+            Some("Confirmed. TUI launch is still disabled.")
+        );
+    }
+
+    #[test]
+    fn confirm_required_plan_rejects_missing_phrase() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![confirm_required_preview("codex")],
+            None,
+        );
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+
+        assert!(view.is_confirming());
+        assert_eq!(
+            view.confirm_notice.as_deref(),
+            Some("Type launch before confirming.")
+        );
+    }
+
+    #[test]
+    fn confirm_required_plan_accepts_phrase_after_backspace_edit() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![confirm_required_preview("codex")],
+            None,
+        );
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+
+        view.handle_key(modified_key(KeyCode::Char('L'), KeyModifiers::SHIFT));
+        for ch in ['a', 'x'] {
+            view.handle_key(key(KeyCode::Char(ch)));
+        }
+        view.handle_key(key(KeyCode::Backspace));
+        for ch in ['u', 'n', 'c', 'h'] {
+            view.handle_key(key(KeyCode::Char(ch)));
+        }
+        view.handle_key(modified_key(KeyCode::Char('!'), KeyModifiers::SHIFT));
+
+        assert_eq!(view.confirm_input, "launch");
+
+        view.handle_key(key(KeyCode::Enter));
+
+        assert_eq!(
+            view.confirm_notice.as_deref(),
+            Some("Confirmed. TUI launch is still disabled.")
+        );
+    }
+
+    #[test]
+    fn confirm_render_keeps_command_and_safety_notes_visible() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![confirm_required_preview("codex")],
+            None,
+        );
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+        let output = render_to_text(&view, 100, 32);
+
+        assert!(output.contains("Step 4/4: Confirm launch"));
+        assert!(output.contains("This plan needs typed confirmation."));
+        assert!(output.contains("Type launch, then press Enter."));
+        assert!(output.contains("Exact command"));
+        assert!(output.contains("container run"));
+        assert!(output.contains("Safety notes"));
+        assert!(output.contains("less safe launch option"));
+    }
+
+    #[test]
+    fn confirm_step_footer_status_and_title_track_step_four() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![ready_preview("codex")],
+            None,
+        );
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+
+        let footer = format!("{:?}", view.footer_status_line());
+        assert!(footer.contains("Confirm launch"));
+        assert!(footer.contains("codex"));
+        assert!(view.terminal_title().contains("Confirm launch"));
+        assert!(view.terminal_title().contains("codex"));
+    }
+
+    #[test]
     fn footer_status_and_title_track_selected_plan() {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
@@ -933,6 +1348,14 @@ mod tests {
         assert!(footer.contains("Review plan"));
         assert!(footer.contains("claude"));
         assert!(view.terminal_title().contains("Review plan"));
+        assert!(view.terminal_title().contains("claude"));
+
+        view.handle_key(key(KeyCode::Enter));
+
+        let footer = format!("{:?}", view.footer_status_line());
+        assert!(footer.contains("Confirm launch"));
+        assert!(footer.contains("claude"));
+        assert!(view.terminal_title().contains("Confirm launch"));
         assert!(view.terminal_title().contains("claude"));
     }
 }

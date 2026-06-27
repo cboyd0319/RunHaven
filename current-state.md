@@ -198,6 +198,16 @@ title on exit. The vendored footer snapshot tests are gated behind
 `codex-vendored-tests`, matching the list-selection snapshot policy because
 upstream `.snap` goldens are intentionally not tracked.
 
+TUI launch-confirmation follow-up: the launch wizard now has Step 4 confirmation
+on top of the current Codex menu-surface review. Enter from review opens
+confirmation, `b`, Backspace, or Esc returns to review, and `q` still exits from
+the shell. The confirmation screen keeps the exact planner command visible and
+uses `LaunchPlanData.confirm_required` as the only typed-confirm gate. Plans
+that need extra intent require typing `launch`; secure/default plans confirm
+with Enter. This remains a read-only preview: confirmation shows an
+acknowledgement, but the TUI does not start containers, run preflight commands,
+or write launch state yet.
+
 Verified:
 
 - `cargo fmt --check`
@@ -233,6 +243,8 @@ Latest TUI smoke verification:
 - `cargo test -p runhaven-tui --locked launch_wizard --quiet`
 - `cargo test -p runhaven-core --locked ui_contracts --quiet`
 - `cargo test -p runhaven-tui --locked app_shell --quiet`
+- `cargo test -p runhaven-tui --locked launch_wizard -- --nocapture`
+- `cargo test -p runhaven-tui --locked app_shell -- --nocapture`
 - `cargo test -p runhaven-tui --locked terminal_title --quiet`
 - `cargo test -p runhaven-tui --locked --quiet`
 - `cargo test -p runhaven-tui --locked pets::image_protocol --quiet`
@@ -242,8 +254,13 @@ Latest TUI smoke verification:
 - `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`
 - `cargo clippy -p runhaven-core --all-targets --locked -- -D warnings`
 - `cargo test --workspace --locked --quiet`
+- `cargo clippy --workspace --all-targets --locked -- -D warnings`
+- `cargo build --workspace --locked --quiet`
 - `cargo test -p runhaven --locked bare_non_tty_prints_cli_help --quiet`
 - `cargo run --locked --bin runhaven-check-pins --quiet`
+- `jq empty feature_list.json`
+- `python3 -m json.tool feature_list.json`
+- `git diff --check`
 - `CODEX_HOME=$(mktemp -d) RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin
   runhaven` in a PTY, quit with `q`; it materialized
   `pets/runhaven-cubby/{pet.json,spritesheet.webp}`, emitted Codex Kitty
@@ -253,6 +270,10 @@ Latest TUI smoke verification:
   help, Enter to open review, `b` to return to the picker, and `q` to quit;
   the terminal title changed between Choose agent and Review plan and cleared
   on exit.
+- `cargo run --locked --bin runhaven` in a PTY, pressed Enter to open review,
+  Enter to open confirmation, Enter to confirm the read-only notice, `b` to
+  return to review, and `q` to quit; the terminal title changed through Choose
+  agent, Review plan, and Confirm launch, then cleared on exit.
 
 ## Blockers
 
@@ -263,7 +284,8 @@ Latest TUI smoke verification:
 Continue TUI integration from the Codex-vendored source baseline. Keep using
 source-first Codex modules for app shell, bottom pane, status line, native pet,
 resume/session, keymap, tooltips, and terminal-title behavior before writing
-custom RunHaven TUI code. The next practical slice is the launch confirmation
-screen on top of the current review step, followed by deeper Codex bottom-pane
-runtime/composer integration. Feed RunHaven-specific surfaces from the shared
-`RunHavenComponentPayload` contracts instead of ad hoc screen structs.
+custom RunHaven TUI code. The next practical slice is deeper Codex bottom-pane
+runtime/composer integration, then real launch execution from the confirmation
+step once the command path stays planner-owned and inspectable. Feed
+RunHaven-specific surfaces from the shared `RunHavenComponentPayload` contracts
+instead of ad hoc screen structs.
