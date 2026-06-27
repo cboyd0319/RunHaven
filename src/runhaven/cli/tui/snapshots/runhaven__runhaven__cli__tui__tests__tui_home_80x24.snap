@@ -2,19 +2,18 @@
 source: src/runhaven/cli/tui/mod.rs
 expression: snapshot
 ---
-      ▄▄▄▄▄▄▄▄▄▄▄▄
-    ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄
-   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      RunHaven
-   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      v0.5.0
-   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀      run agents in a safe haven
-   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-    ▄▄▀▀▀▀▀▀▀▀▀▀▀▄▄
-   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-  ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
-   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+    ▄▀▀▀▀▀▀▀▀▀▀▀▀▄
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀     RunHaven
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀     v0.5.0
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀     run agents in a safe haven
+    ▀▀▀▀▀▀▀▀▀▀▀▀▄
+  ▄▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▄
+  ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+  ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 ┌ Agents ──────────────────────────────────────────────────────────────────────┐
 │> antigravity   Google Antigravity CLI with project-scoped home state.        │
 │  claude        Claude Code with state isolated under /home/agent/.claude.    │
@@ -25,4 +24,5 @@ expression: snapshot
 │                                                                              │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
-                      up/down move · enter select · q quit
+                  up/down move · enter select · p pet · q quit
+               RunHaven shows the exact CLI command before launch.

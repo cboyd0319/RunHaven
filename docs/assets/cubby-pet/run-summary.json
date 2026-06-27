@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "run_dir": "docs/assets/cubby-pet",
+  "spritesheet": "src/runhaven/cli/tui/assets/cubby/spritesheet.webp",
+  "validation": "docs/assets/cubby-pet/validation.json",
+  "contact_sheet": "docs/assets/cubby-pet/contact-sheet.png",
+  "review": "docs/assets/cubby-pet/review.json",
+  "previews": "docs/assets/cubby-pet/qa/previews",
+  "package": "src/runhaven/cli/tui/assets/cubby"
+}

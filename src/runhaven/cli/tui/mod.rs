@@ -24,14 +24,16 @@ mod codex;
 mod color;
 mod event_loop;
 mod mascot;
+mod pet;
 #[cfg(test)]
 mod snapshot;
 #[cfg(test)]
 mod test_backend;
 mod theme;
+mod tooltips;
 
 use event_loop::{Tick, Ticker};
-use theme::{Palette, TuiSettings};
+use theme::{MotionMode, Palette, TuiSettings};
 
 /// Launch the terminal UI. The terminal is restored on exit and on panic.
 pub fn run() -> Result<i32> {
@@ -55,6 +57,11 @@ struct App {
     screen: Screen,
     ticks: u64,
     last_tick_elapsed: Duration,
+    pet_animation_elapsed: Duration,
+    pet: Option<pet::CubbyPet>,
+    pet_image_protocol: Option<codex::image_protocol::ImageProtocol>,
+    pending_pet_draw: Option<pet::PetImageDraw>,
+    pet_image_state: pet::PetImageRenderState,
 }
 
 impl App {
@@ -69,6 +76,12 @@ impl App {
             list.select(Some(0));
         }
         let palette = Palette::for_settings(settings);
+        let pet = if settings.pet_enabled {
+            pet::CubbyPet::load().ok()
+        } else {
+            None
+        };
+        let pet_image_protocol = pet::detect_image_protocol(settings);
         Self {
             agents,
             list,
@@ -77,6 +90,11 @@ impl App {
             screen: Screen::Home,
             ticks: 0,
             last_tick_elapsed: Duration::ZERO,
+            pet_animation_elapsed: Duration::ZERO,
+            pet,
+            pet_image_protocol,
+            pending_pet_draw: None,
+            pet_image_state: pet::PetImageRenderState::default(),
         }
     }
 
@@ -84,12 +102,14 @@ impl App {
         let mut ticker = Ticker::new(Instant::now(), self.settings.tick_rate);
         loop {
             terminal.draw(|frame| self.render(frame))?;
+            self.render_terminal_overlay();
             let now = Instant::now();
             if event::poll(ticker.timeout(now))?
                 && let Event::Key(key) = event::read()?
                 && key.kind == KeyEventKind::Press
                 && let Some(code) = self.handle_key(key.code)
             {
+                self.clear_terminal_overlay();
                 return Ok(code);
             }
             if let Some(tick) = ticker.tick(Instant::now()) {
@@ -106,6 +126,7 @@ impl App {
                 KeyCode::Down | KeyCode::Char('j') => self.select_next(),
                 KeyCode::Up | KeyCode::Char('k') => self.select_previous(),
                 KeyCode::Enter | KeyCode::Char('l') => self.screen = Screen::Detail,
+                KeyCode::Char('p') => self.toggle_pet(),
                 _ => {}
             },
             Screen::Detail => match code {
@@ -139,9 +160,26 @@ impl App {
     fn on_tick(&mut self, tick: Tick) {
         self.ticks = self.ticks.saturating_add(1);
         self.last_tick_elapsed = tick.elapsed;
+        if self.settings.pet_enabled && matches!(self.screen, Screen::Home) {
+            self.pet_animation_elapsed = self.pet_animation_elapsed.saturating_add(tick.elapsed);
+        }
+    }
+
+    fn toggle_pet(&mut self) {
+        self.settings.pet_enabled = !self.settings.pet_enabled;
+        if self.settings.pet_enabled {
+            self.pet_animation_elapsed = Duration::ZERO;
+            if self.pet.is_none() {
+                self.pet = pet::CubbyPet::load().ok();
+            }
+            self.pet_image_protocol = pet::detect_image_protocol(self.settings);
+        } else {
+            self.pending_pet_draw = None;
+        }
     }
 
     fn render(&mut self, frame: &mut Frame) {
+        self.pending_pet_draw = None;
         match self.screen {
             Screen::Home => self.render_home(frame),
             Screen::Detail => self.render_detail(frame),
@@ -151,20 +189,74 @@ impl App {
     fn render_home(&mut self, frame: &mut Frame) {
         // Reserve rows for the agent list and footer, then show the largest
         // Cubby hero that still fits the banner.
-        const RESERVED_ROWS: u16 = 11;
+        const RESERVED_ROWS: u16 = 12;
         let available = frame.area().height.saturating_sub(RESERVED_ROWS);
-        let hero = (!self.settings.line_mode).then(|| mascot::hero_for_banner(available));
-        let banner_height = hero.map_or(4, mascot::HeroSprite::cell_height);
+        let brand_min_width = 22;
+        let mascot_columns = frame.area().width.saturating_sub(brand_min_width);
+        let pet_size = (self.settings.pet_enabled && !self.settings.line_mode)
+            .then(|| {
+                self.pet
+                    .as_ref()
+                    .and_then(|pet| pet.size_for_area(available, mascot_columns))
+            })
+            .flatten();
+        let fallback_hero =
+            (self.settings.pet_enabled && !self.settings.line_mode && pet_size.is_none())
+                .then(|| mascot::hero_for_area(available, mascot_columns))
+                .flatten();
+        let banner_height = pet_size
+            .map(|size| size.rows)
+            .or_else(|| fallback_hero.map(mascot::HeroSprite::cell_height))
+            .unwrap_or(4);
 
         let [banner, body, footer] = Layout::vertical([
             Constraint::Length(banner_height),
             Constraint::Min(0),
-            Constraint::Length(1),
+            Constraint::Length(2),
         ])
         .areas(frame.area());
 
-        if let Some(hero) = hero {
-            render_banner(frame, banner, hero, self.settings, self.palette);
+        if let Some(size) = pet_size {
+            let animated = self.settings.motion_mode == MotionMode::Animated;
+            let pet_lines = self.pet.as_mut().and_then(|pet| {
+                pet.idle_lines(
+                    size,
+                    self.settings.color_enabled,
+                    self.pet_animation_elapsed,
+                    animated,
+                )
+                .ok()
+            });
+            if let Some(pet_lines) = pet_lines {
+                let mascot_area =
+                    render_banner(frame, banner, size.columns, pet_lines, self.palette);
+                if let (Some(pet), Some(protocol)) = (self.pet.as_ref(), self.pet_image_protocol) {
+                    self.pending_pet_draw = pet.draw_request(
+                        mascot_area,
+                        self.pet_animation_elapsed,
+                        animated,
+                        protocol,
+                    );
+                }
+            } else if let Some(hero) = mascot::hero_for_area(available, mascot_columns) {
+                render_banner(
+                    frame,
+                    banner,
+                    hero.cell_width(),
+                    hero.lines_with_color(self.settings.color_enabled),
+                    self.palette,
+                );
+            } else {
+                render_line_banner(frame, banner, self.palette);
+            }
+        } else if let Some(hero) = fallback_hero {
+            render_banner(
+                frame,
+                banner,
+                hero.cell_width(),
+                hero.lines_with_color(self.settings.color_enabled),
+                self.palette,
+            );
         } else {
             render_line_banner(frame, banner, self.palette);
         }
@@ -190,12 +282,13 @@ impl App {
         }
         frame.render_stateful_widget(list, body, &mut self.list);
 
-        let hint = Paragraph::new(Line::styled(
-            "up/down move · enter select · q quit",
-            self.palette.muted(),
-        ))
-        .centered();
-        frame.render_widget(hint, footer);
+        render_footer(
+            frame,
+            footer,
+            "up/down move · enter select · p pet · q quit",
+            tooltips::tip_for_tick(self.ticks),
+            self.palette,
+        );
     }
 
     fn render_detail(&self, frame: &mut Frame) {
@@ -231,9 +324,32 @@ impl App {
         }
         frame.render_widget(detail, body);
 
-        let hint =
-            Paragraph::new(Line::styled("esc back · q quit", self.palette.muted())).centered();
-        frame.render_widget(hint, footer);
+        render_footer(
+            frame,
+            footer,
+            "esc back · q quit",
+            tooltips::tip_for_tick(self.ticks),
+            self.palette,
+        );
+    }
+
+    fn render_terminal_overlay(&mut self) {
+        let mut stdout = std::io::stdout().lock();
+        if pet::render_pet_image(
+            &mut stdout,
+            &mut self.pet_image_state,
+            self.pending_pet_draw.clone(),
+        )
+        .is_err()
+        {
+            self.pet_image_protocol = None;
+            let _ = pet::render_pet_image(&mut stdout, &mut self.pet_image_state, None);
+        }
+    }
+
+    fn clear_terminal_overlay(&mut self) {
+        let mut stdout = std::io::stdout().lock();
+        let _ = pet::render_pet_image(&mut stdout, &mut self.pet_image_state, None);
     }
 }
 
@@ -241,20 +357,14 @@ impl App {
 fn render_banner(
     frame: &mut Frame,
     area: Rect,
-    hero: &mascot::HeroSprite,
-    settings: TuiSettings,
+    mascot_width: u16,
+    mascot_lines: Vec<Line<'static>>,
     palette: Palette,
-) {
-    let [mascot_area, brand_area] = Layout::horizontal([
-        Constraint::Length(hero.cell_width() + 2),
-        Constraint::Min(0),
-    ])
-    .areas(area);
+) -> Rect {
+    let [mascot_area, brand_area] =
+        Layout::horizontal([Constraint::Length(mascot_width + 2), Constraint::Min(0)]).areas(area);
 
-    frame.render_widget(
-        Paragraph::new(hero.lines_with_color(settings.color_enabled)),
-        mascot_area,
-    );
+    frame.render_widget(Paragraph::new(mascot_lines), mascot_area);
 
     // Vertically center the brand against the mascot.
     let brand = [
@@ -267,6 +377,7 @@ fn render_banner(
     let mut lines = vec![Line::from(""); pad as usize];
     lines.extend(brand);
     frame.render_widget(Paragraph::new(lines), brand_area);
+    mascot_area
 }
 
 fn render_line_banner(frame: &mut Frame, area: Rect, palette: Palette) {
@@ -276,6 +387,21 @@ fn render_line_banner(frame: &mut Frame, area: Rect, palette: Palette) {
         Line::styled("run agents in a safe haven", palette.muted()),
     ];
     frame.render_widget(Paragraph::new(lines), area);
+}
+
+fn render_footer(frame: &mut Frame, area: Rect, hints: &str, tip: &str, palette: Palette) {
+    let [hint_area, tip_area] =
+        Layout::vertical([Constraint::Length(1), Constraint::Length(1)]).areas(area);
+    let hint = truncate_to_width(hints, hint_area.width as usize);
+    let tip = truncate_to_width(tip, tip_area.width as usize);
+    frame.render_widget(
+        Paragraph::new(Line::styled(hint, palette.muted())).centered(),
+        hint_area,
+    );
+    frame.render_widget(
+        Paragraph::new(Line::styled(tip, palette.muted())).centered(),
+        tip_area,
+    );
 }
 
 fn agent_list_item(profile: &AgentProfile, width: usize) -> ListItem<'static> {
@@ -324,7 +450,7 @@ fn layout(frame: &Frame) -> [Rect; 3] {
     Layout::vertical([
         Constraint::Length(3),
         Constraint::Min(0),
-        Constraint::Length(1),
+        Constraint::Length(2),
     ])
     .areas(frame.area())
 }

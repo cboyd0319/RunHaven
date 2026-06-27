@@ -123,7 +123,7 @@ Dependencies added for vendored code are pure-Rust and exact-pinned: `base64`,
 Each phase ships at the reference-quality bar (below). Phases are sequenced so
 later screens build on earlier foundations.
 
-### Phase 0 — Foundation (in progress)
+### Phase 0 — Foundation (complete)
 
 The reusable spine. Vendor the foundation primitives (`render`, `key_hint`,
 `wrapping`, `terminal_hyperlinks`, `selection_list`, OSC 52 clipboard). Build:
@@ -134,7 +134,7 @@ The reusable spine. Vendor the foundation primitives (`render`, `key_hint`,
   animation, replacing codex's tokio `FrameRequester`);
 - the VT100 + `insta` snapshot test harness used by every later screen.
 
-### Phase 1 — Brand complete
+### Phase 1 — Brand complete (complete)
 
 - Hero image tier: render the high-resolution Cubby via `codex::image_protocol`
   (Kitty overlay emitted after the ratatui draw, positioned over the banner) on
@@ -225,5 +225,13 @@ phase as they arise.
   `event::poll` tick loop; Codex-derived color helpers; a Codex-derived VT100
   backend; and `insta` snapshots for the current home/detail screens at multiple
   sizes.
-- Next: Phase 1 brand complete: high-resolution Cubby image tier, animated pet
-  policy, and RunHaven-authored rotating tooltips.
+- Complete: Phase 1 brand. The launcher loads the validated Cubby Codex pet
+  package from `src/runhaven/cli/tui/assets/cubby/`, drives the idle loop with
+  Codex animation timing, renders the current atlas frame as a half-block
+  fallback, and emits the Codex Kitty/iTerm2/Sixel image overlay after the
+  ratatui draw when the terminal supports it. Cubby is visible by default,
+  `p` toggles it for the session, `RUNHAVEN_TUI_PET=0` starts with it hidden,
+  reduced-motion keeps it visible but static, and line-mode omits it. The copied
+  QA evidence for the pet lives in `docs/assets/cubby-pet/`.
+- Next: Phase 2 launcher flow: workspace picker, agent/provider picker, plan and
+  egress review, confirm-launch modal, and launching a real run.

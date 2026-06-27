@@ -5,8 +5,8 @@
 //!
 //! The pixel grids live in `sprites.rs` (generated from the half-block renders
 //! in docs/assets/terminal-mascot/, xterm-256 indexed, two pixel rows per cell).
-//! `hero_for_banner` picks the largest sprite whose banner fits the rows
-//! available above the agent list.
+//! `hero_for_area` picks the largest sprite whose banner fits the rows and
+//! columns available above the agent list.
 
 mod sprites;
 
@@ -80,14 +80,20 @@ impl HeroSprite {
     }
 }
 
-/// The largest hero whose banner height fits `available_rows` (the rows left
-/// above the agent list and footer). Falls back to the smallest hero when space
-/// is tight. `HEROES` is ordered largest first.
-pub(super) fn hero_for_banner(available_rows: u16) -> &'static HeroSprite {
+/// The largest hero whose banner height and width fit the available area.
+/// Returns `None` when the terminal is too short or narrow for a useful mascot.
+pub(super) fn hero_for_area(
+    available_rows: u16,
+    available_columns: u16,
+) -> Option<&'static HeroSprite> {
     sprites::HEROES
         .iter()
-        .find(|hero| hero.cell_height() <= available_rows)
-        .unwrap_or_else(|| sprites::HEROES.last().expect("at least one hero sprite"))
+        .find(|hero| hero.cell_height() <= available_rows && hero.cell_width() <= available_columns)
+        .or_else(|| {
+            sprites::HEROES.last().filter(|hero| {
+                hero.cell_height() <= available_rows && hero.cell_width() <= available_columns
+            })
+        })
 }
 
 #[cfg(test)]
@@ -121,8 +127,18 @@ mod tests {
     fn banner_picks_largest_that_fits() {
         let big = sprites::HEROES.first().unwrap();
         let small = sprites::HEROES.last().unwrap();
-        assert_eq!(hero_for_banner(1000).cell_height(), big.cell_height());
-        assert_eq!(hero_for_banner(0).cell_height(), small.cell_height());
+        assert_eq!(
+            hero_for_area(1000, 1000).unwrap().cell_height(),
+            big.cell_height()
+        );
+        assert_eq!(
+            hero_for_area(small.cell_height(), small.cell_width())
+                .unwrap()
+                .cell_height(),
+            small.cell_height()
+        );
+        assert!(hero_for_area(0, 1000).is_none());
+        assert!(hero_for_area(1000, 0).is_none());
     }
 
     #[test]

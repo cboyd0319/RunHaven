@@ -23,6 +23,6 @@ expression: snapshot
 │                                                                              │
 │                                                                              │
 │                                                                              │
-│                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
                                 esc back · q quit
+               RunHaven shows the exact CLI command before launch.

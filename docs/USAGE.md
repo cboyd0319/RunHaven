@@ -20,12 +20,17 @@ a launcher and manager over the same agents and run planner as the CLI:
 runhaven
 ```
 
-The TUI is early: today it is a navigable agent picker (up/down to move, enter to
-open a per-agent detail view, esc to go back); workspace selection, plan and
-egress review, and the run dashboard land in later slices. It already honors
-terminal accessibility basics: `NO_COLOR` disables color, `RUNHAVEN_TUI_REDUCED_MOTION=1`
-uses reduced-motion mode, and `RUNHAVEN_TUI_LINE_MODE=1` starts a simpler
-text-first layout. The CLI stays the complete, scriptable surface: any
+The TUI is early: today it is a navigable agent picker (up/down to move, enter
+to open a per-agent detail view, esc to go back); workspace selection, plan and
+egress review, and the run dashboard land in later slices. Cubby, the RunHaven
+pet, is visible by default. Press `p` to hide or show it for the current
+session. Set `RUNHAVEN_TUI_PET=0` to start with the pet hidden.
+
+On terminals with Kitty graphics, Sixel, or iTerm2 3.6+ support, Cubby can use a
+high-resolution image overlay; otherwise it falls back to a terminal-safe
+half-block sprite. `NO_COLOR` disables color, `RUNHAVEN_TUI_REDUCED_MOTION=1`
+keeps Cubby static, and `RUNHAVEN_TUI_LINE_MODE=1` starts a simpler text-first
+layout without the pet. The CLI stays the complete, scriptable surface: any
 subcommand, or a piped or redirected invocation, uses the CLI directly and never
 opens the TUI. Press `q` to quit.
 

@@ -39,6 +39,15 @@ sources listed below:
 | `src/runhaven/cli/tui/color.rs` | `codex-rs/tui/src/color.rs` |
 | `src/runhaven/cli/tui/test_backend.rs` | `codex-rs/tui/src/test_backend.rs` |
 
+### Adapted pet integration
+
+RunHaven's `src/runhaven/cli/tui/pet.rs` is local integration code that follows
+the structure and terminal-image behavior of these upstream Codex files:
+
+| RunHaven file | Upstream source used as reference |
+| --- | --- |
+| `src/runhaven/cli/tui/pet.rs` | `codex-rs/tui/src/pets/ambient.rs` and `codex-rs/tui/src/pets/mod.rs` |
+
 ### Modifications
 
 The vendored files were modified by RunHaven on 2026-06-26. The changes are

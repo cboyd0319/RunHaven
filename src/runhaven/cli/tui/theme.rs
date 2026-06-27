@@ -9,6 +9,7 @@ use super::event_loop::DEFAULT_TICK_RATE;
 const REDUCED_MOTION_ENV: &str = "RUNHAVEN_TUI_REDUCED_MOTION";
 const LINE_MODE_ENV: &str = "RUNHAVEN_TUI_LINE_MODE";
 const COLOR_MODE_ENV: &str = "RUNHAVEN_TUI_COLOR_MODE";
+const PET_ENV: &str = "RUNHAVEN_TUI_PET";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ColorMode {
@@ -57,6 +58,7 @@ pub(crate) struct TuiSettings {
     pub color_mode: ColorMode,
     pub motion_mode: MotionMode,
     pub line_mode: bool,
+    pub pet_enabled: bool,
     pub tick_rate: Duration,
 }
 
@@ -67,6 +69,7 @@ impl Default for TuiSettings {
             color_mode: ColorMode::Dark,
             motion_mode: MotionMode::Animated,
             line_mode: false,
+            pet_enabled: true,
             tick_rate: DEFAULT_TICK_RATE,
         }
     }
@@ -85,12 +88,14 @@ impl TuiSettings {
             .unwrap_or(ColorMode::Dark);
         let motion_mode = MotionMode::from_animations_enabled(!truthy(var(REDUCED_MOTION_ENV)));
         let line_mode = truthy(var(LINE_MODE_ENV));
+        let pet_enabled = enabled_unless_falsey(var(PET_ENV));
 
         Self {
             color_enabled,
             color_mode,
             motion_mode,
             line_mode,
+            pet_enabled,
             tick_rate: DEFAULT_TICK_RATE,
         }
     }
@@ -187,10 +192,18 @@ fn truthy(value: Option<OsString>) -> bool {
     let Some(value) = value else {
         return false;
     };
+    !falsey(&value)
+}
+
+fn enabled_unless_falsey(value: Option<OsString>) -> bool {
+    value.as_ref().is_none_or(|value| !falsey(value))
+}
+
+fn falsey(value: &OsString) -> bool {
     let Some(value) = value.to_str() else {
-        return true;
+        return false;
     };
-    !matches!(
+    matches!(
         value.trim().to_ascii_lowercase().as_str(),
         "" | "0" | "false" | "no" | "off"
     )
@@ -218,13 +231,22 @@ mod tests {
             ("NO_COLOR", "1"),
             (REDUCED_MOTION_ENV, "true"),
             (LINE_MODE_ENV, "yes"),
+            (PET_ENV, "off"),
             (COLOR_MODE_ENV, "light"),
         ]);
 
         assert!(!settings.color_enabled);
         assert_eq!(settings.motion_mode, MotionMode::Reduced);
         assert!(settings.line_mode);
+        assert!(!settings.pet_enabled);
         assert_eq!(settings.color_mode, ColorMode::Light);
+    }
+
+    #[test]
+    fn pet_is_enabled_by_default_and_accepts_truthy_override() {
+        assert!(settings_from(&[]).pet_enabled);
+        assert!(settings_from(&[(PET_ENV, "yes")]).pet_enabled);
+        assert!(!settings_from(&[(PET_ENV, "0")]).pet_enabled);
     }
 
     #[test]

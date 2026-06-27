@@ -11,10 +11,13 @@ release-readiness are `passing`. The TUI has been re-sequenced by the
 2026-06-26 user directive into a first-class reference implementation to build
 now; the Tauri desktop app remains deferred to the roadmap end.
 
-TUI Phase 0 is complete: foundation primitives, theme/settings, synchronous tick
-loop, VT100 snapshot harness, and accessibility switches. Next is Phase 1 from
-`docs/plans/tui-build-plan.md`: brand complete (high-resolution Cubby image
-tier, animated/static pet policy, and RunHaven-authored rotating tooltips).
+TUI Phase 1 is complete: the validated Cubby Codex pet package is embedded, the
+home banner uses Codex animation timing plus the Codex Kitty/iTerm2/Sixel image
+overlay path with a half-block fallback, `p` and `RUNHAVEN_TUI_PET=0` control
+pet visibility, reduced-motion keeps Cubby static, and RunHaven-authored
+tooltips rotate in the footer. Next is Phase 2 from
+`docs/plans/tui-build-plan.md`: launcher flow (workspace picker, provider
+picker, plan and egress review, confirm-launch modal, and launching a real run).
 
 ## Startup State Contract
 
@@ -184,6 +187,21 @@ evidence and a recorded reason.
   --locked tui` (135 TUI-filtered tests), `cargo clippy --all-targets --locked
   -- -D warnings`, `cargo run --locked --bin runhaven-check-pins`, and `git diff
   --check`. Branch: `terminal-ui-build-plan`. Next: Phase 1 brand complete.
+- 2026-06-27: TUI Phase 1 brand. Embedded the validated Cubby Codex pet package
+  at `src/runhaven/cli/tui/assets/cubby/` and copied QA evidence to
+  `docs/assets/cubby-pet/` (validation ok, contact sheet, preview GIFs, review
+  ok with one accepted jumping `stable-slots` warning). The home banner now uses
+  the real Cubby atlas: Codex animation timing selects idle frames, reduced
+  motion pins the first idle frame, the portable fallback renders the current
+  frame as half-blocks, and graphics terminals use the Codex Kitty/iTerm2/Sixel
+  overlay path after the ratatui draw. `p` toggles Cubby for the session and
+  `RUNHAVEN_TUI_PET=0` starts hidden. Added RunHaven-authored rotating footer
+  tooltips. Verified after implementation: `cargo fmt --check`, `cargo test
+  --locked tui`, `cargo clippy --all-targets --locked -- -D warnings`, `cargo
+  test --locked`, `cargo run --locked --bin runhaven-check-pins`, Cubby atlas
+  validation, copied metadata path sanitation, iTerm2 3.6.11 PTY launch/quit
+  smoke, and `git diff --check`. Branch:
+  `terminal-ui-build-plan`. Next: Phase 2 launcher flow.
 - 2026-06-26: Vendored codex's pet/image rendering stack under
   `src/runhaven/cli/tui/codex/` (Apache-2.0, with attribution), covering the
   three pillars: the high-fidelity hero/image tier (`terminal_detection.rs`,
