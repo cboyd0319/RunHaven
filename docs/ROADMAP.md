@@ -127,6 +127,9 @@ current-stable pins, and keep the harness state current.
   disabled unless explicitly approved
 - task-language usage recipes for review-only, local tests, provider-only,
   undo, and state reset workflows
+- far-backlog on-device natural-language help inside the Codex-vendored TUI,
+  only after current Apple local model APIs, Codex extension points, privacy,
+  offline behavior, and fallback docs are verified
 - one-command bootstrap or installer automation for Apple `container`
 
 ## Completed And Ongoing: Isolation And Recovery

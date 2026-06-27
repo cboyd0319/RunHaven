@@ -70,6 +70,7 @@ problem, user outcome, security boundary, and verification are clear.
 | Strict workflow files | candidate | What schema allows repeatable setup/main/teardown inside Apple `container` without host-side surprises? | Reject unknown fields; persist workflow hash and state. |
 | Read-only context overlays | candidate | What docs, skills, prompts, or project memory can be mounted read-only without exposing host secrets? | Prefer explicit overlays over host-home mounts. |
 | Shared planner/policy objects | candidate | Which CLI planning data should become reusable by future Rust API and UI commands? | Avoid duplicating parser, docs, and UI state logic. |
+| On-device natural-language help assistant | far backlog | Could RunHaven answer help questions inside the Codex-vendored TUI using a local Apple on-device model instead of shipping dense help screens? | Investigation only. Verify current Apple on-device model APIs, Codex model-provider extension points, privacy boundaries, offline behavior, and fallback docs before any build. Keep the answer path local by default if the design proves viable. |
 
 ## Borrowed Ideas From Competitive Scan (2026-06-26)
 
