@@ -1112,11 +1112,12 @@ crate buildable and fails closed for bare interactive TUI launch until that
 integration is complete. The lower native pet runtime now compiles and passes
 tests, including terminal detection, frame extraction, image protocol writers,
 Sixel encoding, ambient draw requests, Tokio frame scheduling, native pet
-picker discovery, picker preview state, and the Codex renderable contract. The
-picker currently uses a staged bottom-pane selection contract until the full
-Codex bottom-pane view is adapted. For each removal, record why removal is
-better than leaving and adapting. Keep the reference-implementation requirement
-in view because this TUI setup will guide several sibling projects.
+picker discovery, picker preview state, the Codex renderable contract, and the
+Codex terminal title helper. The picker currently uses a staged bottom-pane
+selection contract until the full Codex bottom-pane view is adapted. For each
+removal, record why removal is better than leaving and adapting. Keep the
+reference-implementation requirement in view because this TUI setup will guide
+several sibling projects.
 
 Do not publish a release from the interim vendor-reset state. After the TUI is
 fully integrated, verified, and confirmed, do a full release bump to `v0.6.0`

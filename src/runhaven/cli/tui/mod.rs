@@ -225,6 +225,8 @@ pub(crate) mod render {
 }
 #[allow(dead_code)]
 pub(crate) mod terminal_detection;
+#[allow(dead_code)]
+pub(crate) mod terminal_title;
 
 #[allow(dead_code)]
 #[path = "tui/frame_rate_limiter.rs"]

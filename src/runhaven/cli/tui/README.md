@@ -52,6 +52,8 @@ Local integration exceptions:
 - `render/renderable.rs` is now compiled through the RunHaven adapter with one
   Ratatui 0.30 compatibility tweak: `Line` renders through the borrowed
   `WidgetRef` implementation.
+- `terminal_title.rs` is compiled as a vendored app-shell helper. It keeps
+  Codex's OSC title sanitization rules intact.
 
 Known integration gap:
 

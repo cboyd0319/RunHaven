@@ -255,6 +255,21 @@ Why leaving and adapting is better than removing:
   theme globals and terminal palette behavior that should be adapted with the
   app-shell theme pass.
 
+### Codex Terminal Title Helper
+
+Decision: compile and test Codex's `terminal_title.rs` as an app-shell helper
+before the full app shell is runnable.
+
+Why leaving and adapting is better than removing:
+
+- Terminal title behavior was explicitly called out as a Codex source feature
+  to evaluate.
+- The helper is self-contained and protects OSC title output by stripping
+  control, invisible, and bidi-formatting characters.
+- Keeping it now avoids writing a custom title sanitizer later.
+- The app-shell pass can decide when RunHaven sets or clears titles; this slice
+  only preserves the safe low-level helper.
+
 ### Earlier RunHaven Zork Implementation
 
 Decision: leave `src/runhaven/cli/tui/zork/` absent from the raw Codex vendor
@@ -295,6 +310,7 @@ The first milestone is a clean vendor baseline:
   staged bottom-pane selection contract.
 - Codex's `render/renderable.rs` now compiles and passes its tests through the
   RunHaven adapter.
+- Codex's terminal title helper now compiles and passes its tests.
 - The copied Codex source still has crate-root assumptions from the upstream
   `codex-tui` crate. The next integration work is to adapt those assumptions
   into RunHaven product adapters without culling useful Codex surfaces early.
