@@ -79,9 +79,18 @@ rendering floor, no image protocol). The sprites are xterm-256 indexed (indices
 `hero_for_banner` shows the largest one that fits the terminal, so detail scales
 up on bigger windows and degrades cleanly on an 80x24 floor. The source renders
 are in `docs/assets/terminal-mascot/` and the 1024px master is
-`docs/assets/cubby-hero-1024.png`. It is pure branding with no
-data plumbing, the static counterpart to the animated pet (the lifecycle mark in
-`ratatui-brand-graphics.md`).
+`docs/assets/cubby-hero-1024.png`.
+
+On terminals with a graphics protocol (iTerm2/Kitty/Ghostty/WezTerm/Sixel), the
+banner instead shows the real high-resolution Cubby via `ratatui-image`
+(`hero_image_protocol` in `tui/mod.rs` queries the terminal once at startup; the
+half-block sprite is the fallback when no protocol is detected). `ratatui-image`
+is used as the maintained, pure-Rust equivalent of codex's hand-rolled
+`pets/image_protocol.rs` + `sixel.rs` + `picker.rs`; codex's atlas and
+frame-timing logic (`pets/model.rs`, `pets/ambient.rs`) is the reference to adapt
+(Apache-2.0, with attribution) for the animated pet, which `ratatui-image` does
+not cover. It is pure branding with no data plumbing, the static counterpart to
+the animated pet (the lifecycle mark in `ratatui-brand-graphics.md`).
 
 ## Parity and tests
 

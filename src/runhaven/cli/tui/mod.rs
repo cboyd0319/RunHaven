@@ -3,9 +3,11 @@
 //! the CLI uses, never a replacement for the explicit CLI surface.
 //!
 //! Slices so far: the scaffold (terminal setup via `ratatui::init`, a draw and
-//! key-event loop) and an agent picker (a navigable home list and a per-agent
-//! detail screen). Later slices add workspace selection, plan and egress review,
-//! the run dashboard, and brand graphics.
+//! key-event loop), an agent picker (a navigable home list and a per-agent
+//! detail screen), and the Cubby mascot (a high-resolution image on graphics
+//! terminals via `ratatui-image`, a half-block sprite everywhere else). Later
+//! slices add workspace selection, plan and egress review, the run dashboard,
+//! and the animated pet.
 
 use anyhow::Result;
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEventKind};
@@ -14,6 +16,9 @@ use ratatui::style::{Style, Stylize};
 use ratatui::text::{Line, Text};
 use ratatui::widgets::{Block, List, ListItem, ListState, Paragraph};
 use ratatui::{DefaultTerminal, Frame};
+use ratatui_image::picker::{Picker, ProtocolType};
+use ratatui_image::protocol::StatefulProtocol;
+use ratatui_image::{FilterType, Resize, StatefulImage};
 
 use super::app::{agent_broker, agent_sign_in};
 use crate::plans::default_network_mode;
@@ -21,12 +26,32 @@ use crate::profiles::{AgentProfile, profiles};
 
 mod mascot;
 
+/// The high-resolution Cubby used by the image-protocol tier, embedded so the
+/// binary is self-contained. It is shown only on terminals with a graphics
+/// protocol; everywhere else the half-block sprite is used.
+const HERO_IMAGE: &[u8] =
+    include_bytes!("../../../../docs/assets/terminal-mascot/cubby-terminal-source-transparent.png");
+
 /// Launch the terminal UI. The terminal is restored on exit and on panic.
 pub fn run() -> Result<i32> {
     let mut terminal = ratatui::init();
-    let result = App::new().run(&mut terminal);
+    let mut app = App::new();
+    app.hero_image = hero_image_protocol();
+    let result = app.run(&mut terminal);
     ratatui::restore();
     result
+}
+
+/// Build the image-protocol hero, or `None` when the terminal has no graphics
+/// protocol (then the half-block sprite is used). Queries the terminal, so it is
+/// called only from `run` on a real TTY, never in tests.
+fn hero_image_protocol() -> Option<StatefulProtocol> {
+    let picker = Picker::from_query_stdio().ok()?;
+    if picker.protocol_type() == ProtocolType::Halfblocks {
+        return None;
+    }
+    let image = image::load_from_memory(HERO_IMAGE).ok()?;
+    Some(picker.new_resize_protocol(image))
 }
 
 #[derive(Clone, Copy)]
@@ -39,6 +64,9 @@ struct App {
     agents: Vec<AgentProfile>,
     list: ListState,
     screen: Screen,
+    /// The image-protocol hero when the terminal supports graphics; `None` falls
+    /// back to the half-block sprite.
+    hero_image: Option<StatefulProtocol>,
 }
 
 impl App {
@@ -52,6 +80,7 @@ impl App {
             agents,
             list,
             screen: Screen::Home,
+            hero_image: None,
         }
     }
 
@@ -126,7 +155,7 @@ impl App {
         ])
         .areas(frame.area());
 
-        render_banner(frame, banner, hero);
+        render_banner(frame, banner, hero, self.hero_image.as_mut());
 
         let items: Vec<ListItem> = self
             .agents
@@ -174,15 +203,29 @@ impl App {
     }
 }
 
-/// The home banner: Cubby on the left, brand and tagline on the right.
-fn render_banner(frame: &mut Frame, area: Rect, hero: &mascot::HeroSprite) {
+/// The home banner: Cubby on the left, brand and tagline on the right. Cubby is
+/// the high-resolution image on graphics terminals, the half-block sprite
+/// elsewhere.
+fn render_banner(
+    frame: &mut Frame,
+    area: Rect,
+    hero: &mascot::HeroSprite,
+    image: Option<&mut StatefulProtocol>,
+) {
     let [mascot_area, brand_area] = Layout::horizontal([
         Constraint::Length(hero.cell_width() + 2),
         Constraint::Min(0),
     ])
     .areas(area);
 
-    frame.render_widget(Paragraph::new(hero.lines()), mascot_area);
+    match image {
+        Some(protocol) => {
+            let widget = StatefulImage::<StatefulProtocol>::default()
+                .resize(Resize::Fit(Some(FilterType::Lanczos3)));
+            frame.render_stateful_widget(widget, mascot_area, protocol);
+        }
+        None => frame.render_widget(Paragraph::new(hero.lines()), mascot_area),
+    }
 
     // Vertically center the brand against the mascot.
     let brand = [

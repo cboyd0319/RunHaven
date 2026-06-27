@@ -137,9 +137,33 @@ evidence and a recorded reason.
   registrable domain) is built and used for Antigravity. Remaining: graceful
   degradation, plain-language foreign-host messaging, and the auto-updating
   policy. This is still an allowlist (default-deny); it just speaks in families.
+- TUI image rendering uses `ratatui-image`, not a vendored copy of codex's
+  hand-rolled image protocols (2026-06-26). The Codex TUI is Apache-2.0, so
+  copying or adapting it is permitted (preserve notice, state changes); this is
+  an engineering choice, not a licensing one. Codex hand-rolls `pets/image_protocol.rs`
+  + `sixel.rs` + `picker.rs` (~1500 lines) on its internal `codex_terminal_detection`
+  crate because of its bespoke terminal backend; `ratatui-image` is the maintained,
+  pure-Rust standalone equivalent of exactly those modules, giving the same
+  Kitty/iTerm2/Sixel + half-block capability without carrying that code or
+  vendoring an internal crate. Where codex adds value that the crate does not
+  cover, the animated-pet atlas slicing and frame timing (`pets/model.rs`,
+  `pets/ambient.rs`), that self-contained logic will be adapted with attribution
+  when the animation lands. Reopen only if `ratatui-image` cannot meet a needed
+  terminal or behavior.
 
 ## Latest Verified Work
 
+- 2026-06-26: TUI slice 2d (high-resolution image tier). Added `ratatui-image`
+  `=11.0.6` (pure-Rust: `default-features` off, `crossterm` only; pulls
+  `icy_sixel` + `image`, no chafa/libsixel/C) and `image` `=0.25.10` (png). On a
+  graphics-capable terminal (iTerm2/Kitty/Ghostty/WezTerm/Sixel) the home banner
+  shows the real high-resolution Cubby (the 903x1119 transparent PNG embedded via
+  `include_bytes`, decoded once, `StatefulImage` + `Resize::Fit`/Lanczos3); on
+  terminals with no graphics protocol it falls back to the xterm-256 half-block
+  sprite. `hero_image_protocol()` queries the terminal once at startup in `run()`
+  (real TTY only, never in tests, so the sprite-path tests are unchanged).
+  Verified: cargo fmt, `cargo test --locked` (10 TUI tests), clippy `-D warnings`,
+  pin check. Animation is the next slice.
 - 2026-06-27: Generated Terminal.app-safe Cubby header/hero mascot assets from
   the reference cube image. Added exact pixel-grid PNGs plus half-block ANSI
   renderings for 16x18, 24x26, 32x36, 40x44, and 48x52 under
