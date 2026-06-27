@@ -113,14 +113,20 @@ impl App {
     }
 
     fn render_home(&mut self, frame: &mut Frame) {
+        // Reserve rows for the agent list and footer, then show the largest
+        // Cubby hero that still fits the banner.
+        const RESERVED_ROWS: u16 = 11;
+        let available = frame.area().height.saturating_sub(RESERVED_ROWS);
+        let hero = mascot::hero_for_banner(available);
+
         let [banner, body, footer] = Layout::vertical([
-            Constraint::Length(mascot::cell_height()),
+            Constraint::Length(hero.cell_height()),
             Constraint::Min(0),
             Constraint::Length(1),
         ])
         .areas(frame.area());
 
-        render_banner(frame, banner);
+        render_banner(frame, banner, hero);
 
         let items: Vec<ListItem> = self
             .agents
@@ -168,24 +174,27 @@ impl App {
     }
 }
 
-/// The home banner: the mascot on the left, brand and tagline on the right.
-fn render_banner(frame: &mut Frame, area: Rect) {
+/// The home banner: Cubby on the left, brand and tagline on the right.
+fn render_banner(frame: &mut Frame, area: Rect, hero: &mascot::HeroSprite) {
     let [mascot_area, brand_area] = Layout::horizontal([
-        Constraint::Length(mascot::CELL_WIDTH + 2),
+        Constraint::Length(hero.cell_width() + 2),
         Constraint::Min(0),
     ])
     .areas(area);
 
-    frame.render_widget(Paragraph::new(mascot::lines()), mascot_area);
+    frame.render_widget(Paragraph::new(hero.lines()), mascot_area);
 
-    let brand = Paragraph::new(vec![
-        Line::from(""),
+    // Vertically center the brand against the mascot.
+    let brand = [
         Line::from("RunHaven".bold()),
         Line::from(format!("v{}", env!("CARGO_PKG_VERSION")).dim()),
         Line::from(""),
         Line::from("run agents in a safe haven".dim()),
-    ]);
-    frame.render_widget(brand, brand_area);
+    ];
+    let pad = area.height.saturating_sub(brand.len() as u16) / 2;
+    let mut lines = vec![Line::from(""); pad as usize];
+    lines.extend(brand);
+    frame.render_widget(Paragraph::new(lines), brand_area);
 }
 
 /// The shared three-row layout: a header, a flexible body, and a one-line hint.
@@ -213,18 +222,21 @@ mod tests {
 
     #[test]
     fn home_banner_shows_mascot_and_brand() {
-        let mut terminal = Terminal::new(TestBackend::new(48, 22)).unwrap();
+        let mut terminal = Terminal::new(TestBackend::new(60, 30)).unwrap();
         let mut app = App::new();
         terminal.draw(|f| app.render(f)).unwrap();
         let buf = terminal.backend().buffer();
-        // The mascot occupies the top-left of the banner.
-        assert_eq!(buf[(2, 0)].symbol(), "\u{2580}");
-        // The brand sits to the right of the mascot.
-        let brand_row: String = (0..buf.area.width).map(|x| buf[(x, 1)].symbol()).collect();
-        assert!(
-            brand_row.contains("RunHaven"),
-            "banner row was {brand_row:?}"
-        );
+        let mut text = String::new();
+        for y in 0..buf.area.height {
+            for x in 0..buf.area.width {
+                text.push_str(buf[(x, y)].symbol());
+            }
+        }
+        // The brand renders in the banner.
+        assert!(text.contains("RunHaven"), "brand text missing");
+        // Cubby drew a meaningful number of half-block pixels.
+        let blocks = text.matches('\u{2580}').count() + text.matches('\u{2584}').count();
+        assert!(blocks > 40, "expected mascot half-blocks, got {blocks}");
     }
 
     #[test]

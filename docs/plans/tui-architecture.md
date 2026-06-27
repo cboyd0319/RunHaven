@@ -71,11 +71,17 @@ The brand graphics, startup chrome, and the mascot easter egg (see
 `ratatui-brand-graphics.md`) solve a different problem than the functional cards.
 They share design direction but not data plumbing; keep them in separate modules.
 
-The first cut of this lives in `tui/mascot.rs`: a small "cube buddy", a glass
-container cube with a tiny agent spark inside, drawn as a half-block sprite (the
-guaranteed-portable rendering floor) and shown in the home banner. It is pure
-branding with no data plumbing, the smallest concrete step toward the lifecycle
-mark in `ratatui-brand-graphics.md`.
+This lives in `tui/mascot.rs` (renderer) plus `tui/mascot/sprites.rs` (generated
+pixel data): the mascot is **Cubby**, a glass container cube with a tiny gold
+agent spark inside, drawn as half-block pixel art (the guaranteed-portable
+rendering floor, no image protocol). The sprites are xterm-256 indexed (indices
+16-255, avoiding 0-15 so macOS Terminal.app stays stable) at several sizes;
+`hero_for_banner` shows the largest one that fits the terminal, so detail scales
+up on bigger windows and degrades cleanly on an 80x24 floor. The source renders
+are in `docs/assets/terminal-mascot/` and the 1024px master is
+`docs/assets/cubby-hero-1024.png`. It is pure branding with no
+data plumbing, the static counterpart to the animated pet (the lifecycle mark in
+`ratatui-brand-graphics.md`).
 
 ## Parity and tests
 

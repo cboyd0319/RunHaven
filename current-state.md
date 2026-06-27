@@ -140,16 +140,32 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
-- 2026-06-26: TUI slice 2b (mascot). Moved `tui.rs` to `tui/mod.rs` and added a
-  `tui/mascot.rs` submodule so branding stays separate from the functional cards.
-  The mascot is the "cube buddy": a glass container cube with a tiny gold agent
-  spark inside, on a layered base, hand-built as a Unicode half-block sprite (the
-  guaranteed-portable rendering floor, no image protocol) using a logo-derived
-  blue/cyan/teal palette. It renders in the home banner (mascot left, brand and
-  tagline right); the detail screen is unchanged. The reference render is in
-  `docs/assets/mascot-cube-buddy.png`. Sprite width and even-row-count are
-  enforced by a test. Verified: cargo fmt, `cargo test --locked` (77 lib incl. 7
-  TUI tests + 6 integration), clippy `-D warnings`, pin check, `git diff --check`.
+- 2026-06-27: Generated Terminal.app-safe Cubby header/hero mascot assets from
+  the reference cube image. Added exact pixel-grid PNGs plus half-block ANSI
+  renderings for 16x18, 24x26, 32x36, 40x44, and 48x52 under
+  `docs/assets/terminal-mascot/`. The generator removed the dark background with
+  edge-connected flood fill, added a one-pixel safety inset, quantized every
+  opaque pixel to stable xterm 256-color indices 16-255 (avoiding profile-
+  dependent base colors 0-15), and wrote a contact sheet plus manifest. Verified:
+  PNG dimensions, half-block cell dimensions, ANSI escape/index constraints,
+  xterm-palette membership, visual contact sheet, `magick identify`, and
+  `git diff --check`.
+- 2026-06-26: TUI slices 2b/2c (Cubby mascot). Moved `tui.rs` to `tui/mod.rs`
+  and added a `tui/mascot.rs` + `tui/mascot/sprites.rs` submodule so branding
+  stays separate from the functional cards. The mascot is **Cubby**: a glass
+  container cube with a gold agent spark inside, on a layered base. Slice 2b was
+  a hand-built placeholder; slice 2c replaced it with the finished art, real
+  pixel renders quantized to xterm-256 (indices 16-255, avoiding 0-15 for macOS
+  Terminal.app stability) at sizes 16x18/24x26/32x36/40x44, embedded as index
+  grids and rendered via `Color::Indexed` half-blocks (the portable rendering
+  floor, no image protocol). `hero_for_banner` shows the largest hero that fits
+  the terminal, so detail scales up on big windows and degrades to 16x18 on an
+  80x24 floor; the brand is vertically centered beside it. Source renders are in
+  `docs/assets/terminal-mascot/`, the 1024px master in
+  `docs/assets/cubby-hero-1024.png`. The animated pet (codex-pet-style atlas,
+  validated and backed up at `codex-pet`) is a separate future slice. Verified:
+  cargo fmt, `cargo test --locked` (79 lib incl. 10 TUI tests + 6 integration),
+  clippy `-D warnings`, pin check, `git diff --check`.
 - 2026-06-26: Captured TUI architecture patterns in
   `docs/plans/tui-architecture.md` (study of the Codex `ratatui` TUI): the
   planner and policy objects are the single source of truth; adapters build and
