@@ -301,6 +301,17 @@ Latest TUI smoke verification:
   return to review, and `q` to quit; the terminal title changed through Choose
   agent, Review plan, and Confirm launch, then cleared on exit.
 
+Latest harness review:
+
+- 2026-06-27: Reviewed
+  `/Users/c/Documents/GitHub/learn-harness-engineering/docs/en/resources/`,
+  including the minimal templates, reference notes, OpenAI advanced pack, SOPs,
+  and repo-template docs. Decision: keep RunHaven's three-file startup contract
+  and map external template concepts onto existing RunHaven owners instead of
+  adding parallel root progress/handoff, quality, reliability, plan, or product
+  spec files. Verified with pin check, JSON validation, typography scan over
+  changed files, and `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.

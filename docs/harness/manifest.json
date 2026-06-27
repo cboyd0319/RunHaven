@@ -59,7 +59,9 @@
     ]
   },
   "onDemandDocs": {
+    "harnessEvaluation": "docs/HARNESS_EVALUATION.md",
     "harnessOverview": "docs/harness/README.md",
+    "harnessSources": "docs/harness/research/sources.md",
     "verificationRouting": "docs/harness/feedback/verification-matrix.md",
     "componentBoundaries": "docs/harness/boundaries/component-inventory.md",
     "securityBoundaries": "docs/harness/boundaries/security-boundary-map.md",
