@@ -1,6 +1,6 @@
 //! Word-wrapping with URL-aware heuristics.
 //!
-//! The TUI renders text that frequently contains URLs — command output,
+//! The TUI renders text that frequently contains URLs: command output,
 //! markdown, agent messages, tool-call results. Standard `textwrap`
 //! hyphenation treats `/` and `-` as split points, which breaks URLs
 //! across lines and makes them unclickable in terminal emulators.
@@ -20,7 +20,7 @@
 //! functions. Callers that definitely will not (code blocks, pure
 //! numeric output) can use the standard path for speed.
 //!
-//! URL detection is heuristic — see [`text_contains_url_like`] for the
+//! URL detection is heuristic. See [`text_contains_url_like`] for the
 //! rules. False positives suppress hyphenation for that line; false
 //! negatives let a URL get split. The heuristic is intentionally
 //! conservative: file paths like `src/main.rs` are not matched.
@@ -34,7 +34,7 @@ use textwrap::WordSeparator;
 use textwrap::core::Word;
 use textwrap::core::display_width;
 
-use crate::render::line_utils::push_owned_lines;
+use crate::tui::render::line_utils::push_owned_lines;
 
 /// Returns byte-ranges into `text` for each wrapped line, including
 /// trailing whitespace and a +1 sentinel byte. Used by the textarea
@@ -237,7 +237,7 @@ pub(crate) fn line_has_mixed_url_and_non_url_tokens(line: &Line<'_>) -> bool {
 ///
 /// Surrounding punctuation (`()[]{}< >,.;:!'"`) is stripped before
 /// checking. Tokens that look like file paths (`src/main.rs`, `foo/bar`)
-/// are intentionally rejected — the host portion must be a valid domain
+/// are intentionally rejected. The host portion must be a valid domain
 /// name (with a recognized TLD), an IPv4 address, or `localhost`.
 pub(crate) fn text_contains_url_like(text: &str) -> bool {
     text.split_ascii_whitespace().any(is_url_like_token)
@@ -1530,7 +1530,7 @@ them."#
         // the indent char for a source match.  Here the indent is "- " and the
         // source text also starts with "-", so a naive char-by-char match would
         // consume the source "-" for the indent "-", set saw_source_char too
-        // early, then break on the space — returning 0..1 instead of the full
+        // early, then break on the space, returning 0..1 instead of the full
         // first word.
         let text = "- item one and some more words";
         // Simulate what textwrap would produce for the first continuation line

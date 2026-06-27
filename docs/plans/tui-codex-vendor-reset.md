@@ -289,6 +289,24 @@ Why leaving and adapting is better than removing:
   instead of Codex's fork-only crossterm color-query helpers. Revisit this only
   if RunHaven adopts Codex's pinned crossterm fork for the full app shell.
 
+### Codex Style And Text Helpers
+
+Decision: compile and test Codex's shared style, text formatting, line
+truncation, wrapping, and render line utility helpers before the status widget
+and bottom-pane views.
+
+Why leaving and adapting is better than removing:
+
+- These helpers are shared by the status row, markdown rendering, history
+  cells, bottom-pane selection views, and app-shell chrome.
+- Keeping them preserves Codex's URL-aware wrapping, styled line truncation,
+  path truncation, compact JSON formatting, and terminal-palette-aware styles.
+- RunHaven now enables `serde_json`'s `preserve_order` feature to match Codex
+  TUI's dependency shape, which keeps the vendored compact JSON tests and UI
+  formatting behavior intact.
+- `render/line_utils.rs` is compiled as the low-level shared line-copy helper
+  used by wrapping.
+
 ### Earlier RunHaven Zork Implementation
 
 Decision: leave `src/runhaven/cli/tui/zork/` absent from the raw Codex vendor
@@ -332,6 +350,8 @@ The first milestone is a clean vendor baseline:
 - Codex's terminal title helper now compiles and passes its tests.
 - Codex's motion, shimmer, terminal palette, and terminal probe helpers now
   compile and pass their focused tests.
+- Codex's shared style and text helpers now compile and pass their focused
+  tests.
 - The copied Codex source still has crate-root assumptions from the upstream
   `codex-tui` crate. The next integration work is to adapt those assumptions
   into RunHaven product adapters without culling useful Codex surfaces early.

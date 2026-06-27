@@ -173,6 +173,8 @@ pub(crate) mod bottom_pane {
 #[allow(dead_code, unused_imports)]
 pub(crate) mod key_hint;
 #[allow(dead_code)]
+pub(crate) mod line_truncation;
+#[allow(dead_code)]
 pub(crate) mod motion;
 #[allow(dead_code, unused_imports)]
 pub(crate) mod pets;
@@ -180,6 +182,8 @@ pub(crate) mod pets;
 pub(crate) mod render {
     use ratatui::layout::Rect;
 
+    #[path = "line_utils.rs"]
+    pub(crate) mod line_utils;
     #[path = "renderable.rs"]
     pub(crate) mod renderable;
 
@@ -231,6 +235,8 @@ pub(crate) mod render {
 #[allow(dead_code)]
 pub(crate) mod shimmer;
 #[allow(dead_code)]
+pub(crate) mod style;
+#[allow(dead_code)]
 pub(crate) mod terminal_detection;
 #[allow(dead_code)]
 pub(crate) mod terminal_palette;
@@ -238,6 +244,10 @@ pub(crate) mod terminal_palette;
 pub(crate) mod terminal_probe;
 #[allow(dead_code)]
 pub(crate) mod terminal_title;
+#[allow(dead_code)]
+pub(crate) mod text_formatting;
+#[allow(dead_code)]
+pub(crate) mod wrapping;
 
 #[allow(dead_code)]
 #[path = "tui/frame_rate_limiter.rs"]

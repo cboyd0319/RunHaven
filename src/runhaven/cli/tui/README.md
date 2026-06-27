@@ -63,6 +63,11 @@ Local integration exceptions:
 - `terminal_palette.rs` uses the vendored bounded terminal probe for Unix
   default-color requery because RunHaven has not adopted Codex's pinned
   crossterm fork with color-query helpers.
+- `style.rs`, `line_truncation.rs`, `text_formatting.rs`, `wrapping.rs`, and
+  `render/line_utils.rs` are compiled as shared Codex UI helpers. Their module
+  paths point through `crate::tui`.
+- `serde_json` enables `preserve_order` at the RunHaven crate level to match
+  Codex TUI's compact JSON formatting behavior.
 
 Known integration gap:
 

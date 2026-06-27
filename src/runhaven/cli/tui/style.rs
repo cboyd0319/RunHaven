@@ -1,14 +1,14 @@
-use crate::color::blend;
-use crate::color::is_light;
-use crate::terminal_palette::StdoutColorLevel;
-use crate::terminal_palette::best_color;
-use crate::terminal_palette::default_bg;
-use crate::terminal_palette::default_fg;
-use crate::terminal_palette::rgb_color;
-use crate::terminal_palette::stdout_color_level;
 use ratatui::style::Color;
 use ratatui::style::Style;
-use ratatui::style::Stylize;
+
+use crate::tui::color::blend;
+use crate::tui::color::is_light;
+use crate::tui::terminal_palette::StdoutColorLevel;
+use crate::tui::terminal_palette::best_color;
+use crate::tui::terminal_palette::default_bg;
+use crate::tui::terminal_palette::default_fg;
+use crate::tui::terminal_palette::rgb_color;
+use crate::tui::terminal_palette::stdout_color_level;
 
 const LIGHT_BG_ACCENT_RGB: (u8, u8, u8) = (0, 95, 135);
 // Decorative table rules should remain visible without competing with cell content.

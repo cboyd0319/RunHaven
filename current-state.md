@@ -1114,11 +1114,13 @@ tests, including terminal detection, frame extraction, image protocol writers,
 Sixel encoding, ambient draw requests, Tokio frame scheduling, native pet
 picker discovery, picker preview state, the Codex renderable contract, and the
 Codex terminal title helper. The motion, shimmer, terminal palette, and bounded
-terminal probe helpers now compile and pass focused tests too. The picker
-currently uses a staged bottom-pane selection contract until the full Codex
-bottom-pane view is adapted. For each removal, record why removal is better
-than leaving and adapting. Keep the reference-implementation requirement in
-view because this TUI setup will guide several sibling projects.
+terminal probe helpers now compile and pass focused tests too. Shared Codex
+style and text helpers now compile as well: line truncation, text formatting,
+URL-aware wrapping, render line utilities, and terminal-palette-aware styles.
+The picker currently uses a staged bottom-pane selection contract until the
+full Codex bottom-pane view is adapted. For each removal, record why removal is
+better than leaving and adapting. Keep the reference-implementation requirement
+in view because this TUI setup will guide several sibling projects.
 
 Do not publish a release from the interim vendor-reset state. After the TUI is
 fully integrated, verified, and confirmed, do a full release bump to `v0.6.0`
