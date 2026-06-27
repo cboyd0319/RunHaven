@@ -1,7 +1,7 @@
 # Current stable pins verified on 2026-06-24.
 
 [runhaven]
-version = "0.1.0"
+version = "0.5.0"
 
 [rust]
 toolchain = "1.96.0"
@@ -10,6 +10,7 @@ anyhow = "1.0.102"
 clap = "4.6.1"
 idna = "1.1.0"
 ipnet = "2.12.0"
+ratatui = "0.30.2"
 regex = "1.12.4"
 serde = "1.0.228"
 serde_json = "1.0.150"
