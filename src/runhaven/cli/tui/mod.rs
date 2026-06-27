@@ -281,10 +281,13 @@ impl App {
         .areas(frame.area());
 
         if let Some(size) = logo_size {
-            let logo_lines = self
-                .logo
-                .as_mut()
-                .and_then(|logo| logo.lines(size, self.settings.color_enabled).ok());
+            let logo_lines = if self.terminal_image_protocol.is_some() {
+                Some(blank_lines(size.rows))
+            } else {
+                self.logo
+                    .as_mut()
+                    .and_then(|logo| logo.lines(size, self.settings.color_enabled).ok())
+            };
             if let Some(logo_lines) = logo_lines {
                 let logo_area = render_banner(
                     frame,
@@ -383,7 +386,8 @@ impl App {
         };
         let composer_bottom_y = pet_area.y.saturating_add(pet_area.height);
         let animated = self.settings.motion_mode == MotionMode::Animated;
-        if let Some(area) = pet.ambient_area(pet_area, composer_bottom_y)
+        if self.terminal_image_protocol.is_none()
+            && let Some(area) = pet.ambient_area(pet_area, composer_bottom_y)
             && let Ok(lines) = pet.ambient_lines(
                 self.settings.color_enabled,
                 self.pet_animation_elapsed,
@@ -739,6 +743,10 @@ impl App {
             None,
         );
     }
+}
+
+fn blank_lines(rows: u16) -> Vec<Line<'static>> {
+    (0..rows).map(|_| Line::from("")).collect()
 }
 
 #[cfg(test)]
