@@ -262,6 +262,32 @@ Why leaving and adapting is better than removing:
   adapted Codex bottom-pane view once the wider app-shell dependencies are
   ready.
 
+### Temporary Native Pet Image Smoke
+
+Decision: add a temporary visual smoke path to the current read-only
+`app_shell.rs` so image quality can be checked before the full app shell and
+bottom pane are adapted.
+
+Why this is a small RunHaven adapter instead of a custom renderer:
+
+- The smoke path uses Codex's vendored `AmbientPet`, frame extraction,
+  `FrameRequester`, and `render_ambient_pet_image` terminal-image writer.
+- It loads the same local Codex custom pet selector the native Codex TUI uses:
+  `custom:cubby` from `$CODEX_HOME/pets/cubby/`.
+- It gives the vendored `FrameRequester` a small Tokio runtime instead of
+  replacing the scheduler with local code.
+- It is off by default and only runs with `RUNHAVEN_TUI_IMAGE_SMOKE=1`.
+- `RUNHAVEN_TUI_IMAGE_SMOKE_PET=<selector>` can point the smoke at another
+  Codex pet selector when needed.
+
+Manual visual check:
+
+```bash
+RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin runhaven
+```
+
+Quit with `q`.
+
 ### Codex Renderable Contract
 
 Decision: replace the temporary `Renderable` stand-in with Codex's vendored

@@ -33,6 +33,17 @@ coherent terminal app substrate, add a narrow product payload seam, and render
 domain-specific cards from that seam. RunHaven should copy that architecture
 move, not the dbt product shape and not Codex chat ontology.
 
+Temporary visual check for the native Codex pet renderer:
+
+```bash
+RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin runhaven
+```
+
+This is only a smoke path for checking terminal image quality while the full
+Codex app shell and bottom pane are being adapted. It loads `custom:cubby` from
+`$CODEX_HOME/pets/cubby/` and uses Codex's vendored `AmbientPet`,
+`FrameRequester`, and terminal image writer. Quit with `q`.
+
 Immediate integration order:
 
 1. Keep vendored Codex source compiling in small slices.

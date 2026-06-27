@@ -138,6 +138,14 @@ directories are allowed caches and which should be cleaned when they appear.
 Active stale doc paths were corrected in the research and Tauri/TUI design docs;
 historical evidence logs were left as records of what happened at the time.
 
+TUI native-pet image smoke follow-up: the temporary `app_shell.rs` can now run
+an opt-in visual check with `RUNHAVEN_TUI_IMAGE_SMOKE=1`. The smoke path loads
+`custom:cubby` from `$CODEX_HOME/pets/cubby/`, uses Codex's vendored
+`AmbientPet`, frame cache, Tokio `FrameRequester`, and
+`render_ambient_pet_image` writer, and clears the terminal image on exit. This
+is only for checking terminal image quality before the full Codex app shell and
+bottom pane are adapted.
+
 Verified:
 
 - `cargo fmt --check`
@@ -159,6 +167,18 @@ Verified:
 - active stale-reference scans
 - `git diff --check`
 - `./init.sh`
+
+Latest TUI smoke verification:
+
+- `cargo fmt --check`
+- `cargo test -p runhaven-tui --locked app_shell --quiet`
+- `cargo test -p runhaven-tui --locked pets::image_protocol --quiet`
+- `cargo test -p runhaven-tui --locked kitty_file_png_transmission_encodes_local_file_reference --quiet`
+- `cargo test -p runhaven-tui --locked --quiet`
+- `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`
+- `RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin runhaven` in a PTY,
+  quit with `q`; it emitted Codex Kitty local-file frames from the Cubby frame
+  cache and exited cleanly.
 
 ## Blockers
 

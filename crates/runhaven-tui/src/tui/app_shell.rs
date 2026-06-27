@@ -2,6 +2,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use anyhow::Context;
 use anyhow::Result;
 use crossterm::event;
 use crossterm::event::Event;
@@ -35,8 +36,14 @@ use runhaven_core::runtime::plans::build_run_plan;
 use runhaven_core::runtime::plans::default_network_mode;
 use runhaven_core::runtime::profiles::profiles;
 use runhaven_core::ui_contracts::LaunchPlanData;
+use tokio::runtime::Runtime;
+use tokio::sync::broadcast;
 
 const TICK_RATE: Duration = Duration::from_millis(250);
+const IMAGE_SMOKE_TICK_RATE: Duration = Duration::from_millis(100);
+const IMAGE_SMOKE_ENV: &str = "RUNHAVEN_TUI_IMAGE_SMOKE";
+const IMAGE_SMOKE_PET_ENV: &str = "RUNHAVEN_TUI_IMAGE_SMOKE_PET";
+const DEFAULT_IMAGE_SMOKE_PET: &str = "custom:cubby";
 
 pub(crate) fn run() -> Result<i32> {
     let mut state = ShellState::for_current_dir()?;
@@ -57,12 +64,20 @@ impl Drop for TerminalRestoreGuard {
 fn run_loop(terminal: &mut DefaultTerminal, state: &mut ShellState) -> Result<()> {
     let mut redraw = true;
     loop {
+        if state.drain_image_smoke_draws() {
+            redraw = true;
+        }
+
         if redraw {
             terminal.draw(|frame| render(frame, state))?;
+            state.draw_image_smoke(terminal)?;
             redraw = false;
         }
 
-        if !event::poll(TICK_RATE)? {
+        if !event::poll(state.tick_rate())? {
+            if state.image_smoke_animates() {
+                redraw = true;
+            }
             continue;
         }
 
@@ -75,14 +90,15 @@ fn run_loop(terminal: &mut DefaultTerminal, state: &mut ShellState) -> Result<()
             _ => {}
         }
     }
+    state.clear_image_smoke(terminal)?;
     Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
 struct ShellState {
     workspace: PathBuf,
     agents: Vec<AgentPreview>,
     selected: usize,
+    image_smoke: ImageSmoke,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -156,6 +172,7 @@ impl ShellState {
             workspace,
             agents,
             selected: 0,
+            image_smoke: ImageSmoke::from_env(),
         })
     }
 
@@ -202,20 +219,229 @@ impl ShellState {
             _ => ShellAction::Continue,
         }
     }
+
+    fn tick_rate(&self) -> Duration {
+        if self.image_smoke_animates() {
+            IMAGE_SMOKE_TICK_RATE
+        } else {
+            TICK_RATE
+        }
+    }
+
+    fn image_smoke_animates(&self) -> bool {
+        self.image_smoke.animates()
+    }
+
+    fn image_smoke_status(&self) -> Option<Line<'static>> {
+        self.image_smoke.status_line()
+    }
+
+    fn prepare_image_smoke_draw(&mut self, area: ratatui::layout::Rect, composer_bottom_y: u16) {
+        self.image_smoke.prepare_draw(area, composer_bottom_y);
+    }
+
+    fn draw_image_smoke(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+        self.image_smoke.draw(terminal)
+    }
+
+    fn clear_image_smoke(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+        self.image_smoke.clear(terminal)
+    }
+
+    fn drain_image_smoke_draws(&mut self) -> bool {
+        self.image_smoke.drain_draws()
+    }
 }
 
-fn render(frame: &mut Frame<'_>, state: &ShellState) {
+enum ImageSmoke {
+    Disabled,
+    Ready(Box<ImageSmokeState>),
+    Error(String),
+}
+
+impl ImageSmoke {
+    fn from_env() -> Self {
+        if !env_flag_enabled(std::env::var_os(IMAGE_SMOKE_ENV).as_deref()) {
+            return Self::Disabled;
+        }
+
+        match ImageSmokeState::load() {
+            Ok(state) => Self::Ready(Box::new(state)),
+            Err(error) => Self::Error(format!("pet image smoke unavailable: {error}")),
+        }
+    }
+
+    fn animates(&self) -> bool {
+        matches!(self, Self::Ready(state) if state.image_enabled)
+    }
+
+    fn status_line(&self) -> Option<Line<'static>> {
+        match self {
+            Self::Disabled => None,
+            Self::Ready(state) => Some(Line::from(state.status.clone())),
+            Self::Error(message) => Some(Line::from(vec![Span::styled(
+                message.clone(),
+                Style::default().fg(Color::Yellow),
+            )])),
+        }
+    }
+
+    fn prepare_draw(&mut self, area: ratatui::layout::Rect, composer_bottom_y: u16) {
+        if let Self::Ready(state) = self {
+            state.prepare_draw(area, composer_bottom_y);
+        }
+    }
+
+    fn draw(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+        if let Self::Ready(state) = self {
+            state.draw(terminal)?;
+        }
+        Ok(())
+    }
+
+    fn clear(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+        if let Self::Ready(state) = self {
+            state.clear(terminal)?;
+        }
+        Ok(())
+    }
+
+    fn drain_draws(&mut self) -> bool {
+        match self {
+            Self::Ready(state) => state.drain_draws(),
+            Self::Disabled | Self::Error(_) => false,
+        }
+    }
+}
+
+struct ImageSmokeState {
+    runtime: Runtime,
+    draw_rx: broadcast::Receiver<()>,
+    pet: crate::tui::pets::AmbientPet,
+    render_state: crate::tui::pets::PetImageRenderState,
+    pending_draw: Option<crate::tui::pets::AmbientPetDraw>,
+    status: String,
+    image_enabled: bool,
+}
+
+impl ImageSmokeState {
+    fn load() -> Result<Self> {
+        let codex_home = codex_home().context("CODEX_HOME or HOME is not available")?;
+        let pet_id = std::env::var(IMAGE_SMOKE_PET_ENV)
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| DEFAULT_IMAGE_SMOKE_PET.to_string());
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .context("start pet frame scheduler")?;
+        let (draw_tx, draw_rx) = broadcast::channel(16);
+        let frame_requester = {
+            let _guard = runtime.enter();
+            crate::tui::FrameRequester::new(draw_tx)
+        };
+        let mut pet =
+            crate::tui::pets::AmbientPet::load(Some(&pet_id), &codex_home, frame_requester, true)
+                .with_context(|| format!("load {pet_id} from {}", codex_home.display()))?;
+        pet.set_notification(
+            crate::tui::pets::PetNotificationKind::Review,
+            Some("Image smoke".to_string()),
+        );
+        let image_enabled = pet.image_enabled();
+        let status = if image_enabled {
+            format!("pet image smoke: Codex native renderer using {pet_id}")
+        } else {
+            "pet image smoke: terminal image protocol unavailable".to_string()
+        };
+
+        Ok(Self {
+            runtime,
+            draw_rx,
+            pet,
+            render_state: crate::tui::pets::PetImageRenderState::default(),
+            pending_draw: None,
+            status,
+            image_enabled,
+        })
+    }
+
+    fn prepare_draw(&mut self, area: ratatui::layout::Rect, composer_bottom_y: u16) {
+        self.pending_draw = self.pet.draw_request(area, composer_bottom_y);
+        self.pet.schedule_next_frame();
+    }
+
+    fn draw(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+        crate::tui::pets::render_ambient_pet_image(
+            terminal.backend_mut(),
+            &mut self.render_state,
+            self.pending_draw.take(),
+        )?;
+        Ok(())
+    }
+
+    fn clear(&mut self, terminal: &mut DefaultTerminal) -> Result<()> {
+        crate::tui::pets::render_ambient_pet_image(
+            terminal.backend_mut(),
+            &mut self.render_state,
+            None,
+        )?;
+        Ok(())
+    }
+
+    fn drain_draws(&mut self) -> bool {
+        self.runtime.block_on(async {
+            tokio::task::yield_now().await;
+        });
+
+        let mut requested = false;
+        loop {
+            match self.draw_rx.try_recv() {
+                Ok(()) => requested = true,
+                Err(broadcast::error::TryRecvError::Lagged(_)) => requested = true,
+                Err(
+                    broadcast::error::TryRecvError::Empty | broadcast::error::TryRecvError::Closed,
+                ) => {
+                    break;
+                }
+            }
+        }
+        requested
+    }
+}
+
+fn env_flag_enabled(value: Option<&std::ffi::OsStr>) -> bool {
+    let Some(value) = value.and_then(|value| value.to_str()) else {
+        return false;
+    };
+    matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "1" | "true" | "yes" | "on"
+    )
+}
+
+fn codex_home() -> Option<PathBuf> {
+    std::env::var_os("CODEX_HOME")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("HOME")
+                .filter(|value| !value.is_empty())
+                .map(|home| PathBuf::from(home).join(".codex"))
+        })
+}
+
+fn render(frame: &mut Frame<'_>, state: &mut ShellState) {
     let area = frame.area();
     let vertical = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(5),
+            Constraint::Length(6),
             Constraint::Min(10),
             Constraint::Length(2),
         ])
         .split(area);
 
-    render_header(frame, vertical[0]);
+    render_header(frame, vertical[0], state);
 
     let body = Layout::default()
         .direction(Direction::Horizontal)
@@ -225,10 +451,11 @@ fn render(frame: &mut Frame<'_>, state: &ShellState) {
     render_agents(frame, body[0], state);
     render_plan(frame, body[1], state);
     render_footer(frame, vertical[2]);
+    state.prepare_image_smoke_draw(area, vertical[2].y);
 }
 
-fn render_header(frame: &mut Frame<'_>, area: ratatui::layout::Rect) {
-    let lines = vec![
+fn render_header(frame: &mut Frame<'_>, area: ratatui::layout::Rect, state: &ShellState) {
+    let mut lines = vec![
         Line::from(vec![
             Span::styled(
                 "RunHaven",
@@ -241,6 +468,9 @@ fn render_header(frame: &mut Frame<'_>, area: ratatui::layout::Rect) {
         Line::from("launch: 1 agent > 2 workspace > 3 review > 4 run"),
         Line::from("This preview uses the same planner as the CLI."),
     ];
+    if let Some(status) = state.image_smoke_status() {
+        lines.push(status);
+    }
     frame.render_widget(Paragraph::new(lines), area);
 }
 
@@ -441,8 +671,8 @@ mod tests {
     #[test]
     fn shell_render_shows_launch_contract_data() {
         let workspace = tempfile::tempdir().expect("workspace");
-        let state = ShellState::for_workspace(workspace.path()).expect("state");
-        let output = render_to_text(&state, 120, 48);
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+        let output = render_to_text(&mut state, 120, 48);
 
         assert!(output.contains("RunHaven"));
         assert!(output.contains("Launch preview"));
@@ -451,7 +681,18 @@ mod tests {
         assert!(output.contains("container run"));
     }
 
-    fn render_to_text(state: &ShellState, width: u16, height: u16) -> String {
+    #[test]
+    fn image_smoke_flag_accepts_plain_true_values() {
+        assert!(env_flag_enabled(Some(std::ffi::OsStr::new("1"))));
+        assert!(env_flag_enabled(Some(std::ffi::OsStr::new("true"))));
+        assert!(env_flag_enabled(Some(std::ffi::OsStr::new("YES"))));
+        assert!(env_flag_enabled(Some(std::ffi::OsStr::new("on"))));
+        assert!(!env_flag_enabled(Some(std::ffi::OsStr::new("0"))));
+        assert!(!env_flag_enabled(Some(std::ffi::OsStr::new("false"))));
+        assert!(!env_flag_enabled(None));
+    }
+
+    fn render_to_text(state: &mut ShellState, width: u16, height: u16) -> String {
         let mut terminal = Terminal::new(TestBackend::new(width, height)).expect("test terminal");
         terminal.draw(|frame| render(frame, state)).expect("draw");
         terminal
