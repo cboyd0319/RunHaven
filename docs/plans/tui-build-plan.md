@@ -44,6 +44,15 @@ The first active payload seam is in `crates/runhaven-core/src/ui_contracts.rs`:
 fixtures. New visual work should feed RunHaven cards from those payloads into
 the Codex-vendored shell instead of inventing another custom Ratatui screen.
 
+The first bottom-pane source slice is also staged. RunHaven now compiles the
+Codex `ListSelectionView` family from `bottom_pane/list_selection_view.rs` and
+its helper modules. `crates/runhaven-tui/src/tui/mod.rs` still owns a small
+facade for the event sender, list keymap, paste normalization, cancellation, and
+completion types until the full Codex bottom pane is adapted. The facade uses
+Codex's default list navigation keys. The upstream list-selection snapshot tests
+are opt-in behind `codex-vendored-tests` because their Codex snapshot goldens
+were intentionally removed during the vendor reset.
+
 Temporary visual check for the native Codex pet renderer:
 
 ```bash
@@ -59,7 +68,8 @@ Immediate integration order:
 
 1. Keep vendored Codex source compiling in small slices.
 2. Define presentation-neutral RunHaven UI payloads from existing domain data.
-3. Rebuild the RunHaven app shell around those payloads.
+3. Replace temporary manual launch-list drawing with Codex `SelectionViewParams`
+   and `ListSelectionView`, fed by the RunHaven payload seam.
 4. Adapt Codex bottom pane, status line, key handling, title, pets, tooltips,
    and render lifecycle where they fit the RunHaven product.
 5. Remove vendored code only after recording why removal is better than leaving
@@ -153,6 +163,7 @@ terminal image overlay ownership.
 | `render/` (Renderable trait) | foundation | layout composition (Column/Flex/Row/Inset); base for cards |
 | `key_hint.rs` | foundation | consistent keyboard-hint rendering |
 | `wrapping.rs` (+ `width`, `line_truncation`) | foundation | URL-aware, unicode-correct wrapping/truncation |
+| `bottom_pane/list_selection_view.rs` + helpers | staged foundation | native Codex selection list, tab, search, wrapping, side-content, and footer behavior; currently behind a RunHaven facade while the full bottom pane is adapted |
 | `terminal_hyperlinks.rs` | foundation | OSC 8 clickable paths and URLs |
 | `selection_list.rs` | foundation | reusable selection primitive for the pickers |
 | `clipboard` (OSC 52) | foundation | copy the equivalent CLI command, a path, a run receipt |

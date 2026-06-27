@@ -157,6 +157,15 @@ visual target is closer to native Codex: compact intro and status content,
 bottom composer and status line, native Cubby behavior, and no analytics
 dashboard feel in the default launcher.
 
+TUI bottom-pane follow-up: `crates/runhaven-tui` now compiles the Codex
+`ListSelectionView` family directly from the vendored bottom-pane source through
+a narrow staging facade. The facade exposes the Codex-shaped event sender, list
+keymap, paste normalization, cancellation, and completion types needed by
+`ListSelectionView` and the pet picker. Its default list keymap now mirrors the
+upstream Codex list defaults. The upstream Codex list-selection snapshot tests
+are gated behind the opt-in `codex-vendored-tests` feature until RunHaven
+intentionally vendors or regenerates those snapshot goldens.
+
 Verified:
 
 - `cargo fmt --check`
@@ -183,9 +192,11 @@ Latest TUI smoke verification:
 
 - `cargo fmt --check`
 - `cargo test -p runhaven-tui --locked app_shell --quiet`
-- `cargo test -p runhaven-tui --locked pets::image_protocol --quiet`
-- `cargo test -p runhaven-tui --locked kitty_file_png_transmission_encodes_local_file_reference --quiet`
 - `cargo test -p runhaven-tui --locked --quiet`
+- `cargo test -p runhaven-tui --locked pets::image_protocol --quiet`
+- `cargo test -p runhaven-tui --locked pets --quiet`
+- `cargo test -p runhaven-tui --locked kitty_file_png_transmission_encodes_local_file_reference --quiet`
+- `cargo test -p runhaven-tui --locked ambient_pet_image_restores_cursor_after_drawing --quiet`
 - `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`
 - `RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin runhaven` in a PTY,
   quit with `q`; it emitted Codex Kitty local-file frames from the Cubby frame
@@ -200,5 +211,8 @@ Latest TUI smoke verification:
 Continue TUI integration from the Codex-vendored source baseline. Keep using
 source-first Codex modules for app shell, bottom pane, status line, native pet,
 resume/session, keymap, tooltips, and terminal-title behavior before writing
-custom RunHaven TUI code. Feed RunHaven-specific surfaces from the shared
-`RunHavenComponentPayload` contracts instead of ad hoc screen structs.
+custom RunHaven TUI code. The next practical slice is to replace the temporary
+manual agent list in `app_shell.rs` with Codex `SelectionViewParams` and
+`ListSelectionView`, fed by `AgentCatalogData` and `LaunchPlanData`. Feed
+RunHaven-specific surfaces from the shared `RunHavenComponentPayload` contracts
+instead of ad hoc screen structs.
