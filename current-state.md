@@ -4,28 +4,27 @@ Last Updated: 2026-06-27 UTC
 
 ## Current Objective
 
-The TUI build-plan feature `terminal-ui` is now `passing`. The `v0.5.0`
-CLI-complete pre-release was cut and published on 2026-06-26 (first release;
-pre-1.0, CLI only). Runtime and security hardening, multi-provider broker work,
-isolated OAuth login, release-readiness, and the TUI build plan are `passing`.
-The TUI was re-sequenced by the 2026-06-27 user directive into a first-class
-reference implementation for sibling projects; the Tauri desktop app remains
-deferred to the roadmap end.
+The active slice is the TUI Codex vendor reset. The previous custom RunHaven
+TUI implementation is being replaced by the full local Codex TUI source
+baseline from `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/`, then
+RunHaven-specific integration will continue from that baseline.
 
-TUI Phases 0-5 are complete: a fresh cache opens the RunHaven Guide, `?`/F1
-opens help later, and the TUI can choose a workspace, choose an agent, review the
-shared `AgentRunPlan` boundary, type-confirm lower-security plans, restore the
-terminal, launch through `launch_run_plan`, open a live run dashboard, show
-sanitized status and provider egress decisions, surface run-done /
-waiting-for-input notices, view explicit bounded log snapshots, run
-stop/kill/repair through typed-confirm controls, review run history and per-run
-diffs, inspect egress/auth diagnostics plus terminal render capabilities, run
-doctor prerequisite checks with inline remediation, honor no-color /
-reduced-motion / line-mode / light-dark palette controls, and keep the
-architecture guide aligned to the implementation. The Home header uses the
-RunHaven logo, while Cubby is the native ambient pet. The next product slice
-should be selected explicitly before changing `feature_list.json` back to one
-active feature.
+The RunHaven TUI setup is the reference implementation for several sibling
+projects. Treat reusable TUI structure as a product requirement: keep Codex
+vendoring source-first, keep RunHaven-specific behavior in thin adapters, use
+shared data contracts, record every culling decision, and keep user-facing text
+plain enough for non-technical users.
+
+The `v0.5.0` CLI-complete pre-release was cut and published on 2026-06-26
+(first release; pre-1.0, CLI only). Runtime and security hardening,
+multi-provider broker work, isolated OAuth login, and release-readiness remain
+`passing`. The TUI is now `active` again in `feature_list.json` while the vendor
+baseline and integration work are rebuilt.
+
+Do not publish a release from the interim vendor-reset state. After the TUI is
+fully integrated, verified, and confirmed, do a full release bump to `v0.6.0`.
+Temporary public-doc placeholder statements are not needed; do the full
+README/usage/release-doc refresh at the end.
 
 ## Startup State Contract
 
@@ -42,17 +41,17 @@ Load deeper docs only when the task touches that surface.
   `container` on macOS 26+ on Apple silicon.
 - The CLI is the complete `v0.5.0` pre-release surface and remains the
   explicit automation and recovery backend.
-- The terminal UI build plan is complete in this checkout and remains
-  unreleased. A bare interactive `runhaven` opens it; pipes, redirection, and
-  subcommands stay CLI-first.
+- The terminal UI is unreleased and in an active Codex vendor-reset slice. The
+  intended release behavior remains a bare interactive `runhaven` opening the
+  TUI while pipes, redirection, and subcommands stay CLI-first.
 - The alpha desktop shell lives under `ui/` and `src-tauri/`; it remains
   deferred to a later first-class release phase.
 - RunHaven remains alpha/pre-release after `v0.5.0`; stable release scope is
   still open.
 - Current sequence: CLI-complete pre-release, completed runtime/security
-  hardening slices kept current when touched, completed terminal UI build plan,
-  remaining non-UI scope and CLI public-release readiness, then the first-class
-  desktop app.
+  hardening slices kept current when touched, active terminal UI vendor reset
+  and RunHaven integration, full confirmation and `v0.6.0` release bump, then
+  remaining non-UI scope and the first-class desktop app.
 - Above all else, secure defaults must be the easiest path. Supported
   lower-security choices should warn and require explicit intent; unsupported
   or hard-boundary violations still fail closed.
@@ -164,33 +163,24 @@ evidence and a recorded reason.
   in a full-screen alternate-screen TUI; the image tier was reverted. Codex
   (`codex-rs/tui/src/pets/image_protocol.rs` and `pets/ambient.rs`) instead
   renders via the Kitty graphics protocol on iTerm2 (3.6+) and emits images as
-  direct overlays outside the cell buffer, which is TUI-safe. The active TUI now
-  uses the RunHaven logo in the header and native Cubby as the ambient pet.
-  Keep future TUI work source-first against
-  `/Users/c/Documents/GitHub/codex/codex-rs/tui`, with custom code only for
-  RunHaven data, security-boundary mapping, logo asset swaps, or small glue
-  where no Codex equivalent exists.
+  direct overlays outside the cell buffer, which is TUI-safe. The current reset
+  vendors the full Codex TUI source baseline first; future RunHaven image, logo,
+  and pet work should adapt Codex native paths instead of rebuilding custom
+  renderers.
 - The RunHaven TUI is a first-class, reference-quality, reusable
-  implementation, not a deferred minimal launcher. It is the guided front door
-  for a bare interactive `runhaven` and the reference TUI for sibling projects;
-  Phases 0-5 of the build plan are complete in this checkout. Canonical details
-  live in `docs/plans/tui-build-plan.md`, `docs/plans/tui-architecture.md`, and
-  `docs/plans/ratatui-brand-graphics.md`; keep `current-state.md` to current
-  phase status and durable decisions only.
-- The TUI's hidden Zork I easter egg is TUI-local and attributed. It vendors the
-  MIT-licensed `historicalsource/zork1` collection under `third_party/zork1/`
-  and an adapted MIT-licensed Ferrif Z-machine under
-  `src/runhaven/cli/tui/zork/zmachine/`; attribution lives in
-  `THIRD_PARTY_NOTICES.md` and `licenses/`. It adds no Cargo dependencies,
-  spawns no subprocesses, opens no sockets, reads no workspace or credential
-  paths, and calls no Apple `container` or provider/runtime code. The story is
-  bundled with `include_bytes!` and checked by exact length and SHA-256 before
-  VM start. Zork save/restore uses one fixed private RunHaven cache slot and
-  rejects symlinked, malformed, oversized, unknown-chunk, duplicated, or
-  truncated Quetzal saves before handing bytes to the vendored parser. Parser
-  and VM restore panics are contained as restore failures; the active game VM is
-  replaced only after a fresh VM restores successfully and validates release,
-  serial, and checksum against the bundled story.
+  implementation, not a deferred minimal launcher. It is the intended guided
+  front door for a bare interactive `runhaven` and the reference TUI for sibling
+  projects. The current active plan is the Codex vendor reset in
+  `docs/plans/tui-codex-vendor-reset.md`; the older phase build-plan docs remain
+  historical/product intent until the new baseline is integrated.
+- The hidden Zork I easter egg remains wanted. The current reset keeps the
+  MIT-licensed `historicalsource/zork1` collection under `third_party/zork1/`,
+  but the earlier Ferrif-derived engine under `src/runhaven/cli/tui/zork/` was
+  removed with the old custom TUI tree and is recoverable from git history. If
+  Zork is reintroduced, it must stay TUI-local and attributed, add no
+  subprocess/network/workspace/credential/container access, validate bundled
+  story bytes, and treat disk save/restore as a carefully validated private
+  RunHaven cache feature.
 - `src/runhaven/` ownership is locked before TUI Phase 4. Shared host readiness
   lives in `doctor.rs`, secret-free diagnostics data in `diagnostics.rs`, auth
   posture metadata in `provider/auth_profiles.rs`, and run history behind the
@@ -201,6 +191,21 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-27: TUI Codex vendor reset baseline. Added
+  `docs/plans/tui-codex-vendor-reset.md` as the wishlist and culling ledger,
+  replaced the custom `src/runhaven/cli/tui/` tree with a snapshot of
+  `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/`, excluded `.DS_Store`, and
+  removed 538 copied upstream `*.snap` files as Codex test goldens with culling
+  rationale. Added `src/runhaven/cli/tui/README.md`, updated Codex attribution,
+  and recorded local Codex evidence from `/Users/c/.codex/config.toml`
+  (`[tui] pet = "custom:cubby"`) plus `/Users/c/.codex/pets/` custom pet
+  packages. Verification: `jq empty feature_list.json`, `git diff --check`,
+  zero `*.snap`, zero `.DS_Store`, and `cargo check --locked --quiet` failed at
+  the expected integration boundary (`src/runhaven/cli/mod.rs` still expects
+  `tui.rs` or `tui/mod.rs`, while the copied Codex source is crate-shaped with
+  `lib.rs` and `main.rs`). Next: integrate the vendored baseline into
+  RunHaven's module/dependency/product-data shape before claiming the TUI is
+  runnable again.
 - 2026-06-27: TUI source-first logo/native-pet polish. Replaced the oversized
   Cubby header hero with the RunHaven logo from `docs/assets/logo.png` and kept
   Cubby as the compact native ambient pet. Vendored an asset-agnostic
@@ -1095,14 +1100,23 @@ evidence and a recorded reason.
 
 ## Next Step
 
-`v0.5.0` is released (pre-release; see `CHANGELOG.md`). The TUI build plan is
-complete and `terminal-ui` is `passing` in `feature_list.json`; no product slice
-is active until the next one is selected.
+`v0.5.0` is released (pre-release; see `CHANGELOG.md`). The active slice is
+`terminal-ui`: integrate the full Codex-vendored TUI source baseline into
+RunHaven, then adapt it to the wishlist in
+`docs/plans/tui-codex-vendor-reset.md`.
 
-Recommended next selection: choose one planned non-TUI slice explicitly before
-changing `feature_list.json` back to `active`. The user already called out a
-separate logs-sanitization and secure secrets/OAuth-token handling pass, with
-macOS Keychain preferred for RunHaven-owned host secrets where practical. Other
-non-blocking follow-ups on record: RunHaven runs containers without `--rm`
-(killed containers reap asynchronously) and a signed auto-updating
-provider-policy candidate.
+Immediate next step: create the RunHaven module/entrypoint/dependency adapter
+for the copied Codex source without culling product surfaces prematurely. For
+each removal, record why removal is better than leaving and adapting. Keep the
+reference-implementation requirement in view because this TUI setup will guide
+several sibling projects.
+
+Do not publish a release from the interim vendor-reset state. After the TUI is
+fully integrated, verified, and confirmed, do a full release bump to `v0.6.0`
+with a full public docs refresh.
+
+Separate non-TUI follow-up already called out by the user: logs sanitization and
+secure secrets/OAuth-token handling, with macOS Keychain preferred for
+RunHaven-owned host secrets where practical. Other non-blocking follow-ups on
+record: RunHaven runs containers without `--rm` (killed containers reap
+asynchronously) and a signed auto-updating provider-policy candidate.

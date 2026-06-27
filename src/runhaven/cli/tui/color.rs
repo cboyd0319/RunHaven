@@ -1,29 +1,22 @@
-//! Color math adapted from `openai/codex` `codex-rs/tui/src/color.rs`.
-//!
-//! Licensed under Apache-2.0; see `THIRD_PARTY_NOTICES.md`.
-
-#[allow(dead_code)]
 pub(crate) fn is_light(bg: (u8, u8, u8)) -> bool {
     let (r, g, b) = bg;
-    let y = 0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b);
+    let y = 0.299 * r as f32 + 0.587 * g as f32 + 0.114 * b as f32;
     y > 128.0
 }
 
-#[allow(dead_code)]
 pub(crate) fn blend(fg: (u8, u8, u8), bg: (u8, u8, u8), alpha: f32) -> (u8, u8, u8) {
-    let alpha = alpha.clamp(0.0, 1.0);
-    let r = (f32::from(fg.0) * alpha + f32::from(bg.0) * (1.0 - alpha)) as u8;
-    let g = (f32::from(fg.1) * alpha + f32::from(bg.1) * (1.0 - alpha)) as u8;
-    let b = (f32::from(fg.2) * alpha + f32::from(bg.2) * (1.0 - alpha)) as u8;
+    let r = (fg.0 as f32 * alpha + bg.0 as f32 * (1.0 - alpha)) as u8;
+    let g = (fg.1 as f32 * alpha + bg.1 as f32 * (1.0 - alpha)) as u8;
+    let b = (fg.2 as f32 * alpha + bg.2 as f32 * (1.0 - alpha)) as u8;
     (r, g, b)
 }
 
 /// Returns the perceptual color distance between two RGB colors.
 /// Uses the CIE76 formula (Euclidean distance in Lab space approximation).
-#[allow(dead_code)]
 pub(crate) fn perceptual_distance(a: (u8, u8, u8), b: (u8, u8, u8)) -> f32 {
+    // Convert sRGB to linear RGB
     fn srgb_to_linear(c: u8) -> f32 {
-        let c = f32::from(c) / 255.0;
+        let c = c as f32 / 255.0;
         if c <= 0.04045 {
             c / 12.92
         } else {
@@ -31,6 +24,7 @@ pub(crate) fn perceptual_distance(a: (u8, u8, u8), b: (u8, u8, u8)) -> f32 {
         }
     }
 
+    // Convert RGB to XYZ
     fn rgb_to_xyz(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
         let r = srgb_to_linear(r);
         let g = srgb_to_linear(g);
@@ -42,9 +36,11 @@ pub(crate) fn perceptual_distance(a: (u8, u8, u8), b: (u8, u8, u8)) -> f32 {
         (x, y, z)
     }
 
+    // Convert XYZ to Lab
     fn xyz_to_lab(x: f32, y: f32, z: f32) -> (f32, f32, f32) {
+        // D65 reference white
         let xr = x / 0.95047;
-        let yr = y;
+        let yr = y / 1.00000;
         let zr = z / 1.08883;
 
         fn f(t: f32) -> f32 {
@@ -76,35 +72,4 @@ pub(crate) fn perceptual_distance(a: (u8, u8, u8), b: (u8, u8, u8)) -> f32 {
     let db = b1 - b2;
 
     (dl * dl + da * da + db * db).sqrt()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn light_detection_uses_luminance() {
-        assert!(is_light((255, 255, 255)));
-        assert!(!is_light((0, 0, 0)));
-        assert!(is_light((240, 236, 220)));
-        assert!(!is_light((20, 38, 54)));
-    }
-
-    #[test]
-    fn blend_clamps_alpha() {
-        assert_eq!(blend((255, 0, 0), (0, 0, 255), 0.5), (127, 0, 127));
-        assert_eq!(blend((255, 0, 0), (0, 0, 255), -1.0), (0, 0, 255));
-        assert_eq!(blend((255, 0, 0), (0, 0, 255), 2.0), (255, 0, 0));
-    }
-
-    #[test]
-    fn perceptual_distance_is_symmetric_and_zero_for_same_color() {
-        let a = (12, 80, 160);
-        let b = (220, 180, 40);
-        assert_eq!(perceptual_distance(a, a), 0.0);
-        let ab = perceptual_distance(a, b);
-        let ba = perceptual_distance(b, a);
-        assert!((ab - ba).abs() < 0.0001, "{ab} != {ba}");
-        assert!(ab > 0.0);
-    }
 }
