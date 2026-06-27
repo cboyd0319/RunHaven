@@ -126,6 +126,12 @@ Tauri launch/run-control behavior.
   If a touched file is already difficult to review or would become so, split it
   along existing boundaries in the same slice instead of creating large-file
   debt.
+- Keep `src/runhaven/` organized by ownership boundary. Shared/runtime behavior
+  lives under `doctor`, `diagnostics`, `image`, `provider`, `records`,
+  `runtime`, and `support`; `cli/` owns Clap dispatch and human presentation.
+  Internal `src/runhaven` code should import explicit module paths under
+  `crate::runhaven::...`; the flat `src/lib.rs` re-exports are a compatibility
+  facade for Tauri and external callers, not an internal service locator.
 - Use exact subprocess argument lists, not executable shell strings, for
   runtime command generation.
 - Keep direct dependencies, package manifests, runtime pins, and image package

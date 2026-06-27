@@ -18,11 +18,57 @@ pub struct AuthBrokerProfile {
     pub notes: &'static [&'static str],
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AgentSignIn {
+    RunHavenLogin,
+    InSandbox,
+    NotApplicable,
+}
+
+impl AgentSignIn {
+    pub fn label(self) -> &'static str {
+        match self {
+            AgentSignIn::RunHavenLogin => "runhaven login",
+            AgentSignIn::InSandbox => "in-sandbox",
+            AgentSignIn::NotApplicable => "n/a",
+        }
+    }
+
+    pub fn supports_login(self) -> bool {
+        matches!(self, AgentSignIn::RunHavenLogin)
+    }
+}
+
 pub fn auth_broker_profiles() -> Vec<AuthBrokerProfile> {
     profile_names()
         .iter()
         .map(|name| get_auth_broker_profile(name).expect("known auth profile"))
         .collect()
+}
+
+/// How a user signs this agent in: a `runhaven login` command, an in-sandbox
+/// login at first run, or not applicable for the generic shell profile.
+pub fn agent_sign_in_mode(name: &str) -> AgentSignIn {
+    match name {
+        "antigravity" | "claude" | "codex" | "copilot" => AgentSignIn::RunHavenLogin,
+        "shell" => AgentSignIn::NotApplicable,
+        _ => AgentSignIn::InSandbox,
+    }
+}
+
+pub fn agent_sign_in(name: &str) -> &'static str {
+    agent_sign_in_mode(name).label()
+}
+
+/// Whether the host-side API-key broker covers this agent.
+pub fn agent_broker(name: &str) -> &'static str {
+    if name == "shell" {
+        "n/a"
+    } else if is_brokered(name) {
+        "yes"
+    } else {
+        "no"
+    }
 }
 
 /// Whether RunHaven has a host-side API-key broker for this agent. Codex,
@@ -186,5 +232,16 @@ mod tests {
         for agent in ["copilot", "antigravity", "shell", "unknown"] {
             assert!(!is_brokered(agent), "{agent} should not be brokered");
         }
+    }
+
+    #[test]
+    fn agent_sign_in_mode_matches_supported_login_agents() {
+        for agent in ["antigravity", "claude", "codex", "copilot"] {
+            assert_eq!(agent_sign_in_mode(agent), AgentSignIn::RunHavenLogin);
+            assert_eq!(agent_sign_in(agent), "runhaven login");
+        }
+        assert_eq!(agent_sign_in_mode("shell"), AgentSignIn::NotApplicable);
+        assert_eq!(agent_sign_in("shell"), "n/a");
+        assert_eq!(agent_sign_in_mode("unknown"), AgentSignIn::InSandbox);
     }
 }

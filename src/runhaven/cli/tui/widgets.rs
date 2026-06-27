@@ -7,8 +7,8 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use super::theme::{Palette, TuiSettings};
 use super::{launcher, runs};
-use crate::plans::default_network_mode;
-use crate::profiles::AgentProfile;
+use crate::runhaven::runtime::plans::default_network_mode;
+use crate::runhaven::runtime::profiles::AgentProfile;
 
 /// The home banner: Cubby on the left, brand and tagline on the right.
 pub(super) fn render_banner(

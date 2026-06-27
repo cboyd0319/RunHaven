@@ -4,7 +4,7 @@ use std::path::Path;
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::shell;
+use crate::runhaven::support::shell;
 
 #[derive(Clone, Debug, Serialize)]
 pub struct SuggestedCheck {

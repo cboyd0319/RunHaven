@@ -1,4 +1,6 @@
 pub mod cli;
+pub mod diagnostics;
+pub mod doctor;
 pub mod harness;
 pub mod image;
 pub mod provider;

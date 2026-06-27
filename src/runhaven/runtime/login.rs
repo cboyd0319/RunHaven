@@ -21,17 +21,17 @@ use std::process::{Command, Stdio};
 
 use anyhow::{Context, Result, bail};
 
-use crate::doctor::find_on_path;
-use crate::launch::launch_run_plan;
-use crate::paths::{
-    create_private_file, ensure_private_parent, login_workspace_dir, oauth_token_path,
-};
-use crate::plans::{
+use crate::runhaven::doctor::find_on_path;
+use crate::runhaven::runtime::launch::launch_run_plan;
+use crate::runhaven::runtime::plans::{
     AgentRunPlan, AuthScope, RunOptions, WorkspaceScope, build_run_plan, default_network_mode,
 };
-use crate::profiles::get_profile;
-use crate::runtime_state::{VolumeDeletion, delete_volume};
-use crate::session_state::shared_state_volume_name;
+use crate::runhaven::runtime::profiles::get_profile;
+use crate::runhaven::runtime::session_state::shared_state_volume_name;
+use crate::runhaven::runtime::state::{VolumeDeletion, delete_volume};
+use crate::runhaven::support::paths::{
+    create_private_file, ensure_private_parent, login_workspace_dir, oauth_token_path,
+};
 
 /// Agents whose login RunHaven can store host-side as an OAuth token and inject
 /// into the guest at run time. Maps the agent to the env var its CLI reads.
@@ -58,7 +58,7 @@ pub fn login(agent: &str) -> Result<i32> {
 /// Whether `runhaven login <agent>` can sign this agent in: Claude via the host
 /// setup-token, and Codex/Copilot/Antigravity via an in-sandbox login.
 pub fn supports_login(agent: &str) -> bool {
-    token_env_var(agent).is_some() || sandbox_login_command(agent).is_some()
+    crate::runhaven::provider::auth_profiles::agent_sign_in_mode(agent).supports_login()
 }
 
 /// The command to run inside the sandbox to log in. Codex and Copilot have
@@ -277,7 +277,7 @@ mod tests {
 
     #[test]
     fn login_and_refresh_hosts_are_in_the_provider_allowlist() {
-        use crate::provider_endpoints::bundled_provider_hosts;
+        use crate::runhaven::provider::endpoints::bundled_provider_hosts;
         // Without these the in-sandbox login is blocked by provider egress.
         assert!(bundled_provider_hosts("codex").contains(&"auth.openai.com"));
         assert!(bundled_provider_hosts("copilot").contains(&"github.com"));
@@ -290,7 +290,8 @@ mod tests {
             .iter()
             .map(|h| (*h).to_string())
             .collect();
-        let policy = crate::egress::EgressPolicy::new(&antigravity_hosts).expect("policy");
+        let policy = crate::runhaven::provider::egress::EgressPolicy::new(&antigravity_hosts)
+            .expect("policy");
         assert!(policy.allows("daily-cloudcode-pa.googleapis.com", 443));
         assert!(policy.allows("us-cloudcode-pa.googleapis.com", 443));
         assert!(!policy.allows("storage.googleapis.com", 443));

@@ -67,9 +67,9 @@ power use first-class:
 - Opt-out, not lock-in. The TUI is the friendly front door; the CLI is the
   always-open side door.
 
-Timing: this is a behavior decision for when the TUI ships, which is the last
-roadmap phase. Until then the CLI remains the terminal interface as it is now; the
-default only changes once the TUI exists.
+Timing: this behavior decision applies to the active TUI build. The CLI remains
+the terminal interface for subcommands, pipes, redirection, and non-interactive
+automation; the bare interactive `runhaven` default changes as the TUI ships.
 
 ## Design Principles
 

@@ -4,15 +4,15 @@ use anyhow::{Result, bail};
 use serde_json::json;
 
 use super::lock::acquire_state_lock;
-use crate::active::{
+use crate::runhaven::doctor::find_on_path;
+use crate::runhaven::provider::observability::utc_timestamp;
+use crate::runhaven::provider::runtime as provider_runtime;
+use crate::runhaven::records::{RunRecordInput, write_run_record};
+use crate::runhaven::runtime::active::{
     active_run_terminal_status, remove_active_run_record, write_active_run_record,
 };
-use crate::doctor::find_on_path;
-use crate::git::{capture_git_snapshot, summarize_git_change};
-use crate::plans::{AgentRunPlan, NetworkMode};
-use crate::provider_observability::utc_timestamp;
-use crate::provider_runtime;
-use crate::records::{RunRecordInput, write_run_record};
+use crate::runhaven::runtime::plans::{AgentRunPlan, NetworkMode};
+use crate::runhaven::support::git::{capture_git_snapshot, summarize_git_change};
 
 pub fn new_run_id() -> String {
     uuid::Uuid::new_v4().simple().to_string()
@@ -36,7 +36,7 @@ pub fn launch_run_plan(plan: &AgentRunPlan) -> Result<i32> {
 /// instead of letting `container run` try to pull a RunHaven image and return a
 /// confusing `registry-1.docker.io 401`.
 fn ensure_agent_image_built(plan: &AgentRunPlan) -> Result<()> {
-    if crate::image_doctor::image_is_built(&plan.image)? {
+    if crate::runhaven::image::doctor::image_is_built(&plan.image)? {
         return Ok(());
     }
     bail!(
@@ -61,9 +61,11 @@ pub fn run_standard_agent(plan: &AgentRunPlan) -> Result<i32> {
     let started_at = utc_timestamp();
     eprintln!("Run id: {run_id}");
     write_active_run_record(plan, &run_id, &started_at)?;
-    let injection = crate::login::run_token_injection(plan);
+    let injection = crate::runhaven::runtime::login::run_token_injection(plan);
     let command = match &injection {
-        Some((env, _)) => crate::login::with_token_env(&plan.command, &plan.image, env),
+        Some((env, _)) => {
+            crate::runhaven::runtime::login::with_token_env(&plan.command, &plan.image, env)
+        }
         None => plan.command.clone(),
     };
     let mut agent_command = Command::new(&command[0]);

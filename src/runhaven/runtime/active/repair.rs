@@ -4,7 +4,9 @@ use anyhow::{Result, bail};
 use serde_json::{Value, json};
 
 use super::{find_active_run_record, read_active_run_records, remove_active_run_record};
-use crate::validators::{require_string, validate_run_id, validate_runhaven_container_name};
+use crate::runhaven::support::validators::{
+    require_string, validate_run_id, validate_runhaven_container_name,
+};
 
 pub fn runs_repair(run_id: Option<&str>, repair_all: bool, json_output: bool) -> Result<i32> {
     if repair_all && run_id.is_some() {

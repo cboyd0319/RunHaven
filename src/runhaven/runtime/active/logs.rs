@@ -35,7 +35,7 @@ pub fn log_snapshot_payload_from_stdout(
     let (text, truncated) = bounded_log_text(stdout, max_bytes)?;
     Ok(json!({
         "run_id": run_id,
-        "captured_at": crate::provider_observability::utc_timestamp(),
+        "captured_at": crate::runhaven::provider::observability::utc_timestamp(),
         "requested_lines": requested_lines,
         "text": text,
         "returned_lines": returned_lines(&text),

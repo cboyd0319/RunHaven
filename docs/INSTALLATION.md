@@ -4,10 +4,11 @@ RunHaven is a macOS-only project. Runtime and contributor verification require
 macOS 26+ on Apple silicon, Rust 1.96.0, and Apple `container` 1.0.0.
 Windows and Linux are not supported.
 
-RunHaven remains alpha/pre-release until after the `v0.5.0` CLI-complete
-milestone. Install from source only if you are comfortable with changing CLI
-contracts, image layouts, run records, provider allowlists, and desktop
-behavior before that milestone.
+RunHaven is alpha/pre-release. `v0.5.0` is the CLI-only pre-release already
+cut, and current development includes unreleased TUI and desktop work. Install
+from source only if you are comfortable with changing CLI contracts, TUI
+behavior, desktop behavior, image layouts, run records, and provider allowlists
+before a stable release.
 
 ## Requirements
 

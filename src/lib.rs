@@ -1,10 +1,10 @@
 pub mod runhaven;
 
 pub use runhaven::cli::app;
-pub use runhaven::cli::diagnostics;
-pub use runhaven::cli::doctor;
 pub use runhaven::cli::setup;
 pub use runhaven::cli::tui;
+pub use runhaven::diagnostics;
+pub use runhaven::doctor;
 pub use runhaven::harness::pins;
 pub use runhaven::image::assets as image_assets;
 pub use runhaven::image::build as images;
@@ -15,7 +15,7 @@ pub use runhaven::provider::egress;
 pub use runhaven::provider::endpoints as provider_endpoints;
 pub use runhaven::provider::observability as provider_observability;
 pub use runhaven::provider::runtime as provider_runtime;
-pub use runhaven::records::history as records;
+pub use runhaven::records;
 pub use runhaven::runtime::active;
 pub use runhaven::runtime::launch;
 pub use runhaven::runtime::login;

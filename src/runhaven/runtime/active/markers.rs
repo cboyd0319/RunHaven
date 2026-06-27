@@ -4,10 +4,10 @@ use std::io::Write;
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
 
-use crate::paths::{active_run_path, active_runs_dir, create_private_file};
-use crate::plans::AgentRunPlan;
-use crate::validators::{validate_run_id, validate_runhaven_container_name};
-use crate::worktrees::worktree_record;
+use crate::runhaven::runtime::plans::AgentRunPlan;
+use crate::runhaven::runtime::worktrees::worktree_record;
+use crate::runhaven::support::paths::{active_run_path, active_runs_dir, create_private_file};
+use crate::runhaven::support::validators::{validate_run_id, validate_runhaven_container_name};
 
 pub fn write_active_run_record(plan: &AgentRunPlan, run_id: &str, started_at: &str) -> Result<()> {
     let mut payload = json!({
@@ -78,7 +78,7 @@ fn mark_active_run_status(
 ) -> Result<()> {
     let mut updated = record.clone();
     updated["status"] = json!(status);
-    updated[timestamp_key] = json!(crate::provider_observability::utc_timestamp());
+    updated[timestamp_key] = json!(crate::runhaven::provider::observability::utc_timestamp());
     write_active_run_payload(run_id, updated)
 }
 
@@ -165,7 +165,7 @@ pub fn read_active_run_records() -> Vec<Value> {
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
-    use crate::paths::TEST_ENV_LOCK;
+    use crate::runhaven::support::paths::TEST_ENV_LOCK;
     use std::os::unix::fs::PermissionsExt;
     use std::sync::MutexGuard;
 

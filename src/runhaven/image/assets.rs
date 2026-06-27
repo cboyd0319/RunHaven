@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use sha2::{Digest, Sha256};
 
-use crate::paths::runhaven_cache_root;
+use crate::runhaven::support::paths::runhaven_cache_root;
 
 #[derive(Clone, Copy, Debug)]
 pub struct ImageAsset {

@@ -22,8 +22,8 @@ pub use validation::{
     validate_workspace,
 };
 
-use crate::session_state::{shared_state_volume_name, state_volume_name};
-use crate::validators::validate_run_id;
+use crate::runhaven::runtime::session_state::{shared_state_volume_name, state_volume_name};
+use crate::runhaven::support::validators::validate_run_id;
 
 const SSH_FORWARDING_DISABLED_MESSAGE: &str = "SSH forwarding is disabled: Apple container 1.0.0 exposes the forwarded socket to RunHaven's non-root agent user, but ssh-add -l returns permission denied. Do not mount raw SSH keys or run the agent as root; track docs/APPLE_CONTAINER_GAP_ANALYSIS.md.";
 
@@ -263,7 +263,7 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::profiles::get_profile;
+    use crate::runhaven::runtime::profiles::get_profile;
 
     #[test]
     fn default_plan_uses_non_root_read_only_root_and_project_mount() {

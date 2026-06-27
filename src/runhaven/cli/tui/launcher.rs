@@ -4,12 +4,12 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{Result, bail};
 
-use crate::plans::{
+use crate::runhaven::runtime::plans::{
     AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
     default_network_mode,
 };
-use crate::profiles::AgentProfile;
-use crate::shell;
+use crate::runhaven::runtime::profiles::AgentProfile;
+use crate::runhaven::support::shell;
 
 pub(crate) const CONFIRM_PHRASE: &str = "run";
 
@@ -380,7 +380,7 @@ fn canonicalize_or_self(path: PathBuf) -> PathBuf {
 mod tests {
     use tempfile::tempdir;
 
-    use crate::profiles::get_profile;
+    use crate::runhaven::runtime::profiles::get_profile;
 
     use super::*;
 

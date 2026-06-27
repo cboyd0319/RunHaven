@@ -3,7 +3,7 @@ use std::io::Write;
 
 use anyhow::{Context, Result, bail};
 
-use crate::paths::{open_private_read_write, state_lock_path};
+use crate::runhaven::support::paths::{open_private_read_write, state_lock_path};
 
 pub struct StateLock {
     file: File,

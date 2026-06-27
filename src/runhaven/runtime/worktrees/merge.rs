@@ -4,7 +4,9 @@ use std::path::Path;
 use anyhow::{Result, bail};
 
 use super::{WorktreeLifecycle, git_bytes, git_checked, git_stdout};
-use crate::git::{GitSnapshot, capture_git_snapshot, parse_git_status_entries, safe_repo_path};
+use crate::runhaven::support::git::{
+    GitSnapshot, capture_git_snapshot, parse_git_status_entries, safe_repo_path,
+};
 
 pub fn ensure_source_ready_for_merge(lifecycle: &WorktreeLifecycle) -> Result<()> {
     let current_head = git_stdout(&lifecycle.source_repo_root, &["rev-parse", "HEAD"])?;

@@ -1,5 +1,5 @@
-use crate::doctor::Check;
-use crate::profiles::get_profile;
+use crate::runhaven::doctor::Check;
+use crate::runhaven::runtime::profiles::get_profile;
 
 pub fn print_checks(checks: &[Check]) {
     for check in checks {

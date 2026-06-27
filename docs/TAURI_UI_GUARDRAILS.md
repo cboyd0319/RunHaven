@@ -7,11 +7,11 @@ folder-pick, run-plan review, and an explicitly confirmed launch path. This
 document defines the security, resource, and approval boundaries for every
 WebView-controlled RunHaven operation.
 
-Current release context: the desktop app remains alpha while RunHaven closes
-the `v0.5.0` CLI-complete milestone. `v1.0.0` requires the desktop app to
-become the first-class safe path, but each new desktop command still needs
-typed Rust inputs, explicit confirmation where mutating, focused tests, and a
-narrow Tauri capability.
+Current release context: the desktop app remains alpha after the `v0.5.0`
+CLI-only pre-release. The TUI is active in the current checkout; the desktop app
+is deferred to a later first-class release phase. Each new desktop command still
+needs typed Rust inputs, explicit confirmation where mutating, focused tests,
+and a narrow Tauri capability.
 
 ## Source Evidence
 

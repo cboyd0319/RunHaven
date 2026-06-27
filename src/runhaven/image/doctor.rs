@@ -6,10 +6,10 @@ use serde_json::Value;
 
 mod builder;
 
-use crate::active::read_active_run_records;
-use crate::images::{RUNHAVEN_SOURCE_DIGEST_LABEL, image_source_digest};
-use crate::profiles::{AgentProfile, get_profile, profiles};
-use crate::session_state::is_runhaven_state_volume;
+use crate::runhaven::image::build::{RUNHAVEN_SOURCE_DIGEST_LABEL, image_source_digest};
+use crate::runhaven::runtime::active::read_active_run_records;
+use crate::runhaven::runtime::profiles::{AgentProfile, get_profile, profiles};
+use crate::runhaven::runtime::session_state::is_runhaven_state_volume;
 
 #[derive(Clone, Debug)]
 struct LocalImage {

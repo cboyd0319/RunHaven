@@ -1,6 +1,6 @@
 # RunHaven v0.5.0 And v1.0.0 Gap Analysis
 
-Last updated: 2026-06-26
+Last updated: 2026-06-27
 
 Status: active release-gap tracker.
 
@@ -14,16 +14,15 @@ It is not a second roadmap. Use it to decide whether work is:
 - blocking `v1.0.0`;
 - acceptable as a v1.x follow-up.
 
-RunHaven remains alpha/pre-release until after `v0.5.0`. `v0.5.0` is the
-CLI-complete milestone.
+RunHaven remains alpha/pre-release. `v0.5.0` is the CLI-complete pre-release
+already cut.
 
-Sequencing update (2026-06-26 directive): all GUI/UI work, the Tauri desktop app
-and the terminal UI (TUI), is deferred to the very end of the roadmap.
-Runtime/security hardening of the Apple `container` boundary, remaining non-UI
-product scope, and a CLI-based public release come first. The v1 desktop gap
-rows below stay valid as the final phase; they are re-sequenced, not removed, and
-the desktop release version label is no longer locked to `v1.0.0`. The sequence
-of record is `current-state.md` and `docs/ROADMAP.md`.
+Sequencing update: the 2026-06-26 directive deferred GUI/UI work to the end of
+the roadmap. On 2026-06-27, the terminal UI was pulled forward and is now active
+as the reference TUI for sibling projects. The v1 desktop gap rows below stay
+valid for the later desktop phase; they are re-sequenced, not removed, and the
+desktop release version label is no longer locked to `v1.0.0`. The sequence of
+record is `current-state.md` and `docs/ROADMAP.md`.
 
 Above all else, the secure path must be the easy path. Secure defaults should
 be the shortest workflow. Supported lower-security choices should warn and
@@ -35,7 +34,7 @@ warned rather than blocked solely because they are less secure.
 
 ## Evidence Used
 
-Observed from live repo state on 2026-06-18:
+Observed from live repo state, last refreshed on 2026-06-27:
 
 - `feature_list.json` and `current-state.md`.
 - `README.md`, `docs/ROADMAP.md`, `docs/V1_RELEASE_PLAN.md`,
@@ -51,7 +50,7 @@ Observed from live repo state on 2026-06-18:
 - `cargo run --locked --bin runhaven -- auth --help`.
 - `cargo run --locked --bin runhaven -- why --help`.
 - Tauri command and capability scan over `src-tauri/` and `ui/src/`.
-- File-size scan over Rust, Tauri, and frontend source files.
+- File-size scan over Rust, Tauri, frontend, and TUI source files.
 
 Observed CLI command families:
 
@@ -80,17 +79,31 @@ Observed desktop command families:
   explanations and blocked-host review, auth explain, maintenance actions,
   profile support matrix, and release packaging.
 
+Observed TUI command families:
+
+- implemented development surfaces: bare-TTY launch, agent detail, workspace
+  picker, plan review, type-confirm launch, active-run dashboard, bounded log
+  snapshot viewer, stop, hard-stop, and stale-marker repair;
+- current open TUI family: Phase 4 history and diagnostics (run history,
+  per-run diff review, egress/auth diagnostics, terminal/render capability
+  probe, and TUI doctor remediation).
+
 Observed maintainability pressure:
 
-- `src-tauri/src/commands/mod.rs`: 528 lines.
-- `ui/src/commands/runhaven.ts`: 543 lines.
-- `ui/src/app/App.svelte`: 569 lines.
-- `src/runhaven/provider/egress.rs`: 495 lines.
-- `src/runhaven/provider/auth_broker.rs`: 499 lines.
+- `src/runhaven/cli/tui/mod.rs`: approximately 748 lines.
+- `src/runhaven/cli/tui/runs.rs`: approximately 648 lines.
+- `src/runhaven/cli/tui/pet.rs`: approximately 642 lines.
+- `src/runhaven/provider/runtime.rs`: approximately 580 lines.
+- `src/runhaven/runtime/plans/mod.rs`: approximately 584 lines.
+- `src/runhaven/provider/egress.rs`: approximately 525 lines.
+- `src/runhaven/provider/auth_broker.rs`: approximately 512 lines.
+- `src/runhaven/cli/app.rs`: approximately 499 lines after the organization
+  pass.
 
-The first three are v1 desktop maintainability gaps before adding many more
-GUI controls. The provider files are near the project size guard and should be
-watched during v0.5 runtime/auth work.
+The TUI files are allowed to exceed the soft size guard while phases are being
+built, but touched files must split along screen/framework boundaries when a
+new phase would make review harder. Provider/runtime files remain security
+boundaries and should be split only by clear ownership.
 
 ## Release Definitions
 
@@ -102,7 +115,7 @@ pin updates, documentation corrections, and internal support for the desktop
 that preserves CLI semantics.
 
 `v0.5.0` does not need to be the full public desktop release. The project
-remains alpha/pre-release through this milestone.
+remains alpha/pre-release after this milestone.
 
 ### v1.0.0
 

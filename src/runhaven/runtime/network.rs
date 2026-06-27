@@ -2,7 +2,7 @@ use std::process::Command;
 
 use anyhow::{Result, bail};
 
-use crate::plans::VOLUME_PREP_NETWORK;
+use crate::runhaven::runtime::plans::VOLUME_PREP_NETWORK;
 
 pub fn network_list() -> Result<i32> {
     let networks = list_managed_networks()?;

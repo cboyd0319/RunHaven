@@ -1,23 +1,23 @@
 # Non-UI Backlog
 
-Last updated: 2026-06-26
+Last updated: 2026-06-27
 
 Status: durable backlog for CLI-complete, runtime, evidence, and product-scope
-work that is not direct Tauri/UI implementation. Per the 2026-06-26 directive
-that defers all GUI/UI work to the very end, this is now the primary near-term
-backlog: runtime/security hardening leads, then promotion of design-first
-non-UI product candidates one at a time, then a CLI-based public release.
+work that is not direct Tauri/UI implementation. The 2026-06-26 directive made
+this the near-term backlog ahead of broad UI work; the 2026-06-27 directive
+pulled the TUI forward as the active reference implementation. Keep this file
+for non-UI product/security candidates and recurring runtime evidence gates.
 
 RunHaven's Rust CLI is the current product core. This file keeps remaining
-non-UI work explicit so the CLI product can be hardened and rounded out before
-the deferred desktop/TUI surfaces.
+non-UI work explicit so product/security slices can be promoted deliberately
+without weakening CLI semantics or default safety.
 
-RunHaven remains alpha/pre-release until after `v0.5.0`. The post-`v0.5.0`
-contract-preserving guard (bug fixes, security fixes, pin updates, doc
-corrections, internal GUI support only) is relaxed by this directive for
-deliberately promoted non-UI product candidates below: promote one at a time
-through its design gate, preserving CLI semantics and default safety, rather
-than treating it as cleanup.
+RunHaven remains alpha/pre-release after the `v0.5.0` CLI-only pre-release. The
+post-`v0.5.0` contract-preserving guard (bug fixes, security fixes, pin updates,
+doc corrections, internal UI support only) may be relaxed only for deliberately
+promoted non-UI product candidates below: promote one at a time through its
+design gate, preserving CLI semantics and default safety, rather than treating
+it as cleanup.
 
 ## Ongoing Runtime Evidence Gates
 

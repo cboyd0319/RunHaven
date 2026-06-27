@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use anyhow::{Result, bail};
 use serde::Serialize;
 
-use crate::profiles::AgentProfile;
-use crate::shell;
+use crate::runhaven::runtime::profiles::AgentProfile;
+use crate::runhaven::support::shell;
 
 pub const SUPPORTED_NETWORK_MODES: &[&str] = &["internet", "internal", "provider"];
 pub const SUPPORTED_WORKSPACE_SCOPES: &[&str] = &["current", "git-root"];

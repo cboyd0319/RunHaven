@@ -7,10 +7,10 @@ protects by default, and where the current limits are.
 RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
 supported runtimes or contributor verification targets.
 
-RunHaven remains alpha/pre-release until after `v0.5.0`. The CLI is the
-current working product surface. `v0.5.0` should finish and verify the CLI
-contract; `v1.0.0` should make the Tauri desktop app the first-class safe path
-for less-technical users.
+RunHaven is alpha/pre-release. `v0.5.0` is the CLI-only pre-release already
+cut. Current development adds an unreleased terminal UI over the same planner,
+run records, diagnostics, and run-control cores. The Tauri desktop app remains
+alpha and will need a later first-class release path for less-technical users.
 
 For command walkthroughs, use [Usage](USAGE.md). For the full security boundary,
 use [Security model](SECURITY_MODEL.md).
@@ -24,7 +24,7 @@ use [Security model](SECURITY_MODEL.md).
 | Network modes | Secure profile-aware default (provider allowlist where the agent's hosts are bundled, otherwise internet), plus local-only internal networking and explicit override. |
 | Workspace safety | Current-directory mounts by default, explicit git-root expansion, sensitive-path rejection, and optional RunHaven-owned git worktrees. |
 | Credentials | No host home, raw SSH key, browser profile, cloud credential folder, or arbitrary environment passthrough by default. |
-| Observability | Secret-free run records, active-run controls, provider policy logs, auth broker status, and recovery commands. |
+| Observability | Secret-free run records, active-run controls, provider policy logs, auth broker status, TUI run dashboard/log snapshots, and recovery commands. |
 | Cleanup | Focused image, state-volume, network, and worktree recovery for resources RunHaven owns. |
 
 ## Runtime Defaults

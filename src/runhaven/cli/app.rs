@@ -6,29 +6,31 @@ use anyhow::{Result, bail};
 use clap::{CommandFactory, Parser};
 
 use super::args::*;
-use crate::active::{
+use super::diagnostics::{
+    auth_explain, auth_log, auth_status, egress_log, why_host, why_network, why_state,
+    why_workspace,
+};
+use crate::runhaven::cli::setup::{print_checks, print_setup_guide};
+use crate::runhaven::diagnostics::{read_auth_broker_log, read_egress_policy_log};
+use crate::runhaven::doctor::collect_checks;
+use crate::runhaven::image::build::build_image_plan;
+use crate::runhaven::image::doctor as image_doctor;
+use crate::runhaven::provider::auth_profiles::{agent_broker, agent_sign_in};
+use crate::runhaven::provider::runtime as provider_runtime;
+use crate::runhaven::records::{runs_diff, runs_list, runs_log, runs_show};
+use crate::runhaven::runtime::active::{
     runs_active, runs_attach, runs_kill, runs_logs_follow, runs_repair, runs_status, runs_stop,
 };
-use crate::diagnostics::{
-    auth_explain, auth_log, auth_status, egress_log, read_auth_broker_log, read_egress_policy_log,
-    why_host, why_network, why_state, why_workspace,
-};
-use crate::doctor::collect_checks;
-use crate::image_doctor;
-use crate::images::build_image_plan;
 #[cfg(test)]
-use crate::launch::run_standard_agent;
-use crate::launch::{launch_run_plan, require_container_cli};
-use crate::plans::{
+use crate::runhaven::runtime::launch::run_standard_agent;
+use crate::runhaven::runtime::launch::{launch_run_plan, require_container_cli};
+use crate::runhaven::runtime::plans::{
     AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
     default_network_mode,
 };
-use crate::profiles::{get_profile, profiles};
-use crate::provider_runtime;
-use crate::records::{runs_diff, runs_list, runs_log, runs_show};
-use crate::runtime_state;
-use crate::setup::{print_checks, print_setup_guide};
-use crate::worktrees::{
+use crate::runhaven::runtime::profiles::{get_profile, profiles};
+use crate::runhaven::runtime::state as runtime_state;
+use crate::runhaven::runtime::worktrees::{
     create_worktree_for_run, preview_worktree, runs_worktree_discard, runs_worktree_keep,
     runs_worktree_merge, runs_worktree_recover,
 };
@@ -73,7 +75,7 @@ fn dispatch(cli: Cli, agent_args: Vec<String>) -> Result<i32> {
         // No subcommand: on an interactive terminal, the TUI is the default
         // entry; otherwise (piped, redirected, or with trailing args) print help.
         if agent_args.is_empty() && should_launch_tui() {
-            return crate::tui::run();
+            return crate::runhaven::cli::tui::run();
         }
         let mut command = Cli::command();
         command.print_help()?;
@@ -91,9 +93,9 @@ fn dispatch(cli: Cli, agent_args: Vec<String>) -> Result<i32> {
         TopCommand::Login { agent, clear } => {
             get_profile(&agent)?;
             if clear {
-                crate::login::logout(&agent)
+                crate::runhaven::runtime::login::logout(&agent)
             } else {
-                crate::login::login(&agent)
+                crate::runhaven::runtime::login::login(&agent)
             }
         }
         TopCommand::Image { command } => image_command(command),
@@ -149,30 +151,6 @@ fn list_agents() -> Result<i32> {
         );
     }
     Ok(0)
-}
-
-/// How a user signs this agent in: a `runhaven login` command, an in-sandbox
-/// login at first run, or not applicable (the generic shell profile). Shared
-/// with the TUI agent detail screen.
-pub(crate) fn agent_sign_in(name: &str) -> &'static str {
-    if crate::login::supports_login(name) {
-        "runhaven login"
-    } else if name == "shell" {
-        "n/a"
-    } else {
-        "in-sandbox"
-    }
-}
-
-/// Whether the host-side API-key broker covers this agent. Shared with the TUI.
-pub(crate) fn agent_broker(name: &str) -> &'static str {
-    if name == "shell" {
-        "n/a"
-    } else if crate::auth_profiles::is_brokered(name) {
-        "yes"
-    } else {
-        "no"
-    }
 }
 
 fn doctor() -> Result<i32> {
@@ -264,8 +242,8 @@ fn image_command(command: ImageCommand) -> Result<i32> {
 fn network_command(command: NetworkCommand) -> Result<i32> {
     require_container_cli()?;
     match command {
-        NetworkCommand::List => crate::network::network_list(),
-        NetworkCommand::Prune { yes } => crate::network::network_prune(yes),
+        NetworkCommand::List => crate::runhaven::runtime::network::network_list(),
+        NetworkCommand::Prune { yes } => crate::runhaven::runtime::network::network_prune(yes),
     }
 }
 

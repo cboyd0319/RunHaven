@@ -110,7 +110,7 @@ fn codex_broker_wildcard_bind_rejects_clients_outside_container_subnet() {
         ipv4_subnet: "192.0.2.0/24".to_string(),
     };
     let broker = create_api_key_broker(
-        crate::auth_broker::CODEX_BROKER,
+        crate::runhaven::provider::auth_broker::CODEX_BROKER,
         "test-key".to_string(),
         &info,
     )
@@ -151,12 +151,12 @@ fn broker_plan(profile_name: &str, agent: &str) -> AgentRunPlan {
         session: "default".to_string(),
         container_name: "runhaven-test-run".to_string(),
         profile_name: profile_name.to_string(),
-        workspace_scope: crate::plans::WorkspaceScope::Current,
+        workspace_scope: crate::runhaven::runtime::plans::WorkspaceScope::Current,
         workspace_scope_note: None,
         worktree: None,
         run_id: None,
         network_name: Some("runhaven-test-internal".to_string()),
-        network_mode: crate::plans::NetworkMode::Provider,
+        network_mode: crate::runhaven::runtime::plans::NetworkMode::Provider,
         egress_summary: String::new(),
         image: image.to_string(),
         provider_allowed_hosts: vec!["example.com".to_string()],
@@ -171,7 +171,7 @@ fn claude_broker_redirects_base_url_and_gives_guest_only_placeholder() {
     let result = with_api_key_broker_config(
         &plan.command,
         &plan,
-        crate::auth_broker::CLAUDE_BROKER,
+        crate::runhaven::provider::auth_broker::CLAUDE_BROKER,
         "http://192.0.2.1:8080",
     )
     .expect("claude broker config");
@@ -189,7 +189,7 @@ fn gemini_broker_redirects_base_url() {
     let result = with_api_key_broker_config(
         &plan.command,
         &plan,
-        crate::auth_broker::GEMINI_BROKER,
+        crate::runhaven::provider::auth_broker::GEMINI_BROKER,
         "http://192.0.2.1:8080",
     )
     .expect("gemini broker config");
@@ -204,7 +204,7 @@ fn codex_broker_injects_custom_provider_with_v1_base() {
     let result = with_api_key_broker_config(
         &plan.command,
         &plan,
-        crate::auth_broker::CODEX_BROKER,
+        crate::runhaven::provider::auth_broker::CODEX_BROKER,
         "http://192.0.2.1:8080",
     )
     .expect("codex broker config");

@@ -11,11 +11,11 @@ policy, and run status. These patterns keep that rendering clean as it grows.
 ## Single source of truth
 
 The data model lives once, in RunHaven's existing planner and policy objects
-(`profiles`, `RunOptions` / `AgentRunPlan`, the egress policy, run records). The
-TUI never re-derives or duplicates that logic; widgets are pure functions of
-that data. This is already why the agent detail screen reuses
-`agent_sign_in` / `agent_broker` and `default_network_mode` instead of restating
-them.
+(`profiles`, `RunOptions` / `AgentRunPlan`, the egress policy, diagnostics, and
+run records). The TUI never re-derives or duplicates that logic; widgets are
+pure functions of that data. This is already why the agent detail screen reuses
+auth posture labels from `provider/auth_profiles.rs` and `default_network_mode`
+instead of restating them.
 
 ## Adapters build, widgets draw
 
@@ -28,6 +28,12 @@ Keep the layers separate:
 No container calls, planning, or policy decisions inside a widget. That keeps
 widgets pure and testable with `TestBackend` (render every screen without
 panic), which the current tests already do.
+
+Shared data needed by the TUI belongs in presentation-neutral modules before a
+screen consumes it. Examples: host readiness in `doctor.rs`, secret-free
+diagnostics in `diagnostics.rs`, run records in `records/`, auth posture labels
+in `provider/auth_profiles.rs`, and active-run control in `runtime/active/`.
+Do not parse CLI prose or import shared data from `cli/app.rs`.
 
 ## Cards
 

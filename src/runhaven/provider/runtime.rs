@@ -8,20 +8,20 @@ use std::time::Duration;
 use anyhow::{Context, Result, bail};
 use serde_json::{Value, json};
 
-use crate::active::{
-    active_run_terminal_status, remove_active_run_record, write_active_run_record,
-};
-use crate::auth_broker::{
+use crate::runhaven::provider::auth_broker::{
     ApiKeyBrokerProxy, GuestRedirect, ProviderBrokerProfile, broker_profile_for_agent,
 };
-use crate::egress::{EgressPolicy, ProxyDecision, ThreadedAllowlistProxy};
-use crate::git::{capture_git_snapshot, summarize_git_change};
-use crate::plans::AgentRunPlan;
-use crate::provider_observability::{
+use crate::runhaven::provider::egress::{EgressPolicy, ProxyDecision, ThreadedAllowlistProxy};
+use crate::runhaven::provider::observability::{
     print_provider_blocked_host_review, utc_timestamp, write_auth_broker_log,
     write_provider_policy_log,
 };
-use crate::records::{RunRecordInput, write_run_record};
+use crate::runhaven::records::{RunRecordInput, write_run_record};
+use crate::runhaven::runtime::active::{
+    active_run_terminal_status, remove_active_run_record, write_active_run_record,
+};
+use crate::runhaven::runtime::plans::AgentRunPlan;
+use crate::runhaven::support::git::{capture_git_snapshot, summarize_git_change};
 
 #[derive(Clone, Debug)]
 pub struct InternalNetworkInfo {
@@ -111,9 +111,11 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
         eprintln!("Run id: {run_id}");
         write_active_run_record(plan, &run_id, &started)?;
         active_recorded = true;
-        let token_injection = crate::login::run_token_injection(plan);
+        let token_injection = crate::runhaven::runtime::login::run_token_injection(plan);
         let command = match &token_injection {
-            Some((env, _)) => crate::login::with_token_env(&command, &plan.image, env),
+            Some((env, _)) => {
+                crate::runhaven::runtime::login::with_token_env(&command, &plan.image, env)
+            }
             None => command,
         };
         let mut agent_command = Command::new(&command[0]);

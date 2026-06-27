@@ -1,17 +1,17 @@
 # RunHaven v0.5.0/v1.0.0 Release Plan
 
-Last updated: 2026-06-26
+Last updated: 2026-06-27
 
-Status: proposed durable release ladder. Sequencing superseded 2026-06-26.
+Status: historical durable release ladder plus release-quality gates. Current
+sequence is owned by `current-state.md` and `docs/ROADMAP.md`.
 
-> Sequencing update (2026-06-26 user directive): all GUI/UI work, the Tauri
-> desktop app and the terminal UI (TUI), is deferred to the very end of the
-> roadmap. Runtime/security hardening of the Apple `container` boundary,
-> remaining non-UI product scope, and a CLI-based public release come first. The
-> desktop design content below stays valid as the final roadmap phase; only its
-> position changed, and the `v1.0.0` label is no longer locked to the desktop
-> release. The current sequence of record is `current-state.md` and
-> `docs/ROADMAP.md`. Already-shipped desktop slices stay complete and verified.
+> Sequencing update: the 2026-06-26 directive deferred GUI/UI work behind
+> runtime/security hardening, remaining non-UI scope, and a CLI-based public
+> release. On 2026-06-27, the terminal UI was pulled forward and is now active as
+> a first-class reference implementation for sibling projects. The desktop design
+> content below stays valid for a later first-class desktop release; the
+> `v1.0.0` label is no longer locked to that desktop release. Already-shipped
+> desktop slices stay complete and verified.
 
 ## Problem
 
@@ -33,8 +33,9 @@ The release ladder is two-stage:
 - `v1.0.0` is the first-class desktop release built on that stable CLI
   foundation.
 
-RunHaven remains alpha/pre-release until after `v0.5.0` is cut. `v0.5.0`
-establishes the CLI contract; it is not the full public desktop release.
+RunHaven remains alpha/pre-release. `v0.5.0` has been cut as the CLI-complete
+pre-release; it establishes the CLI contract and is not the full public desktop
+release.
 
 ## Release Decision
 
@@ -100,6 +101,8 @@ In scope for v1.0.0:
 - A public desktop release boundary replacing the alpha contract in
   user-facing docs after `v0.5.0`.
 - A first-class Tauri desktop app for the safe workflow listed above.
+- A first-class terminal UI over the same planner and policy. The TUI is now
+  being built before the desktop release as a reusable reference implementation.
 - A stable CLI that shares the same planner, validators, run records, provider
   policy, auth broker metadata, and cleanup rules as the desktop app.
 - Narrow Tauri capabilities for every privileged operation.

@@ -107,7 +107,7 @@ Update only the files needed for the changed pin surface:
 - `pins.toml`: Apple `container` version, commit, installer SHA-256, installer
   Team ID, builder image, vminit image, Kata release, kernel filename, and
   kernel SHA-256.
-- `src/runhaven/cli/doctor/runtime_pins.rs`: fixture pins and parser fixtures
+- `src/runhaven/doctor/runtime_pins.rs`: fixture pins and parser fixtures
   when structured Apple JSON changed.
 - `tests/fixtures/apple_container/`: trimmed JSON fixtures for changed Apple
   output shapes.

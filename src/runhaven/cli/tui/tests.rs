@@ -4,7 +4,7 @@ use ratatui::backend::TestBackend;
 use ratatui::style::Color;
 use tempfile::tempdir;
 
-use crate::plans::{NetworkMode, WorkspaceScope};
+use crate::runhaven::runtime::plans::{NetworkMode, WorkspaceScope};
 
 fn test_app() -> App {
     App::with_settings_and_workspace(TuiSettings::default(), PathBuf::from("/workspace"))

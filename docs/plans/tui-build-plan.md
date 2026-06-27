@@ -123,7 +123,7 @@ Dependencies added for vendored code are pure-Rust and exact-pinned: `base64`,
 Each phase ships at the reference-quality bar (below). Phases are sequenced so
 later screens build on earlier foundations.
 
-### Phase 0 — Foundation (complete)
+### Phase 0 - Foundation (complete)
 
 The reusable spine. Vendor the foundation primitives (`render`, `key_hint`,
 `wrapping`, `terminal_hyperlinks`, `selection_list`, OSC 52 clipboard). Build:
@@ -134,7 +134,7 @@ The reusable spine. Vendor the foundation primitives (`render`, `key_hint`,
   animation, replacing codex's tokio `FrameRequester`);
 - the VT100 + `insta` snapshot test harness used by every later screen.
 
-### Phase 1 — Brand complete (complete)
+### Phase 1 - Brand complete (complete)
 
 - Hero image tier: render the high-resolution Cubby via `codex::image_protocol`
   (Kitty overlay emitted after the ratatui draw, positioned over the banner) on
@@ -149,7 +149,7 @@ The reusable spine. Vendor the foundation primitives (`render`, `key_hint`,
 - RunHaven-authored rotating tooltips that teach shortcuts and the security
   model.
 
-### Phase 2 — The launcher flow (complete)
+### Phase 2 - The launcher flow (complete)
 
 The directory-and-provider front door.
 
@@ -163,7 +163,7 @@ The directory-and-provider front door.
   type-to-confirm only for less-secure choices.
 - Launch a real run.
 
-### Phase 3 — Run management (complete)
+### Phase 3 - Run management (complete)
 
 - Live run dashboard: active run list, sanitized live status, resource summary,
   network attachments, and a streaming egress ledger backed by the provider
@@ -175,14 +175,14 @@ The directory-and-provider front door.
   destructive surfaces), routed through the existing validated run-control
   cores.
 
-### Phase 4 — History and diagnostics
+### Phase 4 - History and diagnostics
 
 - Run history with per-run records and "what changed" diff review
   (`diff_render`).
 - Diagnostics: egress log, auth status, and a terminal/render capability probe.
 - `doctor`: prerequisite checks with spinners and inline remediation.
 
-### Phase 5 — Polish
+### Phase 5 - Polish
 
 - Guided onboarding (first-run).
 - Run-done / waiting-for-input notifications.
@@ -214,7 +214,11 @@ TUI rather than printed text:
   status/log cores and the provider runtime writes egress decision deltas during
   provider-mode execution.
 - Phase 4 (history, diagnostics) needs run records and the egress/auth logs as
-  data.
+  data. Complete prerequisite: `src/runhaven/records/` now exposes a real
+  facade over `run_history` and JSONL IO, `src/runhaven/diagnostics.rs` owns
+  secret-free log readers/status payloads, and `src/runhaven/doctor.rs` owns
+  shared host readiness checks. TUI Phase 4 should consume those data modules,
+  not CLI prose.
 
 Any structured output the TUI needs that the CLI does not yet expose is a CLI gap
 to close in the shared library, not text to re-parse. These are surfaced per
@@ -251,6 +255,12 @@ phase as they arise.
   scroll, tail-following, and ANSI parsing through `vt100`; and stop, hard-stop,
   and stale-marker repair use plain typed-confirm screens over the existing
   validated run-control cores.
+- Complete: pre-Phase 4 organization lock. Shared TUI data dependencies now
+  live outside CLI presentation: host readiness in `doctor.rs`, secret-free
+  diagnostics in `diagnostics.rs`, auth posture labels in
+  `provider/auth_profiles.rs`, and run history behind `records/` with
+  `records/run_history.rs` plus `records/io.rs`. Internal `src/runhaven` imports
+  use explicit ownership paths instead of the crate-root compatibility facade.
 - Next: Phase 4 history and diagnostics: run history, per-run diff review,
   egress/auth diagnostics, terminal/render capability probe, and TUI doctor
   remediation.

@@ -3,11 +3,11 @@ use std::collections::BTreeMap;
 use anyhow::{Result, bail};
 use serde_json::Value;
 
-use crate::active::{
+use crate::runhaven::diagnostics::read_egress_policy_log;
+use crate::runhaven::runtime::active::{
     DEFAULT_LOG_SNAPSHOT_LINES, active_run_log_snapshot_payload, active_run_status_payload,
     kill_active_run, read_active_run_records, repair_active_run, stop_active_run,
 };
-use crate::diagnostics::read_egress_policy_log;
 
 const EGRESS_LOG_LIMIT: usize = 250;
 const LOG_RENDER_MAX_COLUMNS: u16 = 240;

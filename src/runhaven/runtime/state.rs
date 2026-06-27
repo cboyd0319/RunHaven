@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use anyhow::{Result, bail};
 
-use crate::session_state::{validate_session_name, volume_matches_session};
+use crate::runhaven::runtime::session_state::{validate_session_name, volume_matches_session};
 
 pub fn state_list(session: Option<&str>) -> Result<i32> {
     let volumes = list_state_volumes(session)?;

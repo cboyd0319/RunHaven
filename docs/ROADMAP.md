@@ -5,16 +5,14 @@ direction. The live feature status and verification evidence are tracked in
 `feature_list.json`, `current-state.md`, and
 `docs/harness/evidence/evidence-log.md`.
 
-RunHaven remains alpha/pre-release until after the `v0.5.0` CLI-complete
-milestone.
+RunHaven is alpha/pre-release. `v0.5.0` is the CLI-only pre-release already cut.
 
-Sequencing directive (2026-06-26): all GUI/UI work, the Tauri desktop app and the
-terminal UI (TUI), is deferred to the very end of the roadmap. Runtime/security
-hardening of the Apple `container` boundary, remaining non-UI product scope, and a
-CLI-based public release come first. Already-shipped desktop slices stay complete
-and verified; they are re-sequenced, not reverted. This supersedes the prior
-`v1.0.0` = first-class-desktop boundary; the version label for the desktop release
-is open.
+Sequencing history: on 2026-06-26, GUI/UI work was deferred behind
+runtime/security hardening, remaining non-UI product scope, and a CLI-based
+public release. On 2026-06-27, the terminal UI was pulled forward by user
+directive and is now the active feature because it will be the reference TUI for
+sibling projects. The Tauri desktop app remains re-sequenced to a later release
+phase; already-shipped desktop slices stay complete and verified.
 
 The consolidated non-UI backlog lives in
 [`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md). Tauri/UI research lives in
@@ -29,11 +27,11 @@ The active release gap tracker lives in
 | Target | Goal | Status |
 | --- | --- | --- |
 | `v0.5.0` | CLI-complete release: command set, docs, JSON/data decisions, runtime smokes, profile support tiers, diagnostics, cleanup, secure-easy defaults, and maintainable module boundaries are complete and verified. | Scope complete (`passing`); tag cut at release-readiness |
-| Runtime/security hardening | Re-verify and audit the Apple `container` boundary (runs, provider egress, image, cleanup) on the current host; fix real findings under test before any new surface. | Current objective |
+| Runtime/security hardening | Re-verify and audit the Apple `container` boundary (runs, provider egress, image, cleanup) on the current host; fix real findings under test before new runtime-sensitive surfaces. | Passing for the completed hardening slices; keep evidence current when touched |
+| Terminal UI | First-class TUI over the same planner and policy objects as the CLI and desktop app. A bare `runhaven` on a TTY opens the guided launcher/run manager; the CLI stays the complete explicit and automation surface, and non-interactive or explicit-subcommand use bypasses the TUI. Build plan in `docs/plans/tui-build-plan.md`. | Active |
 | Remaining non-UI product scope | Promote one design-first candidate at a time from `NON_UI_BACKLOG.md` (custom profiles, MCP allowlists, path-aware host policy, workflow files, and similar), preserving CLI semantics and default safety. | Planned |
 | CLI public release | Release-readiness for the hardened CLI product: full local verification, Apple `container` smokes, current pins, docs, and security evidence. | Planned |
-| Desktop app (roadmap end) | First-class desktop release: the Tauri app becomes the easiest safe path for setup, image readiness/rebuild, planning, launch, live status, bounded output, stop, kill, repair, diagnostics, worktree review, cleanup, accessibility, signed/notarized artifact, and provenance. Version label open. | Deferred to the very end (2026-06-26 directive) |
-| Terminal UI (after desktop) | Terminal UI (TUI) over the same planner and policy objects as the CLI and desktop app. When it ships, the TUI becomes the default interface for interactive terminal use (a bare `runhaven` on a TTY); the CLI stays the complete explicit and automation surface, and non-interactive or explicit-subcommand use bypasses the TUI. Design intent in `docs/plans/ratatui-brand-graphics.md`. | Deferred; after the desktop app |
+| Desktop app (later release) | First-class desktop release: the Tauri app becomes the easiest safe path for setup, image readiness/rebuild, planning, launch, live status, bounded output, stop, kill, repair, diagnostics, worktree review, cleanup, accessibility, signed/notarized artifact, and provenance. Version label open. | Deferred to a later release phase |
 
 Design rule for every phase: the secure path must be the easy path. Supported
 lower-security choices should warn and require explicit intent; unsupported or
@@ -94,6 +92,19 @@ current-stable pins, and keep the harness state current.
   tiers, and release notes aligned with the CLI-complete contract
 - no known large-file, duplication, or crate-organization debt intentionally
   deferred from CLI code into v1 desktop work
+
+## Active Terminal UI Build
+
+- Current phase: Phase 4 history and diagnostics from
+  [`docs/plans/tui-build-plan.md`](plans/tui-build-plan.md).
+- Complete phases: scaffold, agent picker, Cubby mascot, Phase 0 foundation,
+  Phase 1 brand/pet, Phase 2 launcher, Phase 3 run management.
+- The TUI consumes shared Rust data APIs, not CLI prose: planner data from
+  `runtime/plans`, active-run control from `runtime/active`, host readiness from
+  `doctor.rs`, secret-free diagnostics from `diagnostics.rs`, auth posture from
+  `provider/auth_profiles.rs`, and run history from `records/`.
+- The TUI stays the default only for a bare interactive `runhaven`; scripts,
+  pipes, redirection, and explicit subcommands stay CLI-first.
 
 ## v1.x Or Design-First Product Candidates
 
@@ -161,11 +172,11 @@ current-stable pins, and keep the harness state current.
   contract for UI resource warnings, approval gates, typed Rust commands, and
   narrow Tauri capabilities.
 
-## Desktop Surface: Shipped Slices, Re-Sequenced To Roadmap End
+## Desktop Surface: Shipped Slices, Re-Sequenced To Later Release
 
-These slices are complete and verified. Per the 2026-06-26 directive they are
-re-sequenced behind runtime/security hardening, remaining non-UI product scope,
-and a CLI public release; the desktop release version label is open.
+These slices are complete and verified. The desktop app remains re-sequenced
+behind runtime/security hardening, active TUI work, remaining non-UI product
+scope, and a CLI public release; the desktop release version label is open.
 
 - Completed 2026-06-16 in
   [`docs/TAURI_UI_RESEARCH_PLAN.md`](TAURI_UI_RESEARCH_PLAN.md).
@@ -190,9 +201,9 @@ and a CLI public release; the desktop release version label is open.
   [`TAURI_LOG_VIEWING_DESIGN.md`](TAURI_LOG_VIEWING_DESIGN.md): status first,
   then an explicitly requested bounded container-stdio snapshot, with no
   automatic display, no durable frontend storage, and no live stream.
-- After the `v0.5.0` CLI-complete scope is closed or explicitly accepted, add
-  first-class desktop controls for stop, kill, repair, image build/rebuild,
-  diagnostics, worktree review, and safe cleanup.
+- Remaining desktop controls should add image build/rebuild, state cleanup,
+  network cleanup, worktree review, and broader diagnostics as typed Rust
+  commands with explicit confirmation and narrow capabilities.
 - Before the desktop release, the desktop app must be keyboard navigable,
   accessible at the minimum supported window size, signed, notarized,
   checksummed, and backed by release provenance.

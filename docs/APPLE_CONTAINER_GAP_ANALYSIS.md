@@ -1,6 +1,6 @@
 # Apple Container Gap Analysis
 
-Last updated: 2026-06-18
+Last updated: 2026-06-27
 
 Status: historical pre-Tauri gap analysis plus recurring runtime evidence
 reference.
@@ -10,10 +10,10 @@ what was covered before the Tauri scaffold started, what remains intentionally
 out of scope, and which runtime evidence gates still apply before broadening
 CLI or desktop behavior.
 
-Current release context: RunHaven remains alpha/pre-release until after the
-`v0.5.0` CLI-complete milestone. The Tauri scaffold has started, but runtime,
-provider, image, SSH, and cleanup claims still require focused Apple
-`container` evidence before `v0.5.0` and before the `v1.0.0` desktop release.
+Current release context: RunHaven remains alpha/pre-release after the `v0.5.0`
+CLI-only pre-release. The TUI is active and the Tauri scaffold has started, but
+runtime, provider, image, SSH, and cleanup claims still require focused Apple
+`container` evidence before any release or runtime-sensitive UI expansion.
 
 ## Evidence Used
 
@@ -54,7 +54,7 @@ provider, image, SSH, and cleanup claims still require focused Apple
 - RunHaven implementation evidence: `src/runhaven/runtime/plans/`,
   `src/runhaven/provider/runtime.rs`, `src/runhaven/runtime/network.rs`,
   `src/runhaven/runtime/active/`, `src/runhaven/image/`,
-  `src/runhaven/cli/doctor.rs`, and product docs under `docs/`.
+  `src/runhaven/doctor.rs`, and product docs under `docs/`.
 
 The local Apple source checkout was treated as source-map evidence. The
 installed CLI help and RunHaven pins are the release-specific evidence for
@@ -64,7 +64,7 @@ Apple `container` 1.0.0 behavior.
 
 | Surface | Current Coverage | Primary Evidence |
 | --- | --- | --- |
-| Host prerequisites | `runhaven doctor` checks macOS, Apple silicon, installed CLI, pinned Apple `container` version, service status, runtime commit, builder image, vminit image, and Kata kernel pin surface. | `src/runhaven/cli/doctor.rs`, `src/runhaven/cli/doctor/runtime_pins.rs` |
+| Host prerequisites | `runhaven doctor` checks macOS, Apple silicon, installed CLI, pinned Apple `container` version, service status, runtime commit, builder image, vminit image, and Kata kernel pin surface. | `src/runhaven/doctor.rs`, `src/runhaven/doctor/runtime_pins.rs` |
 | Task-scoped runs | `runhaven plan` builds a `container run` command with `--rm`, `--init`, `--read-only`, `--tmpfs /tmp`, `--cap-drop ALL`, CPU/memory limits, one workspace mount, one state volume, explicit env passthrough, and non-root bundled image defaults. | `src/runhaven/runtime/plans/mod.rs` |
 | Sensitive mounts | Home directories, cloud credential folders, browser profiles, raw SSH keys, and broad system paths are rejected unless explicitly allowed. | `src/runhaven/runtime/plans/validation.rs`, `docs/SECURITY_MODEL.md` |
 | State volume preparation | Non-root home volume ownership is prepared by a short-lived root container on an internal network with DNS disabled. | `src/runhaven/runtime/plans/mod.rs`, `src/runhaven/provider/runtime.rs` |

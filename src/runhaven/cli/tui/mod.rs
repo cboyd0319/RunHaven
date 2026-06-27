@@ -15,10 +15,10 @@ use ratatui::{DefaultTerminal, Frame};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use super::app::{agent_broker, agent_sign_in};
-use crate::launch::launch_run_plan;
-use crate::plans::{AgentRunPlan, default_network_mode};
-use crate::profiles::{AgentProfile, profiles};
+use crate::runhaven::provider::auth_profiles::{agent_broker, agent_sign_in};
+use crate::runhaven::runtime::launch::launch_run_plan;
+use crate::runhaven::runtime::plans::{AgentRunPlan, default_network_mode};
+use crate::runhaven::runtime::profiles::{AgentProfile, profiles};
 
 mod codex;
 mod color;

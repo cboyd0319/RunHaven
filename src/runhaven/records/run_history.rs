@@ -1,22 +1,22 @@
-use std::fs;
 use std::io::Write;
-use std::path::Path;
 
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
 
-use crate::auth_broker::BrokerDecision;
-use crate::egress::ProxyDecision;
+use crate::runhaven::provider::auth_broker::BrokerDecision;
+use crate::runhaven::provider::egress::ProxyDecision;
 mod diff;
 mod log;
 
 pub use diff::runs_diff;
 pub use log::runs_log;
 
-use crate::git::{GitChange, git_value_available};
-use crate::paths::{open_private_append, runs_log_path};
-use crate::plans::AgentRunPlan;
-use crate::worktrees::worktree_record;
+use crate::runhaven::runtime::plans::AgentRunPlan;
+use crate::runhaven::runtime::worktrees::worktree_record;
+use crate::runhaven::support::git::{GitChange, git_value_available};
+use crate::runhaven::support::paths::{open_private_append, runs_log_path};
+
+use super::read_jsonl;
 
 pub struct RunRecordInput<'a> {
     pub plan: &'a AgentRunPlan,
@@ -292,25 +292,4 @@ pub fn find_run_record(run_id: &str) -> Result<Value> {
 
 pub fn read_run_records(limit: usize) -> Result<Vec<Value>> {
     read_jsonl(&runs_log_path(), limit)
-}
-
-pub fn read_jsonl(path: &Path, limit: usize) -> Result<Vec<Value>> {
-    if !path.exists() {
-        return Ok(Vec::new());
-    }
-    let mut records = Vec::new();
-    for line in fs::read_to_string(path)?.lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-        if let Ok(payload) = serde_json::from_str::<Value>(line)
-            && payload.is_object()
-        {
-            records.push(payload);
-        }
-    }
-    if limit == 0 || records.len() <= limit {
-        return Ok(records);
-    }
-    Ok(records[records.len() - limit..].to_vec())
 }

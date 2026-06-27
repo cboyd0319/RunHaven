@@ -2,7 +2,7 @@ use super::*;
 use std::ffi::OsString;
 use std::fs;
 
-use crate::paths::{TEST_ENV_LOCK, active_run_path, runs_log_path};
+use crate::runhaven::support::paths::{TEST_ENV_LOCK, active_run_path, runs_log_path};
 
 struct CacheHomeOverride {
     previous: Option<OsString>,

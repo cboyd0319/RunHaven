@@ -2,8 +2,8 @@ use std::path::Path;
 
 use sha2::{Digest, Sha256};
 
-use crate::profiles::AgentProfile;
-use crate::shell;
+use crate::runhaven::runtime::profiles::AgentProfile;
+use crate::runhaven::support::shell;
 
 pub fn bind_mount(source: &Path, target: &str, read_only: bool) -> String {
     let mut parts = vec![

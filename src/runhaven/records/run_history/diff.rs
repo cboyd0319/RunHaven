@@ -4,8 +4,10 @@ use anyhow::{Result, bail};
 use serde_json::Value;
 
 use super::find_run_record;
-use crate::git::{capture_git_snapshot, git_snapshot_paths, git_value_available, run_git_diff};
-use crate::validators::require_string;
+use crate::runhaven::support::git::{
+    capture_git_snapshot, git_snapshot_paths, git_value_available, run_git_diff,
+};
+use crate::runhaven::support::validators::require_string;
 
 pub fn runs_diff(run_id: &str) -> Result<i32> {
     let record = find_run_record(run_id)?;

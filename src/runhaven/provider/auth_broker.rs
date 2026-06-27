@@ -20,7 +20,7 @@ pub use profiles::{
     GuestRedirect, PathRule, ProviderBrokerProfile, broker_profile_for_agent,
 };
 
-pub use crate::auth_profiles::{
+pub use crate::runhaven::provider::auth_profiles::{
     AUTH_BROKER_RUNTIME, AUTH_BROKER_STATUS, CODEX_API_KEY_BROKER_STATUS,
     CODEX_BROKER_PLACEHOLDER_ENV, DESIGN_ONLY_AUTH_BROKER_STATUS,
 };
@@ -400,7 +400,7 @@ fn read_headers(reader: &mut BufReader<TcpStream>) -> Result<Vec<(String, String
         let mut line = String::new();
         let read = reader.read_line(&mut line)?;
         consumed += read;
-        if consumed > crate::egress::MAX_HEADER_BYTES {
+        if consumed > crate::runhaven::provider::egress::MAX_HEADER_BYTES {
             bail!("headers too large");
         }
         if read == 0 || line == "\r\n" || line == "\n" {

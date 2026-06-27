@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 
-use crate::active::DEFAULT_LOG_FOLLOW_LINES;
+use crate::runhaven::runtime::active::DEFAULT_LOG_FOLLOW_LINES;
 
 #[derive(Parser, Debug)]
 #[command(

@@ -1,17 +1,16 @@
 # Tauri UI Research Plan
 
-Last updated: 2026-06-18
+Last updated: 2026-06-27
 
 Status: research complete. The first Tauri/Svelte scaffold started from this
 plan with setup, dashboard, profile, folder-pick, and run-plan review surfaces.
 The first mutating slice, `launch_run`, is now implemented behind explicit
 plan and warning confirmation plus its own `launch-run` capability.
 
-Current release context: RunHaven remains alpha/pre-release until after the
-`v0.5.0` CLI-complete milestone. This document records the accepted Tauri
-research decision and alpha UI plan. The durable release ladder lives in
-[`V1_RELEASE_PLAN.md`](V1_RELEASE_PLAN.md): after `v0.5.0`, `v1.0.0` should
-make the desktop app the first-class safe path.
+Current release context: RunHaven remains alpha/pre-release after the `v0.5.0`
+CLI-only pre-release. This document records the accepted Tauri research decision
+and alpha UI plan. The TUI is active in the current checkout; the desktop app
+remains alpha and is deferred to a later first-class release phase.
 
 Goal: build the easiest safe desktop experience for people with little or no
 technical background to run AI coding agents inside Apple `container`.

@@ -1,4 +1,4 @@
-use crate::egress::{is_ip_literal, normalize_host};
+use crate::runhaven::provider::egress::{is_ip_literal, normalize_host};
 
 #[derive(Clone, Copy, Debug)]
 pub struct ProviderEndpoint {

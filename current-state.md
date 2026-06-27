@@ -11,14 +11,15 @@ release-readiness are `passing`. The TUI has been re-sequenced by the
 2026-06-26 user directive into a first-class reference implementation to build
 now; the Tauri desktop app remains deferred to the roadmap end.
 
-TUI Phase 3 is complete: the TUI can choose a workspace, choose an agent, review
-the shared `AgentRunPlan` boundary, type-confirm lower-security plans, restore
-the terminal, launch through `launch_run_plan`, open a live run dashboard, show
-sanitized run status and provider egress decisions, view explicit bounded log
-snapshots, and run stop/kill/repair through typed-confirm controls. Next is
-Phase 4 from `docs/plans/tui-build-plan.md`: history and diagnostics (run
-history, diff review, egress/auth diagnostics, terminal/render capability probe,
-and TUI doctor remediation).
+TUI Phase 3 and the pre-Phase 4 organization/docs lock are complete: the TUI
+can choose a workspace, choose an agent, review the shared `AgentRunPlan`
+boundary, type-confirm lower-security plans, restore the terminal, launch
+through `launch_run_plan`, open a live run dashboard, show sanitized run status
+and provider egress decisions, view explicit bounded log snapshots, and run
+stop/kill/repair through typed-confirm controls. Next is Phase 4 from
+`docs/plans/tui-build-plan.md`: history and diagnostics (run history, diff
+review, egress/auth diagnostics, terminal/render capability probe, and TUI
+doctor remediation).
 
 ## Startup State Contract
 
@@ -33,18 +34,19 @@ Load deeper docs only when the task touches that surface.
 
 - RunHaven is a Rust 1.96.0 CLI for running AI coding agents inside Apple
   `container` on macOS 26+ on Apple silicon.
-- The CLI is the current working product surface.
-- The alpha desktop shell lives under `ui/` and `src-tauri/`.
-- `v0.5.0` is now the intended CLI-complete release. All CLI product work
-  should be done by that tag before broad v1 desktop expansion.
-- RunHaven remains alpha/pre-release until after `v0.5.0` is cut.
-- The TUI is now active and first-class per the 2026-06-26 user directive. The
-  desktop app remains deferred to the roadmap end. The version label for the
-  desktop release is open and not locked to `v1.0.0`.
-- The product sequence is CLI-complete (`v0.5.0`), runtime/security hardening of
-  the Apple `container` boundary, remaining non-UI product scope and release
-  readiness, then the active terminal UI over the same planner and policy
-  objects, with the first-class desktop app still deferred.
+- The CLI is the complete `v0.5.0` pre-release surface and remains the
+  explicit automation and recovery backend.
+- The terminal UI is the active first-class reference implementation in this
+  checkout. A bare interactive `runhaven` opens it; pipes, redirection, and
+  subcommands stay CLI-first.
+- The alpha desktop shell lives under `ui/` and `src-tauri/`; it remains
+  deferred to a later first-class release phase.
+- RunHaven remains alpha/pre-release after `v0.5.0`; stable release scope is
+  still open.
+- Current sequence: CLI-complete pre-release, completed runtime/security
+  hardening slices kept current when touched, active terminal UI, remaining
+  non-UI scope and CLI public-release readiness, then the first-class desktop
+  app.
 - Above all else, secure defaults must be the easiest path. Supported
   lower-security choices should warn and require explicit intent; unsupported
   or hard-boundary violations still fail closed.
@@ -74,13 +76,10 @@ Load deeper docs only when the task touches that surface.
 Durable rationale that compaction tends to lose. Change these only with new
 evidence and a recorded reason.
 
-- All GUI/UI work (desktop app and TUI) is deferred to the very end of the
-  roadmap, and runtime/security hardening leads the near-term work (2026-06-26
-  user directive). This reverses the prior sequence where `v1.0.0` was the
-  first-class desktop release. Rationale: harden and complete the non-UI product
-  and its release before building the heavier desktop/TUI surfaces and the
-  signing/notarization path. Already-shipped GUI slices stay `passing`; they are
-  re-sequenced, not reverted. Reopen only with a new user directive.
+- Sequencing history: the 2026-06-26 directive deferred GUI/UI behind runtime
+  hardening and CLI release readiness; the 2026-06-27 directive pulled the TUI
+  forward as an active reference implementation for sibling projects. The
+  desktop app remains deferred; already-shipped desktop slices stay `passing`.
 - Default boundary is task-scoped `container run`, not `container machine`,
   because machine workflows map the host user, home, and credentials into the
   guest. Machine use is warned and explicit, not blocked.
@@ -154,37 +153,40 @@ evidence and a recorded reason.
   adapt codex's Kitty-graphics overlay approach (Apache-2.0, with attribution),
   defaulting to the portable half-block sprite when no graphics protocol is
   present. Codex is Apache-2.0, so adapting its code is permitted.
-- The RunHaven TUI is now a first-class, reference-quality, reusable
-  implementation, built out fully now, not a deferred minimal launcher
-  (2026-06-26 user directive). It will be the reference TUI for several of the
-  user's other projects, so it is architected with a clean seam: a domain-
-  agnostic TUI framework (theme/ColorMode, layout, widgets, input, animation,
-  the vendored codex primitives, the snapshot test harness) that can later be
-  extracted into a shared crate, plus RunHaven-specific screens on top that own
-  the domain (profiles, plans, egress, runs). This re-sequences the TUI ahead of
-  the prior "all GUI/UI deferred to end of roadmap" framing for the TUI
-  specifically (the desktop app deferral is unchanged). The TUI is the guided
-  front door: a bare `runhaven` on a TTY opens it so a non-technical user picks a
-  working directory and an AI provider, sees what a run will and will not touch,
-  and launches, with no command or hostname to manage. Build phases: 0 foundation
-  (primitives + theme + tick loop + test harness), 1 brand (hero image tier +
-  animated pet + tooltips), 2 launcher flow (workspace picker + plan/egress
-  review + confirm-launch), 3 run management (dashboard + log viewer + run
-  control), 4 history + diagnostics (diff review + egress/auth/capability +
-  doctor), 5 polish (onboarding, notifications, accessibility, themes, easter
-  egg, snapshot coverage, docs). Reference-quality bar every phase: snapshot
-  tests, keyboard-complete with visible hints, plain language, accessibility
-  (NO_COLOR, reduced-motion, colorblind-safe, line-mode), attribution for
-  vendored code, framework/screen seam kept clean. The Cubby pet is visible and
-  animated by default (delight is the default, not opt-in, to make RunHaven
-  approachable to less-technical users); a user toggle turns it off, reduced-
-  motion keeps it visible but static, and the restraint rule keeps animation off
-  confirmation/destructive screens. Master build plan in
-  `docs/plans/tui-build-plan.md`; patterns in `docs/plans/tui-architecture.md`;
-  brand/graphics in `docs/plans/ratatui-brand-graphics.md`.
+- The RunHaven TUI is a first-class, reference-quality, reusable
+  implementation, not a deferred minimal launcher. It is the guided front door
+  for a bare interactive `runhaven` and the reference TUI for sibling projects.
+  Canonical details live in `docs/plans/tui-build-plan.md`,
+  `docs/plans/tui-architecture.md`, and `docs/plans/ratatui-brand-graphics.md`;
+  keep `current-state.md` to active phase status and durable decisions only.
+- `src/runhaven/` ownership is locked before TUI Phase 4. Shared host readiness
+  lives in `doctor.rs`, secret-free diagnostics data in `diagnostics.rs`, auth
+  posture metadata in `provider/auth_profiles.rs`, and run history behind the
+  `records/` facade (`run_history.rs`, `run_history/`, `io.rs`). `cli/` owns
+  argument dispatch and human presentation, not shared runtime truth. Internal
+  `src/runhaven` code imports explicit `crate::runhaven::...` module paths; the
+  flat `src/lib.rs` exports are compatibility for Tauri and external callers.
 
 ## Latest Verified Work
 
+- 2026-06-27: Pre-Phase 4 organization/docs lock. Moved shared doctor logic to
+  `src/runhaven/doctor.rs`, secret-free diagnostics data to
+  `src/runhaven/diagnostics.rs`, run history behind the `records/` facade
+  (`run_history.rs`, `run_history/`, and `io.rs`), and shared agent auth posture
+  helpers into `provider/auth_profiles.rs`. Internal `src/runhaven` imports now
+  use explicit `crate::runhaven::...` ownership paths while `src/lib.rs` remains
+  the Tauri/external compatibility facade. Refreshed the README, product docs,
+  TUI plans, harness docs, `AGENTS.md`, `feature_list.json`, and this state
+  file so the active TUI and later desktop sequencing are consistent. Updated
+  `init.sh` to validate `feature_list.json` and run `git diff --check`.
+  Refreshed `src-tauri/Cargo.lock` offline so the Tauri crate locks current
+  root-crate dependencies. Verified: `./init.sh` (root cargo fmt/test/clippy,
+  242 lib tests + 6 integration tests, pin check, JSON validation, frontend
+  check/test/build/e2e, Tauri fmt/test/clippy, Tauri debug no-bundle build, root
+  build, and `git diff --check`), stale-reference scan, typography scan, and
+  read-only code-reviewer approval. Live Apple `container` smokes were not rerun
+  because this pass did not change runtime boundary behavior. Branch:
+  `terminal-ui-build-plan`. Next: Phase 4 history and diagnostics.
 - 2026-06-27: TUI Phase 0 foundation. Added the reusable TUI settings/theme
   layer (`NO_COLOR`, `RUNHAVEN_TUI_REDUCED_MOTION=1`,
   `RUNHAVEN_TUI_LINE_MODE=1`, dark/light palette seam), a synchronous
@@ -308,8 +310,8 @@ evidence and a recorded reason.
   list (up/down or j/k, clamped) via a ratatui `ListState`; enter opens a
   per-agent detail screen (description, image, support tiers) and esc/backspace
   returns home. The detail tiers reuse the shared `agent_sign_in`/`agent_broker`
-  helpers (now `pub(crate)`) plus `default_network_mode`, so the TUI and
-  `runhaven agents` share one source. Input is a testable `handle_key`. Verified:
+  helpers from `provider/auth_profiles.rs` plus `default_network_mode`, so the
+  TUI and `runhaven agents` share one source. Input is a testable `handle_key`. Verified:
   cargo fmt, `cargo test --locked` (74 lib incl. 5 TUI tests + 6 integration),
   clippy `-D warnings`, non-TTY help fallback, `git diff --check`.
 - 2026-06-26: Started the terminal UI (TUI). Decision: reference the Codex TUI
@@ -318,7 +320,7 @@ evidence and a recorded reason.
   its event loop imports `codex_protocol`), while RunHaven needs a
   launcher/manager, a different domain (the agent's own chat runs inside the
   container). Pinned `ratatui =0.30.2` (current stable). Slice 1 (scaffold):
-  `src/runhaven/cli/tui.rs` with `ratatui::init`/`restore` (panic-safe terminal),
+  `src/runhaven/cli/tui/mod.rs` with `ratatui::init`/`restore` (panic-safe terminal),
   a draw/key-event loop, and a home screen listing the agents from `profiles()`.
   Bare `runhaven` opens the TUI only when both stdin and stdout are a terminal
   (`should_launch_tui`); piped, redirected, or subcommand invocations keep the
@@ -390,7 +392,7 @@ evidence and a recorded reason.
 - 2026-06-26: Full repo docs and README refresh, then merged the
   `runtime-security-hardening` branch to `main`. Rewrote `README.md` (added the
   `runhaven login` sign-in story for all four agents, plain-language egress
-  framing, and the corrected GUI-and-TUI-last roadmap), and updated the product,
+  framing, and the then-current UI-last roadmap), and updated the product,
   roadmap, and policy docs to match current state (PROVIDER_ENDPOINTS host sets
   and the domain-family pattern, USAGE/CAPABILITIES/SECURITY_MODEL/ARCHITECTURE
   broker-and-egress wording, ROADMAP/V1_RELEASE_PLAN/NON_UI_BACKLOG re-sequencing
@@ -712,10 +714,11 @@ evidence and a recorded reason.
   warned and require intent rather than blocked solely because they are less
   secure.
 - 2026-06-18: Ran a full active-doc release-status pass. User-facing docs,
-  roadmap/planning docs, Tauri planning docs, and harness routing now agree
-  that RunHaven remains alpha/pre-release until after `v0.5.0`, `v0.5.0` is
-  CLI-complete, and `v1.0.0` is the first-class desktop release. The README now
-  names both goals directly. Historical evidence remains historical.
+  roadmap/planning docs, Tauri planning docs, and harness routing were aligned
+  to the then-current release ladder: alpha through the CLI-complete milestone,
+  `v0.5.0` as CLI-complete, and `v1.0.0` as the first-class desktop release.
+  Later sequencing changes are recorded above. Historical evidence remains
+  historical.
 - 2026-06-18: Added `docs/RELEASE_GAP_ANALYSIS.md` as the active v0.5/v1 gap
   tracker. It records observed CLI command coverage, current desktop command
   coverage, maintainability pressure, v0.5 blockers, v1 blockers, v1.x
@@ -921,8 +924,8 @@ evidence and a recorded reason.
 
 ## Touched Surfaces In This Pass
 
-- tauri-diagnostics: `src/runhaven/cli/diagnostics.rs` (`auth_status_payload`
-  core); `src-tauri/src/commands/diagnostics.rs` (new), `commands/mod.rs`,
+- tauri-diagnostics: `src/runhaven/diagnostics.rs` (`auth_status_payload`
+  core and secret-free log readers), `src/runhaven/cli/diagnostics.rs` (CLI adapter); `src-tauri/src/commands/diagnostics.rs` (new), `commands/mod.rs`,
   `lib.rs`, `build.rs`, `contracts.rs`, `capabilities/main-read.json`;
   `ui/src/commands/{types.ts,client.ts}`,
   `ui/src/components/DiagnosticsPanel.svelte` (new, self-contained),
@@ -948,8 +951,8 @@ evidence and a recorded reason.
   `scripts/cli_surface_check.sh`; `src/runhaven/support/git.rs`
   (`git_value_available`); `src/runhaven/runtime/worktrees/mod.rs` and
   `merge.rs` (typed `GitSnapshot` matches + regression test);
-  `src/runhaven/records/history.rs` and `records/history/diff.rs` (canonical
-  reader). Docs: new `docs/CLI_SURFACE_COVERAGE.md`, `docs/harness/evidence/evidence-log.md`,
+  `src/runhaven/records/run_history.rs`, `records/run_history/diff.rs`,
+  and the `records/` facade (canonical reader). Docs: new `docs/CLI_SURFACE_COVERAGE.md`, `docs/harness/evidence/evidence-log.md`,
   `docs/harness/feedback/verification-matrix.md`, `README.md` (docs index),
   `feature_list.json`, and this state file.
 - Secure-by-default network (code): `src/runhaven/cli/args.rs` (`--network`
@@ -965,8 +968,7 @@ evidence and a recorded reason.
   (`eprint_security_notices` emitted from `plan` and `run`).
 - v0.5.0 CLI contract closure (docs/state): `docs/CAPABILITIES.md` (profile
   support matrix, lower-security overrides, local record files), `docs/USAGE.md`,
-  `docs/ARCHITECTURE.md`, `docs/SECURITY_MODEL.md`, `docs/ROADMAP.md` (deferred
-  TUI phase), `docs/RELEASE_GAP_ANALYSIS.md`, `feature_list.json`, and this
+  `docs/ARCHITECTURE.md`, `docs/SECURITY_MODEL.md`, `docs/ROADMAP.md` (active TUI plus later desktop), `docs/RELEASE_GAP_ANALYSIS.md`, `feature_list.json`, and this
   state file.
 - Earlier this session (already committed): macOS 27 runtime evidence
   (`current-state.md`, `docs/harness/evidence/evidence-log.md`).

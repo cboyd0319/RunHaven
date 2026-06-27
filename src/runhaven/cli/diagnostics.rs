@@ -3,18 +3,19 @@ use std::path::Path;
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
 
-use crate::auth_profiles::{
+use crate::runhaven::diagnostics::{
+    auth_status_payload, read_auth_broker_log, read_egress_policy_log,
+};
+use crate::runhaven::provider::auth_profiles::{
     AUTH_BROKER_RUNTIME, AUTH_BROKER_STATUS, auth_broker_profiles, get_auth_broker_profile,
 };
-use crate::egress::{EgressPolicy, is_ip_literal, normalize_host};
-use crate::paths::{auth_broker_log_path, egress_policy_log_path};
-use crate::plans::{
+use crate::runhaven::provider::egress::{EgressPolicy, is_ip_literal, normalize_host};
+use crate::runhaven::provider::endpoints::{ProviderEndpoint, match_provider_endpoints};
+use crate::runhaven::runtime::plans::{
     NetworkMode, SUPPORTED_NETWORK_MODES, WorkspaceScope, apply_workspace_scope, validate_workspace,
 };
-use crate::profiles::{AgentProfile, get_profile, profiles};
-use crate::provider_endpoints::{ProviderEndpoint, match_provider_endpoints};
-use crate::records::read_jsonl;
-use crate::session_state::SESSION_DEFAULT;
+use crate::runhaven::runtime::profiles::{AgentProfile, get_profile, profiles};
+use crate::runhaven::runtime::session_state::SESSION_DEFAULT;
 
 pub fn egress_log(limit: usize, json_output: bool) -> Result<i32> {
     let entries = read_egress_policy_log(limit)?;
@@ -67,10 +68,6 @@ pub fn egress_log(limit: usize, json_output: bool) -> Result<i32> {
     Ok(0)
 }
 
-pub fn read_egress_policy_log(limit: usize) -> Result<Vec<Value>> {
-    read_jsonl(&egress_policy_log_path(), limit)
-}
-
 pub fn auth_log(limit: usize, json_output: bool) -> Result<i32> {
     let entries = read_auth_broker_log(limit)?;
     if json_output {
@@ -118,24 +115,6 @@ pub fn auth_log(limit: usize, json_output: bool) -> Result<i32> {
         );
     }
     Ok(0)
-}
-
-pub fn read_auth_broker_log(limit: usize) -> Result<Vec<Value>> {
-    read_jsonl(&auth_broker_log_path(), limit)
-}
-
-/// Secret-free auth broker status payload, shared by the CLI `auth status` and
-/// the Tauri `get_auth_status` command. Reports the broker status, runtime, the
-/// per-profile broker tiers, and explicit "nothing inspected/printed" flags.
-pub fn auth_status_payload() -> Value {
-    json!({
-        "status": AUTH_BROKER_STATUS,
-        "runtime": AUTH_BROKER_RUNTIME,
-        "credential_stores_inspected": false,
-        "environment_values_inspected": false,
-        "secrets_printed": false,
-        "profiles": auth_broker_profiles(),
-    })
 }
 
 pub fn auth_status(json_output: bool) -> Result<i32> {

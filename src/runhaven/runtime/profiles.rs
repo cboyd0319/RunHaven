@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 
-use crate::provider_endpoints::bundled_provider_hosts;
+use crate::runhaven::provider::endpoints::bundled_provider_hosts;
 
 #[derive(Clone, Debug)]
 pub struct AgentProfile {

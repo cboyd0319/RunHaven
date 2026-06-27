@@ -3,10 +3,10 @@ use std::path::{Path, PathBuf};
 use anyhow::{Result, bail};
 
 use super::{NetworkMode, RunOptions, WorkspaceScope};
-use crate::egress::{is_ip_literal, normalize_host};
-use crate::git::git_repo_root;
-use crate::profiles::AgentProfile;
-use crate::session_state::{SESSION_DEFAULT, validate_session_name};
+use crate::runhaven::provider::egress::{is_ip_literal, normalize_host};
+use crate::runhaven::runtime::profiles::AgentProfile;
+use crate::runhaven::runtime::session_state::{SESSION_DEFAULT, validate_session_name};
+use crate::runhaven::support::git::git_repo_root;
 
 pub fn apply_workspace_scope(
     workspace: &Path,

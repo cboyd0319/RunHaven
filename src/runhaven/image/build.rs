@@ -2,10 +2,10 @@ use std::path::PathBuf;
 
 use anyhow::{Result, bail};
 
-use crate::image_assets::{context_digest, materialize_image_context, source_root};
-use crate::plans::validate_image_reference;
-use crate::profiles::AgentProfile;
-use crate::shell;
+use crate::runhaven::image::assets::{context_digest, materialize_image_context, source_root};
+use crate::runhaven::runtime::plans::validate_image_reference;
+use crate::runhaven::runtime::profiles::AgentProfile;
+use crate::runhaven::support::shell;
 
 pub const RUNHAVEN_PROFILE_LABEL: &str = "org.runhaven.profile";
 pub const RUNHAVEN_SOURCE_DIGEST_LABEL: &str = "org.runhaven.source-sha256";

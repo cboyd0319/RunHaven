@@ -8,8 +8,8 @@ use super::{
     merge::cleanup_worktree, merge::format_merge_recovery, merge::merge_worktree_changes,
     verify_lifecycle,
 };
-use crate::project_checks::{SuggestedCheck, suggest_project_checks};
-use crate::shell;
+use crate::runhaven::support::project_checks::{SuggestedCheck, suggest_project_checks};
+use crate::runhaven::support::shell;
 
 pub fn runs_worktree_keep(run_id: &str) -> Result<i32> {
     let lifecycle = load_worktree_lifecycle(run_id)?;
