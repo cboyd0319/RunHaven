@@ -7,16 +7,16 @@ expression: snapshot
 └──────────────────────────────────────────────────────────────────────────────┘
 1 agent > 2 workspace > [3 review] > 4 confirm
 ┌ Boundary ────────────────────────────────────────────────────────────────────┐
-│Workspace mount: /workspace -> /workspace                                     │
-│Agent home state: runhaven-codex-shared-home -> /home/agent                   │
-│Network mode: provider                                                        │
-│Egress: provider allowlist egress through runtime proxy: api.openai.com       │
-│Provider hosts: api.openai.com                                                │
-│Will not mount: host home, cloud credential folders, raw SSH keys, browser    │
-│profiles.                                                                     │
+│Workspace folder: /workspace                                                  │
+│Agent saved state: runhaven-codex-shared-home                                 │
+│Network: provider                                                             │
+│Online access: provider allowlist egress through runtime proxy:               │
+│api.openai.com                                                                │
+│Allowed provider hosts: api.openai.com                                        │
+│RunHaven will not open: your home folder, cloud credentials, raw SSH keys,    │
+│or browser profiles.                                                          │
 │                                                                              │
-│CLI: runhaven run codex --workspace /workspace --network provider             │
-│                                                                              │
+│Command: runhaven run codex --workspace /workspace --network provider         │
 │                                                                              │
 │                                                                              │
 │                                                                              │
@@ -25,4 +25,4 @@ expression: snapshot
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
                  enter confirm · w workspace · esc back · q quit
-               RunHaven shows the exact CLI command before launch.
+                    RunHaven shows the command before launch.

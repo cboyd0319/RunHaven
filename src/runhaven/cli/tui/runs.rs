@@ -499,7 +499,7 @@ pub(crate) fn summarize_egress(decisions: &[EgressDecision]) -> String {
         *totals.entry(decision.decision.as_str()).or_default() += count;
     }
     if totals.is_empty() {
-        return "no provider egress decisions logged yet".to_string();
+        return "no provider network decisions yet".to_string();
     }
     totals
         .into_iter()

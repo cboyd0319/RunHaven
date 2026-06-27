@@ -1,6 +1,5 @@
 ---
 source: src/runhaven/cli/tui/tests.rs
-assertion_line: 555
 expression: snapshot
 ---
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -25,5 +24,5 @@ expression: snapshot
 │Press enter to review the recorded diff for this run.                         │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
-       up/down select | enter diff | r refresh | g diagnostics | esc home
+          up/down select | enter diff | r refresh | g checks | esc home
             Run history is loaded from secret-free RunHaven records.

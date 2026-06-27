@@ -166,7 +166,7 @@ pub(crate) struct TerminalProbe {
     pub(crate) color: String,
     pub(crate) motion: String,
     pub(crate) line_mode: String,
-    pub(crate) pet_image: String,
+    pub(crate) terminal_image: String,
 }
 
 impl TerminalProbe {
@@ -186,7 +186,7 @@ impl TerminalProbe {
             } else {
                 "disabled".to_string()
             },
-            pet_image: protocol
+            terminal_image: protocol
                 .map(image_protocol_label)
                 .unwrap_or("portable half-block fallback")
                 .to_string(),
@@ -519,7 +519,7 @@ mod tests {
         let probe = TerminalProbe::from_settings(settings, None);
 
         assert_eq!(probe.color, "enabled");
-        assert_eq!(probe.pet_image, "portable half-block fallback");
+        assert_eq!(probe.terminal_image, "portable half-block fallback");
     }
 
     #[test]

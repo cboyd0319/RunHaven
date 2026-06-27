@@ -23,12 +23,14 @@ drives the architecture below.
 ## Audience and principles
 
 - Built for less-technical people who sign in with OAuth or a subscription, not
-  API keys. They manage no hosts and see no hostnames.
+  API keys. They do not manage hosts; exact hostnames appear only when they are
+  needed to inspect what a run may reach.
 - The secure path is the shortest, clearest path. Supported less-secure choices
   warn and require explicit intent (type-to-confirm); unsupported or
   hard-boundary violations fail closed.
-- Plain language, no jargon. Visible keyboard hints on every screen. Contextual,
-  rotating tooltips that teach the tool and the security model gently.
+- Plain language for non-technical users, roughly 8th grade reading level. Use
+  short sentences, concrete nouns, visible keyboard hints, and contextual
+  tooltips that teach the tool and the security model gently.
 - Inspectable, never opaque: every action shows and can copy the exact CLI
   command it runs.
 - Accessibility is a requirement, not a setting: `NO_COLOR`, a reduced-motion
@@ -75,24 +77,34 @@ state changes, no trademark use). Attribution lives in `THIRD_PARTY_NOTICES.md`
 and `licenses/codex-Apache-2.0.txt`. Vendored files carry a derived-from header
 and `#[allow(dead_code, clippy::all, clippy::pedantic)]` until wired.
 
-We vendor the proven, domain-agnostic primitives and re-implement the parts tied
-to codex's own runtime (its tokio `FrameRequester`, event system, chat UI). The
-lesson that drove this: a generic image crate (`ratatui-image`) auto-selected
-iTerm2's OSC 1337 protocol and rendered blank in a full-screen TUI; codex's code
-deliberately uses the Kitty graphics protocol on iTerm2 3.6+ as a direct overlay,
-which is TUI-safe. Stick to source for the terminal-specific hard parts.
+Source-first rule: for any TUI behavior with an equivalent in the local official
+Codex source at `/Users/c/Documents/GitHub/codex/codex-rs/tui`, vendor or adapt
+that source before writing custom code. Rare exceptions are RunHaven domain data,
+RunHaven security-boundary mapping, RunHaven asset swaps such as
+`docs/assets/logo.png`, and small glue where Codex has no equivalent. Every
+exception needs a short note in this plan or `docs/plans/tui-architecture.md`.
+
+We vendor the proven primitives first and adapt only the parts tied to Codex's
+own runtime (its tokio `FrameRequester`, event system, chat backend) or to
+RunHaven's launcher/manager domain. The lesson that drove this: a generic image
+crate (`ratatui-image`) auto-selected iTerm2's OSC 1337 protocol and rendered
+blank in a full-screen TUI; Codex's code deliberately uses the Kitty graphics
+protocol on iTerm2 3.6+ as a direct overlay, which is TUI-safe. Stick to source
+for terminal-specific behavior, pet behavior, welcome/header structure, and
+terminal image overlay ownership.
 
 ### Codex module evaluation
 
 | Module | Status | Purpose / RunHaven use |
 | --- | --- | --- |
 | `terminal-detection` (crate) | vendored | terminal identification for image-protocol selection |
-| `pets/image_protocol.rs` | vendored | Kitty/iTerm2(3.6+ `t=f`)/Sixel image emission, the hero + pet image tier |
+| `pets/image_protocol.rs` | vendored | Kitty/iTerm2(3.6+ `t=f`)/Sixel image emission, the logo + pet image tier |
 | `pets/sixel.rs` | vendored | pure-Rust Sixel encoder (Sixel-only terminals) |
 | `pets/model.rs` | vendored | pet atlas/manifest/animation model |
 | `pets/frames.rs` | vendored | atlas spritesheet -> per-frame extraction |
 | `pets/catalog.rs` | vendored | catalog/dimension constants |
 | `pets/ambient.rs` (extract) | vendored as `animation.rs` | `current_animation_frame`, the elapsed->frame timing |
+| `pets/ambient.rs` (placement/rendering) | vendored | ambient pet anchor, target size, composer gap, clear-area, and image-overlay lifecycle |
 | `render/` (Renderable trait) | foundation | layout composition (Column/Flex/Row/Inset); base for cards |
 | `key_hint.rs` | foundation | consistent keyboard-hint rendering |
 | `wrapping.rs` (+ `width`, `line_truncation`) | foundation | URL-aware, unicode-correct wrapping/truncation |
@@ -100,6 +112,15 @@ which is TUI-safe. Stick to source for the terminal-specific hard parts.
 | `selection_list.rs` | foundation | reusable selection primitive for the pickers |
 | `clipboard` (OSC 52) | foundation | copy the equivalent CLI command, a path, a run receipt |
 | `color.rs` | Phase 0 (with theme) | pure color math (light/dark, blend, distance) |
+| `chatwidget/status_surfaces.rs` | evaluate next | status line and terminal-title model; useful signal, but must map to RunHaven runs/plans rather than Codex chat turns |
+| `status/card.rs` | evaluate next | `/status` card structure; useful for diagnostics/status display, but data comes from RunHaven records/runtime/auth modules |
+| `theme_picker.rs` + `render/highlight` | evaluate next | syntax and highlighting themes; likely useful for diffs/log snippets, gated by dependency and light/dark behavior review |
+| `keymap.rs` + `chatwidget/keymap_picker.rs` | evaluate next | shortcut/accessibility model; native code is large, so evaluate for command vocabulary and conflict handling before vendoring |
+| `chatwidget/session_flow.rs` thread-name handling | evaluate next | thread naming concept may map to RunHaven run labels/history names |
+| `session_archive_commands.rs` + `resume_picker.rs` | evaluate next | resume/session picker patterns; RunHaven should map this to run history and relaunch/attach semantics, not Codex chat replay |
+| `chatwidget/slash_dispatch.rs` status handling | evaluate next | `/status` command routing pattern; RunHaven may expose TUI command palette/status actions instead of slash chat commands |
+| `terminal_title.rs` + `chatwidget/status_surfaces.rs` | evaluate next | terminal title updates can carry run state, with cleanup on exit and no secret/path leakage |
+| `tooltips.rs` | evaluate next | richer tooltip/announcement system; RunHaven already has local footer tips, so evaluate for timing, suppression, and accessibility before replacing them |
 | `diff_render.rs` + `diff_model.rs` | evaluated at Phase 4, not vendored | RunHaven uses its own `records::run_diff_text` data path and text diff view rather than pulling Codex git helpers |
 | `pager_overlay.rs` | evaluated at Phase 3, not vendored | upstream transcript/chat overlay is tied to Codex history cells, keymaps, and app events; RunHaven ships a dedicated bounded log viewer instead |
 | `status_indicator_widget.rs` / throbber | not vendored | doctor and diagnostics remain static/plain until a real async spinner is needed |
@@ -107,8 +128,8 @@ which is TUI-safe. Stick to source for the terminal-specific hard parts.
 | `notifications/` | referenced at Phase 5, not vendored | RunHaven ships dashboard notices from active-run state and bounded log snapshots |
 | `markdown_render.rs` / `markdown.rs` | reference | rich help/remediation (or `pulldown-cmark` directly) |
 | `terminal_palette.rs` / `terminal_probe.rs` | reference (heavy) | true terminal-aware default colors |
-| `tooltips.{rs,txt}` | reference only | idea is great; write RunHaven's own tips + a ~10-line picker |
-| `keymap.rs` (6176 lines) | skip | full rebindable-keybinding config; overkill for fixed keys |
+| `tooltips.{rs,txt}` | superseded by evaluation row above | keep RunHaven's current tips until Codex timing/suppression/accessibility behavior is reviewed |
+| `keymap.rs` (6176 lines) | superseded by evaluation row above | full rebindable-keybinding config is probably too broad, but command vocabulary and conflict handling should be evaluated |
 | `file_search.rs` | skip | codex-event glue; use a fuzzy crate (e.g. `nucleo`) directly |
 | `get_git_diff` | skip | uses `codex_git_utils`; RunHaven has its own git handling |
 | chat domain (chatwidget, composer, bottom_pane input, markdown_stream, transcript, token_usage, model_catalog) | skip | agent chat runs inside the container, not in the TUI |
@@ -136,18 +157,18 @@ The reusable spine. Vendor the foundation primitives (`render`, `key_hint`,
 
 ### Phase 1 - Brand complete (complete)
 
-- Hero image tier: render the high-resolution Cubby via `codex::image_protocol`
-  (Kitty overlay emitted after the ratatui draw, positioned over the banner) on
-  graphics terminals, with the xterm-256 half-block sprite as the fallback. Needs
-  an iTerm2 test cycle.
-- Animated pet: the idle loop (blink, spark pulse) driven by `codex::animation`
-  and the Phase 0 tick loop, half-block on every terminal, the image tier where
-  supported. Enabled and visible by default (the approachable, fun first
-  impression); an explicit user toggle (a setting and/or env var, surfaced in the
-  UI) turns it off. Reduced-motion keeps the pet visible but static; the restraint
-  rule keeps it off confirmation and destructive surfaces.
+- Header logo: render `docs/assets/logo.png` through the Codex-derived terminal
+  image overlay path on graphics terminals, with a half-block fallback on plain
+  terminals.
+- Native Cubby pet: the idle loop (blink, spark pulse) is driven by
+  `codex::animation` and the Phase 0 tick loop, with Codex-derived ambient
+  placement/rendering where supported and half-block fallback everywhere else.
+  Cubby is enabled and visible by default on safe/idle surfaces; `p` and
+  `RUNHAVEN_TUI_PET=0` hide the pet without hiding the logo. Reduced-motion keeps
+  Cubby visible but static.
 - RunHaven-authored rotating tooltips that teach shortcuts and the security
-  model.
+  model. Evaluate Codex's tooltip timing/suppression/accessibility behavior
+  before replacing them.
 
 ### Phase 2 - The launcher flow (complete)
 

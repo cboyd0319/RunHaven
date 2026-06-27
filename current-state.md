@@ -22,9 +22,10 @@ stop/kill/repair through typed-confirm controls, review run history and per-run
 diffs, inspect egress/auth diagnostics plus terminal render capabilities, run
 doctor prerequisite checks with inline remediation, honor no-color /
 reduced-motion / line-mode / light-dark palette controls, and keep the
-architecture guide aligned to the implementation. The next product slice should
-be selected explicitly before changing `feature_list.json` back to one active
-feature.
+architecture guide aligned to the implementation. The Home header uses the
+RunHaven logo, while Cubby is the native ambient pet. The next product slice
+should be selected explicitly before changing `feature_list.json` back to one
+active feature.
 
 ## Startup State Contract
 
@@ -109,6 +110,11 @@ evidence and a recorded reason.
   behavior is treated as not shipped. Boring-over-clever and the edge-case
   tiebreaker (between equally small standard-library options, take the one
   correct on edge cases) resolve style and algorithm choices.
+- User-facing writing is product behavior. UI text, menus, prompts, warnings,
+  README/usage docs, and setup instructions target non-technical users at
+  roughly an 8th grade reading level. Keep exact commands, paths, hosts, and
+  safety facts when needed, but explain them with short sentences, plain verbs,
+  concrete nouns, and clear next actions.
 - The `GitSnapshot`/`GitChange` `available` field is a serde enum tag that
   serializes as the string "true"/"false", never a JSON boolean. Read serialized
   git values with `git_value_available` (or match the typed enum); never
@@ -128,7 +134,8 @@ evidence and a recorded reason.
   was dismissed as "not used" on 2026-06-24. Rationale in `docs/PINNING.md`.
 - Provider egress should be low-friction for non-technical users without
   weakening the boundary (2026-06-26 user direction: RunHaven is primarily for
-  less-technical people; the user must manage no hosts and see no hostnames). The
+  less-technical people; the user must not manage hosts; exact hosts appear only
+  when needed for safety review or troubleshooting). The
   agreed model: trust each agent's own provider expressed as a few stable
   domain-family patterns, not individual hosts; keep default-deny so data-egress
   hosts (`storage.googleapis.com`, etc.) stay closed by simply never being in an
@@ -151,16 +158,18 @@ evidence and a recorded reason.
   unavailable. This does not authorize reading provider-owned Keychain items,
   browser profiles, cloud credential stores, or arbitrary host credentials, and
   it does not reopen the rejected host-side OAuth/subscription-token broker.
-- TUI high-resolution mascot rendering must follow codex's protocol choice, not
-  a generic crate's auto-detection (2026-06-26 lesson). `ratatui-image` 11.0.6
+- TUI terminal image rendering must follow Codex's protocol choice, not a
+  generic crate's auto-detection (2026-06-26 lesson). `ratatui-image` 11.0.6
   auto-selected iTerm2's own OSC 1337 inline-image protocol, which renders blank
   in a full-screen alternate-screen TUI; the image tier was reverted. Codex
-  (`codex-rs/tui/src/pets/image_protocol.rs`) instead renders via the Kitty
-  graphics protocol on iTerm2 (3.6+) and emits it as a direct overlay outside the
-  cell buffer, which is TUI-safe. When the high-resolution/animated pet is built,
-  adapt codex's Kitty-graphics overlay approach (Apache-2.0, with attribution),
-  defaulting to the portable half-block sprite when no graphics protocol is
-  present. Codex is Apache-2.0, so adapting its code is permitted.
+  (`codex-rs/tui/src/pets/image_protocol.rs` and `pets/ambient.rs`) instead
+  renders via the Kitty graphics protocol on iTerm2 (3.6+) and emits images as
+  direct overlays outside the cell buffer, which is TUI-safe. The active TUI now
+  uses the RunHaven logo in the header and native Cubby as the ambient pet.
+  Keep future TUI work source-first against
+  `/Users/c/Documents/GitHub/codex/codex-rs/tui`, with custom code only for
+  RunHaven data, security-boundary mapping, logo asset swaps, or small glue
+  where no Codex equivalent exists.
 - The RunHaven TUI is a first-class, reference-quality, reusable
   implementation, not a deferred minimal launcher. It is the guided front door
   for a bare interactive `runhaven` and the reference TUI for sibling projects;
@@ -192,6 +201,24 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-27: TUI source-first logo/native-pet polish. Replaced the oversized
+  Cubby header hero with the RunHaven logo from `docs/assets/logo.png` and kept
+  Cubby as the compact native ambient pet. Vendored an asset-agnostic
+  Codex-derived ambient image adapter from `pets/ambient.rs` and `pets/mod.rs`
+  so logo and pet overlays share Codex target sizing, right-anchor, composer
+  gap, clear-area, cursor save/restore, Kitty deletion, and Sixel clearing
+  behavior. Deleted the old hand-built `tui/mascot` sprite module, kept `p`
+  scoped to Cubby only, kept `RUNHAVEN_TUI_PET=0` from hiding the logo, renamed
+  user-facing terminal capability text from "pet image" to "terminal image",
+  and made active TUI copy use plainer non-technical labels such as "safety
+  notes", "checks", "network log", and "command". Locked the source-first and
+  8th grade user-facing writing rules into `AGENTS.md` and the TUI plans.
+  Verified: `cargo fmt --check`, `cargo test --locked tui --quiet` (267
+  TUI-filtered tests), `cargo test --locked --quiet` (338 lib + 6 integration
+  tests), `cargo clippy --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins`, JSON validation,
+  `cargo build --locked --quiet`, snapshot-new scan, and `git diff --check`.
+  Branch: `terminal-ui-build-plan`.
 - 2026-06-27: TUI Zork easter egg. Added a hidden Home-only `~` screen that runs
   the bundled MIT-licensed Zork I story through an attributed Ferrif-derived
   Z-machine. Vendored the full `historicalsource/zork1` collection under
@@ -207,17 +234,17 @@ evidence and a recorded reason.
   locked clippy with warnings denied, pin check, JSON validation, security grep,
   typography scan, `cargo build --locked --quiet`, and `git diff --check`.
   Branch: `terminal-ui-build-plan`.
-- 2026-06-27: TUI design-review polish. Kept Cubby as the single animated
-  hero/mascot/pet, capped the Home mascot to about half of the previous display
-  height, restored versioned identity in the Home banner, and replaced the old
-  right-side brand copy with at-a-glance launch context: four-step wizard,
-  selected agent, network, workspace, boundary, and next safe action. Added a
-  compact launch stepper to workspace, review, and confirm screens; shortened
-  Home and guide footers around screen-local actions; made `p` discoverable from
-  the guide; and documented the wizard/user-flow/action model plus stock agent
-  CLI reference conventions in the TUI architecture guide. Updated README,
-  USAGE, the brand graphics plan, `feature_list.json`, and affected VT100
-  snapshots. Verified: `cargo fmt --check`, `cargo test --locked tui` (189
+- 2026-06-27: TUI design-review polish. Replaced the old right-side brand copy
+  with at-a-glance launch context: four-step wizard, selected agent, network,
+  workspace, boundary, and next safe action. This still used Cubby as the header
+  hero; the later source-first polish superseded that with the RunHaven logo in
+  the header and native Cubby as the ambient pet. Added a compact launch stepper
+  to workspace, review, and confirm screens; shortened Home and guide footers
+  around screen-local actions; made `p` discoverable from the guide; and
+  documented the wizard/user-flow/action model plus stock agent CLI reference
+  conventions in the TUI architecture guide. Updated README, USAGE, the brand
+  graphics plan, `feature_list.json`, and affected VT100 snapshots. Verified:
+  `cargo fmt --check`, `cargo test --locked tui` (189
   TUI-filtered tests), `cargo clippy --all-targets --locked -- -D warnings`,
   JSON validation, typography scan, and `git diff --check`. Branch:
   `terminal-ui-build-plan`.

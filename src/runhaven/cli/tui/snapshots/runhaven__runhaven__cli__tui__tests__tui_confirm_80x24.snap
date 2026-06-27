@@ -7,15 +7,15 @@ expression: snapshot
 └──────────────────────────────────────────────────────────────────────────────┘
 1 agent > 2 workspace > 3 review > [4 confirm]
 ┌ Launch ──────────────────────────────────────────────────────────────────────┐
-│Mount: /workspace -> /workspace                                               │
+│Workspace folder: /workspace                                                  │
 │Network: provider                                                             │
-│Egress: provider allowlist egress through runtime proxy: api.openai.com       │
+│Online access: provider allowlist egress through runtime proxy:               │
+│api.openai.com                                                                │
 │                                                                              │
-│CLI: runhaven run codex --workspace /workspace --network provider             │
+│Command: runhaven run codex --workspace /workspace --network provider         │
 │                                                                              │
-│This plan has security notices. Type run to launch.                           │
+│This plan has safety notes. Type run to launch.                               │
 │confirm: ru                                                                   │
-│                                                                              │
 │                                                                              │
 │                                                                              │
 │                                                                              │
@@ -25,4 +25,4 @@ expression: snapshot
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
                        type run · enter launch · esc back
-               RunHaven shows the exact CLI command before launch.
+                    RunHaven shows the command before launch.

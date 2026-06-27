@@ -19,7 +19,7 @@ expression: snapshot
 │Image: runhaven/codex:0.1.0                                                   │
 │Resources: 4 cpu / 4 GiB                                                      │
 └──────────────────────────────────────────────────────────────────────────────┘
-┌ Egress Ledger ───────────────────────────────────────────────────────────────┐
+┌ Network Log ─────────────────────────────────────────────────────────────────┐
 │Summary: allowed=3 denied=1                                                   │
 │allowed api.openai.com:443 count=3 reason=allowed rule=api.openai.com         │
 │denied example.invalid:443 count=1 reason=not-in-allowlist rule=-             │

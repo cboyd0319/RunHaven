@@ -36,6 +36,7 @@ sources listed below:
 | `src/runhaven/cli/tui/codex/frames.rs` | `codex-rs/tui/src/pets/frames.rs` |
 | `src/runhaven/cli/tui/codex/catalog.rs` | `codex-rs/tui/src/pets/catalog.rs` |
 | `src/runhaven/cli/tui/codex/animation.rs` | `codex-rs/tui/src/pets/ambient.rs` (animation-timing extract only) |
+| `src/runhaven/cli/tui/codex/ambient.rs` | `codex-rs/tui/src/pets/ambient.rs` and `codex-rs/tui/src/pets/mod.rs` |
 | `src/runhaven/cli/tui/color.rs` | `codex-rs/tui/src/color.rs` |
 | `src/runhaven/cli/tui/test_backend.rs` | `codex-rs/tui/src/test_backend.rs` |
 
@@ -72,6 +73,11 @@ limited to integration plumbing, not behavior of the copied logic:
   and `current_animation_frame` in `animation.rs`, `Pet::load_with_codex_home`
   and `Pet::frame_cache_key` in `model.rs`, `prepare_png_frames` in `frames.rs`,
   and the frame/spritesheet dimension constants in `catalog.rs`.
+- `ambient.rs` is an asset-agnostic adapter over Codex's ambient pet placement
+  and terminal overlay renderer. RunHaven keeps Codex's target height, composer
+  gap, right-anchor, clear-area, cursor save/restore, Kitty deletion, and Sixel
+  clearing behavior; the local change is that callers pass either the Cubby pet
+  frame or the RunHaven logo image plus an image id.
 - `color.rs` is copied as a small pure helper module; RunHaven clamps `blend`
   alpha values and currently uses it through the TUI theme layer.
 - `test_backend.rs` is copied as a test-only VT100 backend and updated for

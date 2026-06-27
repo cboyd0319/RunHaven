@@ -13,8 +13,8 @@ surface; behavior may still change before `v1.0.0`.
 
 ## Terminal UI
 
-Running `runhaven` on a terminal with no subcommand opens the terminal UI (TUI),
-a launcher and manager over the same agents and run planner as the CLI:
+Running `runhaven` by itself opens the terminal UI (TUI). It uses the same
+agents and run planner as the CLI:
 
 ```bash
 runhaven
@@ -22,26 +22,25 @@ runhaven
 
 On a fresh RunHaven cache, the TUI opens the guide first. Press esc to return to
 home, or press `?`/F1 from the main screens to open the guide again. Use up/down
-to choose an agent, `w` to choose a workspace, `r` to review the run boundary,
-`d` to open the dashboard, `h` to review run history and diffs, `g` to open
-diagnostics, enter to move through detail/review/confirm, and esc to go back.
+to choose an agent, `w` to choose a workspace, `r` to review safety, `d` to open
+the dashboard, `h` to review run history and diffs, `g` to open checks, enter to
+move through detail/review/confirm, and esc to go back.
 The launch path is a four-step wizard: choose agent, choose workspace, review
-the boundary, then confirm launch. The Home banner keeps Cubby as the animated
-hero/pet and uses the space beside it for at-a-glance context: launch stepper,
-selected agent, workspace, network mode, default boundary, and next safe action.
+the safety plan, then confirm launch. The Home banner shows the RunHaven logo and
+at-a-glance context: launch stepper, selected agent, workspace, network mode,
+default boundary, and next safe action.
 
 The review screen is built from the same planner as `runhaven plan`: it shows
-the workspace mount, state volume, network mode, provider egress posture,
-explicit non-mounts such as host home and credential folders, and the
-equivalent CLI command. Confirming a plan restores the terminal and launches
-the same run path as `runhaven run`.
+the workspace folder, saved agent state, network mode, which provider hosts the
+agent may reach, what RunHaven will not open (such as your home folder or
+credential folders), and the matching CLI command. Confirming a plan restores
+the terminal and launches the same run path as `runhaven run`.
 
-Lower-security plans show the existing security notices and require typing
-`run` before launch. Secure-default plans launch with enter from the confirm
-screen.
+Riskier plans show safety notes and require typing `run` before launch. Safe
+default plans launch with enter from the confirm screen.
 
 The dashboard lists active RunHaven runs and shows the selected run's sanitized
-status, resource summary, network attachments, and provider egress ledger. Press
+status, resource summary, network details, and provider network log. Press
 enter or `l` from the dashboard to open a bounded log snapshot with search,
 scrolling, and tail-following. The log viewer parses ANSI output into terminal
 cells instead of replaying escape sequences. Raw agent output can contain
@@ -53,13 +52,14 @@ container and requires typing the action phrase before RunHaven calls the same
 validated run-control core used by the CLI.
 
 Completed-run history and per-run diff review are available with `h`.
-Diagnostics are available with `g` and show provider egress metadata, auth
-broker metadata, terminal rendering capability, and a doctor screen with inline
-remediation. The dashboard also surfaces plain notices when a run looks done,
-stale, in control-transition, or likely waiting for interactive input.
+Checks are available with `g` and show provider network metadata, auth broker
+metadata, terminal image support, and a doctor screen with fixes. The dashboard
+also shows plain notices when a run looks done, stale, in a stop or repair step,
+or likely waiting for input.
 
-Cubby, the RunHaven pet, is visible by default. Press `p` to hide or show it for
-the current session. Set `RUNHAVEN_TUI_PET=0` to start with the pet hidden.
+Cubby, the RunHaven pet, is visible by default as a compact ambient pet. Press
+`p` to hide or show Cubby for the current session. Set `RUNHAVEN_TUI_PET=0` to
+start with the pet hidden. This does not hide the RunHaven logo.
 
 The Home screen also has a hidden, attributed Zork I easter egg. Press `~` from
 Home to open it, type game commands normally, and press esc to return Home. The
@@ -67,14 +67,14 @@ game runs from bundled MIT-licensed story bytes with no network, subprocess, or
 workspace access. Zork `save` and `restore` use one private RunHaven cache slot;
 RunHaven never opens an arbitrary user-selected save file.
 
-On terminals with Kitty graphics, Sixel, or iTerm2 3.6+ support, Cubby can use a
-high-resolution image overlay; otherwise it falls back to a terminal-safe
-half-block sprite. `NO_COLOR` disables color, `RUNHAVEN_TUI_REDUCED_MOTION=1`
-keeps Cubby static, and `RUNHAVEN_TUI_LINE_MODE=1` starts a simpler text-first
-layout without the pet. `RUNHAVEN_TUI_COLOR_MODE=light` or `dark` selects the
-palette. The CLI stays the complete, scriptable surface: any subcommand, or a
-piped or redirected invocation, uses the CLI directly and never opens the TUI.
-Press `q` to quit.
+On terminals with Kitty graphics, Sixel, or iTerm2 3.6+ support, the logo and
+Cubby use Codex-derived high-resolution image overlays; otherwise they fall back
+to terminal-safe half-block rendering. `NO_COLOR` disables color,
+`RUNHAVEN_TUI_REDUCED_MOTION=1` keeps Cubby static, and
+`RUNHAVEN_TUI_LINE_MODE=1` starts a simpler text-first layout without the logo
+or pet. `RUNHAVEN_TUI_COLOR_MODE=light` or `dark` selects the palette. The CLI
+stays the complete, scriptable surface: any subcommand, or a piped or redirected
+invocation, uses the CLI directly and never opens the TUI. Press `q` to quit.
 
 ## Guided Setup
 

@@ -140,7 +140,7 @@ fn seed_history(app: &mut App) {
         color: "enabled".to_string(),
         motion: "animated".to_string(),
         line_mode: "disabled".to_string(),
-        pet_image: "kitty graphics".to_string(),
+        terminal_image: "kitty graphics".to_string(),
     };
     app.history.diagnostics.egress = vec![history::DiagnosticEgressEntry {
         timestamp: "2026-06-27T00:00:01Z".to_string(),
@@ -194,7 +194,7 @@ fn app_loads_all_agent_profiles() {
 }
 
 #[test]
-fn home_banner_shows_mascot_and_brand() {
+fn home_banner_shows_logo_and_context() {
     let mut terminal = Terminal::new(TestBackend::new(60, 30)).unwrap();
     let mut app = test_app();
     terminal.draw(|f| app.render(f)).unwrap();
@@ -218,7 +218,7 @@ fn home_banner_shows_mascot_and_brand() {
     );
     assert!(text.contains("next: r review plan"), "next action missing");
     let blocks = text.matches('\u{2580}').count() + text.matches('\u{2584}').count();
-    assert!(blocks > 40, "expected mascot half-blocks, got {blocks}");
+    assert!(blocks > 40, "expected logo half-blocks, got {blocks}");
 }
 
 #[test]
@@ -515,7 +515,7 @@ fn no_color_rendering_leaves_color_cells_reset() {
 }
 
 #[test]
-fn line_mode_uses_text_banner_without_mascot_blocks() {
+fn line_mode_uses_text_banner_without_logo_or_pet_blocks() {
     let settings = TuiSettings {
         line_mode: true,
         ..TuiSettings::default()

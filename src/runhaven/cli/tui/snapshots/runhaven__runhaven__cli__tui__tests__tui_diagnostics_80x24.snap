@@ -1,10 +1,9 @@
 ---
 source: src/runhaven/cli/tui/tests.rs
-assertion_line: 577
 expression: snapshot
 ---
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                                  Diagnostics                                 │
+│                                    Checks                                    │
 └──────────────────────────────────────────────────────────────────────────────┘
 ┌ Auth Status ─────────────────────────────────────────────────────────────────┐
 │Auth broker: available runtime=host broker                                    │
@@ -13,9 +12,9 @@ expression: snapshot
 └──────────────────────────────────────────────────────────────────────────────┘
 ┌ Terminal ────────────────────────────────────────────────────────────────────┐
 │Color: enabled  motion: animated                                              │
-│Line mode: disabled  pet image: kitty graphics                                │
+│Line mode: disabled  terminal image: kitty graphics                           │
 └──────────────────────────────────────────────────────────────────────────────┘
-┌ Egress Log ──────────────────────────────────────────────────────────────────┐
+┌ Network Log ─────────────────────────────────────────────────────────────────┐
 │codex denied example.invalid:443 count=1 reason=not-in-allowlist run=run-     │
 │20260627                                                                      │
 │                                                                              │

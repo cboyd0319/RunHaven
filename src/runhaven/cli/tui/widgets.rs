@@ -68,21 +68,21 @@ pub(super) fn render_launch_stepper(
     frame.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
-/// The home banner: Cubby on the left, at-a-glance launch context on the right.
+/// The home banner: the RunHaven logo on the left, at-a-glance launch context on the right.
 pub(super) fn render_banner(
     frame: &mut Frame,
     area: Rect,
-    mascot_width: u16,
-    mascot_lines: Vec<Line<'static>>,
+    image_width: u16,
+    image_lines: Vec<Line<'static>>,
     context_lines: &[String],
     palette: Palette,
 ) -> Rect {
-    let [mascot_area, brand_area] =
-        Layout::horizontal([Constraint::Length(mascot_width + 2), Constraint::Min(0)]).areas(area);
+    let [image_area, brand_area] =
+        Layout::horizontal([Constraint::Length(image_width + 2), Constraint::Min(0)]).areas(area);
 
-    frame.render_widget(Paragraph::new(mascot_lines), mascot_area);
+    frame.render_widget(Paragraph::new(image_lines), image_area);
     render_banner_context(frame, brand_area, context_lines, palette);
-    mascot_area
+    image_area
 }
 
 fn render_banner_context(
@@ -134,7 +134,7 @@ pub(super) fn render_launcher_summary(
         || "agent: none".to_string(),
         |agent| {
             format!(
-                "agent: {}  default network: {}",
+                "agent: {}  network: {}",
                 agent.name,
                 default_network_mode(agent).as_str()
             )
@@ -240,10 +240,7 @@ pub(super) fn plan_review_lines(
     let mut lines = Vec::new();
     push_wrapped_line(
         &mut lines,
-        format!(
-            "Workspace mount: {} -> /workspace",
-            plan.workspace.display()
-        ),
+        format!("Workspace folder: {}", plan.workspace.display()),
         palette.text(),
         width,
     );
@@ -257,46 +254,49 @@ pub(super) fn plan_review_lines(
     }
     push_wrapped_line(
         &mut lines,
-        format!("Agent home state: {} -> /home/agent", plan.state_volume),
+        format!("Agent saved state: {}", plan.state_volume),
         palette.text(),
         width,
     );
     push_wrapped_line(
         &mut lines,
-        format!("Network mode: {}", plan.network_mode.as_str()),
+        format!("Network: {}", plan.network_mode.as_str()),
         palette.text(),
         width,
     );
     push_wrapped_line(
         &mut lines,
-        format!("Egress: {}", plan.egress_summary),
+        format!("Online access: {}", plan.egress_summary),
         palette.text(),
         width,
     );
     if !plan.provider_allowed_hosts.is_empty() {
         push_wrapped_line(
             &mut lines,
-            format!("Provider hosts: {}", plan.provider_allowed_hosts.join(", ")),
+            format!(
+                "Allowed provider hosts: {}",
+                plan.provider_allowed_hosts.join(", ")
+            ),
             palette.muted(),
             width,
         );
     }
     push_wrapped_line(
         &mut lines,
-        "Will not mount: host home, cloud credential folders, raw SSH keys, browser profiles.",
+        "RunHaven will not open: your home folder, cloud credentials, raw SSH keys, or browser profiles.",
         palette.accent(),
         width,
     );
     lines.push(Line::from(""));
     push_wrapped_line(
         &mut lines,
-        format!("CLI: {}", review.cli_command),
+        format!("Command: {}", review.cli_command),
         palette.muted(),
         width,
     );
     if !plan.security_notices.is_empty() {
         lines.push(Line::from(""));
-        push_wrapped_line(&mut lines, "Security notices:", palette.accent(), width);
+        push_wrapped_line(&mut lines, "Safety notes:", palette.accent(), width);
         for notice in &plan.security_notices {
             push_wrapped_line(&mut lines, format!("- {notice}"), palette.muted(), width);
         }
@@ -381,7 +381,7 @@ pub(super) fn egress_ledger_lines(
     if let Some(error) = error {
         push_wrapped_line(
             &mut lines,
-            format!("Egress ledger unavailable: {error}"),
+            format!("Network log unavailable: {error}"),
             palette.muted(),
             width,
         );
@@ -396,7 +396,7 @@ pub(super) fn egress_ledger_lines(
     if decisions.is_empty() {
         push_wrapped_line(
             &mut lines,
-            "Provider decisions appear here while provider-mode runs log decisions.",
+            "Provider network decisions appear here while provider-mode runs are active.",
             palette.muted(),
             width,
         );

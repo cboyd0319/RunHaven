@@ -95,9 +95,9 @@ current-stable pins, and keep the harness state current.
 
 ## Terminal UI Build
 
-- Complete phases: scaffold, agent picker, Cubby mascot, Phase 0 foundation,
-  Phase 1 brand/pet, Phase 2 launcher, Phase 3 run management, Phase 4 history
-  and diagnostics, and Phase 5 polish.
+- Complete phases: scaffold, agent picker, source-first Codex TUI foundation,
+  RunHaven logo header, native Cubby pet, Phase 2 launcher, Phase 3 run
+  management, Phase 4 history and diagnostics, and Phase 5 polish.
 - Phase 5 completed the fresh-cache guide, `?`/F1 help route, dashboard notices,
   accessibility switches, light/dark palette selection, final snapshots, and
   architecture guide. Post-polish added a hidden, attributed Zork I easter egg

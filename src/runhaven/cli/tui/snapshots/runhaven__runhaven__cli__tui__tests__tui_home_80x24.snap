@@ -2,15 +2,15 @@
 source: src/runhaven/cli/tui/tests.rs
 expression: snapshot
 ---
- ▄▀▀▀▀▀▀   RunHaven v0.5.0
- ▀▀▀▀▀▀▀   launch: [1 agent] > 2 workspace > 3 review > 4 confirm
- ▀▀▀▀▀▀▀   agent: antigravity  network: provider
- ▀▀▀▀▀▀▀   workspace: /workspace
-▄▀▀▀▀▀▀▀   boundary: /workspace only  no host home/creds
-           next: r review plan  d dashboard  h history
+▄▀▀▀▀▀▀▀▀▄  RunHaven v0.5.0
+▀▀▀▀▀▀▀▀▀▀  launch: [1 agent] > 2 workspace > 3 review > 4 confirm
+▀▀▀▀▀▀▀▀▀▀  agent: antigravity  network: provider
+▀▀▀▀▀▀▀▀▀▀  workspace: /workspace
+▀▀▀▀▀▀▀▀▀▀  boundary: /workspace only  no home folder or credentials
+            next: r review plan  d dashboard  h history
 ┌ Launcher ────────────────────────────────────────────────────────────────────┐
 │workspace: /workspace                                                         │
-│agent: antigravity  default network: provider                                 │
+│agent: antigravity  network: provider                                         │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ┌ Agents ──────────────────────────────────────────────────────────────────────┐
@@ -25,4 +25,4 @@ expression: snapshot
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
  up/down select · enter inspect · r review plan · w workspace · ? guide · q quit
-               RunHaven shows the exact CLI command before launch.
+                    RunHaven shows the command before launch.

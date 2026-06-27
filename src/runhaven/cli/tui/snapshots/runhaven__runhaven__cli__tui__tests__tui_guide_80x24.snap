@@ -6,23 +6,23 @@ expression: snapshot
 │                                RunHaven Guide                                │
 └──────────────────────────────────────────────────────────────────────────────┘
 ┌ Actions ─────────────────────────────────────────────────────────────────────┐
-│Launch is a four-step wizard: agent, workspace, review boundary, confirm      │
-│launch.                                                                       │
+│Launch has four steps: choose agent, choose workspace, review safety,         │
+│confirm launch.                                                               │
 │                                                                              │
-│Home shows Cubby plus the selected agent, workspace, network, boundary, and   │
-│next safe action.                                                             │
+│Home shows the RunHaven logo, selected agent, workspace, network, boundary,   │
+│and next safe action.                                                         │
 │                                                                              │
-│Footers list only actions for the current screen. Use ? or F1 to return       │
+│Footers show only actions for the current screen. Use ? or F1 to return       │
 │here.                                                                         │
 │                                                                              │
-│Secure-default plans launch with enter. Lower-security choices require        │
-│typing run.                                                                   │
+│Safe plans start with enter. Riskier choices ask you to type run.             │
 │                                                                              │
-│Side flows: d dashboard/logs, h history/diffs, and g diagnostics/doctor.      │
+│Other screens: d dashboard/logs, h history/diffs, and g checks/doctor.        │
 │                                                                              │
-│Display: p toggles Cubby. USAGE documents NO_COLOR, reduced motion, line      │
-│mode, and light/dark palette environment controls.                            │
+│Display: p shows or hides Cubby. USAGE explains color, motion, line mode,     │
+│and light or dark mode.                                                       │
+│                                                                              │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
-     w workspace · r review · d dash · h history · g diag · p pet · esc home
-               Every TUI action maps back to a named CLI command.
+    w workspace · r review · d dash · h history · g checks · p pet · esc home
+                 Every screen action has a matching CLI command.

@@ -2,13 +2,13 @@
 //! subcommand. It is a launcher and manager over the same profiles and planner
 //! the CLI uses, never a replacement for the explicit CLI surface.
 //!
-//! Slices so far: the scaffold, the agent picker, portable and high-resolution
-//! Cubby branding, the Phase 0 foundation, and the Phase 1 pet/tooltips layer.
-//! Later slices add the run dashboard and history/diagnostics surfaces.
+//! Slices so far: the scaffold, the agent picker, the source-first Codex TUI
+//! foundation, RunHaven logo branding, the native Cubby pet, launcher flow, run
+//! dashboard, history/diagnostics, and polish.
 
 use anyhow::Result;
 use ratatui::crossterm::event::{self, Event, KeyEventKind};
-use ratatui::layout::{Constraint, Layout};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::text::{Line, Text};
 use ratatui::widgets::{Block, List, ListState, Paragraph};
 use ratatui::{DefaultTerminal, Frame};
@@ -22,6 +22,7 @@ use crate::runhaven::runtime::plans::{AgentRunPlan, default_network_mode};
 use crate::runhaven::runtime::profiles::{AgentProfile, profiles};
 use crate::runhaven::support::paths::runs_log_path;
 
+mod brand;
 mod codex;
 mod color;
 mod event_loop;
@@ -30,7 +31,6 @@ mod history;
 mod history_views;
 mod input;
 mod launcher;
-mod mascot;
 mod pet;
 mod run_views;
 mod runs;
@@ -98,10 +98,13 @@ struct App {
     ticks: u64,
     last_tick_elapsed: Duration,
     pet_animation_elapsed: Duration,
+    logo: Option<brand::BrandLogo>,
     pet: Option<pet::CubbyPet>,
-    pet_image_protocol: Option<codex::image_protocol::ImageProtocol>,
-    pending_pet_draw: Option<pet::PetImageDraw>,
-    pet_image_state: pet::PetImageRenderState,
+    terminal_image_protocol: Option<codex::image_protocol::ImageProtocol>,
+    pending_logo_draw: Option<codex::ambient::AmbientImageDraw>,
+    pending_pet_draw: Option<codex::ambient::AmbientImageDraw>,
+    logo_image_state: codex::ambient::AmbientImageRenderState,
+    pet_image_state: codex::ambient::AmbientImageRenderState,
     zork: zork::ZorkState,
 }
 
@@ -122,28 +125,36 @@ impl App {
             list.select(Some(0));
         }
         let palette = Palette::for_settings(settings);
-        let pet = if settings.pet_enabled {
+        let logo = if settings.line_mode {
+            None
+        } else {
+            brand::BrandLogo::load().ok()
+        };
+        let pet = if settings.pet_enabled && !settings.line_mode {
             pet::CubbyPet::load().ok()
         } else {
             None
         };
-        let pet_image_protocol = pet::detect_image_protocol(settings);
+        let terminal_image_protocol = pet::detect_image_protocol(settings);
         Self {
             agents,
             list,
             launcher: launcher::LauncherState::new(workspace),
             run_manager: runs::RunManagerState::default(),
-            history: history::HistoryState::new(settings, pet_image_protocol),
+            history: history::HistoryState::new(settings, terminal_image_protocol),
             settings,
             palette,
             screen: Screen::Home,
             ticks: 0,
             last_tick_elapsed: Duration::ZERO,
             pet_animation_elapsed: Duration::ZERO,
+            logo,
             pet,
-            pet_image_protocol,
+            terminal_image_protocol,
+            pending_logo_draw: None,
             pending_pet_draw: None,
-            pet_image_state: pet::PetImageRenderState::default(),
+            logo_image_state: codex::ambient::AmbientImageRenderState::default(),
+            pet_image_state: codex::ambient::AmbientImageRenderState::default(),
             zork: zork::ZorkState::new(),
         }
     }
@@ -193,13 +204,14 @@ impl App {
             if self.pet.is_none() {
                 self.pet = pet::CubbyPet::load().ok();
             }
-            self.pet_image_protocol = pet::detect_image_protocol(self.settings);
+            self.terminal_image_protocol = pet::detect_image_protocol(self.settings);
         } else {
             self.pending_pet_draw = None;
         }
     }
 
     fn render(&mut self, frame: &mut Frame) {
+        self.pending_logo_draw = None;
         self.pending_pet_draw = None;
         match self.screen {
             Screen::Home => self.render_home(frame),
@@ -242,27 +254,22 @@ impl App {
 
     fn render_home(&mut self, frame: &mut Frame) {
         // Reserve rows for the agent list and footer, then show the largest
-        // Cubby hero that still fits the banner without dominating the screen.
+        // RunHaven logo that still fits the banner without dominating the screen.
         const RESERVED_ROWS: u16 = 15;
         let available = frame.area().height.saturating_sub(RESERVED_ROWS);
-        let mascot_max_rows = available.saturating_add(1) / 2;
+        let logo_max_rows = available.saturating_add(1) / 2;
         let brand_min_width = 22;
-        let mascot_columns = frame.area().width.saturating_sub(brand_min_width);
-        let pet_size = (self.settings.pet_enabled && !self.settings.line_mode)
+        let logo_columns = frame.area().width.saturating_sub(brand_min_width);
+        let logo_size = (!self.settings.line_mode)
             .then(|| {
-                self.pet
+                self.logo
                     .as_ref()
-                    .and_then(|pet| pet.size_for_area(mascot_max_rows, mascot_columns))
+                    .and_then(|logo| logo.size_for_area(logo_max_rows, logo_columns))
             })
             .flatten();
-        let fallback_hero =
-            (self.settings.pet_enabled && !self.settings.line_mode && pet_size.is_none())
-                .then(|| mascot::hero_for_area(mascot_max_rows, mascot_columns))
-                .flatten();
         let banner_context = self.home_banner_context();
-        let banner_height = pet_size
+        let banner_height = logo_size
             .map(|size| size.rows)
-            .or_else(|| fallback_hero.map(mascot::HeroSprite::cell_height))
             .unwrap_or(5)
             .max(banner_context.len() as u16);
 
@@ -273,55 +280,28 @@ impl App {
         ])
         .areas(frame.area());
 
-        if let Some(size) = pet_size {
-            let animated = self.settings.motion_mode == MotionMode::Animated;
-            let pet_lines = self.pet.as_mut().and_then(|pet| {
-                pet.idle_lines(
-                    size,
-                    self.settings.color_enabled,
-                    self.pet_animation_elapsed,
-                    animated,
-                )
-                .ok()
-            });
-            if let Some(pet_lines) = pet_lines {
-                let mascot_area = render_banner(
+        if let Some(size) = logo_size {
+            let logo_lines = self
+                .logo
+                .as_mut()
+                .and_then(|logo| logo.lines(size, self.settings.color_enabled).ok());
+            if let Some(logo_lines) = logo_lines {
+                let logo_area = render_banner(
                     frame,
                     banner,
                     size.columns,
-                    pet_lines,
+                    logo_lines,
                     &banner_context,
                     self.palette,
                 );
-                if let (Some(pet), Some(protocol)) = (self.pet.as_ref(), self.pet_image_protocol) {
-                    self.pending_pet_draw = pet.draw_request(
-                        mascot_area,
-                        self.pet_animation_elapsed,
-                        animated,
-                        protocol,
-                    );
+                if let (Some(logo), Some(protocol)) =
+                    (self.logo.as_ref(), self.terminal_image_protocol)
+                {
+                    self.pending_logo_draw = logo.draw_request(logo_area, protocol);
                 }
-            } else if let Some(hero) = mascot::hero_for_area(mascot_max_rows, mascot_columns) {
-                render_banner(
-                    frame,
-                    banner,
-                    hero.cell_width(),
-                    hero.lines_with_color(self.settings.color_enabled),
-                    &banner_context,
-                    self.palette,
-                );
             } else {
                 render_line_banner(frame, banner, &banner_context, self.palette);
             }
-        } else if let Some(hero) = fallback_hero {
-            render_banner(
-                frame,
-                banner,
-                hero.cell_width(),
-                hero.lines_with_color(self.settings.color_enabled),
-                &banner_context,
-                self.palette,
-            );
         } else {
             render_line_banner(frame, banner, &banner_context, self.palette);
         }
@@ -359,6 +339,7 @@ impl App {
             );
         }
         frame.render_stateful_widget(list, list_area, &mut self.list);
+        self.render_ambient_pet(frame, list_area);
 
         render_footer(
             frame,
@@ -371,6 +352,59 @@ impl App {
 
     fn home_tip(&self) -> &'static str {
         tooltips::tip_for_tick(self.ticks)
+    }
+
+    fn render_ambient_pet(&mut self, frame: &mut Frame, list_area: Rect) {
+        if !self.settings.pet_enabled || self.settings.line_mode {
+            return;
+        }
+        let Some(pet) = self.pet.as_mut() else {
+            return;
+        };
+        let size = pet.ambient_size();
+        let inner = Rect {
+            x: list_area.x.saturating_add(1),
+            y: list_area.y.saturating_add(1),
+            width: list_area.width.saturating_sub(2),
+            height: list_area.height.saturating_sub(2),
+        };
+        let pet_area_y = inner
+            .y
+            .saturating_add(self.agents.len() as u16)
+            .saturating_add(1);
+        let pet_area = Rect {
+            x: inner.x,
+            y: pet_area_y,
+            width: inner.width,
+            height: inner
+                .y
+                .saturating_add(inner.height)
+                .saturating_sub(pet_area_y),
+        };
+        let composer_bottom_y = pet_area.y.saturating_add(pet_area.height);
+        let animated = self.settings.motion_mode == MotionMode::Animated;
+        if let Some(area) = pet.ambient_area(pet_area, composer_bottom_y)
+            && let Ok(lines) = pet.ambient_lines(
+                self.settings.color_enabled,
+                self.pet_animation_elapsed,
+                animated,
+            )
+        {
+            debug_assert_eq!(area.width, size.columns);
+            debug_assert_eq!(area.height, size.rows);
+            frame.render_widget(Paragraph::new(lines), area);
+        }
+        if let Some(protocol) = self.terminal_image_protocol
+            && let Some(request) = pet.ambient_draw_request(
+                pet_area,
+                composer_bottom_y,
+                self.pet_animation_elapsed,
+                animated,
+                protocol,
+            )
+        {
+            self.pending_pet_draw = Some(request);
+        }
     }
 
     fn home_banner_context(&self) -> Vec<String> {
@@ -397,7 +431,7 @@ impl App {
             format!("launch: {}", launch_stepper_text(LaunchStep::Agent)),
             format!("agent: {agent}  network: {network}"),
             format!("workspace: {}", self.launcher.workspace.display()),
-            "boundary: /workspace only  no host home/creds".to_string(),
+            "boundary: /workspace only  no home folder or credentials".to_string(),
             next,
         ]
     }
@@ -420,7 +454,7 @@ impl App {
             Line::from(format!("image:           {}", agent.image)),
             Line::from(format!("sign-in:         {}", agent_sign_in(agent.name))),
             Line::from(format!(
-                "default network: {}",
+                "network:         {}",
                 default_network_mode(agent).as_str()
             )),
             Line::from(format!("api-key broker:  {}", agent_broker(agent.name))),
@@ -577,7 +611,7 @@ impl App {
         if let Some(review) = &self.launcher.review {
             push_wrapped_line(
                 &mut lines,
-                format!("Mount: {} -> /workspace", review.plan.workspace.display()),
+                format!("Workspace folder: {}", review.plan.workspace.display()),
                 self.palette.text(),
                 body.width as usize,
             );
@@ -589,14 +623,14 @@ impl App {
             );
             push_wrapped_line(
                 &mut lines,
-                format!("Egress: {}", review.plan.egress_summary),
+                format!("Online access: {}", review.plan.egress_summary),
                 self.palette.text(),
                 body.width as usize,
             );
             lines.push(Line::from(""));
             push_wrapped_line(
                 &mut lines,
-                format!("CLI: {}", review.cli_command),
+                format!("Command: {}", review.cli_command),
                 self.palette.muted(),
                 body.width as usize,
             );
@@ -605,7 +639,7 @@ impl App {
                 push_wrapped_line(
                     &mut lines,
                     format!(
-                        "This plan has security notices. Type {} to launch.",
+                        "This plan has safety notes. Type {} to launch.",
                         launcher::CONFIRM_PHRASE
                     ),
                     self.palette.accent(),
@@ -620,7 +654,7 @@ impl App {
             } else {
                 push_wrapped_line(
                     &mut lines,
-                    "Secure-default plan. Press enter to launch.",
+                    "Safe plan. Press enter to launch.",
                     self.palette.accent(),
                     body.width as usize,
                 );
@@ -656,21 +690,54 @@ impl App {
 
     fn render_terminal_overlay(&mut self) {
         let mut stdout = std::io::stdout().lock();
-        if pet::render_pet_image(
+        if codex::ambient::render_ambient_image(
+            &mut stdout,
+            &mut self.logo_image_state,
+            brand::LOGO_IMAGE_ID,
+            self.pending_logo_draw.clone(),
+        )
+        .is_err()
+        {
+            self.terminal_image_protocol = None;
+            let _ = codex::ambient::render_ambient_image(
+                &mut stdout,
+                &mut self.logo_image_state,
+                brand::LOGO_IMAGE_ID,
+                None,
+            );
+        }
+        if codex::ambient::render_ambient_image(
             &mut stdout,
             &mut self.pet_image_state,
+            pet::PET_IMAGE_ID,
             self.pending_pet_draw.clone(),
         )
         .is_err()
         {
-            self.pet_image_protocol = None;
-            let _ = pet::render_pet_image(&mut stdout, &mut self.pet_image_state, None);
+            self.terminal_image_protocol = None;
+            let _ = codex::ambient::render_ambient_image(
+                &mut stdout,
+                &mut self.pet_image_state,
+                pet::PET_IMAGE_ID,
+                None,
+            );
         }
     }
 
     fn clear_terminal_overlay(&mut self) {
         let mut stdout = std::io::stdout().lock();
-        let _ = pet::render_pet_image(&mut stdout, &mut self.pet_image_state, None);
+        let _ = codex::ambient::render_ambient_image(
+            &mut stdout,
+            &mut self.logo_image_state,
+            brand::LOGO_IMAGE_ID,
+            None,
+        );
+        let _ = codex::ambient::render_ambient_image(
+            &mut stdout,
+            &mut self.pet_image_state,
+            pet::PET_IMAGE_ID,
+            None,
+        );
     }
 }
 

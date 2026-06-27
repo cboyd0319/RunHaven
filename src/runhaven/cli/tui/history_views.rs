@@ -48,7 +48,7 @@ pub(super) fn render_history(
     render_footer(
         frame,
         footer,
-        "up/down select | enter diff | r refresh | g diagnostics | esc home",
+        "up/down select | enter diff | r refresh | g checks | esc home",
         "Run history is loaded from secret-free RunHaven records.",
         palette,
     );
@@ -94,7 +94,7 @@ pub(super) fn render_diagnostics(
     palette: Palette,
 ) {
     let [header, body, footer] = layout(frame);
-    render_screen_title(frame, header, "Diagnostics", settings, palette);
+    render_screen_title(frame, header, "Checks", settings, palette);
     let [auth_status_area, terminal_area, egress_area, auth_log_area] = Layout::vertical([
         Constraint::Length(5),
         Constraint::Length(4),
@@ -122,7 +122,7 @@ pub(super) fn render_diagnostics(
     render_screen_body(
         frame,
         egress_area,
-        " Egress Log ",
+        " Network Log ",
         diagnostic_egress_lines(history, egress_area.width as usize, palette),
         settings,
         palette,
@@ -206,8 +206,8 @@ pub(super) fn render_doctor(
     render_footer(
         frame,
         footer,
-        "r rerun | g diagnostics | esc home | q quit",
-        "Doctor checks are read-only and point to the smallest remediation.",
+        "r rerun | g checks | esc home | q quit",
+        "Checks do not change anything and show the smallest fix.",
         palette,
     );
 }
@@ -365,8 +365,8 @@ fn terminal_probe_lines(
     for line in [
         format!("Color: {}  motion: {}", probe.color, probe.motion),
         format!(
-            "Line mode: {}  pet image: {}",
-            probe.line_mode, probe.pet_image
+            "Line mode: {}  terminal image: {}",
+            probe.line_mode, probe.terminal_image
         ),
     ] {
         push_wrapped_line(&mut lines, line, palette.text(), width);
@@ -383,7 +383,7 @@ fn diagnostic_egress_lines(
     if let Some(error) = &history.diagnostics.egress_error {
         push_wrapped_line(
             &mut lines,
-            format!("Egress log unavailable: {error}"),
+            format!("Network log unavailable: {error}"),
             palette.muted(),
             width,
         );
@@ -392,7 +392,7 @@ fn diagnostic_egress_lines(
     if history.diagnostics.egress.is_empty() {
         push_wrapped_line(
             &mut lines,
-            "No provider egress log entries found.",
+            "No provider network log entries found.",
             palette.muted(),
             width,
         );

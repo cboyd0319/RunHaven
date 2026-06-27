@@ -10,7 +10,7 @@ expression: snapshot
 │                                                                              │
 │image:           runhaven/antigravity:0.1.0                                   │
 │sign-in:         runhaven login                                               │
-│default network: provider                                                     │
+│network:         provider                                                     │
 │api-key broker:  no                                                           │
 │                                                                              │
 │                                                                              │
@@ -25,4 +25,4 @@ expression: snapshot
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
                  enter review · d dashboard · esc back · q quit
-               RunHaven shows the exact CLI command before launch.
+                    RunHaven shows the command before launch.

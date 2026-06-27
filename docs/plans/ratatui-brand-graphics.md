@@ -42,11 +42,17 @@ command output:
 
 If a screen does not help answer one of these, it does not earn its place.
 
-Implemented Home direction: Cubby remains the single animated hero/mascot/pet,
-but its Home footprint is capped to roughly half of the previous banner height.
-The space beside Cubby is an at-a-glance context panel showing the selected
-agent, workspace, network mode, default boundary, next safe action, and the
-launch wizard stepper.
+Implemented Home direction: the header uses the RunHaven logo for brand
+identity and an at-a-glance context panel for the selected agent, workspace,
+network mode, default boundary, next safe action, and launch wizard stepper.
+Cubby is the compact ambient pet, not the header hero. Logo and pet terminal
+image behavior should stay on the Codex-derived overlay and ambient-placement
+contracts wherever possible.
+
+Source-first rule: before adding custom TUI behavior, check the local official
+Codex TUI source at `/Users/c/Documents/GitHub/codex/codex-rs/tui` and vendor or
+adapt the native implementation unless RunHaven's data model, logo asset, or
+security boundary requires a local adapter.
 
 ## Default Terminal Entry Point
 
@@ -100,6 +106,10 @@ RunHaven is a security tool first. The experience principles follow from that.
   command, host, or log line behind it. The UI never hides the command it would
   run or the path it would touch; the TUI extends the CLI's transparency rather
   than masking it.
+- Plain language is the default. User-facing copy, menus, warnings, setup help,
+  and docs are written for non-technical users at roughly an 8th grade reading
+  level. Keep exact commands, paths, hosts, and safety facts when they matter,
+  but explain them with short sentences and clear next actions.
 - Built on the shared library, not shelled subcommands. The TUI calls the same
   planner and policy objects as the CLI (the shared planner and policy objects
   tracked in `docs/NON_UI_BACKLOG.md`), so plan, run, egress, and record
@@ -178,8 +188,11 @@ Capability detection (the practical sequence):
 4. Font cell pixel size query, needed to size graphics; half-block works even
    when this fails.
 
-`ratatui-image`'s `Picker::from_query_stdio()` already encapsulates this detect
-and size flow, so the TUI should not hand-roll protocol detection.
+RunHaven previously tested `ratatui-image` for this tier, but it selected
+iTerm2's OSC 1337 path and rendered blank in the full-screen TUI. The active
+path is Codex source-first: use the local official Codex TUI graphics protocol
+code and overlay lifecycle from `/Users/c/Documents/GitHub/codex/codex-rs/tui`,
+with half-block rendering as the portable floor.
 
 tmux and SSH caveats: tmux needs `set -g allow-passthrough on` (off by default);
 sixel passes through tmux 3.4 or newer; Kitty graphics over tmux is fragile and
@@ -194,7 +207,7 @@ Verified on 2026-06-26 (versions and status are volatile):
 | Crate                  | Version  | Status            | Use                                                        |
 | ---------------------- | -------- | ----------------- | ---------------------------------------------------------- |
 | ratatui                | 0.30.x   | active, core      | Core framework; modularized core/widgets, `ratatui::run()` |
-| ratatui-image          | 11.0.6   | active (rat org)  | Image widget: kitty/sixel/iterm2/halfblock plus auto-detect |
+| ratatui-image          | 11.0.6   | retired for RunHaven | Evaluated and reverted after blank iTerm2 full-screen rendering |
 | tachyonfx              | 0.25.0   | active (rat org)  | 50+ shader-like effects: dissolves, fades, transitions     |
 | tui-big-text           | 0.8.8    | active            | Oversized headline text; Full/Half/Quadrant pixel sizes    |
 | throbber-widgets-tui   | 0.11.1   | active            | Spinners and loading throbbers                             |
@@ -210,12 +223,12 @@ effects. `tui-widgets` also bundles bar-graph, cards, qrcode, and prompts widget
 worth a look.
 
 Supply-chain note: prefer pure-Rust crates and avoid pulling new C builds (see
-Engineering Discipline). If the raster tiers are added, gate `ratatui-image` so
-its Sixel path uses a pure-Rust encoder (`icy_sixel` or `sixel-image`), never
-`libsixel`. Add `unicode-width` for column math and `insta` (dev-only) for the
-snapshot harness. Evaluate `tui-tree-widget` or `tui-nodes` only if the run
-history or trust boundary view needs real tree or graph interaction beyond the
-built-in `Canvas`.
+Engineering Discipline). For raster graphics, prefer the already-vendored Codex
+protocol and Sixel code with attribution instead of adding a new graphics crate.
+Add new UI crates only when a built-in ratatui primitive or vendored Codex
+module cannot cover the behavior. Evaluate `tui-tree-widget` or `tui-nodes` only
+if the run history or trust boundary view needs real tree or graph interaction
+beyond the built-in `Canvas`.
 
 ## Motion and Effects
 
@@ -346,6 +359,11 @@ discoverable on screen; there is no hidden keyboard-only workflow, and every
 mutating or destructive action routes through an explicit confirm. Borrowed from
 Persona's information architecture, narrowed to RunHaven's surfaces.
 
+Codex-source candidates to evaluate before custom implementation: status line
+and terminal-title surfaces, `/status` cards, syntax/highlighting themes,
+keymap/accessibility picker behavior, thread naming, resume/session picker
+patterns, slash status routing, and tooltip timing/suppression.
+
 ## Restraint and Trust
 
 - Delight allowed: idle dashboard, first-run and empty states, the boot splash,
@@ -441,10 +459,11 @@ Guardrails (firm; an easter egg that breaks one of these is a bug):
 
 ## Feasibility Tiers
 
-Feasible now, cross-terminal because half-block is the floor: half-block, braille,
-and octant rendering; truecolor gradients; tachyonfx transitions; big-text
-headers; throbbers; `ansi-to-tui` log panes; popups and scroll views; charts and
-sparklines; tiered detection via `ratatui-image`; `NO_COLOR` and reduced-motion.
+Feasible now, cross-terminal because half-block is the floor: half-block,
+braille, and octant rendering; truecolor gradients; tachyonfx transitions;
+big-text headers; throbbers; `ansi-to-tui` log panes; popups and scroll views;
+charts and sparklines; Codex-derived graphics detection/overlays; `NO_COLOR`
+and reduced-motion.
 
 Aspirational or conditional, gorgeous where supported but never a baseline:
 Kitty-protocol inline images, animation frames, and z-layering (great on
@@ -459,11 +478,9 @@ Start with the universal floor, then layer enhancements behind detection.
 ```text
 src/tui/
   brand/
-    mod.rs       # logo widget, reveal effect, fallback stacked-square mark
-    asset.rs     # source path, target sizing, optional cache helper
+    mod.rs       # logo asset adapter, fallback stacked-square mark
   render/
-    tiers.rs     # capability detection and tier selection (wraps ratatui-image)
-    image.rs     # graphics-protocol path (kitty/iterm2/sixel)
+    image.rs     # Codex-derived graphics-protocol path (kitty/iterm2/sixel)
     blocks.rs    # half-block, braille, octant fallback renderers
   motion/
     effects.rs   # tachyonfx wiring, transitions, reduced-motion gate
@@ -474,7 +491,7 @@ Sequence:
 
 1. Theme tokens and the half-block plus truecolor floor, working on macOS
    Terminal and Alacritty.
-2. The static logo via `ratatui-image` with automatic tier selection and the
+2. The static logo through the Codex-derived terminal image overlay with the
    stacked-square fallback.
 3. The reveal-to-readiness boot and the doctor scan, the first signature moment.
 4. The egress ledger on the dashboard, the defining screen.
@@ -482,9 +499,10 @@ Sequence:
    only.
 6. Kitty-protocol enhancements as a top tier, never a requirement.
 
-Only add a Codex-style ambient overlay renderer (render UI, save cursor, place
-image, restore cursor, delete on resize) if the lifecycle mark needs to float
-near a persistent status line.
+The active implementation now uses a Codex-style ambient overlay renderer: render
+UI, save cursor, place image, restore cursor, and delete/clear on resize. Keep
+future changes source-first against the local Codex TUI before adding custom
+overlay logic.
 
 ## Engineering Discipline
 

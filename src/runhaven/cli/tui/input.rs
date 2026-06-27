@@ -168,7 +168,7 @@ impl App {
                 KeyCode::Esc | KeyCode::Backspace => self.screen = Screen::Home,
                 KeyCode::Char('r') => {
                     self.history
-                        .refresh_diagnostics(self.settings, self.pet_image_protocol);
+                        .refresh_diagnostics(self.settings, self.terminal_image_protocol);
                 }
                 KeyCode::Char('d') => self.open_doctor(),
                 KeyCode::Char('h') => self.open_history(),
@@ -246,7 +246,7 @@ impl App {
 
     fn open_diagnostics(&mut self) {
         self.history
-            .refresh_diagnostics(self.settings, self.pet_image_protocol);
+            .refresh_diagnostics(self.settings, self.terminal_image_protocol);
         self.screen = Screen::Diagnostics;
     }
 

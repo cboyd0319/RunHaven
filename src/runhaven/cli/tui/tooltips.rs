@@ -1,11 +1,11 @@
 const ROTATE_EVERY_TICKS: u64 = 8;
 
 const TIPS: &[&str] = &[
-    "RunHaven shows the exact CLI command before launch.",
+    "RunHaven shows the command before launch.",
     "Secure runs do not mount your home or credential folders.",
     "Press p to hide or show Cubby.",
     "Enter inspects an agent before you launch it.",
-    "Blocked network attempts are shown in the run ledger.",
+    "Blocked network attempts are shown in the network log.",
 ];
 
 pub(super) fn tip_for_tick(ticks: u64) -> &'static str {

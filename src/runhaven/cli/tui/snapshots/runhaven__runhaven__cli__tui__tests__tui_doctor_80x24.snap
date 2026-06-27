@@ -1,6 +1,5 @@
 ---
 source: src/runhaven/cli/tui/tests.rs
-assertion_line: 586
 expression: snapshot
 ---
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -25,5 +24,5 @@ expression: snapshot
 │                                                                              │
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
-                   r rerun | g diagnostics | esc home | q quit
-       Doctor checks are read-only and point to the smallest remediation.
+                     r rerun | g checks | esc home | q quit
+            Checks do not change anything and show the smallest fix.

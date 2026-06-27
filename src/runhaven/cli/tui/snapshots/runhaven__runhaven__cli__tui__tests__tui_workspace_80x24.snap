@@ -25,4 +25,4 @@ expression: snapshot
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
    type filter/path · up/down move · enter choose · backspace edit · esc back
-               RunHaven shows the exact CLI command before launch.
+                    RunHaven shows the command before launch.

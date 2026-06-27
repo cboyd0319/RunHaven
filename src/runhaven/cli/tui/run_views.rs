@@ -99,7 +99,7 @@ pub(super) fn render_runs(
     render_screen_body(
         frame,
         egress_area,
-        " Egress Ledger ",
+        " Network Log ",
         egress_ledger_lines(
             &run_manager.egress,
             run_manager.egress_error.as_deref(),

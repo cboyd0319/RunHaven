@@ -111,6 +111,19 @@ Tauri launch/run-control behavior.
   gate, including the security and correctness carve-outs.
 - Documentation is product: if a behavior is not documented it does not exist.
   Ship the doc change in the same slice as the behavior.
+- User-facing writing is part of the product boundary. Write UI text, menus,
+  prompts, warnings, README/usage docs, and setup instructions for
+  non-technical users at roughly an 8th grade reading level. Prefer short
+  sentences, plain verbs, concrete nouns, and clear next actions. Keep exact
+  commands, paths, hosts, and security facts when they matter; explain them in
+  plain language instead of hiding them.
+- TUI source-first rule: for `src/runhaven/cli/tui/`, vendor or adapt from the
+  official local Codex TUI source at
+  `/Users/c/Documents/GitHub/codex/codex-rs/tui` before writing custom code.
+  Custom TUI code is allowed only for RunHaven domain data, security-boundary
+  mapping, RunHaven asset swaps such as `docs/assets/logo.png`, or small glue
+  where no Codex equivalent exists. Document each exception in the TUI plan or
+  architecture docs.
 - Boring over clever: choose the obvious construct, because clever is what
   someone has to decode at 3am. Between two standard-library options of similar
   size, take the one correct on edge cases; lazy means writing less code, not

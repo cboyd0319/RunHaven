@@ -19,6 +19,22 @@ pure functions of that data. This is already why the agent detail screen reuses
 auth posture labels from `provider/auth_profiles.rs` and `default_network_mode`
 instead of restating them.
 
+## Codex Source First
+
+The TUI implementation vendors first from the official local Codex source at
+`/Users/c/Documents/GitHub/codex/codex-rs/tui`. Before adding custom TUI code,
+check that source for an equivalent behavior and vendor or adapt it with
+attribution. This is mandatory for pet behavior, animation timing, ambient
+placement, terminal image protocols, welcome/header layout patterns, terminal
+wrapping/truncation, selection lists, clipboard behavior, and other generic TUI
+primitives.
+
+RunHaven-owned code is limited to data adaptation and product identity: mapping
+RunHaven profiles, plans, records, diagnostics, and security-boundary state into
+the vendored widgets; swapping the RunHaven logo asset; and small glue where
+Codex has no equivalent. Each exception should be documented here or in
+`docs/plans/tui-build-plan.md`.
+
 ## Adapters build, widgets draw
 
 Keep the layers separate:
@@ -51,7 +67,7 @@ The current split is the reference shape:
 | `runs.rs`, `run_views.rs` | Active-run state, egress/log/control adapters, dashboard notices, and dashboard/log/control rendering. |
 | `history.rs`, `history_views.rs` | Run history, diff review, diagnostics, terminal capability, doctor state, and their views. |
 | `guide_views.rs` | First-run and help guide. It routes users to existing workflows; it does not own product logic. |
-| `pet.rs`, `mascot.rs`, `mascot/`, `codex/` | Branding, Cubby pet rendering, and attributed Codex-derived terminal graphics primitives. |
+| `brand.rs`, `pet.rs`, `codex/` | RunHaven logo/Cubby asset adapters over attributed Codex-derived welcome, pet, and terminal graphics primitives. |
 | `snapshot.rs`, `test_backend.rs` | VT100 snapshot harness used by screen regression tests. |
 
 If a new screen needs shared data, add the data API outside `cli/` first. If a
@@ -72,6 +88,13 @@ Rules:
   global destination.
 - Use task labels (`review plan`, `choose workspace`, `open dashboard`) instead
   of vague nouns.
+
+## User-facing language
+
+Write TUI text, menus, warnings, setup help, and docs for non-technical users at
+roughly an 8th grade reading level. Use short sentences, plain verbs, concrete
+nouns, and one clear next action. Keep exact commands, paths, hosts, and safety
+facts when they matter, but explain why they matter in plain language.
 - Group non-launch actions by job in the guide: prepare, run, review, diagnose,
   display.
 - Keep destructive run controls inside their own screen with explicit typed
@@ -102,8 +125,8 @@ launcher role:
 
 - Put product identity, version, selected agent, workspace, and ready state near
   the top, not hidden in help.
-- Keep the mascot compact and identity-oriented. It should help recognition, not
-  push the workflow below the fold.
+- Keep the logo and ambient pet compact and identity-oriented. They should help
+  recognition, not push the workflow below the fold.
 - Keep the bottom strip for immediate commands and current context.
 - Use contextual tips sparingly, and prefer facts the user can act on.
 - Do not copy the chat prompt as RunHaven's primary model. RunHaven's primary
@@ -153,17 +176,30 @@ The brand graphics, startup chrome, and hidden Zork easter egg (see
 `ratatui-brand-graphics.md`) solve a different problem than the functional cards.
 They share design direction but not data plumbing; keep them in separate modules.
 
-This lives in `tui/mascot.rs` (renderer) plus `tui/mascot/sprites.rs` (generated
-pixel data): the mascot is **Cubby**, a glass container cube with a tiny gold
-agent spark inside, drawn as half-block pixel art (the guaranteed-portable
-rendering floor, no image protocol). The sprites are xterm-256 indexed (indices
-16-255, avoiding 0-15 so macOS Terminal.app stays stable) at several sizes;
-`hero_for_banner` shows the largest one that fits the terminal, so detail scales
-up on bigger windows and degrades cleanly on an 80x24 floor. The source renders
-are in `docs/assets/terminal-mascot/` and the 1024px master is
-`docs/assets/cubby-hero-1024.png`. It is pure branding with no
-data plumbing, the static counterpart to the animated pet (the lifecycle mark in
-`ratatui-brand-graphics.md`).
+The active Home header uses `brand.rs` to load the RunHaven logo from
+`docs/assets/logo.png`, render a terminal-safe half-block fallback, and emit the
+same Codex-derived terminal image overlay used by pets when the terminal
+supports it. Cubby is not the header hero; `pet.rs` adapts the validated Cubby
+Codex pet package into Codex's ambient pet placement and overlay contract.
+RunHaven supplies the available pane and the Cubby asset, while
+`codex/ambient.rs` owns the target size, composer gap, right anchor, clear area,
+and image protocol lifecycle.
+
+Legacy terminal-mascot assets remain under `docs/assets/terminal-mascot/` as
+historical QA/source evidence from the earlier Cubby hero experiment. They are
+not active TUI code.
+
+Source-first candidates to evaluate before adding custom TUI behavior:
+
+- `chatwidget/status_surfaces.rs`: status line and terminal-title model.
+- `status/card.rs`: `/status` card structure.
+- `theme_picker.rs` and `render/highlight`: syntax/highlighting themes.
+- `keymap.rs` and `chatwidget/keymap_picker.rs`: shortcut/accessibility model.
+- `chatwidget/session_flow.rs`: thread naming.
+- `session_archive_commands.rs` and `resume_picker.rs`: session resume flows.
+- `chatwidget/slash_dispatch.rs`: `/status` command routing.
+- `terminal_title.rs`: terminal title cleanup and updates.
+- `tooltips.rs`: richer tooltip/announcement timing and suppression.
 
 The Zork easter egg lives under `tui/zork/`. Its RunHaven-owned wrapper handles
 the screen state, keyboard input, save-file boundary, bundled-story hash check,
