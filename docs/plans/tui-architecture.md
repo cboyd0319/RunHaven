@@ -149,7 +149,7 @@ from one source; hand-synced tokens drift.
 
 ## Branding stays separate from functional cards
 
-The brand graphics, startup chrome, and the mascot easter egg (see
+The brand graphics, startup chrome, and hidden Zork easter egg (see
 `ratatui-brand-graphics.md`) solve a different problem than the functional cards.
 They share design direction but not data plumbing; keep them in separate modules.
 
@@ -165,11 +165,19 @@ are in `docs/assets/terminal-mascot/` and the 1024px master is
 data plumbing, the static counterpart to the animated pet (the lifecycle mark in
 `ratatui-brand-graphics.md`).
 
+The Zork easter egg lives under `tui/zork/`. Its RunHaven-owned wrapper handles
+the screen state, keyboard input, save-file boundary, bundled-story hash check,
+and Quetzal validation. The vendored Ferrif-derived engine stays isolated under
+`tui/zork/zmachine/` and is used only by this hidden screen. It must not call the
+runtime planner, Apple `container`, provider/auth code, subprocess APIs, network
+APIs, workspace paths, or arbitrary save-file paths.
+
 ## Parity and tests
 
 For each card or screen, keep a fixture and a test that renders it with
 `TestBackend` without panicking, and assert the data mapping. The current VT100
 snapshot set covers the guide, home, detail, workspace, plan, confirm,
 dashboard, logs, control, history, history detail, diagnostics, and doctor
-screens. Keep snapshots deterministic: inject settings, workspace paths, records,
-and tick state instead of depending on local machine state.
+screens, plus the hidden Zork screen. Keep snapshots deterministic: inject
+settings, workspace paths, records, and tick state instead of depending on local
+machine state.

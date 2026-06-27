@@ -22,7 +22,7 @@ impl App {
                     self.screen = Screen::Workspace;
                 }
                 KeyCode::Char('p') => self.toggle_pet(),
-                KeyCode::Char('~') => self.lighthouse = !self.lighthouse,
+                KeyCode::Char('~') => self.open_zork(),
                 _ => {}
             },
             Screen::Detail => match code {
@@ -196,6 +196,11 @@ impl App {
                 KeyCode::Char('p') => self.toggle_pet(),
                 _ => {}
             },
+            Screen::Zork => {
+                if self.zork.handle_key(code) {
+                    self.screen = Screen::Home;
+                }
+            }
         }
         None
     }
@@ -248,6 +253,10 @@ impl App {
     fn open_doctor(&mut self) {
         self.history.refresh_doctor();
         self.screen = Screen::Doctor;
+    }
+
+    fn open_zork(&mut self) {
+        self.screen = Screen::Zork;
     }
 
     fn begin_run_control(&mut self, action: runs::RunControlAction) {

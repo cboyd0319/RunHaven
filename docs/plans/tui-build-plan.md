@@ -192,8 +192,9 @@ The directory-and-provider front door.
 - Full accessibility pass: `NO_COLOR`, reduced-motion, colorblind-safe palettes,
   line-mode fallback, and `RUNHAVEN_TUI_COLOR_MODE=light|dark` are documented
   and covered by focused render tests.
-- Themes and lighthouse easter egg: light/dark palette selection is implemented,
-  and the restrained safe-harbor lighthouse mode is a Home-only footer reveal.
+- Themes and Zork easter egg: light/dark palette selection is implemented, and
+  the hidden Home-only `~` screen runs the bundled MIT-licensed Zork I story
+  through an attributed Ferrif-derived Z-machine.
 - Complete snapshot coverage; the architecture doc is finalized as the reference
   guide for sibling projects.
 
@@ -201,7 +202,9 @@ The directory-and-provider front door.
 
 - Snapshot-tested with the VT100 backend + `insta` for each screen, at a few
   sizes, with deterministic (injected-clock) animation frames.
-- Keyboard-complete with visible hints; no hidden keyboard-only workflow.
+- Keyboard-complete with visible hints; no hidden keyboard-only product
+  workflow. Easter eggs must be documented, attributed, non-operational, and
+  isolated from RunHaven runtime boundaries.
 - Plain language; the secure choice is never harder than the insecure one.
 - Accessibility honored, not bolted on.
 - Vendored code attributed; new dependencies pure-Rust and exact-pinned.
@@ -278,3 +281,10 @@ phase as they arise.
   explicit light/dark palette selection; VT100 snapshots now cover guide,
   launcher, dashboard, logs, control, history, diagnostics, and doctor screens;
   and the architecture guide is finalized around the framework/screen seam.
+- Complete: post-polish Zork easter egg. The Home-only `~` screen runs the
+  bundled MIT-licensed Zork I story through a vendored, attributed
+  Ferrif-derived Z-machine. The implementation adds no new Cargo dependencies,
+  runs in-process only, performs no subprocess/network/workspace/container
+  access, validates the bundled story by exact length and SHA-256, and constrains
+  save/restore to one private RunHaven cache slot with Quetzal/IFF validation
+  before restore.

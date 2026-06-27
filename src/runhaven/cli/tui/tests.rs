@@ -394,16 +394,21 @@ fn first_run_guide_depends_on_run_history_log() {
 }
 
 #[test]
-fn lighthouse_mode_is_hidden_home_only_toggle() {
+fn zork_easter_egg_is_hidden_home_only_screen() {
     let mut app = test_app();
 
-    assert!(!app.lighthouse);
     app.handle_key(KeyCode::Char('~'));
-    assert!(app.lighthouse);
-    assert!(app.home_tip().contains("Lighthouse mode"));
+    assert!(matches!(app.screen, Screen::Zork));
+    assert!(app.zork.transcript().contains("ZORK I"));
+    assert!(app.zork.transcript().contains("West of House"));
+    app.handle_key(KeyCode::Char('q'));
+    assert!(matches!(app.screen, Screen::Zork));
+    app.handle_key(KeyCode::Esc);
+    assert!(matches!(app.screen, Screen::Home));
+
     app.screen = Screen::Guide;
     app.handle_key(KeyCode::Char('~'));
-    assert!(app.lighthouse);
+    assert!(matches!(app.screen, Screen::Guide));
 }
 
 #[test]
@@ -700,4 +705,12 @@ fn doctor_snapshot_80x24() {
     app.screen = Screen::Doctor;
     let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
     insta::assert_snapshot!("tui_doctor_80x24", snapshot);
+}
+
+#[test]
+fn zork_snapshot_80x24() {
+    let mut app = test_app();
+    app.screen = Screen::Zork;
+    let snapshot = snapshot::render_vt100(80, 24, |frame| app.render(frame)).unwrap();
+    insta::assert_snapshot!("tui_zork_80x24", snapshot);
 }

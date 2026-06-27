@@ -33,7 +33,7 @@ login is never read or mounted.
 | Surface | Status | Use it for |
 | --- | --- | --- |
 | CLI | `v0.5.0` pre-release, complete for the current command contract | Automation, explicit commands, recovery, diagnostics, and the stable backend for every UI. |
-| Terminal UI | Build-plan complete in this checkout, unreleased | Guided launch, first-run guide, plan review, active-run dashboard, bounded log snapshots, stop/kill/repair, run history and diff review, diagnostics, and doctor checks from a bare interactive `runhaven`. |
+| Terminal UI | Build-plan complete in this checkout, unreleased | Guided launch, first-run guide, plan review, active-run dashboard, bounded log snapshots, stop/kill/repair, run history and diff review, diagnostics, doctor checks, and a hidden attributed Zork I easter egg from a bare interactive `runhaven`. |
 | Desktop app | Alpha scaffold | Typed setup, launch, status, bounded logs, run control, and diagnostics. More maintenance and worktree flows remain CLI-first. |
 
 ## Why RunHaven
@@ -96,9 +96,9 @@ runhaven
 ```
 
 The TUI is a four-step launch wizard, first-run guide, run dashboard,
-history/diff viewer, diagnostics surface, and doctor view over the same Rust
-backend. It does not replace the CLI: subcommands, pipes, and redirected
-invocations still use the CLI directly.
+history/diff viewer, diagnostics surface, doctor view, and hidden attributed
+Zork I easter egg over the same Rust backend. It does not replace the CLI:
+subcommands, pipes, and redirected invocations still use the CLI directly.
 
 Use the smallest project directory the agent needs. RunHaven mounts that
 directory at `/workspace`, not your whole home directory. See

@@ -1,0 +1,29 @@
+---
+source: src/runhaven/cli/tui/tests.rs
+assertion_line: 715
+expression: snapshot
+---
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                     Zork I: The Great Underground Empire                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+West of House  0/0
+┌ Story ───────────────────────────────────────────────────────────────────────┐
+│ZORK I: The Great Underground Empire                                          │
+│Infocom interactive fiction - a fantasy story                                 │
+│Copyright (c) 1981, 1982, 1983, 1984, 1985, 1986 Infocom, Inc. All rights     │
+│reserved.                                                                     │
+│ZORK is a registered trademark of Infocom, Inc.                               │
+│Release 119 / Serial number 880429                                            │
+│                                                                              │
+│West of House                                                                 │
+│You are standing in an open field west of a white house, with a boarded       │
+│front door.                                                                   │
+│There is a small mailbox here.                                                │
+│                                                                              │
+│>                                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+┌ Command ─────────────────────────────────────────────────────────────────────┐
+│>                                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+      type command · enter send · esc home · save/restore use RunHaven slot
+Runs in-process from bundled MIT story bytes; save/restore uses one private R...

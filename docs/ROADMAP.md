@@ -99,8 +99,10 @@ current-stable pins, and keep the harness state current.
   Phase 1 brand/pet, Phase 2 launcher, Phase 3 run management, Phase 4 history
   and diagnostics, and Phase 5 polish.
 - Phase 5 completed the fresh-cache guide, `?`/F1 help route, dashboard notices,
-  accessibility switches, light/dark palette selection, restrained lighthouse
-  footer mode, final snapshots, and architecture guide.
+  accessibility switches, light/dark palette selection, final snapshots, and
+  architecture guide. Post-polish added a hidden, attributed Zork I easter egg
+  that runs in-process, adds no dependencies, and keeps save/restore constrained
+  to one private RunHaven cache slot.
 - The TUI consumes shared Rust data APIs, not CLI prose: planner data from
   `runtime/plans`, active-run control from `runtime/active`, host readiness from
   `doctor.rs`, secret-free diagnostics from `diagnostics.rs`, auth posture from

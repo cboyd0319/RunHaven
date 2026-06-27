@@ -1,7 +1,8 @@
 use std::fs::{self, File, OpenOptions};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 use crate::runhaven::support::validators::validate_run_id;
 
@@ -52,6 +53,10 @@ pub fn oauth_token_path(agent: &str) -> PathBuf {
     runhaven_cache_root()
         .join("auth")
         .join(format!("{agent}-oauth-token"))
+}
+
+pub fn zork_save_path() -> PathBuf {
+    runhaven_cache_root().join("tui").join("zork1-save.ifzs")
 }
 
 /// A stable empty workspace for `runhaven login`. The in-sandbox login does not
@@ -110,6 +115,58 @@ pub fn open_private_read_write(path: &Path) -> Result<File> {
     Ok(file)
 }
 
+pub fn write_private_atomic(path: &Path, contents: &[u8]) -> Result<()> {
+    ensure_private_parent(path)?;
+    let parent = path
+        .parent()
+        .with_context(|| format!("path has no parent: {}", path.display()))?;
+    let name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("runhaven-file");
+    let mut last_error = None;
+
+    for attempt in 0..16 {
+        let temp_path = parent.join(format!(".{name}.{}.{}.tmp", std::process::id(), attempt));
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        set_private_file_mode(&mut options);
+        match options.open(&temp_path) {
+            Ok(mut file) => {
+                restrict_file_permissions(&file)?;
+                if let Err(error) = file.write_all(contents).and_then(|_| file.sync_all()) {
+                    let _ = fs::remove_file(&temp_path);
+                    return Err(error).with_context(|| {
+                        format!("could not write private file: {}", temp_path.display())
+                    });
+                }
+                fs::rename(&temp_path, path).with_context(|| {
+                    format!(
+                        "could not replace private file {} with {}",
+                        path.display(),
+                        temp_path.display()
+                    )
+                })?;
+                return Ok(());
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                last_error = Some(error);
+            }
+            Err(error) => {
+                return Err(error).with_context(|| {
+                    format!(
+                        "could not create private temp file: {}",
+                        temp_path.display()
+                    )
+                });
+            }
+        }
+    }
+
+    let error = last_error.unwrap_or_else(|| std::io::Error::other("could not create temp file"));
+    Err(error).with_context(|| format!("could not create temp file for {}", path.display()))
+}
+
 fn home_dir() -> PathBuf {
     std::env::var_os("HOME")
         .map(PathBuf::from)
@@ -165,10 +222,17 @@ mod tests {
         ensure_private_dir(&dir).expect("private dir");
         drop(open_private_append(&append).expect("append file"));
         drop(open_private_read_write(&lock).expect("lock file"));
+        write_private_atomic(&cache.path().join("tui").join("zork1-save.ifzs"), b"IFZS")
+            .expect("atomic file");
 
         assert_eq!(mode(&dir), 0o700);
         assert_eq!(mode(&append), 0o600);
         assert_eq!(mode(lock.parent().expect("lock parent")), 0o700);
         assert_eq!(mode(&lock), 0o600);
+        assert_eq!(mode(&cache.path().join("tui")), 0o700);
+        assert_eq!(
+            mode(&cache.path().join("tui").join("zork1-save.ifzs")),
+            0o600
+        );
     }
 }

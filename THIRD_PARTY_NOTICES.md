@@ -76,3 +76,59 @@ limited to integration plumbing, not behavior of the copied logic:
   alpha values and currently uses it through the TUI theme layer.
 - `test_backend.rs` is copied as a test-only VT100 backend and updated for
   ratatui 0.30.2's `Backend::Error` associated type and RunHaven's module path.
+
+## ferrif-zmachine (MIT)
+
+RunHaven vendors and adapts the Z-machine engine from
+[moosepod/ferrif-zmachine](https://github.com/moosepod/ferrif-zmachine) for the
+hidden TUI Zork easter egg. The upstream source is licensed under the MIT
+license, copyright 2022 Matthew Christensen. The full license text is in
+[`licenses/ferrif-zmachine-MIT.txt`](licenses/ferrif-zmachine-MIT.txt).
+
+Source revision vendored:
+`e9a4149817ddfb11c5599dcd161cf3952924cc59`.
+
+### Vendored engine files
+
+The following files were copied into `src/runhaven/cli/tui/zork/zmachine/` from
+the upstream `src/` tree:
+
+| RunHaven file | Upstream source |
+| --- | --- |
+| `src/runhaven/cli/tui/zork/zmachine/instructions.rs` | `src/instructions.rs` |
+| `src/runhaven/cli/tui/zork/zmachine/interfaces.rs` | `src/interfaces.rs` |
+| `src/runhaven/cli/tui/zork/zmachine/story.rs` | `src/story.rs` |
+| `src/runhaven/cli/tui/zork/zmachine/vm.rs` | `src/vm.rs` |
+| `src/runhaven/cli/tui/zork/zmachine/quetzal/mod.rs` | `src/quetzal/mod.rs` |
+| `src/runhaven/cli/tui/zork/zmachine/quetzal/iff.rs` | `src/quetzal/iff.rs` |
+
+### Modifications
+
+The vendored files were modified by RunHaven on 2026-06-27:
+
+- Module paths were adapted to RunHaven's nested TUI module layout.
+- The original `rand 0.7` and `rand_chacha 0.2` dependency use was replaced
+  with a tiny local non-cryptographic RNG, avoiding new Cargo dependencies for
+  the easter egg.
+- Console debug/error prints were disabled so the engine cannot write outside
+  the full-screen TUI frame.
+- The copied engine is fenced inside `tui/zork/zmachine/` and used only by the
+  hidden TUI screen. RunHaven's wrapper validates the bundled story hash and the
+  fixed save-file format before interpreter startup or restore.
+
+## historicalsource/zork1 (MIT)
+
+RunHaven vendors the open-source Zork I source collection from
+[historicalsource/zork1](https://github.com/historicalsource/zork1) for the
+hidden TUI easter egg. The repository is licensed under the MIT license,
+copyright 2025 Microsoft. The full license text is in
+[`licenses/zork1-MIT.txt`](licenses/zork1-MIT.txt).
+
+Source revision vendored:
+`97b7b3d68c075dd9af7da499c3e9690ada3471fd`.
+
+RunHaven copies the full upstream repository contents under `third_party/zork1/`,
+including the ZIL source files and the compiled Z-machine story file
+`third_party/zork1/COMPILED/zork1.z3`. `historicalsource` is credited as the
+upstream host of the open-source collection. RunHaven does not claim ownership of
+the Zork name or any Infocom trademarks.

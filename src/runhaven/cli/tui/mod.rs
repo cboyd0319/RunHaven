@@ -41,6 +41,7 @@ mod test_backend;
 mod theme;
 mod tooltips;
 mod widgets;
+mod zork;
 
 use event_loop::{Tick, Ticker};
 use theme::{MotionMode, Palette, TuiSettings};
@@ -76,6 +77,7 @@ enum Screen {
     Diagnostics,
     Doctor,
     Guide,
+    Zork,
 }
 
 #[derive(Debug)]
@@ -100,7 +102,7 @@ struct App {
     pet_image_protocol: Option<codex::image_protocol::ImageProtocol>,
     pending_pet_draw: Option<pet::PetImageDraw>,
     pet_image_state: pet::PetImageRenderState,
-    lighthouse: bool,
+    zork: zork::ZorkState,
 }
 
 impl App {
@@ -142,7 +144,7 @@ impl App {
             pet_image_protocol,
             pending_pet_draw: None,
             pet_image_state: pet::PetImageRenderState::default(),
-            lighthouse: false,
+            zork: zork::ZorkState::new(),
         }
     }
 
@@ -234,6 +236,7 @@ impl App {
                 self.ticks,
             ),
             Screen::Guide => guide_views::render_guide(frame, self.settings, self.palette),
+            Screen::Zork => zork::render_zork(frame, &self.zork, self.settings, self.palette),
         }
     }
 
@@ -367,11 +370,7 @@ impl App {
     }
 
     fn home_tip(&self) -> &'static str {
-        if self.lighthouse {
-            "Lighthouse mode: keep the workspace bounded and the provider channel visible."
-        } else {
-            tooltips::tip_for_tick(self.ticks)
-        }
+        tooltips::tip_for_tick(self.ticks)
     }
 
     fn home_banner_context(&self) -> Vec<String> {

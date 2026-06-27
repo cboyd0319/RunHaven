@@ -140,6 +140,28 @@ provider action or short-lived run credential when that flow is explicitly
 implemented and verified. Broad host credential import, implicit environment
 passthrough, and host home or credential-folder mounts remain out of scope.
 
+## TUI Easter Egg Boundary
+
+The hidden TUI Zork I easter egg is local to the terminal UI. It does not call
+Apple `container`, spawn subprocesses, open network sockets, mount workspaces,
+read provider credentials, inspect the environment for secrets, or access the
+selected project. The game story is bundled at compile time from
+`third_party/zork1/COMPILED/zork1.z3`; RunHaven checks the exact byte length and
+SHA-256 before starting the in-process Z-machine.
+
+Zork `save` and `restore` use a single RunHaven-owned cache slot:
+`$RUNHAVEN_CACHE_HOME/tui/zork1-save.ifzs`, or
+`~/Library/Caches/runhaven/tui/zork1-save.ifzs` by default. The file is written
+with owner-only permissions through the same private-cache helpers as other
+RunHaven state. Restore never accepts a user-supplied path: RunHaven reads only
+that fixed slot, rejects symlinked or non-file save slots, oversized files,
+non-Quetzal data, unknown IFF chunks, malformed stack frames, duplicate required
+chunks, and incomplete save headers before passing bytes to the vendored parser.
+Parser and VM restore panics are contained as restore failures, and the active
+game VM is replaced only after a fresh VM successfully restores the save. The VM
+then validates release number, serial, and checksum against the bundled story
+before restoring.
+
 ## Extension And MCP Boundary
 
 RunHaven does not currently enable MCP servers, editor extensions, or plugin

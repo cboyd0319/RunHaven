@@ -360,30 +360,38 @@ Persona's information architecture, narrowed to RunHaven's surfaces.
   danger hue; auto-dismiss toasts for anything irreversible; any path where the
   secure choice is harder than the insecure one.
 
-## Easter Egg: The Safe Harbor
+## Easter Egg: Zork I
 
-One hidden, delightful moment that is fun to find and stays inside the restraint
-rules above. The name is the brief: RunHaven is a safe harbor where agents run
-without reaching your real machine. The easter egg makes that idea literal for a
-moment.
+The implemented signature easter egg is a hidden Home-only `~` screen that runs
+the original Zork I story in the TUI. It is nerdy, terminal-native, and more
+substantial than a decorative animation while staying outside RunHaven's runtime
+boundary.
 
-Recommended signature easter egg, the lighthouse:
+Implementation:
 
-- Trigger: a quiet, discoverable input on the idle dashboard or splash only,
-  either the Konami code or typing `haven` into the command palette.
-- Effect: a small half-block lighthouse rises at the edge of the idle screen and
-  its beam makes one slow sweep while the status line briefly reads a single calm
-  line such as "A safe harbor for your agents." Then the beam settles and stops.
-  It never loops.
-- Why it fits: it ties the brand name to the security metaphor (the light is the
-  boundary that keeps a run from drifting onto your machine), it stays calm, and
-  it rewards curiosity without getting in the way.
+- Trigger: press `~` from Home only. Other screens ignore the key, and esc
+  returns Home.
+- Engine: `src/runhaven/cli/tui/zork/zmachine/` vendors the MIT-licensed
+  `moosepod/ferrif-zmachine` engine with attribution.
+- Game data: `third_party/zork1/` vendors the MIT-licensed
+  `historicalsource/zork1` collection, including the compiled Z-machine story.
+- Save/restore: Zork `save` and `restore` use one private RunHaven cache slot,
+  not arbitrary user-selected files.
+- Attribution: `THIRD_PARTY_NOTICES.md`,
+  `licenses/ferrif-zmachine-MIT.txt`, and `licenses/zork1-MIT.txt` record the
+  upstream licenses and source revisions.
 
-Implemented Phase 5 version: the safe-harbor idea is intentionally restrained as
-a Home-only footer mode toggled by `~`. It does not run on confirmation,
-destructive, doctor, diagnostics, or history screens; it does not override
-reduced-motion or line-mode behavior; and it keeps the message focused on a
-bounded workspace and visible provider channel.
+Security boundary:
+
+- No new Cargo dependencies.
+- No Apple `container` calls, subprocesses, network sockets, workspace reads,
+  provider credential reads, or arbitrary file paths.
+- The bundled story is checked by exact byte length and SHA-256 before VM start.
+- Restore reads only the fixed RunHaven cache file and rejects oversized,
+  non-Quetzal, unknown-chunk, duplicate-chunk, truncated-stack, or incomplete
+  save data before the vendored parser sees it.
+- The VM restore path still checks story release, serial, and checksum before
+  accepting a save.
 
 Other ideas worth keeping in the bank:
 
@@ -412,10 +420,12 @@ Guardrails (firm; an easter egg that breaks one of these is a bug):
   or disappears, and an env switch (for example `RUNHAVEN_NO_EASTER_EGGS`) turns
   it off entirely.
 - Deterministic and isolated: the trigger and any animation run off the injected
-  clock so the snapshot harness can render the egg frame on demand and exclude it
-  from operational snapshots. It pulls no new dependency and cannot touch a run.
-- Cheap and findable: a few hundred lines at most, recorded in a changelog or a
-  hidden help entry so the community can discover it without reverse engineering.
+  clock so the snapshot harness can render the egg frame on demand. It pulls no
+  new dependency and cannot touch a run.
+- Cheap and findable: RunHaven-owned glue stays small and dependency-free;
+  vendored material must be attributed, fenced to the easter-egg module, and
+  recorded in product docs so the community can discover it without reverse
+  engineering.
 
 ## Accessibility
 

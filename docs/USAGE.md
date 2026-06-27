@@ -61,6 +61,12 @@ stale, in control-transition, or likely waiting for interactive input.
 Cubby, the RunHaven pet, is visible by default. Press `p` to hide or show it for
 the current session. Set `RUNHAVEN_TUI_PET=0` to start with the pet hidden.
 
+The Home screen also has a hidden, attributed Zork I easter egg. Press `~` from
+Home to open it, type game commands normally, and press esc to return Home. The
+game runs from bundled MIT-licensed story bytes with no network, subprocess, or
+workspace access. Zork `save` and `restore` use one private RunHaven cache slot;
+RunHaven never opens an arbitrary user-selected save file.
+
 On terminals with Kitty graphics, Sixel, or iTerm2 3.6+ support, Cubby can use a
 high-resolution image overlay; otherwise it falls back to a terminal-safe
 half-block sprite. `NO_COLOR` disables color, `RUNHAVEN_TUI_REDUCED_MOTION=1`

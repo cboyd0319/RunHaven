@@ -168,6 +168,20 @@ evidence and a recorded reason.
   live in `docs/plans/tui-build-plan.md`, `docs/plans/tui-architecture.md`, and
   `docs/plans/ratatui-brand-graphics.md`; keep `current-state.md` to current
   phase status and durable decisions only.
+- The TUI's hidden Zork I easter egg is TUI-local and attributed. It vendors the
+  MIT-licensed `historicalsource/zork1` collection under `third_party/zork1/`
+  and an adapted MIT-licensed Ferrif Z-machine under
+  `src/runhaven/cli/tui/zork/zmachine/`; attribution lives in
+  `THIRD_PARTY_NOTICES.md` and `licenses/`. It adds no Cargo dependencies,
+  spawns no subprocesses, opens no sockets, reads no workspace or credential
+  paths, and calls no Apple `container` or provider/runtime code. The story is
+  bundled with `include_bytes!` and checked by exact length and SHA-256 before
+  VM start. Zork save/restore uses one fixed private RunHaven cache slot and
+  rejects symlinked, malformed, oversized, unknown-chunk, duplicated, or
+  truncated Quetzal saves before handing bytes to the vendored parser. Parser
+  and VM restore panics are contained as restore failures; the active game VM is
+  replaced only after a fresh VM restores successfully and validates release,
+  serial, and checksum against the bundled story.
 - `src/runhaven/` ownership is locked before TUI Phase 4. Shared host readiness
   lives in `doctor.rs`, secret-free diagnostics data in `diagnostics.rs`, auth
   posture metadata in `provider/auth_profiles.rs`, and run history behind the
@@ -178,6 +192,21 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-27: TUI Zork easter egg. Added a hidden Home-only `~` screen that runs
+  the bundled MIT-licensed Zork I story through an attributed Ferrif-derived
+  Z-machine. Vendored the full `historicalsource/zork1` collection under
+  `third_party/zork1/`, added Ferrif/Zork license files and notice entries,
+  replaced the prior footer easter egg, and added a Zork VT100 snapshot plus
+  focused tests for boot, Home-only routing, `q` as game input, exact Quetzal
+  save-file shape (`FORM`/`IFZS`, `IFhd`, memory, `Stks`), restore, malformed
+  or symlinked save rejection, and private save-file permissions. The easter egg
+  adds no new Cargo dependencies and is documented as TUI-local with no
+  subprocess, network, workspace, credential, container, or arbitrary save-file
+  access. Verified: `cargo fmt --check`, `cargo test --locked zork --quiet` (79
+  filtered tests), `cargo test --locked tui --quiet`, full locked cargo tests,
+  locked clippy with warnings denied, pin check, JSON validation, security grep,
+  typography scan, `cargo build --locked --quiet`, and `git diff --check`.
+  Branch: `terminal-ui-build-plan`.
 - 2026-06-27: TUI design-review polish. Kept Cubby as the single animated
   hero/mascot/pet, capped the Home mascot to about half of the previous display
   height, restored versioned identity in the Home banner, and replaced the old
@@ -199,7 +228,7 @@ evidence and a recorded reason.
   stale/done containers, stale/repair markers, and log snapshots that appear to
   be waiting for input or device-code interaction. Added line-mode render
   coverage for guide/history/diagnostics/doctor surfaces, a guide snapshot, and
-  a restrained Home-only lighthouse footer mode. Updated README, USAGE,
+  the former Home-only footer easter egg. Updated README, USAGE,
   CAPABILITIES, ROADMAP, RELEASE_GAP_ANALYSIS, the TUI build plan, the TUI
   architecture guide, the brand graphics plan, `feature_list.json`, `init.sh`,
   and this state file. Verified: `./init.sh` with its new explicit
