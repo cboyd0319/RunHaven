@@ -98,9 +98,10 @@ runhaven
 The TUI is a four-step launch wizard, first-run guide, run dashboard,
 history/diff viewer, diagnostics surface, doctor view, and hidden attributed
 Zork I easter egg over the same Rust backend. During the Codex-vendored rebuild,
-the current bare `runhaven` screen is a read-only launch preview. It does not
-replace the CLI: subcommands, pipes, and redirected invocations still use the
-CLI directly.
+the current bare `runhaven` screen is a read-only launch picker and plan review.
+It shows the exact command and safety facts, but it does not launch yet. It does
+not replace the CLI: subcommands, pipes, and redirected invocations still use
+the CLI directly.
 
 Use the smallest project directory the agent needs. RunHaven mounts that
 directory at `/workspace`, not your whole home directory. See

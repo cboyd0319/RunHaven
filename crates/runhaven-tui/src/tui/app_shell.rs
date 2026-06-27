@@ -417,6 +417,7 @@ mod tests {
             state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
             ShellAction::Continue
         );
+        assert!(state.launch_wizard.is_reviewing());
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE)),
             ShellAction::Quit
@@ -432,6 +433,52 @@ mod tests {
             state.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
             ShellAction::Quit
         );
+    }
+
+    #[test]
+    fn shell_review_step_is_read_only_and_can_go_back() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        assert!(state.launch_wizard.is_reviewing());
+
+        let output = render_to_text(&mut state, 120, 48);
+        assert!(output.contains("Step 3/4: Review plan"));
+        assert!(output.contains("Check what RunHaven will share before launch."));
+        assert!(output.contains("Exact command"));
+        assert!(output.contains("container run"));
+        assert!(output.contains("Host home"));
+        assert!(output.contains("not mounted"));
+        assert!(output.contains("Credentials"));
+        assert!(output.contains("not mounted by default"));
+        assert!(output.contains("Launch confirmation comes next."));
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        assert!(!state.launch_wizard.is_reviewing());
+    }
+
+    #[test]
+    fn shell_review_escape_returns_to_picker_instead_of_quitting() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        assert!(state.launch_wizard.is_reviewing());
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        assert!(!state.launch_wizard.is_reviewing());
     }
 
     #[test]
@@ -453,6 +500,53 @@ mod tests {
         assert!(output.contains("host home folder"));
         assert!(output.contains("Exact command before launch"));
         assert!(output.contains("container run"));
+    }
+
+    #[test]
+    fn shell_render_review_keeps_command_and_boundary_visible_on_80x24() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        let output = render_to_text(&mut state, 80, 24);
+
+        assert!(output.contains("Step 3/4: Review plan"));
+        assert!(output.contains("Boundary"));
+        assert!(output.contains("/workspace only"));
+        assert!(output.contains("Host home"));
+        assert!(output.contains("Credentials"));
+        assert!(output.contains("Exact command"));
+        assert!(output.contains("container run"));
+    }
+
+    #[test]
+    fn shell_review_render_clears_previous_picker_buffer() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+        let mut terminal = Terminal::new(TestBackend::new(100, 32)).expect("test terminal");
+
+        terminal
+            .draw(|frame| render(frame, &mut state))
+            .expect("draw");
+        assert!(
+            buffer_text(&terminal).contains("Plan Preview"),
+            "test setup should render the picker first"
+        );
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        terminal
+            .draw(|frame| render(frame, &mut state))
+            .expect("draw");
+        let output = buffer_text(&terminal);
+
+        assert!(output.contains("Step 3/4: Review plan"));
+        assert!(output.contains("Exact command"));
+        assert!(!output.contains("Plan Preview"));
     }
 
     #[test]
@@ -503,6 +597,21 @@ mod tests {
             .buffer()
             .content()
             .chunks(width as usize)
+            .map(|row| {
+                row.iter()
+                    .map(ratatui::buffer::Cell::symbol)
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn buffer_text(terminal: &Terminal<TestBackend>) -> String {
+        terminal
+            .backend()
+            .buffer()
+            .content()
+            .chunks(terminal.size().expect("terminal size").width as usize)
             .map(|row| {
                 row.iter()
                     .map(ratatui::buffer::Cell::symbol)

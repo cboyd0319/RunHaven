@@ -5,11 +5,13 @@ use std::sync::atomic::Ordering;
 
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
+use crossterm::event::KeyModifiers;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
+use ratatui::widgets::Clear;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Widget;
 use ratatui::widgets::Wrap;
@@ -35,6 +37,7 @@ use crate::tui::bottom_pane::SelectionRowDisplay;
 use crate::tui::bottom_pane::SelectionViewParams;
 use crate::tui::bottom_pane::SideContentWidth;
 use crate::tui::bottom_pane::ViewCompletion;
+use crate::tui::bottom_pane::render_menu_surface;
 
 pub(crate) struct AgentLaunchPreview {
     pub(crate) agent: AgentCatalogItemData,
@@ -42,10 +45,10 @@ pub(crate) struct AgentLaunchPreview {
 }
 
 pub(crate) struct LaunchWizardView {
-    #[cfg(test)]
     decisions: Arc<Vec<AgentDecisionVm>>,
     selected_idx: Arc<AtomicUsize>,
     picker: ListSelectionView,
+    screen: LaunchWizardScreen,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,6 +60,12 @@ struct AgentDecisionVm {
     auth_label: String,
     network_label: String,
     boundary_label: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LaunchWizardScreen {
+    ChooseAgent,
+    ReviewPlan,
 }
 
 impl LaunchWizardView {
@@ -85,22 +94,44 @@ impl LaunchWizardView {
         );
 
         Self {
-            #[cfg(test)]
             decisions,
             selected_idx,
             picker,
+            screen: LaunchWizardScreen::ChooseAgent,
         }
     }
 
     pub(crate) fn handle_key(&mut self, key: KeyEvent) {
+        match self.screen {
+            LaunchWizardScreen::ChooseAgent => self.handle_picker_key(key),
+            LaunchWizardScreen::ReviewPlan => self.handle_review_key(key),
+        }
+    }
+
+    fn handle_picker_key(&mut self, key: KeyEvent) {
         self.picker.handle_key_event(key);
         if let Some(selected) = self.picker.selected_index() {
             self.selected_idx.store(selected, Ordering::Relaxed);
         }
+        if let Some(selected) = self.picker.take_last_selected_index() {
+            self.selected_idx.store(selected, Ordering::Relaxed);
+            self.screen = LaunchWizardScreen::ReviewPlan;
+        }
+    }
+
+    fn handle_review_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Esc | KeyCode::Backspace => self.screen = LaunchWizardScreen::ChooseAgent,
+            KeyCode::Char('b') if key.modifiers == KeyModifiers::NONE => {
+                self.screen = LaunchWizardScreen::ChooseAgent;
+            }
+            _ => {}
+        }
     }
 
     pub(crate) fn is_cancelled(&self) -> bool {
-        self.picker.completion() == Some(ViewCompletion::Cancelled)
+        self.screen == LaunchWizardScreen::ChooseAgent
+            && self.picker.completion() == Some(ViewCompletion::Cancelled)
     }
 
     #[cfg(test)]
@@ -110,7 +141,7 @@ impl LaunchWizardView {
 
     #[cfg(test)]
     pub(crate) fn selected_agent_name(&self) -> Option<&str> {
-        self.selected_decision()
+        selected_decision(&self.decisions, &self.selected_idx)
             .map(|decision| decision.agent.name.as_str())
     }
 
@@ -130,21 +161,32 @@ impl LaunchWizardView {
     }
 
     #[cfg(test)]
-    fn selected_decision(&self) -> Option<&AgentDecisionVm> {
-        let selected = self.selected_idx.load(Ordering::Relaxed);
-        self.decisions
-            .get(selected)
-            .or_else(|| self.decisions.first())
+    pub(crate) fn is_reviewing(&self) -> bool {
+        self.screen == LaunchWizardScreen::ReviewPlan
     }
 }
 
 impl Renderable for LaunchWizardView {
     fn render(&self, area: Rect, buf: &mut Buffer) {
-        self.picker.render(area, buf);
+        match self.screen {
+            LaunchWizardScreen::ChooseAgent => self.picker.render(area, buf),
+            LaunchWizardScreen::ReviewPlan => ReviewPlan {
+                decisions: Arc::clone(&self.decisions),
+                selected_idx: Arc::clone(&self.selected_idx),
+            }
+            .render(area, buf),
+        }
     }
 
     fn desired_height(&self, width: u16) -> u16 {
-        self.picker.desired_height(width)
+        match self.screen {
+            LaunchWizardScreen::ChooseAgent => self.picker.desired_height(width),
+            LaunchWizardScreen::ReviewPlan => ReviewPlan {
+                decisions: Arc::clone(&self.decisions),
+                selected_idx: Arc::clone(&self.selected_idx),
+            }
+            .desired_height(width),
+        }
     }
 }
 
@@ -265,7 +307,7 @@ fn selection_params(
         title: None,
         subtitle: None,
         footer_note: Some(Line::from(
-            "Review shows the exact command before launch. Enter does not launch.",
+            "Enter reviews the plan. Launch is still disabled in this preview.",
         )),
         footer_hint: Some(footer_hint_line()),
         items,
@@ -293,6 +335,8 @@ fn footer_hint_line() -> Line<'static> {
         Span::raw("/"),
         key_hint::plain(KeyCode::Down).into(),
         Span::raw(" or j/k to choose. "),
+        key_hint::plain(KeyCode::Enter).into(),
+        Span::raw(" reviews. "),
         key_hint::plain(KeyCode::Esc).into(),
         Span::raw(" or q quits."),
     ])
@@ -365,6 +409,93 @@ impl Renderable for SafetyHeader {
 }
 
 #[derive(Clone)]
+struct ReviewPlan {
+    decisions: Arc<Vec<AgentDecisionVm>>,
+    selected_idx: Arc<AtomicUsize>,
+}
+
+impl ReviewPlan {
+    fn selected(&self) -> Option<&AgentDecisionVm> {
+        selected_decision(&self.decisions, &self.selected_idx)
+    }
+
+    fn lines(&self) -> Vec<Line<'static>> {
+        let Some(decision) = self.selected() else {
+            return vec![
+                Line::from(vec![
+                    Span::styled("RunHaven", selected_row_style()),
+                    Span::raw(format!(" v{}  ", env!("CARGO_PKG_VERSION"))),
+                    Span::styled("Step 3/4: Review plan", boundary_style()),
+                ]),
+                Line::from("No agent plan is selected."),
+                review_footer_line(),
+            ];
+        };
+
+        let mut lines = vec![
+            Line::from(vec![
+                Span::styled("RunHaven", selected_row_style()),
+                Span::raw(format!(" v{}  ", env!("CARGO_PKG_VERSION"))),
+                Span::styled("Step 3/4: Review plan", boundary_style()),
+            ]),
+            Line::from("Check what RunHaven will share before launch."),
+            Line::from(""),
+            label_value("Agent", decision.agent.name.clone(), accent_style()),
+            label_value(
+                "Status",
+                decision.status_label.clone(),
+                decision.status_style(),
+            ),
+            label_value(
+                "Auth scope",
+                decision.auth_scope_label.clone(),
+                safe_style(),
+            ),
+            label_value(
+                "Network",
+                decision.network_label.clone(),
+                decision.network_style(),
+            ),
+            label_value(
+                "Boundary",
+                decision.boundary_label.clone(),
+                boundary_style(),
+            ),
+            label_value("Host home", "not mounted", safe_style()),
+            label_value("Credentials", "not mounted by default", safe_style()),
+        ];
+
+        match &decision.plan {
+            Ok(plan) => append_review_plan_lines(&mut lines, plan),
+            Err(message) => {
+                lines.push(Line::from(""));
+                lines.push(Line::from(vec![Span::styled(
+                    "Plan could not be built.",
+                    danger_style(),
+                )]));
+                lines.push(Line::from(message.clone()));
+            }
+        }
+
+        lines.push(Line::from(""));
+        lines.push(review_footer_line());
+        lines
+    }
+}
+
+impl Renderable for ReviewPlan {
+    fn render(&self, area: Rect, buf: &mut Buffer) {
+        Clear.render(area, buf);
+        let content = render_menu_surface(area, buf);
+        paragraph(self.lines()).render(content, buf);
+    }
+
+    fn desired_height(&self, width: u16) -> u16 {
+        paragraph(self.lines()).line_count(width.saturating_sub(4).max(1)) as u16 + 2
+    }
+}
+
+#[derive(Clone)]
 struct PlanPreview {
     decisions: Arc<Vec<AgentDecisionVm>>,
     selected_idx: Arc<AtomicUsize>,
@@ -433,18 +564,45 @@ impl Renderable for PlanPreview {
     }
 }
 
-fn append_plan_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData) {
+fn append_review_plan_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData) {
+    lines.push(label_value(
+        "Workspace",
+        plan.workspace.clone(),
+        boundary_style(),
+    ));
+    lines.push(label_value(
+        "Mount",
+        plan.boundary.mounted_workspace.clone(),
+        boundary_style(),
+    ));
+    lines.push(label_value(
+        "State",
+        plan.state_volume.clone(),
+        safe_style(),
+    ));
+    lines.push(label_value(
+        "Image",
+        plan.image.clone(),
+        muted_but_readable_style(),
+    ));
+    lines.push(label_value(
+        "Worktree",
+        worktree_label(plan),
+        muted_but_readable_style(),
+    ));
     lines.push(Line::from(""));
     lines.push(Line::from(vec![Span::styled(
-        "Not shared",
+        "Exact command",
         selected_row_style(),
     )]));
-    for item in &plan.boundary.not_shared {
-        lines.push(Line::from(vec![
-            Span::raw("- "),
-            Span::styled(item.clone(), safe_style()),
-        ]));
-    }
+    lines.push(Line::from(plan.command.clone()));
+    append_not_shared_lines(lines, plan);
+    append_provider_host_lines(lines, plan, 6);
+    append_safety_note_lines(lines, plan, 4);
+}
+
+fn append_plan_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData) {
+    append_not_shared_lines(lines, plan);
     lines.push(Line::from(""));
     lines.push(label_value(
         "Mount",
@@ -467,33 +625,8 @@ fn append_plan_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData) {
         muted_but_readable_style(),
     ));
 
-    if !plan.network.provider_allowed_hosts.is_empty() {
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![Span::styled(
-            "Provider hosts",
-            selected_row_style(),
-        )]));
-        for host in plan.network.provider_allowed_hosts.iter().take(4) {
-            lines.push(Line::from(format!("- {host}")));
-        }
-        if plan.network.provider_allowed_hosts.len() > 4 {
-            lines.push(Line::from(format!(
-                "- {} more",
-                plan.network.provider_allowed_hosts.len() - 4
-            )));
-        }
-    }
-
-    if !plan.safety_notes.is_empty() {
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![Span::styled(
-            "Safety notes",
-            warning_style(),
-        )]));
-        for note in plan.safety_notes.iter().take(3) {
-            lines.push(Line::from(format!("- {note}")));
-        }
-    }
+    append_provider_host_lines(lines, plan, 4);
+    append_safety_note_lines(lines, plan, 3);
 
     lines.push(Line::from(""));
     lines.push(Line::from(vec![Span::styled(
@@ -501,6 +634,54 @@ fn append_plan_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData) {
         selected_row_style(),
     )]));
     lines.push(Line::from(plan.command.clone()));
+}
+
+fn append_not_shared_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData) {
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![Span::styled(
+        "Not shared",
+        selected_row_style(),
+    )]));
+    for item in &plan.boundary.not_shared {
+        lines.push(Line::from(vec![
+            Span::raw("- "),
+            Span::styled(item.clone(), safe_style()),
+        ]));
+    }
+}
+
+fn append_provider_host_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData, limit: usize) {
+    if plan.network.provider_allowed_hosts.is_empty() {
+        return;
+    }
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![Span::styled(
+        "Provider hosts",
+        selected_row_style(),
+    )]));
+    for host in plan.network.provider_allowed_hosts.iter().take(limit) {
+        lines.push(Line::from(format!("- {host}")));
+    }
+    if plan.network.provider_allowed_hosts.len() > limit {
+        lines.push(Line::from(format!(
+            "- {} more",
+            plan.network.provider_allowed_hosts.len() - limit
+        )));
+    }
+}
+
+fn append_safety_note_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData, limit: usize) {
+    if plan.safety_notes.is_empty() {
+        return;
+    }
+    lines.push(Line::from(""));
+    lines.push(Line::from(vec![Span::styled(
+        "Safety notes",
+        warning_style(),
+    )]));
+    for note in plan.safety_notes.iter().take(limit) {
+        lines.push(Line::from(format!("- {note}")));
+    }
 }
 
 fn selected_decision<'a>(
@@ -522,6 +703,15 @@ fn paragraph(lines: Vec<Line<'static>>) -> Paragraph<'static> {
     Paragraph::new(lines).wrap(Wrap { trim: true })
 }
 
+fn review_footer_line() -> Line<'static> {
+    Line::from(vec![
+        key_hint::plain(KeyCode::Char('b')).into(),
+        Span::raw(" or "),
+        key_hint::plain(KeyCode::Esc).into(),
+        Span::raw(" goes back. q quits. Launch confirmation comes next."),
+    ])
+}
+
 fn network_label(plan: &LaunchPlanData) -> String {
     network_mode_label(&plan.network.mode).to_string()
 }
@@ -540,4 +730,125 @@ fn worktree_label(plan: &LaunchPlanData) -> String {
         .as_ref()
         .map(|worktree| format!("on, branch {}", worktree.branch))
         .unwrap_or_else(|| "off".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use runhaven_core::ui_contracts::LaunchBoundaryData;
+    use runhaven_core::ui_contracts::LaunchNetworkData;
+
+    fn ready_preview(name: &str) -> AgentLaunchPreview {
+        AgentLaunchPreview {
+            agent: agent(name),
+            plan: Ok(plan(name)),
+        }
+    }
+
+    fn blocked_preview(name: &str) -> AgentLaunchPreview {
+        AgentLaunchPreview {
+            agent: agent(name),
+            plan: Err("workspace is blocked".to_string()),
+        }
+    }
+
+    fn agent(name: &str) -> AgentCatalogItemData {
+        AgentCatalogItemData {
+            name: name.to_string(),
+            description: format!("{name} description"),
+            image: format!("runhaven/{name}:0.1.0"),
+            sign_in: "runhaven login".to_string(),
+            broker: "no".to_string(),
+            default_network: "provider".to_string(),
+            provider_host_count: 1,
+        }
+    }
+
+    fn plan(name: &str) -> LaunchPlanData {
+        LaunchPlanData {
+            profile_name: name.to_string(),
+            workspace: "/tmp/project".to_string(),
+            workspace_scope: "current".to_string(),
+            workspace_scope_note: None,
+            auth_scope: "agent".to_string(),
+            session: "none".to_string(),
+            state_volume: format!("runhaven-{name}-state"),
+            container_name: format!("runhaven-{name}"),
+            image: format!("runhaven/{name}:0.1.0"),
+            worktree: None,
+            network: LaunchNetworkData {
+                mode: "provider".to_string(),
+                name: Some("runhaven-provider".to_string()),
+                summary: "provider allowlist".to_string(),
+                provider_allowed_hosts: vec!["example.com".to_string()],
+                api_key_broker_env: None,
+            },
+            boundary: LaunchBoundaryData {
+                mounted_workspace: "/tmp/project -> /workspace".to_string(),
+                mounted_state_volume: format!("runhaven-{name}-state -> /home/agent"),
+                not_shared: vec![
+                    "host home folder".to_string(),
+                    "raw SSH keys".to_string(),
+                    "browser profiles".to_string(),
+                ],
+            },
+            preflight_commands: Vec::new(),
+            command: format!("container run --name runhaven-{name} runhaven/{name}:0.1.0"),
+            safety_notes: Vec::new(),
+            confirm_required: false,
+        }
+    }
+
+    fn key(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    #[test]
+    fn enter_on_ready_plan_opens_review() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![ready_preview("codex")],
+            None,
+        );
+
+        view.handle_key(key(KeyCode::Enter));
+
+        assert!(view.is_reviewing());
+        assert!(!view.is_cancelled());
+        assert_eq!(view.selected_agent_name(), Some("codex"));
+    }
+
+    #[test]
+    fn enter_on_blocked_plan_stays_in_picker() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![blocked_preview("blocked")],
+            None,
+        );
+
+        view.handle_key(key(KeyCode::Enter));
+
+        assert!(!view.is_reviewing());
+        assert!(!view.is_cancelled());
+        assert_eq!(view.selected_agent_name(), Some("blocked"));
+    }
+
+    #[test]
+    fn back_from_review_keeps_selected_agent() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![ready_preview("codex"), ready_preview("claude")],
+            None,
+        );
+        view.handle_key(key(KeyCode::Down));
+        view.handle_key(key(KeyCode::Enter));
+
+        assert!(view.is_reviewing());
+        assert_eq!(view.selected_agent_name(), Some("claude"));
+
+        view.handle_key(key(KeyCode::Esc));
+
+        assert!(!view.is_reviewing());
+        assert_eq!(view.selected_agent_name(), Some("claude"));
+    }
 }

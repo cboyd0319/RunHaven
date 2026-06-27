@@ -127,6 +127,7 @@ pub(crate) mod bottom_pane {
     pub(crate) use list_selection_view::SelectionRowDisplay;
     pub(crate) use list_selection_view::SelectionViewParams;
     pub(crate) use list_selection_view::SideContentWidth;
+    pub(crate) use selection_popup_common::render_menu_surface;
 }
 
 #[allow(dead_code)]

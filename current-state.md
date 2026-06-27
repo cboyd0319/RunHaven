@@ -177,12 +177,23 @@ Codex-vendored. RunHaven-owned code maps `AgentCatalogData` and
 keeps boundary, host home, credentials, auth scope, network mode, and exact
 command visibility near the top. Enter still does not launch.
 
+TUI launch-review follow-up: Enter on a ready agent now opens a read-only review
+step rendered through the Codex menu-surface style. The review shows the
+selected agent, auth scope, network posture, workspace mount, state volume,
+non-shared host data, provider hosts, safety notes, and exact `container run`
+command. `b`, backspace, or Esc returns to the picker; `q` exits from either
+screen. Blocked plans cannot open review. Launch and preflight execution remain
+disabled in the TUI.
+
 Verified:
 
 - `cargo fmt --check`
+- `cargo test -p runhaven-tui --locked launch_wizard -- --nocapture`
+- `cargo test -p runhaven-tui --locked app_shell -- --nocapture`
+- `cargo test -p runhaven-tui --locked --quiet`
+- `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`
 - `cargo test -p runhaven --locked bare_non_tty_prints_cli_help --quiet`
 - `cargo test -p runhaven-cli --locked --quiet`
-- `cargo test -p runhaven-tui --locked --quiet`
 - `cargo tree -p runhaven-cli --locked` with no `runhaven-tui`, `ratatui`,
   `crossterm`, `tokio`, `reqwest`, or `image` dependency matches
 - `cargo test --workspace --locked --quiet`
@@ -198,6 +209,8 @@ Verified:
 - active stale-reference scans
 - `git diff --check`
 - `./init.sh`
+- `cargo run --locked --bin runhaven` in a PTY, pressed Enter to open review,
+  pressed `b` to return to the picker, then pressed `q` to quit.
 
 Latest TUI smoke verification:
 
@@ -227,7 +240,7 @@ Continue TUI integration from the Codex-vendored source baseline. Keep using
 source-first Codex modules for app shell, bottom pane, status line, native pet,
 resume/session, keymap, tooltips, and terminal-title behavior before writing
 custom RunHaven TUI code. The next practical slice is to adapt more of the
-Codex shell around the current launch picker: status/footer behavior, terminal
-title updates, and the review step that shows the exact command before a later
-confirm screen. Feed RunHaven-specific surfaces from the shared
-`RunHavenComponentPayload` contracts instead of ad hoc screen structs.
+Codex shell around the current launch picker and review screen: status/footer
+behavior, terminal title updates, and the later confirm screen. Feed
+RunHaven-specific surfaces from the shared `RunHavenComponentPayload` contracts
+instead of ad hoc screen structs.

@@ -105,7 +105,7 @@ Target ownership for the rebuilt source remains:
 | --- | --- |
 | `mod.rs` | Temporary RunHaven entrypoint during vendor integration; replace staged contracts with adapted Codex app-shell pieces as they come online. |
 | `app_shell.rs` | Temporary shell host for the Codex `ListSelectionView` launch picker, image-smoke bridge, and terminal restore loop; remove or shrink when the full Codex app shell is adapted. |
-| `runhaven/launch_wizard.rs` | RunHaven-owned view model and security copy that maps `AgentCatalogData` and `LaunchPlanData` into Codex picker rows, safety header, and launch-plan preview. |
+| `runhaven/launch_wizard.rs` | RunHaven-owned view model and security copy that maps `AgentCatalogData` and `LaunchPlanData` into Codex picker rows, safety header, launch-plan preview, and read-only review step. |
 | `bottom_pane/list_selection_view.rs` and helpers | Codex-vendored selection surface now compiled through a temporary RunHaven facade; use it before adding custom list, picker, tab, search, side-panel, or footer behavior. |
 | `ui_contracts.rs` | Presentation-neutral RunHaven payloads shared by TUI widgets and any future desktop renderer. |
 | `input.rs` | Keyboard navigation and action routing. Keep key behavior testable here instead of scattering it through draw code. |
