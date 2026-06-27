@@ -17,7 +17,7 @@ use ratatui::text::Line;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Widget;
 
-use crate::render::renderable::Renderable;
+use crate::tui::render::renderable::Renderable;
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct PetPickerPreviewState {

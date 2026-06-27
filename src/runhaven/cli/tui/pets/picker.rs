@@ -10,12 +10,12 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use crate::app_event::AppEvent;
-use crate::bottom_pane::SelectionAction;
-use crate::bottom_pane::SelectionItem;
-use crate::bottom_pane::SelectionViewParams;
-use crate::bottom_pane::SideContentWidth;
-use crate::bottom_pane::popup_consts::standard_popup_hint_line;
+use crate::tui::app_event::AppEvent;
+use crate::tui::bottom_pane::SelectionAction;
+use crate::tui::bottom_pane::SelectionItem;
+use crate::tui::bottom_pane::SelectionViewParams;
+use crate::tui::bottom_pane::SideContentWidth;
+use crate::tui::bottom_pane::popup_consts::standard_popup_hint_line;
 
 use super::DEFAULT_PET_ID;
 use super::DISABLED_PET_ID;
@@ -64,8 +64,8 @@ pub(crate) fn build_pet_picker_params(
         .iter()
         .map(|entry| entry.selector.clone())
         .collect::<Vec<_>>();
-    let on_selection_changed: crate::bottom_pane::OnSelectionChangedCallback = Some(Box::new(
-        move |idx: usize, tx: &crate::app_event_sender::AppEventSender| {
+    let on_selection_changed: crate::tui::bottom_pane::OnSelectionChangedCallback = Some(Box::new(
+        move |idx: usize, tx: &crate::tui::app_event_sender::AppEventSender| {
             if let Some(pet_id) = preview_pet_ids.get(idx) {
                 tx.send(AppEvent::PetPreviewRequested {
                     pet_id: pet_id.clone(),

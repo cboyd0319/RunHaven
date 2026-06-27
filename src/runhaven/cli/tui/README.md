@@ -40,11 +40,15 @@ Local integration exceptions:
   terminal-detection crate because the native pet image protocol depends on the
   same iTerm2, Kitty, Sixel, tmux, and Zellij decisions as Codex.
 - `pets/picker.rs` and `pets/preview.rs` remain vendored but are not compiled
-  yet. They require the Codex bottom-pane adapter, which is a later integration
-  slice.
+  against the full Codex bottom-pane view yet. They compile against the staged
+  `bottom_pane` selection contract in `mod.rs` until the full bottom-pane view
+  is adapted.
 - `pets/model.rs` formats the SHA-256 cache key bytes explicitly because
   RunHaven is pinned to `sha2` 0.11. The produced cache key string stays the
   same shape as Codex.
+- `app_event`, `app_event_sender`, `bottom_pane`, and `render` in `mod.rs` are
+  staged contracts for compiled vendored surfaces. Replace them with full Codex
+  adapters as those surfaces come online.
 
 Known integration gap:
 

@@ -216,6 +216,28 @@ Why leaving and adapting is better than removing:
   SHA-256 lower-hex formatting in `pets/model.rs` for RunHaven's pinned
   `sha2` 0.11 dependency.
 
+### Codex Pet Picker Selection Contract
+
+Decision: compile and test `pets/picker.rs` and `pets/preview.rs` against a
+staged bottom-pane selection contract before adapting the full Codex bottom
+pane.
+
+Why leaving and adapting is better than removing:
+
+- The picker is the native `/pets` path that discovers built-in, custom, and
+  legacy avatar packages.
+- The full Codex bottom pane currently imports app-server, protocol, skills,
+  plugin, file-search, and chat-composer surfaces that are not needed to verify
+  pet discovery.
+- The staged contract in `src/runhaven/cli/tui/mod.rs` mirrors the Codex data
+  types the picker returns: `SelectionItem`, `SelectionViewParams`, callbacks,
+  side content sizing, event sender, and the standard popup hint.
+- `pets/picker.rs` and `pets/preview.rs` stay compiled and tested. They are not
+  removed or rewritten.
+- The next bottom-pane pass should replace the staged contract with the full
+  adapted Codex bottom-pane view once the wider app-shell dependencies are
+  ready.
+
 ### Earlier RunHaven Zork Implementation
 
 Decision: leave `src/runhaven/cli/tui/zork/` absent from the raw Codex vendor
@@ -252,6 +274,8 @@ The first milestone is a clean vendor baseline:
 - The lower native pet runtime, terminal protocol detection, frame extraction,
   Sixel encoder, Kitty image writers, ambient draw request model, and Tokio
   frame scheduler now compile and pass their tests.
+- The native pet picker and preview now compile and pass their tests against a
+  staged bottom-pane selection contract.
 - The copied Codex source still has crate-root assumptions from the upstream
   `codex-tui` crate. The next integration work is to adapt those assumptions
   into RunHaven product adapters without culling useful Codex surfaces early.
