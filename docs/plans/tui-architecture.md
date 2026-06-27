@@ -208,14 +208,12 @@ The brand graphics, startup chrome, and hidden Zork easter egg (see
 `ratatui-brand-graphics.md`) solve a different problem than the functional cards.
 They share design direction but not data plumbing; keep them in separate modules.
 
-The active Home header uses `brand.rs` to load the RunHaven logo from
-`docs/assets/logo.png`, render a terminal-safe half-block fallback, and emit the
-same Codex-derived terminal image overlay used by pets when the terminal
-supports it. Cubby is not the header hero; `pet.rs` adapts the validated Cubby
-Codex pet package into Codex's ambient pet placement and overlay contract.
-RunHaven supplies the available pane and the Cubby asset, while
-`codex/ambient.rs` owns the target size, composer gap, right anchor, clear area,
-and image protocol lifecycle.
+The current vendor-reset shell is intentionally staged. It keeps the
+Codex-vendored TUI source in `crates/runhaven-tui/src/tui/` and opens a
+temporary read-only RunHaven launch preview while the full Codex app shell,
+bottom pane, status line, native pet, resume, and command surfaces are adapted.
+When the header logo or Cubby pet returns, prefer Codex-native modules and
+terminal-image behavior over custom RunHaven rendering code.
 
 Legacy terminal-mascot assets remain under `docs/assets/terminal-mascot/` as
 historical QA/source evidence from the earlier Cubby hero experiment. They are

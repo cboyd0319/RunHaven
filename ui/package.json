@@ -11,8 +11,8 @@
     "test": "vitest run src/test",
     "test:e2e": "playwright test",
     "tauri": "tauri",
-    "tauri:dev": "cd .. && ./ui/node_modules/.bin/tauri dev --config src-tauri/tauri.conf.json",
-    "tauri:build": "cd .. && ./ui/node_modules/.bin/tauri build --config src-tauri/tauri.conf.json --debug --no-bundle"
+    "tauri:dev": "cd .. && CARGO_TARGET_DIR=\"$PWD/target\" ./ui/node_modules/.bin/tauri dev --config src-tauri/tauri.conf.json",
+    "tauri:build": "cd .. && CARGO_TARGET_DIR=\"$PWD/target\" ./ui/node_modules/.bin/tauri build --config src-tauri/tauri.conf.json --debug --no-bundle"
   },
   "dependencies": {
     "@lucide/svelte": "1.21.0",

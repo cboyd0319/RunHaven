@@ -125,6 +125,19 @@ gate, and empty untracked vendored snapshot directories were removed from the
 local tree. Dormant vendored Codex test modules remain source-first until their
 parent modules are wired back into the RunHaven TUI app shell.
 
+Repo-wide organization audit follow-up: tracked source is now clean of root
+`src/`, tracked build output, `.snap` files, `.DS_Store`, and the obsolete
+`src-tauri/Cargo.lock`. The largest visible directory clutter was ignored local
+build output, not tracked source. Tauri npm scripts now set
+`CARGO_TARGET_DIR` to the absolute root `target/` path so desktop builds use
+the root workspace target directory. The stale ignored `src-tauri/target/`,
+frontend `dist/`, Playwright
+reports, test results, and empty `.github/workflows/` directory were removed
+locally. `docs/harness/state/clean-state-checklist.md` records which ignored
+directories are allowed caches and which should be cleaned when they appear.
+Active stale doc paths were corrected in the research and Tauri/TUI design docs;
+historical evidence logs were left as records of what happened at the time.
+
 Verified:
 
 - `cargo fmt --check`
@@ -137,7 +150,12 @@ Verified:
 - `cargo clippy --workspace --all-targets --locked -- -D warnings`
 - `cargo run --locked --bin runhaven-check-pins --quiet`
 - `cargo build --workspace --locked --quiet`
+- `npm --prefix ui run tauri:build` with `CARGO_TARGET_DIR` resolving to root
+  `target/`
+- `test ! -d src-tauri/target`
 - `jq empty feature_list.json`
+- `python3 -m json.tool feature_list.json`
+- `python3 -m json.tool ui/package.json`
 - active stale-reference scans
 - `git diff --check`
 - `./init.sh`
@@ -148,8 +166,7 @@ Verified:
 
 ## Next Step
 
-Finish the repo-wide organization audit findings. Current known cleanup
-candidates are generated local build output (`target/`, `src-tauri/target/`,
-`ui/node_modules/`, `ui/dist/`, Tauri generated schemas/permissions), archived
-TUI design assets under `docs/assets/`, and historical harness research/evidence
-docs that may belong under an archive area instead of active routing docs.
+Continue TUI integration from the Codex-vendored source baseline. Keep using
+source-first Codex modules for app shell, bottom pane, status line, native pet,
+resume/session, keymap, tooltips, and terminal-title behavior before writing
+custom RunHaven TUI code.

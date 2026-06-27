@@ -380,24 +380,24 @@ patterns, slash status routing, and tooltip timing/suppression.
 
 ## Easter Egg: Zork I
 
-The implemented signature easter egg is a hidden Home-only `~` screen that runs
-the original Zork I story in the TUI. It is nerdy, terminal-native, and more
-substantial than a decorative animation while staying outside RunHaven's runtime
-boundary.
+The desired signature easter egg remains a hidden Home-only `~` screen that
+runs the original Zork I story in the TUI. It is nerdy, terminal-native, and
+more substantial than a decorative animation while staying outside RunHaven's
+runtime boundary.
 
-Implementation:
+Current reset state:
 
-- Trigger: press `~` from Home only. Other screens ignore the key, and esc
-  returns Home.
-- Engine: `src/runhaven/cli/tui/zork/zmachine/` vendors the MIT-licensed
-  `moosepod/ferrif-zmachine` engine with attribution.
 - Game data: `third_party/zork1/` vendors the MIT-licensed
   `historicalsource/zork1` collection, including the compiled Z-machine story.
-- Save/restore: Zork `save` and `restore` use one private RunHaven cache slot,
-  not arbitrary user-selected files.
-- Attribution: `THIRD_PARTY_NOTICES.md`,
-  `licenses/ferrif-zmachine-MIT.txt`, and `licenses/zork1-MIT.txt` record the
-  upstream licenses and source revisions.
+- Engine: the earlier Ferrif-derived TUI engine was removed with the discarded
+  custom TUI and is recoverable from git history. If restored, it should live
+  under `crates/runhaven-tui/src/tui/zork/` and remain TUI-local.
+- Save/restore: Zork `save` and `restore` should use one private RunHaven cache
+  slot by default, with any user-selected disk load path treated as untrusted
+  input and validated before parsing.
+- Attribution: `THIRD_PARTY_NOTICES.md` and `licenses/zork1-MIT.txt` already
+  record the story-source attribution. Reintroducing a third-party engine needs
+  matching attribution.
 
 Security boundary:
 

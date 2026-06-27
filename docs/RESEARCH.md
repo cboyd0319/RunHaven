@@ -285,8 +285,8 @@ Reviewed on 2026-06-16 before adding the pre-implementation UI guardrails:
 Current reviewed pins are recorded in [`../pins.toml`](../pins.toml). The
 Rust dependency lock is recorded in [`../Cargo.lock`](../Cargo.lock). The
 enforced pin policy lives in
-[`../src/runhaven/harness/pins.rs`](../src/runhaven/harness/pins.rs) and is run
-with `cargo run --locked --bin runhaven-check-pins`.
+[`../crates/runhaven-core/src/harness/pins.rs`](../crates/runhaven-core/src/harness/pins.rs)
+and is run with `cargo run --locked --bin runhaven-check-pins`.
 
 ## Documentation Research Sources
 

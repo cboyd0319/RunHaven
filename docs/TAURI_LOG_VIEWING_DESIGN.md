@@ -122,8 +122,7 @@ Implementation constraints:
 ## Milestones
 
 1. Rust log snapshot primitive
-   - Files: `src/runhaven/runtime/active/mod.rs` and a focused helper module if
-     the active module would grow too large.
+   - Current files: `crates/runhaven-core/src/runtime/active/`.
    - Add a reusable function that validates the active run, calls
      `container logs -n`, and converts bounded stdout into a typed payload.
    - Add unit tests for line validation, active-run container validation, byte
@@ -158,7 +157,7 @@ Implementation constraints:
 Focused red checks before implementation:
 
 ```bash
-cargo test --manifest-path src-tauri/Cargo.toml --locked log_snapshot -- --nocapture
+cargo test --workspace --locked log_snapshot -- --nocapture
 npm --prefix ui test -- --run
 ```
 
@@ -166,10 +165,10 @@ Required green checks for implementation:
 
 ```bash
 scripts/apple_container_smoke.sh
-cargo fmt --manifest-path src-tauri/Cargo.toml --check
-cargo test --manifest-path src-tauri/Cargo.toml --locked log_snapshot -- --nocapture
-cargo test --manifest-path src-tauri/Cargo.toml --locked
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+cargo fmt --check
+cargo test --workspace --locked log_snapshot -- --nocapture
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
 npm --prefix ui test -- --run
 npm --prefix ui run check
 npm --prefix ui run test:e2e
