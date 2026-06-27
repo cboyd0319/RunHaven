@@ -6,6 +6,12 @@ This directory is a source snapshot from:
 /Users/c/Documents/GitHub/codex/codex-rs/tui/src/
 ```
 
+It also includes Codex terminal detection copied from:
+
+```text
+/Users/c/Documents/GitHub/codex/codex-rs/terminal-detection/src/
+```
+
 The upstream source is the OpenAI Codex TUI and is licensed under Apache-2.0.
 RunHaven keeps attribution in `THIRD_PARTY_NOTICES.md` and
 `licenses/codex-Apache-2.0.txt`.
@@ -25,11 +31,23 @@ Local source-format exception:
   so the runtime test input still contains two trailing spaces, while the source
   file satisfies RunHaven's whitespace check.
 
+Local integration exceptions:
+
+- `mod.rs` is the temporary RunHaven module entrypoint during integration. It
+  keeps the crate buildable and fails closed for interactive TUI launch until
+  the vendored Codex entrypoint is adapted.
+- `terminal_detection.rs` and `terminal_tests.rs` are copied from the Codex
+  terminal-detection crate because the native pet image protocol depends on the
+  same iTerm2, Kitty, Sixel, tmux, and Zellij decisions as Codex.
+- `pets/picker.rs` and `pets/preview.rs` remain vendored but are not compiled
+  yet. They require the Codex bottom-pane adapter, which is a later integration
+  slice.
+- `pets/model.rs` formats the SHA-256 cache key bytes explicitly because
+  RunHaven is pinned to `sha2` 0.11. The produced cache key string stays the
+  same shape as Codex.
+
 Known integration gap:
 
 - The copied Codex crate source still uses Codex crate/module assumptions.
   RunHaven integration will adapt entrypoints, module paths, dependencies, and
   product data in later commits.
-- `mod.rs` is the temporary RunHaven module entrypoint during integration. It
-  keeps the crate buildable and fails closed for interactive TUI launch until
-  the vendored Codex entrypoint is adapted.

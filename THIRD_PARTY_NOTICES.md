@@ -6,9 +6,10 @@ upstream licenses require.
 ## openai/codex (Apache-2.0)
 
 RunHaven vendors source code from [openai/codex](https://github.com/openai/codex),
-specifically the `codex-rs/tui/src/` source tree, under
-`src/runhaven/cli/tui/`. That code is licensed under the Apache License,
-Version 2.0. The full license text is in
+specifically the `codex-rs/tui/src/` source tree under
+`src/runhaven/cli/tui/`, plus the `codex-rs/terminal-detection/src/` helper
+used by the Codex TUI pet image protocol. That code is licensed under the
+Apache License, Version 2.0. The full license text is in
 [`licenses/codex-Apache-2.0.txt`](licenses/codex-Apache-2.0.txt).
 
 The upstream `NOTICE` file, carried forward verbatim:
@@ -25,8 +26,10 @@ Copyright (c) 2023-2025 The Ratatui Developers
 ### Vendored snapshot
 
 The current baseline copies `codex-rs/tui/src/` into
-`src/runhaven/cli/tui/`, excluding only local metadata files and upstream
-snapshot goldens:
+`src/runhaven/cli/tui/`. It also copies
+`codex-rs/terminal-detection/src/lib.rs` and `terminal_tests.rs` into the same
+RunHaven TUI adapter area because the native pet image path depends on that
+terminal protocol detection. Local exclusions from the copied TUI tree are:
 
 - `.DS_Store` files are not source.
 - Upstream `*.snap` files are Codex test goldens, not runtime code. RunHaven

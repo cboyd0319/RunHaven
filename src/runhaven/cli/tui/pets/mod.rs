@@ -21,7 +21,11 @@ mod catalog;
 mod frames;
 mod image_protocol;
 mod model;
+// Picker and preview are still vendored. They compile with the bottom-pane UI
+// adapter in a later phase; the lower pet runtime is wired first.
+#[cfg(any())]
 mod picker;
+#[cfg(any())]
 mod preview;
 mod sixel;
 
@@ -43,8 +47,11 @@ pub(crate) use image_protocol::PetImageSupport;
 pub(crate) use image_protocol::PetImageUnsupportedReason;
 #[cfg(not(test))]
 pub(crate) use image_protocol::detect_pet_image_support;
+#[cfg(any())]
 pub(crate) use picker::PET_PICKER_VIEW_ID;
+#[cfg(any())]
 pub(crate) use picker::build_pet_picker_params;
+#[cfg(any())]
 pub(crate) use preview::PetPickerPreviewState;
 
 pub(crate) const DEFAULT_PET_ID: &str = "codex";

@@ -193,6 +193,29 @@ Why leaving and adapting is better than removing:
 - If Cubby assets are copied into a repo-owned export later, use the
   pet-mascot-studio export handoff and sanitize copied metadata first.
 
+### Codex Pet Runtime And Terminal Detection
+
+Decision: compile and test the lower Codex pet runtime before the picker and
+bottom-pane UI.
+
+Why leaving and adapting is better than removing:
+
+- The pet image quality problem is controlled by Codex's native terminal image
+  overlay path, not by Ratatui cell drawing.
+- `pets/model.rs`, `pets/frames.rs`, `pets/image_protocol.rs`, `pets/sixel.rs`,
+  `pets/ambient.rs`, and `pets/mod.rs` now compile in RunHaven.
+- The Codex frame scheduler from `tui/frame_requester.rs` now compiles with
+  Tokio, matching upstream behavior instead of replacing it with a custom loop.
+- `terminal_detection.rs` and `terminal_tests.rs` are copied from
+  `/Users/c/Documents/GitHub/codex/codex-rs/terminal-detection/src/` because
+  the pet protocol decision needs the same iTerm2, Kitty, Sixel, tmux, and
+  Zellij behavior as Codex.
+- `pets/picker.rs` and `pets/preview.rs` stay vendored but are staged until the
+  bottom-pane adapter compiles. This is not a removal.
+- The only behavior-preserving source adaptation in this slice is explicit
+  SHA-256 lower-hex formatting in `pets/model.rs` for RunHaven's pinned
+  `sha2` 0.11 dependency.
+
 ### Earlier RunHaven Zork Implementation
 
 Decision: leave `src/runhaven/cli/tui/zork/` absent from the raw Codex vendor
@@ -226,6 +249,9 @@ The first milestone is a clean vendor baseline:
 - The first compile gap after the reset was RunHaven's missing module entrypoint.
   `src/runhaven/cli/tui/mod.rs` now keeps the crate buildable and fails closed
   for interactive TUI launch while the vendored Codex entrypoint is adapted.
+- The lower native pet runtime, terminal protocol detection, frame extraction,
+  Sixel encoder, Kitty image writers, ambient draw request model, and Tokio
+  frame scheduler now compile and pass their tests.
 - The copied Codex source still has crate-root assumptions from the upstream
   `codex-tui` crate. The next integration work is to adapt those assumptions
   into RunHaven product adapters without culling useful Codex surfaces early.

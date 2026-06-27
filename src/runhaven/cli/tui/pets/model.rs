@@ -103,8 +103,12 @@ impl Pet {
         let bytes = fs::read(&self.spritesheet_path)
             .with_context(|| format!("read {}", self.spritesheet_path.display()))?;
         let digest = Sha256::digest(&bytes);
+        let digest = digest
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>();
         Ok(format!(
-            "sha256-{digest:x}-{}x{}-{}x{}",
+            "sha256-{digest}-{}x{}-{}x{}",
             self.frame_width, self.frame_height, self.columns, self.rows
         ))
     }
