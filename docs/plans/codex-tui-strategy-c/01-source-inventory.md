@@ -6,8 +6,10 @@ Observed current state:
 
 - RunHaven already contains a broad Codex TUI source snapshot under
   `crates/runhaven-tui/src/tui/`.
-- The Codex source has 355 Rust files under `codex-rs/tui/src`; RunHaven has
-  those 355 plus seven local Rust files:
+- The pinned Codex source has 894 total files under `codex-rs/tui/src`: 355
+  Rust files, one non-snapshot instruction file, and 538 upstream `.snap`
+  goldens. RunHaven shares the 356 non-snapshot upstream paths and adds seven
+  local Rust files:
   - `app_shell.rs`
   - `mod.rs`
   - `pets/bundled_custom.rs`
@@ -85,7 +87,8 @@ ship in the product binary. Snapshot goldens are different: RunHaven already
 removed copied upstream `.snap` files from the active tree and gates upstream
 snapshot-only tests behind `codex-vendored-tests`.
 
-Keep upstream snapshot goldens external by default in the local Codex checkout.
+Keep upstream snapshot goldens external by default in the pinned upstream Codex
+source.
 Only add local RunHaven snapshots for RunHaven-integrated behavior that is
 actually wired and tested.
 
@@ -99,8 +102,7 @@ Recommended layout:
 ```text
 crates/runhaven-tui/src/tui/                 active vendored source
 crates/runhaven-tui/src/tui/snapshots/       RunHaven authoritative snapshots
-/Users/c/Documents/GitHub/codex/codex-rs/tui/src/**/snapshots/
-                                             upstream reference snapshots
+openai/codex:codex-rs/tui/src/**/snapshots/ upstream reference snapshots
 ```
 
 Do not create `crates/runhaven-tui/upstream-snapshots/` unless a future slice
@@ -244,7 +246,7 @@ Use this as the implementation checklist.
 - `src/app/test_support.rs`
 - `src/tui/test_support.rs`
 - upstream `src/**/snapshots/*.snap` as external reference material in the
-  Codex checkout, not copied by default
+  pinned upstream Codex source, not copied by default
 
 ### Keep But Adapt Heavily
 

@@ -6,10 +6,11 @@
 
 Before changing behavior, make the vendored Codex baseline explicit:
 
-- Update `crates/runhaven-tui/src/tui/README.md` with the Codex commit or local
-  source path used for the snapshot.
-- Record that upstream snapshot goldens stay external in the local Codex
-  checkout by default, while RunHaven snapshots cover wired RunHaven behavior.
+- Update `crates/runhaven-tui/src/tui/README.md` with the upstream Codex
+  GitHub repository and commit used for the snapshot.
+- Record that upstream snapshot goldens stay external in the pinned upstream
+  Codex source by default, while RunHaven snapshots cover wired RunHaven
+  behavior.
 - Add a compare command that includes Rust source, helper binaries, tests, and
   snapshot/reference files.
 - List every local RunHaven-only file and every copied Codex file with local
@@ -18,6 +19,20 @@ Before changing behavior, make the vendored Codex baseline explicit:
 
 This phase is documentation and source-control hygiene. It prevents later
 implementation work from turning the fork boundary into guesswork.
+
+Phase 0 focused checks:
+
+```bash
+bash -n scripts/compare-codex-tui.sh
+scripts/compare-codex-tui.sh
+scripts/compare-codex-tui.sh --list-missing >/tmp/runhaven-codex-tui-missing.txt
+cargo run --locked --bin runhaven-check-pins --quiet
+jq empty feature_list.json
+python3 -m json.tool feature_list.json >/dev/null
+! rg -n "[[:blank:]]$" scripts/compare-codex-tui.sh crates/runhaven-tui/src/tui/README.md docs/plans/codex-tui-strategy-c/*.md current-state.md feature_list.json
+! LC_ALL=C rg -n "[^ -~]" scripts/compare-codex-tui.sh crates/runhaven-tui/src/tui/README.md docs/plans/codex-tui-strategy-c/*.md current-state.md feature_list.json
+git diff --check
+```
 
 ### Phase 1: Stop Growing The Temporary Shell
 
@@ -286,8 +301,8 @@ function used by CLI or Tauri. Examples:
 
 ## Testing And Verification
 
-For source-only planning docs, no Rust checks are required. For implementation
-work, use the smallest focused checks.
+For source-only planning docs, no Rust checks are required. For implementation,
+state, or script work, use the smallest focused checks.
 
 After TUI code changes:
 
@@ -368,44 +383,44 @@ LC_ALL=C rg -n "[^ -~]" docs/plans/codex-tui-strategy-c/*.md
 
 ## Upstream Sync Workflow
 
-Use local source comparison first:
+Use the pinned upstream source comparison first:
 
 ```bash
-diff -qr /Users/c/Documents/GitHub/codex/codex-rs/tui/src \
-  /Users/c/Documents/GitHub/RunHaven/crates/runhaven-tui/src/tui
+scripts/compare-codex-tui.sh
 ```
+
+This command fetches `https://github.com/openai/codex.git` at the pinned commit
+recorded in `crates/runhaven-tui/src/tui/README.md` and compares
+`codex-rs/tui/src/` against `crates/runhaven-tui/src/tui/`.
 
 To list upstream files missing from RunHaven:
 
 ```bash
-comm -23 \
-  <(cd /Users/c/Documents/GitHub/codex/codex-rs/tui/src && find . -type f | sort) \
-  <(cd /Users/c/Documents/GitHub/RunHaven/crates/runhaven-tui/src/tui && find . -type f | sort)
+scripts/compare-codex-tui.sh --list-missing
 ```
 
 To include upstream snapshots and tests in the audit, do not filter by file
-extension. The command above intentionally includes `.rs`, `.snap`, test
-modules, helper binaries, and local instruction files under `src/`.
+extension. The compare command intentionally includes `.rs`, `.snap`, test
+modules, helper binaries under `src/bin`, and local instruction files under
+`src/`.
 
 To list RunHaven-local files:
 
 ```bash
-comm -13 \
-  <(cd /Users/c/Documents/GitHub/codex/codex-rs/tui/src && find . -type f | sort) \
-  <(cd /Users/c/Documents/GitHub/RunHaven/crates/runhaven-tui/src/tui && find . -type f | sort)
+scripts/compare-codex-tui.sh
 ```
 
 Expected RunHaven-local files today:
 
 ```text
-./README.md
-./app_shell.rs
-./mod.rs
-./pets/bundled_custom.rs
-./runhaven/launch_wizard.rs
-./runhaven/mod.rs
-./terminal_detection.rs
-./terminal_tests.rs
+README.md
+app_shell.rs
+mod.rs
+pets/bundled_custom.rs
+runhaven/launch_wizard.rs
+runhaven/mod.rs
+terminal_detection.rs
+terminal_tests.rs
 ```
 
 When syncing:

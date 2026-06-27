@@ -17,7 +17,7 @@ Codex TUI into a custom launcher.
 That means:
 
 - Keep the Codex TUI source layout and module names as close to
-  `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/` as possible.
+  upstream `openai/codex:codex-rs/tui/src/` as possible.
 - Keep the Codex runtime ownership model:
   `Tui` terminal runtime -> `App` event loop -> `ChatWidget` and `BottomPane`
   -> `AppServerSession` typed facade -> backend client.
@@ -90,13 +90,15 @@ diffed and merged later.
 Primary sources checked:
 
 - `/Users/c/Downloads/codex-tui-capabilities.md`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/Cargo.toml`
-- `/Users/c/Documents/GitHub/codex/codex-rs/app-server-protocol/src/`
-- `/Users/c/Documents/GitHub/codex/codex-rs/app-server-client/src/lib.rs`
-- `/Users/c/Documents/GitHub/RunHaven/AGENTS.md`
-- `/Users/c/Documents/GitHub/RunHaven/current-state.md`
-- `/Users/c/Documents/GitHub/RunHaven/docs/plans/tui-build-plan.md`
-- `/Users/c/Documents/GitHub/RunHaven/docs/plans/tui-architecture.md`
-- `/Users/c/Documents/GitHub/RunHaven/crates/runhaven-tui/src/tui/`
-- `/Users/c/Documents/GitHub/RunHaven/crates/runhaven-core/src/ui_contracts.rs`
+- `https://github.com/openai/codex.git`, commit
+  `5267e805fb830891c0b23376bcd9cbd382c3473c`
+- `openai/codex:codex-rs/tui/src/`
+- `openai/codex:codex-rs/tui/Cargo.toml`
+- `openai/codex:codex-rs/app-server-protocol/src/`
+- `openai/codex:codex-rs/app-server-client/src/lib.rs`
+- `AGENTS.md`
+- `current-state.md`
+- `docs/plans/tui-build-plan.md`
+- `docs/plans/tui-architecture.md`
+- `crates/runhaven-tui/src/tui/`
+- `crates/runhaven-core/src/ui_contracts.rs`

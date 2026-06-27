@@ -7,11 +7,13 @@ Last updated: 2026-06-27 UTC
 The active slice is the TUI Codex vendor reset plus the Rust workspace
 normalization needed to make that TUI a clean reference implementation.
 
-RunHaven is replacing its previous custom TUI with the local Codex TUI source
-baseline from:
+RunHaven is replacing its previous custom TUI with the pinned upstream Codex
+TUI source baseline:
 
 ```text
-/Users/c/Documents/GitHub/codex/codex-rs/tui/src/
+repo: https://github.com/openai/codex.git
+commit: 5267e805fb830891c0b23376bcd9cbd382c3473c
+path: codex-rs/tui/src/
 ```
 
 The RunHaven TUI is the reference implementation for several sibling projects.
@@ -86,8 +88,8 @@ TUI, Tauri, or frontend layers.
   prefer macOS Keychain where practical. This does not authorize reading
   provider-owned Keychain items, browser profiles, cloud credential stores, or
   arbitrary host credentials.
-- TUI image and pet rendering must follow Codex source behavior. Use the local
-  Codex TUI source and local Codex config evidence before writing custom pet,
+- TUI image and pet rendering must follow Codex source behavior. Use the pinned
+  upstream Codex TUI source and local Codex config evidence before writing custom pet,
   terminal image, statusline, bottom-pane, keymap, title, or resume behavior.
 - User-facing writing is product behavior. UI text, menus, prompts, warnings,
   README/usage docs, and setup instructions target non-technical users at about
@@ -353,6 +355,27 @@ Latest Strategy C plan import:
   execute `launch_run_plan` on the UI thread only after terminal restore; keep
   the hidden Zork easter egg as a future RunHaven-owned Codex-shaped view.
 
+Latest TUI Phase 0 baseline lock:
+
+- 2026-06-27: Completed Phase 0 of the Strategy C plan without runtime behavior
+  changes. `crates/runhaven-tui/src/tui/README.md` now records the upstream
+  Codex GitHub repo, pinned commit
+  `5267e805fb830891c0b23376bcd9cbd382c3473c`, upstream path
+  `codex-rs/tui/src/`, RunHaven-only files, and copied Codex files with local
+  edits. Added `scripts/compare-codex-tui.sh`, which fetches the pinned
+  upstream Codex source from GitHub into a temporary checkout and compares all
+  files under `codex-rs/tui/src/`, including Rust files, `src/bin`, nested
+  tests, and `.snap` goldens. Current audit: 894 upstream files, 364 RunHaven
+  files, 356 common paths, 538 upstream `.snap` files external by default, 8
+  RunHaven-only files, and 20 copied Codex files with local edits. Verified:
+  `bash -n scripts/compare-codex-tui.sh`,
+  `scripts/compare-codex-tui.sh`,
+  `scripts/compare-codex-tui.sh --list-missing`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `jq empty feature_list.json`,
+  `python3 -m json.tool feature_list.json`, whitespace and ASCII scans, and
+  `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -360,10 +383,10 @@ Latest Strategy C plan import:
 ## Next Step
 
 Continue TUI integration from `docs/plans/codex-tui-strategy-c/`, starting with
-Phase 0 vendor-baseline locking. After that, stop growing `app_shell.rs` by
-moving direct core calls into a RunHaven TUI service that returns payloads and
-events while `launch_wizard.rs` stays UI-owned. Then build the Codex-shaped
-backend facade, compile the dormant runtime spine with the smallest
+Phase 1: stop growing `app_shell.rs` by moving direct core calls into a
+RunHaven TUI service that returns payloads and events while
+`launch_wizard.rs` stays UI-owned. Then build the Codex-shaped backend facade,
+compile the dormant runtime spine with the smallest
 protocol/utility surface, prove terminal handoff, and only then adapt the
 native `App`/`BottomPane`/`ChatWidget` path. Foreground launch remains
 read-only until the UI thread owns terminal restore and `launch_run_plan`.

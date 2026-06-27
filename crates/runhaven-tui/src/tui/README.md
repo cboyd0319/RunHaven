@@ -1,15 +1,23 @@
 # RunHaven TUI Vendor Baseline
 
-This directory is a source snapshot from:
+This directory maps the upstream Codex TUI source path:
 
 ```text
-/Users/c/Documents/GitHub/codex/codex-rs/tui/src/
+https://github.com/openai/codex.git
+commit: 5267e805fb830891c0b23376bcd9cbd382c3473c
+path: codex-rs/tui/src/
 ```
 
-It also includes Codex terminal detection copied from:
+to the local RunHaven vendored path:
 
 ```text
-/Users/c/Documents/GitHub/codex/codex-rs/terminal-detection/src/
+crates/runhaven-tui/src/tui/
+```
+
+It also includes Codex terminal detection copied from the same upstream commit:
+
+```text
+codex-rs/terminal-detection/src/
 ```
 
 The upstream source is the OpenAI Codex TUI and is licensed under Apache-2.0.
@@ -21,11 +29,69 @@ keeps Codex TUI structure first, then RunHaven will adapt the parts it needs.
 The active Strategy C integration plan lives in
 `docs/plans/codex-tui-strategy-c/`.
 
+Run the vendor audit with:
+
+```bash
+scripts/compare-codex-tui.sh
+```
+
+That command fetches the pinned upstream Codex source from GitHub into a
+temporary checkout and compares all files under `codex-rs/tui/src/`, including
+Rust source, helper binaries, nested tests, and upstream snapshot files.
+
 Local exclusions in this baseline:
 
 - `.DS_Store` files, because they are local filesystem metadata.
-- upstream `*.snap` files, because they are Codex test goldens and must be
-  regenerated from integrated RunHaven tests if those tests are kept.
+- upstream `*.snap` files, because they are Codex test goldens. They stay
+  external in the pinned upstream Codex source by default, while RunHaven
+  snapshots cover wired RunHaven behavior.
+
+Current vendor audit summary:
+
+- Upstream files under `codex-rs/tui/src/`: 894.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 364.
+- Common file paths: 356.
+- Upstream files not vendored: 538, all `.snap` files.
+- RunHaven-only files: 8.
+- Copied Codex files with local edits: 20.
+
+RunHaven-only files:
+
+```text
+README.md
+app_shell.rs
+mod.rs
+pets/bundled_custom.rs
+runhaven/launch_wizard.rs
+runhaven/mod.rs
+terminal_detection.rs
+terminal_tests.rs
+```
+
+Copied Codex files with local edits:
+
+```text
+app/pets.rs
+bottom_pane/footer.rs
+bottom_pane/list_selection_view.rs
+bottom_pane/mod.rs
+bottom_pane/textarea.rs
+chatwidget/pets.rs
+markdown_render_tests.rs
+motion.rs
+pets/image_protocol.rs
+pets/mod.rs
+pets/model.rs
+pets/picker.rs
+pets/preview.rs
+render/renderable.rs
+shimmer.rs
+style.rs
+terminal_palette.rs
+terminal_probe.rs
+test_backend.rs
+wrapping.rs
+```
 
 Local source-format exception:
 
