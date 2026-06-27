@@ -279,6 +279,27 @@
         "2026-06-26: v0.5.0 CLI-complete pre-release. Closed the v0.5.0 gap-analysis blockers (V05-G1..G8): CLI command+docs contract audit (cli_surface_check.sh 39/39), JSON/local-data lifecycle decision, profile support tiers (runhaven agents), maintainability review, runtime evidence refresh (apple_container_smoke.sh --with-provider --with-ssh passed), secure-easy review, SSH fail-closed posture, and release docs (CHANGELOG.md plus the README pre-release caution). Bumped the runhaven CLI crate to 0.5.0 (runhaven --version = 0.5.0; src-tauri rebuilt against it, 30 Tauri tests pass); image template tags stay 0.1.0 (unchanged, built locally). Verified: cargo fmt, cargo test --locked (69 lib + 6 integration), clippy -D warnings, src-tauri tests, Apple container smokes, doc scans, git diff --check. Tagged v0.5.0 and published a GitHub pre-release in this pass."
       ],
       "notes": "v0.5.0 CLI-complete pre-release cut 2026-06-26 (first release; pre-1.0, CLI only; git tag v0.5.0, GitHub pre-release). The desktop app and TUI remain deferred (desktop-first-class-v1). The durable release contract is docs/V1_RELEASE_PLAN.md; the v0.5.0 gap blockers in docs/RELEASE_GAP_ANALYSIS.md are closed."
+    },
+    {
+      "id": "terminal-ui",
+      "priority": 1,
+      "area": "tui",
+      "title": "Terminal UI launcher",
+      "user_visible_behavior": "Running `runhaven` on a terminal with no subcommand opens a ratatui TUI that launches and manages agent runs over the same profiles and planner as the CLI. The CLI stays the complete surface; piped, redirected, or subcommand invocations never open the TUI.",
+      "status": "active",
+      "dependencies": [
+        "cli-complete-v0.5.0"
+      ],
+      "verification": [
+        "Bare runhaven on a TTY opens the TUI; piped/non-TTY or any subcommand uses the CLI",
+        "Terminal is restored on exit and on panic",
+        "The TUI reuses the profiles and planner objects, not duplicated logic",
+        "Focused Rust checks pass (render and state tests)"
+      ],
+      "evidence": [
+        "2026-06-26: Slice 1 (scaffold). Added ratatui =0.30.2 (pinned). New src/runhaven/cli/tui.rs uses ratatui::init/restore (panic-safe terminal), a draw/key-event loop, and a home screen listing the bundled agents from profiles(). Bare runhaven launches the TUI only when both stdin and stdout are a terminal (should_launch_tui); piped, redirected, or subcommand invocations keep the CLI help/behavior. Verified: cargo fmt, cargo test --locked (71 lib incl. 2 TUI tests + 6 integration), clippy -D warnings, non-TTY falls back to help (exit 2), git diff --check."
+      ],
+      "notes": "Reference (not fork) the Codex TUI (codex-rs/tui, Apache-2.0, agent-chat domain, ~30 codex-internal crate deps) for quality and patterns only; RunHaven's launcher is built fresh in ratatui (MIT). Remaining slices: agent picker, workspace picker, plan/egress review, launch, run dashboard; brand graphics and a mascot sprite (reference codex-rs/tui/src/pets for the animation technique, build a RunHaven sprite fresh). Plan in docs/plans/ratatui-brand-graphics.md."
     }
   ]
 }

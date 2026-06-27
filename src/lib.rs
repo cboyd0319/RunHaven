@@ -4,6 +4,7 @@ pub use runhaven::cli::app;
 pub use runhaven::cli::diagnostics;
 pub use runhaven::cli::doctor;
 pub use runhaven::cli::setup;
+pub use runhaven::cli::tui;
 pub use runhaven::harness::pins;
 pub use runhaven::image::assets as image_assets;
 pub use runhaven::image::build as images;

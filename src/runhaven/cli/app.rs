@@ -61,8 +61,20 @@ where
     dispatch(cli, agent_args)
 }
 
+/// The TUI is the default only when both stdin and stdout are a terminal, so
+/// piped or redirected invocations keep the existing help-on-no-subcommand
+/// behavior.
+fn should_launch_tui() -> bool {
+    std::io::stdin().is_terminal() && std::io::stdout().is_terminal()
+}
+
 fn dispatch(cli: Cli, agent_args: Vec<String>) -> Result<i32> {
     let Some(command) = cli.command else {
+        // No subcommand: on an interactive terminal, the TUI is the default
+        // entry; otherwise (piped, redirected, or with trailing args) print help.
+        if agent_args.is_empty() && should_launch_tui() {
+            return crate::tui::run();
+        }
         let mut command = Cli::command();
         command.print_help()?;
         println!();

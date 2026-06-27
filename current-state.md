@@ -140,6 +140,21 @@ evidence and a recorded reason.
 
 ## Latest Verified Work
 
+- 2026-06-26: Started the terminal UI (TUI). Decision: reference the Codex TUI
+  (`codex-rs/tui`) for quality and patterns, not fork it; it is ~214k lines,
+  Apache-2.0, an agent-chat domain welded to ~30 `codex-*` internal crates (even
+  its event loop imports `codex_protocol`), while RunHaven needs a
+  launcher/manager, a different domain (the agent's own chat runs inside the
+  container). Pinned `ratatui =0.30.2` (current stable). Slice 1 (scaffold):
+  `src/runhaven/cli/tui.rs` with `ratatui::init`/`restore` (panic-safe terminal),
+  a draw/key-event loop, and a home screen listing the agents from `profiles()`.
+  Bare `runhaven` opens the TUI only when both stdin and stdout are a terminal
+  (`should_launch_tui`); piped, redirected, or subcommand invocations keep the
+  CLI. Tracked as the active `terminal-ui` feature. Also fixed the v0.5.0
+  pin-check miss (`pins.toml [runhaven] version` was left at 0.1.0; bumped to
+  0.5.0, fixed forward on `main`, not re-tagged). Verified: cargo fmt, `cargo
+  test --locked` (71 lib incl. 2 TUI tests + 6 integration), clippy `-D
+  warnings`, pin check passes, non-TTY falls back to help, `git diff --check`.
 - 2026-06-26: Cut and published the `v0.5.0` CLI-complete pre-release. Closed
   V05-G4 (Apple container smokes, default plus `--with-provider` and
   `--with-ssh`, passed on the current code, validating the egress wildcard
@@ -786,80 +801,25 @@ evidence and a recorded reason.
 
 ## Next Step
 
-`cli-complete-v0.5.0`, `runtime-security-hardening`, `multi-provider-broker`, and
-`oauth-isolated-login` are all `passing` and on `main` (2026-06-26). No feature
-is currently `active`. Per the 2026-06-26 directive, all GUI/UI work stays
-deferred to the very end, so the next slice is non-UI product scope toward the
-`v0.5.0` CLI-complete milestone.
+`v0.5.0` is released (pre-release; see `CHANGELOG.md`). The active feature is
+`terminal-ui`: the launcher TUI, built fresh in `ratatui`, referencing the Codex
+TUI for quality and patterns only (not forked).
 
-Candidate next slices (see `docs/NON_UI_BACKLOG.md` v0.5.0 closure):
+Slice 1 (scaffold) is done: bare `runhaven` on a TTY opens a home screen listing
+the agents; the CLI stays the complete surface. Remaining TUI slices:
 
-- CLI command and docs contract audit: confirm every command's help, docs, and
-  behavior agree before tagging `v0.5.0`. The docs were just refreshed, so this
-  is a focused verification, not a rewrite.
-- Profile support tiers: a complete, accurate per-agent support matrix (bundled
-  image, basic start, provider mode, interactive login, brokered auth). The
-  login work makes this fully answerable now.
-- CLI maintainability check on this session's touched surfaces (`login.rs`,
-  `endpoints.rs`, `egress.rs`, `observability.rs`, `launch.rs`) for size,
-  duplication, and organization debt before more scope lands.
-- JSON and local-data lifecycle decision (which CLI outputs are stable,
-  schema-versioned, or best-effort).
+- Agent picker and workspace picker (navigate and select from the home screen).
+- Plan and egress review screen (render the run plan and security notices before
+  launch, over the existing planner and policy objects).
+- Launch and run dashboard (start a run, then live status, attach, stop, kill,
+  repair).
+- Image, state, and worktree management screens.
+- Brand graphics and a mascot sprite (an easter egg). Reference
+  `codex-rs/tui/src/pets` for the sprite-animation technique only; build a
+  RunHaven sprite fresh (MIT). Full vision in
+  `docs/plans/ratatui-brand-graphics.md`.
 
-Separate design-first candidate, not a `v0.5.0` blocker: the signed
-auto-updating provider policy (the last piece of the lower-friction egress
-design).
-
-The OAuth-brokering research concluded (2026-06-26): no host-side OAuth broker
-(provider ToS, subscription token is not a drop-in bearer, would read host login
-state). OAuth stays on the isolated in-container login, which is now the active
-`oauth-isolated-login` slice (the product's target audience uses OAuth, so easy
-OAuth is the priority). Done: once-per-agent auth via `--auth-scope` (verified; Claude OAuth proven
-live). THE FOCUSED NEXT EFFORT is the `runhaven login <agent>` command (per-agent
-login flows researched and the approach decided 2026-06-26 with the user; full
-detail in AgentMemory). It is security-sensitive (host token storage + run-time
-injection, broad allowlist widening) and needs live per-agent smokes, so build
-carefully:
-
-- Claude (the user's agent): setup-token opt-in. BUILT and live-verified
-  2026-06-26 (run came up authenticated, zero friction). `runhaven login claude` runs
-  Anthropic's official `claude setup-token` on the host (requires host `claude`),
-  captures `CLAUDE_CODE_OAUTH_TOKEN`, stores it `0600` in the RunHaven cache; runs
-  then inject it as `--env CLAUDE_CODE_OAUTH_TOKEN` at run time only (never in the
-  printed `plan`), behind the opt-in, with a security notice (the guest then
-  holds a usable token; provider-mode egress blocks exfiltration). Add a
-  logout/clear path. Claude has no in-container device flow, so this is the
-  zero-friction path the user chose.
-- Codex + Copilot: clean device-flow login (no PTY). `runhaven login` runs the
-  login command in the sandbox (`codex login --device-auth`; `copilot login`),
-  captures stdout, auto-opens the device URL on the host, shows the one-time
-  code, and lets the CLI poll. Allowlist additions (source-backed, per-host
-  verified): codex += `auth.openai.com`; copilot += `github.com` +
-  `api.github.com` (note: `github.com` is broad/path-sensitive, a deliberate
-  egress widening for the copilot profile, document it). Each needs a live login
-  smoke.
-- Gemini: account login retired 2026-06-18 and its OAuth is fragile, so the
-  API-key broker stays its path (no OAuth login).
-
-The per-run gateway-bind warning is now quieted (commit b8f5b1e). Optional: a
-one-time shared-login notice on first shared-volume creation.
-
-Then, the remaining non-UI roadmap:
-1. Other design-first candidates from `docs/NON_UI_BACKLOG.md` (custom profile
-   schema, path-aware host policy, the in-guest eBPF egress filter for finding #1),
-   promoted one at a time through the design gate.
-2. Release-readiness for a CLI-based public release once the near-term product
-   scope is settled.
-Also pending: deciding how the `runtime-security-hardening` branch lands on
-`main` (it now holds several distinct slices). The known open blocker is P2 SSH
-fail-closed (`ssh-forwarding-boundary`), which needs an upstream non-root socket
-fix. A Claude/Gemini broker live smoke needs a real provider API key.
-
-Deferred to the very end (do not start without a new directive): the desktop
-maintenance slice (image rebuild, state/network cleanup), the V1-G5 read-only
-diagnostics remainder (`why` explanations + blocked-host review + auth explain),
-worktree review (V1-G7), and the TUI. Shipped GUI slices stay `passing`.
-
-Tagged release notes are cut at the release-readiness step. Use
-`docs/RELEASE_GAP_ANALYSIS.md` for status and `docs/V1_RELEASE_PLAN.md` for the
-durable release contract (now superseded on sequencing by this directive).
+Non-blocking follow-ups on record: RunHaven runs containers without `--rm`
+(killed containers reap asynchronously); a signed auto-updating provider-policy
+candidate; and a light docs sweep to retire residual pre-v0.5.0 "alpha" wording
+(README and USAGE are already updated).

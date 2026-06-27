@@ -8,9 +8,22 @@ Install RunHaven and Apple `container` first:
 RunHaven development and runtime verification require macOS 26+ on Apple
 silicon. Windows and Linux are not supported.
 
-RunHaven is alpha/pre-release until after the `v0.5.0` CLI-complete milestone.
-The commands below describe the current CLI surface; CLI behavior may still
-change before `v0.5.0`.
+RunHaven is a pre-1.0 pre-release. The commands below describe the current CLI
+surface; behavior may still change before `v1.0.0`.
+
+## Terminal UI
+
+Running `runhaven` on a terminal with no subcommand opens the terminal UI (TUI),
+a launcher and manager over the same agents and run planner as the CLI:
+
+```bash
+runhaven
+```
+
+The TUI is early (a home screen today; the agent picker, plan and egress review,
+and run dashboard land in later slices). The CLI stays the complete, scriptable
+surface: any subcommand, or a piped or redirected invocation, uses the CLI
+directly and never opens the TUI. Press `q` to quit.
 
 ## Guided Setup
 
