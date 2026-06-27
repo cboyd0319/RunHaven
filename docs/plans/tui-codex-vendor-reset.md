@@ -223,10 +223,12 @@ The first milestone is a clean vendor baseline:
 
 ## Known Integration Gaps
 
-- First compile probe after the reset: `cargo check --locked --quiet` fails at
-  `src/runhaven/cli/mod.rs:5` because RunHaven still expects
-  `src/runhaven/cli/tui.rs` or `src/runhaven/cli/tui/mod.rs`, while the vendored
-  Codex source is shaped as a crate with `lib.rs` and `main.rs`.
+- The first compile gap after the reset was RunHaven's missing module entrypoint.
+  `src/runhaven/cli/tui/mod.rs` now keeps the crate buildable and fails closed
+  for interactive TUI launch while the vendored Codex entrypoint is adapted.
+- The copied Codex source still has crate-root assumptions from the upstream
+  `codex-tui` crate. The next integration work is to adapt those assumptions
+  into RunHaven product adapters without culling useful Codex surfaces early.
 
 ## Release Target
 

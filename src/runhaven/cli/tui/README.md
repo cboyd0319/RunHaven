@@ -30,3 +30,6 @@ Known integration gap:
 - The copied Codex crate source still uses Codex crate/module assumptions.
   RunHaven integration will adapt entrypoints, module paths, dependencies, and
   product data in later commits.
+- `mod.rs` is the temporary RunHaven module entrypoint during integration. It
+  keeps the crate buildable and fails closed for interactive TUI launch until
+  the vendored Codex entrypoint is adapted.

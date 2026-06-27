@@ -1105,11 +1105,13 @@ evidence and a recorded reason.
 RunHaven, then adapt it to the wishlist in
 `docs/plans/tui-codex-vendor-reset.md`.
 
-Immediate next step: create the RunHaven module/entrypoint/dependency adapter
-for the copied Codex source without culling product surfaces prematurely. For
-each removal, record why removal is better than leaving and adapting. Keep the
-reference-implementation requirement in view because this TUI setup will guide
-several sibling projects.
+Immediate next step: adapt the copied Codex crate-root assumptions into
+RunHaven entrypoint, dependency, and product adapters without culling product
+surfaces prematurely. `src/runhaven/cli/tui/mod.rs` currently keeps the crate
+buildable and fails closed for bare interactive TUI launch until that
+integration is complete. For each removal, record why removal is better than
+leaving and adapting. Keep the reference-implementation requirement in view
+because this TUI setup will guide several sibling projects.
 
 Do not publish a release from the interim vendor-reset state. After the TUI is
 fully integrated, verified, and confirmed, do a full release bump to `v0.6.0`
