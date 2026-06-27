@@ -153,6 +153,7 @@ fn broker_plan(profile_name: &str, agent: &str) -> AgentRunPlan {
         profile_name: profile_name.to_string(),
         workspace_scope: crate::runtime::plans::WorkspaceScope::Current,
         workspace_scope_note: None,
+        auth_scope: crate::runtime::plans::AuthScope::Agent,
         worktree: None,
         run_id: None,
         network_name: Some("runhaven-test-internal".to_string()),

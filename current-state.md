@@ -148,7 +148,8 @@ bottom pane are adapted.
 
 TUI component-seam follow-up: `crates/runhaven-core/src/ui_contracts.rs` now
 defines the first tagged RunHaven payload enum with `AgentCatalogData` and
-`LaunchPlanData`. Fixtures live under
+`LaunchPlanData`; `LaunchPlanData` includes the planner's auth scope so the TUI
+does not guess whether login state is agent-wide or project-scoped. Fixtures live under
 `crates/runhaven-core/tests/fixtures/ui/`. The temporary TUI adapter consumes
 `AgentCatalogItemData` for agent display, but the next visual slice should move
 toward a Codex-native shell with RunHaven product cards. dbt-wizard is only the
@@ -165,6 +166,16 @@ keymap, paste normalization, cancellation, and completion types needed by
 upstream Codex list defaults. The upstream Codex list-selection snapshot tests
 are gated behind the opt-in `codex-vendored-tests` feature until RunHaven
 intentionally vendors or regenerates those snapshot goldens.
+
+TUI launch-picker follow-up: `app_shell.rs` no longer owns a hand-drawn
+Ratatui agent list or preview pane. It now hosts a RunHaven launch-wizard view
+model under `crates/runhaven-tui/src/tui/runhaven/launch_wizard.rs`, rendered
+through Codex `SelectionViewParams` and `ListSelectionView`. The generic picker
+logic, side-content layout, cancellation, and list key handling remain
+Codex-vendored. RunHaven-owned code maps `AgentCatalogData` and
+`LaunchPlanData` into decision rows, a safety header, and a plan preview that
+keeps boundary, host home, credentials, auth scope, network mode, and exact
+command visibility near the top. Enter still does not launch.
 
 Verified:
 
@@ -191,6 +202,7 @@ Verified:
 Latest TUI smoke verification:
 
 - `cargo fmt --check`
+- `cargo test -p runhaven-core --locked ui_contracts --quiet`
 - `cargo test -p runhaven-tui --locked app_shell --quiet`
 - `cargo test -p runhaven-tui --locked --quiet`
 - `cargo test -p runhaven-tui --locked pets::image_protocol --quiet`
@@ -198,6 +210,9 @@ Latest TUI smoke verification:
 - `cargo test -p runhaven-tui --locked kitty_file_png_transmission_encodes_local_file_reference --quiet`
 - `cargo test -p runhaven-tui --locked ambient_pet_image_restores_cursor_after_drawing --quiet`
 - `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`
+- `cargo clippy -p runhaven-core --all-targets --locked -- -D warnings`
+- `cargo test -p runhaven --locked bare_non_tty_prints_cli_help --quiet`
+- `cargo run --locked --bin runhaven-check-pins --quiet`
 - `RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin runhaven` in a PTY,
   quit with `q`; it emitted Codex Kitty local-file frames from the Cubby frame
   cache and exited cleanly.
@@ -211,8 +226,8 @@ Latest TUI smoke verification:
 Continue TUI integration from the Codex-vendored source baseline. Keep using
 source-first Codex modules for app shell, bottom pane, status line, native pet,
 resume/session, keymap, tooltips, and terminal-title behavior before writing
-custom RunHaven TUI code. The next practical slice is to replace the temporary
-manual agent list in `app_shell.rs` with Codex `SelectionViewParams` and
-`ListSelectionView`, fed by `AgentCatalogData` and `LaunchPlanData`. Feed
-RunHaven-specific surfaces from the shared `RunHavenComponentPayload` contracts
-instead of ad hoc screen structs.
+custom RunHaven TUI code. The next practical slice is to adapt more of the
+Codex shell around the current launch picker: status/footer behavior, terminal
+title updates, and the review step that shows the exact command before a later
+confirm screen. Feed RunHaven-specific surfaces from the shared
+`RunHavenComponentPayload` contracts instead of ad hoc screen structs.

@@ -68,14 +68,16 @@ Local integration exceptions:
   paths point through `crate::tui`.
 - `serde_json` enables `preserve_order` at the RunHaven crate level to match
   Codex TUI's compact JSON formatting behavior.
-- `app_shell.rs` is temporary RunHaven-owned glue. It restores bare interactive
-  `runhaven` to a real read-only launch preview while the full Codex app shell
-  and bottom pane are still being adapted. It consumes `LaunchPlanData` from
-  `crates/runhaven-core/src/ui_contracts.rs` and uses Ratatui terminal init/restore until
-  the Codex entrypoint can be compiled against RunHaven's product model.
+- `app_shell.rs` is temporary RunHaven-owned shell glue. It restores bare
+  interactive `runhaven` to a read-only launch preview while the full Codex app
+  shell is still being adapted. It now hosts a Codex `ListSelectionView`
+  launch picker through `runhaven/launch_wizard.rs`, which consumes
+  `LaunchPlanData` from `crates/runhaven-core/src/ui_contracts.rs`.
 
 Known integration gap:
 
 - The copied Codex crate source still uses Codex crate/module assumptions.
   RunHaven integration will adapt entrypoints, module paths, dependencies, and
   product data in later commits.
+- The launch picker is still a read-only preview. Review, workspace, policy,
+  and final launch screens still need to be reattached to the Codex shell.

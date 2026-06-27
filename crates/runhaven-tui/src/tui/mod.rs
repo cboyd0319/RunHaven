@@ -1,6 +1,7 @@
 use anyhow::Result;
 
 mod app_shell;
+mod runhaven;
 
 #[allow(dead_code)]
 pub(crate) mod color;

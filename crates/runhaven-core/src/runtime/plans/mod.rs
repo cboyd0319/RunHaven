@@ -244,6 +244,7 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
         profile_name: options.profile.name.to_string(),
         workspace_scope: options.workspace_scope,
         workspace_scope_note,
+        auth_scope: options.auth_scope,
         worktree: options.worktree,
         run_id: options.run_id,
         network_name,

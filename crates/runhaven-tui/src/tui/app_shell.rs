@@ -11,22 +11,14 @@ use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use ratatui::DefaultTerminal;
 use ratatui::Frame;
-use ratatui::layout::Constraint;
-use ratatui::layout::Direction;
-use ratatui::layout::Layout;
 use ratatui::style::Color;
-use ratatui::style::Modifier;
 use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
-use ratatui::widgets::Block;
-use ratatui::widgets::Borders;
-use ratatui::widgets::List;
-use ratatui::widgets::ListItem;
-use ratatui::widgets::ListState;
-use ratatui::widgets::Paragraph;
-use ratatui::widgets::Wrap;
 
+use super::runhaven::launch_wizard::AgentLaunchPreview;
+use super::runhaven::launch_wizard::LaunchWizardView;
+use crate::render::renderable::Renderable;
 use runhaven_core::runtime::plans::AuthScope;
 use runhaven_core::runtime::plans::RunOptions;
 use runhaven_core::runtime::plans::WorkspaceScope;
@@ -94,16 +86,8 @@ fn run_loop(terminal: &mut DefaultTerminal, state: &mut ShellState) -> Result<()
 }
 
 struct ShellState {
-    workspace: PathBuf,
-    agents: Vec<AgentPreview>,
-    selected: usize,
+    launch_wizard: LaunchWizardView,
     image_smoke: ImageSmoke,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct AgentPreview {
-    agent: AgentCatalogItemData,
-    plan: Result<LaunchPlanData, String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -119,7 +103,9 @@ impl ShellState {
 
     fn for_workspace(workspace: impl AsRef<Path>) -> Result<Self> {
         let workspace = workspace.as_ref().to_path_buf();
-        let agents = profiles()
+        let image_smoke = ImageSmoke::from_env();
+        let image_smoke_status = image_smoke.status_line();
+        let previews = profiles()
             .into_iter()
             .map(|profile| {
                 let network = default_network_mode(&profile);
@@ -151,31 +137,15 @@ impl ShellState {
                 .map(|plan| LaunchPlanData::from(&plan))
                 .map_err(|error| error.to_string());
 
-                AgentPreview { agent, plan }
+                AgentLaunchPreview { agent, plan }
             })
             .collect();
+        let launch_wizard = LaunchWizardView::new(workspace, previews, image_smoke_status);
 
         Ok(Self {
-            workspace,
-            agents,
-            selected: 0,
-            image_smoke: ImageSmoke::from_env(),
+            launch_wizard,
+            image_smoke,
         })
-    }
-
-    fn selected_agent(&self) -> Option<&AgentPreview> {
-        self.agents.get(self.selected)
-    }
-
-    fn select_next(&mut self) {
-        if self.agents.is_empty() {
-            return;
-        }
-        self.selected = (self.selected + 1).min(self.agents.len() - 1);
-    }
-
-    fn select_previous(&mut self) {
-        self.selected = self.selected.saturating_sub(1);
     }
 
     fn handle_key(&mut self, key: KeyEvent) -> ShellAction {
@@ -183,27 +153,15 @@ impl ShellState {
             return ShellAction::Continue;
         }
 
-        match key.code {
-            KeyCode::Char('q') | KeyCode::Esc => ShellAction::Quit,
-            KeyCode::Down | KeyCode::Char('j') => {
-                self.select_next();
-                ShellAction::Continue
-            }
-            KeyCode::Up | KeyCode::Char('k') => {
-                self.select_previous();
-                ShellAction::Continue
-            }
-            KeyCode::Home => {
-                self.selected = 0;
-                ShellAction::Continue
-            }
-            KeyCode::End => {
-                if !self.agents.is_empty() {
-                    self.selected = self.agents.len() - 1;
-                }
-                ShellAction::Continue
-            }
-            _ => ShellAction::Continue,
+        if matches!(key.code, KeyCode::Char('q')) {
+            return ShellAction::Quit;
+        }
+
+        self.launch_wizard.handle_key(key);
+        if self.launch_wizard.is_cancelled() {
+            ShellAction::Quit
+        } else {
+            ShellAction::Continue
         }
     }
 
@@ -217,10 +175,6 @@ impl ShellState {
 
     fn image_smoke_animates(&self) -> bool {
         self.image_smoke.animates()
-    }
-
-    fn image_smoke_status(&self) -> Option<Line<'static>> {
-        self.image_smoke.status_line()
     }
 
     fn prepare_image_smoke_draw(&mut self, area: ratatui::layout::Rect, composer_bottom_y: u16) {
@@ -419,200 +373,8 @@ fn codex_home() -> Option<PathBuf> {
 
 fn render(frame: &mut Frame<'_>, state: &mut ShellState) {
     let area = frame.area();
-    let vertical = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(6),
-            Constraint::Min(10),
-            Constraint::Length(2),
-        ])
-        .split(area);
-
-    render_header(frame, vertical[0], state);
-
-    let body = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Length(34), Constraint::Min(30)])
-        .split(vertical[1]);
-
-    render_agents(frame, body[0], state);
-    render_plan(frame, body[1], state);
-    render_footer(frame, vertical[2]);
-    state.prepare_image_smoke_draw(area, vertical[2].y);
-}
-
-fn render_header(frame: &mut Frame<'_>, area: ratatui::layout::Rect, state: &ShellState) {
-    let mut lines = vec![
-        Line::from(vec![
-            Span::styled(
-                "RunHaven",
-                Style::default()
-                    .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
-            ),
-            Span::raw(format!(" v{}", env!("CARGO_PKG_VERSION"))),
-        ]),
-        Line::from("launch: 1 agent > 2 workspace > 3 review > 4 run"),
-        Line::from("This preview uses the same planner as the CLI."),
-    ];
-    if let Some(status) = state.image_smoke_status() {
-        lines.push(status);
-    }
-    frame.render_widget(Paragraph::new(lines), area);
-}
-
-fn render_agents(frame: &mut Frame<'_>, area: ratatui::layout::Rect, state: &ShellState) {
-    let items = state
-        .agents
-        .iter()
-        .map(|agent| {
-            ListItem::new(vec![
-                Line::from(vec![Span::styled(
-                    agent.agent.name.clone(),
-                    Style::default().add_modifier(Modifier::BOLD),
-                )]),
-                Line::from(agent.agent.description.clone()),
-            ])
-        })
-        .collect::<Vec<_>>();
-    let mut list_state = ListState::default();
-    if !state.agents.is_empty() {
-        list_state.select(Some(state.selected));
-    }
-    let list = List::new(items)
-        .block(Block::default().title(" Agents ").borders(Borders::ALL))
-        .highlight_style(
-            Style::default()
-                .bg(Color::Gray)
-                .fg(Color::Black)
-                .add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol("> ");
-    frame.render_stateful_widget(list, area, &mut list_state);
-}
-
-fn render_plan(frame: &mut Frame<'_>, area: ratatui::layout::Rect, state: &ShellState) {
-    let mut lines = Vec::new();
-    lines.push(label_value(
-        "workspace",
-        state.workspace.display().to_string(),
-    ));
-
-    match state.selected_agent() {
-        Some(agent) => {
-            lines.push(label_value("agent", agent.agent.name.clone()));
-            lines.push(label_value("sign in", agent.agent.sign_in.clone()));
-            lines.push(label_value("broker", agent.agent.broker.clone()));
-            lines.push(Line::from(""));
-
-            match &agent.plan {
-                Ok(plan) => append_plan_lines(&mut lines, plan),
-                Err(message) => {
-                    lines.push(Line::from(vec![Span::styled(
-                        "Plan could not be built.",
-                        Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
-                    )]));
-                    lines.push(Line::from(message.clone()));
-                }
-            }
-        }
-        None => lines.push(Line::from("No agents are configured.")),
-    }
-
-    let block = Block::default()
-        .title(" Launch preview ")
-        .borders(Borders::ALL);
-    frame.render_widget(
-        Paragraph::new(lines).block(block).wrap(Wrap { trim: true }),
-        area,
-    );
-}
-
-fn append_plan_lines(lines: &mut Vec<Line<'static>>, plan: &LaunchPlanData) {
-    lines.push(label_value("network", network_label(plan)));
-    lines.push(label_value("state", plan.state_volume.clone()));
-    lines.push(label_value("image", plan.image.clone()));
-    lines.push(Line::from(""));
-    lines.push(Line::from(vec![Span::styled(
-        "Not shared",
-        Style::default().add_modifier(Modifier::BOLD),
-    )]));
-    for item in plan.boundary.not_shared.iter().take(5) {
-        lines.push(Line::from(format!("- {item}")));
-    }
-    lines.push(Line::from(""));
-    lines.push(Line::from(vec![Span::styled(
-        "Shared with the agent",
-        Style::default().add_modifier(Modifier::BOLD),
-    )]));
-    lines.push(Line::from(plan.boundary.mounted_workspace.clone()));
-    lines.push(Line::from(plan.boundary.mounted_state_volume.clone()));
-
-    if !plan.network.provider_allowed_hosts.is_empty() {
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![Span::styled(
-            "Provider hosts",
-            Style::default().add_modifier(Modifier::BOLD),
-        )]));
-        for host in plan.network.provider_allowed_hosts.iter().take(4) {
-            lines.push(Line::from(format!("- {host}")));
-        }
-        if plan.network.provider_allowed_hosts.len() > 4 {
-            lines.push(Line::from(format!(
-                "- {} more",
-                plan.network.provider_allowed_hosts.len() - 4
-            )));
-        }
-    }
-
-    if !plan.safety_notes.is_empty() {
-        lines.push(Line::from(""));
-        lines.push(Line::from(vec![Span::styled(
-            "Safety notes",
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD),
-        )]));
-        for note in plan.safety_notes.iter().take(3) {
-            lines.push(Line::from(format!("- {note}")));
-        }
-    }
-
-    lines.push(Line::from(""));
-    lines.push(Line::from(vec![Span::styled(
-        "Command",
-        Style::default().add_modifier(Modifier::BOLD),
-    )]));
-    lines.push(Line::from(plan.command.clone()));
-}
-
-fn network_label(plan: &LaunchPlanData) -> String {
-    match plan.network.mode.as_str() {
-        "provider" => "provider allowlist".to_string(),
-        "internal" => "local only".to_string(),
-        "internet" => "internet".to_string(),
-        _ => plan.network.summary.clone(),
-    }
-}
-
-fn render_footer(frame: &mut Frame<'_>, area: ratatui::layout::Rect) {
-    let footer = Paragraph::new(vec![
-        Line::from("up/down select  |  enter review coming next  |  q quit"),
-        Line::from("RunHaven will show the full review before launch."),
-    ]);
-    frame.render_widget(footer, area);
-}
-
-fn label_value(label: &'static str, value: String) -> Line<'static> {
-    Line::from(vec![
-        Span::styled(
-            format!("{label}: "),
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        ),
-        Span::raw(value),
-    ])
+    state.launch_wizard.render(area, frame.buffer_mut());
+    state.prepare_image_smoke_draw(area, area.y.saturating_add(area.height));
 }
 
 #[cfg(test)]
@@ -627,10 +389,12 @@ mod tests {
         let workspace = tempfile::tempdir().expect("workspace");
         let state = ShellState::for_workspace(workspace.path()).expect("state");
 
-        assert!(!state.agents.is_empty());
-        let antigravity = state.selected_agent().expect("selected agent");
-        assert_eq!(antigravity.agent.name, "antigravity");
-        assert!(antigravity.plan.is_ok(), "{:?}", antigravity.plan);
+        assert!(state.launch_wizard.agent_count() > 0);
+        assert_eq!(
+            state.launch_wizard.selected_agent_name(),
+            Some("antigravity")
+        );
+        assert!(state.launch_wizard.search_values_are_populated());
     }
 
     #[test]
@@ -638,19 +402,34 @@ mod tests {
         let workspace = tempfile::tempdir().expect("workspace");
         let mut state = ShellState::for_workspace(workspace.path()).expect("state");
 
-        assert_eq!(state.selected, 0);
+        assert_eq!(state.launch_wizard.selected_index(), 0);
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert_eq!(state.selected, 1);
+        assert_eq!(state.launch_wizard.selected_index(), 1);
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert_eq!(state.selected, 0);
+        assert_eq!(state.launch_wizard.selected_index(), 0);
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE)),
+            ShellAction::Quit
+        );
+    }
+
+    #[test]
+    fn shell_escape_cancels_source_picker() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
             ShellAction::Quit
         );
     }
@@ -662,10 +441,47 @@ mod tests {
         let output = render_to_text(&mut state, 120, 48);
 
         assert!(output.contains("RunHaven"));
-        assert!(output.contains("Launch preview"));
+        assert!(output.contains("Step 1/4: Choose agent"));
+        assert!(output.contains("Plan Preview"));
+        assert!(output.contains("Boundary"));
+        assert!(output.contains("/workspace only"));
+        assert!(output.contains("Host home"));
+        assert!(output.contains("not mounted"));
+        assert!(output.contains("Credentials"));
+        assert!(output.contains("provider allowlist"));
         assert!(output.contains("Not shared"));
         assert!(output.contains("host home folder"));
+        assert!(output.contains("Exact command before launch"));
         assert!(output.contains("container run"));
+    }
+
+    #[test]
+    fn shell_render_keeps_boundary_visible_on_80x24() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+        let output = render_to_text(&mut state, 80, 24);
+
+        assert!(output.contains("Boundary"));
+        assert!(output.contains("/workspace only"));
+        assert!(output.contains("Host home"));
+        assert!(output.contains("Credentials"));
+        assert!(output.contains("provider allowlist"));
+    }
+
+    #[test]
+    fn shell_selection_updates_source_picker_preview_state() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+
+        assert_eq!(
+            state.launch_wizard.selected_agent_name(),
+            Some("antigravity")
+        );
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        assert_eq!(state.launch_wizard.selected_agent_name(), Some("claude"));
     }
 
     #[test]

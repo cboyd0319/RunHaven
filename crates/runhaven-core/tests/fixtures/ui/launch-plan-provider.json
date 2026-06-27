@@ -5,6 +5,7 @@
     "workspace": "/Users/c/Documents/GitHub/RunHaven",
     "workspaceScope": "current",
     "workspaceScopeNote": null,
+    "authScope": "agent",
     "session": "default",
     "stateVolume": "runhaven-codex-shared-home",
     "containerName": "runhaven-codex-runhaven-run",

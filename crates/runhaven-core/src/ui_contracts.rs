@@ -37,6 +37,7 @@ pub struct LaunchPlanData {
     pub workspace: String,
     pub workspace_scope: String,
     pub workspace_scope_note: Option<String>,
+    pub auth_scope: String,
     pub session: String,
     pub state_volume: String,
     pub container_name: String,
@@ -119,6 +120,7 @@ impl LaunchPlanData {
             workspace: plan.workspace.display().to_string(),
             workspace_scope: plan.workspace_scope.as_str().to_string(),
             workspace_scope_note: plan.workspace_scope_note.clone(),
+            auth_scope: plan.auth_scope.as_str().to_string(),
             session: plan.session.clone(),
             state_volume: plan.state_volume.clone(),
             container_name: plan.container_name.clone(),
@@ -219,6 +221,7 @@ mod tests {
 
         assert_eq!(data.profile_name, "shell");
         assert_eq!(data.workspace_scope, "current");
+        assert_eq!(data.auth_scope, "project");
         assert_eq!(data.network.mode, "internal");
         assert_eq!(data.state_volume, plan.state_volume);
         assert!(data.boundary.mounted_workspace.ends_with(" -> /workspace"));

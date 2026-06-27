@@ -104,7 +104,8 @@ Target ownership for the rebuilt source remains:
 | Module | Ownership |
 | --- | --- |
 | `mod.rs` | Temporary RunHaven entrypoint during vendor integration; replace staged contracts with adapted Codex app-shell pieces as they come online. |
-| `app_shell.rs` | Temporary read-only launch preview over `LaunchPlanData`; remove or shrink when the full Codex app shell is adapted. |
+| `app_shell.rs` | Temporary shell host for the Codex `ListSelectionView` launch picker, image-smoke bridge, and terminal restore loop; remove or shrink when the full Codex app shell is adapted. |
+| `runhaven/launch_wizard.rs` | RunHaven-owned view model and security copy that maps `AgentCatalogData` and `LaunchPlanData` into Codex picker rows, safety header, and launch-plan preview. |
 | `bottom_pane/list_selection_view.rs` and helpers | Codex-vendored selection surface now compiled through a temporary RunHaven facade; use it before adding custom list, picker, tab, search, side-panel, or footer behavior. |
 | `ui_contracts.rs` | Presentation-neutral RunHaven payloads shared by TUI widgets and any future desktop renderer. |
 | `input.rs` | Keyboard navigation and action routing. Keep key behavior testable here instead of scattering it through draw code. |
@@ -236,6 +237,13 @@ inside `runhaven-tui`. The temporary facade in `tui/mod.rs` exists only to avoid
 pulling Codex's full chat composer and app-server event stack before the app
 shell is ready. Keep future picker and wizard work on this primitive unless a
 RunHaven-specific security boundary requires a documented exception.
+
+The first RunHaven product use of that primitive is the launch wizard adapter in
+`tui/runhaven/launch_wizard.rs`. It is intentionally not generic Codex code. It
+renders planner-backed security facts, including `/workspace only`, host home
+not mounted, credentials not mounted by default, auth scope, network mode, and
+the exact command preview. The generic selection behavior, side-content layout,
+footer rendering, cancellation, and list keys remain Codex source.
 
 Legacy terminal-mascot assets remain under `docs/assets/terminal-mascot/` as
 historical QA/source evidence from the earlier Cubby hero experiment. They are

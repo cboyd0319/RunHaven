@@ -155,6 +155,7 @@ pub struct AgentRunPlan {
     pub profile_name: String,
     pub workspace_scope: WorkspaceScope,
     pub workspace_scope_note: Option<String>,
+    pub auth_scope: AuthScope,
     pub worktree: Option<WorktreeRun>,
     pub run_id: Option<String>,
     pub network_name: Option<String>,

@@ -53,6 +53,14 @@ Codex's default list navigation keys. The upstream list-selection snapshot tests
 are opt-in behind `codex-vendored-tests` because their Codex snapshot goldens
 were intentionally removed during the vendor reset.
 
+The first RunHaven product card over that Codex picker is now active. The
+temporary `app_shell.rs` no longer draws its own agent list; it hosts a
+RunHaven launch-wizard view model in `tui/runhaven/launch_wizard.rs`, rendered
+through Codex `SelectionViewParams` and `ListSelectionView`. The view model is
+RunHaven-owned because it maps `AgentCatalogData` and `LaunchPlanData` into
+security facts: boundary, host home, credentials, auth scope, network mode, and
+the exact command preview. The generic picker remains source-first Codex code.
+
 Temporary visual check for the native Codex pet renderer:
 
 ```bash
@@ -68,8 +76,9 @@ Immediate integration order:
 
 1. Keep vendored Codex source compiling in small slices.
 2. Define presentation-neutral RunHaven UI payloads from existing domain data.
-3. Replace temporary manual launch-list drawing with Codex `SelectionViewParams`
-   and `ListSelectionView`, fed by the RunHaven payload seam.
+3. Continue replacing temporary shell glue with Codex app-shell, bottom-pane,
+   footer, status, title, and keymap pieces while keeping RunHaven domain data
+   isolated under `tui/runhaven/`.
 4. Adapt Codex bottom pane, status line, key handling, title, pets, tooltips,
    and render lifecycle where they fit the RunHaven product.
 5. Remove vendored code only after recording why removal is better than leaving
