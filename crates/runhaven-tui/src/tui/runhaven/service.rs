@@ -7,8 +7,14 @@ use runhaven_core::runtime::plans::WorkspaceScope;
 use runhaven_core::runtime::plans::build_run_plan;
 use runhaven_core::runtime::plans::default_network_mode;
 use runhaven_core::runtime::profiles::profiles;
+use runhaven_core::ui_contracts::AgentCatalogData;
 use runhaven_core::ui_contracts::AgentCatalogItemData;
 use runhaven_core::ui_contracts::LaunchPlanData;
+use serde_json::Value;
+
+use super::protocol::ClientRequest;
+use super::protocol::UnsupportedFamily;
+use super::protocol::ValidateWorkspaceResponse;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct AgentLaunchPreview {
@@ -52,12 +58,85 @@ pub(crate) struct LaunchPreviewPayload {
     pub(crate) previews: Vec<AgentLaunchPreview>,
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub(crate) enum RunHavenServiceError {
+    Unsupported {
+        method: String,
+        family: UnsupportedFamily,
+    },
+    Validation {
+        method: String,
+        message: String,
+    },
+    Backend {
+        method: String,
+        message: String,
+    },
+}
+
+impl std::fmt::Display for RunHavenServiceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unsupported { method, .. } => {
+                write!(f, "{method} is not supported by the RunHaven TUI backend")
+            }
+            Self::Validation { method, message } => {
+                write!(f, "{method} validation error: {message}")
+            }
+            Self::Backend { method, message } => {
+                write!(f, "{method} backend error: {message}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for RunHavenServiceError {}
+
+#[derive(Debug, Default, Clone)]
 pub(crate) struct RunHavenTuiService;
 
 impl RunHavenTuiService {
     pub(crate) fn new() -> Self {
         Self
+    }
+
+    pub(crate) async fn handle_request(
+        &self,
+        request: ClientRequest,
+    ) -> Result<Value, RunHavenServiceError> {
+        let method = request.method().to_string();
+        match request {
+            ClientRequest::RunHavenAgentList { .. } => {
+                serde_json::to_value(self.agent_catalog_payload()).map_err(|error| {
+                    RunHavenServiceError::Backend {
+                        method,
+                        message: error.to_string(),
+                    }
+                })
+            }
+            ClientRequest::RunHavenValidateWorkspace { workspace, .. } => {
+                self.validate_workspace(&workspace, &method)?;
+                serde_json::to_value(ValidateWorkspaceResponse {
+                    workspace: workspace.display().to_string(),
+                })
+                .map_err(|error| RunHavenServiceError::Backend {
+                    method,
+                    message: error.to_string(),
+                })
+            }
+            ClientRequest::Unsupported { method, .. } => Err(RunHavenServiceError::Unsupported {
+                method: method.method().to_string(),
+                family: method.family(),
+            }),
+            #[cfg(test)]
+            ClientRequest::BackendFailureForTest { message, .. } => {
+                Err(RunHavenServiceError::Backend { method, message })
+            }
+        }
+    }
+
+    pub(crate) fn agent_catalog_payload(&self) -> AgentCatalogData {
+        AgentCatalogData::from_profiles(profiles())
     }
 
     pub(crate) fn launch_preview_payload(
@@ -105,6 +184,21 @@ impl RunHavenTuiService {
             workspace,
             previews,
         }
+    }
+
+    fn validate_workspace(
+        &self,
+        workspace: &Path,
+        method: &str,
+    ) -> Result<(), RunHavenServiceError> {
+        if workspace.exists() {
+            return Ok(());
+        }
+
+        Err(RunHavenServiceError::Validation {
+            method: method.to_string(),
+            message: format!("workspace does not exist: {}", workspace.display()),
+        })
     }
 }
 

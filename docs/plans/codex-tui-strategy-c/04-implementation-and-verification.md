@@ -109,6 +109,24 @@ a typed unsupported error:
 When a disabled family becomes visible in the UI, add a UI-level test that it is
 hidden or shows a clear fail-closed local message.
 
+Status:
+
+- Complete as of 2026-06-27. `runhaven/protocol.rs` now defines the local
+  Codex-shaped request, notification, server-request, lag, validation, and
+  disabled-method contract.
+- `runhaven/app_server_client.rs` mirrors Codex's bounded in-process client
+  shape with `request_typed`, `next_event`, `shutdown`, a cloneable request
+  handle, server-request resolve/reject methods, and lossless versus
+  best-effort event forwarding.
+- The worker loop keeps request handling off the command loop so future
+  interactive service flows can continue draining events and accepting
+  server-request responses.
+- Facade tests cover typed requests, request-handle cancellation, next-event
+  delivery, shutdown, server-request resolution and rejection, lossless
+  transcript, completion, and launch-prepared events, lag signaling,
+  best-effort progress and log dropping, validation, backend, and deserialize
+  errors, plus the fail-closed disabled-method matrix.
+
 ### Phase 3: Compile The Dormant Runtime Spine
 
 Before switching runtime ownership, make the dormant Codex runtime spine compile

@@ -49,10 +49,10 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 365.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 367.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 9.
+- RunHaven-only files: 11.
 - Copied Codex files with local edits: 20.
 
 RunHaven-only files:
@@ -62,8 +62,10 @@ README.md
 app_shell.rs
 mod.rs
 pets/bundled_custom.rs
+runhaven/app_server_client.rs
 runhaven/launch_wizard.rs
 runhaven/mod.rs
+runhaven/protocol.rs
 runhaven/service.rs
 terminal_detection.rs
 terminal_tests.rs
@@ -145,6 +147,10 @@ Local integration exceptions:
   `runhaven-core` profiles and planner output into launch preview payloads, so
   `app_shell.rs` does not call core planner APIs directly and
   `launch_wizard.rs` stays UI-owned.
+- `runhaven/protocol.rs` and `runhaven/app_server_client.rs` are the local
+  Strategy C backend facade. They mirror Codex's app-server client shape while
+  keeping RunHaven runtime authority in `runhaven-core` and fail-closing
+  unsupported Codex method families.
 
 Known integration gap:
 
@@ -154,7 +160,7 @@ Known integration gap:
 - The launch picker, read-only review, and confirmation screen are staged in
   `app_shell.rs` plus `runhaven/service.rs`, not the real Codex `App` loop.
   Workspace selection, policy changes, and final foreground launch still need
-  to be reattached through the Codex-shaped runtime and typed backend facade.
+  to be reattached through the Codex-shaped runtime.
 - Foreground launch must be prepared by the RunHaven service but executed by the
   UI loop only after Codex terminal restore. Backend service tasks must not own
   raw terminal state.

@@ -392,19 +392,37 @@ Latest TUI Phase 1 service extraction:
   external by default, 9 RunHaven-only files, and 20 copied Codex files with
   local edits.
 
+Latest TUI Phase 2 backend facade:
+
+- 2026-06-27: Completed Phase 2 of the Strategy C plan. Added the local
+  Codex-shaped request, event, server-request, validation, and disabled-method
+  contract in `crates/runhaven-tui/src/tui/runhaven/protocol.rs`. Added the
+  bounded in-process client facade in
+  `crates/runhaven-tui/src/tui/runhaven/app_server_client.rs` with
+  `request_typed`, `next_event`, `shutdown`, a cloneable request handle,
+  request cancellation, server-request resolve/reject methods, lossless
+  transcript/completion/launch-prepared event delivery, and best-effort
+  progress/log dropping with lag markers. `RunHavenTuiService` now dispatches
+  neutral facade requests for agent catalog and workspace validation while
+  keeping the temporary launch-preview payload for the staging shell. The
+  request worker spawns service work off the command loop, matching Codex's
+  non-blocking client shape for future interactive flows. Focused facade tests
+  cover the Phase 2 matrix, including the fail-closed disabled method families.
+  Verified: `cargo fmt --check`,
+  `cargo test -p runhaven-tui --locked app_server_client --quiet`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `scripts/compare-codex-tui.sh`, `cargo run --locked --bin runhaven-check-pins --quiet`,
+  JSON validation, ASCII and whitespace scans, and `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
 
 ## Next Step
 
-Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 2:
-build the Codex-shaped backend facade. Add the local typed client/protocol
-service with `request_typed`, `next_event`, `shutdown`, request-handle
-cancellation, bounded events, lag signaling, lossless transcript/completion
-delivery, best-effort progress/log delivery, typed unsupported and validation
-errors, and the fail-closed method matrix. After that, compile the dormant
-runtime spine with the smallest protocol/utility surface, prove terminal
-handoff, and only then adapt the native `App`/`BottomPane`/`ChatWidget` path.
-Foreground launch remains read-only until the UI thread owns terminal restore
-and `launch_run_plan`.
+Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 3:
+compile the dormant runtime spine with the smallest protocol/utility surface.
+Then prove terminal handoff, and only then adapt the native
+`App`/`BottomPane`/`ChatWidget` path. Foreground launch remains read-only until
+the UI thread owns terminal restore and `launch_run_plan`.
