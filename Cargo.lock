@@ -1602,6 +1602,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "codex-terminal-detection"
+version = "0.0.0"
+dependencies = [
+ "pretty_assertions",
+ "tracing",
+]
+
+[[package]]
 name = "codex-utils-absolute-path"
 version = "0.0.0"
 dependencies = [
@@ -8659,6 +8667,7 @@ dependencies = [
  "codex-plugin",
  "codex-protocol",
  "codex-shell-command",
+ "codex-terminal-detection",
  "codex-utils-absolute-path",
  "codex-utils-approval-presets",
  "codex-utils-cli",

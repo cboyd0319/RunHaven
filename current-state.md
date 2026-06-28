@@ -530,9 +530,7 @@ Latest Codex config/keymap crate vendoring:
   depends on the real vendored `codex-config` crate, `lib.rs` no longer aliases
   `codex_config`, and the file-backed vendored `keymap.rs` compiles against
   `codex_config::types::{KeybindingsSpec, TuiKeymap, MAX_FUNCTION_KEY}` instead
-  of an inline RunHaven keymap extract. The only remaining `codex_*` self-alias
-  is `codex_terminal_detection`, which stays temporary until the terminal
-  detection crate is promoted.
+  of an inline RunHaven keymap extract.
 - Preserved upstream OpenAI fork git revs for `tokio-tungstenite` and
   `tungstenite` because Codex relies on those forks for proxy-enabled websocket
   behavior. `codex-client` pins `sha2` 0.10 because that source formats the
@@ -699,6 +697,31 @@ Latest Codex utility crate vendoring:
   `cargo check -p codex-utils-elapsed --locked`,
   `cargo check -p codex-utils-sleep-inhibitor --locked`, and
   `cargo check -p runhaven-tui --locked`.
+
+Latest Codex terminal-detection crate vendoring:
+
+- 2026-06-28: Promoted `codex-terminal-detection` from the temporary
+  `runhaven-tui` self-alias to a real original-name vendored crate under
+  `crates/codex/terminal-detection`. The copied source and tests are
+  byte-identical to the pinned local Codex source. `runhaven-tui` now depends
+  on the crate directly, and the duplicate local `terminal_detection.rs` and
+  `terminal_tests.rs` files were deleted. This removes the last `codex_*`
+  self-alias from `runhaven-tui` without changing active TUI behavior.
+- Verified:
+  `cargo check -p codex-terminal-detection --locked`,
+  `cargo test -p codex-terminal-detection --locked --quiet`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked terminal_palette --quiet`,
+  `cargo test -p runhaven-tui --locked pets::image_protocol --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo fmt --check`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`,
+  `scripts/compare-codex-tui.sh`, and
+  `git diff --check`.
 
 ## Blockers
 

@@ -1,7 +1,9 @@
-extern crate self as codex_terminal_detection;
-
 mod tui;
 
+pub use codex_terminal_detection::Multiplexer;
+pub use codex_terminal_detection::TerminalInfo;
+pub use codex_terminal_detection::TerminalName;
+pub use codex_terminal_detection::terminal_info;
 pub(crate) use tui::app;
 pub(crate) use tui::app_command;
 pub(crate) use tui::app_event;
@@ -35,10 +37,6 @@ pub(crate) use tui::slash_command;
 pub(crate) use tui::status;
 pub(crate) use tui::status_indicator_widget;
 pub(crate) use tui::style;
-pub use tui::terminal_detection::Multiplexer;
-pub use tui::terminal_detection::TerminalInfo;
-pub use tui::terminal_detection::TerminalName;
-pub use tui::terminal_detection::terminal_info;
 pub(crate) use tui::terminal_hyperlinks;
 pub(crate) use tui::terminal_palette;
 pub(crate) use tui::terminal_probe;

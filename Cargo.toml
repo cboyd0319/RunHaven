@@ -24,6 +24,7 @@ members = [
     "crates/codex/protocol",
     "crates/codex/sandboxing",
     "crates/codex/shell-command",
+    "crates/codex/terminal-detection",
     "crates/codex/utils/absolute-path",
     "crates/codex/utils/approval-presets",
     "crates/codex/utils/cache",

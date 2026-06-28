@@ -1,8 +1,8 @@
 use ratatui::style::Color;
 
 use crate::tui::color::perceptual_distance;
-use crate::tui::terminal_detection::TerminalName;
-use crate::tui::terminal_detection::terminal_info;
+use codex_terminal_detection::TerminalName;
+use codex_terminal_detection::terminal_info;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StdoutColorLevel {

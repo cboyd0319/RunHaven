@@ -150,8 +150,6 @@ pub(crate) mod status {
     }
 }
 #[allow(dead_code)]
-pub(crate) mod terminal_detection;
-#[allow(dead_code)]
 pub(crate) mod terminal_hyperlinks;
 #[allow(dead_code)]
 pub(crate) mod terminal_palette;
@@ -297,10 +295,9 @@ mod drift_tests {
             .filter(|line| line.starts_with("extern crate self as codex_"))
             .collect::<Vec<_>>();
 
-        assert_eq!(
-            aliases,
-            ["extern crate self as codex_terminal_detection;"],
-            "do not add new codex_* self-aliases; vendor real Codex crates or shrink local shims"
+        assert!(
+            aliases.is_empty(),
+            "do not add codex_* self-aliases; vendor real Codex crates or shrink local shims"
         );
     }
 

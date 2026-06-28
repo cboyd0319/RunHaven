@@ -14,7 +14,8 @@ to the local RunHaven vendored path:
 crates/runhaven-tui/src/tui/
 ```
 
-It also includes Codex terminal detection copied from the same upstream commit:
+It also includes Codex terminal detection copied from the same upstream commit
+under `crates/codex/terminal-detection/`:
 
 ```text
 codex-rs/terminal-detection/src/
@@ -46,6 +47,7 @@ codex-plugin
 codex-protocol
 codex-sandboxing
 codex-shell-command
+codex-terminal-detection
 codex-utils-absolute-path
 codex-utils-approval-presets
 codex-utils-cache
@@ -110,16 +112,17 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 369.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 368.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 13.
-- Copied Codex files with local edits: 26.
+- RunHaven-only files: 12.
+- Copied Codex files with local edits: 42.
 
 RunHaven-only files:
 
 ```text
 README.md
+app_event_shared.rs
 app_shell.rs
 mod.rs
 pets/bundled_custom.rs
@@ -130,36 +133,50 @@ runhaven/mod.rs
 runhaven/protocol.rs
 runhaven/service.rs
 runhaven/terminal_handoff.rs
-terminal_detection.rs
-terminal_tests.rs
 ```
 
 Copied Codex files with local edits:
 
 ```text
-app/pets.rs
 app.rs
+app/pets.rs
+bottom_pane/app_link_view.rs
+bottom_pane/approval_overlay.rs
+bottom_pane/chat_composer.rs
+bottom_pane/command_popup.rs
+bottom_pane/feedback_view.rs
 bottom_pane/footer.rs
+bottom_pane/hooks_browser_view.rs
 bottom_pane/list_selection_view.rs
+bottom_pane/mcp_server_elicitation.rs
 bottom_pane/mod.rs
+bottom_pane/pending_input_preview.rs
+bottom_pane/request_user_input/mod.rs
+bottom_pane/skill_popup.rs
+bottom_pane/skills_toggle_view.rs
+bottom_pane/status_line_setup.rs
 bottom_pane/textarea.rs
+bottom_pane/title_setup.rs
+bottom_pane/unified_exec_footer.rs
 chatwidget/pets.rs
 custom_terminal.rs
 insert_history.rs
 markdown_render_tests.rs
 motion.rs
-pets/image_protocol.rs
 pets/mod.rs
 pets/model.rs
 pets/picker.rs
 pets/preview.rs
+render/highlight.rs
 render/renderable.rs
 shimmer.rs
+status_indicator_widget.rs
 style.rs
 terminal_hyperlinks.rs
 terminal_palette.rs
 terminal_probe.rs
 test_backend.rs
+test_support.rs
 tui.rs
 tui/event_stream.rs
 wrapping.rs
@@ -176,9 +193,6 @@ Local integration exceptions:
 - `mod.rs` is the temporary RunHaven module entrypoint during integration. It
   keeps the crate buildable and fails closed for interactive TUI launch until
   the vendored Codex entrypoint is adapted.
-- `terminal_detection.rs` and `terminal_tests.rs` are copied from the Codex
-  terminal-detection crate because the native pet image protocol depends on the
-  same iTerm2, Kitty, Sixel, tmux, and Zellij decisions as Codex.
 - `pets/picker.rs` and `pets/preview.rs` remain vendored and now compile
   against the real vendored `bottom_pane` module path. They are still not
   exposed as active product flows until the native app shell owns those views.
@@ -234,9 +248,10 @@ Local integration exceptions:
   for dormant Codex TUI CLI, history, exec-cell, and chat turn-lifecycle
   imports. The sleep inhibitor keeps its native FFI unsafe allowance scoped to
   that vendored utility crate; it is not active RunHaven backend authority.
-- `lib.rs` no longer aliases `codex_config`; only
-  `codex_terminal_detection` remains as a temporary self-alias until the
-  terminal-detection crate is promoted into the vendored crate set.
+- `crates/codex/terminal-detection` is now the original-name crate authority
+  for terminal identification. `runhaven-tui` no longer aliases itself as
+  `codex_terminal_detection`, and the duplicate local
+  `terminal_detection.rs` plus `terminal_tests.rs` files were deleted.
 - `render/renderable.rs` is now compiled through the RunHaven adapter with one
   Ratatui 0.30 compatibility tweak: `Line` renders through the borrowed
   `WidgetRef` implementation.

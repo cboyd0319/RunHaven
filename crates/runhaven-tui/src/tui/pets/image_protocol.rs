@@ -4,15 +4,15 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use crate::tui::terminal_detection::Multiplexer;
-use crate::tui::terminal_detection::TerminalInfo;
-use crate::tui::terminal_detection::TerminalName;
-use crate::tui::terminal_detection::terminal_info;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
 use base64::Engine as _;
 use base64::engine::general_purpose;
+use codex_terminal_detection::Multiplexer;
+use codex_terminal_detection::TerminalInfo;
+use codex_terminal_detection::TerminalName;
+use codex_terminal_detection::terminal_info;
 use image::imageops::FilterType;
 
 use super::sixel;
