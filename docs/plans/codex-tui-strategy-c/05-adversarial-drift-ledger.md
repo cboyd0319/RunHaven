@@ -296,10 +296,9 @@ are now real vendored modules. The remaining D2 debt is `app_event_shared.rs`,
 - Plan rule: doc 01 "make it a normal view launched by Codex `App`"; Phase 6
   "Agent picker: `ListSelectionView`"; rule 10 "reuse `BottomPaneView` ...
   before adding a custom rendering loop."
-- Evidence (`launch_wizard.rs`, 1542 lines): imports `BottomPaneView` but still
-  implements the temporary `Renderable` path, and is a 3-screen state machine
-  (`ChooseAgent`/`ReviewPlan`/`ConfirmLaunch`, `:71-76`) that hand-builds two
-  full-screen renderers
+- Evidence (`launch_wizard.rs`, 1542 lines): now implements `BottomPaneView`,
+  but remains a 3-screen state machine (`ChooseAgent`/`ReviewPlan`/
+  `ConfirmLaunch`, `:71-76`) that hand-builds two full-screen renderers
   (`ReviewPlan` `:628-713`, `ConfirmLaunch` `:715-886`) and a typed-confirmation
   composer rather than reusing `ListSelectionView`. ~1200 non-test lines for a
   "view-model mapper."
@@ -310,7 +309,7 @@ are now real vendored modules. The remaining D2 debt is `app_event_shared.rs`,
     boundary changes, the UI text will not.
   - Re-derives `network_mode_label` (`:1179-1186`) when the contract already
     supplies `plan.network.summary`. Duplication against the source of truth.
-- Risk: a large bespoke renderer that Phase 4/6 wants replaced by Codex child
+- Risk: a large bespoke renderer that Phase 4/6 wants owned by Codex child
   views; and security text that can silently desync from the real boundary.
 - Recommendation: drive boundary/network text from the `LaunchPlanData`
   contract, not literals. Treat the review/confirm screens as Codex child views

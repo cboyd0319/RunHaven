@@ -686,10 +686,12 @@ Latest Codex bottom-pane activation:
 Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4:
 adapt the native `App` path and then `ChatWidget` ownership around the now
 promoted bottom pane. `workspace_messages.rs` is active from real vendored
-source; `launch_wizard.rs` still needs to become a real `BottomPaneView` before
-the current picker/review/confirm flow can move out of `app_shell.rs`.
-Foreground launch remains read-only until the native Codex app loop owns
-terminal restore and `launch_run_plan` is wired through the UI thread. The next
-vendor-first slice should keep replacing bridge types with real Codex modules
-or document why a bridge must remain until ChatWidget activation. Do not route
-host-reaching Codex behavior around the RunHaven facade.
+source, and `launch_wizard.rs` now implements `BottomPaneView` for the current
+picker/review/confirm flow. The next slice should show that view through
+`ChatWidget` and the native bottom pane so the flow can move out of
+`app_shell.rs`. Foreground launch remains read-only until the native Codex app
+loop owns terminal restore and `launch_run_plan` is wired through the UI
+thread. The next vendor-first slice should keep replacing bridge types with
+real Codex modules or document why a bridge must remain until ChatWidget
+activation. Do not route host-reaching Codex behavior around the RunHaven
+facade.

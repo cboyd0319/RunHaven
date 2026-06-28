@@ -34,6 +34,7 @@ use crate::style::selected_row_style;
 use crate::style::warning_style;
 use crate::tui::app_event_sender::AppEventSender;
 use crate::tui::bottom_pane::BottomPaneView;
+use crate::tui::bottom_pane::CancellationEvent;
 use crate::tui::bottom_pane::ColumnWidthMode;
 use crate::tui::bottom_pane::ListSelectionView;
 use crate::tui::bottom_pane::SelectionItem;
@@ -53,6 +54,7 @@ pub(crate) struct LaunchWizardView {
     screen: LaunchWizardScreen,
     confirm_composer: TextArea,
     confirm_notice: Option<String>,
+    completion: Option<ViewCompletion>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -110,21 +112,22 @@ impl LaunchWizardView {
             screen: LaunchWizardScreen::ChooseAgent,
             confirm_composer: TextArea::new(),
             confirm_notice: None,
+            completion: None,
         }
     }
 
     pub(crate) fn handle_key(&mut self, key: KeyEvent) {
-        match self.screen {
-            LaunchWizardScreen::ChooseAgent => self.handle_picker_key(key),
-            LaunchWizardScreen::ReviewPlan => self.handle_review_key(key),
-            LaunchWizardScreen::ConfirmLaunch => self.handle_confirm_key(key),
-        }
+        self.handle_key_event(key);
     }
 
     fn handle_picker_key(&mut self, key: KeyEvent) {
         self.picker.handle_key_event(key);
         if let Some(selected) = self.picker.selected_index() {
             self.selected_idx.store(selected, Ordering::Relaxed);
+        }
+        if self.picker.completion() == Some(ViewCompletion::Cancelled) {
+            self.completion = Some(ViewCompletion::Cancelled);
+            return;
         }
         if let Some(selected) = self.picker.take_last_selected_index() {
             self.selected_idx.store(selected, Ordering::Relaxed);
@@ -200,8 +203,7 @@ impl LaunchWizardView {
     }
 
     pub(crate) fn is_cancelled(&self) -> bool {
-        self.screen == LaunchWizardScreen::ChooseAgent
-            && self.picker.completion() == Some(ViewCompletion::Cancelled)
+        self.completion == Some(ViewCompletion::Cancelled)
     }
 
     #[cfg(test)]
@@ -322,6 +324,48 @@ impl LaunchWizardView {
     }
 }
 
+impl BottomPaneView for LaunchWizardView {
+    fn handle_key_event(&mut self, key_event: KeyEvent) {
+        if self.completion.is_some() {
+            return;
+        }
+        match self.screen {
+            LaunchWizardScreen::ChooseAgent => self.handle_picker_key(key_event),
+            LaunchWizardScreen::ReviewPlan => self.handle_review_key(key_event),
+            LaunchWizardScreen::ConfirmLaunch => self.handle_confirm_key(key_event),
+        }
+    }
+
+    fn is_complete(&self) -> bool {
+        self.completion.is_some()
+    }
+
+    fn completion(&self) -> Option<ViewCompletion> {
+        self.completion
+    }
+
+    fn selected_index(&self) -> Option<usize> {
+        Some(self.selected_idx.load(Ordering::Relaxed))
+    }
+
+    fn on_ctrl_c(&mut self) -> CancellationEvent {
+        self.completion = Some(ViewCompletion::Cancelled);
+        CancellationEvent::Handled
+    }
+
+    fn prefer_esc_to_handle_key_event(&self) -> bool {
+        true
+    }
+
+    fn handle_paste(&mut self, pasted: String) -> bool {
+        if !self.confirm_accepts_text_input() || pasted.is_empty() {
+            return false;
+        }
+        LaunchWizardView::handle_paste(self, &pasted);
+        true
+    }
+}
+
 impl Renderable for LaunchWizardView {
     fn render(&self, area: Rect, buf: &mut Buffer) {
         match self.screen {
@@ -357,6 +401,10 @@ impl Renderable for LaunchWizardView {
             }
             .desired_height(width),
         }
+    }
+
+    fn cursor_pos(&self, area: Rect) -> Option<(u16, u16)> {
+        self.confirm_cursor_position(area)
     }
 }
 
@@ -1295,6 +1343,39 @@ mod tests {
     }
 
     #[test]
+    fn bottom_pane_view_selection_opens_review_without_completing() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![ready_preview("codex")],
+            None,
+        );
+
+        BottomPaneView::handle_key_event(&mut view, key(KeyCode::Enter));
+
+        assert!(view.is_reviewing());
+        assert!(!BottomPaneView::is_complete(&view));
+        assert_eq!(BottomPaneView::completion(&view), None);
+    }
+
+    #[test]
+    fn bottom_pane_view_picker_cancel_completes_view() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![ready_preview("codex")],
+            None,
+        );
+
+        BottomPaneView::handle_key_event(&mut view, key(KeyCode::Esc));
+
+        assert!(view.is_cancelled());
+        assert!(BottomPaneView::is_complete(&view));
+        assert_eq!(
+            BottomPaneView::completion(&view),
+            Some(ViewCompletion::Cancelled)
+        );
+    }
+
+    #[test]
     fn back_from_review_keeps_selected_agent() {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
@@ -1467,6 +1548,34 @@ mod tests {
         assert_eq!(
             view.confirm_notice.as_deref(),
             Some("Confirmed. TUI launch is still disabled.")
+        );
+    }
+
+    #[test]
+    fn bottom_pane_view_confirm_paste_is_handled_but_not_inserted() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![confirm_required_preview("codex")],
+            None,
+        );
+        BottomPaneView::handle_key_event(&mut view, key(KeyCode::Enter));
+        BottomPaneView::handle_key_event(&mut view, key(KeyCode::Enter));
+
+        assert!(view.confirm_accepts_text_input());
+        assert!(BottomPaneView::handle_paste(
+            &mut view,
+            "launch".to_string()
+        ));
+        assert!(view.confirm_text().is_empty());
+        assert_eq!(
+            view.confirm_notice.as_deref(),
+            Some("Type launch by hand. Paste is ignored here.")
+        );
+
+        BottomPaneView::handle_key_event(&mut view, key(KeyCode::Enter));
+        assert_eq!(
+            view.confirm_notice.as_deref(),
+            Some("Type launch before confirming.")
         );
     }
 

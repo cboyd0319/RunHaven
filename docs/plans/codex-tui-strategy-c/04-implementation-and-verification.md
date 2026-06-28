@@ -184,10 +184,12 @@ runtime ownership in the same migration. Avoid a separate permanent
 
 Progress note, 2026-06-27: `app_event.rs`, `app_event_sender.rs`,
 `bottom_pane/mod.rs`, and `workspace_messages.rs` now compile from the real
-vendored source under their original module paths. The remaining Phase 4 work
-is native `App` ownership, replacing bridge types with real shared modules,
-making `launch_wizard.rs` a real `BottomPaneView`, and a fail-closed design for
-host-reaching Codex app/session/chat surfaces before they become active.
+vendored source under their original module paths. `launch_wizard.rs` now
+implements `BottomPaneView` for the current picker/review/confirm flow. The
+remaining Phase 4 work is native `App` ownership, replacing bridge types with
+real shared modules, showing the launch wizard through `ChatWidget` and the
+native bottom pane, and a fail-closed design for host-reaching Codex
+app/session/chat surfaces before they become active.
 
 Bring active:
 
