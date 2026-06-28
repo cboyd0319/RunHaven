@@ -32,6 +32,7 @@ codex-async-utils
 codex-client
 codex-config
 codex-connectors
+codex-context-fragments
 codex-exec-server
 codex-exec-server-protocol
 codex-execpolicy
@@ -40,11 +41,14 @@ codex-features
 codex-file-search
 codex-file-system
 codex-git-utils
+codex-install-context
+codex-memories-read
 codex-model-provider-info
 codex-network-proxy
 codex-otel
 codex-plugin
 codex-protocol
+codex-response-debug-context
 codex-sandboxing
 codex-shell-command
 codex-terminal-detection
@@ -57,6 +61,7 @@ codex-utils-elapsed
 codex-utils-fuzzy-match
 codex-utils-home-dir
 codex-utils-image
+codex-utils-output-truncation
 codex-utils-path
 codex-utils-path-uri
 codex-utils-plugins
@@ -64,6 +69,7 @@ codex-utils-pty
 codex-utils-rustls-provider
 codex-utils-sleep-inhibitor
 codex-utils-string
+codex-utils-stream-parser
 codex-windows-sandbox
 ```
 
@@ -252,6 +258,14 @@ Local integration exceptions:
   for terminal identification. `runhaven-tui` no longer aliases itself as
   `codex_terminal_detection`, and the duplicate local
   `terminal_detection.rs` plus `terminal_tests.rs` files were deleted.
+- `crates/codex/context-fragments`, `crates/codex/install-context`,
+  `crates/codex/memories/read`, `crates/codex/response-debug-context`,
+  `crates/codex/utils/output-truncation`, and
+  `crates/codex/utils/stream-parser` are original-name support crate
+  authorities for the next `legacy_core::config` compatibility closure. They
+  compile as source authorities only; `runhaven-tui` does not call their
+  install, memory, or response-debug helpers as active product behavior in this
+  slice.
 - `render/renderable.rs` is now compiled through the RunHaven adapter with one
   Ratatui 0.30 compatibility tweak: `Line` renders through the borrowed
   `WidgetRef` implementation.
@@ -326,6 +340,12 @@ Known integration gap:
   `history_cell`, `status`, and `chatwidget` modules all depend on Codex's
   core config shape, so promoting only `chatwidget.rs` produces root-module and
   config-surface errors instead of a useful intermediate state.
+- Full upstream `codex-app-server-client` and full upstream `codex-core` are
+  not active yet. `codex-app-server-client` brings the app-server transport
+  closure, and full `codex-core` brings login, MCP, filesystem, hooks, tools,
+  rollout, model-provider, and app-server-adjacent behavior. The next useful
+  step is the reduced original-name `codex-core` config compatibility closure,
+  with host-reaching behavior kept inert or fail-closed.
 - The dormant Codex `Tui` runtime spine now compiles and has focused tests, but
   it is not the active bare-interactive app loop yet.
 - The launch picker, read-only review, and confirmation screen still run from

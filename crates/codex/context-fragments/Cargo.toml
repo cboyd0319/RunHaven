@@ -1,0 +1,19 @@
+[package]
+edition.workspace = true
+name = "codex-context-fragments"
+version = "0.0.0"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+name = "codex_context_fragments"
+path = "src/lib.rs"
+test = false
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+codex-protocol = { path = "../protocol" }
+codex-utils-string = { path = "../utils/string" }

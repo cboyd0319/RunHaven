@@ -205,6 +205,21 @@ mod drift_tests {
             .collect()
     }
 
+    fn top_level_inline_module_declarations(module_source: &str) -> Vec<String> {
+        module_source
+            .lines()
+            .filter_map(|line| {
+                ["pub(crate) mod ", "pub mod ", "mod "]
+                    .iter()
+                    .find_map(|prefix| {
+                        line.strip_prefix(prefix)
+                            .and_then(|rest| rest.strip_suffix(" {"))
+                    })
+            })
+            .map(str::to_string)
+            .collect()
+    }
+
     fn module_declared(module_source: &str, module: &str) -> bool {
         let private_decl = format!("mod {module};");
         let crate_decl = format!("pub(crate) mod {module};");
@@ -299,6 +314,70 @@ mod drift_tests {
             aliases.is_empty(),
             "do not add codex_* self-aliases; vendor real Codex crates or shrink local shims"
         );
+    }
+
+    #[test]
+    fn legacy_core_boundary_stays_vendor_first() {
+        let module_source = include_str!("mod.rs");
+        let root_lib_source = include_str!("../lib.rs");
+        let bridge_source = include_str!("app_event_shared.rs");
+        let runhaven_sources = [
+            include_str!("runhaven/app_server_client.rs"),
+            include_str!("runhaven/app_server_session.rs"),
+            include_str!("runhaven/protocol.rs"),
+            include_str!("runhaven/service.rs"),
+            include_str!("runhaven/launch_wizard.rs"),
+            include_str!("runhaven/terminal_handoff.rs"),
+        ];
+
+        assert!(
+            !module_declared(module_source, "legacy_core")
+                && !module_declared(root_lib_source, "legacy_core"),
+            "do not add a local legacy_core shim; vendor the real Codex compatibility path"
+        );
+        assert!(
+            !bridge_source.contains("legacy_core"),
+            "app_event_shared.rs must not grow legacy_core compatibility behavior"
+        );
+        for source in runhaven_sources {
+            assert!(
+                !source.contains("crate::legacy_core") && !source.contains("legacy_core::"),
+                "RunHaven-owned TUI adapters must not import legacy_core directly"
+            );
+        }
+    }
+
+    #[test]
+    fn app_event_shared_shrinks_only() {
+        let source = include_str!("app_event_shared.rs");
+        let inline_modules = top_level_inline_module_declarations(source);
+
+        assert_eq!(
+            inline_modules,
+            [
+                "app",
+                "app_server_session",
+                "chatwidget",
+                "goal_files",
+                "history_cell",
+                "hooks_rpc",
+                "session_log",
+            ],
+            "app_event_shared.rs may shrink as real Codex modules activate, but must not grow new bridge modules"
+        );
+        for marker in [
+            "std::env",
+            "std::fs",
+            "std::process::Command",
+            "reqwest",
+            "runhaven_core::",
+            "legacy_core",
+        ] {
+            assert!(
+                !source.contains(marker),
+                "app_event_shared.rs must stay an inert type bridge and not grow host-reaching marker {marker:?}"
+            );
+        }
     }
 
     #[test]

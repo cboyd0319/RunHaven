@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-06-27 UTC
+Last updated: 2026-06-28 UTC
 
 ## Current Objective
 
@@ -722,6 +722,36 @@ Latest Codex terminal-detection crate vendoring:
   `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`,
   `scripts/compare-codex-tui.sh`, and
   `git diff --check`.
+
+Latest Codex config support crate vendoring:
+
+- 2026-06-28: Added original-name vendored workspace crates for
+  `codex-context-fragments`, `codex-install-context`,
+  `codex-memories-read`, `codex-response-debug-context`,
+  `codex-utils-output-truncation`, and `codex-utils-stream-parser`. These are
+  low-coupling upstream support crates for the next reduced `codex-core`
+  config compatibility closure. They are not active RunHaven product authority,
+  and `runhaven-tui` does not route launch, install, memory, response-debug,
+  app-server, login, MCP, or filesystem behavior through them in this slice.
+- Added two drift guards: local `legacy_core` compatibility shims are blocked,
+  and `app_event_shared.rs` may shrink but cannot grow new bridge modules or
+  host-reaching behavior.
+- Full upstream `codex-app-server-client` and full upstream `codex-core` remain
+  intentionally inactive. The next useful step is the reduced original-name
+  `codex-core` config compatibility closure, not promoting the app-server
+  backend stack.
+- Verified:
+  `cargo check -p codex-utils-output-truncation -p codex-utils-stream-parser -p codex-context-fragments -p codex-install-context -p codex-memories-read -p codex-response-debug-context --offline`,
+  `cargo check -p codex-utils-output-truncation -p codex-utils-stream-parser -p codex-context-fragments -p codex-install-context -p codex-memories-read -p codex-response-debug-context --locked`,
+  `cargo test -p codex-utils-output-truncation -p codex-utils-stream-parser -p codex-context-fragments -p codex-install-context -p codex-memories-read -p codex-response-debug-context --locked --quiet`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo fmt --check`, `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`, JSON validation, snap-new scan, metadata
+  check, typography scan for changed files, and `git diff --check`.
 
 ## Blockers
 

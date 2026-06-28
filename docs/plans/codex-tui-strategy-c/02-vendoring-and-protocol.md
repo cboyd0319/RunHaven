@@ -129,6 +129,13 @@ slice. With the vendor-first assumption, classify them instead of omitting them:
 | `codex-sandboxing`, `codex-windows-sandbox` | Vendor as source reference. RunHaven's macOS container boundary remains authoritative. |
 | `codex-arg0` | Needed only if RunHaven preserves Codex-style binary dispatch or remote app-server startup paths. |
 
+Current low-coupling support crates already vendored under original names for
+the next config closure: `codex-context-fragments`, `codex-install-context`,
+`codex-memories-read`, `codex-response-debug-context`,
+`codex-utils-output-truncation`, and `codex-utils-stream-parser`. They are
+compile/reference authorities only until a later slice promotes the reduced
+`codex-core` config compatibility path.
+
 This table is intentionally permissive about vendoring and strict about active
 authority. The mistake to avoid is not copying Codex source. The mistake is
 letting copied Codex backend paths become the path that launches or mutates

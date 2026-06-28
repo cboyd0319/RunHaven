@@ -1,0 +1,19 @@
+[package]
+edition.workspace = true
+name = "codex-utils-output-truncation"
+version = "0.0.0"
+license = "Apache-2.0"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+codex-protocol = { path = "../../protocol" }
+codex-utils-string = { path = "../string" }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+
+[lib]
+doctest = false

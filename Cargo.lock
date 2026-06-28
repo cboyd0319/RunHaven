@@ -1238,6 +1238,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "codex-context-fragments"
+version = "0.0.0"
+dependencies = [
+ "codex-protocol",
+ "codex-utils-string",
+]
+
+[[package]]
 name = "codex-core-skills"
 version = "0.0.0"
 dependencies = [
@@ -1413,6 +1421,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "codex-install-context"
+version = "0.0.0"
+dependencies = [
+ "codex-utils-absolute-path",
+ "codex-utils-home-dir",
+ "pretty_assertions",
+ "tempfile",
+]
+
+[[package]]
+name = "codex-memories-read"
+version = "0.0.0"
+dependencies = [
+ "codex-protocol",
+ "codex-shell-command",
+ "codex-utils-absolute-path",
+ "pretty_assertions",
+]
+
+[[package]]
 name = "codex-model-provider-info"
 version = "0.0.0"
 dependencies = [
@@ -1558,6 +1586,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "codex-response-debug-context"
+version = "0.0.0"
+dependencies = [
+ "base64 0.22.1",
+ "codex-api",
+ "http",
+ "pretty_assertions",
+ "serde_json",
+]
+
+[[package]]
 name = "codex-sandboxing"
 version = "0.0.0"
 dependencies = [
@@ -1692,6 +1731,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "codex-utils-output-truncation"
+version = "0.0.0"
+dependencies = [
+ "codex-protocol",
+ "codex-utils-string",
+ "pretty_assertions",
+]
+
+[[package]]
 name = "codex-utils-path"
 version = "0.0.0"
 dependencies = [
@@ -1761,6 +1809,13 @@ dependencies = [
  "libc",
  "tracing",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "codex-utils-stream-parser"
+version = "0.0.0"
+dependencies = [
+ "pretty_assertions",
 ]
 
 [[package]]

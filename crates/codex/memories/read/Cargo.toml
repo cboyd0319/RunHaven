@@ -1,0 +1,22 @@
+[package]
+edition.workspace = true
+name = "codex-memories-read"
+version = "0.0.0"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+name = "codex_memories_read"
+path = "src/lib.rs"
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+codex-protocol = { path = "../../protocol" }
+codex-shell-command = { path = "../../shell-command" }
+codex-utils-absolute-path = { path = "../../utils/absolute-path" }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
