@@ -1,45 +1,6 @@
-extern crate self as codex_config;
 extern crate self as codex_terminal_detection;
 
 mod tui;
-
-pub mod types {
-    use std::fmt;
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-    pub enum NotificationMethod {
-        #[default]
-        Auto,
-        Osc9,
-        Bel,
-    }
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-    pub enum NotificationCondition {
-        #[default]
-        Unfocused,
-        Always,
-    }
-
-    impl fmt::Display for NotificationMethod {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            match self {
-                Self::Auto => f.write_str("auto"),
-                Self::Osc9 => f.write_str("osc9"),
-                Self::Bel => f.write_str("bel"),
-            }
-        }
-    }
-
-    impl fmt::Display for NotificationCondition {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            match self {
-                Self::Unfocused => f.write_str("unfocused"),
-                Self::Always => f.write_str("always"),
-            }
-        }
-    }
-}
 
 #[cfg(all(test, feature = "codex-vendored-tests"))]
 pub(crate) use tui::app_event;

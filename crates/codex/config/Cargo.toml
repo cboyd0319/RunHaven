@@ -1,0 +1,74 @@
+[package]
+name = "codex-config"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[[example]]
+name = "generate-proto"
+path = "examples/generate-proto.rs"
+
+[dependencies]
+anyhow = { version = "=1.0.102" }
+base64 = { version = "=0.22.1" }
+codex-execpolicy = { path = "../execpolicy" }
+codex-features = { path = "../features" }
+codex-file-system = { path = "../file-system" }
+codex-git-utils = { path = "../git-utils" }
+codex-model-provider-info = { path = "../model-provider-info" }
+codex-network-proxy = { path = "../network-proxy" }
+codex-protocol = { path = "../protocol" }
+codex-utils-absolute-path = { path = "../utils/absolute-path" }
+codex-utils-path = { path = "../utils/path-utils" }
+codex-utils-path-uri = { path = "../utils/path-uri" }
+dunce = { version = "=1.0.5" }
+futures = { version = "=0.3.32", default-features = false, features = ["alloc", "std"] }
+gethostname = { version = "=1.1.0" }
+indexmap = { version = "=2.14.0", features = ["serde"] }
+multimap = { version = "=0.10.1" }
+prost = { version = "=0.14.3" }
+regex-lite = { version = "=0.1.8" }
+schemars = { version = "=0.8.22" }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+serde_ignored = { version = "=0.1.14" }
+serde_json = { version = "=1.0.150" }
+serde_path_to_error = { version = "=0.1.20" }
+sha2 = { version = "=0.11.0" }
+thiserror = { version = "=2.0.18" }
+tokio = { version = "=1.52.3", features = ["fs"] }
+toml = { version = "=1.1.2", features = ["preserve_order"] }
+toml_edit = { version = "=0.24.0" }
+tonic = { version = "=0.14.3", default-features = false, features = ["channel", "codegen"] }
+tonic-prost = { version = "=0.14.3" }
+tracing = { version = "=0.1.44" }
+wildmatch = { version = "=2.6.1" }
+
+[target.'cfg(unix)'.dependencies]
+dns-lookup = { version = "=3.0.1" }
+libc = { version = "=0.2.186" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "=0.9.4"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi-util = { version = "=0.1.11" }
+windows-sys = { version = "=0.52.0", features = [
+    "Win32_Foundation",
+    "Win32_System_Com",
+    "Win32_UI_Shell",
+] }
+
+[dev-dependencies]
+pretty_assertions = { version = "=1.4.1" }
+tempfile = { version = "=3.27.0" }
+tokio = { version = "=1.52.3", features = ["full"] }
+tokio-stream = { version = "=0.1.18", features = ["net"] }
+tonic = { version = "=0.14.3", default-features = false, features = ["channel", "codegen", "router", "transport"] }
+tonic-prost-build = { version = "=0.14.3", default-features = false, features = ["transport"] }
+
+[lib]
+doctest = false
+
+[lints.clippy]
+result_large_err = "allow"

@@ -15,17 +15,38 @@ CODEX_TUI_PATH="${CODEX_TUI_PATH:-codex-rs/tui/src}"
 RUNHAVEN_TUI_PATH="${RUNHAVEN_TUI_PATH:-crates/runhaven-tui/src/tui}"
 
 LIST_MISSING=0
-for arg in "$@"; do
+WRITE_MANIFESTS_DIR=""
+while [ "$#" -gt 0 ]; do
+  arg="$1"
+  shift
   case "$arg" in
     --list-missing) LIST_MISSING=1 ;;
+    --write-manifests)
+      if [ "$#" -eq 0 ]; then
+        echo "--write-manifests requires an output directory" >&2
+        exit 2
+      fi
+      WRITE_MANIFESTS_DIR="$1"
+      shift
+      ;;
+    --write-manifests=*)
+      WRITE_MANIFESTS_DIR="${arg#--write-manifests=}"
+      ;;
     -h|--help)
       cat <<'USAGE'
-Usage: scripts/compare-codex-tui.sh [--list-missing]
+Usage: scripts/compare-codex-tui.sh [--list-missing] [--write-manifests DIR]
 
 Compares all files under the pinned upstream Codex TUI source path with
 RunHaven's vendored TUI path. The default report prints counts, RunHaven-only
-files, and copied Codex files with local edits. Use --list-missing to also
-print the full list of upstream files not currently vendored by RunHaven.
+files, and copied Codex files with local edits.
+
+The comparison uses deterministic file manifests with:
+
+  relative path, byte size, sha256
+
+Use --list-missing to also print the full list of upstream files not currently
+vendored by RunHaven. Use --write-manifests DIR to save the generated manifests
+and comparison lists for audit.
 
 Environment overrides:
   CODEX_REPO_URL       default: https://github.com/openai/codex.git
@@ -62,35 +83,56 @@ if [ ! -d "$UPSTREAM_TUI" ]; then
   exit 2
 fi
 
-list_files() {
-  local root="$1"
-  (
-    cd "$root"
-    find . -type f ! -name '.DS_Store' | LC_ALL=C sort
-  )
+file_size() {
+  wc -c < "$1" | tr -d ' '
 }
 
-UPSTREAM_LIST="$TMP_ROOT/upstream-files.txt"
-RUNHAVEN_LIST="$TMP_ROOT/runhaven-files.txt"
+file_sha256() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
+write_manifest() {
+  local root="$1"
+  local manifest="$2"
+  (
+    cd "$root"
+    find . -type f ! -name '.DS_Store' | LC_ALL=C sort | while IFS= read -r file; do
+      printf '%s\t%s\t%s\n' "$file" "$(file_size "$file")" "$(file_sha256 "$file")"
+    done
+  ) > "$manifest"
+}
+
+UPSTREAM_MANIFEST="$TMP_ROOT/upstream-tui.files.tsv"
+RUNHAVEN_MANIFEST="$TMP_ROOT/runhaven-tui.files.tsv"
+UPSTREAM_LIST="$TMP_ROOT/upstream-paths.txt"
+RUNHAVEN_LIST="$TMP_ROOT/runhaven-paths.txt"
 MISSING_LIST="$TMP_ROOT/missing-files.txt"
 LOCAL_ONLY_LIST="$TMP_ROOT/local-only-files.txt"
 COMMON_LIST="$TMP_ROOT/common-files.txt"
 CHANGED_LIST="$TMP_ROOT/changed-files.txt"
 
-list_files "$UPSTREAM_TUI" > "$UPSTREAM_LIST"
-list_files "$RUNHAVEN_TUI_PATH" > "$RUNHAVEN_LIST"
+write_manifest "$UPSTREAM_TUI" "$UPSTREAM_MANIFEST"
+write_manifest "$RUNHAVEN_TUI_PATH" "$RUNHAVEN_MANIFEST"
+cut -f1 "$UPSTREAM_MANIFEST" > "$UPSTREAM_LIST"
+cut -f1 "$RUNHAVEN_MANIFEST" > "$RUNHAVEN_LIST"
 
 comm -23 "$UPSTREAM_LIST" "$RUNHAVEN_LIST" > "$MISSING_LIST"
 comm -13 "$UPSTREAM_LIST" "$RUNHAVEN_LIST" > "$LOCAL_ONLY_LIST"
 comm -12 "$UPSTREAM_LIST" "$RUNHAVEN_LIST" > "$COMMON_LIST"
 
-: > "$CHANGED_LIST"
-while IFS= read -r file; do
-  rel="${file#./}"
-  if ! cmp -s "$UPSTREAM_TUI/$rel" "$RUNHAVEN_TUI_PATH/$rel"; then
-    printf '%s\n' "$file" >> "$CHANGED_LIST"
-  fi
-done < "$COMMON_LIST"
+TAB=$'\t'
+LC_ALL=C join -t "$TAB" -1 1 -2 1 "$UPSTREAM_MANIFEST" "$RUNHAVEN_MANIFEST" \
+  | awk -F '\t' '$2 != $4 || $3 != $5 { print $1 }' > "$CHANGED_LIST"
+
+if [ -n "$WRITE_MANIFESTS_DIR" ]; then
+  mkdir -p "$WRITE_MANIFESTS_DIR"
+  cp "$UPSTREAM_MANIFEST" "$WRITE_MANIFESTS_DIR/upstream-tui.files.tsv"
+  cp "$RUNHAVEN_MANIFEST" "$WRITE_MANIFESTS_DIR/runhaven-tui.files.tsv"
+  cp "$MISSING_LIST" "$WRITE_MANIFESTS_DIR/missing-files.txt"
+  cp "$LOCAL_ONLY_LIST" "$WRITE_MANIFESTS_DIR/runhaven-only-files.txt"
+  cp "$COMMON_LIST" "$WRITE_MANIFESTS_DIR/common-files.txt"
+  cp "$CHANGED_LIST" "$WRITE_MANIFESTS_DIR/changed-files.txt"
+fi
 
 count_lines() {
   wc -l < "$1" | tr -d ' '
@@ -100,6 +142,9 @@ echo "Codex repo: $CODEX_REPO_URL"
 echo "Codex commit: $CODEX_COMMIT"
 echo "Codex path: $CODEX_TUI_PATH"
 echo "RunHaven path: $RUNHAVEN_TUI_PATH"
+if [ -n "$WRITE_MANIFESTS_DIR" ]; then
+  echo "Manifest output: $WRITE_MANIFESTS_DIR"
+fi
 echo
 echo "Counts"
 printf '  upstream files: %s\n' "$(count_lines "$UPSTREAM_LIST")"

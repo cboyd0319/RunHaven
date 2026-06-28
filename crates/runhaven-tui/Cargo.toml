@@ -31,6 +31,7 @@ derive_more.workspace = true
 image.workspace = true
 itertools.workspace = true
 codex-app-server-protocol = { path = "../codex/app-server-protocol" }
+codex-config = { path = "../codex/config" }
 codex-protocol = { path = "../codex/protocol" }
 ratatui.workspace = true
 regex.workspace = true

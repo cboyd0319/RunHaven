@@ -1,0 +1,47 @@
+[package]
+name = "codex-api"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+async-channel = { version = "=2.5.0" }
+base64 = { version = "=0.22.1" }
+bytes = { version = "=1.11.1" }
+chrono = { version = "=0.4.45", features = ["serde"] }
+codex-client = { path = "../codex-client" }
+codex-protocol = { path = "../protocol" }
+codex-utils-rustls-provider = { path = "../utils/rustls-provider" }
+eventsource-stream = { version = "=0.2.3" }
+futures = { version = "=0.3.32", default-features = false }
+http = { version = "=1.4.0" }
+regex-lite = { version = "=0.1.8" }
+reqwest = { version = "=0.12.28", features = ["json", "stream"] }
+schemars = { version = "=0.8.22" }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+serde_json = { version = "=1.0.150" }
+thiserror = { version = "=2.0.18" }
+tokio = { version = "=1.52.3", features = ["fs", "macros", "net", "rt", "sync", "time"] }
+tokio-tungstenite = { git = "https://github.com/openai-oss-forks/tokio-tungstenite", rev = "0e5b2d73aa18dd9f0a50ee9ff199d5aef7594186", features = ["proxy", "rustls-tls-native-roots"] }
+tokio-util = { version = "=0.7.18", features = ["codec", "io"] }
+tracing = { version = "=0.1.44" }
+tungstenite = { git = "https://github.com/openai-oss-forks/tungstenite-rs", rev = "4fffad30fe373adbdcffab9545e9e9bf4f2fc19f", features = ["deflate", "proxy"] }
+url = { version = "=2.5.8" }
+
+[dev-dependencies]
+anyhow = { version = "=1.0.102" }
+assert_matches = { version = "=1.5.0" }
+pretty_assertions = { version = "=1.4.1" }
+reqwest = { version = "=0.12.28" }
+tokio-test = { version = "=0.4.5" }
+wiremock = { version = "=0.6.5" }
+
+[lib]
+doctest = false
+
+[lints.clippy]
+result_large_err = "allow"
+
+[lints.rust]
+unfulfilled_lint_expectations = "allow"

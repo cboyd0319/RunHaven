@@ -35,27 +35,28 @@ The drift is real but **early-phase and structural**, not a betrayal of intent:
 
 1. The Codex runtime the whole plan is built around (`App` -> `ChatWidget` ->
    `BottomPane`) is **not wired**. The live app is still `app_shell.rs`, a
-   1081-line hand-rolled shell running its own `ratatui::try_init()` loop, which
+   1050-line hand-rolled shell running its own `ratatui::try_init()` loop, which
    is the plan's single most-named anti-goal.
-2. `mod.rs` has become a 772-line hand-authored compatibility layer that
-   compiles only ~14% of the vendored files and **shadows full-size vendored
-   modules with tiny local reimplementations** (a 4-variant `app_event` vs
-   upstream's 36KB file; a ~420-line `keymap` extract vs upstream's 118KB
-   `keymap.rs`). This is exactly the "staged compatibility definitions = debt"
-   that plan rule 6 warned about, now at scale.
+2. `mod.rs` is still a hand-authored compatibility layer, now reduced to 474
+   lines after the keymap shim was deleted. It still shadows full-size vendored
+   modules with tiny local reimplementations (`app_event`, `app_event_sender`,
+   `bottom_pane`, `render`, `status`, and `clipboard_paste`). This is exactly
+   the "staged compatibility definitions = debt" that plan rule 6 warned about,
+   now shrinking but not gone.
 3. The first real `codex-*` crate authority has now been restored:
-   `codex-protocol`, `codex-app-server-protocol`, and their protocol utility
-   closure are vendored under original package/library names in `crates/codex/`.
-   Remaining drift is narrower: `lib.rs` still aliases `codex_config` and
-   `codex_terminal_detection`, and `mod.rs` still carries staged stand-ins for
-   some TUI modules that have not yet been activated.
+   `codex-protocol`, `codex-app-server-protocol`, `codex-config`, and their
+   required utility/config closure are vendored under original package/library
+   names in `crates/codex/`. Remaining drift is narrower:
+   `lib.rs` still aliases `codex_terminal_detection`, and `mod.rs` still
+   carries staged stand-ins for some TUI modules that have not yet been
+   activated.
 4. 0 of 538 upstream snapshots were copied. Documented and defensible, but it
    means the vendored test goldens provide no regression signal inside the repo.
 
 Net: the project is at the end of the Phase 3 runtime/handoff gate. The
 foundation is faithful; the divergence is that the **temporary scaffolding has
-grown product weight** (`app_shell.rs` 1081 lines, `launch_wizard.rs` 1590
-lines, `mod.rs` 772 lines) while the Codex app loop it is supposed to be
+grown product weight** (`app_shell.rs` 1050 lines, `launch_wizard.rs` 1542
+lines, `mod.rs` 474 lines) while the Codex app loop it is supposed to be
 replaced by does not yet exist. The longer that scaffolding carries real UX, the
 harder the Phase 4 swap to the Codex `App` becomes.
 
@@ -130,7 +131,7 @@ BottomPane" onward is unstarted.
 | 4 Adapt `App` + `BottomPane` | real Codex event loop active | **Not started** | `app.rs`/`bottom_pane/mod.rs` dormant; `app_shell.rs` is live shell |
 | 5 Adapt `ChatWidget` | transcript/status/history cells | **Not started** | `chatwidget.rs` dormant |
 | 6 Reattach product screens | dashboard, logs, history, diff, doctor | **Not started** | none wired; only launch preview exists |
-| 7 Cull/stub unsupported surfaces | decide each dormant surface | **Not started** | dormant surfaces sit ungated on disk (see D8) |
+| 7 Cull/stub unsupported surfaces | decide each dormant surface | **Not started** | dormant surfaces sit marker-guarded on disk (see D8) |
 
 ---
 
@@ -182,10 +183,10 @@ Each finding: severity, the plan rule it bends, evidence, risk, recommendation.
   ChatWidget -> BottomPane`. Phase 3/4 say host the picker "inside the Codex
   runtime."
 - Evidence: `app_shell.rs:44` `let mut terminal = ratatui::try_init()?;`;
-  hand-rolled poll/read loop at `app_shell.rs:59-95` (`event::poll`,
+  hand-rolled poll/read loop at `app_shell.rs:58-94` (`event::poll`,
   `event::read`, `terminal.draw`). The vendored Codex `Tui`/`custom_terminal`/
-  `event_stream` spine **compiles** (`mod.rs:761` `codex_runtime`) but drives
-  nothing. `mod.rs:766-772` `run()` ends in `app_shell::run()`.
+  `event_stream` spine **compiles** (`mod.rs:292-294` `codex_runtime`) but
+  drives nothing. `mod.rs:298-304` `run()` ends in `app_shell::run()`.
 - Risk: the runtime the entire plan is organized around is bypassed by a
   parallel loop. Every screen added to `app_shell.rs` now has to be rebuilt
   against `App` later. The plan explicitly predicted this trap.
@@ -199,18 +200,19 @@ Each finding: severity, the plan rule it bends, evidence, risk, recommendation.
   shrinking. If it gains more staged compatibility definitions, that is debt and
   should be called out." Doc 02 wanted vendored `codex-*` crates, not local
   reimplementations.
-- Evidence (`mod.rs`, 772 lines):
+- Evidence (`mod.rs`, 474 lines):
   - `mod app_event` (`:12-21`) = 4 variants. Upstream `app_event.rs` is 36KB
     with dozens. The real file sits dormant on disk.
-  - `mod keymap` (`:210-627`) = ~420-line hand-extracted subset. Upstream
-    `keymap.rs` is 118KB. Diff-incompatible with upstream.
   - `mod app_event_sender` (`:24-46`), `mod bottom_pane` trait (`:49-146`),
-    `mod render` Insets/RectExt (`:637-689`),
-    `mod status::format_tokens_compact` (`:695-736`), and
+    `mod render` Insets/RectExt (`:169-221`),
+    `mod status::format_tokens_compact` (`:227-268`), and
     `mod clipboard_paste` one-fn (`:149-154`) are all local stand-ins shadowing
     same-named vendored files.
+  - `keymap.rs` is no longer a local inline extract. It is declared as a real
+    file-backed vendored module and compiles against the real vendored
+    `codex-config` crate.
 - Risk: these stand-ins have **smaller, different shapes** than upstream. When
-  Phase 4+ activates the real `app_event.rs`/`keymap.rs`/`bottom_pane/mod.rs`,
+  Phase 4+ activates the real `app_event.rs`/`bottom_pane/mod.rs`,
   every stand-in must be deleted and every consumer rewired. The vendored files
   they shadow cannot be `diff`-merged against a stand-in. This is debt that
   grows with every newly-activated file, exactly as rule 6 predicted.
@@ -222,32 +224,38 @@ Applied fixes after audit: `codex_protocol::user_input` is no longer an inline
 `mod.rs` shim or a RunHaven-local staged leaf. `runhaven-tui` now depends on the
 real vendored `codex-protocol` crate, and `TextArea` consumes
 `codex_protocol::user_input::{ByteRange, TextElement}` from that crate.
+The inline keymap extract is gone; `keymap.rs` now compiles against the real
+vendored `codex-config` crate and `lib.rs` no longer aliases `codex_config`.
 `mod.rs` has guard tests that prevent new inline stand-ins or new `codex_*`
 self-aliases from appearing quietly. The remaining D2 debt is still
-`app_event`, `app_event_sender`, `bottom_pane`, `keymap`, `render`, `status`,
-and `clipboard_paste`.
+`app_event`, `app_event_sender`, `bottom_pane`, `render`, `status`, and
+`clipboard_paste`.
 
-### D3 - Protocol crate vendoring is now real; broader crate activation remains partial. (Severity: Low/Medium)
+### D3 - Codex crate vendoring is now real; broader crate activation remains partial. (Severity: Low/Medium)
 
 - Plan rule: doc 02 "Keep Codex TUI source layout and vendor as many Codex
   crates as practical with their original crate names ... This lets many
   upstream TUI imports remain unchanged" (`use codex_app_server_protocol::...`).
 - Evidence: `crates/codex/` now contains real vendored packages for
-  `codex-protocol`, `codex-app-server-protocol`, and their first dependency
-  closure. `runhaven-tui/Cargo.toml` depends on
+  `codex-protocol`, `codex-app-server-protocol`, `codex-config`, and the
+  first dependency closure needed by protocol, config, and keymap activation.
+  `runhaven-tui/Cargo.toml` depends on
   `codex-protocol = { path = "../codex/protocol" }` and
-  `codex-app-server-protocol = { path = "../codex/app-server-protocol" }`.
+  `codex-app-server-protocol = { path = "../codex/app-server-protocol" }`,
+  plus `codex-config = { path = "../codex/config" }`.
   `cargo check -p codex-protocol`, `cargo check -p codex-app-server-protocol`,
-  and `cargo check -p runhaven-tui --locked` all pass.
+  `cargo check -p codex-config`, and `cargo check -p runhaven-tui --locked` all
+  pass.
 - Integration adjustment: vendored manifests keep Codex package/library names
   and Apache-2.0 metadata. External exact pins that conflict with RunHaven's
   unified workspace resolver are aligned to RunHaven's existing pins, while the
-  upstream `runfiles` git rev is preserved for Codex schema fixture tests. This
-  is manifest integration drift, not source/API drift.
-- Remaining risk: aliases for `codex_config` and `codex_terminal_detection`
-  remain, and larger backend crates such as `codex-app-server` and
-  `codex-core` are not active authorities. Activating native `App`,
-  `BottomPane`, or `ChatWidget` may expose the next crate authority gap.
+  upstream `runfiles`, `tokio-tungstenite`, and `tungstenite` git revs are
+  preserved for the same source behavior Codex relies on. This is manifest
+  integration drift, not source/API drift.
+- Remaining risk: the alias for `codex_terminal_detection` remains, and larger
+  backend crates such as `codex-app-server` and `codex-core` are not active
+  authorities. Activating native `App`, `BottomPane`, or `ChatWidget` may expose
+  the next crate authority gap.
 - Recommendation: keep advancing crate authority before adding more local
   stand-ins. When a copied TUI module expects a `codex-*` crate, vendor the real
   crate or record the specific security reason for a temporary local boundary.
@@ -274,7 +282,7 @@ and `clipboard_paste`.
 - Plan rule: doc 01 "make it a normal view launched by Codex `App`"; Phase 6
   "Agent picker: `ListSelectionView`"; rule 10 "reuse `BottomPaneView` ...
   before adding a custom rendering loop."
-- Evidence (`launch_wizard.rs`, 1590 lines): implements `BottomPaneView`
+- Evidence (`launch_wizard.rs`, 1542 lines): implements `BottomPaneView`
   (`:340-370`, good) but is a 3-screen state machine (`ChooseAgent`/`ReviewPlan`/
   `ConfirmLaunch`, `:71-76`) that hand-builds two full-screen renderers
   (`ReviewPlan` `:628-713`, `ConfirmLaunch` `:715-886`) and a typed-confirmation
@@ -331,7 +339,7 @@ and `clipboard_paste`.
   (documented: it substitutes the bounded probe because RunHaven did not adopt
   Codex's pinned crossterm fork), not upstream moving ahead.
 
-### D8 - Dangerous vendored capabilities are dormant but ungated. (Severity: Medium, latent)
+### D8 - Dangerous vendored capabilities are dormant and marker-guarded. (Severity: Low/Medium, latent)
 
 - Plan rule: security boundary requirements (no env passthrough, no host
   credential login, no clipboard subprocess without restore discipline) and
@@ -340,15 +348,14 @@ and `clipboard_paste`.
   mounts, no env passthrough). But dormant on-disk vendored files carry live
   hazards: `app.rs` `std::env::vars().collect()` passthrough; `onboarding/auth.rs`
   `read_openai_api_key_from_env` + login + `webbrowser::open`; `clipboard_copy.rs`
-  shell-out paths; `external_editor.rs` `EDITOR` exec. They do not compile only
-  because `mod.rs` does not declare them.
-- Risk: the boundary is currently enforced by **omission from `mod.rs`**, not by
-  a guard. A single added `mod` line activates a capability the plan wants
-  reviewed first. There is no compiled deny-list or CI check asserting these stay
-  dormant.
-- Recommendation: add a guard before Phase 4/7 (a test or grep-gate asserting
-  the unsupported families and `std::env::vars()` passthrough are not reachable
-  from `mod.rs`), so activation becomes a deliberate, reviewed act.
+  shell-out paths; `external_editor.rs` `EDITOR` exec. `tui/mod.rs` now has a
+  guard test that fails if named risky modules are declared before their risky
+  upstream markers are removed or fail-closed.
+- Risk: the boundary is still partly enforced by omission from `mod.rs`, and
+  the guard is marker-based. A promoted module can still need additional
+  RunHaven security review beyond the current marker list.
+- Recommendation: keep expanding the guard as each dormant surface is promoted,
+  and require a security note when a host-reaching Codex surface becomes active.
 
 ### D9 - Minor upstream test-coverage erosion. (Severity: Low)
 
@@ -363,8 +370,8 @@ and `clipboard_paste`.
 
 ### D10 - Scaffolding mass vs. the thing it scaffolds. (Severity: Medium, trend)
 
-- Evidence: `app_shell.rs` 1081 + `launch_wizard.rs` 1590 + `mod.rs` 772 +
-  `runhaven/app_server_client.rs` 925 = ~4368 lines of RunHaven-owned
+- Evidence: `app_shell.rs` 1050 + `launch_wizard.rs` 1542 + `mod.rs` 474 +
+  `runhaven/app_server_client.rs` 925 = 3991 lines of RunHaven-owned
   transitional code, versus a Codex `App` loop that is not yet wired at all.
 - Risk: this is not a single bug; it is a trajectory. The plan's whole thesis is
   that the temporary layer shrinks toward the Codex shape. Right now it is
@@ -419,14 +426,14 @@ vendor-first is being respected at the file level.
 
 ## Active vs Dormant Surface
 
-- ~50 of 355 vendored Rust files (about 14%) are wired into the compiled module
+- ~51 of 355 vendored Rust files (about 14%) are wired into the compiled module
   tree via `mod.rs` (color, custom_terminal, key_hint, motion, shimmer, style,
   terminal_*, wrapping, insert_history, render helpers, `pets/*`,
-  `tui.rs` + `tui/*`, a `bottom_pane` subset, `test_backend`). Figure is from
-  `mod.rs` inspection, not a build graph; treat as approximate.
+  `tui.rs` + `tui/*`, `keymap.rs`, a `bottom_pane` subset, `test_backend`).
+  Figure is from `mod.rs` inspection, not a build graph; treat as approximate.
 - ~305 files (about 86%) sit on disk byte-identical to upstream but uncompiled,
   including the load-bearing ones the plan's end state needs: `app.rs` (57KB),
-  `chatwidget.rs` (85KB), `app_server_session.rs` (96KB), `keymap.rs` (118KB),
+  `chatwidget.rs` (85KB), `app_server_session.rs` (96KB),
   `bottom_pane/mod.rs`, `history_cell/*`, `streaming/*`.
 - This is consistent with "vendor-first, activate-later." The risk is not the
   dormancy; it is that the active 14% is wired through hand-rolled stand-ins
@@ -436,7 +443,7 @@ vendor-first is being respected at the file level.
 
 ## Security Boundary Assessment
 
-Verdict: **intact in compiled code; one latent gap.**
+Verdict: **intact in compiled code; guarded latent risk remains.**
 
 - No `container` exec, host-home / `.ssh` / `.aws` / gcloud / browser-profile
   mount, arbitrary env passthrough, or boundary `fs::write` exists in the active
@@ -448,9 +455,8 @@ Verdict: **intact in compiled code; one latent gap.**
 - All 13 unsupported families fail closed with a test matrix (F4).
 - Plan defaults preserved: `allow_root_user: false`,
   `allow_sensitive_workspace: false` in the preview path (`service.rs`).
-- The only standing risk is D8: the dangerous capabilities are dormant by
-  omission from `mod.rs`, not by an enforced guard. Add the guard before real
-  launch is wired.
+- The standing risk is D8: host-reaching Codex surfaces are dormant and
+  marker-guarded, but each promotion still needs a RunHaven security review.
 
 ---
 
@@ -461,10 +467,11 @@ Verdict: **intact in compiled code; one latent gap.**
 2. **(High) Convert `mod.rs` stand-ins into a tracked debt ledger** with a named
    vendored-module upgrade path for each; prefer activating real modules. (D2)
 3. **(Medium) Keep crate authority moving with Phase 4**: the first protocol
-   crate closure is vendored; the next native `App`/`BottomPane` slice should
-   vendor required `codex-*` crates before adding new local stand-ins. (D3)
-4. **(Medium) Add a security guard** asserting unsupported families and
-   `std::env::vars()` passthrough are unreachable from `mod.rs`. (D8)
+   and config crate closures are vendored; the next native `App`/`BottomPane`
+   slice should vendor required `codex-*` crates before adding new local
+   stand-ins. (D3)
+4. **(Medium) Expand the security guard** as dormant host-reaching modules are
+   promoted. (D8)
 5. **(Medium) Drive `launch_wizard.rs` boundary/network text from the
    `LaunchPlanData` contract**, not literals; plan its migration to Codex child
    views. (D5)

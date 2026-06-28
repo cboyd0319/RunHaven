@@ -1,0 +1,28 @@
+[package]
+name = "codex-model-provider-info"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+doctest = false
+name = "codex_model_provider_info"
+path = "src/lib.rs"
+
+[dependencies]
+codex-api = { path = "../codex-api" }
+codex-protocol = { path = "../protocol" }
+http = { version = "=1.4.0" }
+schemars = { version = "=0.8.22" }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+
+[dev-dependencies]
+codex-utils-absolute-path = { path = "../utils/absolute-path" }
+maplit = { version = "=1.0.2" }
+pretty_assertions = { version = "=1.4.1" }
+tempfile = { version = "=3.27.0" }
+toml = { version = "=1.1.2" }
+
+[lints.clippy]
+result_large_err = "allow"

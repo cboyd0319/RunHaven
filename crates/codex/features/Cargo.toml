@@ -1,0 +1,22 @@
+[package]
+name = "codex-features"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+doctest = false
+name = "codex_features"
+path = "src/lib.rs"
+
+[dependencies]
+codex-otel = { path = "../otel" }
+codex-protocol = { path = "../protocol" }
+schemars = { version = "=0.8.22" }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+toml = { version = "=1.1.2" }
+tracing = { version = "=0.1.44", features = ["log"] }
+
+[dev-dependencies]
+pretty_assertions = { version = "=1.4.1" }

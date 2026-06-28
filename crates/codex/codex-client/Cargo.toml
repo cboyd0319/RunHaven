@@ -1,0 +1,52 @@
+[package]
+name = "codex-client"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+bytes = { version = "=1.11.1" }
+codex-utils-rustls-provider = { path = "../utils/rustls-provider" }
+eventsource-stream = { version = "=0.2.3" }
+futures = { version = "=0.3.32", default-features = false }
+http = { version = "=1.4.0" }
+opentelemetry = { version = "=0.31.0" }
+rand = { version = "=0.9.4" }
+reqwest = { version = "=0.12.28", features = ["json", "rustls-tls-native-roots", "stream"] }
+rustls = { version = "=0.23.36", default-features = false }
+rustls-native-certs = { version = "=0.8.3" }
+rustls-pki-types = { version = "=1.14.1" }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+serde_json = { version = "=1.0.150" }
+thiserror = { version = "=2.0.18" }
+tokio = { version = "=1.52.3", features = ["macros", "rt", "sync", "time"] }
+tracing = { version = "=0.1.44" }
+tracing-opentelemetry = { version = "=0.32.1" }
+zstd = { version = "=0.13.3" }
+
+[target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
+sha2 = { version = "=0.10.9" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+system-configuration = { version = "=0.7.0" }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "=0.52.0", features = [
+    "Win32_Foundation",
+    "Win32_Networking_WinHttp",
+] }
+
+[dev-dependencies]
+codex-utils-cargo-bin = { path = "../utils/cargo-bin" }
+opentelemetry_sdk = { version = "=0.31.0" }
+pretty_assertions = { version = "=1.4.1" }
+rcgen = { version = "=0.14.7", default-features = false, features = ["aws_lc_rs", "pem"] }
+tempfile = { version = "=3.27.0" }
+tracing-subscriber = { version = "=0.3.23" }
+
+[lib]
+doctest = false
+
+[lints.clippy]
+result_large_err = "allow"

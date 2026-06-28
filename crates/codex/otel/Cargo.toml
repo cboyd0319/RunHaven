@@ -1,0 +1,63 @@
+[package]
+name = "codex-otel"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+doctest = false
+name = "codex_otel"
+path = "src/lib.rs"
+
+[dependencies]
+chrono = { version = "=0.4.45", features = ["serde"] }
+codex-api = { path = "../codex-api" }
+codex-protocol = { path = "../protocol" }
+codex-utils-absolute-path = { path = "../utils/absolute-path" }
+codex-utils-string = { path = "../utils/string" }
+eventsource-stream = { version = "=0.2.3" }
+gethostname = { version = "=1.1.0" }
+opentelemetry = { version = "=0.31.0", features = ["logs", "metrics", "trace"] }
+opentelemetry-appender-tracing = { version = "=0.31.1" }
+opentelemetry-otlp = { version = "=0.31.0", features = [
+    "grpc-tonic",
+    "http-proto",
+    "http-json",
+    "logs",
+    "metrics",
+    "trace",
+    "reqwest-blocking-client",
+    "reqwest-rustls",
+    "tls",
+    "tls-roots",
+]}
+opentelemetry-semantic-conventions = { version = "=0.31.0" }
+opentelemetry_sdk = { version = "=0.31.0", features = [
+    "experimental_trace_batch_span_processor_with_async_runtime",
+    "experimental_metrics_custom_reader",
+    "logs",
+    "metrics",
+    "rt-tokio",
+    "testing",
+    "trace",
+] }
+http = { version = "=1.4.0" }
+os_info = { version = "=3.14.0" }
+reqwest = { version = "=0.12.28", features = ["blocking", "rustls-tls"] }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+serde_json = { version = "=1.0.150" }
+strum_macros = { version = "=0.28.0" }
+thiserror = { version = "=2.0.18" }
+tokio = { version = "=1.52.3" }
+tokio-tungstenite = { git = "https://github.com/openai-oss-forks/tokio-tungstenite", rev = "0e5b2d73aa18dd9f0a50ee9ff199d5aef7594186", features = ["proxy", "rustls-tls-native-roots"] }
+tracing = { version = "=0.1.44" }
+tracing-opentelemetry = { version = "=0.32.1" }
+tracing-subscriber = { version = "=0.3.23" }
+
+[dev-dependencies]
+opentelemetry_sdk = { version = "=0.31.0", features = [
+    "experimental_metrics_custom_reader",
+    "testing",
+] }
+pretty_assertions = { version = "=1.4.1" }

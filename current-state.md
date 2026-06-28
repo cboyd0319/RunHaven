@@ -506,6 +506,44 @@ Latest TUI Phase 3 runtime and handoff gate:
   upstream `.snap` files external by default, 13 RunHaven-only files, and 26
   copied Codex files with local edits.
 
+Latest Codex config/keymap crate vendoring:
+
+- 2026-06-27: Continued real `codex-*` crate vendoring under original package
+  and library names. Added workspace members for `codex-config`,
+  `codex-api`, `codex-client`, `codex-features`, `codex-file-system`,
+  `codex-git-utils`, `codex-model-provider-info`, `codex-otel`, and
+  `codex-utils-path`, plus their local manifest wiring. `runhaven-tui` now
+  depends on the real vendored `codex-config` crate, `lib.rs` no longer aliases
+  `codex_config`, and the file-backed vendored `keymap.rs` compiles against
+  `codex_config::types::{KeybindingsSpec, TuiKeymap, MAX_FUNCTION_KEY}` instead
+  of an inline RunHaven keymap extract. The only remaining `codex_*` self-alias
+  is `codex_terminal_detection`, which stays temporary until the terminal
+  detection crate is promoted.
+- Preserved upstream OpenAI fork git revs for `tokio-tungstenite` and
+  `tungstenite` because Codex relies on those forks for proxy-enabled websocket
+  behavior. `codex-client` pins `sha2` 0.10 because that source formats the
+  digest with the 0.10 trait behavior; RunHaven-owned code keeps its existing
+  `sha2` 0.11 pin.
+- The active RunHaven launch/security authority is unchanged. These crates are
+  vendored source authorities for TUI config/keymap/protocol types, not a
+  promotion of Codex auth, filesystem RPC, app-server, or network client
+  behavior into the active RunHaven runtime.
+- `scripts/compare-codex-tui.sh` now compares deterministic file manifests
+  instead of looping over `cmp` calls. Each manifest records relative path, byte
+  size, and SHA-256, and `--write-manifests <dir>` writes the upstream/local
+  manifests plus missing, local-only, common, and changed lists for audit.
+- Verified so far:
+  `cargo metadata --locked --no-deps --format-version 1`,
+  `cargo check -p codex-config --locked`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked keymap --quiet`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --nocapture`,
+  `cargo test -p codex-config --locked --quiet`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `bash -n scripts/compare-codex-tui.sh`, and
+  `scripts/compare-codex-tui.sh --write-manifests <tempdir>`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -515,4 +553,8 @@ Latest TUI Phase 3 runtime and handoff gate:
 Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4:
 adapt the native `App` and `BottomPane` path. Foreground launch remains
 read-only until the native Codex app loop owns terminal restore and
-`launch_run_plan` is wired through the UI thread.
+`launch_run_plan` is wired through the UI thread. The next vendor-first slice is
+to shrink `mod.rs` again by promoting real Codex event/bottom-pane surfaces,
+starting with the shared request/event types needed to activate
+`app_event.rs`, `app_event_sender.rs`, and `bottom_pane/mod.rs` without routing
+host-reaching Codex behavior around the RunHaven facade.

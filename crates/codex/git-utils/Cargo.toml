@@ -1,0 +1,37 @@
+[package]
+name = "codex-git-utils"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+readme = "README.md"
+
+[dependencies]
+anyhow = { version = "=1.0.102" }
+chrono = { version = "=0.4.45", features = ["serde"] }
+codex-file-system = { path = "../file-system" }
+codex-protocol = { path = "../protocol" }
+codex-utils-absolute-path = { path = "../utils/absolute-path" }
+codex-utils-path-uri = { path = "../utils/path-uri" }
+futures = { version = "=0.3.32", default-features = false, features = ["alloc"] }
+gix = { version = "=0.81.0", default-features = false, features = ["sha1"] }
+once_cell = { version = "=1.21.4" }
+regex = { version = "=1.12.4" }
+schemars = { version = "=0.8.22" }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+similar = { version = "=2.7.0" }
+tempfile = { version = "=3.27.0" }
+thiserror = { version = "=2.0.18" }
+tokio = { version = "=1.52.3", features = ["macros", "process", "rt", "time"] }
+ts-rs = { version = "=11.1.0", features = [
+    "uuid-impl",
+    "serde-json-impl",
+    "no-serde-warnings",
+] }
+walkdir = { version = "=2.5.0" }
+
+[dev-dependencies]
+pretty_assertions = { version = "=1.4.1" }
+
+[lib]
+doctest = false

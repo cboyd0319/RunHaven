@@ -20,15 +20,24 @@ It also includes Codex terminal detection copied from the same upstream commit:
 codex-rs/terminal-detection/src/
 ```
 
-RunHaven also vendors the first real Codex protocol crate closure under
-`crates/codex/`, using the original package and library names:
+RunHaven also vendors the real Codex crate closures needed by activated
+protocol, config, and keymap surfaces under `crates/codex/`, using the original
+package and library names:
 
 ```text
+codex-api
 codex-app-server-protocol
 codex-async-utils
+codex-client
+codex-config
 codex-execpolicy
 codex-experimental-api-macros
+codex-features
+codex-file-system
+codex-git-utils
+codex-model-provider-info
 codex-network-proxy
+codex-otel
 codex-protocol
 codex-shell-command
 codex-utils-absolute-path
@@ -36,6 +45,7 @@ codex-utils-cache
 codex-utils-cargo-bin
 codex-utils-home-dir
 codex-utils-image
+codex-utils-path
 codex-utils-path-uri
 codex-utils-rustls-provider
 codex-utils-string
@@ -45,8 +55,10 @@ Those vendored crates are Apache-2.0 upstream source. Their local manifests use
 explicit `license = "Apache-2.0"`, `version = "0.0.0"`, and
 `publish = false` metadata so they do not inherit RunHaven workspace package
 metadata or become publishable local forks. Their external exact pins are kept
-direct in the vendored manifests, and the upstream `runfiles` git rev is
-preserved because Codex's schema fixture tests rely on that dependency source.
+direct in the vendored manifests. The upstream `runfiles` git rev is preserved
+because Codex's schema fixture tests rely on that dependency source, and the
+upstream OpenAI fork git revs for `tokio-tungstenite` and `tungstenite` are
+preserved because Codex enables proxy features from those forks.
 Where Cargo's unified resolver cannot hold two semver-compatible exact versions
 in one lockfile, the vendored manifest pin is aligned to RunHaven's existing
 workspace pin and recorded as an integration adjustment.
@@ -68,7 +80,11 @@ scripts/compare-codex-tui.sh
 
 That command fetches the pinned upstream Codex source from GitHub into a
 temporary checkout and compares all files under `codex-rs/tui/src/`, including
-Rust source, helper binaries, nested tests, and upstream snapshot files.
+Rust source, helper binaries, nested tests, and upstream snapshot files. It
+builds deterministic file manifests for the upstream and RunHaven trees with
+relative path, byte size, and SHA-256, then compares those manifests. Use
+`scripts/compare-codex-tui.sh --write-manifests <dir>` when you need to keep
+the generated manifests and comparison lists as audit artifacts.
 
 Local exclusions in this baseline:
 
@@ -159,10 +175,18 @@ Local integration exceptions:
 - `app_event`, `app_event_sender`, and `bottom_pane` in `mod.rs` are staged
   contracts for compiled vendored surfaces. Replace them with full Codex
   adapters as those surfaces come online.
-- `crates/codex/protocol` and `crates/codex/app-server-protocol` are now real
-  vendored package authorities. `bottom_pane/textarea.rs` consumes
+- `keymap.rs` is now compiled file-backed from the vendored Codex TUI source
+  against the real `codex-config` crate, including
+  `codex_config::types::{KeybindingsSpec, TuiKeymap, MAX_FUNCTION_KEY}`.
+- `crates/codex/protocol`, `crates/codex/app-server-protocol`, and
+  `crates/codex/config` are now real vendored package authorities.
+  `bottom_pane/textarea.rs` consumes
   `codex_protocol::user_input::{ByteRange, TextElement}` from that vendored
-  crate instead of a RunHaven-local staged protocol leaf.
+  crate instead of a RunHaven-local staged protocol leaf, and `keymap.rs`
+  consumes real Codex config types instead of a RunHaven-local self-alias.
+- `lib.rs` no longer aliases `codex_config`; only
+  `codex_terminal_detection` remains as a temporary self-alias until the
+  terminal-detection crate is promoted into the vendored crate set.
 - `render/renderable.rs` is now compiled through the RunHaven adapter with one
   Ratatui 0.30 compatibility tweak: `Line` renders through the borrowed
   `WidgetRef` implementation.
@@ -224,7 +248,7 @@ Known integration gap:
 - The copied Codex crate source still uses Codex crate/module assumptions.
   RunHaven integration will adapt entrypoints, module paths, dependencies, and
   product data in later commits.
-- The first real Codex protocol crates compile as workspace members and
+- The real Codex protocol and config crates compile as workspace members, and
   `runhaven-tui` depends on them. Wider Codex crate activation is still
   incremental and must keep RunHaven runtime authority in `runhaven-core`.
 - The dormant Codex `Tui` runtime spine now compiles and has focused tests, but

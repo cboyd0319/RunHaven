@@ -1,0 +1,18 @@
+[package]
+name = "codex-file-system"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+bytes = { version = "=1.11.1" }
+codex-protocol = { path = "../protocol" }
+codex-utils-absolute-path = { path = "../utils/absolute-path" }
+codex-utils-path-uri = { path = "../utils/path-uri" }
+futures = { version = "=0.3.32", default-features = false }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+
+[lib]
+test = false
+doctest = false
