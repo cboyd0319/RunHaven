@@ -1,0 +1,15 @@
+[package]
+name = "codex-utils-cargo-bin"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+
+publish = false
+[dependencies]
+assert_cmd = { version = "=2.1.2" }
+runfiles = { git = "https://github.com/dzbarsky/rules_rust", rev = "b56cbaa8465e74127f1ea216f813cd377295ad81" }
+thiserror = { version = "=2.0.18" }
+
+[lib]
+test = false
+doctest = false

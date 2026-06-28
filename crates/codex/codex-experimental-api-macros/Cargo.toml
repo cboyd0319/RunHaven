@@ -1,0 +1,15 @@
+[package]
+name = "codex-experimental-api-macros"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+[lib]
+proc-macro = true
+test = false
+doctest = false
+
+[dependencies]
+proc-macro2 = "=1.0.106"
+quote = "=1.0.45"
+syn = { version = "=2.0.117", features = ["full", "extra-traits"] }

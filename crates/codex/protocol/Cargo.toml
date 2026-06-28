@@ -1,0 +1,62 @@
+[package]
+edition = "2024"
+license = "Apache-2.0"
+name = "codex-protocol"
+version = "0.0.0"
+publish = false
+[lib]
+name = "codex_protocol"
+path = "src/lib.rs"
+doctest = false
+
+
+[dependencies]
+chardetng = { version = "=0.1.17" }
+chrono = { version = "=0.4.45", features = ["serde"] }
+codex-async-utils = { path = "../async-utils" }
+codex-execpolicy = { path = "../execpolicy" }
+codex-network-proxy = { path = "../network-proxy" }
+codex-utils-absolute-path = { path = "../utils/absolute-path" }
+codex-utils-image = { path = "../utils/image" }
+codex-utils-path-uri = { path = "../utils/path-uri" }
+codex-utils-string = { path = "../utils/string" }
+encoding_rs = { version = "=0.8.35" }
+globset = { version = "=0.4.18" }
+icu_decimal = { version = "=2.2.0" }
+icu_locale_core = { version = "=2.2.0" }
+icu_provider = { version = "=2.2.0", features = ["sync"] }
+quick-xml = { version = "=0.38.4", features = ["serialize"] }
+reqwest = { version = "=0.12.28", features = ["cookies"] }
+schemars = { version = "=0.8.22" }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+serde_json = { version = "=1.0.150" }
+serde_with = { version = "=3.17.0", features = ["macros", "base64"] }
+strum = { version = "=0.27.2" }
+strum_macros = { version = "=0.28.0" }
+sys-locale = { version = "=0.3.2" }
+thiserror = { version = "=2.0.18" }
+tokio = { version = "=1.52.3" }
+tracing = { version = "=0.1.44" }
+ts-rs = { version = "=11.1.0", features = [
+    "uuid-impl",
+    "serde-json-impl",
+    "no-serde-warnings",
+] }
+uuid = { version = "=1.23.3", features = ["serde", "v7", "v4"] }
+wildmatch = { version = "=2.6.1" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+landlock = { version = "=0.4.4" }
+seccompiler = { version = "=0.5.0" }
+
+[dev-dependencies]
+anyhow = { version = "=1.0.102" }
+http = { version = "=1.4.0" }
+pretty_assertions = { version = "=1.4.1" }
+tempfile = { version = "=3.27.0" }
+
+[package.metadata.cargo-shear]
+# Required because:
+# `icu_provider`: contains a required `sync` feature for `icu_decimal`
+# `strum`: is referenced by generated `EnumIter` derive implementations
+ignored = ["icu_provider", "strum"]

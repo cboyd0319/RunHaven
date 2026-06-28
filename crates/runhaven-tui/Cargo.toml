@@ -30,6 +30,8 @@ crossterm.workspace = true
 derive_more.workspace = true
 image.workspace = true
 itertools.workspace = true
+codex-app-server-protocol = { path = "../codex/app-server-protocol" }
+codex-protocol = { path = "../codex/protocol" }
 ratatui.workspace = true
 regex.workspace = true
 reqwest.workspace = true

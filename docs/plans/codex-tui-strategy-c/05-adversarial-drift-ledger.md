@@ -43,11 +43,12 @@ The drift is real but **early-phase and structural**, not a betrayal of intent:
    upstream's 36KB file; a ~420-line `keymap` extract vs upstream's 118KB
    `keymap.rs`). This is exactly the "staged compatibility definitions = debt"
    that plan rule 6 warned about, now at scale.
-3. The plan's documented vendoring strategy (vendor `codex-*` crates under their
-   original names so imports stay unchanged) was **not** followed. There are
-   zero `codex-*` dependencies; instead `lib.rs` uses
-   `extern crate self as codex_config;` aliasing plus hand-rolled stand-in
-   modules. This works today but widens the gap the plan tried to keep narrow.
+3. The first real `codex-*` crate authority has now been restored:
+   `codex-protocol`, `codex-app-server-protocol`, and their protocol utility
+   closure are vendored under original package/library names in `crates/codex/`.
+   Remaining drift is narrower: `lib.rs` still aliases `codex_config` and
+   `codex_terminal_detection`, and `mod.rs` still carries staged stand-ins for
+   some TUI modules that have not yet been activated.
 4. 0 of 538 upstream snapshots were copied. Documented and defensible, but it
    means the vendored test goldens provide no regression signal inside the repo.
 
@@ -204,8 +205,8 @@ Each finding: severity, the plan rule it bends, evidence, risk, recommendation.
   - `mod keymap` (`:210-627`) = ~420-line hand-extracted subset. Upstream
     `keymap.rs` is 118KB. Diff-incompatible with upstream.
   - `mod app_event_sender` (`:24-46`), `mod bottom_pane` trait (`:49-146`),
-    `mod codex_protocol::user_input` (`:157-205`), `mod render` Insets/RectExt
-    (`:637-689`), `mod status::format_tokens_compact` (`:695-736`),
+    `mod render` Insets/RectExt (`:637-689`),
+    `mod status::format_tokens_compact` (`:695-736`), and
     `mod clipboard_paste` one-fn (`:149-154`) are all local stand-ins shadowing
     same-named vendored files.
 - Risk: these stand-ins have **smaller, different shapes** than upstream. When
@@ -217,38 +218,39 @@ Each finding: severity, the plan rule it bends, evidence, risk, recommendation.
   upgrade path (which vendored module replaces it). Prefer activating the real
   vendored module over extending a stand-in.
 
-Applied partial fix after audit: `codex_protocol::user_input` is no longer an
-inline `mod.rs` shim. RunHaven now stages the upstream Codex protocol leaf in
-`crates/runhaven-tui/src/tui/codex_protocol/`, and `mod.rs` has guard tests that
-prevent new inline stand-ins or new `codex_*` self-aliases from appearing
-quietly. The remaining D2 debt is still `app_event`, `app_event_sender`,
-`bottom_pane`, `keymap`, `render`, `status`, and `clipboard_paste`.
+Applied fixes after audit: `codex_protocol::user_input` is no longer an inline
+`mod.rs` shim or a RunHaven-local staged leaf. `runhaven-tui` now depends on the
+real vendored `codex-protocol` crate, and `TextArea` consumes
+`codex_protocol::user_input::{ByteRange, TextElement}` from that crate.
+`mod.rs` has guard tests that prevent new inline stand-ins or new `codex_*`
+self-aliases from appearing quietly. The remaining D2 debt is still
+`app_event`, `app_event_sender`, `bottom_pane`, `keymap`, `render`, `status`,
+and `clipboard_paste`.
 
-### D3 - Vendoring strategy diverged: no `codex-*` crates; crate-aliasing instead. (Severity: Medium)
+### D3 - Protocol crate vendoring is now real; broader crate activation remains partial. (Severity: Low/Medium)
 
 - Plan rule: doc 02 "Keep Codex TUI source layout and vendor as many Codex
   crates as practical with their original crate names ... This lets many
   upstream TUI imports remain unchanged" (`use codex_app_server_protocol::...`).
-- Evidence: `runhaven-tui/Cargo.toml` has **zero** `codex-*` dependencies.
-  `lib.rs:1-2` `extern crate self as codex_config;` /
-  `extern crate self as codex_terminal_detection;` alias the crate to Codex
-  names. Types like `ClientRequest`/`ThreadId` are hand-rolled locally, not
-  imported from vendored crates.
-- Risk: the plan's stated payoff (unchanged upstream imports, easy diff) is
-  partially forfeited. Activating any vendored file that imports a real
-  `codex_protocol` / `codex_app_server_protocol` type requires either editing
-  the import (drift) or building the missing local stand-in (D2). The aliasing
-  hack only covers `codex_config` and `codex_terminal_detection`.
-- Recommendation: revisit doc 02's vendor-the-crates recommendation before
-  Phase 4. Vendoring `codex-app-server-protocol` and `codex-protocol` as real
-  inert crates would remove a large class of future stand-ins.
-
-Current status after the first D2 shrink: this is still open. The protocol leaf
-removal reduces live shim surface, but it does not claim that full
-`codex-protocol` or `codex-app-server-protocol` crate vendoring is complete.
-Those crates should be evaluated together with native `AppServerSession`,
-`AppEvent`, and `BottomPane` activation so RunHaven does not pull host-reaching
-Codex backend behavior into the active security boundary by accident.
+- Evidence: `crates/codex/` now contains real vendored packages for
+  `codex-protocol`, `codex-app-server-protocol`, and their first dependency
+  closure. `runhaven-tui/Cargo.toml` depends on
+  `codex-protocol = { path = "../codex/protocol" }` and
+  `codex-app-server-protocol = { path = "../codex/app-server-protocol" }`.
+  `cargo check -p codex-protocol`, `cargo check -p codex-app-server-protocol`,
+  and `cargo check -p runhaven-tui --locked` all pass.
+- Integration adjustment: vendored manifests keep Codex package/library names
+  and Apache-2.0 metadata. External exact pins that conflict with RunHaven's
+  unified workspace resolver are aligned to RunHaven's existing pins, while the
+  upstream `runfiles` git rev is preserved for Codex schema fixture tests. This
+  is manifest integration drift, not source/API drift.
+- Remaining risk: aliases for `codex_config` and `codex_terminal_detection`
+  remain, and larger backend crates such as `codex-app-server` and
+  `codex-core` are not active authorities. Activating native `App`,
+  `BottomPane`, or `ChatWidget` may expose the next crate authority gap.
+- Recommendation: keep advancing crate authority before adding more local
+  stand-ins. When a copied TUI module expects a `codex-*` crate, vendor the real
+  crate or record the specific security reason for a temporary local boundary.
 
 ### D4 - Zero of 538 upstream snapshots copied. (Severity: Medium)
 
@@ -392,7 +394,7 @@ real logic change. MIXED = both. All are RunHaven edits (commit-exact baseline).
 | `bottom_pane/footer.rs` | GLUE | test gated behind `codex-vendored-tests` |
 | `bottom_pane/list_selection_view.rs` | GLUE | comments; 2 tests disabled `#[cfg(any())]` (D9) |
 | `bottom_pane/mod.rs` | GLUE | re-export `render_menu_surface` |
-| `bottom_pane/textarea.rs` | GLUE | vendored `codex_protocol` path; `#[path=vim.rs]`; test gates |
+| `bottom_pane/textarea.rs` | GLUE | real vendored `codex_protocol` crate import; `#[path=vim.rs]`; test gates |
 | `custom_terminal.rs` | GLUE | Ratatui 0.30 `Backend<Error=io::Error>`, deprecation allows |
 | `markdown_render_tests.rs` | GLUE | `concat!` to keep trailing two-space hard break |
 | `motion.rs` | GLUE | `regex_lite`->`regex`; `CARGO_MANIFEST_DIR` |
@@ -458,9 +460,9 @@ Verdict: **intact in compiled code; one latent gap.**
    Host the existing picker inside `Tui`. Stop growing `app_shell.rs`. (D1, D10)
 2. **(High) Convert `mod.rs` stand-ins into a tracked debt ledger** with a named
    vendored-module upgrade path for each; prefer activating real modules. (D2)
-3. **(Medium) Decide the vendoring strategy** for `codex-app-server-protocol` /
-   `codex-protocol`: vendor as inert crates or commit to stand-ins permanently
-   and update doc 02. (D3)
+3. **(Medium) Keep crate authority moving with Phase 4**: the first protocol
+   crate closure is vendored; the next native `App`/`BottomPane` slice should
+   vendor required `codex-*` crates before adding new local stand-ins. (D3)
 4. **(Medium) Add a security guard** asserting unsupported families and
    `std::env::vars()` passthrough are unreachable from `mod.rs`. (D8)
 5. **(Medium) Drive `launch_wizard.rs` boundary/network text from the

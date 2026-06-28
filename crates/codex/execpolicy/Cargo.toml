@@ -1,0 +1,32 @@
+[package]
+name = "codex-execpolicy"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+description = "Codex exec policy: prefix-based Starlark rules for command decisions."
+
+publish = false
+[lib]
+name = "codex_execpolicy"
+path = "src/lib.rs"
+doctest = false
+
+[[bin]]
+name = "codex-execpolicy"
+path = "src/main.rs"
+
+
+[dependencies]
+anyhow = { version = "=1.0.102" }
+clap = { version = "=4.6.1", features = ["derive"] }
+codex-utils-absolute-path = { path = "../utils/absolute-path" }
+multimap = { version = "=0.10.1" }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+serde_json = { version = "=1.0.150" }
+shlex = { version = "=1.3.0" }
+starlark = { version = "=0.14.2", default-features = false }
+thiserror = { version = "=2.0.18" }
+
+[dev-dependencies]
+pretty_assertions = { version = "=1.4.1" }
+tempfile = { version = "=3.27.0" }

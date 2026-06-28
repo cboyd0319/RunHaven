@@ -20,6 +20,37 @@ It also includes Codex terminal detection copied from the same upstream commit:
 codex-rs/terminal-detection/src/
 ```
 
+RunHaven also vendors the first real Codex protocol crate closure under
+`crates/codex/`, using the original package and library names:
+
+```text
+codex-app-server-protocol
+codex-async-utils
+codex-execpolicy
+codex-experimental-api-macros
+codex-network-proxy
+codex-protocol
+codex-shell-command
+codex-utils-absolute-path
+codex-utils-cache
+codex-utils-cargo-bin
+codex-utils-home-dir
+codex-utils-image
+codex-utils-path-uri
+codex-utils-rustls-provider
+codex-utils-string
+```
+
+Those vendored crates are Apache-2.0 upstream source. Their local manifests use
+explicit `license = "Apache-2.0"`, `version = "0.0.0"`, and
+`publish = false` metadata so they do not inherit RunHaven workspace package
+metadata or become publishable local forks. Their external exact pins are kept
+direct in the vendored manifests, and the upstream `runfiles` git rev is
+preserved because Codex's schema fixture tests rely on that dependency source.
+Where Cargo's unified resolver cannot hold two semver-compatible exact versions
+in one lockfile, the vendored manifest pin is aligned to RunHaven's existing
+workspace pin and recorded as an integration adjustment.
+
 The upstream source is the OpenAI Codex TUI and is licensed under Apache-2.0.
 RunHaven keeps attribution in `THIRD_PARTY_NOTICES.md` and
 `licenses/codex-Apache-2.0.txt`.
@@ -49,10 +80,10 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 372.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 369.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 16.
+- RunHaven-only files: 13.
 - Copied Codex files with local edits: 26.
 
 RunHaven-only files:
@@ -60,9 +91,6 @@ RunHaven-only files:
 ```text
 README.md
 app_shell.rs
-codex_protocol/mod.rs
-codex_protocol/models.rs
-codex_protocol/user_input.rs
 mod.rs
 pets/bundled_custom.rs
 runhaven/app_server_client.rs
@@ -131,10 +159,10 @@ Local integration exceptions:
 - `app_event`, `app_event_sender`, and `bottom_pane` in `mod.rs` are staged
   contracts for compiled vendored surfaces. Replace them with full Codex
   adapters as those surfaces come online.
-- `codex_protocol/user_input.rs` and `codex_protocol/models.rs` are staged
-  leaves from the upstream Codex protocol crate. They replace the previous
-  inline `codex_protocol::user_input` shim in `mod.rs` while the full
-  `codex-protocol` crate remains a Phase 4 dependency decision.
+- `crates/codex/protocol` and `crates/codex/app-server-protocol` are now real
+  vendored package authorities. `bottom_pane/textarea.rs` consumes
+  `codex_protocol::user_input::{ByteRange, TextElement}` from that vendored
+  crate instead of a RunHaven-local staged protocol leaf.
 - `render/renderable.rs` is now compiled through the RunHaven adapter with one
   Ratatui 0.30 compatibility tweak: `Line` renders through the borrowed
   `WidgetRef` implementation.
@@ -196,6 +224,9 @@ Known integration gap:
 - The copied Codex crate source still uses Codex crate/module assumptions.
   RunHaven integration will adapt entrypoints, module paths, dependencies, and
   product data in later commits.
+- The first real Codex protocol crates compile as workspace members and
+  `runhaven-tui` depends on them. Wider Codex crate activation is still
+  incremental and must keep RunHaven runtime authority in `runhaven-core`.
 - The dormant Codex `Tui` runtime spine now compiles and has focused tests, but
   it is not the active bare-interactive app loop yet.
 - The launch picker, read-only review, and confirmation screen are staged in

@@ -1,0 +1,25 @@
+[package]
+name = "codex-utils-image"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+
+publish = false
+[dependencies]
+base64 = { version = "=0.22.1" }
+image = { version = "=0.25.10", features = ["jpeg", "png", "gif", "webp"] }
+codex-utils-cache = { path = "../cache" }
+mime_guess = { version = "=2.0.5" }
+thiserror = { version = "=2.0.18" }
+tokio = { version = "=1.52.3", features = ["fs", "rt", "rt-multi-thread", "macros"] }
+
+[dev-dependencies]
+divan = { version = "=0.1.21" }
+image = { version = "=0.25.10", features = ["jpeg", "png", "gif", "webp"] }
+
+[lib]
+doctest = false
+
+[[bench]]
+name = "prompt_images"
+harness = false

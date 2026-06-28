@@ -1,0 +1,13 @@
+[package]
+name = "codex-utils-rustls-provider"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+
+publish = false
+[dependencies]
+rustls = { version = "=0.23.36", default-features = false }
+
+[lib]
+test = false
+doctest = false

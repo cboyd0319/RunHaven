@@ -1,0 +1,16 @@
+[package]
+name = "codex-async-utils"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+
+publish = false
+[dependencies]
+tokio = { version = "=1.52.3", features = ["macros", "rt", "rt-multi-thread", "time"] }
+tokio-util = { version = "=0.7.18" }
+
+[dev-dependencies]
+pretty_assertions = { version = "=1.4.1" }
+
+[lib]
+doctest = false

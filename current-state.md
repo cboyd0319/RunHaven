@@ -216,11 +216,11 @@ or write launch state yet.
 
 TUI confirm-composer follow-up: `crates/runhaven-tui` now compiles the vendored
 Codex `bottom_pane/textarea.rs` and `bottom_pane/textarea/vim.rs` through the
-staging facade. The facade has the Codex editor/Vim keymap defaults and a tiny
-local `codex_protocol::user_input` compatibility module for the byte-range text
-element types used by the textarea. The upstream deterministic textarea tests
-run by default; the snapshot and randomized stress tests remain opt-in with the
-same `codex-vendored-tests` policy as the other upstream snapshot goldens.
+staging facade. The facade has the Codex editor/Vim keymap defaults, and the
+byte-range text element types now come from the real vendored `codex-protocol`
+crate. The upstream deterministic textarea tests run by default; the snapshot
+and randomized stress tests remain opt-in with the same `codex-vendored-tests`
+policy as the other upstream snapshot goldens.
 
 TUI capabilities-doc follow-up: `docs/plans/codex-tui-capabilities.md` now
 locks the full local Codex TUI capability survey into repo docs. Use it as the
@@ -461,16 +461,33 @@ Latest TUI Strategy C drift correction:
 Latest TUI staging-facade shrink:
 
 - 2026-06-27: Removed the inline `codex_protocol::user_input` shim from
-  `crates/runhaven-tui/src/tui/mod.rs`. The active `TextArea` path now uses
-  file-backed staged leaves under `crates/runhaven-tui/src/tui/codex_protocol/`
-  copied from upstream Codex protocol source. Added exact pins for `schemars`
-  and `ts-rs` because the staged leaf keeps Codex's schema and TypeScript
-  derives. Added drift guards so `mod.rs` cannot grow new inline staging
-  modules, new `codex_*` self-aliases, or a native `app` declaration that still
-  routes `run()` through `app_shell::run()`. Current vendor audit: 894 upstream
-  files, 372 RunHaven files, 356 common paths, 538 upstream `.snap` files
-  external by default, 16 RunHaven-only files, and 26 copied Codex files with
-  local edits.
+  `crates/runhaven-tui/src/tui/mod.rs` and first replaced it with file-backed
+  staged leaves under `crates/runhaven-tui/src/tui/codex_protocol/`. Added drift
+  guards so `mod.rs` cannot grow new inline staging modules, new `codex_*`
+  self-aliases, or a native `app` declaration that still routes `run()` through
+  `app_shell::run()`.
+
+Latest Codex protocol crate vendoring:
+
+- 2026-06-27: Began real `codex-*` crate vendoring under original package and
+  library names. Added `crates/codex/` workspace members for
+  `codex-protocol`, `codex-app-server-protocol`, and their first dependency
+  closure: `codex-async-utils`, `codex-execpolicy`,
+  `codex-experimental-api-macros`, `codex-network-proxy`,
+  `codex-shell-command`, and the required `codex-utils-*` crates. Vendored
+  crate manifests use explicit Apache-2.0, `0.0.0`, and `publish = false`
+  local metadata, keep internal `codex-*` paths relative, preserve the upstream
+  `runfiles` git rev for schema fixture tests, and align only external exact
+  pins that Cargo's unified workspace resolver cannot hold twice. `runhaven-tui`
+  now depends on the real vendored `codex-protocol` and
+  `codex-app-server-protocol` crates, and the active `TextArea` path consumes
+  `ByteRange` and `TextElement` from `codex_protocol::user_input`. Deleted the
+  local `tui/codex_protocol/` staged leaf. Verified so far:
+  `cargo check -p codex-protocol`, `cargo check -p codex-app-server-protocol`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p codex-protocol --locked --quiet`,
+  `cargo test -p codex-app-server-protocol --locked --quiet`, and
+  `cargo test -p runhaven-tui --locked drift_tests -- --nocapture`.
 
 Latest TUI Phase 3 runtime and handoff gate:
 

@@ -153,9 +153,6 @@ pub(crate) mod clipboard_paste {
     }
 }
 
-#[allow(dead_code)]
-pub(crate) mod codex_protocol;
-
 #[allow(dead_code, unused_imports)]
 pub(crate) mod key_hint;
 #[allow(dead_code)]
@@ -793,26 +790,20 @@ mod drift_tests {
     }
 
     #[test]
-    fn protocol_user_input_leaf_is_file_backed() {
+    fn protocol_crates_are_vendored_dependencies() {
         let module_source = include_str!("mod.rs");
-        let protocol_source = include_str!("codex_protocol/user_input.rs");
+        let manifest_source = include_str!("../../Cargo.toml");
 
         assert!(
-            module_declared(module_source, "codex_protocol"),
-            "codex_protocol should be a file-backed staged module"
+            !module_declared(module_source, "codex_protocol"),
+            "codex_protocol must be consumed from the vendored crate, not staged inside runhaven-tui"
         );
         assert!(
-            !module_source
-                .lines()
-                .map(str::trim)
-                .any(|line| line == "pub(crate) mod codex_protocol {"),
-            "codex_protocol must not be an inline shim in tui/mod.rs"
-        );
-        assert!(
-            protocol_source.contains("MAX_USER_INPUT_TEXT_CHARS")
-                && protocol_source.contains("set_placeholder")
-                && protocol_source.contains("enum UserInput"),
-            "staged codex_protocol::user_input should preserve the upstream protocol leaf shape"
+            manifest_source.contains("codex-protocol = { path = \"../codex/protocol\" }")
+                && manifest_source.contains(
+                    "codex-app-server-protocol = { path = \"../codex/app-server-protocol\" }"
+                ),
+            "runhaven-tui must depend on the real vendored Codex protocol crates"
         );
     }
 

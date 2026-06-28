@@ -1,0 +1,51 @@
+[package]
+name = "codex-network-proxy"
+edition = "2024"
+version = "0.0.0"
+license = "Apache-2.0"
+publish = false
+[lib]
+name = "codex_network_proxy"
+path = "src/lib.rs"
+doctest = false
+
+
+[dependencies]
+anyhow = { version = "=1.0.102" }
+base64 = { version = "=0.22.1" }
+clap = { version = "=4.6.1", features = ["derive"] }
+chrono = { version = "=0.4.45", features = ["serde"] }
+codex-utils-absolute-path = { path = "../utils/absolute-path" }
+codex-utils-home-dir = { path = "../utils/home-dir" }
+codex-utils-rustls-provider = { path = "../utils/rustls-provider" }
+globset = { version = "=0.4.18" }
+rand = { version = "=0.9.4" }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+serde_json = { version = "=1.0.150" }
+thiserror = { version = "=2.0.18" }
+time = { version = "=0.3.51" }
+tokio = { version = "=1.52.3", features = ["full"] }
+tracing = { version = "=0.1.44" }
+url = { version = "=2.5.8" }
+rama-core = { version = "=0.3.0-alpha.4" }
+rama-http = { version = "=0.3.0-alpha.4" }
+rama-http-backend = { version = "=0.3.0-alpha.4", features = ["tls"] }
+rama-net = { version = "=0.3.0-alpha.4", features = ["http", "tls"] }
+rama-socks5 = { version = "=0.3.0-alpha.4" }
+rama-tcp = { version = "=0.3.0-alpha.4", features = ["http"] }
+rama-tls-rustls = { version = "=0.3.0-alpha.4", features = ["http"] }
+rustls-native-certs = { version = "=0.8.3" }
+sha2 = { version = "=0.10.9" }
+
+[dev-dependencies]
+pretty_assertions = { version = "=1.4.1" }
+tempfile = { version = "=3.27.0" }
+
+[target.'cfg(target_family = "unix")'.dependencies]
+rama-unix = { version = "=0.3.0-alpha.4" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "=3.5.1"
+
+[target.'cfg(windows)'.dependencies]
+schannel = "=0.1.28"

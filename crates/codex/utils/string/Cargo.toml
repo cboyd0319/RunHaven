@@ -1,0 +1,17 @@
+[package]
+name = "codex-utils-string"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+
+publish = false
+[dependencies]
+regex-lite = { version = "=0.1.8" }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+serde_json = { version = "=1.0.150" }
+
+[dev-dependencies]
+pretty_assertions = { version = "=1.4.1" }
+
+[lib]
+doctest = false

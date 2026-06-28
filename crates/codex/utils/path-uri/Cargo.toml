@@ -1,0 +1,23 @@
+[package]
+name = "codex-utils-path-uri"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+
+publish = false
+[dependencies]
+base64 = { version = "=0.22.1" }
+codex-utils-absolute-path = { path = "../absolute-path" }
+schemars = { version = "=0.8.22" }
+serde = { version = "=1.0.228", features = ["derive", "rc"] }
+thiserror = { version = "=2.0.18" }
+ts-rs = { version = "=11.1.0", features = ["no-serde-warnings"] }
+url = { version = "=2.5.8" }
+urlencoding = { version = "=2.1.3" }
+
+[dev-dependencies]
+pretty_assertions = { version = "=1.4.1" }
+serde_json = { version = "=1.0.150" }
+
+[lib]
+doctest = false
