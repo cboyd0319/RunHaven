@@ -173,12 +173,17 @@ Tauri launch/run-control behavior.
 - For security-sensitive changes, use `security-engineering`; use
   `adversarial-review` for major architecture or boundary claims before
   committing.
+- Antigravity (`agy`) is research-only in this repo. Do not use it for
+  end-of-slice code review, adversarial review, verification, or proof of
+  correctness.
 - For direct Codex CLI behavior or vendored Codex TUI behavior, use
   `codex-cli-guide` and the local Codex source/config as evidence.
-- For RunHaven TUI work, use the `rust`, `codex-tui`, and
-  `adversarial-review` skills together as the end-of-slice gate before commit:
-  Rust crate/tooling correctness, Codex source-pattern alignment, then boundary
-  and overclaim review.
+- For RunHaven TUI work, use the `rust`, the Persona Codex TUI skill at
+  `/Users/c/Documents/GitHub/persona/content/skills/codex-tui`, and
+  `adversarial-review` together as the end-of-slice gate before commit: Rust
+  crate/tooling correctness, Codex source-pattern alignment, then boundary and
+  overclaim review. The repo-local `.agents/skills/codex-tui` wrapper exists
+  only to make that Persona skill discoverable from this project.
 
 ## Definition Of Done
 

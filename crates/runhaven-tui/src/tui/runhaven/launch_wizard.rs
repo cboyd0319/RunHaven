@@ -94,9 +94,10 @@ impl LaunchWizardView {
             Arc::clone(&selected_idx),
             image_smoke_status,
         );
+        let (app_event_tx, _app_event_rx) = tokio::sync::mpsc::unbounded_channel();
         let picker = ListSelectionView::new(
             params,
-            AppEventSender::default(),
+            AppEventSender::new(app_event_tx),
             RuntimeKeymap::defaults().list,
         );
         let workspace_title = workspace_title(&workspace);

@@ -33,9 +33,11 @@ itertools.workspace = true
 codex-app-server-protocol = { path = "../codex/app-server-protocol" }
 codex-config = { path = "../codex/config" }
 codex-connectors = { path = "../codex/connectors" }
+codex-features = { path = "../codex/features" }
 codex-file-search = { path = "../codex/file-search" }
 codex-plugin = { path = "../codex/plugin" }
 codex-protocol = { path = "../codex/protocol" }
+codex-utils-absolute-path = { path = "../codex/utils/absolute-path" }
 codex-utils-approval-presets = { path = "../codex/utils/approval-presets" }
 ratatui.workspace = true
 regex.workspace = true

@@ -1,5 +1,11 @@
 use anyhow::Result;
 
+#[allow(dead_code)]
+pub(crate) mod app_command;
+#[allow(dead_code)]
+pub(crate) mod app_event;
+#[allow(dead_code)]
+mod app_event_shared;
 mod app_shell;
 mod runhaven;
 
@@ -8,48 +14,31 @@ pub(crate) mod color;
 #[allow(dead_code)]
 pub(crate) mod custom_terminal;
 
-#[allow(dead_code)]
-pub(crate) mod app_event {
-    #[derive(Debug, Clone, PartialEq, Eq)]
-    #[allow(clippy::enum_variant_names)]
-    pub(crate) enum AppEvent {
-        OpenApprovalsPopup,
-        PetPreviewRequested { pet_id: String },
-        PetSelected { pet_id: String },
-        PetDisabled,
-    }
-}
+pub(crate) use app_event_shared::app_server_session;
+pub(crate) use app_event_shared::chatwidget;
+pub(crate) use app_event_shared::goal_files;
+pub(crate) use app_event_shared::history_cell;
+pub(crate) use app_event_shared::hooks_rpc;
+pub(crate) use app_event_shared::session_log;
+pub(crate) use app_event_shared::workspace_messages;
 
 #[allow(dead_code)]
-pub(crate) mod app_event_sender {
-    use super::app_event::AppEvent;
-    use tokio::sync::mpsc::UnboundedSender;
-
-    #[derive(Clone, Debug, Default)]
-    pub(crate) struct AppEventSender {
-        app_event_tx: Option<UnboundedSender<AppEvent>>,
-    }
-
-    impl AppEventSender {
-        pub(crate) fn new(app_event_tx: UnboundedSender<AppEvent>) -> Self {
-            Self {
-                app_event_tx: Some(app_event_tx),
-            }
-        }
-
-        pub(crate) fn send(&self, event: AppEvent) {
-            if let Some(app_event_tx) = &self.app_event_tx {
-                let _ = app_event_tx.send(event);
-            }
-        }
-    }
-}
+pub(crate) mod app_event_sender;
 
 #[allow(dead_code, unused_imports)]
 pub(crate) mod bottom_pane {
     use crossterm::event::KeyEvent;
 
     use super::render::renderable::Renderable;
+
+    #[derive(Clone, Debug)]
+    pub(crate) enum ApprovalRequest {}
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub(crate) enum StatusLineItem {}
+
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub(crate) enum TerminalTitleItem {}
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub(crate) enum CancellationEvent {
@@ -358,8 +347,6 @@ mod drift_tests {
         assert_eq!(
             inline_modules,
             [
-                "app_event",
-                "app_event_sender",
                 "bottom_pane",
                 "bottom_pane_view",
                 "clipboard_paste",
@@ -394,6 +381,20 @@ mod drift_tests {
         assert!(
             manifest_source.contains("codex-config = { path = \"../codex/config\" }"),
             "runhaven-tui must depend on the real vendored Codex config crate"
+        );
+        assert!(
+            manifest_source.contains("codex-connectors = { path = \"../codex/connectors\" }")
+                && manifest_source.contains("codex-features = { path = \"../codex/features\" }")
+                && manifest_source
+                    .contains("codex-file-search = { path = \"../codex/file-search\" }")
+                && manifest_source.contains("codex-plugin = { path = \"../codex/plugin\" }")
+                && manifest_source.contains(
+                    "codex-utils-absolute-path = { path = \"../codex/utils/absolute-path\" }"
+                )
+                && manifest_source.contains(
+                    "codex-utils-approval-presets = { path = \"../codex/utils/approval-presets\" }"
+                ),
+            "runhaven-tui must depend on the real vendored Codex event-data crates needed by app_event.rs"
         );
     }
 

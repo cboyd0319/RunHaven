@@ -182,9 +182,13 @@ Local integration exceptions:
 - `pets/model.rs` formats the SHA-256 cache key bytes explicitly because
   RunHaven is pinned to `sha2` 0.11. The produced cache key string stays the
   same shape as Codex.
-- `app_event`, `app_event_sender`, and `bottom_pane` in `mod.rs` are staged
-  contracts for compiled vendored surfaces. Replace them with full Codex
-  adapters as those surfaces come online.
+- `app_event.rs` and `app_event_sender.rs` are now compiled as the real
+  vendored Codex files. `app_event_shared.rs` is a temporary inert type bridge
+  for shared leaves whose owning modules remain dormant. Remove that bridge as
+  the real shared modules are promoted.
+- `bottom_pane` in `mod.rs` is still a staged contract for compiled vendored
+  surfaces. Replace it with the full Codex adapter as that surface comes
+  online.
 - `keymap.rs` is now compiled file-backed from the vendored Codex TUI source
   against the real `codex-config` crate, including
   `codex_config::types::{KeybindingsSpec, TuiKeymap, MAX_FUNCTION_KEY}`.
@@ -194,9 +198,12 @@ Local integration exceptions:
   `codex_protocol::user_input::{ByteRange, TextElement}` from that vendored
   crate instead of a RunHaven-local staged protocol leaf, and `keymap.rs`
   consumes real Codex config types instead of a RunHaven-local self-alias.
-- `crates/codex/connectors`, `crates/codex/file-search`,
-  `crates/codex/plugin`, and `crates/codex/utils/approval-presets` are now
-  real vendored package authorities for the next `app_event.rs` activation.
+- `crates/codex/connectors`, `crates/codex/features`,
+  `crates/codex/file-search`, `crates/codex/plugin`,
+  `crates/codex/utils/absolute-path`, and
+  `crates/codex/utils/approval-presets` are now real vendored package
+  authorities for the active vendored `app_event.rs` and
+  `app_event_sender.rs`.
   The required plugin namespace closure also vendors `codex-utils-plugins`,
   `codex-exec-server`, `codex-exec-server-protocol`, `codex-sandboxing`,
   `codex-utils-pty`, and `codex-windows-sandbox`. These crates compile as
@@ -276,11 +283,11 @@ Known integration gap:
 - The real Codex protocol and config crates compile as workspace members, and
   `runhaven-tui` depends on them. Wider Codex crate activation is still
   incremental and must keep RunHaven runtime authority in `runhaven-core`.
-- The real Codex connector, file-search, plugin, approval-preset, exec-server,
-  sandboxing, PTY, and Windows sandbox crates compile as workspace members for
-  the event-data dependency closure. `app_event.rs` itself is still dormant
-  until the required shared TUI types are exposed without activating
-  host-reaching Codex app paths.
+- The real Codex event and sender files compile. Their temporary
+  `app_event_shared.rs` leaf-type bridge must be removed as the real
+  `chatwidget`, `history_cell`, `goal_files`, `session_log`, and
+  app-server-session surfaces are promoted without activating host-reaching
+  Codex app paths.
 - The dormant Codex `Tui` runtime spine now compiles and has focused tests, but
   it is not the active bare-interactive app loop yet.
 - The launch picker, read-only review, and confirmation screen are staged in

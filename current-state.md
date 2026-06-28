@@ -91,10 +91,16 @@ TUI, Tauri, or frontend layers.
 - TUI image and pet rendering must follow Codex source behavior. Use the pinned
   upstream Codex TUI source and local Codex config evidence before writing custom pet,
   terminal image, statusline, bottom-pane, keymap, title, or resume behavior.
-- TUI implementation slices should end with the combined `rust`, `codex-tui`,
-  and `adversarial-review` skill gate before commit: Rust crate/tooling
+- TUI implementation slices should end with the combined `rust`, Persona
+  Codex TUI skill
+  (`/Users/c/Documents/GitHub/persona/content/skills/codex-tui`), and
+  `adversarial-review` skill gate before commit: Rust crate/tooling
   correctness, Codex source-pattern alignment, then boundary and overclaim
-  review.
+  review. The repo-local `.agents/skills/codex-tui` wrapper exists only to make
+  that Persona skill discoverable from this project.
+- Antigravity (`agy`) is research-only in this repo. Do not use it for
+  end-of-slice code review, adversarial review, verification, or proof of
+  correctness.
 - User-facing writing is product behavior. UI text, menus, prompts, warnings,
   README/usage docs, and setup instructions target non-technical users at about
   an 8th grade reading level.
@@ -598,6 +604,34 @@ Latest Codex event-data crate vendoring:
   (expected no package match), and
   `cargo tree -p runhaven-tui --locked -i tokio-tungstenite@0.28.0`.
 
+Latest Codex event-bus activation:
+
+- 2026-06-27: Activated the real vendored `app_event.rs` and
+  `app_event_sender.rs` files. The four-variant inline `AppEvent` shim and the
+  inline optional-channel `AppEventSender` shim are gone.
+- Added `app_event_shared.rs` as a narrow inert leaf-type bridge for
+  `AppServerStartedThread`, `UserMessage`, `GoalDraft`, `HistoryCell`,
+  `StatusLineGitSummary`, hook trust updates, workspace headline results, and
+  no-op session logging while the owning modules remain dormant. This is
+  temporary bridge debt, not product behavior.
+- `runhaven-tui` now directly depends on `codex-features` and
+  `codex-utils-absolute-path` because the real event bus imports those
+  authorities directly.
+- The temporary launch wizard now gives `ListSelectionView` a real
+  `AppEventSender` backed by a scratch channel instead of relying on a local
+  `Default` implementation that does not exist upstream.
+- Verified:
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --nocapture`,
+  `cargo test -p runhaven-tui --locked launch_wizard --quiet`,
+  `cargo test -p runhaven-tui --locked app_shell --quiet`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`, and
+  `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -608,8 +642,7 @@ Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4:
 adapt the native `App` and `BottomPane` path. Foreground launch remains
 read-only until the native Codex app loop owns terminal restore and
 `launch_run_plan` is wired through the UI thread. The next vendor-first slice is
-to expose the shared TUI types needed by real `app_event.rs` without declaring
-guarded host-reaching modules, then flip `app_event.rs` from the inline
-stand-in to the vendored file. After that, continue with `app_event_sender.rs`
-and `bottom_pane/mod.rs` in dependency order without routing host-reaching
-Codex behavior around the RunHaven facade.
+to promote `bottom_pane/mod.rs` after either replacing `app_event_shared.rs`
+with real shared modules or proving which inert bridge types can remain until
+ChatWidget activation. Do not route host-reaching Codex behavior around the
+RunHaven facade.

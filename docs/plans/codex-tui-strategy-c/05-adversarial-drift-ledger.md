@@ -201,14 +201,14 @@ Each finding: severity, the plan rule it bends, evidence, risk, recommendation.
   shrinking. If it gains more staged compatibility definitions, that is debt and
   should be called out." Doc 02 wanted vendored `codex-*` crates, not local
   reimplementations.
-- Evidence (`mod.rs`, 474 lines):
-  - `mod app_event` (`:12-21`) = 4 variants. Upstream `app_event.rs` is 36KB
-    with dozens. The real file sits dormant on disk.
-  - `mod app_event_sender` (`:24-46`), `mod bottom_pane` trait (`:49-146`),
-    `mod render` Insets/RectExt (`:169-221`),
-    `mod status::format_tokens_compact` (`:227-268`), and
-    `mod clipboard_paste` one-fn (`:149-154`) are all local stand-ins shadowing
-    same-named vendored files.
+- Evidence:
+  - `app_event.rs` and `app_event_sender.rs` now compile as real vendored
+    files, not inline stand-ins.
+  - `app_event_shared.rs` is temporary leaf-type bridge debt for shared types
+    whose owning modules remain dormant.
+  - `mod bottom_pane`, `mod render` Insets/RectExt,
+    `mod status::format_tokens_compact`, and `mod clipboard_paste` one-fn are
+    still local stand-ins shadowing same-named vendored files.
   - `keymap.rs` is no longer a local inline extract. It is declared as a real
     file-backed vendored module and compiles against the real vendored
     `codex-config` crate.
@@ -228,9 +228,9 @@ real vendored `codex-protocol` crate, and `TextArea` consumes
 The inline keymap extract is gone; `keymap.rs` now compiles against the real
 vendored `codex-config` crate and `lib.rs` no longer aliases `codex_config`.
 `mod.rs` has guard tests that prevent new inline stand-ins or new `codex_*`
-self-aliases from appearing quietly. The remaining D2 debt is still
-`app_event`, `app_event_sender`, `bottom_pane`, `render`, `status`, and
-`clipboard_paste`.
+self-aliases from appearing quietly. `app_event.rs` and `app_event_sender.rs`
+are now real vendored modules. The remaining D2 debt is `app_event_shared.rs`,
+`bottom_pane`, `render`, `status`, and `clipboard_paste`.
 
 ### D3 - Codex crate vendoring is now real; broader crate activation remains partial. (Severity: Low/Medium)
 
