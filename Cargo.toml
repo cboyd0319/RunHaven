@@ -6,24 +6,34 @@ members = [
     "crates/codex/codex-client",
     "crates/codex/codex-experimental-api-macros",
     "crates/codex/config",
+    "crates/codex/connectors",
+    "crates/codex/exec-server",
+    "crates/codex/exec-server-protocol",
     "crates/codex/execpolicy",
     "crates/codex/features",
+    "crates/codex/file-search",
     "crates/codex/file-system",
     "crates/codex/git-utils",
     "crates/codex/model-provider-info",
     "crates/codex/network-proxy",
     "crates/codex/otel",
+    "crates/codex/plugin",
     "crates/codex/protocol",
+    "crates/codex/sandboxing",
     "crates/codex/shell-command",
     "crates/codex/utils/absolute-path",
+    "crates/codex/utils/approval-presets",
     "crates/codex/utils/cache",
     "crates/codex/utils/cargo-bin",
     "crates/codex/utils/home-dir",
     "crates/codex/utils/image",
     "crates/codex/utils/path-utils",
     "crates/codex/utils/path-uri",
+    "crates/codex/utils/plugins",
+    "crates/codex/utils/pty",
     "crates/codex/utils/rustls-provider",
     "crates/codex/utils/string",
+    "crates/codex/windows-sandbox-rs",
     "crates/runhaven",
     "crates/runhaven-cli",
     "crates/runhaven-core",
@@ -94,3 +104,7 @@ all = { level = "deny", priority = -1 }
 
 [profile.release]
 overflow-checks = true
+
+[patch.crates-io]
+tokio-tungstenite = { git = "https://github.com/openai-oss-forks/tokio-tungstenite", rev = "0e5b2d73aa18dd9f0a50ee9ff199d5aef7594186" }
+tungstenite = { git = "https://github.com/openai-oss-forks/tungstenite-rs", rev = "4fffad30fe373adbdcffab9545e9e9bf4f2fc19f" }

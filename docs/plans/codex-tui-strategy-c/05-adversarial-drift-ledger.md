@@ -44,9 +44,10 @@ The drift is real but **early-phase and structural**, not a betrayal of intent:
    the "staged compatibility definitions = debt" that plan rule 6 warned about,
    now shrinking but not gone.
 3. The first real `codex-*` crate authority has now been restored:
-   `codex-protocol`, `codex-app-server-protocol`, `codex-config`, and their
-   required utility/config closure are vendored under original package/library
-   names in `crates/codex/`. Remaining drift is narrower:
+   `codex-protocol`, `codex-app-server-protocol`, `codex-config`,
+   `codex-connectors`, `codex-file-search`, `codex-plugin`, and their required
+   utility/config/event-data closure are vendored under original
+   package/library names in `crates/codex/`. Remaining drift is narrower:
    `lib.rs` still aliases `codex_terminal_detection`, and `mod.rs` still
    carries staged stand-ins for some TUI modules that have not yet been
    activated.
@@ -237,21 +238,32 @@ self-aliases from appearing quietly. The remaining D2 debt is still
   crates as practical with their original crate names ... This lets many
   upstream TUI imports remain unchanged" (`use codex_app_server_protocol::...`).
 - Evidence: `crates/codex/` now contains real vendored packages for
-  `codex-protocol`, `codex-app-server-protocol`, `codex-config`, and the
-  first dependency closure needed by protocol, config, and keymap activation.
+  `codex-protocol`, `codex-app-server-protocol`, `codex-config`,
+  `codex-connectors`, `codex-file-search`, `codex-plugin`,
+  `codex-utils-approval-presets`, and the first dependency closures needed by
+  protocol, config, keymap, and event-data activation.
   `runhaven-tui/Cargo.toml` depends on
   `codex-protocol = { path = "../codex/protocol" }` and
   `codex-app-server-protocol = { path = "../codex/app-server-protocol" }`,
-  plus `codex-config = { path = "../codex/config" }`.
+  plus `codex-config = { path = "../codex/config" }`,
+  `codex-connectors = { path = "../codex/connectors" }`,
+  `codex-file-search = { path = "../codex/file-search" }`,
+  `codex-plugin = { path = "../codex/plugin" }`, and
+  `codex-utils-approval-presets = { path = "../codex/utils/approval-presets" }`.
   `cargo check -p codex-protocol`, `cargo check -p codex-app-server-protocol`,
-  `cargo check -p codex-config`, and `cargo check -p runhaven-tui --locked` all
-  pass.
+  `cargo check -p codex-config`, `cargo check -p codex-plugin --locked`,
+  `cargo check -p codex-file-search --locked`,
+  `cargo check -p codex-connectors --locked`, and
+  `cargo check -p runhaven-tui --locked` all pass.
 - Integration adjustment: vendored manifests keep Codex package/library names
   and Apache-2.0 metadata. External exact pins that conflict with RunHaven's
   unified workspace resolver are aligned to RunHaven's existing pins, while the
   upstream `runfiles`, `tokio-tungstenite`, and `tungstenite` git revs are
-  preserved for the same source behavior Codex relies on. This is manifest
-  integration drift, not source/API drift.
+  preserved for the same source behavior Codex relies on. RunHaven also carries
+  the upstream Codex `tokio-tungstenite` and `tungstenite` crates.io patches,
+  and pins `codex-exec-server` to upstream Codex's `axum` 0.8.8 to avoid a
+  duplicate registry websocket stack. This is manifest integration drift, not
+  source/API drift.
 - Remaining risk: the alias for `codex_terminal_detection` remains, and larger
   backend crates such as `codex-app-server` and `codex-core` are not active
   authorities. Activating native `App`, `BottomPane`, or `ChatWidget` may expose

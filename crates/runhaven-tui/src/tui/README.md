@@ -30,25 +30,35 @@ codex-app-server-protocol
 codex-async-utils
 codex-client
 codex-config
+codex-connectors
+codex-exec-server
+codex-exec-server-protocol
 codex-execpolicy
 codex-experimental-api-macros
 codex-features
+codex-file-search
 codex-file-system
 codex-git-utils
 codex-model-provider-info
 codex-network-proxy
 codex-otel
+codex-plugin
 codex-protocol
+codex-sandboxing
 codex-shell-command
 codex-utils-absolute-path
+codex-utils-approval-presets
 codex-utils-cache
 codex-utils-cargo-bin
 codex-utils-home-dir
 codex-utils-image
 codex-utils-path
 codex-utils-path-uri
+codex-utils-plugins
+codex-utils-pty
 codex-utils-rustls-provider
 codex-utils-string
+codex-windows-sandbox
 ```
 
 Those vendored crates are Apache-2.0 upstream source. Their local manifests use
@@ -184,6 +194,21 @@ Local integration exceptions:
   `codex_protocol::user_input::{ByteRange, TextElement}` from that vendored
   crate instead of a RunHaven-local staged protocol leaf, and `keymap.rs`
   consumes real Codex config types instead of a RunHaven-local self-alias.
+- `crates/codex/connectors`, `crates/codex/file-search`,
+  `crates/codex/plugin`, and `crates/codex/utils/approval-presets` are now
+  real vendored package authorities for the next `app_event.rs` activation.
+  The required plugin namespace closure also vendors `codex-utils-plugins`,
+  `codex-exec-server`, `codex-exec-server-protocol`, `codex-sandboxing`,
+  `codex-utils-pty`, and `codex-windows-sandbox`. These crates compile as
+  source authorities only; RunHaven still does not route active TUI behavior
+  through Codex exec-server, filesystem RPC, or sandbox launch paths.
+- The local `codex-exec-server` manifest omits Codex's dev-only
+  `codex-test-binary-support` dependency until RunHaven intentionally vendors
+  and runs that exec-server test surface.
+- The local `codex-plugin` manifest allows Clippy's `result_large_err` lint,
+  matching the package-level pattern already used by other vendored Codex
+  crates. This preserves upstream source shape under RunHaven's stricter
+  workspace `-D warnings` gate.
 - `lib.rs` no longer aliases `codex_config`; only
   `codex_terminal_detection` remains as a temporary self-alias until the
   terminal-detection crate is promoted into the vendored crate set.
@@ -251,6 +276,11 @@ Known integration gap:
 - The real Codex protocol and config crates compile as workspace members, and
   `runhaven-tui` depends on them. Wider Codex crate activation is still
   incremental and must keep RunHaven runtime authority in `runhaven-core`.
+- The real Codex connector, file-search, plugin, approval-preset, exec-server,
+  sandboxing, PTY, and Windows sandbox crates compile as workspace members for
+  the event-data dependency closure. `app_event.rs` itself is still dormant
+  until the required shared TUI types are exposed without activating
+  host-reaching Codex app paths.
 - The dormant Codex `Tui` runtime spine now compiles and has focused tests, but
   it is not the active bare-interactive app loop yet.
 - The launch picker, read-only review, and confirmation screen are staged in

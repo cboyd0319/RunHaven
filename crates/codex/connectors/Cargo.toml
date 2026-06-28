@@ -1,0 +1,25 @@
+[package]
+name = "codex-connectors"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+anyhow = { version = "=1.0.102" }
+codex-config = { path = "../config" }
+codex-plugin = { path = "../plugin" }
+indexmap = { version = "=2.14.0", features = ["serde"] }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = { version = "=1.0.150" }
+sha1 = { version = "=0.10.6" }
+tracing = { version = "=0.1.44" }
+urlencoding = { version = "=2.1.3" }
+
+[dev-dependencies]
+pretty_assertions = { version = "=1.4.1" }
+tempfile = { version = "=3.27.0" }
+tokio = { version = "=1.52.3", features = ["macros", "rt-multi-thread"] }
+
+[lib]
+doctest = false

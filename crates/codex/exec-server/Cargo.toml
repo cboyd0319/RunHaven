@@ -1,0 +1,83 @@
+[package]
+name = "codex-exec-server"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+doctest = false
+
+[dependencies]
+arc-swap = { version = "=1.9.1" }
+axum = { version = "=0.8.8", default-features = false, features = ["http1", "tokio", "ws"] }
+base64 = { version = "=0.22.1" }
+bytes = { version = "=1.11.1" }
+clatter = { version = "=2.2.0", default-features = false, features = [
+    "alloc",
+    "getrandom",
+    "use-25519",
+    "use-aes-gcm",
+    "use-rust-crypto-ml-kem",
+    "use-sha",
+] }
+codex-api = { path = "../codex-api" }
+codex-client = { path = "../codex-client" }
+codex-exec-server-protocol = { path = "../exec-server-protocol" }
+codex-file-system = { path = "../file-system" }
+codex-network-proxy = { path = "../network-proxy" }
+codex-otel = { path = "../otel" }
+codex-protocol = { path = "../protocol" }
+codex-sandboxing = { path = "../sandboxing" }
+codex-utils-absolute-path = { path = "../utils/absolute-path" }
+codex-utils-path-uri = { path = "../utils/path-uri" }
+codex-utils-pty = { path = "../utils/pty" }
+codex-utils-rustls-provider = { path = "../utils/rustls-provider" }
+futures = { version = "=0.3.32", default-features = false }
+http = { version = "=1.4.0" }
+reqwest = { version = "=0.12.28", features = ["json", "rustls-tls", "stream"] }
+prost = { version = "=0.14.3" }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = { version = "=1.0.150" }
+thiserror = { version = "=2.0.18" }
+toml = { version = "=1.1.2" }
+tokio = { version = "=1.52.3", features = [
+    "fs",
+    "io-std",
+    "io-util",
+    "macros",
+    "net",
+    "process",
+    "rt-multi-thread",
+    "sync",
+    "time",
+] }
+tokio-util = { version = "=0.7.18", features = ["io", "rt"] }
+tokio-tungstenite = { git = "https://github.com/openai-oss-forks/tokio-tungstenite", rev = "0e5b2d73aa18dd9f0a50ee9ff199d5aef7594186", features = ["proxy", "rustls-tls-native-roots"] }
+tracing = { version = "=0.1.44" }
+uuid = { version = "=1.23.3", features = ["v4"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = { version = "=0.2.186" }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.52.0", features = [
+    "Win32_Foundation",
+    "Win32_Storage_FileSystem",
+] }
+
+[dev-dependencies]
+anyhow = { version = "=1.0.102" }
+ctor = { version = "=0.6.3" }
+http = { version = "=1.4.0" }
+opentelemetry = { version = "=0.31.0" }
+opentelemetry_sdk = { version = "=0.31.0" }
+pretty_assertions = { version = "=1.4.1" }
+rcgen = { version = "=0.14.7", default-features = false, features = ["aws_lc_rs", "pem"] }
+rustls = { version = "=0.23.36", default-features = false, features = ["aws_lc_rs", "std"] }
+serial_test = { version = "=3.5.0" }
+tempfile = { version = "=3.27.0" }
+test-case = "=3.3.1"
+tracing-opentelemetry = { version = "=0.32.1" }
+tracing-subscriber = { version = "=0.3.23" }
+wiremock = { version = "=0.6.5" }

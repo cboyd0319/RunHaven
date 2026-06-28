@@ -175,6 +175,10 @@ Tauri launch/run-control behavior.
   committing.
 - For direct Codex CLI behavior or vendored Codex TUI behavior, use
   `codex-cli-guide` and the local Codex source/config as evidence.
+- For RunHaven TUI work, use the `rust`, `codex-tui`, and
+  `adversarial-review` skills together as the end-of-slice gate before commit:
+  Rust crate/tooling correctness, Codex source-pattern alignment, then boundary
+  and overclaim review.
 
 ## Definition Of Done
 

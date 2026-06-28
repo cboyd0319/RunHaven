@@ -91,6 +91,10 @@ TUI, Tauri, or frontend layers.
 - TUI image and pet rendering must follow Codex source behavior. Use the pinned
   upstream Codex TUI source and local Codex config evidence before writing custom pet,
   terminal image, statusline, bottom-pane, keymap, title, or resume behavior.
+- TUI implementation slices should end with the combined `rust`, `codex-tui`,
+  and `adversarial-review` skill gate before commit: Rust crate/tooling
+  correctness, Codex source-pattern alignment, then boundary and overclaim
+  review.
 - User-facing writing is product behavior. UI text, menus, prompts, warnings,
   README/usage docs, and setup instructions target non-technical users at about
   an 8th grade reading level.
@@ -544,6 +548,56 @@ Latest Codex config/keymap crate vendoring:
   `bash -n scripts/compare-codex-tui.sh`, and
   `scripts/compare-codex-tui.sh --write-manifests <tempdir>`.
 
+Latest Codex event-data crate vendoring:
+
+- 2026-06-27: Continued real `codex-*` crate vendoring for the next
+  `app_event.rs` activation. Added workspace members for `codex-connectors`,
+  `codex-file-search`, `codex-plugin`, and
+  `codex-utils-approval-presets`, plus the required plugin namespace closure:
+  `codex-utils-plugins`, `codex-exec-server`,
+  `codex-exec-server-protocol`, `codex-sandboxing`, `codex-utils-pty`, and
+  `codex-windows-sandbox`.
+- `runhaven-tui` now depends on the real vendored connector, file-search,
+  plugin, and approval-preset crates so the real vendored `app_event.rs`
+  imports have crate authority available. `app_event.rs` itself remains
+  dormant until its shared TUI types are exposed without activating
+  host-reaching Codex app paths.
+- Added the same `tokio-tungstenite` and `tungstenite` crates.io patches used
+  by upstream Codex, and pinned `codex-exec-server` to upstream Codex's
+  `axum` 0.8.8. This avoids carrying an extra registry websocket stack
+  (`tokio-tungstenite` 0.29) beside Codex's patched 0.28 fork.
+- The active RunHaven launch/security authority is unchanged. These crates are
+  vendored source authorities for TUI event-data compatibility, not a promotion
+  of Codex exec-server, filesystem RPC, app-server, sandbox launch, plugin
+  execution, or connector network behavior into the active RunHaven runtime.
+- Local manifest integration found by the end-of-slice adversarial pass:
+  `codex-plugin` allows Clippy's `result_large_err`, matching existing
+  package-level exceptions in other vendored Codex crates and preserving
+  upstream source under RunHaven's stricter `-D warnings` gate.
+- The same adversarial pass found loose version specs inherited in target/dev
+  dependency sections of new vendored manifests; they were tightened to exact
+  pins before commit.
+- Focused Cargo efficiency note: use one umbrella `cargo check -p runhaven-tui`
+  after dependency graph changes, then rerun `cargo check -p runhaven-tui
+  --locked`. Avoid parallel Cargo checks; they serialize behind package-cache
+  and build-directory locks and are slower than one incremental umbrella check.
+- Verified so far:
+  `cargo metadata --locked --no-deps --format-version 1`,
+  `cargo check -p runhaven-tui`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo check -p codex-plugin --locked`,
+  `cargo check -p codex-file-search --locked`,
+  `cargo check -p codex-connectors --locked`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --nocapture`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`,
+  `git diff --check`,
+  `cargo tree -p runhaven-tui --locked -i tokio-tungstenite@0.29.0`
+  (expected no package match), and
+  `cargo tree -p runhaven-tui --locked -i tokio-tungstenite@0.28.0`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -554,7 +608,8 @@ Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4:
 adapt the native `App` and `BottomPane` path. Foreground launch remains
 read-only until the native Codex app loop owns terminal restore and
 `launch_run_plan` is wired through the UI thread. The next vendor-first slice is
-to shrink `mod.rs` again by promoting real Codex event/bottom-pane surfaces,
-starting with the shared request/event types needed to activate
-`app_event.rs`, `app_event_sender.rs`, and `bottom_pane/mod.rs` without routing
-host-reaching Codex behavior around the RunHaven facade.
+to expose the shared TUI types needed by real `app_event.rs` without declaring
+guarded host-reaching modules, then flip `app_event.rs` from the inline
+stand-in to the vendored file. After that, continue with `app_event_sender.rs`
+and `bottom_pane/mod.rs` in dependency order without routing host-reaching
+Codex behavior around the RunHaven facade.

@@ -1,0 +1,24 @@
+[package]
+name = "codex-exec-server-protocol"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+name = "codex_exec_server_protocol"
+path = "src/lib.rs"
+doctest = false
+
+[dependencies]
+base64 = { version = "=0.22.1" }
+codex-file-system = { path = "../file-system" }
+codex-network-proxy = { path = "../network-proxy" }
+codex-protocol = { path = "../protocol" }
+codex-shell-command = { path = "../shell-command" }
+codex-utils-path-uri = { path = "../utils/path-uri" }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = { version = "=1.0.150" }
+
+[dev-dependencies]
+pretty_assertions = { version = "=1.4.1" }

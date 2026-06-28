@@ -1,0 +1,25 @@
+[package]
+name = "codex-plugin"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[lib]
+doctest = false
+name = "codex_plugin"
+path = "src/lib.rs"
+
+[dependencies]
+codex-config = { path = "../config" }
+codex-protocol = { path = "../protocol" }
+codex-utils-absolute-path = { path = "../utils/absolute-path" }
+codex-utils-path-uri = { path = "../utils/path-uri" }
+codex-utils-plugins = { path = "../utils/plugins" }
+thiserror = { version = "=2.0.18" }
+
+[dev-dependencies]
+pretty_assertions = { version = "=1.4.1" }
+
+[lints.clippy]
+result_large_err = "allow"
