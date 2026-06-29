@@ -229,7 +229,8 @@ RunHaven boundaries.
 Progress note, 2026-06-29: The live staging shell now initializes and restores
 the real vendored Codex `Tui` runtime. Its loop consumes `TuiEventStream`,
 draws through `Tui::draw`, and shares the Codex `FrameRequester` with
-`BottomPane` and the temporary Cubby image smoke path. This removes the
+`BottomPane`. The earlier temporary Cubby image smoke path has been removed
+from the live shell during core-completion cleanup. This removes the
 previous `ratatui::try_init()` plus raw `crossterm::event::poll/read` loop from
 the active bare-interactive path. Native `App`, `ChatWidget`, real
 `app_server_session`, and app-server transport remain dormant until
@@ -300,8 +301,8 @@ Move only the RunHaven MVP screens into Codex-shaped surfaces:
 
 Defer Cubby/pet polish, mascot work, terminal image polish, Zork, dashboard
 breadth, rich history/diff, and Codex-native product affordances until the core
-RunHaven TUI is fully working. Existing pet/image code remains source-first
-infrastructure and opt-in smoke coverage, not near-term product scope.
+RunHaven TUI is fully working. Existing pet/image code remains parked
+source-first infrastructure, not near-term product scope.
 
 Progress note, 2026-06-29: The MVP workspace picker became active inside the
 BottomPane-owned `LaunchWizardView` without expanding `app_shell.rs`. The
@@ -446,11 +447,9 @@ cargo insta show -p runhaven-tui <path-to-snap.new>
 cargo insta accept -p runhaven-tui
 ```
 
-For terminal image behavior:
-
-```bash
-RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin runhaven
-```
+For final-pass terminal image behavior, first reintroduce a bounded visual
+smoke path and verify it explicitly. The live shell currently has no active
+`RUNHAVEN_TUI_IMAGE_SMOKE` path.
 
 For substantial integration slices on macOS 26+:
 

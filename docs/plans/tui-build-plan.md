@@ -105,17 +105,13 @@ hands the terminal to the foreground launch path only after Codex terminal
 restore. The first chooser stays plain; review and confirm show the dense
 safety facts and exact command before launch.
 
-Temporary visual check for the native Codex pet renderer:
+Historical visual check for the native Codex pet renderer:
 
-```bash
-RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin runhaven
-```
-
-This is only a smoke path for checking terminal image quality while the full
-Codex app shell and bottom pane are being adapted. By default it materializes
-the bundled RunHaven Cubby package as `custom:runhaven-cubby` under
-`$CODEX_HOME/pets/runhaven-cubby/`, then uses Codex's vendored `AmbientPet`,
-`FrameRequester`, and terminal image writer. Quit with `q`.
+The earlier `RUNHAVEN_TUI_IMAGE_SMOKE=1` hook has been removed from the live
+`app_shell.rs` path during core-completion cleanup. The bundled RunHaven Cubby
+package and lower Codex pet/image modules remain parked as source-first
+infrastructure. Reintroduce a bounded visual smoke only in a final-pass pet
+slice or when a core terminal-image check explicitly requires it.
 
 Immediate integration order:
 
@@ -335,8 +331,8 @@ a shared-library gap to close. Do not parse CLI prose in the TUI.
   policy mutation, review, typed confirmation, foreground launch handoff,
   post-run recovery, active-run list, confirmation-gated log snapshots, and
   secret-free diagnostics. The native Cubby pet package and Codex pet/image
-  renderer remain available as source-first infrastructure and opt-in smoke
-  coverage, but are not part of the current core-completion gate.
+  renderer remain available as parked source-first infrastructure, but are not
+  part of the current core-completion gate.
 - The first agent chooser is intentionally plain. Dense launch details such as
   auth scope, provider hosts, not-shared host data, safety notes, and the exact
   `container run` command belong in review and confirm.

@@ -63,7 +63,6 @@ pub(crate) struct LaunchWizardView {
     confirm_notice: Option<String>,
     launch_prepared: bool,
     app_event_tx: Option<AppEventSender>,
-    image_smoke_status: Option<Line<'static>>,
     completion: Option<ViewCompletion>,
 }
 
@@ -100,29 +99,20 @@ pub(crate) const LAUNCH_WIZARD_VIEW_ID: &str = "runhaven.launch_wizard";
 
 impl LaunchWizardView {
     #[cfg(test)]
-    pub(crate) fn new(
-        workspace: PathBuf,
-        previews: Vec<AgentLaunchPreview>,
-        image_smoke_status: Option<Line<'static>>,
-    ) -> Self {
-        Self::new_with_workspace_choices(
-            vec![WorkspaceLaunchPreview {
-                label: "Current directory".to_string(),
-                description: workspace.display().to_string(),
-                payload: LaunchPreviewPayload {
-                    workspace,
-                    previews,
-                },
-            }],
-            image_smoke_status,
-        )
+    pub(crate) fn new(workspace: PathBuf, previews: Vec<AgentLaunchPreview>) -> Self {
+        Self::new_with_workspace_choices(vec![WorkspaceLaunchPreview {
+            label: "Current directory".to_string(),
+            description: workspace.display().to_string(),
+            payload: LaunchPreviewPayload {
+                workspace,
+                previews,
+            },
+        }])
     }
 
     pub(crate) fn new_with_workspace_choices(
         workspace_choices: Vec<WorkspaceLaunchPreview>,
-        image_smoke_status: Option<Line<'static>>,
     ) -> Self {
-        let image_smoke_status_for_agent = image_smoke_status.clone();
         let workspaces = Arc::new(
             workspace_choices
                 .into_iter()
@@ -150,7 +140,6 @@ impl LaunchWizardView {
             selected_workspace_display(&workspaces, &selected_workspace_idx),
             Arc::clone(&decisions),
             Arc::clone(&selected_idx),
-            image_smoke_status_for_agent,
             if workspace_picker.is_some() {
                 "Step 2/4: Choose agent"
             } else {
@@ -181,7 +170,6 @@ impl LaunchWizardView {
             confirm_notice: None,
             launch_prepared: false,
             app_event_tx: None,
-            image_smoke_status,
             completion: None,
         }
     }
@@ -226,7 +214,6 @@ impl LaunchWizardView {
             selected_workspace_display(&self.workspace_choices, &self.selected_workspace_idx),
             Arc::clone(&self.decisions),
             Arc::clone(&self.selected_idx),
-            self.image_smoke_status.clone(),
             if self.workspace_picker.is_some() {
                 "Step 2/4: Choose agent"
             } else {
@@ -740,7 +727,6 @@ fn agent_selection_params(
     workspace: String,
     decisions: Arc<Vec<AgentDecisionVm>>,
     selected_idx: Arc<AtomicUsize>,
-    image_smoke_status: Option<Line<'static>>,
     step_label: &'static str,
 ) -> SelectionViewParams {
     let items = decisions
@@ -751,7 +737,6 @@ fn agent_selection_params(
         workspace,
         decisions: Arc::clone(&decisions),
         selected_idx: Arc::clone(&selected_idx),
-        image_smoke_status,
         step_label,
     };
     let on_selection_changed = {
@@ -943,7 +928,6 @@ struct SafetyHeader {
     workspace: String,
     decisions: Arc<Vec<AgentDecisionVm>>,
     selected_idx: Arc<AtomicUsize>,
-    image_smoke_status: Option<Line<'static>>,
     step_label: &'static str,
 }
 
@@ -981,9 +965,6 @@ impl SafetyHeader {
             Span::styled("/workspace only", boundary_style()),
             Span::raw(". Host home and credentials are not mounted."),
         ]));
-        if let Some(status) = &self.image_smoke_status {
-            lines.push(status.clone());
-        }
         lines
     }
 }
@@ -1669,18 +1650,14 @@ mod tests {
         pane.show_view(Box::new(LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             previews,
-            None,
         )));
         pane
     }
 
     #[test]
     fn enter_on_ready_plan_opens_review() {
-        let mut view = LaunchWizardView::new(
-            PathBuf::from("/tmp/project"),
-            vec![ready_preview("codex")],
-            None,
-        );
+        let mut view =
+            LaunchWizardView::new(PathBuf::from("/tmp/project"), vec![ready_preview("codex")]);
 
         view.handle_key(key(KeyCode::Enter));
 
@@ -1701,28 +1678,25 @@ mod tests {
                 executable_plan("codex"),
             )),
         };
-        let mut view = LaunchWizardView::new_with_workspace_choices(
-            vec![
-                WorkspaceLaunchPreview {
-                    label: "Current directory".to_string(),
-                    description: "/tmp/repo/nested".to_string(),
-                    payload: LaunchPreviewPayload {
-                        workspace: PathBuf::from("/tmp/repo/nested"),
-                        previews: vec![ready_preview("codex")],
-                    },
+        let mut view = LaunchWizardView::new_with_workspace_choices(vec![
+            WorkspaceLaunchPreview {
+                label: "Current directory".to_string(),
+                description: "/tmp/repo/nested".to_string(),
+                payload: LaunchPreviewPayload {
+                    workspace: PathBuf::from("/tmp/repo/nested"),
+                    previews: vec![ready_preview("codex")],
                 },
-                WorkspaceLaunchPreview {
-                    label: "Git repository root".to_string(),
-                    description: "Mount the full repository instead of only the nested folder."
-                        .to_string(),
-                    payload: LaunchPreviewPayload {
-                        workspace: PathBuf::from("/tmp/repo"),
-                        previews: vec![root_preview],
-                    },
+            },
+            WorkspaceLaunchPreview {
+                label: "Git repository root".to_string(),
+                description: "Mount the full repository instead of only the nested folder."
+                    .to_string(),
+                payload: LaunchPreviewPayload {
+                    workspace: PathBuf::from("/tmp/repo"),
+                    previews: vec![root_preview],
                 },
-            ],
-            None,
-        );
+            },
+        ]);
 
         assert!(view.is_choosing_workspace());
         assert!(render_to_text(&view, 100, 32).contains("Step 1/4: Choose workspace"));
@@ -1742,11 +1716,8 @@ mod tests {
 
     #[test]
     fn launch_copy_matches_foreground_handoff_behavior() {
-        let mut view = LaunchWizardView::new(
-            PathBuf::from("/tmp/project"),
-            vec![ready_preview("codex")],
-            None,
-        );
+        let mut view =
+            LaunchWizardView::new(PathBuf::from("/tmp/project"), vec![ready_preview("codex")]);
 
         let output = render_to_text(&view, 120, 32);
         assert!(output.contains("Confirming will start the agent after terminal restore."));
@@ -1764,7 +1735,6 @@ mod tests {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![blocked_preview("blocked")],
-            None,
         );
 
         view.handle_key(key(KeyCode::Enter));
@@ -1776,11 +1746,8 @@ mod tests {
 
     #[test]
     fn bottom_pane_view_selection_opens_review_without_completing() {
-        let mut view = LaunchWizardView::new(
-            PathBuf::from("/tmp/project"),
-            vec![ready_preview("codex")],
-            None,
-        );
+        let mut view =
+            LaunchWizardView::new(PathBuf::from("/tmp/project"), vec![ready_preview("codex")]);
 
         BottomPaneView::handle_key_event(&mut view, key(KeyCode::Enter));
 
@@ -1791,11 +1758,8 @@ mod tests {
 
     #[test]
     fn bottom_pane_view_picker_cancel_completes_view() {
-        let mut view = LaunchWizardView::new(
-            PathBuf::from("/tmp/project"),
-            vec![ready_preview("codex")],
-            None,
-        );
+        let mut view =
+            LaunchWizardView::new(PathBuf::from("/tmp/project"), vec![ready_preview("codex")]);
 
         BottomPaneView::handle_key_event(&mut view, key(KeyCode::Esc));
 
@@ -1812,7 +1776,6 @@ mod tests {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![ready_preview("codex"), ready_preview("claude")],
-            None,
         );
         view.handle_key(key(KeyCode::Down));
         view.handle_key(key(KeyCode::Enter));
@@ -1831,7 +1794,6 @@ mod tests {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![ready_preview("codex"), ready_preview("claude")],
-            None,
         );
         view.handle_key(key(KeyCode::Down));
         view.handle_key(key(KeyCode::Enter));
@@ -1844,11 +1806,8 @@ mod tests {
 
     #[test]
     fn confirm_back_keys_return_to_review() {
-        let mut view = LaunchWizardView::new(
-            PathBuf::from("/tmp/project"),
-            vec![ready_preview("codex")],
-            None,
-        );
+        let mut view =
+            LaunchWizardView::new(PathBuf::from("/tmp/project"), vec![ready_preview("codex")]);
         view.handle_key(key(KeyCode::Enter));
         view.handle_key(key(KeyCode::Enter));
 
@@ -1866,11 +1825,8 @@ mod tests {
     #[test]
     fn secure_plan_confirm_enter_prepares_foreground_launch_handoff() {
         let (app_event_tx, mut app_event_rx) = mpsc::unbounded_channel();
-        let mut view = LaunchWizardView::new(
-            PathBuf::from("/tmp/project"),
-            vec![ready_preview("codex")],
-            None,
-        );
+        let mut view =
+            LaunchWizardView::new(PathBuf::from("/tmp/project"), vec![ready_preview("codex")]);
         view.set_app_event_sender(AppEventSender::new(app_event_tx));
         view.handle_key(key(KeyCode::Enter));
         view.handle_key(key(KeyCode::Enter));
@@ -1901,7 +1857,6 @@ mod tests {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![confirm_required_preview("codex")],
-            None,
         );
         view.handle_key(key(KeyCode::Enter));
         view.handle_key(key(KeyCode::Enter));
@@ -1919,7 +1874,6 @@ mod tests {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![confirm_required_preview("codex")],
-            None,
         );
         view.handle_key(key(KeyCode::Enter));
         view.handle_key(key(KeyCode::Enter));
@@ -1955,7 +1909,6 @@ mod tests {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![confirm_required_preview("codex")],
-            None,
         );
         view.set_app_event_sender(AppEventSender::new(app_event_tx));
         view.handle_key(key(KeyCode::Enter));
@@ -1986,7 +1939,6 @@ mod tests {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![confirm_required_preview("codex")],
-            None,
         );
         view.handle_key(key(KeyCode::Enter));
         view.handle_key(key(KeyCode::Enter));
@@ -2002,7 +1954,6 @@ mod tests {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![confirm_required_preview("codex")],
-            None,
         );
         view.handle_key(key(KeyCode::Enter));
         view.handle_key(key(KeyCode::Enter));
@@ -2029,7 +1980,6 @@ mod tests {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![confirm_required_preview("codex")],
-            None,
         );
         BottomPaneView::handle_key_event(&mut view, key(KeyCode::Enter));
         BottomPaneView::handle_key_event(&mut view, key(KeyCode::Enter));
@@ -2080,7 +2030,6 @@ mod tests {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![confirm_required_preview("codex")],
-            None,
         );
         view.handle_key(key(KeyCode::Enter));
         view.handle_key(key(KeyCode::Enter));
@@ -2097,11 +2046,8 @@ mod tests {
 
     #[test]
     fn confirm_step_footer_status_and_title_track_step_four() {
-        let mut view = LaunchWizardView::new(
-            PathBuf::from("/tmp/project"),
-            vec![ready_preview("codex")],
-            None,
-        );
+        let mut view =
+            LaunchWizardView::new(PathBuf::from("/tmp/project"), vec![ready_preview("codex")]);
         view.handle_key(key(KeyCode::Enter));
         view.handle_key(key(KeyCode::Enter));
 
@@ -2117,7 +2063,6 @@ mod tests {
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![ready_preview("codex"), ready_preview("claude")],
-            None,
         );
 
         let footer = format!("{:?}", view.footer_status_line());

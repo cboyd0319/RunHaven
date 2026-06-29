@@ -50,7 +50,6 @@ const DIAGNOSTICS_LIMIT: usize = 20;
 pub(crate) struct RunHavenMvpView {
     workspace: PathBuf,
     service: RunHavenTuiService,
-    image_smoke_status: Option<Line<'static>>,
     policy: LaunchPolicySelection,
     launch: LaunchWizardView,
     screen: MvpScreen,
@@ -120,27 +119,16 @@ struct DiagnosticsScreen {
 }
 
 impl RunHavenMvpView {
-    pub(crate) fn new(workspace: PathBuf, image_smoke_status: Option<Line<'static>>) -> Self {
-        Self::with_service(workspace, image_smoke_status, RunHavenTuiService::new())
+    pub(crate) fn new(workspace: PathBuf) -> Self {
+        Self::with_service(workspace, RunHavenTuiService::new())
     }
 
-    fn with_service(
-        workspace: PathBuf,
-        image_smoke_status: Option<Line<'static>>,
-        service: RunHavenTuiService,
-    ) -> Self {
+    fn with_service(workspace: PathBuf, service: RunHavenTuiService) -> Self {
         let policy = LaunchPolicySelection::default();
-        let launch = launch_wizard_for(
-            &service,
-            &workspace,
-            policy,
-            image_smoke_status.clone(),
-            None,
-        );
+        let launch = launch_wizard_for(&service, &workspace, policy, None);
         Self {
             workspace,
             service,
-            image_smoke_status,
             policy,
             launch,
             screen: MvpScreen::Launch,
@@ -157,7 +145,6 @@ impl RunHavenMvpView {
         Self {
             workspace,
             service: RunHavenTuiService::new(),
-            image_smoke_status: None,
             policy: LaunchPolicySelection::default(),
             launch,
             screen: MvpScreen::Launch,
@@ -182,7 +169,6 @@ impl RunHavenMvpView {
             &self.service,
             &self.workspace,
             self.policy,
-            self.image_smoke_status.clone(),
             self.app_event_tx.clone(),
         );
     }
@@ -679,7 +665,6 @@ fn launch_wizard_for(
     service: &RunHavenTuiService,
     workspace: &PathBuf,
     policy: LaunchPolicySelection,
-    image_smoke_status: Option<Line<'static>>,
     app_event_tx: Option<AppEventSender>,
 ) -> LaunchWizardView {
     let choices = if policy == LaunchPolicySelection::default() {
@@ -687,7 +672,7 @@ fn launch_wizard_for(
     } else {
         service.launch_workspace_choices_with_policy(workspace, policy)
     };
-    let mut launch = LaunchWizardView::new_with_workspace_choices(choices, image_smoke_status);
+    let mut launch = LaunchWizardView::new_with_workspace_choices(choices);
     if let Some(app_event_tx) = app_event_tx {
         launch.set_app_event_sender(app_event_tx);
     }
@@ -1070,7 +1055,7 @@ mod tests {
     #[test]
     fn policy_keys_rebuild_launch_plan_without_custom_shell_code() {
         let workspace = tempfile::tempdir().expect("workspace");
-        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf(), None);
+        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());
 
         let output = render_to_text(&mut view, 120, 32);
         assert!(output.contains("Choose an agent"));
@@ -1107,7 +1092,7 @@ mod tests {
         )
         .expect("active marker");
         let workspace = tempfile::tempdir().expect("workspace");
-        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf(), None);
+        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());
 
         view.handle_key_event(key(KeyCode::Char('2')));
         let output = render_to_text(&mut view, 120, 32);
@@ -1124,7 +1109,7 @@ mod tests {
     #[test]
     fn log_confirmation_rejects_paste_and_wrong_phrase() {
         let workspace = tempfile::tempdir().expect("workspace");
-        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf(), None);
+        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());
         view.screen = MvpScreen::RunLogs(Box::new(RunLogsScreen {
             run: ActiveRunSummaryData {
                 run_id: "run-123".to_string(),
@@ -1157,7 +1142,7 @@ mod tests {
     #[test]
     fn loaded_log_snapshot_is_visible_only_after_confirm_state() {
         let workspace = tempfile::tempdir().expect("workspace");
-        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf(), None);
+        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());
         view.screen = MvpScreen::RunLogs(Box::new(RunLogsScreen {
             run: ActiveRunSummaryData {
                 run_id: "run-123".to_string(),
@@ -1236,7 +1221,7 @@ mod tests {
             .expect("auth write");
         }
         let workspace = tempfile::tempdir().expect("workspace");
-        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf(), None);
+        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());
 
         view.handle_key_event(key(KeyCode::Char('3')));
         let output = render_to_text(&mut view, 120, 40);
@@ -1252,7 +1237,7 @@ mod tests {
     #[test]
     fn post_run_recovery_screen_can_return_to_launch() {
         let workspace = tempfile::tempdir().expect("workspace");
-        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf(), None);
+        let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());
         let launch = view
             .service
             .launch_preview_payload(workspace.path())
@@ -1278,7 +1263,7 @@ mod tests {
         let root = tempfile::tempdir().expect("root");
         let nested = root.path().join("nested");
         std::fs::create_dir(&nested).expect("nested workspace");
-        let mut view = RunHavenMvpView::new(nested.clone(), None);
+        let mut view = RunHavenMvpView::new(nested.clone());
         let policy = LaunchPolicySelection {
             network: NetworkPolicySelection::Fixed(NetworkMode::Internet),
             auth_scope: AuthScope::Project,

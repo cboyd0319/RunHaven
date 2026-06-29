@@ -271,9 +271,10 @@ Why leaving and adapting is better than removing:
 
 ### Temporary Native Pet Image Smoke
 
-Decision: add a temporary visual smoke path to the current read-only
-`app_shell.rs` so image quality can be checked before the full app shell and
-bottom pane are adapted.
+Superseded decision: a temporary visual smoke path was added to the old
+read-only `app_shell.rs` so image quality could be checked before the full app
+shell and bottom pane were adapted. That hook has since been removed from the
+live shell during core-completion cleanup.
 
 Why this is a small RunHaven adapter instead of a custom renderer:
 
@@ -285,17 +286,14 @@ Why this is a small RunHaven adapter instead of a custom renderer:
 - It does not overwrite or depend on a user's own `$CODEX_HOME/pets/cubby/`.
 - It gives the vendored `FrameRequester` a small Tokio runtime instead of
   replacing the scheduler with local code.
-- It is off by default and only runs with `RUNHAVEN_TUI_IMAGE_SMOKE=1`.
-- `RUNHAVEN_TUI_IMAGE_SMOKE_PET=<selector>` can point the smoke at another
-  Codex pet selector when needed.
+- It was off by default and only ran with `RUNHAVEN_TUI_IMAGE_SMOKE=1`.
+- `RUNHAVEN_TUI_IMAGE_SMOKE_PET=<selector>` pointed the smoke at another Codex
+  pet selector when needed.
 
-Manual visual check:
-
-```bash
-RUNHAVEN_TUI_IMAGE_SMOKE=1 cargo run --locked --bin runhaven
-```
-
-Quit with `q`.
+Current state: the live shell has no active `RUNHAVEN_TUI_IMAGE_SMOKE` path.
+The bundled Cubby package and lower pet/image modules remain parked as
+source-first infrastructure. Reintroduce a bounded visual smoke only in a
+final-pass pet slice or when a core terminal-image check explicitly requires it.
 
 ### Codex Renderable Contract
 

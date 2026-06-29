@@ -8,10 +8,6 @@ use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::Color;
-use ratatui::style::Style;
-use ratatui::text::Line;
-use ratatui::text::Span;
 use ratatui::widgets::Clear;
 use ratatui::widgets::Widget;
 
@@ -42,10 +38,6 @@ use ratatui::Frame;
 use tokio::sync::mpsc;
 use tokio_stream::StreamExt;
 
-const IMAGE_SMOKE_ENV: &str = "RUNHAVEN_TUI_IMAGE_SMOKE";
-const IMAGE_SMOKE_PET_ENV: &str = "RUNHAVEN_TUI_IMAGE_SMOKE_PET";
-const DEFAULT_IMAGE_SMOKE_PET: &str = crate::tui::pets::RUNHAVEN_BUNDLED_CUBBY_SELECTOR;
-
 pub(crate) fn run() -> Result<i32> {
     let initialized = codex_runtime::init().context("initialize Codex terminal runtime")?;
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -66,12 +58,10 @@ pub(crate) fn run() -> Result<i32> {
     let exit_result = loop {
         match runtime.block_on(run_loop(&mut tui, &mut state)) {
             Ok(ShellExit::Quit) => {
-                state.clear_image_smoke(&mut tui)?;
                 tui.terminal.clear().context("clear terminal UI")?;
                 break Ok(state.process_exit_code());
             }
             Ok(ShellExit::Launch(launch)) => {
-                state.clear_image_smoke(&mut tui)?;
                 let launch = *launch;
                 let success_outcome = PostRunOutcome::from_launch(&launch, 0, None);
                 match runtime.block_on(super::runhaven::launch_handoff::launch_prepared(
@@ -152,7 +142,6 @@ async fn run_loop(tui: &mut codex_runtime::Tui, state: &mut ShellState) -> Resul
                 state.refresh_terminal_title();
                 let height = tui.terminal.size()?.height;
                 tui.draw(height, |frame| render_custom(frame, state))?;
-                state.draw_image_smoke(tui)?;
             }
         }
     }
@@ -164,7 +153,6 @@ struct ShellState {
     bottom_pane: BottomPane,
     app_event_tx: AppEventSender,
     app_event_rx: mpsc::UnboundedReceiver<crate::app_event::AppEvent>,
-    image_smoke: ImageSmoke,
     show_footer_help: bool,
     last_terminal_title: Option<String>,
     process_exit_code: i32,
@@ -201,24 +189,18 @@ impl ShellState {
         frame_requester: crate::tui::FrameRequester,
     ) -> Result<Self> {
         let workspace = workspace.as_ref().to_path_buf();
-        let image_smoke = ImageSmoke::from_env(frame_requester.clone());
-        let image_smoke_status = image_smoke.status_line();
-        let mvp_view = RunHavenMvpView::new(workspace.clone(), image_smoke_status);
-        Self::from_mvp_view_with_frame_requester(workspace, mvp_view, image_smoke, frame_requester)
+        let mvp_view = RunHavenMvpView::new(workspace.clone());
+        Self::from_mvp_view_with_frame_requester(workspace, mvp_view, frame_requester)
     }
 
     #[cfg(test)]
-    fn from_launch_wizard(
-        launch_wizard: LaunchWizardView,
-        image_smoke: ImageSmoke,
-    ) -> Result<Self> {
+    fn from_launch_wizard(launch_wizard: LaunchWizardView) -> Result<Self> {
         Self::from_mvp_view_with_frame_requester(
             PathBuf::from("/tmp/project"),
             RunHavenMvpView::from_launch_wizard_for_tests(
                 PathBuf::from("/tmp/project"),
                 launch_wizard,
             ),
-            image_smoke,
             crate::tui::FrameRequester::test_dummy(),
         )
     }
@@ -226,7 +208,6 @@ impl ShellState {
     fn from_mvp_view_with_frame_requester(
         workspace: PathBuf,
         mvp_view: RunHavenMvpView,
-        image_smoke: ImageSmoke,
         frame_requester: crate::tui::FrameRequester,
     ) -> Result<Self> {
         let (app_event_tx, app_event_rx) = mpsc::unbounded_channel();
@@ -250,7 +231,6 @@ impl ShellState {
             bottom_pane,
             app_event_tx,
             app_event_rx,
-            image_smoke,
             show_footer_help: false,
             last_terminal_title: None,
             process_exit_code: 0,
@@ -319,18 +299,6 @@ impl ShellState {
         prepared_launch
     }
 
-    fn prepare_image_smoke_draw(&mut self, area: ratatui::layout::Rect, composer_bottom_y: u16) {
-        self.image_smoke.prepare_draw(area, composer_bottom_y);
-    }
-
-    fn draw_image_smoke(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
-        self.image_smoke.draw(tui)
-    }
-
-    fn clear_image_smoke(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
-        self.image_smoke.clear(tui)
-    }
-
     fn show_post_run(&mut self, outcome: PostRunOutcome) {
         self.process_exit_code = outcome.exit_code;
         self.workspace = outcome.workspace.clone();
@@ -340,7 +308,7 @@ impl ShellState {
         let _ = self
             .bottom_pane
             .dismiss_active_view_if_id(RUNHAVEN_MVP_VIEW_ID);
-        let mut view = RunHavenMvpView::new(outcome.workspace.clone(), None);
+        let mut view = RunHavenMvpView::new(outcome.workspace.clone());
         view.show_post_run(outcome);
         view.set_app_event_sender(self.app_event_tx.clone());
         self.bottom_pane.show_view(Box::new(view));
@@ -461,129 +429,6 @@ impl ShellState {
     }
 }
 
-enum ImageSmoke {
-    Disabled,
-    Ready(Box<ImageSmokeState>),
-    Error(String),
-}
-
-impl ImageSmoke {
-    fn from_env(frame_requester: crate::tui::FrameRequester) -> Self {
-        if !env_flag_enabled(std::env::var_os(IMAGE_SMOKE_ENV).as_deref()) {
-            return Self::Disabled;
-        }
-
-        match ImageSmokeState::load(frame_requester) {
-            Ok(state) => Self::Ready(Box::new(state)),
-            Err(error) => Self::Error(format!("pet image smoke unavailable: {error}")),
-        }
-    }
-
-    fn status_line(&self) -> Option<Line<'static>> {
-        match self {
-            Self::Disabled => None,
-            Self::Ready(state) => Some(Line::from(state.status.clone())),
-            Self::Error(message) => Some(Line::from(vec![Span::styled(
-                message.clone(),
-                Style::default().fg(Color::Yellow),
-            )])),
-        }
-    }
-
-    fn prepare_draw(&mut self, area: ratatui::layout::Rect, composer_bottom_y: u16) {
-        if let Self::Ready(state) = self {
-            state.prepare_draw(area, composer_bottom_y);
-        }
-    }
-
-    fn draw(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
-        if let Self::Ready(state) = self {
-            state.draw(tui)?;
-        }
-        Ok(())
-    }
-
-    fn clear(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
-        if let Self::Ready(state) = self {
-            state.clear(tui)?;
-        }
-        Ok(())
-    }
-}
-
-struct ImageSmokeState {
-    pet: crate::tui::pets::AmbientPet,
-    pending_draw: Option<crate::tui::pets::AmbientPetDraw>,
-    status: String,
-}
-
-impl ImageSmokeState {
-    fn load(frame_requester: crate::tui::FrameRequester) -> Result<Self> {
-        let codex_home = codex_home().context("CODEX_HOME or HOME is not available")?;
-        let pet_id = std::env::var(IMAGE_SMOKE_PET_ENV)
-            .ok()
-            .filter(|value| !value.trim().is_empty())
-            .unwrap_or_else(|| DEFAULT_IMAGE_SMOKE_PET.to_string());
-        crate::tui::pets::ensure_pet_assets_for_selector(&pet_id, &codex_home)
-            .with_context(|| format!("prepare {pet_id} in {}", codex_home.display()))?;
-        let mut pet =
-            crate::tui::pets::AmbientPet::load(Some(&pet_id), &codex_home, frame_requester, true)
-                .with_context(|| format!("load {pet_id} from {}", codex_home.display()))?;
-        pet.set_notification(
-            crate::tui::pets::PetNotificationKind::Review,
-            Some("Image smoke".to_string()),
-        );
-        let image_enabled = pet.image_enabled();
-        let status = if image_enabled {
-            format!("pet image smoke: Codex native renderer using {pet_id}")
-        } else {
-            "pet image smoke: terminal image protocol unavailable".to_string()
-        };
-
-        Ok(Self {
-            pet,
-            pending_draw: None,
-            status,
-        })
-    }
-
-    fn prepare_draw(&mut self, area: ratatui::layout::Rect, composer_bottom_y: u16) {
-        self.pending_draw = self.pet.draw_request(area, composer_bottom_y);
-        self.pet.schedule_next_frame();
-    }
-
-    fn draw(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
-        tui.draw_ambient_pet_image(self.pending_draw.take())?;
-        Ok(())
-    }
-
-    fn clear(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
-        tui.clear_ambient_pet_image()?;
-        Ok(())
-    }
-}
-
-fn env_flag_enabled(value: Option<&std::ffi::OsStr>) -> bool {
-    let Some(value) = value.and_then(|value| value.to_str()) else {
-        return false;
-    };
-    matches!(
-        value.trim().to_ascii_lowercase().as_str(),
-        "1" | "true" | "yes" | "on"
-    )
-}
-
-fn codex_home() -> Option<PathBuf> {
-    std::env::var_os("CODEX_HOME")
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| {
-            std::env::var_os("HOME")
-                .filter(|value| !value.is_empty())
-                .map(|home| PathBuf::from(home).join(".codex"))
-        })
-}
-
 #[cfg(test)]
 fn render(frame: &mut Frame<'_>, state: &mut ShellState) {
     let area = frame.area();
@@ -616,7 +461,6 @@ fn render_buffer(area: Rect, buf: &mut Buffer, state: &mut ShellState) -> Option
     };
     Renderable::render(&state.bottom_pane, content_area, buf);
     state.render_footer(footer_area, buf);
-    state.prepare_image_smoke_draw(content_area, footer_area.y);
     state.bottom_pane.cursor_pos(content_area)
 }
 
@@ -1146,26 +990,11 @@ mod tests {
         assert!(title.contains("claude"));
     }
 
-    #[test]
-    fn image_smoke_flag_accepts_plain_true_values() {
-        assert!(env_flag_enabled(Some(std::ffi::OsStr::new("1"))));
-        assert!(env_flag_enabled(Some(std::ffi::OsStr::new("true"))));
-        assert!(env_flag_enabled(Some(std::ffi::OsStr::new("YES"))));
-        assert!(env_flag_enabled(Some(std::ffi::OsStr::new("on"))));
-        assert!(!env_flag_enabled(Some(std::ffi::OsStr::new("0"))));
-        assert!(!env_flag_enabled(Some(std::ffi::OsStr::new("false"))));
-        assert!(!env_flag_enabled(None));
-    }
-
     fn confirm_required_shell_state() -> ShellState {
-        ShellState::from_launch_wizard(
-            LaunchWizardView::new(
-                PathBuf::from("/tmp/project"),
-                vec![confirm_required_preview_for_tests()],
-                None,
-            ),
-            ImageSmoke::Disabled,
-        )
+        ShellState::from_launch_wizard(LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![confirm_required_preview_for_tests()],
+        ))
         .expect("state")
     }
 

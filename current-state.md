@@ -93,8 +93,9 @@ TUI, Tauri, or frontend layers.
   terminal image, statusline, bottom-pane, keymap, title, or resume behavior.
   Cubby, pet polish, mascot work, and terminal image polish are final-pass TUI
   work after the core RunHaven TUI is complete. Keep existing pet code as
-  source-first infrastructure and opt-in smoke coverage unless a core TUI check
-  requires it.
+  parked source-first infrastructure; do not add a live env-gated smoke path
+  unless a final-pass pet slice or core terminal-image check explicitly requires
+  it.
 - TUI implementation slices should use the repo-local
   `.agents/skills/codex-tui` skill first. It requires the Persona Codex TUI
   skill (`/Users/c/Documents/GitHub/persona/content/skills/codex-tui`), then
@@ -158,16 +159,14 @@ directories are allowed caches and which should be cleaned when they appear.
 Active stale doc paths were corrected in the research and Tauri/TUI design docs;
 historical evidence logs were left as records of what happened at the time.
 
-TUI native-pet image smoke follow-up: the temporary `app_shell.rs` can now run
-an opt-in visual check with `RUNHAVEN_TUI_IMAGE_SMOKE=1`. RunHaven now bundles
-the verified Cubby Codex pet package from `docs/assets/installed-pet/cubby/`
-and materializes it as `custom:runhaven-cubby` under
-`$CODEX_HOME/pets/runhaven-cubby/` before calling Codex's vendored
-`AmbientPet`, frame cache, Tokio `FrameRequester`, and
-`render_ambient_pet_image` writer. This keeps the renderer source-first while
-avoiding collisions with a user's own `$CODEX_HOME/pets/cubby/` package. The
-smoke path is only for checking terminal image quality before the full Codex
-app shell and bottom pane are adapted.
+TUI native-pet image smoke follow-up (superseded): the earlier temporary
+`app_shell.rs` image-smoke path has been removed from the active shell during
+core-completion cleanup. RunHaven still bundles the verified Cubby Codex pet
+package from `docs/assets/installed-pet/cubby/` and can materialize it as
+`custom:runhaven-cubby` under `$CODEX_HOME/pets/runhaven-cubby/` through the
+lower pet modules, avoiding collisions with a user's own
+`$CODEX_HOME/pets/cubby/` package. Reintroduce terminal-image smoke only in a
+final-pass pet slice or when a core terminal-image check explicitly requires it.
 
 TUI component-seam follow-up: `crates/runhaven-core/src/ui_contracts.rs` now
 defines the first tagged RunHaven payload enum with `AgentCatalogData` and
@@ -879,8 +878,8 @@ Latest TUI Codex runtime ownership:
   real vendored Codex `Tui` runtime instead of using `ratatui::try_init()` and
   raw `crossterm::event::poll/read`. Its active loop consumes
   `TuiEventStream`, draws through `Tui::draw`, and shares the Codex
-  `FrameRequester` with the hosted `BottomPane` and the temporary Cubby image
-  smoke path.
+  `FrameRequester` with the hosted `BottomPane`. The earlier Cubby image-smoke
+  path is no longer active.
 - This preserved the launch picker, review, and confirmation behavior from
   that earlier disabled-launch phase. Native `App`, `ChatWidget`, real
   `app_server_session`, and app-server transport remain dormant until
@@ -1149,6 +1148,11 @@ Latest RunHaven-only TUI MVP surface:
   list, or broker/image/auth detail on the first screen. Review and confirm
   still show auth scope, network posture, not-shared host data, provider hosts,
   safety notes, and the exact command before launch.
+- 2026-06-29: Removed the active `RUNHAVEN_TUI_IMAGE_SMOKE` hook from the live
+  `app_shell.rs` path so core TUI completion stays free of Cubby/pet polish
+  scope. The bundled Cubby package and lower pet/image modules remain parked
+  for final-pass work. Source scan confirms no active image-smoke symbols remain
+  in `app_shell.rs` or the RunHaven TUI view modules.
 - Shared UI contracts now include `ActiveRunListData` and
   `RunHavenDiagnosticsData`. Active-run summaries intentionally omit workspace
   paths, diagnostics map only metadata fields, auth broker request paths are
@@ -1174,7 +1178,7 @@ Latest RunHaven-only TUI MVP surface:
   --nocapture`; `cargo test -p runhaven-tui --locked app_shell --
   --nocapture`; `cargo check -p runhaven-tui --locked`;
   `cargo test -p runhaven-tui --locked drift_tests -- --show-output`;
-  `cargo test -p runhaven-tui --locked --quiet` (782 passed, 5 ignored);
+  `cargo test -p runhaven-tui --locked --quiet` (781 passed, 5 ignored);
   `cargo test -p runhaven-tui --locked --features codex-vendored-tests
   --no-run`; `cargo clippy -p runhaven-core --all-targets --locked --
   -D warnings`; `cargo clippy -p runhaven-tui --all-targets --locked --
@@ -1184,7 +1188,8 @@ Latest RunHaven-only TUI MVP surface:
   `scripts/compare-codex-tui.sh` (371 RunHaven files, 15 RunHaven-only files,
   53 copied Codex files with local edits); `cargo fmt --check`;
   `python3 -m json.tool feature_list.json >/dev/null`; snap-new scan; and
-  `git diff --check`.
+  `git diff --check`; local Rust/Codex/adversarial review of this cleanup found
+  no blocker.
 
 ## Blockers
 

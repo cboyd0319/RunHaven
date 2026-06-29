@@ -76,9 +76,10 @@ current Phase 4 path.
 - Keep RunHaven product behavior in thin adapters and shared UI contracts in
   `runhaven-core`.
 - Defer Cubby/pet polish, terminal mascot work, and the hidden Zork easter egg
-  until the core RunHaven TUI is complete. Keep existing pet/image code only as
-  source-first infrastructure and opt-in smoke coverage unless a core TUI check
-  requires it.
+  until the core RunHaven TUI is complete. Keep existing pet/image code as
+  parked source-first infrastructure; do not add a live env-gated smoke path
+  unless a final-pass pet slice or core terminal-image check explicitly requires
+  it.
 - Snapshot goldens from upstream stay external unless intentionally promoted.
   Default tests must not leave `.snap.new` files.
 
