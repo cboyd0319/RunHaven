@@ -40,6 +40,7 @@ pub struct Config {
     pub cwd: PathBuf,
     pub log_dir: PathBuf,
     pub model: String,
+    pub model_provider_id: String,
     pub model_provider: ModelProviderInfo,
     pub preferred_auth_method: Option<codex_protocol::config_types::ForcedLoginMethod>,
     pub disable_response_storage: bool,
@@ -95,6 +96,7 @@ pub struct TerminalResizeReflowConfig {
 pub struct ConfigOverrides {
     pub cwd: Option<PathBuf>,
     pub model: Option<String>,
+    pub model_provider_id: Option<String>,
     pub model_provider: Option<ModelProviderInfo>,
 }
 
@@ -148,10 +150,33 @@ impl ConfigBuilder {
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
         let config_layer_stack = self.config_layer_stack.unwrap_or_default();
         let model = self.overrides.model.unwrap_or_else(|| "gpt-5".to_string());
-        let model_provider = self
-            .overrides
-            .model_provider
-            .unwrap_or_else(|| built_in_model_providers(None)["openai"].clone());
+        let model_providers = built_in_model_providers(None);
+        let (model_provider_id, model_provider) = match (
+            self.overrides.model_provider_id,
+            self.overrides.model_provider,
+        ) {
+            (Some(model_provider_id), Some(model_provider)) => (model_provider_id, model_provider),
+            (None, Some(model_provider)) => {
+                let model_provider_id = model_providers
+                    .iter()
+                    .find_map(|(id, provider)| (provider == &model_provider).then(|| id.clone()))
+                    .unwrap_or_else(|| "custom".to_string());
+                (model_provider_id, model_provider)
+            }
+            (Some(model_provider_id), None) => {
+                let model_provider =
+                    model_providers
+                        .get(&model_provider_id)
+                        .cloned()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "model_provider_id `{model_provider_id}` requires a matching model_provider override"
+                            )
+                        })?;
+                (model_provider_id, model_provider)
+            }
+            (None, None) => ("openai".to_string(), model_providers["openai"].clone()),
+        };
         let log_dir = codex_home.join("log");
 
         Ok(Config {
@@ -160,6 +185,7 @@ impl ConfigBuilder {
             cwd,
             log_dir,
             model,
+            model_provider_id,
             model_provider,
             preferred_auth_method: None,
             disable_response_storage: false,
@@ -272,6 +298,84 @@ mod tests {
             codex_protocol::protocol::SandboxPolicy::new_read_only_policy()
         );
         assert!(config.permissions.network.is_none());
+    }
+
+    #[tokio::test]
+    async fn default_config_builder_reports_openai_provider_id() {
+        let config = ConfigBuilder::without_managed_config_for_tests()
+            .build()
+            .await
+            .unwrap();
+
+        assert_eq!(config.model_provider_id, "openai");
+    }
+
+    #[tokio::test]
+    async fn config_builder_derives_builtin_provider_id_from_override() {
+        let config = ConfigBuilder::without_managed_config_for_tests()
+            .harness_overrides(ConfigOverrides {
+                model_provider: Some(built_in_model_providers(None)["amazon-bedrock"].clone()),
+                ..ConfigOverrides::default()
+            })
+            .build()
+            .await
+            .unwrap();
+
+        assert_eq!(config.model_provider_id, "amazon-bedrock");
+    }
+
+    #[tokio::test]
+    async fn config_builder_resolves_builtin_provider_from_id_override() {
+        let config = ConfigBuilder::without_managed_config_for_tests()
+            .harness_overrides(ConfigOverrides {
+                model_provider_id: Some("amazon-bedrock".to_string()),
+                ..ConfigOverrides::default()
+            })
+            .build()
+            .await
+            .unwrap();
+
+        assert_eq!(config.model_provider_id, "amazon-bedrock");
+        assert_eq!(
+            config.model_provider,
+            built_in_model_providers(None)["amazon-bedrock"]
+        );
+    }
+
+    #[tokio::test]
+    async fn config_builder_preserves_custom_provider_id_override() {
+        let config = ConfigBuilder::without_managed_config_for_tests()
+            .harness_overrides(ConfigOverrides {
+                model_provider_id: Some("local-provider".to_string()),
+                model_provider: Some(ModelProviderInfo {
+                    name: "Local Provider".to_string(),
+                    ..ModelProviderInfo::default()
+                }),
+                ..ConfigOverrides::default()
+            })
+            .build()
+            .await
+            .unwrap();
+
+        assert_eq!(config.model_provider_id, "local-provider");
+        assert_eq!(config.model_provider.name, "Local Provider");
+    }
+
+    #[tokio::test]
+    async fn config_builder_rejects_unknown_provider_id_without_provider() {
+        let err = ConfigBuilder::without_managed_config_for_tests()
+            .harness_overrides(ConfigOverrides {
+                model_provider_id: Some("local-provider".to_string()),
+                ..ConfigOverrides::default()
+            })
+            .build()
+            .await
+            .unwrap_err();
+
+        assert!(
+            err.to_string()
+                .contains("requires a matching model_provider override")
+        );
     }
 
     #[tokio::test]

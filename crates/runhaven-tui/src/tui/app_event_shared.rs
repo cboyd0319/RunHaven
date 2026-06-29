@@ -86,14 +86,3 @@ pub(crate) mod hooks_rpc {
         )
     }
 }
-
-pub(crate) mod session_log {
-    use crate::app_command::AppCommand;
-    use crate::app_event::AppEvent;
-
-    pub(crate) fn log_inbound_app_event(_event: &AppEvent) {}
-
-    pub(crate) fn log_outbound_op(_op: &AppCommand) {}
-
-    pub(crate) fn log_session_end() {}
-}

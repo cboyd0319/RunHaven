@@ -642,9 +642,11 @@ Latest Codex bottom-pane activation:
 - The default remains original Codex package, crate, and module names. Local
   bridges are exceptions only when activating the real surface would cross an
   unreviewed RunHaven security boundary or pull host-reaching behavior into the
-  active TUI. Current named bridge exceptions are `app_event_shared.rs`,
-  `status`, `onboarding`, and the narrow exposed surfaces inside
-  `codex-core-skills`, `codex-feedback`, and `codex-models-manager`.
+  active TUI. The latest TUI sections below are authoritative for current
+  named bridge exceptions; at this point in the history they included
+  `app_event_shared.rs`, `status`, `onboarding`, and the narrow exposed
+  surfaces inside `codex-core-skills`, `codex-feedback`, and
+  `codex-models-manager`.
   `codex-feedback::FeedbackDiagnostics::collect_from_env()` is kept
   shape-compatible but returns no diagnostics until RunHaven has a redaction
   policy for host environment capture.
@@ -964,6 +966,45 @@ Latest TUI status-bridge reduction:
   `python3 -m json.tool feature_list.json >/dev/null`, snap-new scan, and
   `git diff --check`.
 
+Latest TUI session-log source promotion:
+
+- 2026-06-29: Promoted the real vendored Codex `session_log.rs` source and
+  removed the no-op `session_log` bridge from `app_event_shared.rs`. This is a
+  ChatWidget/AppEvent support surface only; a source-tree guard allows
+  `session_log::maybe_init` and `CODEX_TUI_RECORD_SESSION` only in
+  `session_log.rs` itself and the parked dormant vendored `tui/lib.rs`
+  launcher, not the active temporary `app_shell` path or RunHaven adapters.
+- Reduced `codex-core` now exposes `Config::model_provider_id` with the
+  default `openai` id, derives known built-in ids from `model_provider`
+  overrides, resolves built-in id-only overrides to their matching provider,
+  rejects unknown id-only overrides, and preserves explicit custom provider ids
+  only when a provider override is supplied. This keeps the upstream session-log
+  source compiling without adding full Codex core, app-server transport, login,
+  MCP, filesystem, hooks, tools, rollout, state, or thread-store behavior.
+- Full `status/`, native `App`, `ChatWidget`, real `app_server_session`,
+  app-server transport, filesystem RPC, MCP, login, workspace command
+  execution, and other host-reaching Codex paths remain dormant or
+  fail-closed. Codex session recording initialization is not active; before any
+  native `App` startup promotes it, RunHaven needs a reviewed env/path and
+  redaction policy.
+- Verified so far:
+  baseline `cargo test -p runhaven-tui --locked`,
+  fail-first
+  `cargo test -p runhaven-tui --locked session_log_uses_source_first_boundary_without_active_recording -- --show-output`,
+  green rerun of the same guard,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo fmt --check`,
+  focused `codex-core` config tests,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `cargo test -p codex-core --locked`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json >/dev/null`, snap-new scan, and
+  `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -978,12 +1019,16 @@ Codex `Tui` plus `TuiEventStream`. `branch_summary.rs` and the
 `workspace_command.rs` contract are active for the next ChatWidget status path,
 with Codex app-server command execution still compiled dormant. The inline
 root `status` bridge is gone, but the full Codex `status/` module remains
-dormant until its broader dependency and security closure is designed. The next
-slice should continue toward native `App`/`ChatWidget` ownership without
-adding new product screens to `app_shell.rs`. Do not activate native `App`,
-`ChatWidget`, full `status/`, real `app_server_session`, app-server transport,
-filesystem RPC, MCP, login, workspace command execution, or host-reaching
-execution until those markers are removed, fail-closed, or routed through a
-reviewed RunHaven boundary.
+dormant until its broader dependency and security closure is designed.
+`session_log.rs` is active as source-first support, but session recording is
+not initialized from the active RunHaven path. The next slice should continue
+toward native `App`/`ChatWidget` ownership without adding new product screens
+to `app_shell.rs`. Do not activate native `App`, `ChatWidget`, full `status/`,
+real `app_server_session`, app-server transport, filesystem RPC, MCP, login,
+workspace command execution, Codex session recording initialization, or
+host-reaching execution until those markers are removed, fail-closed, or
+routed through a reviewed RunHaven boundary. If native `App` startup promotes
+session recording, first replace the raw Codex env/path behavior with a
+RunHaven-reviewed policy and redaction boundary.
 Foreground launch remains read-only until native Codex app ownership and
 terminal restore are wired through the UI thread.

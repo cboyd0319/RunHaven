@@ -375,12 +375,14 @@ Known integration gap:
   print-boundary control stripping, and ANSI-output degradation.
 - The temporary `app_event_shared.rs` leaf-type bridge plus the inline
   `onboarding` shim must be removed as real `chatwidget`, `goal_files`,
-  `session_log`, onboarding, and app-server-session surfaces are promoted
-  without activating host-reaching Codex app paths. The old inline `status`
-  shim has been removed; active footer and hook-browser formatting now uses the
+  onboarding, and app-server-session surfaces are promoted without activating
+  host-reaching Codex app paths. The old inline `status` shim has been
+  removed; active footer and hook-browser formatting now uses the
   RunHaven-local `runhaven/status_format.rs` helper while the full Codex
   `status/` module stays dormant until its config, model-provider,
-  remote-app-server, and status-card closure is promoted.
+  remote-app-server, and status-card closure is promoted. The real vendored
+  `session_log.rs` is active for AppEvent/ChatWidget compatibility, but the
+  temporary `app_shell` does not initialize Codex session recording.
 - Direct `chatwidget` activation is blocked on replacing the temporary
   `legacy_core::config` gap with a vendor-first compatibility path. The real
   `status` and `chatwidget` modules still depend on more of Codex's core config

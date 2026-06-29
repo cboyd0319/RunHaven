@@ -21,7 +21,6 @@ pub(crate) use app_event_shared::app_server_session;
 pub(crate) use app_event_shared::chatwidget;
 pub(crate) use app_event_shared::goal_files;
 pub(crate) use app_event_shared::hooks_rpc;
-pub(crate) use app_event_shared::session_log;
 
 #[allow(dead_code)]
 pub(crate) mod app_event_sender;
@@ -80,6 +79,8 @@ pub(crate) mod onboarding {
 pub(crate) mod pets;
 #[allow(dead_code)]
 pub(crate) mod render;
+#[allow(dead_code)]
+pub(crate) mod session_log;
 #[allow(dead_code)]
 pub(crate) mod session_state;
 #[allow(dead_code)]
@@ -438,6 +439,50 @@ mod drift_tests {
     }
 
     #[test]
+    fn session_log_uses_source_first_boundary_without_active_recording() {
+        let module_source = include_str!("mod.rs");
+        let bridge_source = include_str!("app_event_shared.rs");
+
+        assert!(
+            module_declared(module_source, "session_log"),
+            "ChatWidget/AppEvent promotion must use the real vendored session_log.rs source"
+        );
+        assert!(
+            !bridge_source.contains("mod session_log"),
+            "app_event_shared.rs must not keep a session_log bridge once real session_log.rs is active"
+        );
+
+        let maybe_init_marker = ["session_log::", "maybe_init"].concat();
+        let recording_env_marker = ["CODEX_TUI_", "RECORD_SESSION"].concat();
+        let tui_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/tui");
+        let mut pending = vec![tui_dir];
+        while let Some(path) = pending.pop() {
+            let metadata = std::fs::metadata(&path).expect("metadata should be readable");
+            if metadata.is_dir() {
+                for entry in std::fs::read_dir(&path).expect("directory should be readable") {
+                    pending.push(entry.expect("directory entry should be readable").path());
+                }
+                continue;
+            }
+            if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                continue;
+            }
+            let relative = path
+                .strip_prefix(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/tui"))
+                .expect("path should be under tui source");
+            if matches!(relative.to_str(), Some("session_log.rs") | Some("lib.rs")) {
+                continue;
+            }
+            let source = std::fs::read_to_string(&path).expect("source should be readable");
+            assert!(
+                !source.contains(&maybe_init_marker) && !source.contains(&recording_env_marker),
+                "only session_log.rs and dormant tui/lib.rs may mention Codex session recording markers; found one in {}",
+                relative.display()
+            );
+        }
+    }
+
+    #[test]
     fn app_event_shared_shrinks_only() {
         let source = include_str!("app_event_shared.rs");
         let inline_modules = top_level_inline_module_declarations(source);
@@ -450,7 +495,6 @@ mod drift_tests {
                 "chatwidget",
                 "goal_files",
                 "hooks_rpc",
-                "session_log",
             ],
             "app_event_shared.rs may shrink as real Codex modules activate, but must not grow new bridge modules"
         );
