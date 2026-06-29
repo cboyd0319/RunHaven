@@ -327,6 +327,7 @@ mod drift_tests {
             include_str!("runhaven/protocol.rs"),
             include_str!("runhaven/service.rs"),
             include_str!("runhaven/launch_wizard.rs"),
+            include_str!("runhaven/mvp.rs"),
             include_str!("runhaven/terminal_handoff.rs"),
         ];
 
@@ -360,6 +361,7 @@ mod drift_tests {
             include_str!("runhaven/protocol.rs"),
             include_str!("runhaven/service.rs"),
             include_str!("runhaven/launch_wizard.rs"),
+            include_str!("runhaven/mvp.rs"),
             include_str!("runhaven/terminal_handoff.rs"),
         ];
 
@@ -414,12 +416,13 @@ mod drift_tests {
         assert!(
             protocol_source.contains(&method_marker)
                 && session_source.contains("run_log_snapshot")
+                && service_source.contains("self.active_run_log_snapshot_data(")
                 && service_source.contains(
-                    "self.validate_sensitive_log_confirmation(confirm_sensitive_output, &method)?;"
+                    "self.validate_sensitive_log_confirmation(confirm_sensitive_output, method)?;"
                 )
-                && service_source.contains("self.validate_log_snapshot_lines(lines, &method)?;")
+                && service_source.contains("self.validate_log_snapshot_lines(lines, method)?;")
                 && service_source
-                    .contains("self.active_run_log_snapshot_payload(&run_id, lines, &method)"),
+                    .contains("self.active_run_log_snapshot_payload(run_id, lines, method)"),
             "log snapshots must stay a typed RunHaven method with sensitive-output confirmation and validation before backend lookup"
         );
         for marker in [
@@ -430,6 +433,50 @@ mod drift_tests {
             assert!(
                 !app_shell_source.contains(marker),
                 "the temporary app_shell must not grow active-run log product behavior or direct runtime calls"
+            );
+        }
+    }
+
+    #[test]
+    fn visible_run_log_ui_stays_confirmation_gated_in_runhaven_mvp() {
+        let mvp_source = include_str!("runhaven/mvp.rs");
+        let app_shell_source = include_str!("app_shell.rs");
+        let log_text_marker = ["snapshot", ".text.lines().take"].concat();
+        let owners = tui_rust_sources()
+            .into_iter()
+            .filter_map(|path| {
+                let relative = relative_tui_source(&path);
+                if relative == std::path::Path::new("mod.rs") {
+                    return None;
+                }
+                let source = std::fs::read_to_string(&path).expect("source should be readable");
+                source
+                    .contains(&log_text_marker)
+                    .then(|| relative.display().to_string())
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            owners,
+            ["runhaven/mvp.rs"],
+            "raw log text rendering must stay in the RunHaven MVP view"
+        );
+        assert!(
+            mvp_source.contains("LOG_CONFIRM_PHRASE")
+                && mvp_source.contains("Raw container output can contain secrets")
+                && mvp_source.contains("typed.trim() != LOG_CONFIRM_PHRASE")
+                && mvp_source.contains("active_run_log_snapshot_data(")
+                && mvp_source.contains("\"runhaven/run/logSnapshot\""),
+            "visible log UI must require typed confirmation before loading raw output"
+        );
+        for marker in [
+            "Raw container output",
+            log_text_marker.as_str(),
+            "active_run_log_snapshot_data",
+        ] {
+            assert!(
+                !app_shell_source.contains(marker),
+                "app_shell.rs must not render or load active-run logs"
             );
         }
     }
@@ -448,6 +495,7 @@ mod drift_tests {
             include_str!("runhaven/protocol.rs"),
             include_str!("runhaven/service.rs"),
             include_str!("runhaven/launch_wizard.rs"),
+            include_str!("runhaven/mvp.rs"),
             include_str!("runhaven/terminal_handoff.rs"),
         ];
 

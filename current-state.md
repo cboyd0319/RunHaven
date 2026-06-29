@@ -1123,41 +1123,61 @@ Latest TUI active-run log snapshot seam:
   codex-tui-expert review, adversarial-reviewer review, and rust-expert
   re-review after the sensitive-output confirmation fix.
 
+Latest RunHaven-only TUI MVP surface:
+
+- 2026-06-29: Added the RunHaven-owned MVP root view in
+  `crates/runhaven-tui/src/tui/runhaven/mvp.rs` and made the staging shell host
+  that view inside the real vendored `BottomPane`. The active TUI now covers
+  the scoped MVP path: workspace picker, agent picker, policy changes for
+  network mode and auth scope, plan review, typed launch confirmation,
+  foreground launch handoff, post-run recovery back into the TUI, active-run
+  list, confirmation-gated raw log snapshot display, and secret-free diagnostics
+  for auth broker status/log plus provider egress decisions.
+- Shared UI contracts now include `ActiveRunListData` and
+  `RunHavenDiagnosticsData`. Active-run summaries intentionally omit workspace
+  paths, diagnostics map only metadata fields, auth broker request paths are
+  scrubbed of query strings and fragments at producer, reader, and UI-contract
+  boundaries, and raw container output remains hidden until the user types
+  `logs`. Raw log text is kept in live view state only; the active path still
+  does not initialize Codex session recording. Post-run recovery preserves the
+  effective launch workspace and selected policy, and TUI diagnostics use
+  bounded tail reads for log files.
+- Guard posture: direct container log backend access still belongs only to
+  `runhaven/service.rs`; visible raw-log rendering is guarded to
+  `runhaven/mvp.rs`; `app_shell.rs` only owns terminal runtime, foreground
+  launch handoff/recovery routing, and process exit-code tracking. Native
+  `App`, `ChatWidget`, full `status/`, real app-server transport, filesystem
+  RPC, MCP, login, workspace command execution, Codex session recording
+  initialization, and host-reaching Codex execution remain dormant or
+  fail-closed.
+- Verified: `cargo test -p runhaven-core --locked ui_contracts --quiet`;
+  `cargo test -p runhaven-core --locked --quiet` (84 passed);
+  `cargo test -p runhaven-tui --locked runhaven::mvp -- --nocapture`;
+  `cargo test -p runhaven-tui --locked runhaven::service -- --nocapture`;
+  `cargo test -p runhaven-tui --locked runhaven::app_server_session --
+  --nocapture`; `cargo test -p runhaven-tui --locked app_shell --
+  --nocapture`; `cargo check -p runhaven-tui --locked`;
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`;
+  `cargo test -p runhaven-tui --locked --quiet` (781 passed, 5 ignored);
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests
+  --no-run`; `cargo clippy -p runhaven-core --all-targets --locked --
+  -D warnings`; `cargo clippy -p runhaven-tui --all-targets --locked --
+  -D warnings`; `cargo run --locked --bin runhaven-check-pins --quiet`;
+  `scripts/compare-codex-tui.sh` (371 RunHaven files, 15 RunHaven-only files,
+  53 copied Codex files with local edits); `cargo fmt --check`;
+  `python3 -m json.tool feature_list.json >/dev/null`; snap-new scan; and
+  `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
 
 ## Next Step
 
-New direction: hard-push the smallest fully working RunHaven MVP TUI and avoid
-non-RunHaven Codex product features. Source-first still means using Codex TUI
-architecture and modules where they serve RunHaven, not porting Codex product
-parity. The MVP surface is agent picker, workspace picker, plan review, confirm
-launch, foreground launch handoff, active run transcript/logs, diagnostics, and
-RunHaven assets. Leave unrelated Codex features dormant, fail-closed, stubbed,
-or deleted with documentation.
-
-Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4.
-`workspace_messages.rs` is active from real vendored source,
-`launch_wizard.rs` implements `BottomPaneView`, the staging shell hosts that
-view inside native `BottomPane`, and the active terminal runtime now uses
-Codex `Tui` plus `TuiEventStream`. `branch_summary.rs` and the
-`workspace_command.rs` contract are active for the next ChatWidget status path,
-with Codex app-server command execution still compiled dormant. The inline
-root `status` bridge is gone, but the full Codex `status/` module remains
-dormant until its broader dependency and security closure is designed.
-`session_log.rs` is active as source-first support, but session recording is not
-initialized from the active RunHaven path. Workspace selection is active for
-current directory versus git repository root choices, confirmation now hands a
-`PreparedLaunch` to the UI-thread foreground handoff, and the active-run log
-snapshot backend seam is typed and raw-output confirmation-gated through the
-local RunHaven facade. The next slices should continue the MVP path without
-adding product screens to `app_shell.rs`: visible active-run transcript/logs,
-diagnostics, policy changes, and post-run TUI recovery. Do not activate
-native `App`, `ChatWidget`, full `status/`, real `app_server_session`,
-app-server transport, filesystem RPC, MCP, login, workspace command execution,
-Codex session recording initialization, or host-reaching execution until those
-markers are removed, fail-closed, or routed through a reviewed RunHaven
-boundary. If native `App` startup promotes session recording, first replace the
-raw Codex env/path behavior with a RunHaven-reviewed policy and redaction
-boundary.
+The RunHaven-only TUI MVP surface is now present in the staging Codex runtime.
+Next TUI work should be cleanup and hardening, not new product scope: reduce
+module-path debt, decide whether native `App`/`ChatWidget` ownership is still
+needed for RunHaven after the MVP root view, and keep unrelated Codex product
+features dormant, fail-closed, or deleted. If native `App` startup is promoted
+later, first replace raw Codex env/path session-recording behavior with a
+reviewed RunHaven redaction boundary.

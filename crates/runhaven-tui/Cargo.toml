@@ -117,5 +117,6 @@ chrono = { version = "=0.4.45", default-features = false, features = ["clock", "
 insta.workspace = true
 pretty_assertions = "=1.4.1"
 rand = { version = "=0.9.4", default-features = false, features = ["std", "std_rng"] }
+runhaven-core = { workspace = true, features = ["test-support"] }
 serial_test = "=3.5.0"
 tempfile.workspace = true

@@ -8,8 +8,10 @@ use std::path::PathBuf;
 use std::time::Duration;
 use std::time::Instant;
 
+use runhaven_core::ui_contracts::ActiveRunListData;
 use runhaven_core::ui_contracts::ActiveRunLogSnapshotData;
 use runhaven_core::ui_contracts::AgentCatalogData;
+use runhaven_core::ui_contracts::RunHavenDiagnosticsData;
 
 use super::app_server_client::AppServerClient;
 use super::app_server_client::AppServerRequestHandle;
@@ -61,6 +63,23 @@ impl AppServerSession {
         let request_id = self.alloc_request_id();
         self.client
             .request_typed(ClientRequest::RunHavenAgentList { request_id })
+            .await
+    }
+
+    pub(crate) async fn active_runs(&mut self) -> Result<ActiveRunListData, TypedRequestError> {
+        let request_id = self.alloc_request_id();
+        self.client
+            .request_typed(ClientRequest::RunHavenActiveRuns { request_id })
+            .await
+    }
+
+    pub(crate) async fn diagnostics(
+        &mut self,
+        limit: usize,
+    ) -> Result<RunHavenDiagnosticsData, TypedRequestError> {
+        let request_id = self.alloc_request_id();
+        self.client
+            .request_typed(ClientRequest::RunHavenDiagnostics { request_id, limit })
             .await
     }
 
@@ -140,6 +159,18 @@ mod tests {
         assert_eq!(bootstrap.workspace, workspace);
         assert!(!bootstrap.agents.agents.is_empty());
         assert!(bootstrap.duration < Duration::from_secs(30));
+        session.shutdown().await.expect("shutdown");
+    }
+
+    #[tokio::test]
+    async fn active_runs_and_diagnostics_route_to_runhaven_service() {
+        let mut session = AppServerSession::start_in_process(RunHavenTuiService::new());
+
+        let active_runs = session.active_runs().await.expect("active runs");
+        let diagnostics = session.diagnostics(5).await.expect("diagnostics");
+
+        assert!(active_runs.runs.iter().all(|run| !run.run_id.is_empty()));
+        assert!(!diagnostics.auth_status.status.is_empty());
         session.shutdown().await.expect("shutdown");
     }
 

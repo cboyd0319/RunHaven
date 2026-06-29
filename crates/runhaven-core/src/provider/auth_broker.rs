@@ -484,6 +484,15 @@ pub fn broker_upstream_path(target: &str, path_rule: &PathRule) -> Result<String
     Ok(query.map_or_else(|| path.to_string(), |query| format!("{path}?{query}")))
 }
 
+pub fn sanitize_broker_request_path(path: &str) -> String {
+    let path = path
+        .split(['?', '#'])
+        .next()
+        .filter(|path| !path.is_empty())
+        .unwrap_or("-");
+    path.to_string()
+}
+
 pub fn parse_content_length(value: Option<&str>) -> Result<Option<usize>> {
     let Some(value) = value else {
         return Ok(None);
@@ -500,6 +509,19 @@ pub fn parse_content_length(value: Option<&str>) -> Result<Option<usize>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sanitize_broker_request_path_strips_query_and_fragment() {
+        assert_eq!(
+            sanitize_broker_request_path("/v1/responses?token=secret#frag"),
+            "/v1/responses"
+        );
+        assert_eq!(
+            sanitize_broker_request_path("/v1/responses#fragment"),
+            "/v1/responses"
+        );
+        assert_eq!(sanitize_broker_request_path("?token=secret"), "-");
+    }
 
     #[test]
     fn openai_upstream_uses_global_request_timeout() {

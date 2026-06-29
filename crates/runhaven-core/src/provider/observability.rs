@@ -5,7 +5,7 @@ use serde_json::json;
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
-use crate::provider::auth_broker::BrokerDecision;
+use crate::provider::auth_broker::{BrokerDecision, sanitize_broker_request_path};
 use crate::provider::egress::ProxyDecision;
 use crate::runtime::plans::AgentRunPlan;
 use crate::support::paths::{auth_broker_log_path, egress_policy_log_path, open_private_append};
@@ -83,7 +83,7 @@ fn auth_payload(
             "network": plan.network_mode.as_str(),
             "broker": "codex-api-key",
             "method": decision.method,
-            "path": decision.path,
+            "path": sanitize_broker_request_path(&decision.path),
             "decision": decision.decision,
             "reason": decision.reason,
             "upstream_status": decision.upstream_status,
@@ -138,4 +138,61 @@ pub fn print_provider_blocked_host_review(
     eprintln!(
         "If {agent} seemed to miss something, run `runhaven egress log` to see what was blocked."
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::plans::{
+        AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
+    };
+    use crate::runtime::profiles::get_profile;
+    use crate::support::paths::{auth_broker_log_path, override_cache_root_for_tests};
+
+    #[test]
+    fn auth_broker_writer_strips_query_and_fragment_from_paths() {
+        let cache = tempfile::tempdir().expect("cache");
+        let workspace = tempfile::tempdir().expect("workspace");
+        let _cache_home = override_cache_root_for_tests(cache.path());
+        let plan = build_run_plan(RunOptions {
+            profile: get_profile("codex").expect("profile"),
+            workspace: workspace.path().to_path_buf(),
+            agent_args: Vec::new(),
+            image: None,
+            cpus: "4".to_string(),
+            memory: "4g".to_string(),
+            network: NetworkMode::Provider,
+            workspace_scope: WorkspaceScope::Current,
+            session: None,
+            auth_scope: AuthScope::Agent,
+            read_only_workspace: false,
+            ssh: false,
+            env: Vec::new(),
+            user: "agent".to_string(),
+            interactive: true,
+            tty: true,
+            allow_sensitive_workspace: false,
+            allow_root_user: false,
+            provider_hosts: Vec::new(),
+            api_key_broker_env: None,
+            worktree: None,
+            run_id: None,
+        })
+        .expect("run plan");
+        let decision = BrokerDecision {
+            method: "POST".to_string(),
+            path: "/v1/responses?token=secret#fragment".to_string(),
+            decision: "allowed".to_string(),
+            reason: "-".to_string(),
+            upstream_status: Some(200),
+            count: 1,
+        };
+
+        write_auth_broker_log(&plan, &[decision], "run-123", 0).expect("write auth log");
+
+        let raw = std::fs::read_to_string(auth_broker_log_path()).expect("read auth log");
+        assert!(raw.contains("/v1/responses"));
+        assert!(!raw.contains("token=secret"));
+        assert!(!raw.contains("#fragment"));
+    }
 }

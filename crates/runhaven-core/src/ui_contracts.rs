@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use crate::provider::auth_broker::sanitize_broker_request_path;
 use crate::provider::auth_profiles::{agent_broker, agent_sign_in};
 use crate::runtime::plans::AgentRunPlan;
 use crate::runtime::plans::default_network_mode;
@@ -10,7 +11,9 @@ use crate::runtime::profiles::AgentProfile;
 pub enum RunHavenComponentPayload {
     AgentCatalog(AgentCatalogData),
     LaunchPlan(Box<LaunchPlanData>),
+    ActiveRunList(ActiveRunListData),
     ActiveRunLogSnapshot(Box<ActiveRunLogSnapshotData>),
+    Diagnostics(Box<RunHavenDiagnosticsData>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -54,6 +57,25 @@ pub struct LaunchPlanData {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ActiveRunListData {
+    pub runs: Vec<ActiveRunSummaryData>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveRunSummaryData {
+    pub run_id: String,
+    pub profile: String,
+    pub network: String,
+    pub status: String,
+    pub timestamp: String,
+    pub state_volume: String,
+    pub session: String,
+    pub container_name: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ActiveRunLogSnapshotData {
     pub run_id: String,
     pub captured_at: String,
@@ -63,6 +85,58 @@ pub struct ActiveRunLogSnapshotData {
     pub truncated: bool,
     pub source: String,
     pub warnings: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunHavenDiagnosticsData {
+    pub auth_status: AuthStatusData,
+    pub egress_log: Vec<EgressDecisionData>,
+    pub auth_log: Vec<AuthDecisionData>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthStatusData {
+    pub status: String,
+    pub runtime: String,
+    pub profiles: Vec<AuthProfileStatusData>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthProfileStatusData {
+    pub name: String,
+    pub status: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EgressDecisionData {
+    pub timestamp: String,
+    pub profile: String,
+    pub decision: String,
+    pub host: String,
+    pub port: u32,
+    pub count: u64,
+    pub reason: String,
+    pub matched_rule: String,
+    pub run_id: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthDecisionData {
+    pub timestamp: String,
+    pub profile: String,
+    pub broker: String,
+    pub decision: String,
+    pub method: String,
+    pub path: String,
+    pub upstream_status: Option<u32>,
+    pub count: u64,
+    pub reason: String,
+    pub run_id: String,
 }
 
 impl AgentCatalogData {
@@ -125,6 +199,32 @@ pub struct LaunchBoundaryData {
     pub mounted_workspace: String,
     pub mounted_state_volume: String,
     pub not_shared: Vec<String>,
+}
+
+impl ActiveRunListData {
+    pub fn from_active_run_records(records: impl IntoIterator<Item = serde_json::Value>) -> Self {
+        let mut runs = records
+            .into_iter()
+            .map(ActiveRunSummaryData::from_active_run_record)
+            .collect::<Vec<_>>();
+        runs.sort_by(|left, right| right.timestamp.cmp(&left.timestamp));
+        Self { runs }
+    }
+}
+
+impl ActiveRunSummaryData {
+    pub fn from_active_run_record(record: serde_json::Value) -> Self {
+        Self {
+            run_id: string_field(&record, "run_id"),
+            profile: string_field(&record, "profile"),
+            network: string_field(&record, "network"),
+            status: string_field(&record, "status"),
+            timestamp: string_field(&record, "timestamp"),
+            state_volume: string_field(&record, "state_volume"),
+            session: string_field(&record, "session"),
+            container_name: string_field(&record, "container_name"),
+        }
+    }
 }
 
 impl LaunchPlanData {
@@ -208,6 +308,107 @@ impl ActiveRunLogSnapshotData {
             warnings: raw.warnings,
         })
     }
+}
+
+impl RunHavenDiagnosticsData {
+    pub fn from_payloads(
+        auth_status: serde_json::Value,
+        egress_log: impl IntoIterator<Item = serde_json::Value>,
+        auth_log: impl IntoIterator<Item = serde_json::Value>,
+    ) -> Self {
+        Self {
+            auth_status: AuthStatusData::from_payload(auth_status),
+            egress_log: egress_log
+                .into_iter()
+                .map(EgressDecisionData::from_log_record)
+                .collect(),
+            auth_log: auth_log
+                .into_iter()
+                .map(AuthDecisionData::from_log_record)
+                .collect(),
+        }
+    }
+}
+
+impl AuthStatusData {
+    pub fn from_payload(payload: serde_json::Value) -> Self {
+        let profiles = payload
+            .get("profiles")
+            .and_then(serde_json::Value::as_array)
+            .map(|items| {
+                items
+                    .iter()
+                    .map(|item| AuthProfileStatusData {
+                        name: string_field(item, "name"),
+                        status: string_field(item, "status"),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        Self {
+            status: string_field(&payload, "status"),
+            runtime: string_field(&payload, "runtime"),
+            profiles,
+        }
+    }
+}
+
+impl EgressDecisionData {
+    pub fn from_log_record(record: serde_json::Value) -> Self {
+        Self {
+            timestamp: string_field(&record, "timestamp"),
+            profile: string_field(&record, "profile"),
+            decision: string_field(&record, "decision"),
+            host: string_field(&record, "host"),
+            port: u32_field(&record, "port"),
+            count: count_field(&record),
+            reason: string_field(&record, "reason"),
+            matched_rule: string_field(&record, "matched_rule"),
+            run_id: string_field(&record, "run_id"),
+        }
+    }
+}
+
+impl AuthDecisionData {
+    pub fn from_log_record(record: serde_json::Value) -> Self {
+        Self {
+            timestamp: string_field(&record, "timestamp"),
+            profile: string_field(&record, "profile"),
+            broker: string_field(&record, "broker"),
+            decision: string_field(&record, "decision"),
+            method: string_field(&record, "method"),
+            path: sanitize_broker_request_path(&string_field(&record, "path")),
+            upstream_status: record
+                .get("upstream_status")
+                .and_then(serde_json::Value::as_u64)
+                .map(|status| status as u32),
+            count: count_field(&record),
+            reason: string_field(&record, "reason"),
+            run_id: string_field(&record, "run_id"),
+        }
+    }
+}
+
+fn string_field(record: &serde_json::Value, name: &str) -> String {
+    record
+        .get(name)
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("-")
+        .to_string()
+}
+
+fn u32_field(record: &serde_json::Value, name: &str) -> u32 {
+    record
+        .get(name)
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0) as u32
+}
+
+fn count_field(record: &serde_json::Value) -> u64 {
+    record
+        .get("count")
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(1)
 }
 
 impl From<&AgentRunPlan> for LaunchPlanData {
@@ -417,6 +618,91 @@ mod tests {
             serde_json::from_value(encoded).expect("deserialize snapshot payload");
 
         assert_eq!(decoded, payload);
+    }
+
+    #[test]
+    fn active_run_list_contract_omits_workspace_paths() {
+        let data = ActiveRunListData::from_active_run_records([serde_json::json!({
+            "timestamp": "2026-06-29T00:00:00Z",
+            "run_id": "run-123",
+            "profile": "codex",
+            "workspace": "/Users/c/secret/project",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-project-run",
+            "state_volume": "runhaven-codex-shared-home",
+            "session": "none"
+        })]);
+
+        assert_eq!(data.runs.len(), 1);
+        assert_eq!(data.runs[0].run_id, "run-123");
+        assert_eq!(data.runs[0].profile, "codex");
+        let serialized = serde_json::to_string(&data).expect("serialize");
+        assert!(
+            !serialized.contains("/Users/c/secret/project"),
+            "TUI active-run summaries must not include workspace paths"
+        );
+    }
+
+    #[test]
+    fn diagnostics_contract_maps_secret_free_fields_only() {
+        let data = RunHavenDiagnosticsData::from_payloads(
+            serde_json::json!({
+                "status": "available",
+                "runtime": "host-broker",
+                "credential_stores_inspected": false,
+                "environment_values_inspected": false,
+                "secrets_printed": false,
+                "profiles": [{"name": "codex", "status": "brokered"}],
+                "token": "should-not-leak"
+            }),
+            [serde_json::json!({
+                "timestamp": "2026-06-29T00:00:00Z",
+                "profile": "codex",
+                "decision": "denied",
+                "host": "example.com",
+                "port": 443,
+                "count": 2,
+                "reason": "not-in-allowlist",
+                "matched_rule": "",
+                "run_id": "run-123",
+                "workspace": "/Users/c/secret/project"
+            })],
+            [serde_json::json!({
+                "timestamp": "2026-06-29T00:00:00Z",
+                "profile": "codex",
+                "broker": "api-key",
+                "decision": "allowed",
+                "method": "POST",
+                "path": "/v1/responses?token=secret#fragment",
+                "upstream_status": 200,
+                "count": 1,
+                "reason": "-",
+                "run_id": "run-123",
+                "authorization": "Bearer secret"
+            })],
+        );
+
+        assert_eq!(data.auth_status.status, "available");
+        assert_eq!(data.auth_status.profiles[0].name, "codex");
+        assert_eq!(data.egress_log[0].host, "example.com");
+        assert_eq!(data.auth_log[0].path, "/v1/responses");
+        assert_eq!(data.auth_log[0].upstream_status, Some(200));
+
+        let serialized = serde_json::to_string(&data).expect("serialize");
+        for forbidden in [
+            "/Users/c/secret/project",
+            "Bearer secret",
+            "token=secret",
+            "should-not-leak",
+            "credential_stores_inspected",
+            "environment_values_inspected",
+        ] {
+            assert!(
+                !serialized.contains(forbidden),
+                "diagnostics payload leaked forbidden field/value {forbidden:?}"
+            );
+        }
     }
 
     #[test]

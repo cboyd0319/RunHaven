@@ -403,29 +403,33 @@ Known integration gap:
   fail-closed until reviewed.
 - The Codex `Tui` runtime spine is now the active terminal runtime for bare
   interactive `runhaven`, but native Codex `App` ownership is not active yet.
-- The launch picker, review, and confirmation screen still run from
-  `app_shell.rs` plus `runhaven/service.rs`, not the real Codex `App` loop.
-  Confirmation now emits a typed `RunHavenLaunchPrepared` app event carrying
-  a RunHaven `PreparedLaunch`: the display-only `LaunchPlanData` plus the
-  original executable `AgentRunPlan`. The staging shell exits its draw loop
-  with that intent, then `runhaven/launch_handoff.rs` clears TUI-owned terminal
-  images and title state, calls Codex `Tui::with_restored`, and invokes
-  `runhaven_core::runtime::launch::launch_run_plan` only after terminal
-  ownership has been released. The app event sender intentionally excludes that
-  plan payload from Codex session logging until RunHaven owns a redaction
-  policy. The local facade now has a typed `runhaven/run/logSnapshot` method for
-  bounded active-run output, gated by explicit raw-output confirmation, but no
-  product screen renders it yet.
-  The next Phase 4 slice should continue toward native `App` and `ChatWidget`
-  ownership without adding new product screens to `app_shell.rs`. Workspace
-  selection is now reattached inside the BottomPane-owned launch wizard for
-  current directory versus git repository root choices. Policy changes, visible
-  active-run transcript/logs, diagnostics, and post-run TUI recovery remain
-  before the MVP TUI is complete.
-- The active-run log snapshot payload is intentionally raw container output and
-  can contain secrets or workspace content. Future visible UI must add an
-  explicit confirmation flow and a redaction/session-recording policy before it
-  renders, caches, or logs that text.
+- The active RunHaven MVP screen is `runhaven/mvp.rs`, hosted inside the real
+  vendored `BottomPane`. `app_shell.rs` owns Codex terminal runtime, foreground
+  launch handoff, post-run recovery routing, and process exit-code tracking
+  only. Product state for workspace selection, agent selection, policy changes,
+  active runs, raw-log confirmation, diagnostics, and recovery lives under
+  `runhaven/`.
+- Confirmation emits a typed `RunHavenLaunchPrepared` app event carrying a
+  RunHaven `PreparedLaunch`: display-only `LaunchPlanData`, the original
+  executable `AgentRunPlan`, and the selected policy. The staging shell exits
+  its draw loop with that intent, then `runhaven/launch_handoff.rs` clears
+  TUI-owned terminal images and title state, calls Codex `Tui::with_restored`,
+  and invokes `runhaven_core::runtime::launch::launch_run_plan` only after
+  terminal ownership has been released. The app event sender intentionally
+  excludes that plan payload from Codex session logging until RunHaven owns a
+  redaction policy.
+- The local facade has a typed `runhaven/run/logSnapshot` method for bounded
+  active-run output. The MVP view renders raw container output only after the
+  user types `logs`; paste is ignored in that confirmation field. Raw log text
+  stays in live view state and is not written to Codex session recording.
+- Diagnostics render auth status, auth-broker decisions, and provider egress
+  decisions as metadata. Workspace paths and unknown fields are omitted, auth
+  broker request paths are scrubbed of query strings and fragments before
+  display, and the TUI diagnostics path uses bounded tail reads for log files.
+- The scoped RunHaven-only MVP TUI surface is present. Remaining TUI work is
+  cleanup and hardening: reduce module-path debt, decide whether native
+  `App`/`ChatWidget` ownership is still needed for RunHaven, and keep unrelated
+  Codex product features dormant, fail-closed, stubbed, or deleted.
 - The current product direction is MVP-first, not Codex parity. Promote only
   Codex surfaces needed for RunHaven's agent picker, workspace picker, plan
   review, confirm launch, foreground launch handoff, active run

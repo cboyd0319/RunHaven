@@ -10,6 +10,13 @@ pub(crate) enum ClientRequest {
     RunHavenAgentList {
         request_id: RequestId,
     },
+    RunHavenActiveRuns {
+        request_id: RequestId,
+    },
+    RunHavenDiagnostics {
+        request_id: RequestId,
+        limit: usize,
+    },
     RunHavenValidateWorkspace {
         request_id: RequestId,
         workspace: PathBuf,
@@ -35,6 +42,8 @@ impl ClientRequest {
     pub(crate) fn request_id(&self) -> RequestId {
         match self {
             Self::RunHavenAgentList { request_id }
+            | Self::RunHavenActiveRuns { request_id }
+            | Self::RunHavenDiagnostics { request_id, .. }
             | Self::RunHavenValidateWorkspace { request_id, .. }
             | Self::RunHavenRunLogSnapshot { request_id, .. }
             | Self::Unsupported { request_id, .. } => *request_id,
@@ -46,6 +55,8 @@ impl ClientRequest {
     pub(crate) fn method(&self) -> &'static str {
         match self {
             Self::RunHavenAgentList { .. } => "runhaven/agent/list",
+            Self::RunHavenActiveRuns { .. } => "runhaven/run/active",
+            Self::RunHavenDiagnostics { .. } => "runhaven/diagnostics",
             Self::RunHavenValidateWorkspace { .. } => "runhaven/workspace/validate",
             Self::RunHavenRunLogSnapshot { .. } => "runhaven/run/logSnapshot",
             Self::Unsupported { method, .. } => method.method(),

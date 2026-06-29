@@ -15,11 +15,13 @@ use ratatui::text::Span;
 use ratatui::widgets::Clear;
 use ratatui::widgets::Widget;
 
-#[cfg(test)]
 use super::runhaven::launch_wizard::LAUNCH_WIZARD_VIEW_ID;
+#[cfg(test)]
 use super::runhaven::launch_wizard::LaunchWizardView;
+use super::runhaven::mvp::PostRunOutcome;
+use super::runhaven::mvp::RUNHAVEN_MVP_VIEW_ID;
+use super::runhaven::mvp::RunHavenMvpView;
 use super::runhaven::service::PreparedLaunch;
-use super::runhaven::service::RunHavenTuiService;
 use crate::key_hint;
 use crate::render::renderable::Renderable;
 use crate::tui::app_event::AppEvent;
@@ -61,19 +63,38 @@ pub(crate) fn run() -> Result<i32> {
     let mut restore_guard = CodexTerminalRestoreGuard::new();
     let mut state = ShellState::for_current_dir(tui.frame_requester())?;
 
-    let exit_result = match runtime.block_on(run_loop(&mut tui, &mut state)) {
-        Ok(ShellExit::Quit) => {
-            state.clear_image_smoke(&mut tui)?;
-            tui.terminal.clear().context("clear terminal UI")?;
-            Ok(0)
+    let exit_result = loop {
+        match runtime.block_on(run_loop(&mut tui, &mut state)) {
+            Ok(ShellExit::Quit) => {
+                state.clear_image_smoke(&mut tui)?;
+                tui.terminal.clear().context("clear terminal UI")?;
+                break Ok(state.process_exit_code());
+            }
+            Ok(ShellExit::Launch(launch)) => {
+                state.clear_image_smoke(&mut tui)?;
+                let launch = *launch;
+                let success_outcome = PostRunOutcome::from_launch(&launch, 0, None);
+                match runtime.block_on(super::runhaven::launch_handoff::launch_prepared(
+                    &mut tui, launch,
+                )) {
+                    Ok(exit_code) => {
+                        state.show_post_run(PostRunOutcome {
+                            exit_code,
+                            ..success_outcome
+                        });
+                    }
+                    Err(error) => {
+                        state.show_post_run(PostRunOutcome {
+                            exit_code: 1,
+                            error: Some(error.to_string()),
+                            ..success_outcome
+                        });
+                    }
+                }
+                tui.frame_requester().schedule_frame();
+            }
+            Err(error) => break Err(error),
         }
-        Ok(ShellExit::Launch(launch)) => {
-            state.clear_image_smoke(&mut tui)?;
-            runtime.block_on(super::runhaven::launch_handoff::launch_prepared(
-                &mut tui, *launch,
-            ))
-        }
-        Err(error) => Err(error),
     };
     drop(tui);
     restore_guard.restore()?;
@@ -139,11 +160,14 @@ async fn run_loop(tui: &mut codex_runtime::Tui, state: &mut ShellState) -> Resul
 }
 
 struct ShellState {
+    workspace: PathBuf,
     bottom_pane: BottomPane,
+    app_event_tx: AppEventSender,
     app_event_rx: mpsc::UnboundedReceiver<crate::app_event::AppEvent>,
     image_smoke: ImageSmoke,
     show_footer_help: bool,
     last_terminal_title: Option<String>,
+    process_exit_code: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -176,13 +200,11 @@ impl ShellState {
         workspace: impl AsRef<Path>,
         frame_requester: crate::tui::FrameRequester,
     ) -> Result<Self> {
+        let workspace = workspace.as_ref().to_path_buf();
         let image_smoke = ImageSmoke::from_env(frame_requester.clone());
         let image_smoke_status = image_smoke.status_line();
-        let launch_wizard = LaunchWizardView::new_with_workspace_choices(
-            RunHavenTuiService::new().launch_workspace_choices(workspace),
-            image_smoke_status,
-        );
-        Self::from_launch_wizard_with_frame_requester(launch_wizard, image_smoke, frame_requester)
+        let mvp_view = RunHavenMvpView::new(workspace.clone(), image_smoke_status);
+        Self::from_mvp_view_with_frame_requester(workspace, mvp_view, image_smoke, frame_requester)
     }
 
     #[cfg(test)]
@@ -190,24 +212,29 @@ impl ShellState {
         launch_wizard: LaunchWizardView,
         image_smoke: ImageSmoke,
     ) -> Result<Self> {
-        Self::from_launch_wizard_with_frame_requester(
-            launch_wizard,
+        Self::from_mvp_view_with_frame_requester(
+            PathBuf::from("/tmp/project"),
+            RunHavenMvpView::from_launch_wizard_for_tests(
+                PathBuf::from("/tmp/project"),
+                launch_wizard,
+            ),
             image_smoke,
             crate::tui::FrameRequester::test_dummy(),
         )
     }
 
-    fn from_launch_wizard_with_frame_requester(
-        launch_wizard: LaunchWizardView,
+    fn from_mvp_view_with_frame_requester(
+        workspace: PathBuf,
+        mvp_view: RunHavenMvpView,
         image_smoke: ImageSmoke,
         frame_requester: crate::tui::FrameRequester,
     ) -> Result<Self> {
         let (app_event_tx, app_event_rx) = mpsc::unbounded_channel();
         let app_event_tx = AppEventSender::new(app_event_tx);
-        let mut launch_wizard = launch_wizard;
-        launch_wizard.set_app_event_sender(app_event_tx.clone());
+        let mut mvp_view = mvp_view;
+        mvp_view.set_app_event_sender(app_event_tx.clone());
         let mut bottom_pane = BottomPane::new(BottomPaneParams {
-            app_event_tx,
+            app_event_tx: app_event_tx.clone(),
             frame_requester,
             has_input_focus: true,
             enhanced_keys_supported: false,
@@ -216,14 +243,17 @@ impl ShellState {
             animations_enabled: true,
             skills: None,
         });
-        bottom_pane.show_view(Box::new(launch_wizard));
+        bottom_pane.show_view(Box::new(mvp_view));
 
         Ok(Self {
+            workspace,
             bottom_pane,
+            app_event_tx,
             app_event_rx,
             image_smoke,
             show_footer_help: false,
             last_terminal_title: None,
+            process_exit_code: 0,
         })
     }
 
@@ -299,6 +329,25 @@ impl ShellState {
 
     fn clear_image_smoke(&mut self, tui: &mut codex_runtime::Tui) -> Result<()> {
         self.image_smoke.clear(tui)
+    }
+
+    fn show_post_run(&mut self, outcome: PostRunOutcome) {
+        self.process_exit_code = outcome.exit_code;
+        self.workspace = outcome.workspace.clone();
+        let _ = self
+            .bottom_pane
+            .dismiss_active_view_if_id(LAUNCH_WIZARD_VIEW_ID);
+        let _ = self
+            .bottom_pane
+            .dismiss_active_view_if_id(RUNHAVEN_MVP_VIEW_ID);
+        let mut view = RunHavenMvpView::new(outcome.workspace.clone(), None);
+        view.show_post_run(outcome);
+        view.set_app_event_sender(self.app_event_tx.clone());
+        self.bottom_pane.show_view(Box::new(view));
+    }
+
+    fn process_exit_code(&self) -> i32 {
+        self.process_exit_code
     }
 
     fn refresh_terminal_title(&mut self) {
@@ -1035,6 +1084,33 @@ mod tests {
         assert_eq!(prepared.data.command, prepared.executable.shell_command());
         assert!(output.contains("Launch prepared. Starting in the terminal."));
         assert!(output.contains("container run"));
+    }
+
+    #[test]
+    fn shell_post_run_recovery_keeps_tui_open_with_exit_code() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+        let launch = confirm_required_preview_for_tests()
+            .plan
+            .expect("prepared launch");
+
+        state.show_post_run(PostRunOutcome::from_launch(&launch, 7, None));
+
+        let output = render_to_text(&mut state, 120, 32);
+        assert!(output.contains("Run finished"));
+        assert!(output.contains("exit 7"));
+        assert_eq!(state.workspace, launch.executable.workspace);
+        assert_eq!(state.process_exit_code(), 7);
+
+        assert_eq!(
+            state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            ShellAction::Continue
+        );
+        let output = render_to_text(&mut state, 120, 32);
+        assert!(
+            output.contains("Choose agent") || output.contains("Choose workspace"),
+            "expected launch flow after post-run recovery, got: {output}"
+        );
     }
 
     #[test]
