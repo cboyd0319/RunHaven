@@ -688,15 +688,51 @@ Latest Codex utility crate vendoring:
   not change RunHaven runtime safety boundaries.
 - A direct `chatwidget` module declaration was tested and reverted before this
   commit because it exposed the pending shared closure rather than a clean
-  activation point: real `ChatWidget`, `history_cell`, and `status` all require
-  Codex's `legacy_core::config::Config` shape. The next vendor-first slice must
-  decide that compatibility path before promoting those modules. Do not replace
+  activation point: real `ChatWidget` and `status` still require more of
+  Codex's `legacy_core::config::Config` and app-server shape. `history_cell`
+  has since been promoted through the reduced config boundary. Do not replace
   that with another custom RunHaven TUI stand-in.
+- 2026-06-29: Promoted the real vendored Codex `history_cell/*`,
+  `diff_render.rs`, `exec_cell/*`, `markdown*.rs`, `session_state.rs`,
+  `tooltips.rs`, `update_action.rs`, and related root-module aliases out of the
+  inert `app_event_shared.rs` bridge. Added original-name `codex-ansi-escape`
+  plus the upstream markdown/diff/tooltip dependency closure and the upstream
+  `tooltips.txt` asset. The reduced `codex-core` config now loads the
+  upstream `tui.show_tooltips` field so session tooltip suppression follows the
+  same setting. Two small source exceptions remain: update notices use plain
+  Ratatui `Line`/`Text` construction because upstream `ratatui-macros` targets
+  Ratatui 0.29, and yolo mode reads RunHaven's reduced Codex config shape until
+  full Codex core config is promoted. The full upstream `history_cell/tests.rs`
+  module remains parked because it currently requires full Codex config/MCP
+  surfaces and snapshot goldens that are not promoted; default tests cover the
+  reduced tooltip/config seams, yolo-mode mapping, basic diff rendering, decoded
+  local-link control stripping, terminal print-boundary control stripping, and
+  ANSI-output degradation.
 - Verified so far:
   `cargo check -p codex-utils-cli --locked`,
   `cargo check -p codex-utils-elapsed --locked`,
   `cargo check -p codex-utils-sleep-inhibitor --locked`, and
   `cargo check -p runhaven-tui --locked`.
+- Latest `history_cell` promotion verification:
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo check -p codex-ansi-escape --locked`,
+  `cargo check -p codex-install-context --locked`,
+  `cargo test -p codex-core --locked show_tooltips --quiet`,
+  `cargo test -p codex-ansi-escape --locked malformed_ansi_degrades_without_control_bytes --quiet`,
+  `cargo test -p runhaven-tui --locked local_link_display_strips_decoded_terminal_controls --quiet`,
+  `cargo test -p runhaven-tui --locked safe_print_symbol --quiet`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`,
+  `cargo test -p runhaven-tui --locked launch_wizard --quiet`,
+  `cargo test -p runhaven-tui --locked app_shell --quiet`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`, and
+  `git diff --check`.
 
 Latest Codex terminal-detection crate vendoring:
 
@@ -790,12 +826,12 @@ Latest Codex reduced app-server client compatibility authority:
   clients, in-process client startup, login, MCP, filesystem RPC, exec-server,
   rollout, state, and thread-store behavior.
 - A direct real `status`/`history_cell` activation was tested and reverted in
-  the working tree because it cascades into `ChatWidget` and richer config
-  methods before the bottom pane ownership slice is ready. The next Phase 4
-  slice should stay bottom-pane-first: move the launch wizard into native
-  `BottomPane` ownership, or add the smallest source-shaped host API needed for
-  that, without activating native `App`, `ChatWidget`, or app-server session
-  host-reaching behavior.
+  the working tree because it cascaded into `ChatWidget` and richer config
+  methods before the bottom pane ownership slice was ready. `history_cell` has
+  since been promoted through the reduced config boundary. The next Phase 4
+  slice should continue toward native `ChatWidget` ownership without activating
+  native `App`, real app-server session, or app-server transport host-reaching
+  behavior.
 - Verified so far:
   `cargo check -p codex-app-server-client --offline`,
   `cargo test -p codex-app-server-client --locked --quiet`,

@@ -1305,6 +1305,40 @@ fn style_gutter_dim() -> Style {
 }
 
 #[cfg(test)]
+mod runhaven_tests {
+    use super::*;
+    use crate::diff_model::FileChange;
+    use std::collections::HashMap;
+
+    #[test]
+    fn diff_summary_renders_basic_update_without_snapshot_goldens() {
+        let mut changes = HashMap::new();
+        changes.insert(
+            PathBuf::from("example.txt"),
+            FileChange::Update {
+                unified_diff: "@@ -1 +1 @@\n-old\n+new\n".to_string(),
+                move_path: None,
+            },
+        );
+
+        let rendered = create_diff_summary(&changes, Path::new("/tmp"), 80)
+            .into_iter()
+            .map(|line| {
+                line.spans
+                    .into_iter()
+                    .map(|span| span.content.into_owned())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        assert!(rendered.contains("Edited example.txt (+1 -1)"));
+        assert!(rendered.contains("-old"));
+        assert!(rendered.contains("+new"));
+    }
+}
+
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod tests {
     use super::*;
     use insta::assert_debug_snapshot;
@@ -1314,7 +1348,6 @@ mod tests {
     use ratatui::backend::TestBackend;
     use ratatui::text::Text;
     use ratatui::widgets::Paragraph;
-    use ratatui::widgets::WidgetRef;
     use ratatui::widgets::Wrap;
 
     #[test]
@@ -1367,7 +1400,7 @@ mod tests {
             .draw(|f| {
                 Paragraph::new(Text::from(lines))
                     .wrap(Wrap { trim: false })
-                    .render_ref(f.area(), f.buffer_mut())
+                    .render(f.area(), f.buffer_mut())
             })
             .expect("draw");
         assert_snapshot!(name, terminal.backend());

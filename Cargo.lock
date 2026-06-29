@@ -157,6 +157,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ansi-to-tui"
+version = "8.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e42366bb9d958f042bf58f0a85e1b2d091997c1257ca49bddd7e4827aadc65fd"
+dependencies = [
+ "nom 8.0.0",
+ "ratatui-core",
+ "simdutf8",
+ "smallvec",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "anstream"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1069,6 +1082,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "codex-ansi-escape"
+version = "0.0.0"
+dependencies = [
+ "ansi-to-tui",
+ "ratatui",
+ "tracing",
+]
+
+[[package]]
 name = "codex-api"
 version = "0.0.0"
 dependencies = [
@@ -1264,6 +1286,7 @@ dependencies = [
  "codex-utils-absolute-path",
  "codex-utils-path",
  "serde",
+ "tempfile",
  "tokio",
  "toml 1.1.2+spec-1.1.0",
  "toml_edit 0.24.0+spec-1.1.0",
@@ -2589,6 +2612,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6184e33543162437515c2e2b48714794e37845ec9851711914eec9d308f6ebe8"
 
 [[package]]
+name = "diffy"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b545b8c50194bdd008283985ab0b31dba153cfd5b3066a92770634fbc0d7d291"
+dependencies = [
+ "nu-ansi-term",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3570,6 +3602,15 @@ checksum = "1bd49230192a3797a9a4d6abe9b3eed6f7fa4c8a8a4947977c6f80025f92cbd8"
 dependencies = [
  "rustix",
  "windows-link 0.2.1",
+]
+
+[[package]]
+name = "getopts"
+version = "0.2.24"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfe4fbac503b8d1f88e6676011885f34b7174f46e59956bba534ba83abded4df"
+dependencies = [
+ "unicode-width 0.2.2",
 ]
 
 [[package]]
@@ -7063,6 +7104,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2ee67f1008b1ba2321834326597b8e186293b049a023cdef258527550b9935b4"
 
 [[package]]
+name = "pathdiff"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
+
+[[package]]
 name = "pem"
 version = "3.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7657,6 +7704,25 @@ dependencies = [
  "idna",
  "psl-types",
 ]
+
+[[package]]
+name = "pulldown-cmark"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76979bea66e7875e7509c4ec5300112b316af87fa7a252ca91c448b32dfe3993"
+dependencies = [
+ "bitflags 2.13.0",
+ "getopts",
+ "memchr",
+ "pulldown-cmark-escape",
+ "unicase",
+]
+
+[[package]]
+name = "pulldown-cmark-escape"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd348ff538bc9caeda7ee8cad2d1d48236a1f443c1fa3913c6a02fe0043b1dd3"
 
 [[package]]
 name = "pxfm"
@@ -8735,6 +8801,8 @@ dependencies = [
  "arboard",
  "base64 0.22.1",
  "chrono",
+ "codex-ansi-escape",
+ "codex-app-server-client",
  "codex-app-server-protocol",
  "codex-config",
  "codex-connectors",
@@ -8742,7 +8810,10 @@ dependencies = [
  "codex-features",
  "codex-feedback",
  "codex-file-search",
+ "codex-git-utils",
+ "codex-install-context",
  "codex-models-manager",
+ "codex-otel",
  "codex-plugin",
  "codex-protocol",
  "codex-shell-command",
@@ -8755,18 +8826,25 @@ dependencies = [
  "codex-utils-path-uri",
  "codex-utils-plugins",
  "codex-utils-sleep-inhibitor",
+ "codex-utils-string",
  "crossterm",
  "derive_more 2.1.1",
+ "diffy",
  "dirs",
  "image",
  "insta",
  "itertools",
+ "lazy_static",
  "libc",
+ "pathdiff",
  "pretty_assertions",
+ "pulldown-cmark",
  "rand 0.9.4",
  "ratatui",
  "regex",
+ "regex-lite",
  "reqwest 0.13.4",
+ "rmcp",
  "runhaven-core",
  "schemars 0.8.22",
  "serde",
@@ -8784,12 +8862,14 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "toml 1.1.2+spec-1.1.0",
  "tracing",
  "ts-rs",
  "two-face",
  "unicode-segmentation",
  "unicode-width 0.2.2",
  "url",
+ "urlencoding",
  "uuid",
  "vt100",
  "windows-sys 0.52.0",

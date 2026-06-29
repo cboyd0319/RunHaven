@@ -20,7 +20,6 @@ pub(crate) use app_event_shared::app;
 pub(crate) use app_event_shared::app_server_session;
 pub(crate) use app_event_shared::chatwidget;
 pub(crate) use app_event_shared::goal_files;
-pub(crate) use app_event_shared::history_cell;
 pub(crate) use app_event_shared::hooks_rpc;
 pub(crate) use app_event_shared::session_log;
 
@@ -38,6 +37,10 @@ pub(crate) mod approval_events;
 #[allow(dead_code)]
 pub(crate) mod diff_model;
 #[allow(dead_code)]
+pub(crate) mod diff_render;
+#[allow(dead_code, unused_imports)]
+pub(crate) mod exec_cell;
+#[allow(dead_code)]
 pub(crate) mod exec_command;
 
 #[allow(dead_code, unused_imports)]
@@ -48,6 +51,14 @@ pub(crate) mod keymap;
 pub(crate) mod line_truncation;
 #[allow(dead_code)]
 pub(crate) mod live_wrap;
+#[allow(dead_code)]
+pub(crate) mod markdown;
+#[allow(dead_code)]
+pub(crate) mod markdown_render;
+#[allow(dead_code)]
+pub(crate) mod markdown_stream;
+#[allow(dead_code)]
+pub(crate) mod markdown_text_merge;
 #[allow(dead_code)]
 pub(crate) mod mention_codec;
 #[allow(dead_code)]
@@ -68,6 +79,8 @@ pub(crate) mod pets;
 #[allow(dead_code)]
 pub(crate) mod render;
 #[allow(dead_code)]
+pub(crate) mod session_state;
+#[allow(dead_code)]
 pub(crate) mod shimmer;
 #[allow(dead_code)]
 pub(crate) mod skills_helpers;
@@ -77,6 +90,8 @@ pub(crate) mod slash_command;
 pub(crate) mod status_indicator_widget;
 #[allow(dead_code)]
 pub(crate) mod style;
+#[allow(dead_code)]
+pub(crate) mod table_detect;
 #[allow(dead_code)]
 pub(crate) mod workspace_messages;
 #[allow(dead_code)]
@@ -166,10 +181,20 @@ pub(crate) mod test_support;
 #[allow(dead_code)]
 pub(crate) mod text_formatting;
 #[allow(dead_code)]
+pub(crate) mod tooltips;
+#[allow(dead_code)]
 pub(crate) mod ui_consts;
+#[allow(dead_code)]
+pub(crate) mod update_action;
+#[allow(dead_code)]
+pub(crate) mod version;
+#[allow(dead_code)]
+pub(crate) mod width;
 #[allow(dead_code)]
 pub(crate) mod wrapping;
 
+#[allow(dead_code, unused_imports)]
+pub(crate) mod history_cell;
 #[allow(dead_code)]
 pub(crate) mod insert_history;
 
@@ -404,7 +429,6 @@ mod drift_tests {
                 "app_server_session",
                 "chatwidget",
                 "goal_files",
-                "history_cell",
                 "hooks_rpc",
                 "session_log",
             ],

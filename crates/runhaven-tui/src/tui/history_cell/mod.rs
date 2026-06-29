@@ -37,9 +37,11 @@ use crate::terminal_hyperlinks::mark_buffer_hyperlinks;
 use crate::terminal_hyperlinks::plain_hyperlink_lines;
 use crate::terminal_hyperlinks::prefix_hyperlink_lines;
 use crate::terminal_hyperlinks::visible_lines;
-#[cfg(test)]
+// Park upstream history-cell snapshot/MCP tests until full Codex config and MCP
+// surfaces are promoted. Default tests below cover the reduced RunHaven seams.
+#[cfg(any())]
 use crate::test_support::PathBufExt;
-#[cfg(test)]
+#[cfg(any())]
 use crate::test_support::test_path_buf;
 use crate::text_formatting::format_and_truncate_tool_result;
 use crate::text_formatting::truncate_text;
@@ -58,17 +60,17 @@ use codex_app_server_protocol::McpServerStatusDetail;
 use codex_app_server_protocol::ToolRequestUserInputAnswer;
 use codex_app_server_protocol::ToolRequestUserInputQuestion;
 use codex_app_server_protocol::WebSearchAction;
-#[cfg(test)]
+#[cfg(any())]
 use codex_config::types::McpServerTransportConfig;
-#[cfg(test)]
+#[cfg(any())]
 use codex_mcp::qualified_mcp_tool_name_prefix;
 use codex_otel::RuntimeMetricsSummary;
 use codex_protocol::account::PlanType;
 use codex_protocol::approvals::ExecPolicyAmendment;
 use codex_protocol::approvals::NetworkPolicyAmendment;
-#[cfg(test)]
+#[cfg(any())]
 use codex_protocol::mcp::Resource;
-#[cfg(test)]
+#[cfg(any())]
 use codex_protocol::mcp::ResourceTemplate;
 use codex_protocol::models::ManagedFileSystemPermissions;
 use codex_protocol::models::PermissionProfile;
@@ -80,7 +82,7 @@ use codex_protocol::plan_tool::StepStatus;
 use codex_protocol::plan_tool::UpdatePlanArgs;
 use codex_protocol::user_input::TextElement;
 use codex_utils_absolute_path::AbsolutePathBuf;
-#[cfg(test)]
+#[cfg(any())]
 use codex_utils_cli::format_env_display;
 use image::DynamicImage;
 use image::ImageReader;
@@ -138,7 +140,7 @@ pub(crate) use search::*;
 pub(crate) use separators::*;
 pub(crate) use session::*;
 
-#[cfg(test)]
+#[cfg(any())]
 mod tests;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

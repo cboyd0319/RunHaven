@@ -64,7 +64,6 @@ use pulldown_cmark::Parser;
 use pulldown_cmark::Tag;
 use pulldown_cmark::TagEnd;
 use ratatui::style::Style;
-use ratatui::style::Stylize;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::text::Text;
@@ -2028,10 +2027,11 @@ fn parse_local_link_target(dest_url: &str) -> Option<(String, Option<String>)> {
     if dest_url.starts_with("file://") {
         let url = Url::parse(dest_url).ok()?;
         let path_text = file_url_to_local_path_text(&url)?;
+        let safe_path_text = strip_terminal_controls(&path_text);
         let location_suffix = url
             .fragment()
             .and_then(normalize_hash_location_suffix_fragment);
-        return Some((path_text, location_suffix));
+        return Some((safe_path_text, location_suffix));
     }
 
     let mut path_text = dest_url;
@@ -2054,7 +2054,12 @@ fn parse_local_link_target(dest_url: &str) -> Option<(String, Option<String>)> {
 
     let decoded_path_text =
         urlencoding::decode(path_text).unwrap_or(std::borrow::Cow::Borrowed(path_text));
-    Some((expand_local_link_path(&decoded_path_text), location_suffix))
+    let safe_path_text = strip_terminal_controls(&decoded_path_text);
+    Some((expand_local_link_path(&safe_path_text), location_suffix))
+}
+
+fn strip_terminal_controls(text: &str) -> String {
+    text.chars().filter(|ch| !ch.is_control()).collect()
 }
 
 /// Normalize a hash fragment like `L12` or `L12C3-L14C9` into the display suffix we render.
@@ -2208,7 +2213,7 @@ fn display_local_link_path(path_text: &str, cwd: Option<&Path>) -> String {
     path_text
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "codex-vendored-tests"))]
 mod markdown_render_tests {
     include!("markdown_render_tests.rs");
 }
@@ -2743,6 +2748,28 @@ mod tests {
         );
 
         assert!(lines.iter().all(|line| line.hyperlinks.is_empty()));
+    }
+
+    #[test]
+    fn local_link_display_strips_decoded_terminal_controls() {
+        let lines = render_markdown_lines_with_width_and_cwd(
+            "[x](file:///tmp/%1b]52;c;SGVsbG8=%07safe)",
+            /*width*/ Some(80),
+            /*cwd*/ Some(Path::new("/tmp")),
+        );
+        let rendered = lines
+            .into_iter()
+            .flat_map(|line| {
+                line.line
+                    .spans
+                    .into_iter()
+                    .map(|span| span.content.into_owned())
+            })
+            .collect::<String>();
+
+        assert!(!rendered.contains('\x1b'), "{rendered:?}");
+        assert!(!rendered.contains('\x07'), "{rendered:?}");
+        assert!(rendered.contains("]52;c;SGVsbG8=safe"));
     }
 
     #[test]

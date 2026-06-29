@@ -25,3 +25,6 @@ serde = { version = "=1.0.228", features = ["derive"] }
 tokio = { version = "=1.52.3", features = ["fs"] }
 toml = { version = "=1.1.2", features = ["preserve_order"] }
 toml_edit = { version = "=0.24.0" }
+
+[dev-dependencies]
+tempfile = { workspace = true }

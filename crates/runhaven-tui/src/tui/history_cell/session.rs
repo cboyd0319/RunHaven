@@ -217,9 +217,10 @@ pub(crate) fn new_session_info(
 }
 
 pub(crate) fn is_yolo_mode(config: &Config) -> bool {
+    let permission_profile = PermissionProfile::from_legacy_sandbox_policy(&config.sandbox_policy);
     has_yolo_permissions(
-        AskForApproval::from(config.permissions.approval_policy.value()),
-        &config.permissions.effective_permission_profile(),
+        AskForApproval::from(config.approval_policy),
+        &permission_profile,
     )
 }
 
@@ -419,5 +420,90 @@ impl HistoryCell for SessionHeaderHistoryCell {
             lines.push(Line::from("permissions: YOLO mode"));
         }
         lines
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::legacy_core::config::ConfigBuilder;
+    use codex_protocol::ThreadId;
+    use codex_protocol::protocol::SandboxPolicy;
+
+    async fn test_config() -> Config {
+        ConfigBuilder::default()
+            .codex_home(std::env::temp_dir())
+            .build()
+            .await
+            .expect("config")
+    }
+
+    fn test_session(approval_policy: AskForApproval) -> ThreadSessionState {
+        let cwd = AbsolutePathBuf::from_absolute_path(std::env::temp_dir())
+            .expect("temporary directory path should be absolute");
+        ThreadSessionState {
+            thread_id: ThreadId::new(),
+            forked_from_id: None,
+            fork_parent_title: None,
+            thread_name: None,
+            model: "gpt-5".to_string(),
+            model_provider_id: "test-provider".to_string(),
+            service_tier: None,
+            approval_policy,
+            approvals_reviewer: codex_protocol::config_types::ApprovalsReviewer::User,
+            permission_profile: PermissionProfile::read_only(),
+            active_permission_profile: None,
+            cwd,
+            runtime_workspace_roots: Vec::new(),
+            instruction_source_paths: Vec::new(),
+            reasoning_effort: None,
+            collaboration_mode: None,
+            personality: None,
+            message_history: None,
+            network_proxy: None,
+            rollout_path: None,
+        }
+    }
+
+    fn rendered_text(cell: &impl HistoryCell) -> String {
+        cell.display_lines(80)
+            .into_iter()
+            .flat_map(|line| {
+                line.spans
+                    .into_iter()
+                    .map(|span| span.content.into_owned())
+                    .chain(std::iter::once("\n".to_string()))
+            })
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn session_info_respects_reduced_config_tooltip_toggle() {
+        let mut config = test_config().await;
+        config.show_tooltips = false;
+
+        let cell = new_session_info(
+            &config,
+            "gpt-5",
+            &test_session(AskForApproval::Never),
+            false,
+            Some("This tip should be hidden".to_string()),
+            Some(PlanType::Free),
+            false,
+        );
+
+        assert!(!rendered_text(&cell).contains("This tip should be hidden"));
+    }
+
+    #[tokio::test]
+    async fn yolo_mode_uses_reduced_config_approval_and_sandbox_policy() {
+        let mut config = test_config().await;
+        config.approval_policy = codex_protocol::protocol::AskForApproval::Never;
+        config.sandbox_policy = SandboxPolicy::DangerFullAccess;
+
+        assert!(is_yolo_mode(&config));
+
+        config.sandbox_policy = SandboxPolicy::new_read_only_policy();
+        assert!(!is_yolo_mode(&config));
     }
 }

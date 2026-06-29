@@ -52,6 +52,7 @@ pub struct Config {
     pub model_supports_reasoning_summaries: bool,
     pub model_context_window: Option<u64>,
     pub model_max_output_tokens: Option<u64>,
+    pub show_tooltips: bool,
     pub approval_policy: codex_protocol::protocol::AskForApproval,
     pub sandbox_policy: codex_protocol::protocol::SandboxPolicy,
     pub shell_environment_policy: ShellEnvironmentPolicy,
@@ -138,6 +139,7 @@ impl ConfigBuilder {
 
     pub async fn build(self) -> anyhow::Result<Config> {
         let codex_home = self.codex_home.unwrap_or_else(|| PathBuf::from(".codex"));
+        let config_toml = load_reduced_config_toml(&codex_home).await;
         let cwd = self
             .overrides
             .cwd
@@ -170,6 +172,11 @@ impl ConfigBuilder {
             model_supports_reasoning_summaries: true,
             model_context_window: None,
             model_max_output_tokens: None,
+            show_tooltips: config_toml
+                .tui
+                .as_ref()
+                .map(|tui| tui.show_tooltips)
+                .unwrap_or(true),
             approval_policy: codex_protocol::protocol::AskForApproval::UnlessTrusted,
             sandbox_policy: codex_protocol::protocol::SandboxPolicy::new_read_only_policy(),
             shell_environment_policy: ShellEnvironmentPolicy::default(),
@@ -197,13 +204,21 @@ impl ConfigBuilder {
     }
 }
 
+async fn load_reduced_config_toml(codex_home: &Path) -> UpstreamConfigToml {
+    let path = codex_home.join("config.toml");
+    let Ok(text) = tokio::fs::read_to_string(path).await else {
+        return UpstreamConfigToml::default();
+    };
+    toml::from_str(&text).unwrap_or_default()
+}
+
 pub async fn load_config_toml_with_layer_stack(
-    _codex_home: &Path,
+    codex_home: &Path,
     _cwd: &Path,
     _options: ConfigLoadOptions,
 ) -> anyhow::Result<ConfigTomlLoadResult> {
     Ok(ConfigTomlLoadResult {
-        config_toml: UpstreamConfigToml::default(),
+        config_toml: load_reduced_config_toml(codex_home).await,
         config_layer_stack: ConfigLayerStack::default(),
     })
 }
@@ -257,5 +272,45 @@ mod tests {
             codex_protocol::protocol::SandboxPolicy::new_read_only_policy()
         );
         assert!(config.permissions.network.is_none());
+    }
+
+    #[tokio::test]
+    async fn reduced_config_builder_loads_tui_show_tooltips() {
+        let dir = tempfile::tempdir().unwrap();
+        tokio::fs::write(
+            dir.path().join("config.toml"),
+            "[tui]\nshow_tooltips = false\n",
+        )
+        .await
+        .unwrap();
+
+        let config = ConfigBuilder::without_managed_config_for_tests()
+            .codex_home(dir.path().to_path_buf())
+            .build()
+            .await
+            .unwrap();
+
+        assert!(!config.show_tooltips);
+    }
+
+    #[tokio::test]
+    async fn reduced_config_toml_loader_loads_tui_show_tooltips() {
+        let dir = tempfile::tempdir().unwrap();
+        tokio::fs::write(
+            dir.path().join("config.toml"),
+            "[tui]\nshow_tooltips = false\n",
+        )
+        .await
+        .unwrap();
+
+        let loaded =
+            load_config_toml_with_layer_stack(dir.path(), dir.path(), ConfigLoadOptions::default())
+                .await
+                .unwrap();
+
+        assert_eq!(
+            loaded.config_toml.tui.as_ref().map(|tui| tui.show_tooltips),
+            Some(false)
+        );
     }
 }

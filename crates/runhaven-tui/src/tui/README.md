@@ -347,16 +347,27 @@ Known integration gap:
 - The real Codex protocol and config crates compile as workspace members, and
   `runhaven-tui` depends on them. Wider Codex crate activation is still
   incremental and must keep RunHaven runtime authority in `runhaven-core`.
-- The real Codex event, sender, and bottom-pane files compile. The temporary
+- The real Codex event, sender, bottom-pane, history-cell, markdown-render, and
+  diff-render files compile. `history_cell/notices.rs` has a small local
+  Ratatui 0.30 compatibility edit in place of upstream `ratatui-macros`, and
+  `history_cell/session.rs` reads RunHaven's reduced Codex config shape until
+  full Codex core config is promoted. The reduced config loads
+  `tui.show_tooltips` so session tooltip suppression follows the same field as
+  upstream. The full upstream `history_cell/tests.rs` module is parked until
+  full Codex config/MCP surfaces and snapshot goldens are promoted; local
+  default tests cover reduced tooltip loading, tooltip suppression, yolo-mode
+  mapping, basic diff rendering, decoded local-link control stripping, terminal
+  print-boundary control stripping, and ANSI-output degradation.
+- The temporary
   `app_event_shared.rs` leaf-type bridge plus the inline `status` and
-  `onboarding` shims must be removed as real `chatwidget`, `history_cell`,
-  `goal_files`, `session_log`, status, onboarding, and app-server-session
-  surfaces are promoted without activating host-reaching Codex app paths.
+  `onboarding` shims must be removed as real `chatwidget`, `goal_files`,
+  `session_log`, status, onboarding, and app-server-session surfaces are
+  promoted without activating host-reaching Codex app paths.
 - Direct `chatwidget` activation is blocked on replacing the temporary
   `legacy_core::config` gap with a vendor-first compatibility path. The real
-  `history_cell`, `status`, and `chatwidget` modules all depend on Codex's
-  core config shape, so promoting only `chatwidget.rs` produces root-module and
-  config-surface errors instead of a useful intermediate state.
+  `status` and `chatwidget` modules still depend on more of Codex's core config
+  and app-server shape, so promoting only `chatwidget.rs` produces root-module
+  and config-surface errors instead of a useful intermediate state.
 - Full upstream `codex-app-server-client` and full upstream `codex-core` are
   not active yet. RunHaven has a reduced original-name
   `codex-app-server-client` crate for the upstream `legacy_core` re-export and

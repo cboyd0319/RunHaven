@@ -82,6 +82,35 @@ fn display_width(s: &str) -> usize {
     visible.width()
 }
 
+fn safe_print_symbol(symbol: &str) -> std::borrow::Cow<'_, str> {
+    if !symbol.chars().any(char::is_control) {
+        return std::borrow::Cow::Borrowed(symbol);
+    }
+
+    if let Some((destination, text)) = parse_osc8_symbol(symbol)
+        && crate::terminal_hyperlinks::web_destination(destination).is_some()
+    {
+        let safe_text = strip_control_chars(text);
+        return std::borrow::Cow::Owned(crate::terminal_hyperlinks::osc8_hyperlink(
+            destination,
+            &safe_text,
+        ));
+    }
+
+    std::borrow::Cow::Owned(strip_control_chars(symbol))
+}
+
+fn parse_osc8_symbol(symbol: &str) -> Option<(&str, &str)> {
+    let rest = symbol.strip_prefix("\x1b]8;;")?;
+    let (destination, rest) = rest.split_once('\x07')?;
+    let text = rest.strip_suffix("\x1b]8;;\x07")?;
+    Some((destination, text))
+}
+
+fn strip_control_chars(text: &str) -> String {
+    text.chars().filter(|ch| !ch.is_control()).collect()
+}
+
 pub struct Frame<'a> {
     /// Where should the cursor be after drawing this frame?
     ///
@@ -690,7 +719,8 @@ where
                     bg = cell.bg;
                 }
 
-                queue!(writer, Print(cell.symbol()))?;
+                let symbol = safe_print_symbol(cell.symbol());
+                queue!(writer, Print(symbol.as_ref()))?;
             }
             DrawCommand::ClearToEnd { bg: clear_bg, .. } => {
                 queue!(writer, SetAttribute(crossterm::style::Attribute::Reset))?;
@@ -957,6 +987,27 @@ mod tests {
         assert!(
             actual.contains(&expected),
             "expected terminal output to contain cursor style {expected:?}, got {actual:?}"
+        );
+    }
+
+    #[test]
+    fn safe_print_symbol_strips_raw_terminal_controls() {
+        let symbol = safe_print_symbol("\x1b]52;c;SGVsbG8=\x07visible");
+
+        assert_eq!(symbol.as_ref(), "]52;c;SGVsbG8=visible");
+        assert!(!symbol.contains('\x1b'));
+        assert!(!symbol.contains('\x07'));
+    }
+
+    #[test]
+    fn safe_print_symbol_preserves_safe_osc8_wrapper() {
+        let symbol =
+            crate::terminal_hyperlinks::osc8_hyperlink("https://example.com/a", "vis\x07ible");
+        let safe = safe_print_symbol(&symbol);
+
+        assert_eq!(
+            safe.as_ref(),
+            crate::terminal_hyperlinks::osc8_hyperlink("https://example.com/a", "visible")
         );
     }
 
