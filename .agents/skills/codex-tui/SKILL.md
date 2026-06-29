@@ -3,18 +3,144 @@ name: codex-tui
 description: "Use for RunHaven TUI work that vendors, adapts, audits, or verifies Codex Rust TUI source."
 ---
 
-# Codex TUI Skill Wrapper
+# RunHaven Codex TUI
 
-RunHaven uses the Persona Codex TUI skill as the source-level TUI routing
-guide:
+Use this skill for RunHaven TUI work that vendors, adapts, audits, or verifies
+Codex Rust TUI source. This includes terminal ownership, `App` and
+`ChatWidget`, `BottomPane`, transcript rendering, status/footer chrome, pets,
+terminal images, snapshot tests, vendored `codex-*` crates, and drift guards.
+
+RunHaven follows a source-first Strategy C reset. The active goal is to replace
+the former custom TUI with Codex's TUI architecture while keeping RunHaven's
+security boundary intact.
+
+## Required Source Skill
+
+Read the Persona Codex TUI skill before making source-level Codex claims:
 
 ```text
 /Users/c/Documents/GitHub/persona/content/skills/codex-tui
 ```
 
-Before doing RunHaven TUI work, read that skill's `SKILL.md` completely and
-follow its referenced files for the touched surface. If the Persona skill is
-not available, stop and report that gap instead of guessing Codex TUI behavior.
+Then load only the Persona references that match the touched surface:
 
-RunHaven-specific rule: local Codex source and the pinned upstream GitHub
-baseline are evidence. DeepWiki and other generated docs are source maps only.
+- `references/source-map.md` for navigation and source claims.
+- `references/architecture-patterns.md` for app loop, widget ownership, input,
+  render, async, or adaptation decisions.
+- `references/testing-and-build.md` for snapshots, VT100 tests, terminal
+  behavior, features, workspace, or packaging.
+
+If the Persona skill or local Codex checkout is unavailable, stop and report
+that gap instead of guessing Codex TUI behavior.
+
+## Evidence Order
+
+Use evidence in this order:
+
+1. RunHaven live files and docs.
+2. Local Codex checkout:
+   `/Users/c/Documents/GitHub/codex/codex-rs/tui`.
+3. Pinned upstream Codex baseline recorded in `current-state.md` and
+   `feature_list.json`.
+4. DeepWiki or generated docs as source maps only, verified against local
+   source before acting.
+
+For active strategy work, read the focused plan file under:
+
+```text
+docs/plans/codex-tui-strategy-c/
+```
+
+`04-implementation-and-verification.md` is the implementation gate for the
+current Phase 4 path.
+
+## RunHaven Rules
+
+- Preserve original Codex package, crate, and module names by default.
+- Prefer real vendored Codex crates and modules over RunHaven shims.
+- Use local bridges only when activating the real surface would compile in or
+  execute unreviewed host-reaching behavior.
+- Keep host-reaching Codex paths dormant or fail-closed until explicitly
+  promoted through RunHaven security design and focused verification. This
+  includes app-server transport, filesystem RPC, MCP execution, login,
+  external editors, hooks, shell execution, cloud or browser credential access,
+  and broad host environment capture.
+- Do not mount host home, cloud credential folders, raw SSH keys, browser
+  profiles, or arbitrary host environment variables by default.
+- Do not expand `crates/runhaven-tui/src/tui/app_shell.rs` as a product
+  screen. Shrink it toward native Codex `App`/`ChatWidget` ownership.
+- Keep RunHaven product behavior in thin adapters and shared UI contracts in
+  `runhaven-core`.
+- Keep launch execution read-only until native Codex app ownership and
+  terminal restore are wired through the UI thread.
+- Snapshot goldens from upstream stay external unless intentionally promoted.
+  Default tests must not leave `.snap.new` files.
+
+## Current Promotion Path
+
+For Phase 4, prefer this order unless live plan files say otherwise:
+
+1. Keep Codex `Tui`, `TuiEventStream`, `FrameRequester`, and `BottomPane`
+   ownership active.
+2. Promote the next source-first surface needed for `ChatWidget`.
+3. Remove or shrink temporary bridge types as their real owners become active.
+4. Add drift and security guards for each promoted surface.
+5. Keep native `App`, real `app_server_session`, app-server transport,
+   filesystem RPC, MCP, login, and host-reaching paths dormant or fail-closed
+   until their markers are removed or guarded.
+
+## Guard Expectations
+
+Every non-trivial promotion needs at least one focused guard where practical:
+
+- Source drift guard for copied or locally adapted Codex files.
+- Dependency guard for reduced `codex-*` crates that must not pull backend,
+  login, MCP, filesystem, exec-server, rollout, state, or thread-store
+  dependencies.
+- Module guard for dormant upstream files that must not be declared before
+  fail-closed design exists.
+- Adapter import guard so RunHaven-owned code does not bypass the approved
+  boundary through backend Codex modules.
+- Snapshot hygiene guard when upstream snapshot tests are parked or gated.
+
+## Verification
+
+Before implementation, run the smallest baseline check for the touched TUI
+surface from `docs/harness/feedback/verification-matrix.md`. For ordinary
+RunHaven TUI code, start with:
+
+```bash
+cargo test -p runhaven-tui --locked
+```
+
+For implementation slices, choose the smallest reliable set, then usually end
+with:
+
+```bash
+cargo fmt --check
+cargo check -p runhaven-tui --locked
+cargo test -p runhaven-tui --locked
+cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run
+cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings
+cargo run --locked --bin runhaven-check-pins --quiet
+scripts/compare-codex-tui.sh
+python3 -m json.tool feature_list.json >/dev/null
+find crates/runhaven-tui/src/tui -name '*.snap.new' -print
+git diff --check
+```
+
+Use broader workspace checks only when the change crosses crate boundaries,
+dependency graph behavior, runtime security boundaries, or release controls.
+
+## End-of-Slice Gate
+
+For RunHaven TUI implementation slices, run the requested review sequence
+before commit:
+
+1. `rust`: crate/tooling correctness, ownership, features, and tests.
+2. Persona `codex-tui`: source-pattern alignment with local Codex.
+3. `adversarial-review`: boundary, overclaim, dormant-path, and simplification
+   review.
+
+Record only durable facts and verification in `feature_list.json` and
+`current-state.md`. Keep raw logs out of startup files.
