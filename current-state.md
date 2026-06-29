@@ -486,6 +486,11 @@ Latest TUI staging-facade shrink:
   guards so `mod.rs` cannot grow new inline staging modules, new `codex_*`
   self-aliases, or a native `app` declaration that still routes `run()` through
   `app_shell::run()`.
+- 2026-06-29: Moved the `tui/mod.rs` drift and security guard tests into
+  `tui/drift_tests.rs`. This keeps the same guard coverage while shrinking
+  `tui/mod.rs` to declarations plus the TUI entrypoint. The only remaining
+  inline staging module in `tui/mod.rs` is the narrow `onboarding` hyperlink
+  shim, and the guard still fails if new inline staging modules are added.
 
 Latest Codex protocol crate vendoring:
 
@@ -1185,7 +1190,7 @@ Latest RunHaven-only TUI MVP surface:
   -D warnings`; `cargo run --locked --bin runhaven-check-pins --quiet`;
   `cargo test -p runhaven-tui --locked launch_wizard -- --nocapture`;
   `cargo test -p runhaven-tui --locked runhaven::mvp -- --nocapture`;
-  `scripts/compare-codex-tui.sh` (371 RunHaven files, 15 RunHaven-only files,
+  `scripts/compare-codex-tui.sh` (372 RunHaven files, 16 RunHaven-only files,
   53 copied Codex files with local edits); `cargo fmt --check`;
   `python3 -m json.tool feature_list.json >/dev/null`; snap-new scan; and
   `git diff --check`; local Rust/Codex/adversarial review of this cleanup found

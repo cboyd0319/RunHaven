@@ -435,7 +435,7 @@ Known integration gap:
   review, confirm launch, foreground launch handoff, active run
   transcript/logs, diagnostics, and RunHaven assets. Leave unrelated Codex
   product features dormant, fail-closed, stubbed, or deleted with documentation.
-- `tui/mod.rs` has a test guard for dormant host-reaching Codex surfaces. If
+- `tui/drift_tests.rs` has a guard for dormant host-reaching Codex surfaces. If
   `app`, `app_server_session`, onboarding auth, local ChatGPT auth, external
   editor, clipboard copy, or hooks RPC modules are activated, the test requires
   their risky upstream markers to be removed or fail-closed first.
