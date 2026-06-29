@@ -34,7 +34,12 @@ impl AppEventSender {
     pub(crate) fn send(&self, event: AppEvent) {
         // Record inbound events for high-fidelity session replay.
         // Avoid double-logging Ops; those are logged at the point of submission.
-        if !matches!(event, AppEvent::CodexOp(_)) {
+        // RunHaven launch plans include workspace and command details, so keep
+        // them out of Codex session recording until RunHaven owns redaction.
+        if !matches!(
+            event,
+            AppEvent::CodexOp(_) | AppEvent::RunHavenLaunchPrepared { .. }
+        ) {
             session_log::log_inbound_app_event(&event);
         }
         if let Err(e) = self.app_event_tx.send(event) {

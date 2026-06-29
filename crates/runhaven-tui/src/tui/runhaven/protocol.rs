@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use runhaven_core::ui_contracts::LaunchPlanData;
 use serde::{Deserialize, Serialize};
 
 pub(crate) type RequestId = i64;
@@ -153,11 +154,22 @@ pub(crate) enum AppServerEvent {
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "method", content = "params", rename_all = "camelCase")]
 pub(crate) enum ServerNotification {
-    TranscriptDelta { text: String },
-    TurnCompleted { turn_id: String },
-    LaunchPrepared { plan_id: String },
-    Progress { message: String },
-    LogDelta { text: String },
+    TranscriptDelta {
+        text: String,
+    },
+    TurnCompleted {
+        turn_id: String,
+    },
+    LaunchPrepared {
+        plan_id: String,
+        plan: Box<LaunchPlanData>,
+    },
+    Progress {
+        message: String,
+    },
+    LogDelta {
+        text: String,
+    },
 }
 
 impl ServerNotification {

@@ -308,6 +308,16 @@ the current directory is nested inside a repo, and the agent preview list is
 rebuilt from the selected workspace before review. Foreground launch remains
 disabled.
 
+Progress note, 2026-06-29: The confirmation step now prepares a typed launch
+intent instead of only showing a disabled notice. `LaunchWizardView` emits
+`AppEvent::RunHavenLaunchPrepared` with the selected `LaunchPlanData`, and the
+staging shell drains that event into owner state while still leaving foreground
+execution fail-closed. The Codex-shaped `ServerNotification::LaunchPrepared`
+also carries the plan payload for the later App/ChatWidget event path. A guard
+keeps staging TUI code from calling `launch_run_plan` and keeps full launch
+plans out of Codex session logging until RunHaven owns terminal handoff and
+redaction.
+
 ### Phase 7: Cull Or Stub Unsupported Codex Product Features
 
 After the Codex-shaped app shell is active, decide each dormant Codex product

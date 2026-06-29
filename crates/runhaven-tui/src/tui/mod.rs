@@ -483,6 +483,41 @@ mod drift_tests {
     }
 
     #[test]
+    fn launch_prepared_intent_stays_fail_closed_until_terminal_handoff() {
+        let app_shell_source = include_str!("app_shell.rs");
+        let app_event_sender_source = include_str!("app_event_sender.rs");
+        let launch_wizard_source = include_str!("runhaven/launch_wizard.rs");
+        let runhaven_sources = [
+            include_str!("runhaven/app_server_client.rs"),
+            include_str!("runhaven/app_server_session.rs"),
+            include_str!("runhaven/protocol.rs"),
+            include_str!("runhaven/service.rs"),
+            include_str!("runhaven/terminal_handoff.rs"),
+        ];
+
+        for (label, source) in [
+            ("temporary app shell", app_shell_source),
+            ("launch wizard", launch_wizard_source),
+        ] {
+            assert!(
+                !source.contains("launch_run_plan"),
+                "{label} must not start foreground launch before UI-thread terminal handoff owns it"
+            );
+        }
+        for source in runhaven_sources {
+            assert!(
+                !source.contains("launch_run_plan"),
+                "RunHaven TUI facade code must not start foreground launch inside backend/service tasks"
+            );
+        }
+        assert!(
+            app_event_sender_source.contains("AppEvent::RunHavenLaunchPrepared { .. }")
+                && app_event_sender_source.contains("session_log::log_inbound_app_event(&event)"),
+            "RunHaven launch-prepared events carry full plan data and must stay excluded from Codex session logging"
+        );
+    }
+
+    #[test]
     fn app_event_shared_shrinks_only() {
         let source = include_str!("app_event_shared.rs");
         let inline_modules = top_level_inline_module_declarations(source);

@@ -1035,6 +1035,43 @@ Latest TUI MVP workspace picker:
   `scripts/compare-codex-tui.sh`, JSON validation, snap-new scan, and
   `git diff --check`.
 
+Latest TUI launch intent preparation:
+
+- 2026-06-29: The confirmation step now prepares a typed RunHaven launch intent
+  instead of only showing the disabled-launch notice. `LaunchWizardView` emits
+  `AppEvent::RunHavenLaunchPrepared` with the selected `LaunchPlanData`; the
+  temporary staging shell drains that event into owner state and shows
+  `Launch prepared. Terminal handoff is still disabled.` without starting a
+  container. `ServerNotification::LaunchPrepared` now carries the plan payload
+  for the later App/ChatWidget event path.
+- Security boundary is unchanged: no foreground child starts from the widget,
+  backend facade, or staging shell; no terminal handoff runs; and the full
+  launch plan is excluded from Codex session logging until RunHaven owns a
+  redaction policy. A drift guard blocks `launch_run_plan` from the active TUI
+  preparation path.
+- Verified so far:
+  baseline `cargo test -p runhaven-tui --locked`,
+  red compile failures for the missing launch-prepared event, missing
+  `LaunchPrepared.plan`, missing wizard sender hook, and missing shell
+  prepared-launch state,
+  `cargo test -p runhaven-tui --locked secure_plan_confirm_enter_prepares_launch_event_without_launching -- --show-output`,
+  `cargo test -p runhaven-tui --locked shell_confirm_enter_prepares_launch_intent_without_launching -- --show-output`,
+  `cargo test -p runhaven-tui --locked lossless_notifications_are_delivered_in_order -- --show-output`,
+  `cargo test -p runhaven-tui --locked launch_prepared_intent_stays_fail_closed_until_terminal_handoff -- --show-output`,
+  `cargo test -p runhaven-tui --locked launch_wizard -- --show-output`,
+  `cargo test -p runhaven-tui --locked app_shell -- --show-output`, and
+  `cargo test -p runhaven-tui --locked runhaven::app_server_client -- --show-output`.
+  Final gate:
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json >/dev/null`, snap-new scan, and
+  `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -1062,8 +1099,10 @@ dormant until its broader dependency and security closure is designed.
 not initialized from the active RunHaven path. The next slice should continue
 toward native `App`/`ChatWidget` ownership without adding new product screens
 to `app_shell.rs`. Workspace selection is active for current directory versus
-git repository root choices; policy changes, active run transcript/logs,
-diagnostics, and launch execution still need MVP reattachment. Do not activate
+git repository root choices, and confirmation now prepares a typed
+`LaunchPlanData` intent while foreground launch stays fail-closed. Policy
+changes, active run transcript/logs, diagnostics, and actual launch execution
+still need MVP reattachment. Do not activate
 native `App`, `ChatWidget`, full `status/`, real `app_server_session`,
 app-server transport, filesystem RPC, MCP, login, workspace command execution,
 Codex session recording initialization, or host-reaching execution until those

@@ -337,6 +337,11 @@ impl App {
                 self.chat_widget.prepare_local_op_submission(&op);
                 self.submit_active_thread_op(app_server, op).await?;
             }
+            AppEvent::RunHavenLaunchPrepared { .. } => {
+                tracing::warn!(
+                    "RunHaven launch prepared before native App foreground handoff is active"
+                );
+            }
             AppEvent::RetrySafetyBufferedTurn {
                 thread_id,
                 turn_id,

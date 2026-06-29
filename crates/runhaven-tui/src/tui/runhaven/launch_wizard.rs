@@ -35,6 +35,7 @@ use crate::style::muted_but_readable_style;
 use crate::style::safe_style;
 use crate::style::selected_row_style;
 use crate::style::warning_style;
+use crate::tui::app_event::AppEvent;
 use crate::tui::app_event_sender::AppEventSender;
 use crate::tui::bottom_pane::BottomPaneView;
 use crate::tui::bottom_pane::CancellationEvent;
@@ -59,6 +60,8 @@ pub(crate) struct LaunchWizardView {
     screen: LaunchWizardScreen,
     confirm_composer: TextArea,
     confirm_notice: Option<String>,
+    prepared_launch: Option<LaunchPlanData>,
+    app_event_tx: Option<AppEventSender>,
     image_smoke_status: Option<Line<'static>>,
     completion: Option<ViewCompletion>,
 }
@@ -174,9 +177,15 @@ impl LaunchWizardView {
             screen,
             confirm_composer: TextArea::new(),
             confirm_notice: None,
+            prepared_launch: None,
+            app_event_tx: None,
             image_smoke_status,
             completion: None,
         }
+    }
+
+    pub(crate) fn set_app_event_sender(&mut self, app_event_tx: AppEventSender) {
+        self.app_event_tx = Some(app_event_tx);
     }
 
     #[cfg(test)]
@@ -285,11 +294,12 @@ impl LaunchWizardView {
         }
         self.confirm_composer = TextArea::new();
         self.confirm_notice = None;
+        self.prepared_launch = None;
         self.screen = LaunchWizardScreen::ConfirmLaunch;
     }
 
     fn confirm_current_plan(&mut self) {
-        let Some(plan) = self.selected_plan() else {
+        let Some(plan) = self.selected_plan().cloned() else {
             self.confirm_notice = Some("Plan could not be built.".to_string());
             return;
         };
@@ -299,7 +309,16 @@ impl LaunchWizardView {
             return;
         }
 
-        self.confirm_notice = Some("Confirmed. TUI launch is still disabled.".to_string());
+        if self.prepared_launch.as_ref() != Some(&plan) {
+            if let Some(app_event_tx) = &self.app_event_tx {
+                app_event_tx.send(AppEvent::RunHavenLaunchPrepared {
+                    plan: Box::new(plan.clone()),
+                });
+            }
+            self.prepared_launch = Some(plan);
+        }
+        self.confirm_notice =
+            Some("Launch prepared. Terminal handoff is still disabled.".to_string());
     }
 
     fn selected_plan(&self) -> Option<&LaunchPlanData> {
@@ -1379,7 +1398,9 @@ fn append_confirm_plan_lines(
             Span::styled(CONFIRM_PHRASE, selected_row_style()),
             Span::raw(", then press Enter."),
         ]));
-        lines.push(Line::from("This preview will not start the container yet."));
+        lines.push(Line::from(
+            "This step prepares the launch. The TUI will not start the container yet.",
+        ));
         if !confirm_input.trim().is_empty() {
             lines.push(label_value(
                 "Typed",
@@ -1389,12 +1410,12 @@ fn append_confirm_plan_lines(
         }
     } else {
         lines.push(Line::from(
-            "Press Enter to confirm. This preview will not start the container yet.",
+            "Press Enter to prepare launch. The TUI will not start the container yet.",
         ));
     }
 
     if let Some(notice) = confirm_notice {
-        let style = if notice.starts_with("Confirmed") {
+        let style = if notice.starts_with("Launch prepared") {
             safe_style()
         } else {
             warning_style()
@@ -1601,6 +1622,7 @@ fn workspace_title(workspace: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tui::app_event::AppEvent;
     use crate::tui::bottom_pane::AppEventSender;
     use crate::tui::bottom_pane::BottomPane;
     use crate::tui::bottom_pane::BottomPaneParams;
@@ -1900,12 +1922,14 @@ mod tests {
     }
 
     #[test]
-    fn secure_plan_confirm_enter_sets_disabled_launch_notice() {
+    fn secure_plan_confirm_enter_prepares_launch_event_without_launching() {
+        let (app_event_tx, mut app_event_rx) = mpsc::unbounded_channel();
         let mut view = LaunchWizardView::new(
             PathBuf::from("/tmp/project"),
             vec![ready_preview("codex")],
             None,
         );
+        view.set_app_event_sender(AppEventSender::new(app_event_tx));
         view.handle_key(key(KeyCode::Enter));
         view.handle_key(key(KeyCode::Enter));
         view.handle_key(key(KeyCode::Enter));
@@ -1913,7 +1937,22 @@ mod tests {
         assert!(view.is_confirming());
         assert_eq!(
             view.confirm_notice.as_deref(),
-            Some("Confirmed. TUI launch is still disabled.")
+            Some("Launch prepared. Terminal handoff is still disabled.")
+        );
+        match app_event_rx.try_recv().expect("launch prepared event") {
+            AppEvent::RunHavenLaunchPrepared { plan } => {
+                assert_eq!(plan.profile_name, "codex");
+                assert_eq!(
+                    plan.command,
+                    "container run --name runhaven-codex runhaven/codex:0.1.0"
+                );
+            }
+            other => panic!("unexpected app event: {other:?}"),
+        }
+        view.handle_key(key(KeyCode::Enter));
+        assert!(
+            app_event_rx.try_recv().is_err(),
+            "confirmed launch should be emitted once"
         );
     }
 
@@ -1969,7 +2008,7 @@ mod tests {
 
         assert_eq!(
             view.confirm_notice.as_deref(),
-            Some("Confirmed. TUI launch is still disabled.")
+            Some("Launch prepared. Terminal handoff is still disabled.")
         );
     }
 
@@ -2015,7 +2054,7 @@ mod tests {
 
         assert_eq!(
             view.confirm_notice.as_deref(),
-            Some("Confirmed. TUI launch is still disabled.")
+            Some("Launch prepared. Terminal handoff is still disabled.")
         );
     }
 

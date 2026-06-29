@@ -582,6 +582,7 @@ mod tests {
     use super::*;
     use crate::tui::runhaven::protocol::UnsupportedMethod;
     use crate::tui::runhaven::protocol::ValidateWorkspaceResponse;
+    use crate::tui::runhaven::service::confirm_required_preview_for_tests;
     use runhaven_core::ui_contracts::AgentCatalogData;
     use serde::Deserialize;
 
@@ -722,6 +723,9 @@ mod tests {
     async fn lossless_notifications_are_delivered_in_order() {
         let mut client = test_client(8);
         let handle = client.request_handle();
+        let plan = confirm_required_preview_for_tests()
+            .plan
+            .expect("test plan");
 
         for notification in [
             ServerNotification::TranscriptDelta {
@@ -732,6 +736,7 @@ mod tests {
             },
             ServerNotification::LaunchPrepared {
                 plan_id: "plan-1".to_string(),
+                plan: Box::new(plan.clone()),
             },
         ] {
             handle
@@ -760,7 +765,8 @@ mod tests {
             client.next_event().await,
             Some(AppServerEvent::ServerNotification(
                 ServerNotification::LaunchPrepared {
-                    plan_id: "plan-1".to_string()
+                    plan_id: "plan-1".to_string(),
+                    plan: Box::new(plan)
                 }
             ))
         );

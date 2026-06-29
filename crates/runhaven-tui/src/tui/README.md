@@ -400,6 +400,11 @@ Known integration gap:
   interactive `runhaven`, but native Codex `App` ownership is not active yet.
 - The launch picker, read-only review, and confirmation screen still run from
   `app_shell.rs` plus `runhaven/service.rs`, not the real Codex `App` loop.
+  Confirmation now emits a typed `RunHavenLaunchPrepared` app event carrying
+  the validated `LaunchPlanData`; the staging shell records that intent and
+  leaves foreground launch fail-closed with a terminal-handoff-disabled notice.
+  The app event sender intentionally excludes that plan payload from Codex
+  session logging until RunHaven owns a redaction policy.
   The next Phase 4 slice should continue toward native `App` and `ChatWidget`
   ownership without adding new product screens to `app_shell.rs`. Workspace
   selection is now reattached inside the BottomPane-owned launch wizard for

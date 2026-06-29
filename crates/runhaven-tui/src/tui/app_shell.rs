@@ -14,6 +14,7 @@ use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::Clear;
 use ratatui::widgets::Widget;
+use runhaven_core::ui_contracts::LaunchPlanData;
 
 #[cfg(test)]
 use super::runhaven::launch_wizard::LAUNCH_WIZARD_VIEW_ID;
@@ -21,6 +22,7 @@ use super::runhaven::launch_wizard::LaunchWizardView;
 use super::runhaven::service::RunHavenTuiService;
 use crate::key_hint;
 use crate::render::renderable::Renderable;
+use crate::tui::app_event::AppEvent;
 use crate::tui::bottom_pane::AppEventSender;
 use crate::tui::bottom_pane::BottomPane;
 use crate::tui::bottom_pane::BottomPaneParams;
@@ -129,7 +131,8 @@ async fn run_loop(tui: &mut codex_runtime::Tui, state: &mut ShellState) -> Resul
 
 struct ShellState {
     bottom_pane: BottomPane,
-    _app_event_rx: mpsc::UnboundedReceiver<crate::app_event::AppEvent>,
+    app_event_rx: mpsc::UnboundedReceiver<crate::app_event::AppEvent>,
+    prepared_launch: Option<LaunchPlanData>,
     image_smoke: ImageSmoke,
     show_footer_help: bool,
     last_terminal_title: Option<String>,
@@ -185,8 +188,11 @@ impl ShellState {
         frame_requester: crate::tui::FrameRequester,
     ) -> Result<Self> {
         let (app_event_tx, app_event_rx) = mpsc::unbounded_channel();
+        let app_event_tx = AppEventSender::new(app_event_tx);
+        let mut launch_wizard = launch_wizard;
+        launch_wizard.set_app_event_sender(app_event_tx.clone());
         let mut bottom_pane = BottomPane::new(BottomPaneParams {
-            app_event_tx: AppEventSender::new(app_event_tx),
+            app_event_tx,
             frame_requester,
             has_input_focus: true,
             enhanced_keys_supported: false,
@@ -199,7 +205,8 @@ impl ShellState {
 
         Ok(Self {
             bottom_pane,
-            _app_event_rx: app_event_rx,
+            app_event_rx,
+            prepared_launch: None,
             image_smoke,
             show_footer_help: false,
             last_terminal_title: None,
@@ -214,6 +221,7 @@ impl ShellState {
         if self.confirm_accepts_text_input() {
             self.show_footer_help = false;
             self.bottom_pane.handle_key_event(key);
+            self.drain_app_events();
             return ShellAction::Continue;
         }
 
@@ -232,6 +240,7 @@ impl ShellState {
         }
 
         self.bottom_pane.handle_key_event(key);
+        self.drain_app_events();
         if self.confirm_accepts_text_input() {
             self.show_footer_help = false;
         }
@@ -245,6 +254,20 @@ impl ShellState {
     fn handle_paste(&mut self, pasted: &str) {
         self.show_footer_help = false;
         self.bottom_pane.handle_paste(pasted.to_string());
+        self.drain_app_events();
+    }
+
+    fn drain_app_events(&mut self) {
+        while let Ok(event) = self.app_event_rx.try_recv() {
+            match event {
+                AppEvent::RunHavenLaunchPrepared { plan } => {
+                    self.prepared_launch = Some(*plan);
+                }
+                _ => {
+                    tracing::debug!("staging RunHaven TUI shell ignored unsupported app event");
+                }
+            }
+        }
     }
 
     fn prepare_image_smoke_draw(&mut self, area: ratatui::layout::Rect, composer_bottom_y: u16) {
@@ -943,7 +966,7 @@ mod tests {
     }
 
     #[test]
-    fn shell_confirm_enter_shows_disabled_launch_notice_without_launching() {
+    fn shell_confirm_enter_prepares_launch_intent_without_launching() {
         let workspace = tempfile::tempdir().expect("workspace");
         let mut state = ShellState::for_workspace(workspace.path()).expect("state");
 
@@ -961,7 +984,12 @@ mod tests {
         );
         let output = render_to_text(&mut state, 120, 32);
 
-        assert!(output.contains("Confirmed. TUI launch is still disabled."));
+        let prepared = state
+            .prepared_launch
+            .as_ref()
+            .expect("confirmed launch should be prepared");
+        assert!(prepared.command.contains("container run"));
+        assert!(output.contains("Launch prepared. Terminal handoff is still disabled."));
         assert!(output.contains("container run"));
     }
 
