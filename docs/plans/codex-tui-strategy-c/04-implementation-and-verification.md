@@ -301,6 +301,13 @@ Move only the RunHaven MVP screens into Codex-shaped surfaces:
 Defer dashboard breadth, rich history/diff, easter eggs, and Codex-native
 product affordances until the MVP TUI is fully working.
 
+Progress note, 2026-06-29: The MVP workspace picker is active inside the
+BottomPane-owned `LaunchWizardView` without expanding `app_shell.rs`. The
+RunHaven service offers current directory and git repository root choices when
+the current directory is nested inside a repo, and the agent preview list is
+rebuilt from the selected workspace before review. Foreground launch remains
+disabled.
+
 ### Phase 7: Cull Or Stub Unsupported Codex Product Features
 
 After the Codex-shaped app shell is active, decide each dormant Codex product

@@ -6,6 +6,9 @@ use std::sync::atomic::Ordering;
 
 use super::service::AgentLaunchPreview;
 use super::service::LaunchPreviewError;
+#[cfg(test)]
+use super::service::LaunchPreviewPayload;
+use super::service::WorkspaceLaunchPreview;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyModifiers;
@@ -47,14 +50,25 @@ use crate::tui::bottom_pane::menu_surface_inset;
 use crate::tui::bottom_pane::render_menu_surface;
 
 pub(crate) struct LaunchWizardView {
-    workspace_title: String,
+    workspace_choices: Arc<Vec<WorkspaceDecisionVm>>,
+    selected_workspace_idx: Arc<AtomicUsize>,
     decisions: Arc<Vec<AgentDecisionVm>>,
     selected_idx: Arc<AtomicUsize>,
+    workspace_picker: Option<ListSelectionView>,
     picker: ListSelectionView,
     screen: LaunchWizardScreen,
     confirm_composer: TextArea,
     confirm_notice: Option<String>,
+    image_smoke_status: Option<Line<'static>>,
     completion: Option<ViewCompletion>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct WorkspaceDecisionVm {
+    label: String,
+    description: String,
+    workspace: PathBuf,
+    decisions: Arc<Vec<AgentDecisionVm>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,6 +84,7 @@ struct AgentDecisionVm {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LaunchWizardScreen {
+    ChooseWorkspace,
     ChooseAgent,
     ReviewPlan,
     ConfirmLaunch,
@@ -79,23 +94,63 @@ const CONFIRM_PHRASE: &str = "launch";
 pub(crate) const LAUNCH_WIZARD_VIEW_ID: &str = "runhaven.launch_wizard";
 
 impl LaunchWizardView {
+    #[cfg(test)]
     pub(crate) fn new(
         workspace: PathBuf,
         previews: Vec<AgentLaunchPreview>,
         image_smoke_status: Option<Line<'static>>,
     ) -> Self {
-        let decisions = Arc::new(
-            previews
+        Self::new_with_workspace_choices(
+            vec![WorkspaceLaunchPreview {
+                label: "Current directory".to_string(),
+                description: workspace.display().to_string(),
+                payload: LaunchPreviewPayload {
+                    workspace,
+                    previews,
+                },
+            }],
+            image_smoke_status,
+        )
+    }
+
+    pub(crate) fn new_with_workspace_choices(
+        workspace_choices: Vec<WorkspaceLaunchPreview>,
+        image_smoke_status: Option<Line<'static>>,
+    ) -> Self {
+        let image_smoke_status_for_agent = image_smoke_status.clone();
+        let workspaces = Arc::new(
+            workspace_choices
                 .into_iter()
-                .map(AgentDecisionVm::from)
+                .map(WorkspaceDecisionVm::from)
                 .collect::<Vec<_>>(),
         );
+        let selected_workspace_idx = Arc::new(AtomicUsize::new(0));
+        let decisions = selected_workspace(&workspaces, &selected_workspace_idx)
+            .map(|workspace| Arc::clone(&workspace.decisions))
+            .unwrap_or_default();
         let selected_idx = Arc::new(AtomicUsize::new(0));
-        let params = selection_params(
-            workspace.display().to_string(),
+        let workspace_picker = (workspaces.len() > 1).then(|| {
+            let params = workspace_selection_params(
+                Arc::clone(&workspaces),
+                Arc::clone(&selected_workspace_idx),
+            );
+            let (app_event_tx, _app_event_rx) = tokio::sync::mpsc::unbounded_channel();
+            ListSelectionView::new(
+                params,
+                AppEventSender::new(app_event_tx),
+                RuntimeKeymap::defaults().list,
+            )
+        });
+        let params = agent_selection_params(
+            selected_workspace_display(&workspaces, &selected_workspace_idx),
             Arc::clone(&decisions),
             Arc::clone(&selected_idx),
-            image_smoke_status,
+            image_smoke_status_for_agent,
+            if workspace_picker.is_some() {
+                "Step 2/4: Choose agent"
+            } else {
+                "Step 1/4: Choose agent"
+            },
         );
         let (app_event_tx, _app_event_rx) = tokio::sync::mpsc::unbounded_channel();
         let picker = ListSelectionView::new(
@@ -103,16 +158,23 @@ impl LaunchWizardView {
             AppEventSender::new(app_event_tx),
             RuntimeKeymap::defaults().list,
         );
-        let workspace_title = workspace_title(&workspace);
+        let screen = if workspace_picker.is_some() {
+            LaunchWizardScreen::ChooseWorkspace
+        } else {
+            LaunchWizardScreen::ChooseAgent
+        };
 
         Self {
-            workspace_title,
+            workspace_choices: workspaces,
+            selected_workspace_idx,
             decisions,
             selected_idx,
+            workspace_picker,
             picker,
-            screen: LaunchWizardScreen::ChooseAgent,
+            screen,
             confirm_composer: TextArea::new(),
             confirm_notice: None,
+            image_smoke_status,
             completion: None,
         }
     }
@@ -120,6 +182,52 @@ impl LaunchWizardView {
     #[cfg(test)]
     pub(crate) fn handle_key(&mut self, key: KeyEvent) {
         self.handle_key_event(key);
+    }
+
+    fn handle_workspace_key(&mut self, key: KeyEvent) {
+        let Some(picker) = self.workspace_picker.as_mut() else {
+            self.screen = LaunchWizardScreen::ChooseAgent;
+            return;
+        };
+        picker.handle_key_event(key);
+        if let Some(selected) = picker.selected_index() {
+            self.selected_workspace_idx
+                .store(selected, Ordering::Relaxed);
+        }
+        if picker.completion() == Some(ViewCompletion::Cancelled) {
+            self.completion = Some(ViewCompletion::Cancelled);
+            return;
+        }
+        if let Some(selected) = picker.take_last_selected_index() {
+            self.activate_workspace(selected);
+            self.screen = LaunchWizardScreen::ChooseAgent;
+        }
+    }
+
+    fn activate_workspace(&mut self, selected: usize) {
+        self.selected_workspace_idx
+            .store(selected, Ordering::Relaxed);
+        self.selected_idx.store(0, Ordering::Relaxed);
+        self.decisions = selected_workspace(&self.workspace_choices, &self.selected_workspace_idx)
+            .map(|workspace| Arc::clone(&workspace.decisions))
+            .unwrap_or_default();
+        let params = agent_selection_params(
+            selected_workspace_display(&self.workspace_choices, &self.selected_workspace_idx),
+            Arc::clone(&self.decisions),
+            Arc::clone(&self.selected_idx),
+            self.image_smoke_status.clone(),
+            if self.workspace_picker.is_some() {
+                "Step 2/4: Choose agent"
+            } else {
+                "Step 1/4: Choose agent"
+            },
+        );
+        let (app_event_tx, _app_event_rx) = tokio::sync::mpsc::unbounded_channel();
+        self.picker = ListSelectionView::new(
+            params,
+            AppEventSender::new(app_event_tx),
+            RuntimeKeymap::defaults().list,
+        );
     }
 
     fn handle_picker_key(&mut self, key: KeyEvent) {
@@ -214,6 +322,17 @@ impl LaunchWizardView {
             .map(|decision| decision.agent.name.as_str())
     }
 
+    #[cfg(test)]
+    pub(crate) fn is_choosing_workspace(&self) -> bool {
+        self.screen == LaunchWizardScreen::ChooseWorkspace
+    }
+
+    #[cfg(test)]
+    pub(crate) fn selected_workspace_path(&self) -> Option<&Path> {
+        selected_workspace(&self.workspace_choices, &self.selected_workspace_idx)
+            .map(|workspace| workspace.workspace.as_path())
+    }
+
     pub(crate) fn is_reviewing(&self) -> bool {
         self.screen == LaunchWizardScreen::ReviewPlan
     }
@@ -293,13 +412,14 @@ impl LaunchWizardView {
         let agent = self.selected_agent_name().unwrap_or("no agent");
         format!(
             "RunHaven | {} | {} | {agent}",
-            self.workspace_title,
+            selected_workspace_title(&self.workspace_choices, &self.selected_workspace_idx),
             self.step_label()
         )
     }
 
     fn step_label(&self) -> &'static str {
         match self.screen {
+            LaunchWizardScreen::ChooseWorkspace => "Choose workspace",
             LaunchWizardScreen::ChooseAgent => "Choose agent",
             LaunchWizardScreen::ReviewPlan => "Review plan",
             LaunchWizardScreen::ConfirmLaunch => "Confirm launch",
@@ -313,6 +433,7 @@ impl BottomPaneView for LaunchWizardView {
             return;
         }
         match self.screen {
+            LaunchWizardScreen::ChooseWorkspace => self.handle_workspace_key(key_event),
             LaunchWizardScreen::ChooseAgent => self.handle_picker_key(key_event),
             LaunchWizardScreen::ReviewPlan => self.handle_review_key(key_event),
             LaunchWizardScreen::ConfirmLaunch => self.handle_confirm_key(key_event),
@@ -353,6 +474,12 @@ impl BottomPaneView for LaunchWizardView {
                 ("esc".to_string(), "back".to_string()),
                 ("enter".to_string(), "confirm".to_string()),
             ]
+        } else if self.screen == LaunchWizardScreen::ChooseWorkspace {
+            vec![
+                ("up/down".to_string(), "choose".to_string()),
+                ("enter".to_string(), "select".to_string()),
+                ("q".to_string(), "quit".to_string()),
+            ]
         } else if self.is_reviewing() || self.is_confirming() {
             vec![
                 ("b".to_string(), "back".to_string()),
@@ -392,6 +519,11 @@ impl BottomPaneView for LaunchWizardView {
 impl Renderable for LaunchWizardView {
     fn render(&self, area: Rect, buf: &mut Buffer) {
         match self.screen {
+            LaunchWizardScreen::ChooseWorkspace => self
+                .workspace_picker
+                .as_ref()
+                .expect("workspace picker exists")
+                .render(area, buf),
             LaunchWizardScreen::ChooseAgent => self.picker.render(area, buf),
             LaunchWizardScreen::ReviewPlan => ReviewPlan {
                 decisions: Arc::clone(&self.decisions),
@@ -410,6 +542,11 @@ impl Renderable for LaunchWizardView {
 
     fn desired_height(&self, width: u16) -> u16 {
         match self.screen {
+            LaunchWizardScreen::ChooseWorkspace => self
+                .workspace_picker
+                .as_ref()
+                .expect("workspace picker exists")
+                .desired_height(width),
             LaunchWizardScreen::ChooseAgent => self.picker.desired_height(width),
             LaunchWizardScreen::ReviewPlan => ReviewPlan {
                 decisions: Arc::clone(&self.decisions),
@@ -460,6 +597,24 @@ impl From<AgentLaunchPreview> for AgentDecisionVm {
             auth_label,
             network_label,
             boundary_label: "/workspace only".to_string(),
+        }
+    }
+}
+
+impl From<WorkspaceLaunchPreview> for WorkspaceDecisionVm {
+    fn from(choice: WorkspaceLaunchPreview) -> Self {
+        Self {
+            label: choice.label,
+            description: choice.description,
+            workspace: choice.payload.workspace,
+            decisions: Arc::new(
+                choice
+                    .payload
+                    .previews
+                    .into_iter()
+                    .map(AgentDecisionVm::from)
+                    .collect(),
+            ),
         }
     }
 }
@@ -515,11 +670,60 @@ impl AgentDecisionVm {
     }
 }
 
-fn selection_params(
+fn workspace_selection_params(
+    workspaces: Arc<Vec<WorkspaceDecisionVm>>,
+    selected_workspace_idx: Arc<AtomicUsize>,
+) -> SelectionViewParams {
+    let items = workspaces
+        .iter()
+        .map(WorkspaceDecisionVm::selection_item)
+        .collect::<Vec<_>>();
+    let header = WorkspaceHeader {
+        workspaces: Arc::clone(&workspaces),
+        selected_workspace_idx: Arc::clone(&selected_workspace_idx),
+    };
+    let preview = WorkspacePreview {
+        workspaces: Arc::clone(&workspaces),
+        selected_workspace_idx: Arc::clone(&selected_workspace_idx),
+    };
+    let on_selection_changed = {
+        let selected_workspace_idx = Arc::clone(&selected_workspace_idx);
+        Some(Box::new(move |idx, _sender: &AppEventSender| {
+            selected_workspace_idx.store(idx, Ordering::Relaxed);
+        })
+            as Box<dyn Fn(usize, &AppEventSender) + Send + Sync>)
+    };
+
+    SelectionViewParams {
+        view_id: Some("runhaven-launch-workspace"),
+        footer_note: Some(Line::from(
+            "Choose what RunHaven mounts as /workspace before reviewing an agent.",
+        )),
+        footer_hint: Some(workspace_footer_hint_line()),
+        items,
+        is_searchable: false,
+        col_width_mode: ColumnWidthMode::AutoAllRows,
+        row_display: SelectionRowDisplay::SingleLine,
+        name_column_width: Some(22),
+        header: Box::new(header),
+        initial_selected_idx: Some(0),
+        side_content: Box::new(preview.clone()),
+        side_content_width: SideContentWidth::Half,
+        side_content_min_width: 44,
+        stacked_side_content: Some(Box::new(preview)),
+        preserve_side_content_bg: false,
+        on_selection_changed,
+        allow_cancel: true,
+        ..Default::default()
+    }
+}
+
+fn agent_selection_params(
     workspace: String,
     decisions: Arc<Vec<AgentDecisionVm>>,
     selected_idx: Arc<AtomicUsize>,
     image_smoke_status: Option<Line<'static>>,
+    step_label: &'static str,
 ) -> SelectionViewParams {
     let items = decisions
         .iter()
@@ -530,6 +734,7 @@ fn selection_params(
         decisions: Arc::clone(&decisions),
         selected_idx: Arc::clone(&selected_idx),
         image_smoke_status,
+        step_label,
     };
     let preview = PlanPreview {
         decisions: Arc::clone(&decisions),
@@ -569,6 +774,41 @@ fn selection_params(
     }
 }
 
+impl WorkspaceDecisionVm {
+    fn selection_item(&self) -> SelectionItem {
+        SelectionItem {
+            name: self.label.clone(),
+            description: Some(self.description.clone()),
+            selected_description: Some(format!(
+                "{} agents available for this workspace",
+                self.decisions.len()
+            )),
+            search_value: Some(format!(
+                "{} {} {}",
+                self.label,
+                self.description,
+                self.workspace.display()
+            )),
+            dismiss_on_select: false,
+            ..Default::default()
+        }
+    }
+}
+
+fn workspace_footer_hint_line() -> Line<'static> {
+    Line::from(vec![
+        Span::raw("Use "),
+        key_hint::plain(KeyCode::Up).into(),
+        Span::raw("/"),
+        key_hint::plain(KeyCode::Down).into(),
+        Span::raw(" or j/k to choose. "),
+        key_hint::plain(KeyCode::Enter).into(),
+        Span::raw(" selects. "),
+        key_hint::plain(KeyCode::Esc).into(),
+        Span::raw(" or q quits."),
+    ])
+}
+
 fn footer_hint_line() -> Line<'static> {
     Line::from(vec![
         Span::raw("Use "),
@@ -584,11 +824,118 @@ fn footer_hint_line() -> Line<'static> {
 }
 
 #[derive(Clone)]
+struct WorkspaceHeader {
+    workspaces: Arc<Vec<WorkspaceDecisionVm>>,
+    selected_workspace_idx: Arc<AtomicUsize>,
+}
+
+impl WorkspaceHeader {
+    fn selected(&self) -> Option<&WorkspaceDecisionVm> {
+        selected_workspace(&self.workspaces, &self.selected_workspace_idx)
+    }
+
+    fn lines(&self) -> Vec<Line<'static>> {
+        let mut lines = vec![
+            Line::from(vec![
+                Span::styled("RunHaven", selected_row_style()),
+                Span::raw(format!(" v{}  ", env!("CARGO_PKG_VERSION"))),
+                Span::styled("Step 1/4: Choose workspace", boundary_style()),
+            ]),
+            Line::from(vec![
+                Span::styled("Boundary  ", muted_but_readable_style()),
+                Span::styled("/workspace only", boundary_style()),
+                Span::raw("  "),
+                Span::styled("Host home  ", muted_but_readable_style()),
+                Span::styled("not mounted", safe_style()),
+                Span::raw("  "),
+                Span::styled("Credentials  ", muted_but_readable_style()),
+                Span::styled("not mounted by default", safe_style()),
+            ]),
+        ];
+
+        if let Some(selected) = self.selected() {
+            lines.push(label_value(
+                "Selected",
+                selected.label.clone(),
+                accent_style(),
+            ));
+            lines.push(label_value(
+                "Workspace",
+                selected.workspace.display().to_string(),
+                boundary_style(),
+            ));
+        }
+        lines
+    }
+}
+
+impl Renderable for WorkspaceHeader {
+    fn render(&self, area: Rect, buf: &mut Buffer) {
+        paragraph(self.lines()).render(area, buf);
+    }
+
+    fn desired_height(&self, width: u16) -> u16 {
+        paragraph(self.lines()).line_count(width) as u16
+    }
+}
+
+#[derive(Clone)]
+struct WorkspacePreview {
+    workspaces: Arc<Vec<WorkspaceDecisionVm>>,
+    selected_workspace_idx: Arc<AtomicUsize>,
+}
+
+impl WorkspacePreview {
+    fn selected(&self) -> Option<&WorkspaceDecisionVm> {
+        selected_workspace(&self.workspaces, &self.selected_workspace_idx)
+    }
+
+    fn lines(&self) -> Vec<Line<'static>> {
+        let Some(selected) = self.selected() else {
+            return vec![Line::from("No workspace choices are available.")];
+        };
+        vec![
+            Line::from(vec![Span::styled(
+                "Workspace Preview",
+                selected_row_style(),
+            )]),
+            label_value("Choice", selected.label.clone(), accent_style()),
+            label_value(
+                "Workspace",
+                selected.workspace.display().to_string(),
+                boundary_style(),
+            ),
+            label_value("Mount", "/workspace only", boundary_style()),
+            label_value("Host home", "not mounted", safe_style()),
+            label_value("Credentials", "not mounted by default", safe_style()),
+            label_value(
+                "Agents",
+                selected.decisions.len().to_string(),
+                muted_but_readable_style(),
+            ),
+            Line::from(""),
+            Line::from(selected.description.clone()),
+        ]
+    }
+}
+
+impl Renderable for WorkspacePreview {
+    fn render(&self, area: Rect, buf: &mut Buffer) {
+        paragraph(self.lines()).render(area, buf);
+    }
+
+    fn desired_height(&self, width: u16) -> u16 {
+        paragraph(self.lines()).line_count(width) as u16
+    }
+}
+
+#[derive(Clone)]
 struct SafetyHeader {
     workspace: String,
     decisions: Arc<Vec<AgentDecisionVm>>,
     selected_idx: Arc<AtomicUsize>,
     image_smoke_status: Option<Line<'static>>,
+    step_label: &'static str,
 }
 
 impl SafetyHeader {
@@ -601,7 +948,7 @@ impl SafetyHeader {
             Line::from(vec![
                 Span::styled("RunHaven", selected_row_style()),
                 Span::raw(format!(" v{}  ", env!("CARGO_PKG_VERSION"))),
-                Span::styled("Step 1/4: Choose agent", boundary_style()),
+                Span::styled(self.step_label, boundary_style()),
             ]),
             Line::from(vec![
                 Span::styled("Boundary  ", muted_but_readable_style()),
@@ -1155,6 +1502,32 @@ fn selected_decision<'a>(
     decisions.get(selected).or_else(|| decisions.first())
 }
 
+fn selected_workspace<'a>(
+    workspaces: &'a [WorkspaceDecisionVm],
+    selected_workspace_idx: &AtomicUsize,
+) -> Option<&'a WorkspaceDecisionVm> {
+    let selected = selected_workspace_idx.load(Ordering::Relaxed);
+    workspaces.get(selected).or_else(|| workspaces.first())
+}
+
+fn selected_workspace_display(
+    workspaces: &[WorkspaceDecisionVm],
+    selected_workspace_idx: &AtomicUsize,
+) -> String {
+    selected_workspace(workspaces, selected_workspace_idx)
+        .map(|workspace| workspace.workspace.display().to_string())
+        .unwrap_or_else(|| "workspace unavailable".to_string())
+}
+
+fn selected_workspace_title(
+    workspaces: &[WorkspaceDecisionVm],
+    selected_workspace_idx: &AtomicUsize,
+) -> String {
+    selected_workspace(workspaces, selected_workspace_idx)
+        .map(|workspace| workspace_title(&workspace.workspace))
+        .unwrap_or_else(|| "workspace".to_string())
+}
+
 fn label_value(label: &'static str, value: impl Into<String>, value_style: Style) -> Line<'static> {
     Line::from(vec![
         Span::styled(format!("{label:<12}"), muted_but_readable_style()),
@@ -1372,6 +1745,54 @@ mod tests {
         assert!(view.is_reviewing());
         assert!(!view.is_cancelled());
         assert_eq!(view.selected_agent_name(), Some("codex"));
+    }
+
+    #[test]
+    fn workspace_picker_selects_git_root_before_agent_review() {
+        let mut root_plan = plan("codex");
+        root_plan.workspace = "/tmp/repo".to_string();
+        root_plan.boundary.mounted_workspace = "/tmp/repo -> /workspace".to_string();
+        let root_preview = AgentLaunchPreview {
+            agent: agent("codex"),
+            plan: Ok(root_plan),
+        };
+        let mut view = LaunchWizardView::new_with_workspace_choices(
+            vec![
+                WorkspaceLaunchPreview {
+                    label: "Current directory".to_string(),
+                    description: "/tmp/repo/nested".to_string(),
+                    payload: LaunchPreviewPayload {
+                        workspace: PathBuf::from("/tmp/repo/nested"),
+                        previews: vec![ready_preview("codex")],
+                    },
+                },
+                WorkspaceLaunchPreview {
+                    label: "Git repository root".to_string(),
+                    description: "Mount the full repository instead of only the nested folder."
+                        .to_string(),
+                    payload: LaunchPreviewPayload {
+                        workspace: PathBuf::from("/tmp/repo"),
+                        previews: vec![root_preview],
+                    },
+                },
+            ],
+            None,
+        );
+
+        assert!(view.is_choosing_workspace());
+        assert!(render_to_text(&view, 100, 32).contains("Step 1/4: Choose workspace"));
+
+        view.handle_key(key(KeyCode::Down));
+        view.handle_key(key(KeyCode::Enter));
+
+        assert!(!view.is_choosing_workspace());
+        assert_eq!(view.selected_workspace_path(), Some(Path::new("/tmp/repo")));
+        assert!(render_to_text(&view, 100, 32).contains("Step 2/4: Choose agent"));
+
+        view.handle_key(key(KeyCode::Enter));
+
+        assert!(view.is_reviewing());
+        assert!(render_to_text(&view, 100, 32).contains("/tmp/repo -> /workspace"));
     }
 
     #[test]

@@ -402,8 +402,10 @@ Known integration gap:
   `app_shell.rs` plus `runhaven/service.rs`, not the real Codex `App` loop.
   The next Phase 4 slice should continue toward native `App` and `ChatWidget`
   ownership without adding new product screens to `app_shell.rs`. Workspace
-  selection, policy changes, and final foreground launch still need to be
-  reattached through the Codex-shaped runtime and native app ownership.
+  selection is now reattached inside the BottomPane-owned launch wizard for
+  current directory versus git repository root choices; policy changes and
+  final foreground launch still need to be reattached through the Codex-shaped
+  runtime and native app ownership.
 - The current product direction is MVP-first, not Codex parity. Promote only
   Codex surfaces needed for RunHaven's agent picker, workspace picker, plan
   review, confirm launch, foreground launch handoff, active run

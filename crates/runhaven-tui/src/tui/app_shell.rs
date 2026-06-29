@@ -160,10 +160,8 @@ impl ShellState {
     ) -> Result<Self> {
         let image_smoke = ImageSmoke::from_env(frame_requester.clone());
         let image_smoke_status = image_smoke.status_line();
-        let launch_payload = RunHavenTuiService::new().launch_preview_payload(workspace);
-        let launch_wizard = LaunchWizardView::new(
-            launch_payload.workspace,
-            launch_payload.previews,
+        let launch_wizard = LaunchWizardView::new_with_workspace_choices(
+            RunHavenTuiService::new().launch_workspace_choices(workspace),
             image_smoke_status,
         );
         Self::from_launch_wizard_with_frame_requester(launch_wizard, image_smoke, frame_requester)

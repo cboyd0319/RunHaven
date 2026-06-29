@@ -7,6 +7,7 @@ use runhaven_core::runtime::plans::WorkspaceScope;
 use runhaven_core::runtime::plans::build_run_plan;
 use runhaven_core::runtime::plans::default_network_mode;
 use runhaven_core::runtime::profiles::profiles;
+use runhaven_core::support::git::git_repo_root;
 use runhaven_core::ui_contracts::AgentCatalogData;
 use runhaven_core::ui_contracts::AgentCatalogItemData;
 use runhaven_core::ui_contracts::LaunchPlanData;
@@ -53,9 +54,17 @@ impl std::fmt::Display for LaunchPreviewError {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct LaunchPreviewPayload {
     pub(crate) workspace: PathBuf,
     pub(crate) previews: Vec<AgentLaunchPreview>,
+}
+
+#[derive(Debug)]
+pub(crate) struct WorkspaceLaunchPreview {
+    pub(crate) label: String,
+    pub(crate) description: String,
+    pub(crate) payload: LaunchPreviewPayload,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -184,6 +193,36 @@ impl RunHavenTuiService {
             workspace,
             previews,
         }
+    }
+
+    pub(crate) fn launch_workspace_choices(
+        &self,
+        workspace: impl AsRef<Path>,
+    ) -> Vec<WorkspaceLaunchPreview> {
+        let workspace = workspace.as_ref();
+        let mut choices = vec![WorkspaceLaunchPreview {
+            label: "Current directory".to_string(),
+            description: workspace.display().to_string(),
+            payload: self.launch_preview_payload(workspace),
+        }];
+
+        let (repo_root, _) = git_repo_root(workspace);
+        if let Some(repo_root) = repo_root {
+            let repo_root = PathBuf::from(repo_root);
+            let current = workspace
+                .canonicalize()
+                .unwrap_or_else(|_| workspace.to_path_buf());
+            if repo_root != current {
+                choices.push(WorkspaceLaunchPreview {
+                    label: "Git repository root".to_string(),
+                    description: "Mount the full repository instead of only the nested folder."
+                        .to_string(),
+                    payload: self.launch_preview_payload(repo_root),
+                });
+            }
+        }
+
+        choices
     }
 
     fn validate_workspace(
@@ -417,6 +456,30 @@ mod tests {
 
         assert!(note.contains("selected workspace is inside git repository root"));
         assert!(note.contains("RunHaven mounts only the selected directory"));
+    }
+
+    #[test]
+    fn launch_workspace_choices_offer_current_and_git_root_for_nested_repo() {
+        let repo = tempfile::tempdir().expect("repo");
+        run_git(&["init", "-q"], repo.path());
+        let nested = repo.path().join("nested");
+        std::fs::create_dir(&nested).expect("nested workspace");
+
+        let choices = RunHavenTuiService::new().launch_workspace_choices(&nested);
+
+        assert_eq!(choices.len(), 2);
+        assert_eq!(choices[0].label, "Current directory");
+        assert_eq!(choices[0].payload.workspace, nested);
+        assert_eq!(choices[1].label, "Git repository root");
+        assert_eq!(
+            choices[1].payload.workspace,
+            repo.path().canonicalize().expect("canonical repo")
+        );
+        assert!(
+            choices[1]
+                .description
+                .contains("Mount the full repository instead of only the nested folder")
+        );
     }
 
     #[test]
