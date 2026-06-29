@@ -95,78 +95,6 @@ pub(crate) mod style;
 #[allow(dead_code)]
 pub(crate) mod table_detect;
 #[allow(dead_code)]
-pub(crate) mod workspace_messages;
-#[allow(dead_code)]
-pub(crate) mod status {
-    use std::path::Path;
-
-    use unicode_width::UnicodeWidthStr;
-
-    pub(crate) fn format_tokens_compact(value: i64) -> String {
-        let value = value.max(0);
-        if value == 0 {
-            return "0".to_string();
-        }
-        if value < 1_000 {
-            return value.to_string();
-        }
-
-        let value_f64 = value as f64;
-        let (scaled, suffix) = if value >= 1_000_000_000_000 {
-            (value_f64 / 1_000_000_000_000.0, "T")
-        } else if value >= 1_000_000_000 {
-            (value_f64 / 1_000_000_000.0, "B")
-        } else if value >= 1_000_000 {
-            (value_f64 / 1_000_000.0, "M")
-        } else {
-            (value_f64 / 1_000.0, "K")
-        };
-
-        let decimals = if scaled < 10.0 {
-            2
-        } else if scaled < 100.0 {
-            1
-        } else {
-            0
-        };
-
-        let mut formatted = format!("{scaled:.decimals$}");
-        if formatted.contains('.') {
-            while formatted.ends_with('0') {
-                formatted.pop();
-            }
-            if formatted.ends_with('.') {
-                formatted.pop();
-            }
-        }
-
-        format!("{formatted}{suffix}")
-    }
-
-    pub(crate) fn format_directory_display(directory: &Path, max_width: Option<usize>) -> String {
-        let formatted = if let Some(rel) = crate::exec_command::relativize_to_home(directory) {
-            if rel.as_os_str().is_empty() {
-                "~".to_string()
-            } else {
-                format!("~{}{}", std::path::MAIN_SEPARATOR, rel.display())
-            }
-        } else {
-            directory.display().to_string()
-        };
-
-        if let Some(max_width) = max_width {
-            if max_width == 0 {
-                return String::new();
-            }
-            if UnicodeWidthStr::width(formatted.as_str()) > max_width {
-                return crate::text_formatting::center_truncate_path(&formatted, max_width);
-            }
-        }
-
-        formatted
-    }
-}
-#[allow(dead_code)]
 pub(crate) mod terminal_hyperlinks;
 #[allow(dead_code)]
 pub(crate) mod terminal_palette;
@@ -183,6 +111,8 @@ pub(crate) mod test_support;
 #[allow(dead_code)]
 pub(crate) mod text_formatting;
 #[allow(dead_code)]
+pub(crate) mod token_usage;
+#[allow(dead_code)]
 pub(crate) mod tooltips;
 #[allow(dead_code)]
 pub(crate) mod ui_consts;
@@ -194,6 +124,8 @@ pub(crate) mod version;
 pub(crate) mod width;
 #[allow(dead_code)]
 pub(crate) mod workspace_command;
+#[allow(dead_code)]
+pub(crate) mod workspace_messages;
 #[allow(dead_code)]
 pub(crate) mod wrapping;
 
@@ -293,7 +225,7 @@ mod drift_tests {
 
         assert_eq!(
             inline_modules,
-            ["onboarding", "status", "drift_tests",],
+            ["onboarding", "drift_tests",],
             "tui/mod.rs may shrink inline staging modules, but must not grow new stand-ins"
         );
     }
@@ -443,7 +375,7 @@ mod drift_tests {
             "ChatWidget status promotion must use the real branch_summary.rs plus workspace_command.rs source boundary"
         );
         assert!(
-            !bridge_source.contains("struct StatusLineGitSummary"),
+            !bridge_source.contains("StatusLineGitSummary"),
             "app_event_shared.rs must not keep the StatusLineGitSummary bridge once branch_summary.rs is active"
         );
         for marker in [
@@ -474,6 +406,33 @@ mod drift_tests {
             assert!(
                 !source.contains("AppServerWorkspaceCommandRunner"),
                 "RunHaven-owned adapters must not activate app-server workspace command execution in this slice"
+            );
+        }
+    }
+
+    #[test]
+    fn token_usage_uses_source_first_boundary_before_full_status() {
+        let module_source = include_str!("mod.rs");
+        let root_lib_source = include_str!("../lib.rs");
+        let footer_source = include_str!("bottom_pane/footer.rs");
+        let hooks_browser_source = include_str!("bottom_pane/hooks_browser_view.rs");
+
+        assert!(
+            module_declared(module_source, "token_usage"),
+            "ChatWidget/status integration must use the real token_usage.rs source model"
+        );
+        assert!(
+            !module_declared(module_source, "status"),
+            "Keep full status/ dormant until its config, model-provider, remote app-server, and status-card closure is promoted"
+        );
+        assert!(
+            !root_lib_source.contains("pub(crate) use tui::status;"),
+            "do not re-export a fake root status surface before full status/ is intentionally promoted"
+        );
+        for source in [footer_source, hooks_browser_source] {
+            assert!(
+                !source.contains("crate::status::") && !source.contains("use crate::status"),
+                "active bottom-pane code must use the small RunHaven status_format helper instead of a root status bridge"
             );
         }
     }

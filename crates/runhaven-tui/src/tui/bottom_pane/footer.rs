@@ -44,7 +44,7 @@
 use crate::key_hint;
 use crate::key_hint::KeyBinding;
 use crate::render::line_utils::prefix_lines;
-use crate::status::format_tokens_compact;
+use crate::tui::runhaven::status_format::format_tokens_compact;
 use crate::ui_consts::FOOTER_INDENT_COLS;
 use crossterm::event::KeyCode;
 use ratatui::buffer::Buffer;

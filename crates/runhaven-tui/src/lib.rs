@@ -42,7 +42,6 @@ pub(crate) use tui::session_log;
 pub(crate) use tui::session_state;
 pub(crate) use tui::skills_helpers;
 pub(crate) use tui::slash_command;
-pub(crate) use tui::status;
 pub(crate) use tui::status_indicator_widget;
 pub(crate) use tui::style;
 pub(crate) use tui::table_detect;

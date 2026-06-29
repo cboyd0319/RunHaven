@@ -932,6 +932,38 @@ Latest repo-local agent harness audit:
   `python3 -m json.tool feature_list.json >/dev/null`, local Markdown link
   check over touched docs, and `git diff --check`.
 
+Latest TUI status-bridge reduction:
+
+- 2026-06-29: Removed the inline root `status` bridge from
+  `crates/runhaven-tui/src/tui/mod.rs` without activating the full Codex
+  `status/` module. Active footer and hook-browser call sites now use
+  `tui/runhaven/status_format.rs` for the two helper functions they need.
+  `token_usage.rs` is active from real source, and a drift guard keeps full
+  `status/` dormant until its config, model-provider, remote-app-server, and
+  status-card closure is intentionally promoted.
+- `AppEvent::StatusLineGitSummaryUpdated` now uses
+  `branch_summary::StatusLineGitSummary` directly, so `app_event_shared.rs`
+  no longer re-exports that type through the `chatwidget` bridge.
+- Full `status/`, native `App`, `ChatWidget`, real `app_server_session`,
+  app-server transport, filesystem RPC, MCP, login, workspace command
+  execution, and other host-reaching Codex paths remain dormant or
+  fail-closed.
+- Verified so far:
+  baseline `cargo test -p runhaven-tui --locked`,
+  `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked status_format -- --show-output`,
+  `cargo test -p runhaven-tui --locked drift_tests -- --show-output`, and
+  `cargo test -p runhaven-tui --locked footer -- --show-output`.
+  Final gate:
+  `cargo test -p runhaven-tui --locked`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`,
+  `python3 -m json.tool feature_list.json >/dev/null`, snap-new scan, and
+  `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -944,11 +976,14 @@ Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4.
 view inside native `BottomPane`, and the active terminal runtime now uses
 Codex `Tui` plus `TuiEventStream`. `branch_summary.rs` and the
 `workspace_command.rs` contract are active for the next ChatWidget status path,
-with Codex app-server command execution still compiled dormant. The next slice
-should continue toward native `App`/`ChatWidget` ownership without adding new
-product screens to `app_shell.rs`. Do not activate native `App`, `ChatWidget`,
-real `app_server_session`, app-server transport, filesystem RPC, MCP, login, or
-host-reaching execution until those markers are removed, fail-closed, or routed
-through a reviewed RunHaven boundary.
+with Codex app-server command execution still compiled dormant. The inline
+root `status` bridge is gone, but the full Codex `status/` module remains
+dormant until its broader dependency and security closure is designed. The next
+slice should continue toward native `App`/`ChatWidget` ownership without
+adding new product screens to `app_shell.rs`. Do not activate native `App`,
+`ChatWidget`, full `status/`, real `app_server_session`, app-server transport,
+filesystem RPC, MCP, login, workspace command execution, or host-reaching
+execution until those markers are removed, fail-closed, or routed through a
+reviewed RunHaven boundary.
 Foreground launch remains read-only until native Codex app ownership and
 terminal restore are wired through the UI thread.

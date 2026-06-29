@@ -1002,7 +1002,7 @@ pub(crate) enum AppEvent {
     /// Async update of Git summary fields for status line rendering.
     StatusLineGitSummaryUpdated {
         cwd: PathBuf,
-        summary: crate::chatwidget::StatusLineGitSummary,
+        summary: crate::branch_summary::StatusLineGitSummary,
     },
     /// Async update of the workspace notification headline for status line rendering.
     StatusLineWorkspaceHeadlineUpdated {

@@ -119,11 +119,11 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 368.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 369.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 12.
-- Copied Codex files with local edits: 50.
+- RunHaven-only files: 13.
+- Copied Codex files with local edits: 51.
 
 RunHaven-only files:
 
@@ -139,6 +139,7 @@ runhaven/launch_wizard.rs
 runhaven/mod.rs
 runhaven/protocol.rs
 runhaven/service.rs
+runhaven/status_format.rs
 runhaven/terminal_handoff.rs
 ```
 
@@ -147,6 +148,7 @@ Copied Codex files with local edits:
 ```text
 app.rs
 app/pets.rs
+app_event.rs
 bottom_pane/app_link_view.rs
 bottom_pane/approval_overlay.rs
 bottom_pane/bottom_pane_view.rs
@@ -371,11 +373,14 @@ Known integration gap:
   default tests cover reduced tooltip loading, tooltip suppression, yolo-mode
   mapping, basic diff rendering, decoded local-link control stripping, terminal
   print-boundary control stripping, and ANSI-output degradation.
-- The temporary
-  `app_event_shared.rs` leaf-type bridge plus the inline `status` and
-  `onboarding` shims must be removed as real `chatwidget`, `goal_files`,
-  `session_log`, status, onboarding, and app-server-session surfaces are
-  promoted without activating host-reaching Codex app paths.
+- The temporary `app_event_shared.rs` leaf-type bridge plus the inline
+  `onboarding` shim must be removed as real `chatwidget`, `goal_files`,
+  `session_log`, onboarding, and app-server-session surfaces are promoted
+  without activating host-reaching Codex app paths. The old inline `status`
+  shim has been removed; active footer and hook-browser formatting now uses the
+  RunHaven-local `runhaven/status_format.rs` helper while the full Codex
+  `status/` module stays dormant until its config, model-provider,
+  remote-app-server, and status-card closure is promoted.
 - Direct `chatwidget` activation is blocked on replacing the temporary
   `legacy_core::config` gap with a vendor-first compatibility path. The real
   `status` and `chatwidget` modules still depend on more of Codex's core config

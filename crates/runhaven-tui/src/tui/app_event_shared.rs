@@ -46,8 +46,6 @@ pub(crate) mod app_server_session {
 pub(crate) mod chatwidget {
     use codex_protocol::user_input::TextElement;
 
-    pub(crate) use crate::branch_summary::StatusLineGitSummary;
-
     #[derive(Debug, Clone, PartialEq)]
     pub(crate) struct UserMessage {
         pub(crate) text: String,

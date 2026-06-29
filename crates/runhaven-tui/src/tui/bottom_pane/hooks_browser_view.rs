@@ -33,8 +33,8 @@ use crate::key_hint::KeyBindingListExt;
 use crate::keymap::ListKeymap;
 use crate::line_truncation::truncate_line_with_ellipsis_if_overflow;
 use crate::render::renderable::Renderable;
-use crate::status::format_directory_display;
 use crate::style::accent_style;
+use crate::tui::runhaven::status_format::format_directory_display;
 
 const EVENT_COLUMN_WIDTH: usize = 22;
 const COUNT_COLUMN_WIDTH: usize = 12;
