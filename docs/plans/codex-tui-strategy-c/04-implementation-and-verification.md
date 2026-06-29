@@ -297,10 +297,11 @@ Move only the RunHaven MVP screens into Codex-shaped surfaces:
 - Active run transcript/logs: bounded transcript items, log snapshot item, or
   overlay.
 - Diagnostics/doctor: status card and markdown renderer.
-- Pet and logo: Codex pet/image primitives, RunHaven assets.
 
-Defer dashboard breadth, rich history/diff, easter eggs, and Codex-native
-product affordances until the MVP TUI is fully working.
+Defer Cubby/pet polish, mascot work, terminal image polish, Zork, dashboard
+breadth, rich history/diff, and Codex-native product affordances until the core
+RunHaven TUI is fully working. Existing pet/image code remains source-first
+infrastructure and opt-in smoke coverage, not near-term product scope.
 
 Progress note, 2026-06-29: The MVP workspace picker became active inside the
 BottomPane-owned `LaunchWizardView` without expanding `app_shell.rs`. The

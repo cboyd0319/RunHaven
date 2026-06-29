@@ -69,10 +69,16 @@ current Phase 4 path.
   profiles, or arbitrary host environment variables by default.
 - Do not expand `crates/runhaven-tui/src/tui/app_shell.rs` as a product
   screen. Shrink it toward native Codex `App`/`ChatWidget` ownership.
+- Keep the active foreground launch path owned by
+  `tui/runhaven/launch_handoff.rs` and the prepared RunHaven plan. Do not route
+  RunHaven launches through Codex workspace-command, app-server transport, or
+  shell-execution surfaces.
 - Keep RunHaven product behavior in thin adapters and shared UI contracts in
   `runhaven-core`.
-- Keep launch execution read-only until native Codex app ownership and
-  terminal restore are wired through the UI thread.
+- Defer Cubby/pet polish, terminal mascot work, and the hidden Zork easter egg
+  until the core RunHaven TUI is complete. Keep existing pet/image code only as
+  source-first infrastructure and opt-in smoke coverage unless a core TUI check
+  requires it.
 - Snapshot goldens from upstream stay external unless intentionally promoted.
   Default tests must not leave `.snap.new` files.
 

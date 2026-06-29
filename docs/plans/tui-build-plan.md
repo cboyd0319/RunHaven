@@ -38,9 +38,10 @@ move, not the dbt product shape and not Codex chat ontology.
 
 dbt-wizard is not the visual target. RunHaven should stay closer to the native
 Codex look: a compact intro and status area, the bottom composer and status
-line, source-native pet behavior, and small RunHaven cards that feel like Codex
-surfaces. Avoid an analytics-dashboard feel unless the user is explicitly in a
-diagnostics, history, or dashboard view.
+line, and small RunHaven cards that feel like Codex surfaces. Avoid an
+analytics-dashboard feel unless the user is explicitly in a diagnostics,
+history, or dashboard view. Cubby, pet behavior, mascot polish, and Zork are
+final-pass work after the core TUI is complete.
 
 The first active payload seam is in `crates/runhaven-core/src/ui_contracts.rs`:
 `AgentCatalogData`, `LaunchPlanData`, and tagged `RunHavenComponentPayload`
@@ -157,13 +158,11 @@ Immediate integration order:
 - Accessibility is a requirement, not a setting: `NO_COLOR`, a reduced-motion
   switch, colorblind-safe palettes, never color-only state, and a line-mode
   fallback for assistive tech.
-- Delight is the default, not opt-in. The Cubby pet is visible and animated by
-  default to make RunHaven approachable to less-technical users; the user can
-  toggle it off. This still honors the two rules above: reduced-motion keeps the
-  pet visible but static, and the restraint rule keeps all animation off
-  confirmation and destructive screens. So "pet on by default" means the idle pet
-  animates on safe/idle surfaces unless reduced-motion or the user's toggle says
-  otherwise; the pet stays visible either way.
+- Delight is final-pass polish, not the current core-completion gate. Cubby,
+  pet behavior, mascot polish, and Zork should wait until the TUI shell, launch
+  flow, recovery, active-run logs, diagnostics, guards, and cleanup are finished.
+  When pet work resumes, reduced-motion, confirmation/destructive-screen
+  restraint, and an explicit user toggle still apply.
 
 ## Architecture: the framework / screen seam
 
@@ -331,12 +330,13 @@ a shared-library gap to close. Do not parse CLI prose in the TUI.
 - The source copy is broad enough for Strategy C, and the live TUI is now a
   RunHaven-only MVP hosted in the staged shell. Native Codex `App` and
   `ChatWidget` remain deferred.
-- Active staged pieces: native Cubby pet package from
-  `docs/assets/installed-pet/cubby/`, Codex pet/image renderer, terminal title,
-  footer, `BottomPane`, `ListSelectionView`, `TextArea`, workspace picker,
-  plain agent chooser, policy mutation, review, typed confirmation, foreground
-  launch handoff, post-run recovery, active-run list, confirmation-gated log
-  snapshots, and secret-free diagnostics.
+- Active staged pieces: terminal title, footer, `BottomPane`,
+  `ListSelectionView`, `TextArea`, workspace picker, plain agent chooser,
+  policy mutation, review, typed confirmation, foreground launch handoff,
+  post-run recovery, active-run list, confirmation-gated log snapshots, and
+  secret-free diagnostics. The native Cubby pet package and Codex pet/image
+  renderer remain available as source-first infrastructure and opt-in smoke
+  coverage, but are not part of the current core-completion gate.
 - The first agent chooser is intentionally plain. Dense launch details such as
   auth scope, provider hosts, not-shared host data, safety notes, and the exact
   `container run` command belong in review and confirm.

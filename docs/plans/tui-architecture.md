@@ -49,9 +49,10 @@ shell.
 
 Use dbt-wizard as proof that a narrow product payload seam can ship, not as the
 RunHaven visual model. RunHaven should stay closer to native Codex: compact
-intro and status content, bottom composer, bottom status line, source-native
-Cubby pet behavior, Codex wrapping and selection behavior, and RunHaven-specific
-cards that fit inside that shell.
+intro and status content, bottom composer, bottom status line, Codex wrapping
+and selection behavior, and RunHaven-specific cards that fit inside that shell.
+Cubby, pet behavior, mascot polish, terminal image polish, and Zork are
+final-pass work after the core TUI is complete.
 
 Do not turn the default launcher into an analytics dashboard. Dense grids,
 counts, and health bars belong in explicit diagnostics, history, or dashboard
@@ -115,7 +116,7 @@ Target ownership for the rebuilt source remains:
 | `runs.rs`, `run_views.rs` | Active-run state, egress/log/control adapters, dashboard notices, and dashboard/log/control rendering. |
 | `history.rs`, `history_views.rs` | Run history, diff review, diagnostics, terminal capability, doctor state, and their views. |
 | `guide_views.rs` | First-run and help guide. It routes users to existing workflows; it does not own product logic. |
-| `brand.rs`, `pet.rs`, `codex/` | RunHaven logo/Cubby asset adapters over attributed Codex-derived welcome, pet, and terminal graphics primitives. |
+| `brand.rs`, `pet.rs`, `codex/` | Final-pass RunHaven logo/Cubby asset adapters over attributed Codex-derived welcome, pet, and terminal graphics primitives. |
 | `snapshot.rs`, `test_backend.rs` | VT100 snapshot harness used by screen regression tests. |
 
 If a new screen needs shared data, add the data API outside `cli/` first. If a
@@ -159,7 +160,7 @@ Design screens from flows, not from available commands:
 | Monitor | Home, Guide, or after a launch record exists | Dashboard, bounded logs, or a typed run-control result. |
 | Review | Home, Guide, or Dashboard notice | History list and selected run diff. |
 | Diagnose | Home, Guide, or History | Diagnostics and doctor checks with inline remediation. |
-| Display/accessibility | Guide or environment variables | Cubby visibility, reduced motion, line mode, no-color, light/dark palette. |
+| Display/accessibility | Guide or environment variables | Reduced motion, line mode, no-color, light/dark palette, and later Cubby visibility once final pet polish resumes. |
 
 When adding a screen, name its flow, entry point, success state, and escape path
 before adding key bindings. If a destination does not serve one of these flows,
@@ -227,7 +228,7 @@ They share design direction but not data plumbing; keep them in separate modules
 The current vendor-reset shell is intentionally staged. It keeps the
 Codex-vendored TUI source in `crates/runhaven-tui/src/tui/` and opens a
 RunHaven-only MVP launch flow while native Codex `App`, `ChatWidget`, richer
-history, native pet, resume, and command surfaces are adapted.
+history, resume, and command surfaces are adapted.
 When the header logo or Cubby pet returns, prefer Codex-native modules and
 terminal-image behavior over custom RunHaven rendering code.
 

@@ -91,6 +91,10 @@ TUI, Tauri, or frontend layers.
 - TUI image and pet rendering must follow Codex source behavior. Use the pinned
   upstream Codex TUI source and local Codex config evidence before writing custom pet,
   terminal image, statusline, bottom-pane, keymap, title, or resume behavior.
+  Cubby, pet polish, mascot work, and terminal image polish are final-pass TUI
+  work after the core RunHaven TUI is complete. Keep existing pet code as
+  source-first infrastructure and opt-in smoke coverage unless a core TUI check
+  requires it.
 - TUI implementation slices should use the repo-local
   `.agents/skills/codex-tui` skill first. It requires the Persona Codex TUI
   skill (`/Users/c/Documents/GitHub/persona/content/skills/codex-tui`), then
@@ -111,7 +115,8 @@ TUI, Tauri, or frontend layers.
   MIT-licensed `historicalsource/zork1` collection under `third_party/zork1/`.
   The earlier Ferrif-derived TUI engine was removed with the old custom TUI and
   is recoverable from git history. If reintroduced, it must stay TUI-local,
-  attributed, offline, and carefully validate save/restore files.
+  attributed, offline, and carefully validate save/restore files. Defer it
+  until the core TUI is complete and final polish starts.
 - The glib advisory GHSA-wrw7-89jp-8q8g remains treated as not affected because
   `glib` enters only through Tauri's Linux GTK backend and is absent from the
   macOS build graph. See `docs/PINNING.md`.
@@ -173,8 +178,9 @@ does not guess whether login state is agent-wide or project-scoped. Fixtures liv
 toward a Codex-native shell with RunHaven product cards. dbt-wizard is only the
 architecture proof for stable domain payloads first and renderer second. The
 visual target is closer to native Codex: compact intro and status content,
-bottom composer and status line, native Cubby behavior, and no analytics
-dashboard feel in the default launcher.
+bottom composer and status line, and no analytics dashboard feel in the default
+launcher. Native Cubby behavior is final-pass polish after the core TUI is
+complete.
 
 TUI bottom-pane follow-up: `crates/runhaven-tui` now compiles the Codex
 `ListSelectionView` family directly from the vendored bottom-pane source through
@@ -1187,9 +1193,10 @@ Latest RunHaven-only TUI MVP surface:
 ## Next Step
 
 The RunHaven-only TUI MVP surface is now present in the staging Codex runtime.
-Next TUI work should be cleanup and hardening, not new product scope: reduce
-module-path debt, decide whether native `App`/`ChatWidget` ownership is still
-needed for RunHaven after the MVP root view, and keep unrelated Codex product
-features dormant, fail-closed, or deleted. If native `App` startup is promoted
-later, first replace raw Codex env/path session-recording behavior with a
-reviewed RunHaven redaction boundary.
+Next TUI work should be core completion, cleanup, and hardening, not final
+polish or new product scope. Defer Cubby/pet polish, mascot work, terminal image
+polish, and Zork until the end. Reduce module-path debt, decide whether native
+`App`/`ChatWidget` ownership is still needed for RunHaven after the MVP root
+view, and keep unrelated Codex product features dormant, fail-closed, or
+deleted. If native `App` startup is promoted later, first replace raw Codex
+env/path session-recording behavior with a reviewed RunHaven redaction boundary.
