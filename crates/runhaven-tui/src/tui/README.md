@@ -119,10 +119,10 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 370.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 372.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 14.
+- RunHaven-only files: 16.
 - Copied Codex files with local edits: 53.
 
 RunHaven-only files:
@@ -131,6 +131,7 @@ RunHaven-only files:
 README.md
 app_event_shared.rs
 app_shell.rs
+drift_tests.rs
 mod.rs
 pets/bundled_custom.rs
 runhaven/app_server_client.rs
@@ -138,6 +139,7 @@ runhaven/app_server_session.rs
 runhaven/launch_handoff.rs
 runhaven/launch_wizard.rs
 runhaven/mod.rs
+runhaven/mvp.rs
 runhaven/protocol.rs
 runhaven/service.rs
 runhaven/status_format.rs
@@ -213,6 +215,8 @@ Local integration exceptions:
 - `mod.rs` is the temporary RunHaven module entrypoint during integration. It
   keeps the crate buildable and fails closed for interactive TUI launch until
   the vendored Codex entrypoint is adapted.
+- `drift_tests.rs` is RunHaven guard code. It keeps dormant host-reaching Codex
+  surfaces from being activated before RunHaven owns the matching boundary.
 - `pets/picker.rs` and `pets/preview.rs` remain vendored and now compile
   against the real vendored `bottom_pane` module path. They are still not
   exposed as active product flows until the native app shell owns those views.
@@ -388,6 +392,10 @@ Known integration gap:
   remote-app-server, and status-card closure is promoted. The real vendored
   `session_log.rs` is active for AppEvent/ChatWidget compatibility, but the
   temporary `app_shell` does not initialize Codex session recording.
+- The inline `onboarding` shim is intentionally limited to the hyperlink helper
+  needed by active vendored widgets. Full onboarding remains dormant while its
+  source tree still carries browser, app-server request-handle, environment-key,
+  and Codex login behavior.
 - Direct `chatwidget` activation is blocked on replacing the temporary
   `legacy_core::config` gap with a vendor-first compatibility path. The real
   `status` and `chatwidget` modules still depend on more of Codex's core config

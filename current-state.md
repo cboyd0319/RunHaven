@@ -417,9 +417,10 @@ Latest TUI Phase 0 baseline lock:
   edits. Added `scripts/compare-codex-tui.sh`, which fetches the pinned
   upstream Codex source from GitHub into a temporary checkout and compares all
   files under `codex-rs/tui/src/`, including Rust files, `src/bin`, nested
-  tests, and `.snap` goldens. Current audit: 894 upstream files, 364 RunHaven
-  files, 356 common paths, 538 upstream `.snap` files external by default, 8
-  RunHaven-only files, and 20 copied Codex files with local edits. Verified:
+  tests, and `.snap` goldens. Phase 0 audit snapshot: 894 upstream files, 364
+  RunHaven files, 356 common paths, 538 upstream `.snap` files external by
+  default, 8 RunHaven-only files, and 20 copied Codex files with local edits.
+  Verified:
   `bash -n scripts/compare-codex-tui.sh`,
   `scripts/compare-codex-tui.sh`,
   `scripts/compare-codex-tui.sh --list-missing`,
@@ -439,7 +440,7 @@ Latest TUI Phase 1 service extraction:
   model over Codex `ListSelectionView`. Service tests cover agent-name
   mapping, default network and auth scope, provider metadata, shell internet
   confirmation, shared agent state volumes, nested git workspace notes, and
-  fail-per-agent missing-workspace errors. Current vendor audit: 894 upstream
+  fail-per-agent missing-workspace errors. Phase 1 audit snapshot: 894 upstream
   files, 365 RunHaven files, 356 common paths, 538 upstream `.snap` files
   external by default, 9 RunHaven-only files, and 20 copied Codex files with
   local edits.
@@ -526,8 +527,8 @@ Latest TUI Phase 3 runtime and handoff gate:
   runtime, clears managed terminal title and pet image state before handoff,
   runs only a harmless foreground child or an intentional missing child, restores
   terminal ownership, and exits. Ambient and picker-preview pet image state now
-  share a combined cleanup helper, including native `App` shutdown. Current
-  latest vendor audit: 894 upstream files, 370 RunHaven files, 356 common
+  share a combined cleanup helper, including native `App` shutdown. Phase 3
+  audit snapshot: 894 upstream files, 370 RunHaven files, 356 common
   paths, 538 upstream `.snap` files external by default, 14 RunHaven-only files,
   and 53 copied Codex files with local edits.
 
@@ -1195,6 +1196,34 @@ Latest RunHaven-only TUI MVP surface:
   `python3 -m json.tool feature_list.json >/dev/null`; snap-new scan; and
   `git diff --check`; local Rust/Codex/adversarial review of this cleanup found
   no blocker.
+
+Latest TUI onboarding shim hardening:
+
+- 2026-06-29: Added a focused drift/security guard for the remaining inline
+  `onboarding` shim in `crates/runhaven-tui/src/tui/mod.rs`. The shim is
+  allowed only to expose the hyperlink helper required by active vendored
+  widgets, while the full onboarding module stays dormant until RunHaven owns a
+  reviewed login/browser/app-server/environment boundary. The guard checks the
+  exact inline shim body and verifies risky markers still exist somewhere under
+  `onboarding/`, so future source movement forces the boundary decision to be
+  revisited instead of silently activating login behavior.
+- Updated `crates/runhaven-tui/src/tui/README.md` to match the current vendor
+  audit: 372 RunHaven TUI files, 16 RunHaven-only files, 356 common paths, 538
+  upstream snapshot goldens not vendored, and 53 copied Codex files with local
+  edits.
+- Security boundary is unchanged: native `App`, `ChatWidget`, full onboarding,
+  app-server transport, filesystem RPC, MCP, login, workspace command
+  execution, Codex session recording, and host-reaching Codex execution remain
+  dormant or fail-closed.
+- Verified: baseline and final `cargo test -p runhaven-tui --locked`, focused
+  onboarding-shim guard test, focused `drift_tests`, `cargo fmt --check`,
+  `cargo check -p runhaven-tui --locked`, codex-vendored-tests no-run build,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `scripts/compare-codex-tui.sh`, JSON validation, snap-new scan, em dash scan
+  for changed docs/state, Rust/security/adversarial re-review after the stricter
+  guard patch, and
+  `git diff --check`.
 
 ## Blockers
 

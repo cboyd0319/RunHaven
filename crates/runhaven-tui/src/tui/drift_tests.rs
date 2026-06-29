@@ -72,6 +72,32 @@ fn module_declared(module_source: &str, module: &str) -> bool {
         .any(|line| line == private_decl || line == crate_decl || line == public_decl)
 }
 
+fn inline_module_block<'a>(module_source: &'a str, module: &str) -> &'a str {
+    let declaration = format!("pub(crate) mod {module} {{");
+    let start = module_source
+        .find(&declaration)
+        .unwrap_or_else(|| panic!("inline module {module} should be declared"));
+    let rest = &module_source[start..];
+    let mut depth = 0usize;
+
+    for (offset, character) in rest.char_indices() {
+        match character {
+            '{' => depth += 1,
+            '}' => {
+                depth = depth
+                    .checked_sub(1)
+                    .expect("inline module block should have balanced braces");
+                if depth == 0 {
+                    return &rest[..=offset];
+                }
+            }
+            _ => {}
+        }
+    }
+
+    panic!("inline module {module} should have a closing brace");
+}
+
 fn workspace_member_declared(root_manifest_source: &str, member: &str) -> bool {
     let quoted = format!("\"{member}\"");
     root_manifest_source
@@ -109,6 +135,60 @@ fn staging_facade_inline_modules_do_not_grow() {
         ["onboarding"],
         "tui/mod.rs may shrink inline staging modules, but must not grow new stand-ins"
     );
+}
+
+#[test]
+fn inline_onboarding_shim_stays_link_only_until_auth_boundary_exists() {
+    let module_source = include_str!("mod.rs");
+    let onboarding_source = tui_rust_sources()
+        .into_iter()
+        .filter(|path| relative_tui_source(path).starts_with("onboarding"))
+        .map(|path| std::fs::read_to_string(path).expect("onboarding source should be readable"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let expected_shim = r#"pub(crate) mod onboarding {
+    use ratatui::buffer::Buffer;
+    use ratatui::layout::Rect;
+
+    pub(crate) fn mark_underlined_hyperlink(buf: &mut Buffer, area: Rect, url: &str) {
+        crate::terminal_hyperlinks::mark_underlined_hyperlink(buf, area, url);
+    }
+}"#;
+
+    assert!(
+        !module_declared(module_source, "onboarding"),
+        "do not activate the full onboarding module while onboarding/auth.rs still carries login, browser, app-server, and environment-key behavior"
+    );
+    assert_eq!(
+        inline_module_block(module_source, "onboarding"),
+        expected_shim,
+        "the temporary onboarding shim may expose only the hyperlink helper needed by active vendored widgets"
+    );
+    for marker in [
+        "read_openai_api_key_from_env",
+        "webbrowser::open",
+        "AppServerRequestHandle",
+        "OPENAI_API_KEY",
+        "headless_chatgpt_login",
+        "codex_login",
+    ] {
+        assert!(
+            !module_source.contains(marker),
+            "the inline onboarding shim must not grow host-reaching auth marker {marker:?}"
+        );
+    }
+    for marker in [
+        "read_openai_api_key_from_env",
+        "webbrowser::open",
+        "AppServerRequestHandle",
+        "OPENAI_API_KEY",
+        "codex_login",
+    ] {
+        assert!(
+            onboarding_source.contains(marker),
+            "update the onboarding dormancy guard if risky onboarding marker {marker:?} moves outside onboarding/ or is removed"
+        );
+    }
 }
 
 #[test]
