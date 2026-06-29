@@ -777,7 +777,7 @@ fn agent_selection_params(
         title: None,
         subtitle: None,
         footer_note: Some(Line::from(
-            "Enter reviews the plan. Launch is still disabled in this preview.",
+            "Enter reviews the plan. Confirming will start the agent after terminal restore.",
         )),
         footer_hint: Some(footer_hint_line()),
         items,
@@ -1404,7 +1404,7 @@ fn append_confirm_plan_lines(
             Span::raw(", then press Enter."),
         ]));
         lines.push(Line::from(
-            "This step prepares the launch. The TUI will not start the container yet.",
+            "This step prepares the launch. RunHaven starts it after restoring the terminal.",
         ));
         if !confirm_input.trim().is_empty() {
             lines.push(label_value(
@@ -1415,7 +1415,7 @@ fn append_confirm_plan_lines(
         }
     } else {
         lines.push(Line::from(
-            "Press Enter to prepare launch. The TUI will not start the container yet.",
+            "Press Enter to prepare launch. RunHaven starts it after restoring the terminal.",
         ));
     }
 
@@ -1864,6 +1864,25 @@ mod tests {
 
         assert!(view.is_reviewing());
         assert!(render_to_text(&view, 100, 32).contains("/tmp/repo -> /workspace"));
+    }
+
+    #[test]
+    fn launch_copy_matches_foreground_handoff_behavior() {
+        let mut view = LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            vec![ready_preview("codex")],
+            None,
+        );
+
+        let output = render_to_text(&view, 120, 32);
+        assert!(output.contains("Confirming will start the agent after terminal restore."));
+        assert!(!output.contains("Launch is still disabled"));
+
+        view.handle_key(key(KeyCode::Enter));
+        view.handle_key(key(KeyCode::Enter));
+        let output = render_to_text(&view, 120, 32);
+        assert!(output.contains("RunHaven starts it after restoring the terminal."));
+        assert!(!output.contains("will not start the container"));
     }
 
     #[test]
