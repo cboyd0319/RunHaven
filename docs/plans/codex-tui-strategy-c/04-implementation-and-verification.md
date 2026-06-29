@@ -215,6 +215,16 @@ move `LaunchWizardView` under native `BottomPane` ownership, or add the
 smallest source-shaped host hook needed for that, before activating native
 `App`, `ChatWidget`, or app-server transport.
 
+Progress note, 2026-06-28: The live staging shell now hosts
+`LaunchWizardView` inside the real vendored `BottomPane`. Key events, paste,
+rendering, cursor placement, frame scheduling, selected-index lookup, terminal
+title, footer status, text-input routing, and footer help now flow through
+`BottomPane` or defaulted `BottomPaneView` contracts instead of direct
+launch-wizard ownership. The current read-only confirmation behavior is
+preserved because confirmation only sets a notice; the view completes only on
+cancel. Native `App` and `ChatWidget` remain dormant until their host-reaching
+surfaces are fail-closed or routed through reviewed RunHaven boundaries.
+
 Bring active:
 
 - `app.rs`

@@ -1204,6 +1204,30 @@ impl BottomPane {
             .and_then(|view| view.selected_index())
     }
 
+    pub(crate) fn active_view_terminal_title(&self) -> Option<String> {
+        self.view_stack
+            .last()
+            .and_then(|view| view.terminal_title())
+    }
+
+    pub(crate) fn active_view_footer_status_line(&self) -> Option<Line<'static>> {
+        self.view_stack
+            .last()
+            .and_then(|view| view.footer_status_line())
+    }
+
+    pub(crate) fn active_view_accepts_text_input(&self) -> bool {
+        self.view_stack
+            .last()
+            .is_some_and(|view| view.accepts_text_input())
+    }
+
+    pub(crate) fn active_view_footer_help_items(&self) -> Option<Vec<(String, String)>> {
+        self.view_stack
+            .last()
+            .and_then(|view| view.footer_help_items())
+    }
+
     pub(crate) fn active_tab_id_for_active_view(&self, view_id: &'static str) -> Option<&str> {
         self.view_stack
             .last()

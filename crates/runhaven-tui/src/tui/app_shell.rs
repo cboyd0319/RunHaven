@@ -19,10 +19,15 @@ use ratatui::text::Span;
 use ratatui::widgets::Clear;
 use ratatui::widgets::Widget;
 
+#[cfg(test)]
+use super::runhaven::launch_wizard::LAUNCH_WIZARD_VIEW_ID;
 use super::runhaven::launch_wizard::LaunchWizardView;
 use super::runhaven::service::RunHavenTuiService;
 use crate::key_hint;
 use crate::render::renderable::Renderable;
+use crate::tui::bottom_pane::AppEventSender;
+use crate::tui::bottom_pane::BottomPane;
+use crate::tui::bottom_pane::BottomPaneParams;
 use crate::tui::bottom_pane::FooterKeyHints;
 use crate::tui::bottom_pane::FooterMode;
 use crate::tui::bottom_pane::FooterProps;
@@ -31,6 +36,7 @@ use crate::tui::terminal_title::clear_terminal_title;
 use crate::tui::terminal_title::set_terminal_title;
 use tokio::runtime::Runtime;
 use tokio::sync::broadcast;
+use tokio::sync::mpsc;
 
 const TICK_RATE: Duration = Duration::from_millis(250);
 const IMAGE_SMOKE_TICK_RATE: Duration = Duration::from_millis(100);
@@ -58,7 +64,7 @@ impl Drop for TerminalRestoreGuard {
 fn run_loop(terminal: &mut DefaultTerminal, state: &mut ShellState) -> Result<()> {
     let mut redraw = true;
     loop {
-        if state.drain_image_smoke_draws() {
+        if state.drain_scheduled_draws() {
             redraw = true;
         }
 
@@ -94,7 +100,10 @@ fn run_loop(terminal: &mut DefaultTerminal, state: &mut ShellState) -> Result<()
 }
 
 struct ShellState {
-    launch_wizard: LaunchWizardView,
+    bottom_pane: BottomPane,
+    frame_runtime: Runtime,
+    frame_draw_rx: broadcast::Receiver<()>,
+    _app_event_rx: mpsc::UnboundedReceiver<crate::app_event::AppEvent>,
     image_smoke: ImageSmoke,
     show_footer_help: bool,
     last_terminal_title: Option<String>,
@@ -120,9 +129,40 @@ impl ShellState {
             launch_payload.previews,
             image_smoke_status,
         );
+        Self::from_launch_wizard(launch_wizard, image_smoke)
+    }
+
+    fn from_launch_wizard(
+        launch_wizard: LaunchWizardView,
+        image_smoke: ImageSmoke,
+    ) -> Result<Self> {
+        let frame_runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_time()
+            .build()
+            .context("start bottom pane frame scheduler")?;
+        let (draw_tx, frame_draw_rx) = broadcast::channel(16);
+        let frame_requester = {
+            let _guard = frame_runtime.enter();
+            crate::tui::FrameRequester::new(draw_tx)
+        };
+        let (app_event_tx, app_event_rx) = mpsc::unbounded_channel();
+        let mut bottom_pane = BottomPane::new(BottomPaneParams {
+            app_event_tx: AppEventSender::new(app_event_tx),
+            frame_requester,
+            has_input_focus: true,
+            enhanced_keys_supported: false,
+            placeholder_text: String::new(),
+            disable_paste_burst: true,
+            animations_enabled: true,
+            skills: None,
+        });
+        bottom_pane.show_view(Box::new(launch_wizard));
 
         Ok(Self {
-            launch_wizard,
+            bottom_pane,
+            frame_runtime,
+            frame_draw_rx,
+            _app_event_rx: app_event_rx,
             image_smoke,
             show_footer_help: false,
             last_terminal_title: None,
@@ -134,9 +174,9 @@ impl ShellState {
             return ShellAction::Continue;
         }
 
-        if self.launch_wizard.confirm_accepts_text_input() {
+        if self.confirm_accepts_text_input() {
             self.show_footer_help = false;
-            self.launch_wizard.handle_key(key);
+            self.bottom_pane.handle_key_event(key);
             return ShellAction::Continue;
         }
 
@@ -154,11 +194,11 @@ impl ShellState {
             return ShellAction::Continue;
         }
 
-        self.launch_wizard.handle_key(key);
-        if self.launch_wizard.confirm_accepts_text_input() {
+        self.bottom_pane.handle_key_event(key);
+        if self.confirm_accepts_text_input() {
             self.show_footer_help = false;
         }
-        if self.launch_wizard.is_cancelled() {
+        if !self.bottom_pane.has_active_view() {
             ShellAction::Quit
         } else {
             ShellAction::Continue
@@ -167,7 +207,7 @@ impl ShellState {
 
     fn handle_paste(&mut self, pasted: &str) {
         self.show_footer_help = false;
-        self.launch_wizard.handle_paste(pasted);
+        self.bottom_pane.handle_paste(pasted.to_string());
     }
 
     fn tick_rate(&self) -> Duration {
@@ -194,8 +234,26 @@ impl ShellState {
         self.image_smoke.clear(terminal)
     }
 
-    fn drain_image_smoke_draws(&mut self) -> bool {
-        self.image_smoke.drain_draws()
+    fn drain_scheduled_draws(&mut self) -> bool {
+        self.drain_bottom_pane_draws() || self.image_smoke.drain_draws()
+    }
+
+    fn drain_bottom_pane_draws(&mut self) -> bool {
+        self.frame_runtime.block_on(async {
+            tokio::task::yield_now().await;
+        });
+
+        let mut requested = false;
+        loop {
+            match self.frame_draw_rx.try_recv() {
+                Ok(()) => requested = true,
+                Err(broadcast::error::TryRecvError::Lagged(_)) => requested = true,
+                Err(
+                    broadcast::error::TryRecvError::Empty | broadcast::error::TryRecvError::Closed,
+                ) => break,
+            }
+        }
+        requested
     }
 
     fn refresh_terminal_title(&mut self) {
@@ -217,7 +275,13 @@ impl ShellState {
     }
 
     fn terminal_title(&self) -> String {
-        self.launch_wizard.terminal_title()
+        self.bottom_pane
+            .active_view_terminal_title()
+            .unwrap_or_else(|| "RunHaven".to_string())
+    }
+
+    fn confirm_accepts_text_input(&self) -> bool {
+        self.bottom_pane.active_view_accepts_text_input()
     }
 
     fn footer_height(&self) -> u16 {
@@ -269,10 +333,10 @@ impl ShellState {
             collaboration_modes_enabled: false,
             is_wsl: false,
             quit_shortcut_key: key_hint::plain(KeyCode::Char('q')),
-            status_line_value: Some(self.launch_wizard.footer_status_line()),
+            status_line_value: self.bottom_pane.active_view_footer_status_line(),
             status_line_enabled: true,
             key_hints: FooterKeyHints {
-                toggle_shortcuts: if self.launch_wizard.confirm_accepts_text_input() {
+                toggle_shortcuts: if self.confirm_accepts_text_input() {
                     None
                 } else {
                     Some(key_hint::plain(KeyCode::Char('?')))
@@ -291,27 +355,15 @@ impl ShellState {
     }
 
     fn footer_help_items(&self) -> Vec<(String, String)> {
-        let mut items = if self.launch_wizard.confirm_accepts_text_input() {
-            vec![
-                ("esc".to_string(), "back".to_string()),
-                ("enter".to_string(), "confirm".to_string()),
-            ]
-        } else if self.launch_wizard.is_reviewing() || self.launch_wizard.is_confirming() {
-            vec![
-                ("b".to_string(), "back".to_string()),
-                ("esc".to_string(), "back".to_string()),
-                ("enter".to_string(), "confirm".to_string()),
-                ("q".to_string(), "quit".to_string()),
-            ]
-        } else {
-            vec![
-                ("up/down".to_string(), "choose".to_string()),
-                ("enter".to_string(), "review".to_string()),
-                ("q".to_string(), "quit".to_string()),
-            ]
-        };
-        items.push(("?".to_string(), "hide help".to_string()));
-        items
+        self.bottom_pane
+            .active_view_footer_help_items()
+            .unwrap_or_default()
+    }
+
+    #[cfg(test)]
+    fn selected_index(&self) -> Option<usize> {
+        self.bottom_pane
+            .selected_index_for_active_view(LAUNCH_WIZARD_VIEW_ID)
     }
 }
 
@@ -508,10 +560,10 @@ fn render(frame: &mut Frame<'_>, state: &mut ShellState) {
         height: footer_height,
         ..area
     };
-    state.launch_wizard.render(content_area, frame.buffer_mut());
+    Renderable::render(&state.bottom_pane, content_area, frame.buffer_mut());
     state.render_footer(footer_area, frame.buffer_mut());
     state.prepare_image_smoke_draw(content_area, footer_area.y);
-    if let Some(cursor) = state.launch_wizard.confirm_cursor_position(content_area) {
+    if let Some(cursor) = state.bottom_pane.cursor_pos(content_area) {
         frame.set_cursor_position(cursor);
     }
 }
@@ -527,14 +579,12 @@ mod tests {
     #[test]
     fn shell_state_builds_default_launch_previews() {
         let workspace = tempfile::tempdir().expect("workspace");
-        let state = ShellState::for_workspace(workspace.path()).expect("state");
+        let mut state = ShellState::for_workspace(workspace.path()).expect("state");
 
-        assert!(state.launch_wizard.agent_count() > 0);
-        assert_eq!(
-            state.launch_wizard.selected_agent_name(),
-            Some("antigravity")
-        );
-        assert!(state.launch_wizard.search_values_are_populated());
+        let output = render_to_text(&mut state, 120, 32);
+        assert!(output.contains("antigravity"));
+        assert!(output.contains("Google Antigravity CLI"));
+        assert_eq!(state.selected_index(), Some(0));
     }
 
     #[test]
@@ -542,22 +592,22 @@ mod tests {
         let workspace = tempfile::tempdir().expect("workspace");
         let mut state = ShellState::for_workspace(workspace.path()).expect("state");
 
-        assert_eq!(state.launch_wizard.selected_index(), 0);
+        assert_eq!(state.selected_index(), Some(0));
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert_eq!(state.launch_wizard.selected_index(), 1);
+        assert_eq!(state.selected_index(), Some(1));
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert_eq!(state.launch_wizard.selected_index(), 0);
+        assert_eq!(state.selected_index(), Some(0));
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert!(state.launch_wizard.is_reviewing());
+        assert!(render_to_text(&mut state, 120, 32).contains("Step 3/4: Review plan"));
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE)),
             ShellAction::Quit
@@ -584,7 +634,7 @@ mod tests {
             state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert!(state.launch_wizard.is_reviewing());
+        assert!(render_to_text(&mut state, 120, 32).contains("Step 3/4: Review plan"));
 
         let output = render_to_text(&mut state, 120, 48);
         assert!(output.contains("Step 3/4: Review plan"));
@@ -601,7 +651,7 @@ mod tests {
             state.handle_key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert!(!state.launch_wizard.is_reviewing());
+        assert!(render_to_text(&mut state, 120, 32).contains("Step 1/4: Choose agent"));
     }
 
     #[test]
@@ -613,12 +663,12 @@ mod tests {
             state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert!(state.launch_wizard.is_reviewing());
+        assert!(render_to_text(&mut state, 120, 32).contains("Step 3/4: Review plan"));
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert!(!state.launch_wizard.is_reviewing());
+        assert!(render_to_text(&mut state, 120, 32).contains("Step 1/4: Choose agent"));
     }
 
     #[test]
@@ -630,14 +680,14 @@ mod tests {
             state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert!(state.launch_wizard.is_reviewing());
+        assert!(render_to_text(&mut state, 120, 32).contains("Step 3/4: Review plan"));
 
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
             ShellAction::Continue
         );
 
-        assert!(state.launch_wizard.is_confirming());
+        assert!(render_to_text(&mut state, 120, 32).contains("Step 4/4: Confirm launch"));
     }
 
     #[test]
@@ -653,14 +703,14 @@ mod tests {
             state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert!(state.launch_wizard.is_confirming());
+        assert!(render_to_text(&mut state, 120, 32).contains("Step 4/4: Confirm launch"));
 
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)),
             ShellAction::Continue
         );
 
-        assert!(state.launch_wizard.is_reviewing());
+        assert!(render_to_text(&mut state, 120, 32).contains("Step 3/4: Review plan"));
     }
 
     #[test]
@@ -676,7 +726,7 @@ mod tests {
             state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert!(state.launch_wizard.is_confirming());
+        assert!(render_to_text(&mut state, 120, 32).contains("Step 4/4: Confirm launch"));
 
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE)),
@@ -702,7 +752,7 @@ mod tests {
             ShellAction::Continue
         );
 
-        assert!(state.launch_wizard.confirm_accepts_text_input());
+        assert!(state.confirm_accepts_text_input());
         assert!(!state.show_footer_help);
         let output = render_to_text(&mut state, 120, 32);
         assert!(!output.contains("? help"));
@@ -716,11 +766,11 @@ mod tests {
             state.handle_key(KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert_eq!(state.launch_wizard.confirm_text(), "?q");
+        assert!(render_to_text(&mut state, 120, 32).contains("?q"));
         assert!(!state.show_footer_help);
 
         state.handle_paste("launch");
-        assert_eq!(state.launch_wizard.confirm_text(), "?q");
+        assert!(render_to_text(&mut state, 120, 32).contains("?q"));
         let output = render_to_text(&mut state, 120, 32);
         assert!(output.contains("Paste is ignored here."));
 
@@ -874,15 +924,12 @@ mod tests {
         let workspace = tempfile::tempdir().expect("workspace");
         let mut state = ShellState::for_workspace(workspace.path()).expect("state");
 
-        assert_eq!(
-            state.launch_wizard.selected_agent_name(),
-            Some("antigravity")
-        );
+        assert!(state.terminal_title().contains("antigravity"));
         assert_eq!(
             state.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE)),
             ShellAction::Continue
         );
-        assert_eq!(state.launch_wizard.selected_agent_name(), Some("claude"));
+        assert!(state.terminal_title().contains("claude"));
     }
 
     #[test]
@@ -1004,16 +1051,15 @@ mod tests {
     }
 
     fn confirm_required_shell_state() -> ShellState {
-        ShellState {
-            launch_wizard: LaunchWizardView::new(
+        ShellState::from_launch_wizard(
+            LaunchWizardView::new(
                 PathBuf::from("/tmp/project"),
                 vec![confirm_required_preview_for_tests()],
                 None,
             ),
-            image_smoke: ImageSmoke::Disabled,
-            show_footer_help: false,
-            last_terminal_title: None,
-        }
+            ImageSmoke::Disabled,
+        )
+        .expect("state")
     }
 
     fn render_to_text(state: &mut ShellState, width: u16, height: u16) -> String {

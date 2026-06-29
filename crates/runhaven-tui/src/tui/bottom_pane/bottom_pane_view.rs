@@ -4,6 +4,7 @@ use crate::bottom_pane::McpServerElicitationFormRequest;
 use crate::render::renderable::Renderable;
 use codex_app_server_protocol::ToolRequestUserInputParams;
 use crossterm::event::KeyEvent;
+use ratatui::text::Line;
 use std::time::Instant;
 
 use super::CancellationEvent;
@@ -47,6 +48,26 @@ pub(crate) trait BottomPaneView: Renderable {
     /// Actual item index for list-based views that want to preserve selection
     /// across external refreshes.
     fn selected_index(&self) -> Option<usize> {
+        None
+    }
+
+    /// Optional terminal title for host shells that show a root view before `ChatWidget` is active.
+    fn terminal_title(&self) -> Option<String> {
+        None
+    }
+
+    /// Optional footer status line for host shells that show a root view before `ChatWidget` is active.
+    fn footer_status_line(&self) -> Option<Line<'static>> {
+        None
+    }
+
+    /// Return true when this view should receive plain shortcut keys as text input.
+    fn accepts_text_input(&self) -> bool {
+        false
+    }
+
+    /// Optional expanded footer help for host shells that show a root view before `ChatWidget` is active.
+    fn footer_help_items(&self) -> Option<Vec<(String, String)>> {
         None
     }
 

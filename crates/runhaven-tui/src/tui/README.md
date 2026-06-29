@@ -123,7 +123,7 @@ Current vendor audit summary:
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
 - RunHaven-only files: 12.
-- Copied Codex files with local edits: 42.
+- Copied Codex files with local edits: 43.
 
 RunHaven-only files:
 
@@ -149,6 +149,7 @@ app.rs
 app/pets.rs
 bottom_pane/app_link_view.rs
 bottom_pane/approval_overlay.rs
+bottom_pane/bottom_pane_view.rs
 bottom_pane/chat_composer.rs
 bottom_pane/command_popup.rs
 bottom_pane/feedback_view.rs
@@ -214,6 +215,10 @@ Local integration exceptions:
   small re-exports for the temporary shell and gates snapshot-heavy upstream
   tests behind `codex-vendored-tests` until RunHaven intentionally tracks
   those goldens.
+- `bottom_pane/bottom_pane_view.rs` keeps defaulted, read-only chrome hooks for
+  the temporary shell to show title, footer status, footer help, and text-input
+  shortcut policy while a root `BottomPaneView` is hosted before native
+  `ChatWidget` ownership is active.
 - `keymap.rs` is now compiled file-backed from the vendored Codex TUI source
   against the real `codex-config` crate, including
   `codex_config::types::{KeybindingsSpec, TuiKeymap, MAX_FUNCTION_KEY}`.

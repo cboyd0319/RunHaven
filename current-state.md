@@ -802,6 +802,32 @@ Latest Codex reduced app-server client compatibility authority:
   `cargo check -p runhaven-tui --offline`, and
   `cargo test -p runhaven-tui --locked drift_tests --quiet`.
 
+Latest TUI native bottom-pane ownership:
+
+- 2026-06-28: The live staging `app_shell.rs` now hosts `LaunchWizardView`
+  inside the real vendored `BottomPane`. Key events, paste, render, cursor
+  placement, frame scheduling, selected-index lookup, terminal title, footer
+  status, text-input routing, and footer help now flow through `BottomPane` or
+  defaulted `BottomPaneView` contracts instead of direct launch-wizard
+  ownership.
+- This preserves read-only confirmation behavior: confirming a plan sets the
+  existing disabled-launch notice and keeps the view active; the view completes
+  only on cancel. Native `App`, `ChatWidget`, real `app_server_session`, and
+  app-server transport remain dormant until host-reaching surfaces are
+  removed, fail-closed, or routed through reviewed RunHaven boundaries.
+- Verified so far:
+  `cargo fmt --check`,
+  `cargo test -p runhaven-tui --locked app_shell --quiet`,
+  `cargo test -p runhaven-tui --locked launch_wizard --quiet`,
+  `cargo test -p runhaven-tui --locked --quiet`,
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`,
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`,
+  `cargo run --locked --bin runhaven-check-pins --quiet`,
+  `python3 -m json.tool feature_list.json`,
+  `find crates/runhaven-tui/src/tui -name '*.snap.new' -print`,
+  `scripts/compare-codex-tui.sh`, and
+  `git diff --check`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -811,10 +837,11 @@ Latest Codex reduced app-server client compatibility authority:
 Continue TUI integration from `docs/plans/codex-tui-strategy-c/` with Phase 4,
 bottom-pane-first. `workspace_messages.rs` is active from real vendored source,
 and `launch_wizard.rs` implements `BottomPaneView` for the current
-picker/review/confirm flow. The next slice should move that view under native
-`BottomPane` ownership or add the smallest source-shaped host hook needed to do
-so. Do not activate native `App`, `ChatWidget`, real `app_server_session`, or
-app-server transport until host-reaching markers are removed, fail-closed, or
-routed through a reviewed RunHaven boundary. Foreground launch remains read-only
-until the native Codex app loop owns terminal restore and `launch_run_plan` is
-wired through the UI thread.
+picker/review/confirm flow, and the staging shell now hosts that view inside
+native `BottomPane`. The next slice should continue Phase 4 toward native
+`App`/`ChatWidget` ownership without adding new product screens to
+`app_shell.rs`. Do not activate native `App`, `ChatWidget`, real
+`app_server_session`, or app-server transport until host-reaching markers are
+removed, fail-closed, or routed through a reviewed RunHaven boundary.
+Foreground launch remains read-only until the native Codex app loop owns
+terminal restore and `launch_run_plan` is wired through the UI thread.

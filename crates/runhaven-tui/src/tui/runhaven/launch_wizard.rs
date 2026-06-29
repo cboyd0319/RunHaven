@@ -76,6 +76,7 @@ enum LaunchWizardScreen {
 }
 
 const CONFIRM_PHRASE: &str = "launch";
+pub(crate) const LAUNCH_WIZARD_VIEW_ID: &str = "runhaven.launch_wizard";
 
 impl LaunchWizardView {
     pub(crate) fn new(
@@ -116,6 +117,7 @@ impl LaunchWizardView {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn handle_key(&mut self, key: KeyEvent) {
         self.handle_key_event(key);
     }
@@ -202,33 +204,14 @@ impl LaunchWizardView {
             .is_some_and(|plan| plan.confirm_required)
     }
 
+    #[cfg(test)]
     pub(crate) fn is_cancelled(&self) -> bool {
         self.completion == Some(ViewCompletion::Cancelled)
-    }
-
-    #[cfg(test)]
-    pub(crate) fn selected_index(&self) -> usize {
-        self.selected_idx.load(Ordering::Relaxed)
     }
 
     pub(crate) fn selected_agent_name(&self) -> Option<&str> {
         selected_decision(&self.decisions, &self.selected_idx)
             .map(|decision| decision.agent.name.as_str())
-    }
-
-    #[cfg(test)]
-    pub(crate) fn agent_count(&self) -> usize {
-        self.decisions.len()
-    }
-
-    #[cfg(test)]
-    pub(crate) fn search_values_are_populated(&self) -> bool {
-        self.decisions.iter().all(|decision| {
-            let search_value = decision.search_value();
-            !search_value.trim().is_empty()
-                && search_value.contains(&decision.agent.name)
-                && search_value.contains(&decision.network_label)
-        })
     }
 
     pub(crate) fn is_reviewing(&self) -> bool {
@@ -346,6 +329,46 @@ impl BottomPaneView for LaunchWizardView {
 
     fn selected_index(&self) -> Option<usize> {
         Some(self.selected_idx.load(Ordering::Relaxed))
+    }
+
+    fn view_id(&self) -> Option<&'static str> {
+        Some(LAUNCH_WIZARD_VIEW_ID)
+    }
+
+    fn terminal_title(&self) -> Option<String> {
+        Some(LaunchWizardView::terminal_title(self))
+    }
+
+    fn footer_status_line(&self) -> Option<Line<'static>> {
+        Some(LaunchWizardView::footer_status_line(self))
+    }
+
+    fn accepts_text_input(&self) -> bool {
+        self.confirm_accepts_text_input()
+    }
+
+    fn footer_help_items(&self) -> Option<Vec<(String, String)>> {
+        let mut items = if self.confirm_accepts_text_input() {
+            vec![
+                ("esc".to_string(), "back".to_string()),
+                ("enter".to_string(), "confirm".to_string()),
+            ]
+        } else if self.is_reviewing() || self.is_confirming() {
+            vec![
+                ("b".to_string(), "back".to_string()),
+                ("esc".to_string(), "back".to_string()),
+                ("enter".to_string(), "confirm".to_string()),
+                ("q".to_string(), "quit".to_string()),
+            ]
+        } else {
+            vec![
+                ("up/down".to_string(), "choose".to_string()),
+                ("enter".to_string(), "review".to_string()),
+                ("q".to_string(), "quit".to_string()),
+            ]
+        };
+        items.push(("?".to_string(), "hide help".to_string()));
+        Some(items)
     }
 
     fn on_ctrl_c(&mut self) -> CancellationEvent {
@@ -1205,11 +1228,15 @@ fn workspace_title(workspace: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tui::bottom_pane::AppEventSender;
+    use crate::tui::bottom_pane::BottomPane;
+    use crate::tui::bottom_pane::BottomPaneParams;
     use crate::tui::runhaven::service::LaunchPreviewError;
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
     use runhaven_core::ui_contracts::LaunchBoundaryData;
     use runhaven_core::ui_contracts::LaunchNetworkData;
+    use tokio::sync::mpsc;
 
     fn ready_preview(name: &str) -> AgentLaunchPreview {
         AgentLaunchPreview {
@@ -1293,7 +1320,7 @@ mod tests {
         KeyEvent::new(code, modifiers)
     }
 
-    fn render_to_text(view: &LaunchWizardView, width: u16, height: u16) -> String {
+    fn render_to_text(view: &impl Renderable, width: u16, height: u16) -> String {
         let mut terminal = Terminal::new(TestBackend::new(width, height)).expect("test terminal");
         terminal
             .draw(|frame| view.render(frame.area(), frame.buffer_mut()))
@@ -1310,6 +1337,26 @@ mod tests {
             })
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    fn bottom_pane_with_launch_wizard(previews: Vec<AgentLaunchPreview>) -> BottomPane {
+        let (app_event_tx, _app_event_rx) = mpsc::unbounded_channel();
+        let mut pane = BottomPane::new(BottomPaneParams {
+            app_event_tx: AppEventSender::new(app_event_tx),
+            frame_requester: crate::tui::FrameRequester::test_dummy(),
+            has_input_focus: true,
+            enhanced_keys_supported: false,
+            placeholder_text: String::new(),
+            disable_paste_burst: true,
+            animations_enabled: true,
+            skills: None,
+        });
+        pane.show_view(Box::new(LaunchWizardView::new(
+            PathBuf::from("/tmp/project"),
+            previews,
+            None,
+        )));
+        pane
     }
 
     #[test]
@@ -1577,6 +1624,29 @@ mod tests {
             view.confirm_notice.as_deref(),
             Some("Type launch before confirming.")
         );
+    }
+
+    #[test]
+    fn native_bottom_pane_hosts_launch_wizard_without_shell_shortcuts() {
+        let mut pane = bottom_pane_with_launch_wizard(vec![confirm_required_preview("codex")]);
+
+        pane.handle_key_event(key(KeyCode::Enter));
+        assert!(render_to_text(&pane, 100, 32).contains("Step 3/4: Review plan"));
+
+        pane.handle_key_event(key(KeyCode::Esc));
+        assert!(render_to_text(&pane, 100, 32).contains("Step 1/4: Choose agent"));
+
+        pane.handle_key_event(key(KeyCode::Enter));
+        pane.handle_key_event(key(KeyCode::Enter));
+        pane.handle_key_event(key(KeyCode::Char('q')));
+        assert!(render_to_text(&pane, 100, 32).contains("q"));
+
+        pane.handle_key_event(key(KeyCode::Esc));
+        assert!(render_to_text(&pane, 100, 32).contains("Step 3/4: Review plan"));
+        pane.handle_key_event(key(KeyCode::Esc));
+        assert!(render_to_text(&pane, 100, 32).contains("Step 1/4: Choose agent"));
+        pane.handle_key_event(key(KeyCode::Esc));
+        assert!(!pane.has_active_view());
     }
 
     #[test]
