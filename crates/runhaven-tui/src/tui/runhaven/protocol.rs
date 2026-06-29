@@ -14,6 +14,12 @@ pub(crate) enum ClientRequest {
         request_id: RequestId,
         workspace: PathBuf,
     },
+    RunHavenRunLogSnapshot {
+        request_id: RequestId,
+        run_id: String,
+        lines: u32,
+        confirm_sensitive_output: bool,
+    },
     Unsupported {
         request_id: RequestId,
         method: UnsupportedMethod,
@@ -30,6 +36,7 @@ impl ClientRequest {
         match self {
             Self::RunHavenAgentList { request_id }
             | Self::RunHavenValidateWorkspace { request_id, .. }
+            | Self::RunHavenRunLogSnapshot { request_id, .. }
             | Self::Unsupported { request_id, .. } => *request_id,
             #[cfg(test)]
             Self::BackendFailureForTest { request_id, .. } => *request_id,
@@ -40,6 +47,7 @@ impl ClientRequest {
         match self {
             Self::RunHavenAgentList { .. } => "runhaven/agent/list",
             Self::RunHavenValidateWorkspace { .. } => "runhaven/workspace/validate",
+            Self::RunHavenRunLogSnapshot { .. } => "runhaven/run/logSnapshot",
             Self::Unsupported { method, .. } => method.method(),
             #[cfg(test)]
             Self::BackendFailureForTest { .. } => "runhaven/test/backendFailure",
@@ -247,5 +255,18 @@ mod tests {
         assert!(protocol_source.contains(&display_plan_field));
         assert!(!protocol_source.contains(&prepared_launch_marker));
         assert!(!protocol_source.contains(&executable_plan_marker));
+    }
+
+    #[test]
+    fn run_log_snapshot_request_uses_runhaven_method() {
+        let request = ClientRequest::RunHavenRunLogSnapshot {
+            request_id: 42,
+            run_id: "run-123".to_string(),
+            lines: 100,
+            confirm_sensitive_output: true,
+        };
+
+        assert_eq!(request.request_id(), 42);
+        assert_eq!(request.method(), "runhaven/run/logSnapshot");
     }
 }

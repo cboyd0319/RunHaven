@@ -1081,6 +1081,48 @@ Latest TUI foreground launch handoff:
   `python3 -m json.tool feature_list.json >/dev/null`, snap-new scan, and
   `git diff --check`.
 
+Latest TUI active-run log snapshot seam:
+
+- 2026-06-29: Added the first active-run transcript/log backing route without
+  adding product UI to `app_shell.rs`. `runhaven/run/logSnapshot` now flows
+  through the local RunHaven protocol, in-process client, service, and session
+  bridge into `runhaven_core::runtime::active::active_run_log_snapshot_payload`.
+  The shared UI contract exposes `ActiveRunLogSnapshotData` as camelCase display
+  data converted from the existing core snake_case payload.
+- Guard posture: only `runhaven/service.rs` may call the active-run log snapshot
+  runtime API, raw-output requests require explicit confirmation before
+  validation or backend lookup, malformed line counts fail validation before
+  active-run or container log lookup, and `app_shell.rs` must not grow active-run
+  log product behavior. This does not activate native `App`, `ChatWidget`,
+  app-server transport, filesystem RPC, MCP, login, workspace command execution,
+  Codex session recording, or host-reaching Codex execution. Future visible log
+  UI must add a redaction and session-recording policy before it renders,
+  caches, or logs raw container output.
+- Verified:
+  red compile failures for the missing `ActiveRunLogSnapshotData`,
+  `RunHavenRunLogSnapshot`, and `AppServerSession::run_log_snapshot` APIs;
+  `cargo test -p runhaven-core --locked active_run_log_snapshot_contract -- --show-output`;
+  `cargo test -p runhaven-tui --locked run_log_snapshot_request_uses_runhaven_method -- --show-output`;
+  `cargo test -p runhaven-tui --locked log_snapshot_requires_sensitive_output_confirmation_before_backend_lookup -- --show-output`;
+  `cargo test -p runhaven-tui --locked run_log_snapshot_requires_sensitive_output_confirmation_before_backend_lookup -- --show-output`;
+  `cargo test -p runhaven-tui --locked log_snapshot_rejects_invalid_line_count_before_backend_lookup -- --show-output`;
+  `cargo test -p runhaven-tui --locked active_run_log_snapshot_route_stays_in_runhaven_facade -- --show-output`;
+  `cargo check -p runhaven-core --locked`;
+  `cargo check -p runhaven-tui --locked`;
+  `cargo test -p runhaven-core --locked --quiet` (78 passed);
+  `cargo test -p runhaven-tui --locked --quiet` (767 passed, 5 ignored);
+  `cargo test -p runhaven-tui --locked --features codex-vendored-tests --no-run`;
+  `cargo clippy -p runhaven-core --all-targets --locked -- -D warnings`;
+  `cargo clippy -p runhaven-tui --all-targets --locked -- -D warnings`;
+  `cargo run --locked --bin runhaven-check-pins --quiet`;
+  `scripts/compare-codex-tui.sh`;
+  `cargo fmt --check`;
+  `python3 -m json.tool feature_list.json >/dev/null`;
+  snap-new scan;
+  `git diff --check`;
+  codex-tui-expert review, adversarial-reviewer review, and rust-expert
+  re-review after the sensitive-output confirmation fix.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
@@ -1104,13 +1146,14 @@ Codex `Tui` plus `TuiEventStream`. `branch_summary.rs` and the
 with Codex app-server command execution still compiled dormant. The inline
 root `status` bridge is gone, but the full Codex `status/` module remains
 dormant until its broader dependency and security closure is designed.
-`session_log.rs` is active as source-first support, but session recording is
-not initialized from the active RunHaven path. Workspace selection is active
-for current directory versus git repository root choices, and confirmation now
-hands a `PreparedLaunch` to the UI-thread foreground handoff. The next slices
-should continue the MVP path without adding product screens to `app_shell.rs`:
-active run transcript/logs, diagnostics, policy changes, and post-run TUI
-recovery. Do not activate
+`session_log.rs` is active as source-first support, but session recording is not
+initialized from the active RunHaven path. Workspace selection is active for
+current directory versus git repository root choices, confirmation now hands a
+`PreparedLaunch` to the UI-thread foreground handoff, and the active-run log
+snapshot backend seam is typed and raw-output confirmation-gated through the
+local RunHaven facade. The next slices should continue the MVP path without
+adding product screens to `app_shell.rs`: visible active-run transcript/logs,
+diagnostics, policy changes, and post-run TUI recovery. Do not activate
 native `App`, `ChatWidget`, full `status/`, real `app_server_session`,
 app-server transport, filesystem RPC, MCP, login, workspace command execution,
 Codex session recording initialization, or host-reaching execution until those

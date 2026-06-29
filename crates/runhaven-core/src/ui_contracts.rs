@@ -10,6 +10,7 @@ use crate::runtime::profiles::AgentProfile;
 pub enum RunHavenComponentPayload {
     AgentCatalog(AgentCatalogData),
     LaunchPlan(Box<LaunchPlanData>),
+    ActiveRunLogSnapshot(Box<ActiveRunLogSnapshotData>),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -49,6 +50,19 @@ pub struct LaunchPlanData {
     pub command: String,
     pub safety_notes: Vec<String>,
     pub confirm_required: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActiveRunLogSnapshotData {
+    pub run_id: String,
+    pub captured_at: String,
+    pub requested_lines: u32,
+    pub text: String,
+    pub returned_lines: usize,
+    pub truncated: bool,
+    pub source: String,
+    pub warnings: Vec<String>,
 }
 
 impl AgentCatalogData {
@@ -164,6 +178,35 @@ impl LaunchPlanData {
             safety_notes: plan.security_notices.clone(),
             confirm_required: !plan.security_notices.is_empty(),
         }
+    }
+}
+
+impl ActiveRunLogSnapshotData {
+    pub fn from_active_log_snapshot_payload(value: serde_json::Value) -> serde_json::Result<Self> {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "snake_case")]
+        struct RawActiveRunLogSnapshotData {
+            run_id: String,
+            captured_at: String,
+            requested_lines: u32,
+            text: String,
+            returned_lines: usize,
+            truncated: bool,
+            source: String,
+            warnings: Vec<String>,
+        }
+
+        let raw: RawActiveRunLogSnapshotData = serde_json::from_value(value)?;
+        Ok(Self {
+            run_id: raw.run_id,
+            captured_at: raw.captured_at,
+            requested_lines: raw.requested_lines,
+            text: raw.text,
+            returned_lines: raw.returned_lines,
+            truncated: raw.truncated,
+            source: raw.source,
+            warnings: raw.warnings,
+        })
     }
 }
 
@@ -295,6 +338,83 @@ mod tests {
         let encoded = serde_json::to_string(&payload).expect("serialize");
         let decoded: RunHavenComponentPayload =
             serde_json::from_str(&encoded).expect("deserialize");
+
+        assert_eq!(decoded, payload);
+    }
+
+    #[test]
+    fn active_run_log_snapshot_contract_maps_core_payload_to_ui_shape() {
+        let payload = crate::runtime::active::log_snapshot_payload_from_stdout(
+            "run-123",
+            20,
+            b"one\ntwo\n",
+            64,
+        )
+        .expect("active run log payload");
+
+        let data = ActiveRunLogSnapshotData::from_active_log_snapshot_payload(payload)
+            .expect("active run log snapshot data");
+
+        assert_eq!(data.run_id, "run-123");
+        assert!(!data.captured_at.is_empty());
+        assert_eq!(data.requested_lines, 20);
+        assert_eq!(data.text, "one\ntwo\n");
+        assert_eq!(data.returned_lines, 2);
+        assert!(!data.truncated);
+        assert_eq!(data.source, "container-stdio");
+        assert!(data.warnings.iter().any(|warning| {
+            warning.contains("Raw container output") && warning.contains("workspace content")
+        }));
+    }
+
+    #[test]
+    fn active_run_log_snapshot_contract_serializes_camel_case() {
+        let payload =
+            crate::runtime::active::log_snapshot_payload_from_stdout("run-123", 50, b"line\n", 64)
+                .expect("active run log payload");
+        let data = ActiveRunLogSnapshotData::from_active_log_snapshot_payload(payload)
+            .expect("active run log snapshot data");
+
+        let encoded = serde_json::to_value(&data).expect("serialize snapshot data");
+
+        assert!(encoded.get("runId").is_some());
+        assert!(encoded.get("capturedAt").is_some());
+        assert!(encoded.get("requestedLines").is_some());
+        assert!(encoded.get("returnedLines").is_some());
+        assert!(encoded.get("run_id").is_none());
+        assert!(encoded.get("captured_at").is_none());
+        assert!(encoded.get("requested_lines").is_none());
+        assert!(encoded.get("returned_lines").is_none());
+    }
+
+    #[test]
+    fn active_run_log_snapshot_component_payload_round_trips_json() {
+        let payload =
+            crate::runtime::active::log_snapshot_payload_from_stdout("run-123", 20, b"one\n", 64)
+                .expect("active run log payload");
+        let data = ActiveRunLogSnapshotData::from_active_log_snapshot_payload(payload)
+            .expect("active run log snapshot data");
+        let payload = RunHavenComponentPayload::ActiveRunLogSnapshot(Box::new(data));
+
+        let encoded = serde_json::to_value(&payload).expect("serialize snapshot payload");
+
+        assert_eq!(
+            encoded.get("type").and_then(serde_json::Value::as_str),
+            Some("activeRunLogSnapshot")
+        );
+        let data = encoded.get("data").expect("snapshot data");
+        assert_eq!(
+            data.get("runId").and_then(serde_json::Value::as_str),
+            Some("run-123")
+        );
+        assert!(data.get("requestedLines").is_some());
+        assert!(data.get("returnedLines").is_some());
+        assert!(data.get("run_id").is_none());
+        assert!(data.get("requested_lines").is_none());
+        assert!(data.get("returned_lines").is_none());
+
+        let decoded: RunHavenComponentPayload =
+            serde_json::from_value(encoded).expect("deserialize snapshot payload");
 
         assert_eq!(decoded, payload);
     }

@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 use std::time::Instant;
 
+use runhaven_core::ui_contracts::ActiveRunLogSnapshotData;
 use runhaven_core::ui_contracts::AgentCatalogData;
 
 use super::app_server_client::AppServerClient;
@@ -72,6 +73,23 @@ impl AppServerSession {
             .request_typed(ClientRequest::RunHavenValidateWorkspace {
                 request_id,
                 workspace,
+            })
+            .await
+    }
+
+    pub(crate) async fn run_log_snapshot(
+        &mut self,
+        run_id: String,
+        lines: u32,
+        confirm_sensitive_output: bool,
+    ) -> Result<ActiveRunLogSnapshotData, TypedRequestError> {
+        let request_id = self.alloc_request_id();
+        self.client
+            .request_typed(ClientRequest::RunHavenRunLogSnapshot {
+                request_id,
+                run_id,
+                lines,
+                confirm_sensitive_output,
             })
             .await
     }
@@ -151,6 +169,46 @@ mod tests {
                 other => panic!("expected unsupported error, got {other:?}"),
             }
         }
+        session.shutdown().await.expect("shutdown");
+    }
+
+    #[tokio::test]
+    async fn run_log_snapshot_rejects_invalid_line_count_before_backend_lookup() {
+        let mut session = AppServerSession::start_in_process(RunHavenTuiService::new());
+
+        let error = session
+            .run_log_snapshot("not-a-real-run".to_string(), 0, true)
+            .await
+            .expect_err("invalid line count should fail validation");
+
+        match error {
+            TypedRequestError::Validation { method, message } => {
+                assert_eq!(method, "runhaven/run/logSnapshot");
+                assert!(message.contains("between 1 and 500"));
+            }
+            other => panic!("expected validation error, got {other:?}"),
+        }
+
+        session.shutdown().await.expect("shutdown");
+    }
+
+    #[tokio::test]
+    async fn run_log_snapshot_requires_sensitive_output_confirmation_before_backend_lookup() {
+        let mut session = AppServerSession::start_in_process(RunHavenTuiService::new());
+
+        let error = session
+            .run_log_snapshot("not-a-real-run".to_string(), 100, false)
+            .await
+            .expect_err("missing confirmation should fail validation");
+
+        match error {
+            TypedRequestError::Validation { method, message } => {
+                assert_eq!(method, "runhaven/run/logSnapshot");
+                assert!(message.contains("Confirm raw log viewing"));
+            }
+            other => panic!("expected validation error, got {other:?}"),
+        }
+
         session.shutdown().await.expect("shutdown");
     }
 }

@@ -326,16 +326,18 @@ Local integration exceptions:
   uses the shared Codex `FrameRequester` for bottom-pane and pet redraws.
 - `runhaven/service.rs` is the temporary RunHaven TUI service seam. It turns
   `runhaven-core` profiles and planner output into launch preview payloads, so
-  `app_shell.rs` does not call core planner APIs directly and
-  `launch_wizard.rs` stays UI-owned.
+  `app_shell.rs` does not call core planner APIs directly. It also owns the
+  confirmation-gated active-run log snapshot route, keeping malformed or
+  unconfirmed raw-output requests from reaching container log lookup.
 - `runhaven/protocol.rs` and `runhaven/app_server_client.rs` are the local
   Strategy C backend facade. They mirror Codex's app-server client shape while
   keeping RunHaven runtime authority in `runhaven-core` and fail-closing
   unsupported Codex method families.
 - `runhaven/app_server_session.rs` is the local Strategy C session bridge for
   this phase. It routes supported bootstrap, agent-catalog, and workspace
-  validation calls into the RunHaven facade and returns typed unsupported errors
-  for method families that are not promoted into the RunHaven security model.
+  validation calls plus bounded active-run log snapshots into the RunHaven
+  facade and returns typed unsupported errors for method families that are not
+  promoted into the RunHaven security model.
 - `runhaven/terminal_handoff.rs` is the local Phase 4 smoke hook. It proves
   Codex `Tui::with_restored` can release terminal ownership for a harmless
   foreground child and restore afterward without wiring real agent launch.
@@ -411,13 +413,19 @@ Known integration gap:
   `runhaven_core::runtime::launch::launch_run_plan` only after terminal
   ownership has been released. The app event sender intentionally excludes that
   plan payload from Codex session logging until RunHaven owns a redaction
-  policy.
+  policy. The local facade now has a typed `runhaven/run/logSnapshot` method for
+  bounded active-run output, gated by explicit raw-output confirmation, but no
+  product screen renders it yet.
   The next Phase 4 slice should continue toward native `App` and `ChatWidget`
   ownership without adding new product screens to `app_shell.rs`. Workspace
   selection is now reattached inside the BottomPane-owned launch wizard for
-  current directory versus git repository root choices. Policy changes, active
-  run transcript/logs, diagnostics, and post-run TUI recovery remain before the
-  MVP TUI is complete.
+  current directory versus git repository root choices. Policy changes, visible
+  active-run transcript/logs, diagnostics, and post-run TUI recovery remain
+  before the MVP TUI is complete.
+- The active-run log snapshot payload is intentionally raw container output and
+  can contain secrets or workspace content. Future visible UI must add an
+  explicit confirmation flow and a redaction/session-recording policy before it
+  renders, caches, or logs that text.
 - The current product direction is MVP-first, not Codex parity. Promote only
   Codex surfaces needed for RunHaven's agent picker, workspace picker, plan
   review, confirm launch, foreground launch handoff, active run

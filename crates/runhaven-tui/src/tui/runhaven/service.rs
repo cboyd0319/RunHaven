@@ -1,6 +1,8 @@
 use std::path::Path;
 use std::path::PathBuf;
 
+use runhaven_core::runtime::active::active_run_log_snapshot_payload;
+use runhaven_core::runtime::active::validate_log_snapshot_lines;
 use runhaven_core::runtime::plans::AgentRunPlan;
 use runhaven_core::runtime::plans::AuthScope;
 use runhaven_core::runtime::plans::RunOptions;
@@ -9,6 +11,7 @@ use runhaven_core::runtime::plans::build_run_plan;
 use runhaven_core::runtime::plans::default_network_mode;
 use runhaven_core::runtime::profiles::profiles;
 use runhaven_core::support::git::git_repo_root;
+use runhaven_core::ui_contracts::ActiveRunLogSnapshotData;
 use runhaven_core::ui_contracts::AgentCatalogData;
 use runhaven_core::ui_contracts::AgentCatalogItemData;
 use runhaven_core::ui_contracts::LaunchPlanData;
@@ -160,6 +163,16 @@ impl RunHavenTuiService {
                     message: error.to_string(),
                 })
             }
+            ClientRequest::RunHavenRunLogSnapshot {
+                run_id,
+                lines,
+                confirm_sensitive_output,
+                ..
+            } => {
+                self.validate_sensitive_log_confirmation(confirm_sensitive_output, &method)?;
+                self.validate_log_snapshot_lines(lines, &method)?;
+                self.active_run_log_snapshot_payload(&run_id, lines, &method)
+            }
             ClientRequest::Unsupported { method, .. } => Err(RunHavenServiceError::Unsupported {
                 method: method.method().to_string(),
                 family: method.family(),
@@ -264,6 +277,58 @@ impl RunHavenTuiService {
         Err(RunHavenServiceError::Validation {
             method: method.to_string(),
             message: format!("workspace does not exist: {}", workspace.display()),
+        })
+    }
+
+    fn validate_log_snapshot_lines(
+        &self,
+        lines: u32,
+        method: &str,
+    ) -> Result<(), RunHavenServiceError> {
+        validate_log_snapshot_lines(lines).map_err(|error| RunHavenServiceError::Validation {
+            method: method.to_string(),
+            message: error.to_string(),
+        })
+    }
+
+    fn validate_sensitive_log_confirmation(
+        &self,
+        confirmed: bool,
+        method: &str,
+    ) -> Result<(), RunHavenServiceError> {
+        if confirmed {
+            return Ok(());
+        }
+
+        Err(RunHavenServiceError::Validation {
+            method: method.to_string(),
+            message: "Confirm raw log viewing before loading output that may contain secrets."
+                .to_string(),
+        })
+    }
+
+    fn active_run_log_snapshot_payload(
+        &self,
+        run_id: &str,
+        lines: u32,
+        method: &str,
+    ) -> Result<Value, RunHavenServiceError> {
+        let payload = active_run_log_snapshot_payload(run_id, lines).map_err(|error| {
+            RunHavenServiceError::Backend {
+                method: method.to_string(),
+                message: error.to_string(),
+            }
+        })?;
+        let data = ActiveRunLogSnapshotData::from_active_log_snapshot_payload(payload).map_err(
+            |error| RunHavenServiceError::Backend {
+                method: method.to_string(),
+                message: error.to_string(),
+            },
+        )?;
+
+        serde_json::to_value(data).map_err(|error| RunHavenServiceError::Backend {
+            method: method.to_string(),
+            message: error.to_string(),
         })
     }
 }
@@ -613,5 +678,47 @@ mod tests {
                             || error.detail().contains("workspace does not exist"))
                 }))
         );
+    }
+
+    #[tokio::test]
+    async fn log_snapshot_rejects_invalid_line_count_before_backend_lookup() {
+        let error = RunHavenTuiService::new()
+            .handle_request(ClientRequest::RunHavenRunLogSnapshot {
+                request_id: 42,
+                run_id: "not-a-real-run".to_string(),
+                lines: 0,
+                confirm_sensitive_output: true,
+            })
+            .await
+            .expect_err("invalid line count should fail validation");
+
+        match error {
+            RunHavenServiceError::Validation { method, message } => {
+                assert_eq!(method, "runhaven/run/logSnapshot");
+                assert!(message.contains("between 1 and 500"));
+            }
+            other => panic!("expected validation error, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn log_snapshot_requires_sensitive_output_confirmation_before_backend_lookup() {
+        let error = RunHavenTuiService::new()
+            .handle_request(ClientRequest::RunHavenRunLogSnapshot {
+                request_id: 42,
+                run_id: "not-a-real-run".to_string(),
+                lines: 100,
+                confirm_sensitive_output: false,
+            })
+            .await
+            .expect_err("missing confirmation should fail validation");
+
+        match error {
+            RunHavenServiceError::Validation { method, message } => {
+                assert_eq!(method, "runhaven/run/logSnapshot");
+                assert!(message.contains("Confirm raw log viewing"));
+            }
+            other => panic!("expected validation error, got {other:?}"),
+        }
     }
 }

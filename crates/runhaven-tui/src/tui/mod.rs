@@ -356,6 +356,7 @@ mod drift_tests {
         let runhaven_sources = [
             include_str!("runhaven/app_server_client.rs"),
             include_str!("runhaven/app_server_session.rs"),
+            include_str!("runhaven/launch_handoff.rs"),
             include_str!("runhaven/protocol.rs"),
             include_str!("runhaven/service.rs"),
             include_str!("runhaven/launch_wizard.rs"),
@@ -384,6 +385,56 @@ mod drift_tests {
     }
 
     #[test]
+    fn active_run_log_snapshot_route_stays_in_runhaven_facade() {
+        let active_snapshot_marker = ["active_run_", "log_snapshot_payload"].concat();
+        let method_marker = ["runhaven/run/", "logSnapshot"].concat();
+        let service_source = include_str!("runhaven/service.rs");
+        let protocol_source = include_str!("runhaven/protocol.rs");
+        let session_source = include_str!("runhaven/app_server_session.rs");
+        let app_shell_source = include_str!("app_shell.rs");
+        let owners = tui_rust_sources()
+            .into_iter()
+            .filter_map(|path| {
+                let relative = relative_tui_source(&path);
+                if relative == std::path::Path::new("mod.rs") {
+                    return None;
+                }
+                let source = std::fs::read_to_string(&path).expect("source should be readable");
+                source
+                    .contains(&active_snapshot_marker)
+                    .then(|| relative.display().to_string())
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            owners,
+            ["runhaven/service.rs"],
+            "only the RunHaven TUI service facade may call the active-run log snapshot runtime API"
+        );
+        assert!(
+            protocol_source.contains(&method_marker)
+                && session_source.contains("run_log_snapshot")
+                && service_source.contains(
+                    "self.validate_sensitive_log_confirmation(confirm_sensitive_output, &method)?;"
+                )
+                && service_source.contains("self.validate_log_snapshot_lines(lines, &method)?;")
+                && service_source
+                    .contains("self.active_run_log_snapshot_payload(&run_id, lines, &method)"),
+            "log snapshots must stay a typed RunHaven method with sensitive-output confirmation and validation before backend lookup"
+        );
+        for marker in [
+            method_marker.as_str(),
+            active_snapshot_marker.as_str(),
+            "run_log_snapshot",
+        ] {
+            assert!(
+                !app_shell_source.contains(marker),
+                "the temporary app_shell must not grow active-run log product behavior or direct runtime calls"
+            );
+        }
+    }
+
+    #[test]
     fn chatwidget_branch_summary_uses_source_first_boundary() {
         let module_source = include_str!("mod.rs");
         let bridge_source = include_str!("app_event_shared.rs");
@@ -393,6 +444,7 @@ mod drift_tests {
         let runhaven_sources = [
             include_str!("runhaven/app_server_client.rs"),
             include_str!("runhaven/app_server_session.rs"),
+            include_str!("runhaven/launch_handoff.rs"),
             include_str!("runhaven/protocol.rs"),
             include_str!("runhaven/service.rs"),
             include_str!("runhaven/launch_wizard.rs"),

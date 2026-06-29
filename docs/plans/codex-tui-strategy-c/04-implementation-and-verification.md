@@ -322,6 +322,21 @@ guard keeps widgets and backend facade code from calling `launch_run_plan` and
 keeps full launch plans out of Codex session logging until RunHaven owns a
 redaction policy.
 
+Progress note, 2026-06-29: The first active-run transcript/log backing seam is
+promoted without expanding `app_shell.rs`: `runhaven/run/logSnapshot` now flows
+through the local protocol, in-process client, service, and session bridge into
+`runhaven_core::runtime::active::active_run_log_snapshot_payload`. The UI
+contract maps the existing snake_case core payload into
+`ActiveRunLogSnapshotData` camelCase display data. Guard coverage keeps the
+direct active-run log snapshot runtime call owned by `runhaven/service.rs`, and
+requests must carry explicit raw-output confirmation before line validation and
+backend lookup. This is not a visible ChatWidget transcript/log screen yet; the
+raw payload can contain secrets or workspace content, so future visible UI must
+define redaction and session-recording policy before rendering, caching, or
+logging it. App-server transport, filesystem RPC, MCP, login, workspace command
+execution, Codex session recording, native `App`, and `ChatWidget` remain
+dormant or fail-closed.
+
 ### Phase 7: Cull Or Stub Unsupported Codex Product Features
 
 After the Codex-shaped app shell is active, decide each dormant Codex product
