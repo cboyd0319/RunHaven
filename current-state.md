@@ -4,8 +4,9 @@ Last updated: 2026-06-30 UTC
 
 ## Current Objective
 
-The active slice is the TUI Codex vendor reset plus the Rust workspace
-normalization needed to make that TUI a clean reference implementation.
+The scoped RunHaven-only TUI MVP is complete and passing. The next product
+decision is release readiness for `v0.6.0`, a final polish slice, or a separate
+non-TUI backlog item chosen by the maintainer.
 
 RunHaven is replacing its previous custom TUI with the pinned upstream Codex
 TUI source baseline:
@@ -21,8 +22,8 @@ Keep Codex vendoring source-first, RunHaven behavior in thin adapters, shared
 data contracts in `runhaven-core`, every culling decision documented, and
 user-facing copy plain enough for non-technical users.
 
-Do not publish a release from the interim vendor-reset state. After the TUI is
-fully integrated, verified, and confirmed, do a full release bump to `v0.6.0`.
+Do not publish a release from the unreleased TUI checkout without a separate
+release-readiness pass and explicit version bump to `v0.6.0`.
 
 ## Startup State Contract
 
@@ -39,8 +40,8 @@ Load deeper docs only when the task touches that surface.
   `container` on macOS 26+ on Apple silicon.
 - The `v0.5.0` CLI-complete pre-release was cut and published on 2026-06-26.
 - The CLI remains the complete automation and recovery backend.
-- The terminal UI is unreleased and active. A bare interactive `runhaven`
-  should open the TUI when the TUI is integrated; pipes, redirection, and
+- The terminal UI is unreleased and passing for the scoped RunHaven-only MVP.
+  A bare interactive `runhaven` opens the TUI; pipes, redirection, and
   explicit subcommands stay CLI-first.
 - The alpha desktop shell lives under `ui/` and `src-tauri/`. `src-tauri` is a
   Rust workspace member over typed `runhaven-core` commands. The desktop shell
@@ -230,9 +231,9 @@ editor primitive for the confirmation phrase. While that text field is focused,
 plain `q` and `?` are text input instead of shell shortcuts; Esc returns to
 review. Paste is ignored for the lower-security confirmation phrase so the
 extra intent still means typing. Secure/default plans still confirm with Enter
-and keep `q` as the shell quit shortcut. At that point this was still a
-read-only preview; the later foreground launch handoff supersedes the
-no-launch behavior.
+and keep `q` as the shell quit shortcut. At that point launch was still
+disabled; the later foreground launch handoff supersedes the no-launch
+behavior.
 
 TUI confirm-composer follow-up: `crates/runhaven-tui` now compiles the vendored
 Codex `bottom_pane/textarea.rs` and `bottom_pane/textarea/vim.rs` through the
@@ -1347,12 +1348,24 @@ Latest TUI MVP module cleanup:
   execution, session recording, or host-reaching Codex paths. Final slice
   verification is recorded in `feature_list.json`.
 - 2026-06-30: Updated public TUI documentation to match the current active
-  MVP instead of the older read-only preview. README and Usage now describe
+  MVP instead of the older disabled-launch status. README and Usage now describe
   workspace choice, agent choice, policy changes, plan review, typed
   confirmation, foreground launch handoff, active-run summaries,
   confirmation-gated log snapshots, diagnostics, and post-run recovery.
   Advanced run management, history, worktree review, cleanup, Cubby/pet
   polish, terminal image polish, and Zork remain out of this core MVP path.
+- 2026-06-30: Final scoped TUI MVP completion audit moved `terminal-ui` to
+  passing after review found stale repo-state/docs wording and a missing
+  shell-loop launch recovery proof. Local evidence covers the full MVP
+  requirement matrix: bare interactive TUI launch and quit, non-TTY CLI help
+  fallback, workspace and agent choice, policy changes, plan review, typed
+  confirmation, foreground terminal handoff, active-run summaries,
+  typed-confirm raw log snapshots, diagnostics, post-run recovery, public docs,
+  vendor audit counts, and dormant/fail-closed Codex host-reaching surfaces.
+  The focused app-shell recovery test drives the real confirmation action,
+  passes the exact executable `AgentRunPlan` into the launcher seam, and renders
+  post-run recovery with the returned exit code without requiring Apple
+  `container` or credentials.
 
 ## Blockers
 
@@ -1360,15 +1373,13 @@ Latest TUI MVP module cleanup:
 
 ## Next Step
 
-The RunHaven-only TUI MVP surface is now present in the staging Codex runtime.
-Next TUI work should be the final requirement-by-requirement completion audit,
-plus any gaps it proves from live files or PTY behavior. Keep this focused on
-core completion, cleanup, and hardening, not final polish or new product scope.
-Defer Cubby/pet polish, mascot work, terminal image polish, and Zork until the
-end. Keep native `App` and `ChatWidget` dormant unless a future RunHaven scope
-genuinely needs that specific owner. If native `App` startup is promoted later,
-first replace raw Codex env/path session-recording behavior and app-server
-assumptions with reviewed RunHaven redaction and app-server boundaries. If
-`ChatWidget` is promoted later, first define the RunHaven transcript, raw-log
-redaction, and session-recording policy. Keep unrelated Codex product features
-dormant, fail-closed, or deleted.
+The scoped RunHaven-only TUI MVP is passing in the staging Codex runtime. Next
+work should be chosen explicitly: `v0.6.0` release readiness, final polish such
+as Cubby/pet/terminal-image/Zork, or a non-TUI backlog item. Keep native `App`
+and `ChatWidget` dormant unless a future RunHaven scope genuinely needs that
+specific owner. If native `App` startup is promoted later, first replace raw
+Codex env/path session-recording behavior and app-server assumptions with
+reviewed RunHaven redaction and app-server boundaries. If `ChatWidget` is
+promoted later, first define the RunHaven transcript, raw-log redaction, and
+session-recording policy. Keep unrelated Codex product features dormant,
+fail-closed, or deleted.

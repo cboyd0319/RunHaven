@@ -1,3 +1,4 @@
+use std::future::Future;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -63,24 +64,9 @@ pub(crate) fn run() -> Result<i32> {
             }
             Ok(ShellExit::Launch(launch)) => {
                 let launch = *launch;
-                let success_outcome = PostRunOutcome::from_launch(&launch, 0, None);
-                match runtime.block_on(super::runhaven::launch_handoff::launch_prepared(
-                    &mut tui, launch,
-                )) {
-                    Ok(exit_code) => {
-                        state.show_post_run(PostRunOutcome {
-                            exit_code,
-                            ..success_outcome
-                        });
-                    }
-                    Err(error) => {
-                        state.show_post_run(PostRunOutcome {
-                            exit_code: 1,
-                            error: Some(error.to_string()),
-                            ..success_outcome
-                        });
-                    }
-                }
+                runtime.block_on(show_recovery_after_launch(&mut state, launch, |launch| {
+                    super::runhaven::launch_handoff::launch_prepared(&mut tui, launch)
+                }));
                 tui.frame_requester().schedule_frame();
             }
             Err(error) => break Err(error),
@@ -146,6 +132,32 @@ async fn run_loop(tui: &mut codex_runtime::Tui, state: &mut ShellState) -> Resul
         }
     }
     Ok(ShellExit::Quit)
+}
+
+async fn show_recovery_after_launch<F, Fut>(
+    state: &mut ShellState,
+    launch: PreparedLaunch,
+    launcher: F,
+) where
+    F: FnOnce(PreparedLaunch) -> Fut,
+    Fut: Future<Output = Result<i32>>,
+{
+    let success_outcome = PostRunOutcome::from_launch(&launch, 0, None);
+    match launcher(launch).await {
+        Ok(exit_code) => {
+            state.show_post_run(PostRunOutcome {
+                exit_code,
+                ..success_outcome
+            });
+        }
+        Err(error) => {
+            state.show_post_run(PostRunOutcome {
+                exit_code: 1,
+                error: Some(error.to_string()),
+                ..success_outcome
+            });
+        }
+    }
 }
 
 struct ShellState {

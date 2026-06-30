@@ -27,7 +27,8 @@ to change the network policy and `a` to switch between shared agent login state
 and project-only login state. Review and confirm show auth scope, network
 posture, what is shared, what is not shared, safety notes, and the matching
 `container run` command before launch. Lower-security plans require typed
-confirmation. Press `q` or esc to quit.
+confirmation. Press `q` or esc to quit except while typing confirmation text;
+there, esc backs out and `q` is entered as text.
 
 The active-runs screen shows RunHaven-owned active markers without workspace
 paths. Opening logs requires typing `logs` before RunHaven reads a bounded raw

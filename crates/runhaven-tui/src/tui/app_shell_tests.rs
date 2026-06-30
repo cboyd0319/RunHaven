@@ -3,6 +3,8 @@ use crate::tui::runhaven::service::confirm_required_preview_for_tests;
 use crossterm::event::KeyModifiers;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
+use std::cell::Cell;
+use std::rc::Rc;
 
 #[test]
 fn shell_state_builds_default_launch_previews() {
@@ -460,6 +462,51 @@ fn shell_confirm_enter_requests_foreground_launch_handoff() {
     assert_eq!(prepared.data.command, prepared.executable.shell_command());
     assert!(output.contains("Launch prepared. Starting in the terminal."));
     assert!(output.contains("container run"));
+}
+
+#[tokio::test]
+async fn shell_confirmed_launch_runs_launcher_and_returns_to_post_run_recovery() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut state = ShellState::for_workspace(workspace.path()).expect("state");
+
+    assert_eq!(
+        state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+        ShellAction::Continue
+    );
+    assert_eq!(
+        state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+        ShellAction::Continue
+    );
+    let action = state.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+    let ShellAction::Launch(prepared) = action else {
+        panic!("expected launch handoff action, got {action:?}");
+    };
+    let launch = *prepared;
+    let expected_command = launch.executable.command.clone();
+    let expected_workspace = launch.executable.workspace.clone();
+    let launcher_called = Rc::new(Cell::new(false));
+    let launcher_called_for_closure = Rc::clone(&launcher_called);
+
+    show_recovery_after_launch(&mut state, launch, move |launch| {
+        let expected_command = expected_command.clone();
+        let expected_workspace = expected_workspace.clone();
+        let launcher_called = Rc::clone(&launcher_called_for_closure);
+        async move {
+            assert_eq!(launch.executable.command, expected_command);
+            assert_eq!(launch.executable.workspace, expected_workspace);
+            assert_eq!(launch.data.command, launch.executable.shell_command());
+            launcher_called.set(true);
+            Ok(13)
+        }
+    })
+    .await;
+
+    assert!(launcher_called.get());
+    assert_eq!(state.process_exit_code(), 13);
+    let output = render_to_text(&mut state, 120, 32);
+    assert!(output.contains("Run finished"));
+    assert!(output.contains("exit 13"));
+    assert!(output.contains("Enter starts another launch."));
 }
 
 #[test]
