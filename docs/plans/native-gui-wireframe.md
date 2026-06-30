@@ -8,7 +8,7 @@ Make the secure RunHaven path feel like the easy path for a nontechnical macOS
 user. The first GUI should answer one question: "Can I safely start an agent in
 this project now?"
 
-This is a wireframe contract for the first Tauri/Svelte prototype. It does not
+This is a wireframe contract for the first Tauri prototype. It does not
 authorize new backend commands, broad Tauri plugins, shell bridges, signing
 work, updater work, or SwiftUI migration.
 
@@ -19,6 +19,9 @@ RunHaven should feel like a calm macOS utility:
 - Plain language, short labels, and one obvious next action.
 - Dense enough for repeat use, but not a developer dashboard.
 - Safe defaults visible, not hidden.
+- The default visual mode is dark, calm, and legible.
+- Trust cues should be visible at decision points: what is shared, what is not
+  shared, and what needs attention before launch.
 - Expert controls present only behind secondary detail.
 - No landing page, mascot-first screen, terminal-first screen, or generic
   container admin surface.
@@ -36,6 +39,8 @@ Usage:
 - Let the logo inform accent colors: blue for selected navigation and primary
   links, teal or green for safe/ready states, amber for warnings, red only for
   destructive or blocked states.
+- Let the logo guide the surface treatment: dark navy base, translucent
+  glass-like panes, thin blue-teal borders, and clear contrast.
 - Keep the asset crisp on Retina screens by using the PNG at rendered sizes
   well below 512 px.
 - Provide an accessible text label through surrounding text or `alt="RunHaven"`
@@ -327,15 +332,18 @@ primitives first:
   secondary navigation.
 - `tabs` only for secondary detail views, not the start flow.
 
-If the stack spike chooses Svelte + shadcn-svelte, use the equivalent
-components and verify that accessibility, keyboard behavior, and generated
-markup match the React path closely enough.
+Svelte + shadcn-svelte is no longer the active local path. Treat it only as a
+fallback if the React path hits a concrete blocker that is recorded with
+evidence.
 
 ## Visual Notes
 
 - Use system font and macOS-like density.
-- Use restrained colors: neutral background, white content panes, green for
-  ready/safe, amber for warnings, red only for blocked or destructive action.
+- Default to dark mode. Use a dark navy base, slightly translucent content
+  panes, blue for primary actions, teal or green for ready states, amber for
+  warnings, and red only for blocked or destructive action.
+- Keep transparency subtle. It should support trust and depth, not become a
+  decorative glass effect.
 - Keep headings modest. This is a utility, not a marketing page.
 - Use icons in buttons where they clarify the action, such as folder, refresh,
   play, stop, and warning.

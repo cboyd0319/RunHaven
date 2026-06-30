@@ -11,11 +11,12 @@ complete technical, automation, recovery, and verification surface. The TUI
 should be finished only where it hardens the shared workflow and proves backend
 contracts, not polished into a standalone product.
 
-Current branch goal: finish the remaining TUI hardening surfaces already backed
-by `runhaven-core`, do one more CLI surface audit, commit and push the branch,
-then merge this branch/PR and shift focus to the GUI. Do not publish, tag,
-version-bump, or cut a release from this work unless the maintainer explicitly
-asks for a release pass.
+Current branch goal: continue local GUI design and implementation work without
+pushing. The first local GUI slice replaces the alpha Svelte WebView layer with
+React + shadcn/ui, keeps the existing typed Tauri/Rust command boundary, and
+makes the safe launch path feel simple, trusted, and calm. Do not publish, tag,
+version-bump, notarize, push, or cut a release from this work unless the
+maintainer explicitly asks for that pass.
 
 RunHaven is replacing its previous custom TUI with the pinned upstream Codex
 TUI source baseline:
@@ -70,10 +71,9 @@ that harden the shared backend:
   `docs/plans/native-gui-reference-pass.md`. The completed frontend stack
   spike is captured in `docs/plans/native-gui-stack-spike.md`. React +
   shadcn/ui + Tauri is the selected first implementation path. The first GUI
-  wireframe is captured in `docs/plans/native-gui-wireframe.md`. Next GUI work
-  should keep RunHaven's typed Tauri/Rust boundary, replace the alpha Svelte
-  frontend only at the WebView layer, and implement the first real GUI slice
-  with the least custom UI code.
+  wireframe is captured in `docs/plans/native-gui-wireframe.md`. The active
+  local GUI branch keeps RunHaven's typed Tauri/Rust boundary and replaces the
+  alpha Svelte frontend only at the WebView layer.
 
 ## Startup State Contract
 
@@ -94,9 +94,10 @@ Load deeper docs only when the task touches that surface.
   the verified RunHaven-only checkpoint; pipes, redirection, and explicit
   subcommands stay CLI-first. The TUI should now be hardened only where it
   strengthens shared RunHaven workflow contracts.
-- The alpha desktop shell lives under `ui/` and `src-tauri/`. `src-tauri` is a
-  Rust workspace member over typed `runhaven-core` commands. The desktop shell
-  remains deferred to a later first-class release phase.
+- The desktop shell lives under `ui/` and `src-tauri/`. `ui/` is now a local
+  React + shadcn/ui prototype on this branch; `src-tauri` is a Rust workspace
+  member over typed `runhaven-core` commands. The desktop shell remains local
+  prototype work, not a release artifact.
 - Windows and Linux are not supported runtime or contributor-verification
   targets.
 - GitHub Actions CI is disabled during alpha/pre-release. Local macOS 26+
@@ -111,7 +112,7 @@ Load deeper docs only when the task touches that surface.
 | CLI presentation | `crates/runhaven-cli/` | Clap dispatch, setup text, and human CLI output. |
 | Terminal UI | `crates/runhaven-tui/` | Codex-vendored TUI source plus RunHaven TUI adapters. |
 | Desktop Rust shell | `src-tauri/` | Narrow typed Tauri commands over `runhaven-core`. |
-| Frontend | `ui/` | Alpha Svelte desktop UI; next GUI slice replaces the WebView frontend with React + shadcn/ui while keeping the typed Tauri/Rust boundary. |
+| Frontend | `ui/` | React + shadcn/ui desktop WebView prototype over the existing typed Tauri command layer. |
 
 `crates/runhaven` is binary-only. Do not rebuild a root compatibility facade.
 Shared runtime truth belongs in `runhaven-core`; presentation belongs in CLI,
@@ -170,6 +171,10 @@ TUI, Tauri, or frontend layers.
 - `docs/assets/logo.png` is the canonical GUI logo. Use it as a small
   app-identity mark, not a hero, background, splash screen, or mascot-first
   surface.
+- The first GUI visual direction is dark by default, logo-informed, and
+  restrained: dark navy base, subtle glass-like panes, blue primary actions,
+  teal or green ready states, amber warnings, and red only for blocked or
+  destructive states.
 - The hidden Zork I easter egg remains wanted. The current reset keeps the
   MIT-licensed `historicalsource/zork1` collection under `third_party/zork1/`.
   The earlier Ferrif-derived TUI engine was removed with the old custom TUI and
@@ -1517,20 +1522,33 @@ Latest CLI surface pass:
   network cleanup confirmation gates, auth/egress logs, and safety `why`
   commands. `docs/CLI_SURFACE_COVERAGE.md` now records this current evidence.
 
+Latest GUI local prototype:
+
+- 2026-06-30: Replaced the alpha Svelte WebView layer with a local React +
+  shadcn/ui prototype while preserving the existing typed command helpers and
+  Tauri capability boundary. The first screen now defaults to a dark,
+  logo-informed safe-start flow with plain copy, visible access checks, setup
+  status, plan review, run controls, bounded output, and secret-free trust
+  checks.
+- The prototype intentionally did not change `src-tauri/`, add a generic
+  command runner, broaden plugins, add signing, add updater work, or require a
+  paid Apple Developer Program account. Visual smoke screenshots were captured
+  at `1080 x 720` and `720 x 560` under `target/playwright/ui/`. The
+  no-bundle Tauri debug build passed and produced `target/debug/runhaven-tauri`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
 
 ## Next Step
 
-The TUI hardening plus CLI-audit branch is merged. Next product work shifts to
-a native-feeling macOS GUI as the easy path for nontechnical users. The first
-GUI slice should use `docs/plans/native-gui-reference-pass.md`,
+Continue local GUI work on this branch. Use
+`docs/plans/native-gui-reference-pass.md`,
 `docs/plans/native-gui-stack-spike.md`, and
-`docs/plans/native-gui-wireframe.md`: keep the typed RunHaven Tauri/Rust
-boundary, implement the first screen in React + shadcn/ui, simplify around
-safe launch, and hide developer details behind secondary views. Keep Svelte +
-shadcn-svelte as a fallback only if the first real React slice hits a concrete
-blocker. Keep the prototype path free of paid Apple Developer Program
-requirements. Do not cut a release, tag, version bump, notarization, updater,
-or public distribution pass unless the maintainer explicitly asks for it.
+`docs/plans/native-gui-wireframe.md` as the design contract: keep the typed
+RunHaven Tauri/Rust boundary, make safe launch the simplest path, and keep
+developer details behind secondary views. Next useful work is a focused live
+Tauri smoke of the React shell, then one beginner-safe slice at a time for
+setup-blocked remediation, image/login blocked remediation, and history/review.
+Do not push, cut a release, tag, version bump, notarize, add an updater, or do
+public distribution work unless the maintainer explicitly asks for it.

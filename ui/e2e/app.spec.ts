@@ -11,9 +11,9 @@ test("renders the dashboard without runtime errors", async ({ page }) => {
 
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Agent runs" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start safely" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Setup checks" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Launch plan" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
   await expect(page.getByText("Preview mode")).toBeVisible();
   expect(runtimeErrors).toEqual([]);
 });
@@ -58,9 +58,10 @@ test("reviews and starts a preview run", async ({ page }) => {
 test("loads secret-free diagnostics", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Diagnostics" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Trust checks" })).toBeVisible();
   await page.getByRole("button", { name: "Load diagnostics" }).click();
   await expect(page.getByRole("heading", { name: "Auth broker status" })).toBeVisible();
   await expect(page.getByText("codex: api-key-prototype")).toBeVisible();
+  await page.getByRole("tab", { name: "Network" }).click();
   await expect(page.getByText("No provider egress decisions recorded.")).toBeVisible();
 });
