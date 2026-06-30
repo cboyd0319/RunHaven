@@ -1297,6 +1297,19 @@ Latest TUI MVP snapshot matrix:
   generated and reran the matrix successfully, including an env-unset rerun.
   Final slice verification is recorded in `feature_list.json`.
 
+Latest TUI MVP module cleanup:
+
+- 2026-06-29: Moved the RunHaven MVP unit tests from inline
+  `runhaven/mvp.rs` into sibling `runhaven/mvp_tests.rs`, leaving `mvp.rs`
+  focused on runtime state handling and rendering while keeping the snapshot
+  matrix in `runhaven/mvp_snapshots.rs`.
+- Behavior and security boundary are unchanged: the same tests still cover
+  policy key rebuilds, active-run path omission, raw-log confirmation,
+  diagnostics redaction, post-run recovery, and the MVP snapshot matrix.
+- Verification for the split started with the existing MVP test baseline and
+  focused `cargo test -p runhaven-tui --locked runhaven::mvp -- --show-output`.
+  Final slice verification is recorded in `feature_list.json`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.
