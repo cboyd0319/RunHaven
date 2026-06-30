@@ -1589,6 +1589,12 @@ Latest GUI local prototype:
   can exercise the `Active sessions` sidebar and selected-session pane without
   Tauri or Apple container. This is preview-only state and does not add a Tauri
   command, process bridge, terminal input, resize, attach, or filesystem access.
+- 2026-06-30 selected-session output: The selected-session pane now exposes the
+  existing confirmation-gated bounded output snapshot for the session's run ID.
+  The output card shows source, captured cursor, returned line count,
+  truncation state, backend warnings, and bounded text. This reuses
+  `get_log_snapshot`; it does not add a Tauri command, streaming transport,
+  terminal input, resize, attach, or filesystem access.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
@@ -1616,8 +1622,8 @@ Continue local GUI work on this branch. Use
 terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
 boundary, make safe launch the simplest path, and keep developer details behind
 secondary views. Next useful work is a focused live Tauri smoke of the React
-shell, then design the typed session output/log contract with source, cursor,
-redaction, and ownership tests before any bounded session input or resize
-commands.
+shell, then design the future typed streaming `SessionLogEntry` contract with
+source, cursor, redaction, and ownership tests before any bounded session input
+or resize commands.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.

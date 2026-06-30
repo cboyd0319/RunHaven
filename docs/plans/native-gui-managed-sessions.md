@@ -147,6 +147,13 @@ Current GUI behavior:
 - Browser preview records launched preview runs as safe managed-session
   summaries only for local visual QA. Real desktop data still comes from the
   typed `get_managed_sessions` Tauri command.
+- Selected sessions can load the existing bounded output snapshot through
+  `get_log_snapshot` after explicit raw-output confirmation. The card shows
+  source, captured cursor, returned line count, truncation state, backend
+  warnings, and bounded text.
+- Selected-session output uses the backend-owned session run ID. It does not
+  add a new Tauri command, streaming transport, terminal input, resize, attach,
+  filesystem RPC, or process control.
 
 ## Verification
 
@@ -167,6 +174,10 @@ Current slice:
 - Playwright preview smoke proves a launched preview run can open the
   `Active sessions` sidebar item and selected-session pane without raw preview
   paths
+- Playwright preview smoke proves selected-session output remains
+  confirmation-gated before loading bounded raw output
+- frontend output-card test proves source, captured cursor, line count,
+  truncation state, warnings, and bounded text render from the typed snapshot
 
 Future embedded-session slices need focused Rust tests for session ownership,
 unknown ID rejection, bounded input, bounded resize, raw output gating, and

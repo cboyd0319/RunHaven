@@ -37,11 +37,6 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByText("Container state")).toBeVisible();
   await expect(page.getByText("running").first()).toBeVisible();
   await expect(page.getByText("Container", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Run output" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "View latest output" })).toBeDisabled();
-  await page.getByLabel("Show raw container output for this run.").check();
-  await page.getByRole("button", { name: "View latest output" }).click();
-  await expect(page.getByText("Preview log line")).toBeVisible();
 
   await expect(page.getByText("Active sessions")).toBeVisible();
   await page.getByText("Claude - runhaven-preview").click();
@@ -49,6 +44,11 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Claude - runhaven-preview" })).toBeVisible();
   await expect(page.getByText("Monitor session")).toBeVisible();
   await expect(page.getByText("Run record")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Run output" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "View latest output" })).toBeDisabled();
+  await page.getByLabel("Show raw container output for this run.").check();
+  await page.getByRole("button", { name: "View latest output" }).click();
+  await expect(page.getByText("Preview log line")).toBeVisible();
   await expect(page.getByText("/tmp/runhaven-preview")).toHaveCount(0);
   await page.getByRole("button", { name: "Start" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Launch" })).toBeVisible();

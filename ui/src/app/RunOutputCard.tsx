@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 
+import { Metric } from "./Metric"
+
 export function RunOutputCard({
   logAcknowledged,
   logLoading,
@@ -61,11 +63,54 @@ export function RunOutputCard({
           </Alert>
         ) : null}
         {logSnapshot ? (
-          <pre className="max-h-72 overflow-auto rounded-lg border bg-muted p-3 text-sm whitespace-pre-wrap">
-            {logSnapshot.text}
-          </pre>
+          <div className="flex flex-col gap-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Metric
+                label="Source"
+                value={outputSourceLabel(logSnapshot.source)}
+              />
+              <Metric
+                label="Captured"
+                value={displayValue(logSnapshot.capturedAt)}
+              />
+              <Metric
+                label="Returned lines"
+                value={String(logSnapshot.returnedLines)}
+              />
+              <Metric
+                label="Truncated"
+                value={logSnapshot.truncated ? "Yes" : "No"}
+              />
+            </div>
+            {logSnapshot.warnings.length > 0 ? (
+              <ul className="rounded-lg border px-3 py-2 text-sm text-muted-foreground">
+                {logSnapshot.warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            ) : null}
+            <pre
+              aria-label="Raw output snapshot"
+              className="max-h-72 overflow-auto rounded-lg border bg-muted p-3 text-sm whitespace-pre-wrap"
+            >
+              {logSnapshot.text}
+            </pre>
+          </div>
         ) : null}
       </CardContent>
     </Card>
   )
+}
+
+function outputSourceLabel(source: string): string {
+  switch (source.trim().toLowerCase()) {
+    case "container-stdio":
+      return "Container output"
+    default:
+      return displayValue(source)
+  }
+}
+
+function displayValue(value: string): string {
+  return value.trim() || "Unknown"
 }

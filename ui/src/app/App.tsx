@@ -85,6 +85,7 @@ export default function App() {
   const [logSnapshot, setLogSnapshot] = useState<LogSnapshotResponse | null>(
     null,
   )
+  const [logTargetRunId, setLogTargetRunId] = useState<string | null>(null)
   const [logAcknowledged, setLogAcknowledged] = useState(false)
   const [logLoading, setLogLoading] = useState(false)
   const [logError, setLogError] = useState("")
@@ -125,6 +126,9 @@ export default function App() {
   const pageDescription = selectedSession
     ? "Review status and access for the selected agent session."
     : "Choose an agent and project. Review access before launch."
+  const outputRunId = selectedSession?.runId ?? lastLaunch?.runId ?? null
+  const visibleLogSnapshot =
+    logTargetRunId === outputRunId ? logSnapshot : null
 
   useEffect(() => {
     void refresh()
@@ -138,6 +142,13 @@ export default function App() {
       setSelectedSessionId(null)
     }
   }, [managedSessions.sessions, selectedSessionId])
+
+  useEffect(() => {
+    setLogAcknowledged(false)
+    setLogSnapshot(null)
+    setLogTargetRunId(null)
+    setLogError("")
+  }, [outputRunId])
 
   async function refresh() {
     setLoading(true)
@@ -279,6 +290,7 @@ export default function App() {
       })
       setLastLaunch(started)
       setLogSnapshot(null)
+      setLogTargetRunId(null)
       setLogAcknowledged(false)
       setLogError("")
       await loadRunStatus(started.runId)
@@ -295,20 +307,22 @@ export default function App() {
     }
   }
 
-  async function loadLogSnapshot() {
-    if (!lastLaunch) {
+  async function loadLogSnapshot(runId: string | null) {
+    if (!runId) {
       return
     }
     setLogLoading(true)
     setLogError("")
     try {
       setLogSnapshot(
-        await getLogSnapshot(lastLaunch.runId, {
+        await getLogSnapshot(runId, {
           confirmSensitiveOutput: logAcknowledged,
         }),
       )
+      setLogTargetRunId(runId)
     } catch (cause) {
       setLogSnapshot(null)
+      setLogTargetRunId(null)
       setLogError(errorMessage(cause))
     } finally {
       setLogLoading(false)
@@ -431,7 +445,17 @@ export default function App() {
               {!setupReady ? (
                 <SetupCard loading={loading} dashboard={dashboard} />
               ) : selectedSession ? (
-                <ManagedSessionCard session={selectedSession} />
+                <>
+                  <ManagedSessionCard session={selectedSession} />
+                  <RunOutputCard
+                    logAcknowledged={logAcknowledged}
+                    logLoading={logLoading}
+                    logError={logError}
+                    logSnapshot={visibleLogSnapshot}
+                    onAcknowledgedChange={setLogAcknowledged}
+                    onLoad={() => loadLogSnapshot(outputRunId)}
+                  />
+                </>
               ) : (
                 <>
                   {launchStep === "review" && plan ? (
@@ -498,9 +522,9 @@ export default function App() {
                   logAcknowledged={logAcknowledged}
                   logLoading={logLoading}
                   logError={logError}
-                  logSnapshot={logSnapshot}
+                  logSnapshot={visibleLogSnapshot}
                   onAcknowledgedChange={setLogAcknowledged}
-                  onLoad={loadLogSnapshot}
+                  onLoad={() => loadLogSnapshot(outputRunId)}
                 />
               ) : null}
 
