@@ -155,10 +155,21 @@ pub(crate) struct LogSnapshotRequest {
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct LogSnapshotEntry {
+    pub source: String,
+    pub timestamp: String,
+    pub text: String,
+    pub line_count: usize,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct LogSnapshotResponse {
     pub run_id: String,
     pub captured_at: String,
+    pub cursor: String,
     pub requested_lines: u32,
+    pub entries: Vec<LogSnapshotEntry>,
     pub text: String,
     pub returned_lines: usize,
     pub truncated: bool,

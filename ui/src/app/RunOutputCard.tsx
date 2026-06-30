@@ -29,6 +29,14 @@ export function RunOutputCard({
   onAcknowledgedChange: (checked: boolean) => void
   onLoad: () => Promise<void>
 }) {
+  const primaryEntry = logSnapshot?.entries[0]
+  const snapshotSource = primaryEntry?.source ?? logSnapshot?.source ?? ""
+  const snapshotCaptured =
+    logSnapshot?.cursor ?? primaryEntry?.timestamp ?? logSnapshot?.capturedAt ?? ""
+  const snapshotLineCount =
+    primaryEntry?.lineCount ?? logSnapshot?.returnedLines ?? 0
+  const snapshotText = primaryEntry?.text ?? logSnapshot?.text ?? ""
+
   return (
     <Card>
       <CardHeader>
@@ -67,15 +75,15 @@ export function RunOutputCard({
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Metric
                 label="Source"
-                value={outputSourceLabel(logSnapshot.source)}
+                value={outputSourceLabel(snapshotSource)}
               />
               <Metric
                 label="Captured"
-                value={displayValue(logSnapshot.capturedAt)}
+                value={displayValue(snapshotCaptured)}
               />
               <Metric
                 label="Returned lines"
-                value={String(logSnapshot.returnedLines)}
+                value={String(snapshotLineCount)}
               />
               <Metric
                 label="Truncated"
@@ -93,7 +101,7 @@ export function RunOutputCard({
               aria-label="Raw output snapshot"
               className="max-h-72 overflow-auto rounded-lg border bg-muted p-3 text-sm whitespace-pre-wrap"
             >
-              {logSnapshot.text}
+              {snapshotText}
             </pre>
           </div>
         ) : null}

@@ -150,7 +150,10 @@ Current GUI behavior:
 - Selected sessions can load the existing bounded output snapshot through
   `get_log_snapshot` after explicit raw-output confirmation. The card shows
   source, captured cursor, returned line count, truncation state, backend
-  warnings, and bounded text.
+  warnings, and bounded text from an additive typed snapshot entry.
+- `LogSnapshotResponse` includes a cursor and typed snapshot entries while
+  keeping the previous top-level text fields for compatibility. This is not a
+  streaming terminal or session-attach contract.
 - Selected-session output uses the backend-owned session run ID. It does not
   add a new Tauri command, streaming transport, terminal input, resize, attach,
   filesystem RPC, or process control.
@@ -178,6 +181,9 @@ Current slice:
   confirmation-gated before loading bounded raw output
 - frontend output-card test proves source, captured cursor, line count,
   truncation state, warnings, and bounded text render from the typed snapshot
+  entry
+- Tauri command test proves the log snapshot response maps the bounded payload
+  into a cursor plus one typed entry without changing the gated backend lookup
 
 Future embedded-session slices need focused Rust tests for session ownership,
 unknown ID rejection, bounded input, bounded resize, raw output gating, and

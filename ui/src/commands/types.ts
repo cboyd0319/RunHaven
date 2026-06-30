@@ -108,12 +108,21 @@ export type RunStatusResponse = {
 export type LogSnapshotResponse = {
   runId: string;
   capturedAt: string;
+  cursor: string;
   requestedLines: number;
+  entries: LogSnapshotEntry[];
   text: string;
   returnedLines: number;
   truncated: boolean;
   source: string;
   warnings: string[];
+};
+
+export type LogSnapshotEntry = {
+  source: string;
+  timestamp: string;
+  text: string;
+  lineCount: number;
 };
 
 export type ManagedSessionSummary = {

@@ -180,16 +180,29 @@ export async function getLogSnapshot(
         confirmSensitiveOutput: options.confirmSensitiveOutput
       }
     },
-    () => ({
-      runId,
-      capturedAt: "preview",
-      requestedLines,
-      text: "Preview log line one\nPreview log line two\n",
-      returnedLines: 2,
-      truncated: false,
-      source: "container-stdio",
-      warnings: ["Raw container output can contain secrets or workspace content."]
-    })
+    () => {
+      const text = "Preview log line one\nPreview log line two\n";
+
+      return {
+        runId,
+        capturedAt: "preview",
+        cursor: "preview",
+        requestedLines,
+        entries: [
+          {
+            source: "container-stdio",
+            timestamp: "preview",
+            text,
+            lineCount: 2
+          }
+        ],
+        text,
+        returnedLines: 2,
+        truncated: false,
+        source: "container-stdio",
+        warnings: ["Raw container output can contain secrets or workspace content."]
+      };
+    }
   );
 }
 

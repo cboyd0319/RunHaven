@@ -344,6 +344,13 @@ fn log_snapshot_response_caps_lines_and_bytes() {
     assert_eq!(response.requested_lines, 200);
     assert!(response.truncated);
     assert!(response.text.len() <= 18);
+    assert_eq!(response.cursor, response.captured_at);
+    assert_eq!(response.entries.len(), 1);
+    let entry = &response.entries[0];
+    assert_eq!(entry.source, "container-stdio");
+    assert_eq!(entry.timestamp, response.captured_at);
+    assert_eq!(entry.text, response.text);
+    assert_eq!(entry.line_count, response.returned_lines);
     assert!(
         response
             .warnings

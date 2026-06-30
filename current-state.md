@@ -1591,8 +1591,10 @@ Latest GUI local prototype:
   command, process bridge, terminal input, resize, attach, or filesystem access.
 - 2026-06-30 selected-session output: The selected-session pane now exposes the
   existing confirmation-gated bounded output snapshot for the session's run ID.
-  The output card shows source, captured cursor, returned line count,
-  truncation state, backend warnings, and bounded text. This reuses
+  `LogSnapshotResponse` now includes an additive cursor plus typed snapshot
+  entries while keeping the legacy top-level text fields for compatibility. The
+  output card renders source, captured cursor, returned line count, truncation
+  state, backend warnings, and bounded text from that typed entry. This reuses
   `get_log_snapshot`; it does not add a Tauri command, streaming transport,
   terminal input, resize, attach, or filesystem access.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local

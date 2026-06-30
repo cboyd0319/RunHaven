@@ -7,12 +7,21 @@ import type { LogSnapshotResponse } from "../commands/runhaven";
 function snapshot(patch: Partial<LogSnapshotResponse> = {}): LogSnapshotResponse {
   return {
     runId: "run-123",
-    capturedAt: "preview-cursor",
+    capturedAt: "legacy-cursor",
+    cursor: "entry-cursor",
     requestedLines: 200,
-    text: "line one\nline two\n",
-    returnedLines: 2,
+    entries: [
+      {
+        source: "container-stdio",
+        timestamp: "entry-timestamp",
+        text: "entry line one\nentry line two\n",
+        lineCount: 2
+      }
+    ],
+    text: "legacy line one\nlegacy line two\n",
+    returnedLines: 99,
     truncated: false,
-    source: "container-stdio",
+    source: "legacy-source",
     warnings: ["Raw container output can contain secrets or workspace content."],
     ...patch
   };
@@ -34,11 +43,13 @@ describe("RunOutputCard", () => {
     expect(html).toContain("Source");
     expect(html).toContain("Container output");
     expect(html).toContain("Captured");
-    expect(html).toContain("preview-cursor");
+    expect(html).toContain("entry-cursor");
+    expect(html).not.toContain("legacy-cursor");
     expect(html).toContain("Returned lines");
-    expect(html).toContain("2");
+    expect(html).not.toContain("99");
     expect(html).toContain("Raw container output can contain secrets");
-    expect(html).toContain("line one");
+    expect(html).toContain("entry line one");
+    expect(html).not.toContain("legacy line one");
     expect(html).not.toContain("/Users/");
   });
 });
