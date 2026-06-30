@@ -31,7 +31,9 @@ Untrusted:
 Rules:
 
 - The frontend can observe sessions through typed read-only commands.
-- The frontend can send input only to an existing backend-owned session ID.
+- The current frontend cannot send session input.
+- A future frontend input bridge can send input only to an existing
+  backend-owned session ID after ownership and bounds tests exist.
 - The frontend cannot request arbitrary commands, shells, mounts, environment
   variables, network modes, provider hosts, or workspace paths.
 - Rust/Tauri owns process creation, launch review, auth setup, run records, and
@@ -59,6 +61,9 @@ It returns display-safe summaries:
 - start time
 - container name
 - detail command
+- lifecycle state
+- one backend-owned next action
+- safe event markers for run state, auth, and network posture
 
 It intentionally omits:
 
@@ -132,8 +137,10 @@ Current GUI behavior:
 - Selecting a session opens a read-only main-pane summary.
 - The summary shows agent, project label, session name, status, auth posture,
   network posture, and start time.
-- Auth states that are not brokered, ready, available, or not applicable are
-  shown as needing attention.
+- The summary renders backend-owned lifecycle, next-action, and event markers
+  instead of inferring those states in the WebView.
+- Auth states that need attention use a backend-owned next action such as
+  `auth_attention`.
 - The summary does not expose raw workspace paths, state volume names, raw
   command arguments, terminal input, resize, attach, filesystem RPC, or process
   control.
@@ -144,11 +151,16 @@ Current slice:
 
 - core contract tests prove active runs merge with auth status and omit raw
   paths/secrets
+- core contract tests prove lifecycle, next action, and event markers are
+  derived from secret-free fields
 - Tauri command test proves `get_managed_sessions` is read-only and secret-free
+- Tauri command test proves the endpoint does not expose write-session or
+  attach affordances
 - capability guard proves the command is under an `allow-*` scope only
 - frontend helper test proves the browser fallback keeps the same shape
 - frontend selected-session card test proves the rendered summary stays
-  read-only and does not include host paths or write-session command names
+  read-only, renders the typed next action and event markers, and does not
+  include host paths or write-session command names
 
 Future embedded-session slices need focused Rust tests for session ownership,
 unknown ID rejection, bounded input, bounded resize, raw output gating, and

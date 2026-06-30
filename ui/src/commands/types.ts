@@ -130,6 +130,22 @@ export type ManagedSessionSummary = {
   startedAt: string;
   containerName: string;
   detailCommand: string;
+  lifecycle: string;
+  nextAction: ManagedSessionNextAction;
+  events: ManagedSessionEvent[];
+};
+
+export type ManagedSessionNextAction = {
+  kind: string;
+  label: string;
+  detail: string;
+};
+
+export type ManagedSessionEvent = {
+  source: string;
+  label: string;
+  detail: string;
+  timestamp: string;
 };
 
 export type ManagedSessionList = {

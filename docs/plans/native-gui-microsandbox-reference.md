@@ -148,10 +148,11 @@ before risky change" recovery pattern, especially for stateful agent work.
 
 Use these ideas in this order:
 
-1. Extend `ManagedSessionSummaryData` only as needed for selected-session UI:
-   lifecycle state, one next action, and optional blocked reason.
-2. Add a selected-session main pane before terminal input. It should show state,
-   project label, agent, auth, network posture, and recent lifecycle markers.
+1. Done: extend `ManagedSessionSummaryData` only as needed for selected-session
+   UI with lifecycle state, one next action, and safe event markers.
+2. Done: add a selected-session main pane before terminal input. It shows
+   state, project label, agent, auth, network posture, and recent lifecycle
+   markers without a write bridge.
 3. Add typed `SessionLogEntry` later with source, timestamp, session ID, cursor,
    bounded body, and warning-gated raw output.
 4. Add bounded `write_session_input` and `resize_session` only after unknown ID,

@@ -116,6 +116,26 @@ pub struct ManagedSessionSummaryData {
     pub started_at: String,
     pub container_name: String,
     pub detail_command: String,
+    pub lifecycle: String,
+    pub next_action: ManagedSessionNextActionData,
+    pub events: Vec<ManagedSessionEventData>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedSessionNextActionData {
+    pub kind: String,
+    pub label: String,
+    pub detail: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedSessionEventData {
+    pub source: String,
+    pub label: String,
+    pub detail: String,
+    pub timestamp: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -349,6 +369,14 @@ impl ManagedSessionSummaryData {
         let agent = string_field(&record, "profile");
         let project = project_label(&string_field(&record, "workspace"));
         let status = string_field(&record, "status");
+        let status_label = status_label(&status);
+        let auth_status = auth_by_agent
+            .get(&agent)
+            .cloned()
+            .unwrap_or_else(|| "unknown".to_string());
+        let network = string_field(&record, "network");
+        let started_at = string_field(&record, "timestamp");
+        let lifecycle = managed_session_lifecycle(&status);
         Self {
             id: run_id.clone(),
             run_id: run_id.clone(),
@@ -356,16 +384,16 @@ impl ManagedSessionSummaryData {
             session: string_field(&record, "session"),
             title: format!("{} - {}", display_agent_name(&agent), project),
             project,
-            status_label: status_label(&status),
+            status_label: status_label.clone(),
             status,
-            auth_status: auth_by_agent
-                .get(&agent)
-                .cloned()
-                .unwrap_or_else(|| "unknown".to_string()),
-            network: string_field(&record, "network"),
-            started_at: string_field(&record, "timestamp"),
+            auth_status: auth_status.clone(),
+            network: network.clone(),
+            started_at: started_at.clone(),
             container_name: string_field(&record, "container_name"),
             detail_command: format!("runhaven runs show {run_id}"),
+            next_action: managed_session_next_action(&agent, &auth_status, &lifecycle),
+            events: managed_session_events(&status_label, &auth_status, &network, &started_at),
+            lifecycle,
         }
     }
 }
@@ -784,6 +812,133 @@ fn status_label(status: &str) -> String {
         "stopped" => "Stopped".to_string(),
         other => display_agent_name(other),
     }
+}
+
+fn managed_session_lifecycle(status: &str) -> String {
+    match status.trim().to_lowercase().as_str() {
+        "running" => "running".to_string(),
+        "started" | "starting" => "starting".to_string(),
+        "finished" | "succeeded" => "finished".to_string(),
+        "failed" | "error" | "crashed" => "failed".to_string(),
+        "stopped" | "exited" => "stopped".to_string(),
+        "" | "-" => "unknown".to_string(),
+        other => other.to_string(),
+    }
+}
+
+fn managed_session_next_action(
+    agent: &str,
+    auth_status: &str,
+    lifecycle: &str,
+) -> ManagedSessionNextActionData {
+    if managed_session_auth_needs_attention(agent, auth_status) {
+        return ManagedSessionNextActionData {
+            kind: "auth_attention".to_string(),
+            label: "Finish auth setup".to_string(),
+            detail: format!("Auth is not ready for {}.", display_agent_name(agent)),
+        };
+    }
+
+    match lifecycle {
+        "running" | "starting" => ManagedSessionNextActionData {
+            kind: "monitor".to_string(),
+            label: "Monitor session".to_string(),
+            detail: "RunHaven is tracking status for this session.".to_string(),
+        },
+        "finished" | "stopped" => ManagedSessionNextActionData {
+            kind: "none".to_string(),
+            label: "No action needed".to_string(),
+            detail: "The session is no longer running.".to_string(),
+        },
+        "failed" => ManagedSessionNextActionData {
+            kind: "review".to_string(),
+            label: "Review session".to_string(),
+            detail: "The session reported a failure.".to_string(),
+        },
+        _ => ManagedSessionNextActionData {
+            kind: "review".to_string(),
+            label: "Review session".to_string(),
+            detail: "RunHaven does not recognize this session state.".to_string(),
+        },
+    }
+}
+
+fn managed_session_auth_needs_attention(agent: &str, auth_status: &str) -> bool {
+    if agent.trim().eq_ignore_ascii_case("shell") {
+        return false;
+    }
+
+    !matches!(
+        auth_status.trim().to_lowercase().as_str(),
+        "api-key-broker" | "brokered" | "ready" | "available" | "n/a"
+    )
+}
+
+fn managed_session_events(
+    status_label: &str,
+    auth_status: &str,
+    network: &str,
+    timestamp: &str,
+) -> Vec<ManagedSessionEventData> {
+    vec![
+        ManagedSessionEventData {
+            source: "run".to_string(),
+            label: "Run record".to_string(),
+            detail: status_label.to_string(),
+            timestamp: timestamp.to_string(),
+        },
+        ManagedSessionEventData {
+            source: "auth".to_string(),
+            label: "Auth".to_string(),
+            detail: auth_status_label(auth_status),
+            timestamp: timestamp.to_string(),
+        },
+        ManagedSessionEventData {
+            source: "network".to_string(),
+            label: "Network".to_string(),
+            detail: network_label(network),
+            timestamp: timestamp.to_string(),
+        },
+    ]
+}
+
+fn network_label(network: &str) -> String {
+    match network.trim().to_lowercase().as_str() {
+        "provider" => "Provider only".to_string(),
+        "internal" => "Local only".to_string(),
+        "internet" => "Internet".to_string(),
+        "" | "-" => "Unknown".to_string(),
+        _ => display_words(network),
+    }
+}
+
+fn auth_status_label(status: &str) -> String {
+    match status.trim().to_lowercase().as_str() {
+        "api-key-broker" => "API key broker".to_string(),
+        "n/a" => "N/A".to_string(),
+        "" | "-" => "Unknown".to_string(),
+        _ => display_words(status),
+    }
+}
+
+fn display_words(value: &str) -> String {
+    let cleaned = value.trim().replace('-', " ");
+    if cleaned.is_empty() {
+        return "Unknown".to_string();
+    }
+    cleaned
+        .split_whitespace()
+        .map(|word| {
+            let mut chars = word.chars();
+            let Some(first) = chars.next() else {
+                return String::new();
+            };
+            let mut label = first.to_uppercase().to_string();
+            label.push_str(chars.as_str());
+            label
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn u32_field(record: &serde_json::Value, name: &str) -> u32 {
@@ -1265,6 +1420,80 @@ mod tests {
         let decoded: RunHavenComponentPayload =
             serde_json::from_value(encoded).expect("deserialize managed sessions");
         assert_eq!(decoded, payload);
+    }
+
+    #[test]
+    fn managed_session_contract_derives_lifecycle_action_and_events() {
+        let data = ManagedSessionListData::from_active_runs_and_auth_status(
+            [
+                serde_json::json!({
+                    "timestamp": "2026-06-30T03:00:00Z",
+                    "run_id": "run-auth",
+                    "profile": "claude",
+                    "workspace": "/sensitive/workspaces/auth",
+                    "network": "provider",
+                    "status": "running",
+                    "container_name": "runhaven-claude-auth-run",
+                    "state_volume": "runhaven-claude-auth-home",
+                    "session": "auth",
+                    "token": "should-not-leak"
+                }),
+                serde_json::json!({
+                    "timestamp": "2026-06-30T02:00:00Z",
+                    "run_id": "run-ready",
+                    "profile": "codex",
+                    "workspace": "/sensitive/workspaces/ready",
+                    "network": "provider",
+                    "status": "running",
+                    "container_name": "runhaven-codex-ready-run",
+                    "state_volume": "runhaven-codex-ready-home",
+                    "session": "ready"
+                }),
+            ],
+            serde_json::json!({
+                "profiles": [
+                    {"name": "codex", "status": "api-key-broker"},
+                    {"name": "claude", "status": "unknown"}
+                ]
+            }),
+        );
+
+        let auth = &data.sessions[0];
+        assert_eq!(auth.lifecycle, "running");
+        assert_eq!(auth.next_action.kind, "auth_attention");
+        assert_eq!(auth.next_action.label, "Finish auth setup");
+        assert_eq!(auth.next_action.detail, "Auth is not ready for Claude.");
+
+        let ready = &data.sessions[1];
+        assert_eq!(ready.lifecycle, "running");
+        assert_eq!(ready.next_action.kind, "monitor");
+        assert_eq!(ready.next_action.label, "Monitor session");
+        assert_eq!(
+            ready
+                .events
+                .iter()
+                .map(|event| event.source.as_str())
+                .collect::<Vec<_>>(),
+            ["run", "auth", "network"]
+        );
+        assert_eq!(ready.events[0].label, "Run record");
+        assert_eq!(ready.events[0].detail, "Running");
+        assert_eq!(ready.events[1].detail, "API key broker");
+        assert_eq!(ready.events[2].detail, "Provider only");
+
+        let encoded = serde_json::to_string(&data).expect("serialize managed sessions");
+        for forbidden in [
+            "/sensitive/workspaces",
+            "should-not-leak",
+            "state_volume",
+            "runhaven-claude-auth-home",
+            "runhaven-codex-ready-home",
+        ] {
+            assert!(
+                !encoded.contains(forbidden),
+                "managed session payload leaked forbidden value {forbidden:?}"
+            );
+        }
     }
 
     #[test]

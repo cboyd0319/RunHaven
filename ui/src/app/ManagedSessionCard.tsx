@@ -19,6 +19,7 @@ export function ManagedSessionCard({
   session: ManagedSessionSummary
 }) {
   const needsAttention = sessionNeedsAttention(session)
+  const action = session.nextAction
 
   return (
     <Card aria-live="polite">
@@ -32,7 +33,7 @@ export function ManagedSessionCard({
               RunHaven is monitoring this session.
             </CardDescription>
           </div>
-          <Badge variant={needsAttention ? "destructive" : "success"}>
+          <Badge variant={sessionBadgeVariant(session)}>
             {needsAttention ? "Needs attention" : session.statusLabel}
           </Badge>
         </div>
@@ -41,19 +42,19 @@ export function ManagedSessionCard({
         {needsAttention ? (
           <Alert variant="destructive">
             <CircleAlert />
-            <AlertTitle>Sign in or auth setup needs attention</AlertTitle>
+            <AlertTitle>{displayValue(action.label)}</AlertTitle>
             <AlertDescription>
-              This session is still isolated. Finish auth in RunHaven or choose
-              an agent with ready auth.
+              {displayValue(action.detail)}
             </AlertDescription>
           </Alert>
         ) : (
           <Alert>
             <ShieldCheck />
-            <AlertTitle>Credentials stay brokered or isolated</AlertTitle>
+            <AlertTitle>{displayValue(action.label)}</AlertTitle>
             <AlertDescription>
-              Host home, browser profiles, cloud credentials, and raw SSH keys
-              are not part of this session summary.
+              {displayValue(action.detail)} Host home, browser profiles, cloud
+              credentials, and raw SSH keys are not part of this session
+              summary.
             </AlertDescription>
           </Alert>
         )}
@@ -67,20 +68,60 @@ export function ManagedSessionCard({
           <Metric label="Network" value={networkLabel(session.network)} />
           <Metric label="Started" value={displayValue(session.startedAt)} />
         </div>
+
+        {session.events.length > 0 ? (
+          <section aria-labelledby="managed-session-events">
+            <h3
+              id="managed-session-events"
+              className="mb-2 text-sm font-medium"
+            >
+              Session events
+            </h3>
+            <ul className="divide-y rounded-lg border">
+              {session.events.map((event) => (
+                <li
+                  className="flex flex-col gap-1 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                  key={`${event.source}-${event.label}-${event.timestamp}`}
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Badge variant="outline">{displayValue(event.source)}</Badge>
+                    <span className="truncate font-medium">
+                      {displayValue(event.label)}
+                    </span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {displayValue(event.detail)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </CardContent>
     </Card>
   )
 }
 
 export function sessionNeedsAttention(session: ManagedSessionSummary): boolean {
-  if (session.agent === "shell") {
-    return false
+  return session.nextAction.kind === "auth_attention"
+}
+
+function sessionBadgeVariant(
+  session: ManagedSessionSummary,
+): "destructive" | "secondary" | "success" | "warning" {
+  if (sessionNeedsAttention(session)) {
+    return "destructive"
   }
 
-  const status = session.authStatus.trim().toLowerCase()
-  return !["api-key-broker", "brokered", "ready", "available", "n/a"].includes(
-    status,
-  )
+  switch (session.lifecycle.trim().toLowerCase()) {
+    case "running":
+    case "starting":
+      return "success"
+    case "failed":
+      return "warning"
+    default:
+      return "secondary"
+  }
 }
 
 function networkLabel(network: string): string {

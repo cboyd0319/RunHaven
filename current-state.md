@@ -1578,6 +1578,12 @@ Latest GUI local prototype:
   card shows agent, project label, session, status, auth posture, network
   posture, and start time; it does not add terminal input, resize, attach,
   filesystem RPC, process control, raw workspace paths, or state volume names.
+- 2026-06-30 managed-session status markers: `ManagedSessionSummaryData` now
+  includes backend-owned lifecycle, next-action, and safe event markers for run
+  state, auth, and network posture. The selected-session card renders those
+  typed markers from the contract instead of inferring action state in the
+  WebView. Tauri tests guard that `get_managed_sessions` remains read-only and
+  does not expose write-session or attach affordances.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
@@ -1605,8 +1611,8 @@ Continue local GUI work on this branch. Use
 terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
 boundary, make safe launch the simplest path, and keep developer details behind
 secondary views. Next useful work is a focused live Tauri smoke of the React
-shell, then continue managed-session hardening: richer auth-blocked next
-actions, typed lifecycle markers/log sources, and only then bounded session
-input/resize contracts.
+shell, then design the typed session output/log contract with source, cursor,
+redaction, and ownership tests before any bounded session input or resize
+commands.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.

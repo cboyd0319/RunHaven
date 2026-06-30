@@ -426,12 +426,24 @@ fn managed_sessions_response_is_read_only_and_secret_free() {
     assert_eq!(session.project, "project");
     assert_eq!(session.status, "running");
     assert_eq!(session.auth_status, "api-key-broker");
+    assert_eq!(session.lifecycle, "running");
+    assert_eq!(session.next_action.kind, "monitor");
+    assert_eq!(
+        session
+            .events
+            .iter()
+            .map(|event| event.source.as_str())
+            .collect::<Vec<_>>(),
+        ["run", "auth", "network"]
+    );
 
     let encoded = serde_json::to_string(&response).expect("serialize managed sessions");
     for forbidden in [
         "/sensitive/workspaces",
         "runhaven-codex-secret-home",
         "should-not-leak",
+        "write_session_input",
+        "attach_session",
     ] {
         assert!(
             !encoded.contains(forbidden),
