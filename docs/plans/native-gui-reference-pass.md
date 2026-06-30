@@ -104,8 +104,8 @@ work until the maintainer explicitly asks for a distribution pass.
   shell strings or fall back to `/bin/sh -c`; RunHaven should keep exact
   subprocess argument lists and typed backend commands.
 - Do not migrate RunHaven to React, Tailwind, shadcn/ui, Bun, or a scaffolded
-  app shell just because `tauri-ui` uses them. RunHaven already has a Svelte
-  app and pinned npm workflow.
+  app shell blindly. A pivot is allowed if the stack spike shows a clear
+  product-quality and implementation-speed win.
 - Do not add opener, log, debug-panel, release-workflow, or size-optimization
   changes from `tauri-ui` by default. Each affects dependencies, capabilities,
   packaging, logs, or release behavior and needs its own RunHaven review.
@@ -128,26 +128,42 @@ Keep that boundary even if the visual shell changes.
 
 ## Framework Decision
 
-Two paths are viable:
+Do not treat the current Svelte frontend as a constraint. The Tauri/Rust
+boundary is the valuable part to preserve; the web frontend can change.
 
-1. Continue the existing Tauri/Svelte shell first.
+Use `docs/plans/native-gui-stack-spike.md` before writing the first real GUI
+implementation. The stack spike should compare React + shadcn/ui,
+Svelte + shadcn-svelte, the existing Svelte/plain-CSS path, and SwiftUI against
+RunHaven's security boundary and visual-quality needs.
 
-   This is the lowest-risk path because RunHaven already owns typed Rust
-   commands, focused Tauri capabilities, tests, and Svelte panels. The next
-   value comes from deleting dashboard noise and reshaping the first screen
-   into a native-feeling RunHaven workflow.
+Four paths are viable:
 
-2. Build a SwiftUI shell over a narrow RunHaven backend.
+1. React + shadcn/ui + Tauri.
+
+   This is the strongest component/template path. It can use official shadcn
+   primitives and blocks while keeping the existing typed Tauri commands.
+
+2. Svelte + shadcn-svelte + Tauri.
+
+   This is the lower-migration shadcn-like path. It should be considered, but
+   its community-port maturity and block coverage need proof.
+
+3. Existing Svelte + plain CSS + Tauri.
+
+   This is the smallest code migration, but likely carries the highest custom
+   design burden.
+
+4. SwiftUI shell over a narrow RunHaven backend.
 
    This is the strongest native-feel path, but it creates harder Rust to Swift,
    packaging, IPC, signing, and test seams. The backend must still be a typed
    RunHaven bridge, either through an exact JSON CLI sidecar or a reviewed
    local IPC/FFI layer. It must not become a generic Apple `container` GUI.
 
-Working recommendation: start with a Tauri native-feel prototype over the
-existing typed boundary, then make the SwiftUI switch only if that prototype
-fails the native-feel acceptance bar. This avoids spending the first GUI slice
-on packaging and bridge work before validating the product workflow.
+Working recommendation: keep `src-tauri` and `runhaven-core` as the secure
+backend boundary, run the stack spike, then implement the first real GUI slice
+in the stack that produces the most polished RunHaven-specific screen with the
+least custom UI code.
 
 ## Hardest Problems First
 
@@ -170,10 +186,11 @@ The next GUI work should prove these before visual polish:
 
 ## Immediate GUI Slice
 
-Use `docs/plans/native-gui-wireframe.md` as the implementation contract.
+Use `docs/plans/native-gui-stack-spike.md` to decide the frontend stack, then
+use `docs/plans/native-gui-wireframe.md` as the implementation contract.
 
 1. Keep `src-tauri` as the narrow Rust command boundary.
-2. Redesign the Svelte first screen around "Start a safe agent run":
+2. Redesign the first screen around "Start a safe agent run":
    workspace, agent, plan review, launch, then status.
 3. Move CPU, memory, diagnostics, image builder detail, raw logs, and history
    behind secondary detail views.

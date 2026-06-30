@@ -298,18 +298,38 @@ or broader plugin permission for this wireframe.
 
 ## Component Direction
 
-Keep the first implementation small:
+Keep the first implementation small. The exact frontend framework is not fixed
+by this wireframe.
 
-- `App.svelte`: app-level state, selected section, refresh orchestration.
-- `StartRunView.svelte`: project, agent, safety summary, review action.
-- `SafetySummary.svelte`: what is shared and not shared.
-- `PlanReviewPanel.svelte`: adapt the existing component into the review step.
-- `SetupBlockedView.svelte`: lead with the first blocker.
-- `ActiveRunView.svelte`: combine run status, safe controls, and recent
+- App shell: app-level state, selected section, refresh orchestration.
+- Start run view: project, agent, safety summary, review action.
+- Safety summary: what is shared and not shared.
+- Plan review: review step or sheet.
+- Setup blocked view: lead with the first blocker.
+- Active run view: combine run status, safe controls, and recent
   activity.
 - Existing diagnostics and output panels move behind the Diagnostics section.
 
 Avoid nested cards. Use full-width panes, rows, sections, and one summary rail.
+
+If the stack spike chooses React + shadcn/ui, map the wireframe to shadcn
+primitives first:
+
+- `sidebar` or a simple sidebar block for navigation.
+- `button` for primary, secondary, icon, and destructive actions.
+- `field`, `input`, `select`, and `checkbox` for project, agent, and advanced
+  controls.
+- `alert` for setup, image, login, warning, and success states.
+- `dialog`, `alert-dialog`, `sheet`, or `drawer` for review, warning
+  confirmation, and advanced details.
+- `empty` for no active runs or no history.
+- `table` for history and diagnostics only after those views move behind
+  secondary navigation.
+- `tabs` only for secondary detail views, not the start flow.
+
+If the stack spike chooses Svelte + shadcn-svelte, use the equivalent
+components and verify that accessibility, keyboard behavior, and generated
+markup match the React path closely enough.
 
 ## Visual Notes
 
@@ -325,7 +345,7 @@ Avoid nested cards. Use full-width panes, rows, sections, and one summary rail.
 ## Desktop Shell Polish
 
 Borrow these implementation checks from the `agmmnn/tauri-ui` reference, but
-adapt them to RunHaven's existing Svelte/Tauri stack:
+adapt them to whichever Tauri frontend stack wins the stack spike:
 
 - Prevent startup flash if it appears in baseline screenshots. The app may hide
   the main window until first paint, but only after checking Tauri behavior

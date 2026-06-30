@@ -67,11 +67,13 @@ that harden the shared backend:
 - CLI pass: run the existing CLI surface check, inspect command help/output for
   stale TUI/v0.6 wording, and fix any CLI-facing mismatch before merge.
 - GUI handoff: initial Apple `container` GUI reference research is captured in
-  `docs/plans/native-gui-reference-pass.md`. The first GUI wireframe is
-  captured in `docs/plans/native-gui-wireframe.md`. Next GUI work should keep
-  RunHaven's typed Tauri boundary, prototype a calmer native-feeling first
-  screen, and switch to SwiftUI only if that prototype fails the native-feel
-  acceptance bar.
+  `docs/plans/native-gui-reference-pass.md`. The frontend stack decision gate
+  is captured in `docs/plans/native-gui-stack-spike.md`. The first GUI
+  wireframe is captured in `docs/plans/native-gui-wireframe.md`. Next GUI work
+  should keep RunHaven's typed Tauri/Rust boundary, evaluate React + shadcn/ui,
+  Svelte + shadcn-svelte, existing Svelte/plain CSS, and SwiftUI, then
+  implement the first real GUI slice in the stack that gives the best polished
+  RunHaven-specific result with the least custom UI code.
 
 ## Startup State Contract
 
@@ -1524,10 +1526,12 @@ Latest CLI surface pass:
 The TUI hardening plus CLI-audit branch is merged. Next product work shifts to
 a native-feeling macOS GUI as the easy path for nontechnical users. The first
 GUI slice should use `docs/plans/native-gui-reference-pass.md`: keep the typed
-RunHaven Tauri boundary, then implement from
+RunHaven Tauri/Rust boundary, run the
+`docs/plans/native-gui-stack-spike.md` comparison, then implement from
 `docs/plans/native-gui-wireframe.md`: simplify the first screen around safe
-launch, hide developer details behind secondary views, and decide whether
-SwiftUI is needed only after a focused native-feel prototype. Keep the prototype
-path free of paid Apple Developer Program requirements. Do not cut a release,
-tag, version bump, notarization, updater, or public distribution pass unless the
-maintainer explicitly asks for it.
+launch and hide developer details behind secondary views. Do not prefer Svelte
+just because it exists; choose the stack that best reduces custom UI code while
+preserving the boundary. Keep the prototype path free of paid Apple Developer
+Program requirements. Do not cut a release, tag, version bump, notarization,
+updater, or public distribution pass unless the maintainer explicitly asks for
+it.
