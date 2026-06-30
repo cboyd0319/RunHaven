@@ -23,6 +23,28 @@ RunHaven should feel like a calm macOS utility:
 - No landing page, mascot-first screen, terminal-first screen, or generic
   container admin surface.
 
+## Logo And Brand Asset
+
+Use `docs/assets/logo.png` as the canonical GUI logo. It is a 512 x 512 RGBA
+PNG with a glass cube over blue and teal stacked layers.
+
+Usage:
+
+- Show it at small app-identity sizes, such as `28 x 28` in the sidebar header
+  or `40 x 40` on setup and empty states.
+- Keep the logo near the RunHaven name, not as a large hero image.
+- Let the logo inform accent colors: blue for selected navigation and primary
+  links, teal or green for safe/ready states, amber for warnings, red only for
+  destructive or blocked states.
+- Keep the asset crisp on Retina screens by using the PNG at rendered sizes
+  well below 512 px.
+- Provide an accessible text label through surrounding text or `alt="RunHaven"`
+  if rendered as an image.
+
+Do not use the logo as a decorative background, watermark, orb, splash screen,
+or mascot replacement. The first screen should still lead with the safe launch
+workflow.
+
 ## Primary Window
 
 Target first pass: one window, about `1080 x 720`, responsive down to
@@ -37,7 +59,7 @@ Use a simple macOS-style layout:
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
-│ RunHaven                                                Setup Ready  Refresh │
+│ [logo] RunHaven                                   Setup Ready       Refresh │
 ├───────────────┬───────────────────────────────────┬────────────────────────┤
 │ Start         │ Start a safe agent run            │ Safety summary         │
 │ Runs          │                                   │                        │

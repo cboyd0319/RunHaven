@@ -44,6 +44,10 @@ GUI job is narrower:
 Container management can exist later as expert detail, but it should not be the
 first screen or the mental model for nontechnical users.
 
+Use `docs/assets/logo.png` as the canonical GUI logo. It should appear as a
+small app-identity mark, not a hero, background, splash screen, or mascot-first
+surface.
+
 ## Packaging Constraint
 
 Do not require a paid Apple Developer Program membership for current GUI

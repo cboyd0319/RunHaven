@@ -165,6 +165,9 @@ TUI, Tauri, or frontend layers.
   membership. Use local dev, no-sign builds, or ad-hoc signing until the
   maintainer explicitly asks for a distribution pass. Signed and notarized
   public artifacts remain a later release gate.
+- `docs/assets/logo.png` is the canonical GUI logo. Use it as a small
+  app-identity mark, not a hero, background, splash screen, or mascot-first
+  surface.
 - The hidden Zork I easter egg remains wanted. The current reset keeps the
   MIT-licensed `historicalsource/zork1` collection under `third_party/zork1/`.
   The earlier Ferrif-derived TUI engine was removed with the old custom TUI and
