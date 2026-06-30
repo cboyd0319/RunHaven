@@ -119,10 +119,10 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 391.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 395.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 35.
+- RunHaven-only files: 39.
 - Copied Codex files with local edits: 53.
 
 RunHaven-only files:
@@ -163,6 +163,10 @@ snapshots/runhaven_mvp_review_120x48.snap
 snapshots/runhaven_mvp_review_80x24.snap
 snapshots/runhaven_mvp_typed_confirm_120x48.snap
 snapshots/runhaven_mvp_typed_confirm_80x24.snap
+snapshots/runhaven_mvp_workspace_picker_repo_root_120x48.snap
+snapshots/runhaven_mvp_workspace_picker_repo_root_80x24.snap
+snapshots/runhaven_mvp_workspace_picker_120x48.snap
+snapshots/runhaven_mvp_workspace_picker_80x24.snap
 ```
 
 Copied Codex files with local edits:

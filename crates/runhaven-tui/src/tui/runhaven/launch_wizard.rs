@@ -862,13 +862,12 @@ impl WorkspaceHeader {
                 Span::styled("Step 1/4: Choose workspace", boundary_style()),
             ]),
             Line::from(vec![
-                Span::styled("Boundary  ", muted_but_readable_style()),
+                Span::styled("Safety    ", muted_but_readable_style()),
                 Span::styled("/workspace only", boundary_style()),
-                Span::raw("  "),
-                Span::styled("Host home  ", muted_but_readable_style()),
-                Span::styled("not mounted", safe_style()),
-                Span::raw("  "),
-                Span::styled("Credentials  ", muted_but_readable_style()),
+                Span::raw(". Host home not mounted."),
+            ]),
+            Line::from(vec![
+                Span::styled("Credentials ", muted_but_readable_style()),
                 Span::styled("not mounted by default", safe_style()),
             ]),
         ];

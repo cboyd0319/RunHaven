@@ -17,8 +17,7 @@ expression: rendered
 
   Exact command
   container run --rm --init --name runhaven-antigravity-snapshot-run
-  --read-only --mount
-  type=bind,source=/tmp/runhaven-snapshot-workspace,target=/workspace
+  --read-only --mount type=bind,source=/selected-workspace,target=/workspace
   --network runhaven-provider runhaven/antigravity:0.1.0 antigravity
 
   esc goes back. enter confirms. q quits.

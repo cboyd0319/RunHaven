@@ -13,14 +13,15 @@ expression: rendered
   Boundary    /workspace only
   Host home   not mounted
   Credentials not mounted by default
-  Workspace   /tmp/runhaven-snapshot-workspace
-  Mount       /tmp/runhaven-snapshot-workspace -> /workspace
+  Workspace   /selected-workspace
+  Mount       /selected-workspace -> /workspace
   State       runhaven-antigravity-shared-home
   Image       runhaven/antigravity:0.1.0
   Worktree    off
 
   Exact command
   container run --rm --init --name runhaven-antigravity-snapshot-run
-  --read-only --mount
-  type=bind,source=/tmp/runhaven-snapshot-workspace,target=/workspace
+  --read-only --mount type=bind,source=/selected-workspace,target=/workspace
   --network runhaven-provider runhaven/antigravity:0.1.0 antigravity
+
+  Not shared

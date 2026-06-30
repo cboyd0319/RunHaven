@@ -29,6 +29,10 @@ use super::protocol::UnsupportedFamily;
 use super::protocol::ValidateWorkspaceResponse;
 
 const DIAGNOSTICS_LOG_TAIL_BYTES: u64 = 2 * 1024 * 1024;
+pub(crate) const CURRENT_DIRECTORY_WORKSPACE_LABEL: &str = "Current directory";
+pub(crate) const GIT_REPOSITORY_ROOT_WORKSPACE_LABEL: &str = "Git repository root";
+pub(crate) const GIT_REPOSITORY_ROOT_WORKSPACE_DESCRIPTION: &str =
+    "Mount the full repository instead of only the nested folder.";
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub(crate) struct LaunchPolicySelection {
@@ -378,7 +382,7 @@ impl RunHavenTuiService {
     ) -> Vec<WorkspaceLaunchPreview> {
         let workspace = workspace.as_ref();
         let mut choices = vec![WorkspaceLaunchPreview {
-            label: "Current directory".to_string(),
+            label: CURRENT_DIRECTORY_WORKSPACE_LABEL.to_string(),
             description: workspace.display().to_string(),
             payload: payload_for(self, workspace),
         }];
@@ -391,9 +395,8 @@ impl RunHavenTuiService {
                 .unwrap_or_else(|_| workspace.to_path_buf());
             if repo_root != current {
                 choices.push(WorkspaceLaunchPreview {
-                    label: "Git repository root".to_string(),
-                    description: "Mount the full repository instead of only the nested folder."
-                        .to_string(),
+                    label: GIT_REPOSITORY_ROOT_WORKSPACE_LABEL.to_string(),
+                    description: GIT_REPOSITORY_ROOT_WORKSPACE_DESCRIPTION.to_string(),
                     payload: payload_for(self, &repo_root),
                 });
             }

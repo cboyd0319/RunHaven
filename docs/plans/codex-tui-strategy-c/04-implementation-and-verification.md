@@ -348,13 +348,18 @@ dormant or fail-closed.
 
 Progress note, 2026-06-29: The scoped RunHaven MVP now has authoritative
 RunHaven-owned snapshots under `crates/runhaven-tui/src/tui/snapshots/`.
-`runhaven/mvp_snapshots.rs` covers the agent picker, plan review, confirm
-launch, typed confirm-required launch, active runs, raw-log confirmation,
-loaded bounded log snapshot, secret-free diagnostics, and post-run recovery at
-`80x24` and `120x48`. The fixture uses deterministic data, does not touch
-external temp or workspace state, and does not depend on host environment
-passthrough; snapshot verification uses repo-local `.snap` goldens and no
-Codex upstream `.snap` goldens were imported.
+`runhaven/mvp_snapshots.rs` covers the workspace picker, agent picker, plan
+review, confirm launch, typed confirm-required launch, active runs, raw-log
+confirmation, loaded bounded log snapshot, secret-free diagnostics, and
+post-run recovery at `80x24` and `120x48`. The fixture uses deterministic data,
+does not touch external temp or workspace state, and does not depend on host
+environment passthrough; snapshot verification uses repo-local `.snap` goldens
+and no Codex upstream `.snap` goldens were imported. Follow-up workspace-picker
+goldens cover the current-directory and git-repository-root options selected,
+mirror the live service labels and descriptions, use neutral synthetic
+placeholder paths, and keep the `/workspace only`, host-home exclusion, and
+credentials-not-mounted-by-default safety facts visible in both narrow and wide
+split layouts.
 
 ### Phase 7: Cull Or Stub Unsupported Codex Product Features
 

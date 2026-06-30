@@ -1,6 +1,11 @@
 use super::*;
 use crate::test_backend::VT100Backend;
 use crate::tui::runhaven::service::AgentLaunchPreview;
+use crate::tui::runhaven::service::CURRENT_DIRECTORY_WORKSPACE_LABEL;
+use crate::tui::runhaven::service::GIT_REPOSITORY_ROOT_WORKSPACE_DESCRIPTION;
+use crate::tui::runhaven::service::GIT_REPOSITORY_ROOT_WORKSPACE_LABEL;
+use crate::tui::runhaven::service::LaunchPreviewPayload;
+use crate::tui::runhaven::service::WorkspaceLaunchPreview;
 use ratatui::Terminal;
 use runhaven_core::ui_contracts::AgentCatalogItemData;
 use runhaven_core::ui_contracts::AuthDecisionData;
@@ -11,10 +16,24 @@ use runhaven_core::ui_contracts::LaunchBoundaryData;
 use runhaven_core::ui_contracts::LaunchNetworkData;
 use runhaven_core::ui_contracts::LaunchPlanData;
 
-const SNAPSHOT_WORKSPACE: &str = "/tmp/runhaven-snapshot-workspace";
+const SNAPSHOT_WORKSPACE: &str = "/selected-workspace";
+const SNAPSHOT_NESTED_WORKSPACE: &str = "/selected-workspace/app";
 
 #[test]
 fn runhaven_mvp_snapshot_matrix() {
+    snapshot_workspace_picker("runhaven_mvp_workspace_picker_80x24", 80, 24);
+    snapshot_workspace_picker("runhaven_mvp_workspace_picker_120x48", 120, 48);
+    snapshot_workspace_picker_repo_root_selected(
+        "runhaven_mvp_workspace_picker_repo_root_80x24",
+        80,
+        24,
+    );
+    snapshot_workspace_picker_repo_root_selected(
+        "runhaven_mvp_workspace_picker_repo_root_120x48",
+        120,
+        48,
+    );
+
     snapshot_launch_step("runhaven_mvp_agent_picker_80x24", 80, 24, |_| {});
     snapshot_launch_step("runhaven_mvp_agent_picker_120x48", 120, 48, |_| {});
 
@@ -98,6 +117,55 @@ fn snapshot_confirm_required_step(name: &str, width: u16, height: u16) {
     let mut view = snapshot_launch_view(vec![launch_preview("shell", true)]);
     view.handle_key_event(key(KeyCode::Enter));
     view.handle_key_event(key(KeyCode::Enter));
+    assert_snapshot(name, &view, width, height);
+}
+
+fn snapshot_workspace_picker(name: &str, width: u16, height: u16) {
+    assert_workspace_picker_snapshot(name, width, height, |_| {});
+}
+
+fn snapshot_workspace_picker_repo_root_selected(name: &str, width: u16, height: u16) {
+    assert_workspace_picker_snapshot(name, width, height, |view| {
+        view.handle_key_event(key(KeyCode::Down));
+    });
+}
+
+fn assert_workspace_picker_snapshot(
+    name: &str,
+    width: u16,
+    height: u16,
+    drive: impl FnOnce(&mut RunHavenMvpView),
+) {
+    let mut view = RunHavenMvpView::from_launch_wizard_for_tests(
+        SNAPSHOT_NESTED_WORKSPACE.into(),
+        LaunchWizardView::new_with_workspace_choices(vec![
+            WorkspaceLaunchPreview {
+                label: CURRENT_DIRECTORY_WORKSPACE_LABEL.to_string(),
+                description: SNAPSHOT_NESTED_WORKSPACE.to_string(),
+                payload: LaunchPreviewPayload {
+                    workspace: SNAPSHOT_NESTED_WORKSPACE.into(),
+                    previews: vec![launch_preview_for_workspace(
+                        "codex",
+                        false,
+                        SNAPSHOT_NESTED_WORKSPACE,
+                    )],
+                },
+            },
+            WorkspaceLaunchPreview {
+                label: GIT_REPOSITORY_ROOT_WORKSPACE_LABEL.to_string(),
+                description: GIT_REPOSITORY_ROOT_WORKSPACE_DESCRIPTION.to_string(),
+                payload: LaunchPreviewPayload {
+                    workspace: SNAPSHOT_WORKSPACE.into(),
+                    previews: vec![launch_preview_for_workspace(
+                        "codex",
+                        false,
+                        SNAPSHOT_WORKSPACE,
+                    )],
+                },
+            },
+        ]),
+    );
+    drive(&mut view);
     assert_snapshot(name, &view, width, height);
 }
 
@@ -245,6 +313,14 @@ fn key(code: KeyCode) -> KeyEvent {
 }
 
 fn launch_preview(name: &str, confirm_required: bool) -> AgentLaunchPreview {
+    launch_preview_for_workspace(name, confirm_required, SNAPSHOT_WORKSPACE)
+}
+
+fn launch_preview_for_workspace(
+    name: &str,
+    confirm_required: bool,
+    workspace: &str,
+) -> AgentLaunchPreview {
     use runhaven_core::runtime::plans::AgentRunPlan;
     use runhaven_core::runtime::plans::AuthScope;
     use runhaven_core::runtime::plans::NetworkMode;
@@ -283,7 +359,7 @@ fn launch_preview(name: &str, confirm_required: bool) -> AgentLaunchPreview {
         format!("runhaven-{name}-snapshot-run"),
         "--read-only".to_string(),
         "--mount".to_string(),
-        format!("type=bind,source={SNAPSHOT_WORKSPACE},target=/workspace"),
+        format!("type=bind,source={workspace},target=/workspace"),
         "--network".to_string(),
         if confirm_required {
             "internet".to_string()
@@ -296,7 +372,7 @@ fn launch_preview(name: &str, confirm_required: bool) -> AgentLaunchPreview {
     let executable = AgentRunPlan {
         command,
         preflight: Vec::new(),
-        workspace: SNAPSHOT_WORKSPACE.into(),
+        workspace: workspace.into(),
         state_volume: format!("runhaven-{name}-shared-home"),
         session: "none".to_string(),
         container_name: format!("runhaven-{name}-snapshot-run"),
@@ -316,7 +392,7 @@ fn launch_preview(name: &str, confirm_required: bool) -> AgentLaunchPreview {
     };
     let data = LaunchPlanData {
         profile_name: name.to_string(),
-        workspace: SNAPSHOT_WORKSPACE.to_string(),
+        workspace: workspace.to_string(),
         workspace_scope: "current".to_string(),
         workspace_scope_note: None,
         auth_scope: "agent".to_string(),
@@ -333,7 +409,7 @@ fn launch_preview(name: &str, confirm_required: bool) -> AgentLaunchPreview {
             api_key_broker_env: None,
         },
         boundary: LaunchBoundaryData {
-            mounted_workspace: format!("{SNAPSHOT_WORKSPACE} -> /workspace"),
+            mounted_workspace: format!("{workspace} -> /workspace"),
             mounted_state_volume: format!("runhaven-{name}-shared-home -> /home/agent"),
             not_shared: vec![
                 "host home folder".to_string(),

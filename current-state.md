@@ -1275,10 +1275,16 @@ Latest TUI MVP snapshot matrix:
 
 - 2026-06-29: Added the authoritative RunHaven-owned MVP snapshot matrix under
   `crates/runhaven-tui/src/tui/snapshots/`, with a test-only
-  `runhaven/mvp_snapshots.rs` module. The matrix covers the agent picker, plan
-  review, confirm launch, typed confirm-required launch, active-run list,
-  raw-log confirmation, loaded bounded log snapshot, secret-free diagnostics,
-  and post-run recovery at both `80x24` and `120x48`.
+  `runhaven/mvp_snapshots.rs` module. The initial matrix covered the agent
+  picker, plan review, confirm launch, typed confirm-required launch,
+  active-run list, raw-log confirmation, loaded bounded log snapshot,
+  secret-free diagnostics, and post-run recovery at both `80x24` and `120x48`.
+- 2026-06-29: Expanded the matrix to include the workspace picker with both the
+  current-directory option and git-repository-root option selected. The fixture
+  mirrors the live service labels and descriptions, uses neutral synthetic
+  placeholder paths, and keeps `/workspace only`, host-home exclusion, and
+  credentials-not-mounted-by-default safety facts visible in both narrow and
+  wide split layouts.
 - The snapshots use deterministic fixture data, do not touch external temp or
   workspace state, and do not depend on host environment passthrough. Snapshot
   verification uses repo-local `.snap` goldens. Upstream Codex `.snap` goldens

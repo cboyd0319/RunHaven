@@ -1,0 +1,28 @@
+---
+source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
+expression: rendered
+---
+
+  RunHaven v0.5.0  Step 1/4: Choose workspace
+  Safety    /workspace only. Host home not mounted.
+  Credentials not mounted by default
+  Selected    Current directory
+  Workspace   /selected-workspace/app
+
+› 1. Current directory    1 agents available for this workspace
+  2. Git repository root  Mount the full repository instead of only the neste…
+
+  Workspace Preview
+  Choice      Current directory
+  Workspace   /selected-workspace/app
+  Mount       /workspace only
+  Host home   not mounted
+  Credentials not mounted by default
+  Agents      1
+
+  /selected-workspace/app
+
+
+
+  Choose what RunHaven mounts as /workspace before reviewing an agent.
+  Use ↑/↓ or j/k to choose. enter selects. esc or q quits.

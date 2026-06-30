@@ -6,7 +6,7 @@ expression: rendered
   RunHaven v0.5.0  Step 1/4: Choose agent
   Pick the agent to run. You will review the plan before anything starts.
   Agent  antigravity  Network  Provider only
-  Workspace   /tmp/runhaven-snapshot-workspace
+  Workspace   /selected-workspace
   Safety  /workspace only. Host home and credentials are not mounted.
 
 › 1. antigravity  Ready. Provider only. Workspace only.
