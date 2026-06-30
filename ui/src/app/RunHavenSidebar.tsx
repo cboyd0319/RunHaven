@@ -14,12 +14,18 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import type { ManagedSessionSummary } from "@/commands/runhaven"
 
-export function RunHavenSidebar() {
+export function RunHavenSidebar({
+  sessions,
+}: {
+  sessions: ManagedSessionSummary[]
+}) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -61,6 +67,24 @@ export function RunHavenSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {sessions.length > 0 ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Active sessions</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {sessions.map((session) => (
+                  <SidebarMenuItem key={session.id}>
+                    <SidebarMenuButton tooltip={session.title}>
+                      <Terminal />
+                      <span>{session.title}</span>
+                    </SidebarMenuButton>
+                    <SidebarMenuBadge>{session.statusLabel}</SidebarMenuBadge>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
       </SidebarContent>
       <SidebarRail />
     </Sidebar>

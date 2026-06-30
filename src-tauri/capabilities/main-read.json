@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-read",
-  "description": "Read-only access for RunHaven setup, dashboard, profile, image status, run status, planning, and secret-free diagnostics commands.",
+  "description": "Read-only access for RunHaven setup, dashboard, profile, image status, managed session status, run status, planning, and secret-free diagnostics commands.",
   "windows": ["main"],
   "permissions": [
     "allow-get-setup-status",
@@ -12,6 +12,7 @@
     "allow-plan-run",
     "allow-get-egress-log",
     "allow-get-auth-log",
-    "allow-get-auth-status"
+    "allow-get-auth-status",
+    "allow-get-managed-sessions"
   ]
 }

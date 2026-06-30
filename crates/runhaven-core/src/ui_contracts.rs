@@ -1,3 +1,6 @@
+use std::collections::BTreeMap;
+use std::path::Path;
+
 use serde::{Deserialize, Serialize};
 
 use crate::doctor::Check;
@@ -14,6 +17,7 @@ pub enum RunHavenComponentPayload {
     LaunchPlan(Box<LaunchPlanData>),
     ActiveRunList(ActiveRunListData),
     ActiveRunLogSnapshot(Box<ActiveRunLogSnapshotData>),
+    ManagedSessionList(ManagedSessionListData),
     RunDiff(Box<RunDiffData>),
     RunControlResult(Box<RunControlResultData>),
     Diagnostics(Box<RunHavenDiagnosticsData>),
@@ -88,6 +92,30 @@ pub struct ActiveRunLogSnapshotData {
     pub truncated: bool,
     pub source: String,
     pub warnings: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedSessionListData {
+    pub sessions: Vec<ManagedSessionSummaryData>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedSessionSummaryData {
+    pub id: String,
+    pub run_id: String,
+    pub agent: String,
+    pub session: String,
+    pub title: String,
+    pub project: String,
+    pub status: String,
+    pub status_label: String,
+    pub auth_status: String,
+    pub network: String,
+    pub started_at: String,
+    pub container_name: String,
+    pub detail_command: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -288,6 +316,56 @@ impl ActiveRunSummaryData {
             state_volume: string_field(&record, "state_volume"),
             session: string_field(&record, "session"),
             container_name: string_field(&record, "container_name"),
+        }
+    }
+}
+
+impl ManagedSessionListData {
+    pub fn from_active_runs_and_auth_status(
+        records: impl IntoIterator<Item = serde_json::Value>,
+        auth_status: serde_json::Value,
+    ) -> Self {
+        let auth_by_agent = auth_profiles_by_name(&auth_status);
+        let mut sessions = records
+            .into_iter()
+            .map(|record| ManagedSessionSummaryData::from_active_run_record(record, &auth_by_agent))
+            .collect::<Vec<_>>();
+        sessions.sort_by(|left, right| {
+            right
+                .started_at
+                .cmp(&left.started_at)
+                .then_with(|| right.run_id.cmp(&left.run_id))
+        });
+        Self { sessions }
+    }
+}
+
+impl ManagedSessionSummaryData {
+    fn from_active_run_record(
+        record: serde_json::Value,
+        auth_by_agent: &BTreeMap<String, String>,
+    ) -> Self {
+        let run_id = string_field(&record, "run_id");
+        let agent = string_field(&record, "profile");
+        let project = project_label(&string_field(&record, "workspace"));
+        let status = string_field(&record, "status");
+        Self {
+            id: run_id.clone(),
+            run_id: run_id.clone(),
+            agent: agent.clone(),
+            session: string_field(&record, "session"),
+            title: format!("{} - {}", display_agent_name(&agent), project),
+            project,
+            status_label: status_label(&status),
+            status,
+            auth_status: auth_by_agent
+                .get(&agent)
+                .cloned()
+                .unwrap_or_else(|| "unknown".to_string()),
+            network: string_field(&record, "network"),
+            started_at: string_field(&record, "timestamp"),
+            container_name: string_field(&record, "container_name"),
+            detail_command: format!("runhaven runs show {run_id}"),
         }
     }
 }
@@ -659,6 +737,53 @@ fn string_field(record: &serde_json::Value, name: &str) -> String {
             .and_then(serde_json::Value::as_str)
             .unwrap_or("-"),
     )
+}
+
+fn auth_profiles_by_name(payload: &serde_json::Value) -> BTreeMap<String, String> {
+    payload
+        .get("profiles")
+        .and_then(serde_json::Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .map(|item| (string_field(item, "name"), string_field(item, "status")))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn project_label(workspace: &str) -> String {
+    let trimmed = workspace.trim();
+    if trimmed.is_empty() || trimmed == "-" {
+        return "-".to_string();
+    }
+    Path::new(trimmed)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .filter(|name| !name.is_empty())
+        .map(strip_terminal_controls)
+        .unwrap_or_else(|| "-".to_string())
+}
+
+fn display_agent_name(agent: &str) -> String {
+    let mut chars = agent.chars();
+    let Some(first) = chars.next() else {
+        return "-".to_string();
+    };
+    let mut label = first.to_uppercase().to_string();
+    label.push_str(chars.as_str());
+    label
+}
+
+fn status_label(status: &str) -> String {
+    match status {
+        "running" => "Running".to_string(),
+        "started" => "Starting".to_string(),
+        "finished" | "succeeded" => "Finished".to_string(),
+        "failed" => "Failed".to_string(),
+        "stopped" => "Stopped".to_string(),
+        other => display_agent_name(other),
+    }
 }
 
 fn u32_field(record: &serde_json::Value, name: &str) -> u32 {
@@ -1044,6 +1169,102 @@ mod tests {
             !serialized.contains("/Users/c/secret/project"),
             "TUI active-run summaries must not include workspace paths"
         );
+    }
+
+    #[test]
+    fn managed_session_list_contract_merges_active_runs_with_auth_status() {
+        let data = ManagedSessionListData::from_active_runs_and_auth_status(
+            [
+                serde_json::json!({
+                    "timestamp": "2026-06-30T01:00:00Z",
+                    "run_id": "run-older",
+                    "profile": "codex",
+                    "workspace": "/sensitive/workspaces/docs",
+                    "network": "provider",
+                    "status": "running",
+                    "container_name": "runhaven-codex-docs-run",
+                    "state_volume": "runhaven-codex-docs-home",
+                    "session": "docs"
+                }),
+                serde_json::json!({
+                    "timestamp": "2026-06-30T02:00:00Z",
+                    "run_id": "run-newer",
+                    "profile": "claude",
+                    "workspace": "/sensitive/workspaces/backend",
+                    "network": "provider",
+                    "status": "running",
+                    "container_name": "runhaven-claude-backend-run",
+                    "state_volume": "runhaven-claude-backend-home",
+                    "session": "backend"
+                }),
+            ],
+            serde_json::json!({
+                "status": "api-key-broker",
+                "runtime": "host-broker",
+                "profiles": [
+                    {"name": "codex", "status": "api-key-broker"},
+                    {"name": "claude", "status": "api-key-broker"}
+                ],
+                "token": "should-not-leak"
+            }),
+        );
+
+        assert_eq!(data.sessions.len(), 2);
+        let first = &data.sessions[0];
+        assert_eq!(first.id, "run-newer");
+        assert_eq!(first.agent, "claude");
+        assert_eq!(first.session, "backend");
+        assert_eq!(first.project, "backend");
+        assert_eq!(first.status, "running");
+        assert_eq!(first.status_label, "Running");
+        assert_eq!(first.auth_status, "api-key-broker");
+        assert_eq!(first.detail_command, "runhaven runs show run-newer");
+
+        let encoded = serde_json::to_string(&data).expect("serialize managed sessions");
+        for forbidden in [
+            "/sensitive/workspaces",
+            "should-not-leak",
+            "state_volume",
+            "runhaven-codex-docs-home",
+        ] {
+            assert!(
+                !encoded.contains(forbidden),
+                "managed session payload leaked forbidden value {forbidden:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn managed_session_component_payload_round_trips_json() {
+        let data = ManagedSessionListData::from_active_runs_and_auth_status(
+            [serde_json::json!({
+                "timestamp": "2026-06-30T02:00:00Z",
+                "run_id": "run-123",
+                "profile": "codex",
+                "workspace": "/sensitive/workspaces/project",
+                "network": "provider",
+                "status": "running",
+                "container_name": "runhaven-codex-project-run",
+                "session": "project"
+            })],
+            serde_json::json!({
+                "profiles": [{"name": "codex", "status": "api-key-broker"}]
+            }),
+        );
+        let payload = RunHavenComponentPayload::ManagedSessionList(data);
+        let encoded = serde_json::to_value(&payload).expect("serialize managed sessions");
+
+        assert_eq!(
+            encoded.get("type").and_then(serde_json::Value::as_str),
+            Some("managedSessionList")
+        );
+        let data = encoded.get("data").expect("session data");
+        assert!(data.get("sessions").is_some());
+        assert!(data.to_string().contains("runhaven runs show run-123"));
+
+        let decoded: RunHavenComponentPayload =
+            serde_json::from_value(encoded).expect("deserialize managed sessions");
+        assert_eq!(decoded, payload);
     }
 
     #[test]

@@ -1558,6 +1558,14 @@ Latest GUI local prototype:
   ready launch path shows only the wizard plus secondary diagnostics.
   Screenshots captured at `target/playwright/ui/runhaven-two-pane-1080.png`
   and `target/playwright/ui/runhaven-two-pane-720.png`.
+- 2026-06-30 managed-session foundation: Added the first read-only managed
+  session contract before any embedded terminal work. `runhaven-core` now owns
+  `ManagedSessionListData`, which merges active RunHaven runs with secret-free
+  auth status and omits raw workspace paths, state volume names, tokens, and
+  environment values. Tauri exposes `get_managed_sessions` under `main-read`
+  with `allow-get-managed-sessions`; the React command client and sidebar can
+  show an `Active sessions` group only when sessions exist. The design contract
+  lives in `docs/plans/native-gui-managed-sessions.md`.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
@@ -1579,10 +1587,12 @@ Latest GUI local prototype:
 Continue local GUI work on this branch. Use
 `docs/plans/native-gui-reference-pass.md`,
 `docs/plans/native-gui-stack-spike.md`, and
-`docs/plans/native-gui-wireframe.md` as the design contract: keep the typed
-RunHaven Tauri/Rust boundary, make safe launch the simplest path, and keep
-developer details behind secondary views. Next useful work is a focused live
-Tauri smoke of the React shell, then one beginner-safe slice at a time for
-setup-blocked remediation, image/login blocked remediation, and history/review.
+`docs/plans/native-gui-wireframe.md` as the design contract; use
+`docs/plans/native-gui-managed-sessions.md` before adding embedded terminal or
+session-write controls. Keep the typed RunHaven Tauri/Rust boundary, make safe
+launch the simplest path, and keep developer details behind secondary views.
+Next useful work is a focused live Tauri smoke of the React shell, then continue
+managed-session hardening: auth-blocked presentation, selected-session main-pane
+state, and only then bounded session input/resize contracts.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.

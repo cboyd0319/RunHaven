@@ -16,6 +16,7 @@ pub fn run() {
             commands::diagnostics::get_egress_log,
             commands::diagnostics::get_auth_log,
             commands::diagnostics::get_auth_status,
+            commands::sessions::get_managed_sessions,
             commands::run_control::stop_run,
             commands::run_control::kill_run,
             commands::run_control::repair_run,

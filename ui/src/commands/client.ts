@@ -13,6 +13,7 @@ import type {
   LaunchRunResponse,
   LogSnapshotOptions,
   LogSnapshotResponse,
+  ManagedSessionList,
   RunPlanRequest,
   RunPlanResponse,
   KillRunResponse,
@@ -187,6 +188,10 @@ export async function getLogSnapshot(
       warnings: ["Raw container output can contain secrets or workspace content."]
     })
   );
+}
+
+export async function getManagedSessions(): Promise<ManagedSessionList> {
+  return call("get_managed_sessions", {}, () => ({ sessions: [] }));
 }
 
 export async function planRun(request: RunPlanRequest): Promise<RunPlanResponse> {

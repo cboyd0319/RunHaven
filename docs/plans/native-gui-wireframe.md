@@ -346,6 +346,7 @@ The first prototype should use existing contracts:
 | Image readiness | `get_image_status` |
 | Plan review | `plan_run` |
 | Launch | `launch_run` |
+| Managed session list | `get_managed_sessions` |
 | Active run | `get_run_status` |
 | Stop, hard stop, repair | `stop_run`, `kill_run`, `repair_run` |
 | Logs | `get_log_snapshot` |

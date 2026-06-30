@@ -10,6 +10,7 @@ fn main() {
             "get_egress_log",
             "get_auth_log",
             "get_auth_status",
+            "get_managed_sessions",
             "stop_run",
             "kill_run",
             "repair_run",

@@ -397,6 +397,50 @@ fn log_snapshot_rejects_non_runhaven_container_names() {
 }
 
 #[test]
+fn managed_sessions_response_is_read_only_and_secret_free() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "managed-session-run",
+        json!({
+            "timestamp": "2026-06-30T02:00:00Z",
+            "run_id": "managed-session-run",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/project",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-managed-session",
+            "state_volume": "runhaven-codex-secret-home",
+            "session": "project",
+            "token": "should-not-leak"
+        }),
+    )
+    .expect("active run payload");
+
+    let response =
+        crate::commands::sessions::get_managed_sessions().expect("managed sessions response");
+
+    assert_eq!(response.sessions.len(), 1);
+    let session = &response.sessions[0];
+    assert_eq!(session.run_id, "managed-session-run");
+    assert_eq!(session.agent, "codex");
+    assert_eq!(session.project, "project");
+    assert_eq!(session.status, "running");
+    assert_eq!(session.auth_status, "api-key-broker");
+
+    let encoded = serde_json::to_string(&response).expect("serialize managed sessions");
+    for forbidden in [
+        "/sensitive/workspaces",
+        "runhaven-codex-secret-home",
+        "should-not-leak",
+    ] {
+        assert!(
+            !encoded.contains(forbidden),
+            "managed sessions response leaked forbidden value {forbidden:?}"
+        );
+    }
+}
+
+#[test]
 #[ignore = "requires RUNHAVEN_LIVE_LOG_RUN_ID and a live RunHaven container"]
 fn log_snapshot_reads_live_active_run() {
     let run_id = std::env::var("RUNHAVEN_LIVE_LOG_RUN_ID").expect("live run id");

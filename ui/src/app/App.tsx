@@ -10,6 +10,7 @@ import {
   getEgressLog,
   getImageStatus,
   getLogSnapshot,
+  getManagedSessions,
   getRunStatus,
   isLaunchReady,
   killRun,
@@ -22,6 +23,7 @@ import {
   type ImageStatusResponse,
   type LaunchRunResponse,
   type LogSnapshotResponse,
+  type ManagedSessionList,
   type RunPlanRequest,
   type RunPlanResponse,
   type RunStatusResponse,
@@ -70,6 +72,9 @@ export default function App() {
   const [confirmedWarnings, setConfirmedWarnings] = useState<string[]>([])
   const [launchMessage, setLaunchMessage] = useState("")
   const [lastLaunch, setLastLaunch] = useState<LaunchRunResponse | null>(null)
+  const [managedSessions, setManagedSessions] = useState<ManagedSessionList>({
+    sessions: [],
+  })
   const [runStatus, setRunStatus] = useState<RunStatusResponse | null>(null)
   const [runStatusLoading, setRunStatusLoading] = useState(false)
   const [runStatusError, setRunStatusError] = useState("")
@@ -116,6 +121,7 @@ export default function App() {
     try {
       const nextDashboard = await getDashboardStatus()
       setDashboard(nextDashboard)
+      await loadManagedSessions()
       const agent =
         nextDashboard.agents.find((item) => item.name === request.agent) ??
         nextDashboard.agents[0]
@@ -161,6 +167,10 @@ export default function App() {
     } finally {
       setRunStatusLoading(false)
     }
+  }
+
+  async function loadManagedSessions() {
+    setManagedSessions(await getManagedSessions())
   }
 
   function changeAgent(agentName: string) {
@@ -249,6 +259,7 @@ export default function App() {
       setLogError("")
       await loadRunStatus(started.runId)
       setLaunchMessage(`Run started: ${started.runId}`)
+      await loadManagedSessions()
       setPlan(null)
       setLaunchConfirmation(false)
       setConfirmedWarnings([])
@@ -304,6 +315,7 @@ export default function App() {
         )
       }
       await loadRunStatus(runId)
+      await loadManagedSessions()
     } catch (cause) {
       setControlError(errorMessage(cause))
     } finally {
@@ -332,7 +344,7 @@ export default function App() {
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <RunHavenSidebar />
+        <RunHavenSidebar sessions={managedSessions.sessions} />
         <SidebarInset className="h-screen overflow-hidden">
           <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
             <SidebarTrigger variant="outline" />

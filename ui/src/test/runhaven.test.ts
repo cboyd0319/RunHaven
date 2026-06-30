@@ -4,6 +4,7 @@ import {
   getDashboardStatus,
   getImageStatus,
   getLogSnapshot,
+  getManagedSessions,
   getRunStatus,
   getSetupStatus,
   isLaunchReady,
@@ -113,6 +114,13 @@ describe("runhaven command helpers", () => {
     expect(status.run.runId).toBe("preview-run");
     expect(status.container.state).toBe("running");
     expect(status.container.resources.memoryBytes).toBe(4 * 1024 ** 3);
+  });
+
+  it("returns managed session preview data without raw paths", async () => {
+    const sessions = await getManagedSessions();
+
+    expect(sessions.sessions).toEqual([]);
+    expect(JSON.stringify(sessions)).not.toContain("/Users/");
   });
 
   it("requires explicit confirmation before loading raw log preview data", async () => {

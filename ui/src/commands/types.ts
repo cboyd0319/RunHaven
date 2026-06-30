@@ -116,6 +116,26 @@ export type LogSnapshotResponse = {
   warnings: string[];
 };
 
+export type ManagedSessionSummary = {
+  id: string;
+  runId: string;
+  agent: string;
+  session: string;
+  title: string;
+  project: string;
+  status: string;
+  statusLabel: string;
+  authStatus: string;
+  network: string;
+  startedAt: string;
+  containerName: string;
+  detailCommand: string;
+};
+
+export type ManagedSessionList = {
+  sessions: ManagedSessionSummary[];
+};
+
 export type LogSnapshotOptions = {
   lines?: number;
   confirmSensitiveOutput: boolean;
