@@ -331,13 +331,12 @@ export default function App() {
           <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
             <SidebarTrigger variant="outline" />
             <div className="min-w-0">
-              <h1 className="text-base font-medium">Start safely</h1>
+              <h1 className="text-base font-medium">Launch</h1>
               <p className="text-sm text-muted-foreground">
-                Choose an agent, see what it can access, then start.
+                Choose an agent and project. Review access before launch.
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Badge variant="secondary">macOS local</Badge>
               <Button
                 type="button"
                 variant="outline"
@@ -435,12 +434,19 @@ export default function App() {
             <aside className="flex min-w-0 flex-col gap-4">
               <SetupCard loading={loading} dashboard={dashboard} />
               <SafetyCard request={request} imageReady={launchImageReady} />
-              <DiagnosticsCard
-                diagnostics={diagnostics}
-                loading={diagnosticsLoading}
-                error={diagnosticsError}
-                onLoad={loadDiagnostics}
-              />
+              <details className="rounded-xl border bg-card p-4 text-card-foreground">
+                <summary className="cursor-pointer text-sm font-medium">
+                  Diagnostics
+                </summary>
+                <div className="mt-4">
+                  <DiagnosticsCard
+                    diagnostics={diagnostics}
+                    loading={diagnosticsLoading}
+                    error={diagnosticsError}
+                    onLoad={loadDiagnostics}
+                  />
+                </div>
+              </details>
             </aside>
           </main>
         </SidebarInset>

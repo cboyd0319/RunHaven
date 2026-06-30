@@ -19,6 +19,15 @@ RunHaven should feel like a calm macOS utility:
 - Plain language, short labels, and one obvious next action.
 - Dense enough for repeat use, but not a developer dashboard.
 - Safe defaults visible, not hidden.
+- The launch screen should use one agent picker. Do not show both a dropdown
+  and duplicate agent cards for the same choice.
+- Default launch should read like a short wizard: agent, project, review.
+  Network, CPU, memory, and read-only project controls belong under Advanced.
+- The default screen should not show diagnostics, raw policy detail, command
+  detail, or duplicate boundary summaries. Put support details behind a
+  secondary disclosure or secondary view.
+- Avoid slogan-like labels. Prefer direct words such as Launch, Review access,
+  Status, and Access.
 - The default visual mode is dark, calm, and legible.
 - Trust cues should be visible at decision points: what is shared, what is not
   shared, and what needs attention before launch.

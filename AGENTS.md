@@ -2,7 +2,7 @@
 
 ## Project
 
-RunHaven is a Rust CLI, with an alpha Tauri/Svelte desktop shell, for running
+RunHaven is a Rust CLI, with a Tauri/React desktop shell prototype, for running
 AI coding agents inside Apple `container` on macOS 26+ on Apple silicon.
 
 The product safety boundary matters more than convenience. Do not mount host

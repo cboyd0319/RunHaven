@@ -1527,9 +1527,14 @@ Latest GUI local prototype:
 - 2026-06-30: Replaced the alpha Svelte WebView layer with a local React +
   shadcn/ui prototype while preserving the existing typed command helpers and
   Tauri capability boundary. The first screen now defaults to a dark,
-  logo-informed safe-start flow with plain copy, visible access checks, setup
+  logo-informed launch flow with plain copy, visible access checks, setup
   status, plan review, run controls, bounded output, and secret-free trust
   checks.
+- 2026-06-30 follow-up: Simplified the first launch screen for nontechnical
+  users. The agent chooser is now a single control, network/resources moved
+  under Advanced options, the top bar removed redundant macOS-local copy, the
+  Ready setup state uses a success badge, the logo is larger, sidebar boundary
+  details are removed from the default path, and diagnostics are collapsed.
 - The prototype intentionally did not change `src-tauri/`, add a generic
   command runner, broaden plugins, add signing, add updater work, or require a
   paid Apple Developer Program account. Visual smoke screenshots were captured

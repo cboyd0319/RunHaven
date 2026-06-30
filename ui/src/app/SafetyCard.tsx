@@ -6,22 +6,20 @@ import { networkLabels } from "./types"
 
 export function SafetyCard({
   request,
-  imageReady,
 }: {
   request: RunPlanRequest
   imageReady: boolean
 }) {
   const checks = [
-    "Workspace is mounted at /workspace only.",
-    "Host home and credentials are not mounted.",
-    `${networkLabels[request.networkMode]} is selected.`,
-    imageReady ? "Image is ready." : "Image needs attention.",
+    "Project folder only",
+    "Home and credentials not shared",
+    networkLabels[request.networkMode],
   ]
   return (
     <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
-          What the agent can access
+          Access summary
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

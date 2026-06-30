@@ -11,19 +11,19 @@ test("renders the dashboard without runtime errors", async ({ page }) => {
 
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Start safely" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Setup checks" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
-  await expect(page.getByText("Preview mode")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Launch" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Status" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "New run" })).toBeVisible();
+  await expect(page.getByText("Ready to launch.")).toBeVisible();
   expect(runtimeErrors).toEqual([]);
 });
 
 test("reviews and starts a preview run", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByText("Image ready")).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "Agent ready" })).toBeVisible();
   await page.getByLabel("Project folder path").fill("/tmp/runhaven-preview");
-  await page.getByRole("button", { name: "Review plan" }).click();
+  await page.getByRole("button", { name: "Review access" }).click();
 
   await expect(page.getByRole("heading", { name: "Plan review" })).toBeVisible();
   await page.getByLabel("I reviewed this plan and want to start this run.").check();
@@ -58,6 +58,7 @@ test("reviews and starts a preview run", async ({ page }) => {
 test("loads secret-free diagnostics", async ({ page }) => {
   await page.goto("/");
 
+  await page.getByText("Diagnostics", { exact: true }).click();
   await expect(page.getByRole("heading", { name: "Trust checks" })).toBeVisible();
   await page.getByRole("button", { name: "Load diagnostics" }).click();
   await expect(page.getByRole("heading", { name: "Auth broker status" })).toBeVisible();

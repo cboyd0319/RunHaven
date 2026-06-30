@@ -15,7 +15,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -67,27 +66,11 @@ export function LaunchPlanCard({
     <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
-          Choose agent
+          New run
         </CardTitle>
         <CardDescription>
-          Safe defaults are already selected.
+          Pick an agent and a project. Review access before it starts.
         </CardDescription>
-        <CardAction>
-          <Select value={request.agent} onValueChange={onAgentChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select agent" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {agents.map((agent) => (
-                  <SelectItem key={agent.name} value={agent.name}>
-                    {agent.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </CardAction>
       </CardHeader>
       <CardContent>
         <form
@@ -97,32 +80,43 @@ export function LaunchPlanCard({
             void onReviewPlan()
           }}
         >
-          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-            {agents.map((agent) => (
-              <button
-                type="button"
-                key={agent.name}
-                className="rounded-lg border bg-background p-4 text-left transition hover:bg-muted/60"
-                onClick={() => onAgentChange(agent.name)}
-              >
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="font-medium">{agent.name}</div>
-                  <Badge variant="outline">
-                    {agent.name === request.agent ? "Selected" : "Ready"}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {agent.description}
-                </p>
-              </button>
-            ))}
+          <div className="grid gap-2 rounded-lg border p-3 text-sm sm:grid-cols-3">
+            <div>
+              <div className="font-medium">1. Agent</div>
+              <div className="text-muted-foreground">Choose who runs</div>
+            </div>
+            <div>
+              <div className="font-medium">2. Project</div>
+              <div className="text-muted-foreground">Pick the folder</div>
+            </div>
+            <div>
+              <div className="font-medium">3. Review</div>
+              <div className="text-muted-foreground">Check access</div>
+            </div>
           </div>
 
-          {selectedAgent ? (
-            <p className="text-sm text-muted-foreground">
-              {selectedAgent.description}
-            </p>
-          ) : null}
+          <label className="flex flex-col gap-1.5 text-sm font-medium">
+            Agent
+            <Select value={request.agent} onValueChange={onAgentChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select agent" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {agents.map((agent) => (
+                    <SelectItem key={agent.name} value={agent.name}>
+                      {agent.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            {selectedAgent ? (
+              <span className="text-sm font-normal text-muted-foreground">
+                {selectedAgent.description}
+              </span>
+            ) : null}
+          </label>
 
           <ImageReadiness
             imageLoading={imageLoading}
@@ -153,67 +147,74 @@ export function LaunchPlanCard({
             </div>
           </label>
 
-          <fieldset className="rounded-lg border p-3">
-            <legend className="px-1 text-sm font-medium">Network access</legend>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {(["provider", "internal", "internet"] as const).map((mode) => (
-                <label
-                  key={mode}
-                  className="flex items-start gap-2 rounded-lg border p-3 text-sm"
-                >
-                  <input
-                    type="radio"
-                    name="network"
-                    checked={request.networkMode === mode}
-                    onChange={() => onNetworkChange(mode)}
+          <details className="rounded-lg border p-3">
+            <summary className="cursor-pointer text-sm font-medium">
+              Advanced options
+            </summary>
+            <div className="mt-3 flex flex-col gap-4">
+              <fieldset className="rounded-lg border p-3">
+                <legend className="px-1 text-sm font-medium">Network access</legend>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {(["provider", "internal", "internet"] as const).map((mode) => (
+                    <label
+                      key={mode}
+                      className="flex items-start gap-2 rounded-lg border p-3 text-sm"
+                    >
+                      <input
+                        type="radio"
+                        name="network"
+                        checked={request.networkMode === mode}
+                        onChange={() => onNetworkChange(mode)}
+                      />
+                      <span>
+                        <span className="block font-medium">
+                          {networkLabels[mode]}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {networkHelp(mode)}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
+                  CPU
+                  <Input
+                    value={request.cpus}
+                    onChange={(event) =>
+                      onRequestChange({ cpus: event.currentTarget.value })
+                    }
                   />
-                  <span>
-                    <span className="block font-medium">
-                      {networkLabels[mode]}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {networkHelp(mode)}
-                    </span>
-                  </span>
                 </label>
-              ))}
+                <label className="flex flex-col gap-1.5 text-sm font-medium">
+                  Memory
+                  <Input
+                    value={request.memory}
+                    onChange={(event) =>
+                      onRequestChange({ memory: event.currentTarget.value })
+                    }
+                  />
+                </label>
+              </div>
+
+              <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+                <Checkbox
+                  checked={request.readOnlyWorkspace}
+                  onCheckedChange={(checked) =>
+                    onRequestChange({ readOnlyWorkspace: checked === true })
+                  }
+                />
+                <span>Read-only project folder</span>
+              </label>
             </div>
-          </fieldset>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1.5 text-sm font-medium">
-              CPU
-              <Input
-                value={request.cpus}
-                onChange={(event) =>
-                  onRequestChange({ cpus: event.currentTarget.value })
-                }
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 text-sm font-medium">
-              Memory
-              <Input
-                value={request.memory}
-                onChange={(event) =>
-                  onRequestChange({ memory: event.currentTarget.value })
-                }
-              />
-            </label>
-          </div>
-
-          <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
-            <Checkbox
-              checked={request.readOnlyWorkspace}
-              onCheckedChange={(checked) =>
-                onRequestChange({ readOnlyWorkspace: checked === true })
-              }
-            />
-            <span>Read-only project folder</span>
-          </label>
+          </details>
 
           <Button type="submit" disabled={!request.workspacePath || planning}>
             <ClipboardCheck />
-            {planning ? "Reviewing..." : "Review plan"}
+            {planning ? "Reviewing..." : "Review access"}
           </Button>
         </form>
       </CardContent>
@@ -249,11 +250,12 @@ function ImageReadiness({
     <Alert>
       <ShieldCheck />
       <AlertTitle>
-        {imageStatus.image.ready ? "Image ready" : "Image needs rebuild"}
+        {imageStatus.image.ready ? "Agent ready" : "Agent setup needed"}
       </AlertTitle>
       <AlertDescription>
-        {imageStatus.image.image}
-        {imageStatus.image.fixCommand ? `, ${imageStatus.image.fixCommand}` : ""}
+        {imageStatus.image.ready
+          ? "This agent is installed."
+          : imageStatus.image.fixCommand}
       </AlertDescription>
     </Alert>
   )
