@@ -1584,6 +1584,11 @@ Latest GUI local prototype:
   typed markers from the contract instead of inferring action state in the
   WebView. Tauri tests guard that `get_managed_sessions` remains read-only and
   does not expose write-session or attach affordances.
+- 2026-06-30 browser-preview managed sessions: The browser preview fallback now
+  records launched preview runs as safe managed-session summaries, so Playwright
+  can exercise the `Active sessions` sidebar and selected-session pane without
+  Tauri or Apple container. This is preview-only state and does not add a Tauri
+  command, process bridge, terminal input, resize, attach, or filesystem access.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external

@@ -144,6 +144,9 @@ Current GUI behavior:
 - The summary does not expose raw workspace paths, state volume names, raw
   command arguments, terminal input, resize, attach, filesystem RPC, or process
   control.
+- Browser preview records launched preview runs as safe managed-session
+  summaries only for local visual QA. Real desktop data still comes from the
+  typed `get_managed_sessions` Tauri command.
 
 ## Verification
 
@@ -161,6 +164,9 @@ Current slice:
 - frontend selected-session card test proves the rendered summary stays
   read-only, renders the typed next action and event markers, and does not
   include host paths or write-session command names
+- Playwright preview smoke proves a launched preview run can open the
+  `Active sessions` sidebar item and selected-session pane without raw preview
+  paths
 
 Future embedded-session slices need focused Rust tests for session ownership,
 unknown ID rejection, bounded input, bounded resize, raw output gating, and

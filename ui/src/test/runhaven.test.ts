@@ -119,8 +119,29 @@ describe("runhaven command helpers", () => {
   it("returns managed session preview data without raw paths", async () => {
     const sessions = await getManagedSessions();
 
-    expect(sessions.sessions).toEqual([]);
     expect(JSON.stringify(sessions)).not.toContain("/Users/");
+    expect(JSON.stringify(sessions)).not.toContain("/tmp/runhaven-preview");
+  });
+
+  it("returns launched preview sessions as managed session summaries", async () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview"
+    };
+    const started = await launchRun({
+      plan: request,
+      confirmLaunch: true,
+      confirmedWarnings: []
+    });
+
+    const sessions = await getManagedSessions();
+    const session = sessions.sessions.find((item) => item.runId === started.runId);
+
+    expect(session?.project).toBe("runhaven-preview");
+    expect(session?.lifecycle).toBe("running");
+    expect(session?.nextAction.kind).toBe("monitor");
+    expect(session?.events.map((event) => event.source)).toEqual(["run", "auth", "network"]);
+    expect(JSON.stringify(session)).not.toContain("/tmp/runhaven-preview");
   });
 
   it("requires explicit confirmation before loading raw log preview data", async () => {

@@ -14,6 +14,7 @@ import type {
   LogSnapshotOptions,
   LogSnapshotResponse,
   ManagedSessionList,
+  ManagedSessionSummary,
   RunPlanRequest,
   RunPlanResponse,
   KillRunResponse,
@@ -46,6 +47,8 @@ const mockAgents: AgentProfile[] = [
     providerHosts: []
   }
 ];
+
+let previewManagedSessions: ManagedSessionSummary[] = [];
 
 export function hasTauriRuntime(): boolean {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -191,7 +194,13 @@ export async function getLogSnapshot(
 }
 
 export async function getManagedSessions(): Promise<ManagedSessionList> {
-  return call("get_managed_sessions", {}, () => ({ sessions: [] }));
+  return call("get_managed_sessions", {}, () => ({
+    sessions: previewManagedSessions.map((session) => ({
+      ...session,
+      nextAction: { ...session.nextAction },
+      events: session.events.map((event) => ({ ...event }))
+    }))
+  }));
 }
 
 export async function planRun(request: RunPlanRequest): Promise<RunPlanResponse> {
@@ -233,6 +242,7 @@ export async function launchRun(request: LaunchRunRequest): Promise<LaunchRunRes
       networkMode: request.plan.networkMode,
       containerName: "preview"
     };
+    rememberPreviewManagedSession(snapshot);
     return {
       runId,
       status: "started",
@@ -269,6 +279,88 @@ export async function repairRun(runId: string): Promise<RepairRunResponse> {
     status: "removed",
     markerRemoved: true
   }));
+}
+
+function rememberPreviewManagedSession(
+  snapshot: LaunchRunResponse["snapshot"]
+) {
+  const project = projectLabel(snapshot.workspace);
+  const session: ManagedSessionSummary = {
+    id: snapshot.runId,
+    runId: snapshot.runId,
+    agent: snapshot.profile,
+    session: snapshot.session,
+    title: `${agentLabel(snapshot.profile)} - ${project}`,
+    project,
+    status: "running",
+    statusLabel: "Running",
+    authStatus: "api-key-broker",
+    network: snapshot.networkMode,
+    startedAt: "preview",
+    containerName: snapshot.containerName,
+    detailCommand: `runhaven runs show ${snapshot.runId}`,
+    lifecycle: "running",
+    nextAction: {
+      kind: "monitor",
+      label: "Monitor session",
+      detail: "RunHaven is tracking status for this session."
+    },
+    events: [
+      {
+        source: "run",
+        label: "Run record",
+        detail: "Running",
+        timestamp: "preview"
+      },
+      {
+        source: "auth",
+        label: "Auth",
+        detail: "API key broker",
+        timestamp: "preview"
+      },
+      {
+        source: "network",
+        label: "Network",
+        detail: networkLabel(snapshot.networkMode),
+        timestamp: "preview"
+      }
+    ]
+  };
+
+  previewManagedSessions = [
+    session,
+    ...previewManagedSessions.filter((item) => item.runId !== snapshot.runId)
+  ];
+}
+
+function projectLabel(workspace: string): string {
+  const trimmed = workspace.trim();
+  if (!trimmed || trimmed === ".") {
+    return "current project";
+  }
+
+  const parts = trimmed.split(/[\\/]+/).filter(Boolean);
+  return parts[parts.length - 1] || "current project";
+}
+
+function agentLabel(agent: string): string {
+  const trimmed = agent.trim();
+  return trimmed
+    ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}`
+    : "Agent";
+}
+
+function networkLabel(network: string): string {
+  switch (network.trim().toLowerCase()) {
+    case "provider":
+      return "Provider only";
+    case "internal":
+      return "Local only";
+    case "internet":
+      return "Internet";
+    default:
+      return network.trim() || "Unknown";
+  }
 }
 
 export async function getEgressLog(): Promise<EgressLogResponse> {
