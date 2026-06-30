@@ -1535,6 +1535,10 @@ Latest GUI local prototype:
   under Advanced options, the top bar removed redundant macOS-local copy, the
   Ready setup state uses a success badge, the logo is larger, sidebar boundary
   details are removed from the default path, and diagnostics are collapsed.
+- 2026-06-30 follow-up: Converted the launch form into a real three-step
+  wizard: choose agent, choose project, then review access. Each step shows
+  only its own controls. The main content area now scrolls inside the app shell
+  so compact windows keep the primary action reachable.
 - The prototype intentionally did not change `src-tauri/`, add a generic
   command runner, broaden plugins, add signing, add updater work, or require a
   paid Apple Developer Program account. Visual smoke screenshots were captured

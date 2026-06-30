@@ -14,6 +14,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table"
 
+import { LaunchSteps } from "./LaunchSteps"
+
 type PlanReviewCardProps = {
   plan: RunPlanResponse
   launchConfirmation: boolean
@@ -24,6 +26,7 @@ type PlanReviewCardProps = {
   launchImageReady: boolean
   onLaunchConfirmationChange: (checked: boolean) => void
   onConfirmWarning: (code: string, checked: boolean) => void
+  onBack: () => void
   onStart: () => Promise<void>
 }
 
@@ -37,19 +40,22 @@ export function PlanReviewCard({
   launchImageReady,
   onLaunchConfirmationChange,
   onConfirmWarning,
+  onBack,
   onStart,
 }: PlanReviewCardProps) {
   return (
     <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
-          Plan review
+          Review access
         </CardTitle>
         <CardDescription>
-          Review what the agent can access before launch.
+          Confirm this is the agent, project, and access you expect.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        <LaunchSteps step="review" />
+
         <Table>
           <TableBody>
             {[
@@ -124,13 +130,18 @@ export function PlanReviewCard({
           </p>
         ) : null}
 
-        <Button
-          type="button"
-          disabled={!launchReady || launching}
-          onClick={() => void onStart()}
-        >
-          {launching ? "Launching..." : "Launch run"}
-        </Button>
+        <div className="flex justify-between gap-3">
+          <Button type="button" variant="outline" onClick={onBack}>
+            Back
+          </Button>
+          <Button
+            type="button"
+            disabled={!launchReady || launching}
+            onClick={() => void onStart()}
+          >
+            {launching ? "Launching..." : "Launch run"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )

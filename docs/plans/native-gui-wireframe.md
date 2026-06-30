@@ -23,6 +23,9 @@ RunHaven should feel like a calm macOS utility:
   and duplicate agent cards for the same choice.
 - Default launch should read like a short wizard: agent, project, review.
   Network, CPU, memory, and read-only project controls belong under Advanced.
+- The first implementation should be a real wizard, not a form with a wizard
+  header. Each step shows only the controls needed for that step, with Back and
+  Continue/Review actions at the bottom.
 - The default screen should not show diagnostics, raw policy detail, command
   detail, or duplicate boundary summaries. Put support details behind a
   secondary disclosure or secondary view.

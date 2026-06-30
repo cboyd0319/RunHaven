@@ -31,9 +31,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import { LaunchSteps } from "./LaunchSteps"
 import { networkHelp, networkLabels } from "./types"
+import type { LaunchStep } from "./types"
 
 type LaunchPlanCardProps = {
+  step: Exclude<LaunchStep, "review">
   agents: AgentProfile[]
   request: RunPlanRequest
   selectedAgent: AgentProfile | undefined
@@ -45,10 +48,13 @@ type LaunchPlanCardProps = {
   onPickFolder: () => Promise<void>
   onRequestChange: (patch: Partial<RunPlanRequest>) => void
   onNetworkChange: (networkMode: RunPlanRequest["networkMode"]) => void
+  onBack: () => void
+  onContinue: () => void
   onReviewPlan: () => Promise<void>
 }
 
 export function LaunchPlanCard({
+  step,
   agents,
   request,
   selectedAgent,
@@ -60,16 +66,20 @@ export function LaunchPlanCard({
   onPickFolder,
   onRequestChange,
   onNetworkChange,
+  onBack,
+  onContinue,
   onReviewPlan,
 }: LaunchPlanCardProps) {
   return (
     <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
-          New run
+          {step === "agent" ? "Choose agent" : "Choose project"}
         </CardTitle>
         <CardDescription>
-          Pick an agent and a project. Review access before it starts.
+          {step === "agent"
+            ? "Pick the agent you want to run."
+            : "Pick the project folder the agent can use."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -77,145 +87,162 @@ export function LaunchPlanCard({
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault()
-            void onReviewPlan()
+            if (step === "agent") {
+              onContinue()
+            } else {
+              void onReviewPlan()
+            }
           }}
         >
-          <div className="grid gap-2 rounded-lg border p-3 text-sm sm:grid-cols-3">
-            <div>
-              <div className="font-medium">1. Agent</div>
-              <div className="text-muted-foreground">Choose who runs</div>
-            </div>
-            <div>
-              <div className="font-medium">2. Project</div>
-              <div className="text-muted-foreground">Pick the folder</div>
-            </div>
-            <div>
-              <div className="font-medium">3. Review</div>
-              <div className="text-muted-foreground">Check access</div>
-            </div>
-          </div>
+          <LaunchSteps step={step} />
 
-          <label className="flex flex-col gap-1.5 text-sm font-medium">
-            Agent
-            <Select value={request.agent} onValueChange={onAgentChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select agent" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {agents.map((agent) => (
-                    <SelectItem key={agent.name} value={agent.name}>
-                      {agent.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            {selectedAgent ? (
-              <span className="text-sm font-normal text-muted-foreground">
-                {selectedAgent.description}
-              </span>
-            ) : null}
-          </label>
-
-          <ImageReadiness
-            imageLoading={imageLoading}
-            imageStatus={imageStatus}
-            imageError={imageError}
-          />
-
-          <label className="flex flex-col gap-1.5 text-sm font-medium">
-            Project folder
-            <div className="flex gap-2">
-              <Input
-                value={request.workspacePath}
-                onChange={(event) =>
-                  onRequestChange({ workspacePath: event.currentTarget.value })
-                }
-                placeholder="/Users/you/project"
-                aria-label="Project folder path"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => void onPickFolder()}
-                aria-label="Choose project folder"
-              >
-                <FolderOpen />
-              </Button>
-            </div>
-          </label>
-
-          <details className="rounded-lg border p-3">
-            <summary className="cursor-pointer text-sm font-medium">
-              Advanced options
-            </summary>
-            <div className="mt-3 flex flex-col gap-4">
-              <fieldset className="rounded-lg border p-3">
-                <legend className="px-1 text-sm font-medium">Network access</legend>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {(["provider", "internal", "internet"] as const).map((mode) => (
-                    <label
-                      key={mode}
-                      className="flex items-start gap-2 rounded-lg border p-3 text-sm"
-                    >
-                      <input
-                        type="radio"
-                        name="network"
-                        checked={request.networkMode === mode}
-                        onChange={() => onNetworkChange(mode)}
-                      />
-                      <span>
-                        <span className="block font-medium">
-                          {networkLabels[mode]}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {networkHelp(mode)}
-                        </span>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex flex-col gap-1.5 text-sm font-medium">
-                  CPU
-                  <Input
-                    value={request.cpus}
-                    onChange={(event) =>
-                      onRequestChange({ cpus: event.currentTarget.value })
-                    }
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5 text-sm font-medium">
-                  Memory
-                  <Input
-                    value={request.memory}
-                    onChange={(event) =>
-                      onRequestChange({ memory: event.currentTarget.value })
-                    }
-                  />
-                </label>
-              </div>
-
-              <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
-                <Checkbox
-                  checked={request.readOnlyWorkspace}
-                  onCheckedChange={(checked) =>
-                    onRequestChange({ readOnlyWorkspace: checked === true })
-                  }
-                />
-                <span>Read-only project folder</span>
+          {step === "agent" ? (
+            <>
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
+                Agent
+                <Select value={request.agent} onValueChange={onAgentChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select agent" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {agents.map((agent) => (
+                        <SelectItem key={agent.name} value={agent.name}>
+                          {agent.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {selectedAgent ? (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {selectedAgent.description}
+                  </span>
+                ) : null}
               </label>
-            </div>
-          </details>
 
-          <Button type="submit" disabled={!request.workspacePath || planning}>
-            <ClipboardCheck />
-            {planning ? "Reviewing..." : "Review access"}
-          </Button>
+              <ImageReadiness
+                imageLoading={imageLoading}
+                imageStatus={imageStatus}
+                imageError={imageError}
+              />
+            </>
+          ) : null}
+
+          {step === "project" ? (
+            <>
+              <label className="flex flex-col gap-1.5 text-sm font-medium">
+                Project folder
+                <div className="flex gap-2">
+                  <Input
+                    value={request.workspacePath}
+                    onChange={(event) =>
+                      onRequestChange({ workspacePath: event.currentTarget.value })
+                    }
+                    placeholder="/Users/you/project"
+                    aria-label="Project folder path"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => void onPickFolder()}
+                    aria-label="Choose project folder"
+                  >
+                    <FolderOpen />
+                  </Button>
+                </div>
+              </label>
+
+              <details className="rounded-lg border p-3">
+                <summary className="cursor-pointer text-sm font-medium">
+                  Advanced options
+                </summary>
+                <div className="mt-3 flex flex-col gap-4">
+                  <fieldset className="rounded-lg border p-3">
+                    <legend className="px-1 text-sm font-medium">Network access</legend>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {(["provider", "internal", "internet"] as const).map((mode) => (
+                        <label
+                          key={mode}
+                          className="flex items-start gap-2 rounded-lg border p-3 text-sm"
+                        >
+                          <input
+                            type="radio"
+                            name="network"
+                            checked={request.networkMode === mode}
+                            onChange={() => onNetworkChange(mode)}
+                          />
+                          <span>
+                            <span className="block font-medium">
+                              {networkLabels[mode]}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {networkHelp(mode)}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="flex flex-col gap-1.5 text-sm font-medium">
+                      CPU
+                      <Input
+                        value={request.cpus}
+                        onChange={(event) =>
+                          onRequestChange({ cpus: event.currentTarget.value })
+                        }
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1.5 text-sm font-medium">
+                      Memory
+                      <Input
+                        value={request.memory}
+                        onChange={(event) =>
+                          onRequestChange({ memory: event.currentTarget.value })
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+                    <Checkbox
+                      checked={request.readOnlyWorkspace}
+                      onCheckedChange={(checked) =>
+                        onRequestChange({ readOnlyWorkspace: checked === true })
+                      }
+                    />
+                    <span>Read-only project folder</span>
+                  </label>
+                </div>
+              </details>
+            </>
+          ) : null}
+
+          <div className={step === "agent" ? "flex justify-end" : "flex justify-between gap-3"}>
+            {step === "project" ? (
+              <Button type="button" variant="outline" onClick={onBack}>
+                Back
+              </Button>
+            ) : null}
+            <Button
+              type="submit"
+              disabled={
+                step === "project"
+                  ? !request.workspacePath || planning
+                  : !request.agent
+              }
+            >
+              <ClipboardCheck />
+              {step === "agent"
+                ? "Continue"
+                : planning
+                  ? "Reviewing..."
+                  : "Review access"}
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>

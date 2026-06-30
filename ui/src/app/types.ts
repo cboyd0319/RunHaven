@@ -13,6 +13,8 @@ export type DiagnosticsState = {
 
 export type RunControlAction = "stop" | "kill" | "repair"
 
+export type LaunchStep = "agent" | "project" | "review"
+
 export const networkLabels: Record<RunPlanRequest["networkMode"], string> = {
   provider: "Provider allowlist",
   internal: "Local only",

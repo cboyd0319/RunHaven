@@ -16,6 +16,8 @@ export function SetupCard({
   loading: boolean
   dashboard: DashboardStatus | null
 }) {
+  const setupKnown = !loading && dashboard !== null
+  const setupReady = setupKnown && dashboard.setup.ok
   const failedChecks = (dashboard?.setup.checks ?? []).filter(
     (check) => !check.ok,
   )
@@ -26,13 +28,19 @@ export function SetupCard({
           Status
         </CardTitle>
         <CardDescription>
-          {dashboard?.setup.ok
-            ? "Ready to launch."
-            : "Fix blockers before launch."}
+          {!setupKnown
+            ? "Checking setup..."
+            : setupReady
+              ? "Ready to launch."
+              : "Fix blockers before launch."}
         </CardDescription>
         <CardAction>
-          <Badge variant={dashboard?.setup.ok ? "success" : "destructive"}>
-            {dashboard?.setup.ok ? "Ready" : "Blocked"}
+          <Badge
+            variant={
+              !setupKnown ? "outline" : setupReady ? "success" : "destructive"
+            }
+          >
+            {!setupKnown ? "Checking" : setupReady ? "Ready" : "Blocked"}
           </Badge>
         </CardAction>
       </CardHeader>
@@ -40,7 +48,7 @@ export function SetupCard({
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading setup...</p>
         ) : null}
-        {dashboard?.setup.ok && !loading ? (
+        {setupReady ? (
           <p className="text-sm text-muted-foreground">All checks passed.</p>
         ) : null}
         {failedChecks.map((check) => (

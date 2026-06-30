@@ -48,6 +48,7 @@ import { SetupCard } from "./SetupCard"
 import {
   errorMessage,
   type DiagnosticsState,
+  type LaunchStep,
   type RunControlAction,
 } from "./types"
 
@@ -56,6 +57,7 @@ export default function App() {
   const [request, setRequest] = useState<RunPlanRequest>(() =>
     defaultRunPlanRequest(undefined),
   )
+  const [launchStep, setLaunchStep] = useState<LaunchStep>("agent")
   const [plan, setPlan] = useState<RunPlanResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [planning, setPlanning] = useState(false)
@@ -205,7 +207,9 @@ export default function App() {
     setPlan(null)
     resetLaunchConfirmation()
     try {
-      setPlan(await planRun(request))
+      const nextPlan = await planRun(request)
+      setPlan(nextPlan)
+      setLaunchStep("review")
     } catch (cause) {
       setError(errorMessage(cause))
     } finally {
@@ -247,6 +251,7 @@ export default function App() {
       setPlan(null)
       setLaunchConfirmation(false)
       setConfirmedWarnings([])
+      setLaunchStep("agent")
     } catch (cause) {
       setError(errorMessage(cause))
     } finally {
@@ -327,7 +332,7 @@ export default function App() {
     <TooltipProvider>
       <SidebarProvider>
         <RunHavenSidebar />
-        <SidebarInset>
+        <SidebarInset className="h-screen overflow-hidden">
           <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
             <SidebarTrigger variant="outline" />
             <div className="min-w-0">
@@ -349,7 +354,7 @@ export default function App() {
             </div>
           </header>
 
-          <main className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <main className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
             <section className="flex min-w-0 flex-col gap-4">
               {error ? (
                 <Alert variant="destructive">
@@ -368,22 +373,7 @@ export default function App() {
                 </Alert>
               ) : null}
 
-              <LaunchPlanCard
-                agents={dashboard?.agents ?? []}
-                request={request}
-                selectedAgent={selectedAgent}
-                imageLoading={imageLoading}
-                imageStatus={imageStatus}
-                imageError={imageError}
-                planning={planning}
-                onAgentChange={changeAgent}
-                onPickFolder={pickFolder}
-                onRequestChange={updateRequest}
-                onNetworkChange={updateNetworkMode}
-                onReviewPlan={reviewPlan}
-              />
-
-              {plan ? (
+              {launchStep === "review" && plan ? (
                 <PlanReviewCard
                   plan={plan}
                   launchConfirmation={launchConfirmation}
@@ -394,9 +384,28 @@ export default function App() {
                   launchImageReady={launchImageReady}
                   onLaunchConfirmationChange={setLaunchConfirmation}
                   onConfirmWarning={setWarningConfirmation}
+                  onBack={() => setLaunchStep("project")}
                   onStart={startRun}
                 />
-              ) : null}
+              ) : (
+                <LaunchPlanCard
+                  step={launchStep === "review" ? "project" : launchStep}
+                  agents={dashboard?.agents ?? []}
+                  request={request}
+                  selectedAgent={selectedAgent}
+                  imageLoading={imageLoading}
+                  imageStatus={imageStatus}
+                  imageError={imageError}
+                  planning={planning}
+                  onAgentChange={changeAgent}
+                  onPickFolder={pickFolder}
+                  onRequestChange={updateRequest}
+                  onNetworkChange={updateNetworkMode}
+                  onBack={() => setLaunchStep("agent")}
+                  onContinue={() => setLaunchStep("project")}
+                  onReviewPlan={reviewPlan}
+                />
+              )}
 
               {lastLaunch ? <LastLaunchCard lastLaunch={lastLaunch} /> : null}
 
