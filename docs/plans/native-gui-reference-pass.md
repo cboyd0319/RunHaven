@@ -24,9 +24,13 @@ The reference repositories were cloned under `/Users/c/Documents/GitHub/`:
 | `SterbenSQ/container-ui` | `gui-ref-SterbenSQ-container-ui` | `ca15b26` |
 | `locustave/keel` | `gui-ref-locustave-keel` | `db0c542` |
 | `0Itsuki0/AppleContainerDesktop` | `gui-ref-0Itsuki0-AppleContainerDesktop` | `2595351` |
+| `agmmnn/tauri-ui` | `gui-ref-agmmnn-tauri-ui` | `0cfd2a7` |
 
 The `0Itsuki0/AppleContainerDesktop` checkout is the source project linked from
 the Medium reference.
+
+The `agmmnn/tauri-ui` checkout is a Tauri app scaffold and documentation
+project, not an Apple `container` GUI.
 
 ## Product Direction
 
@@ -80,6 +84,10 @@ work until the maintainer explicitly asks for a distribution pass.
   awareness, and actor-owned service state.
 - `keel`: phase-gated workflow, audit, and rollback ideas. It is not a
   container GUI, but the "plan, gate, execute, recover" shape fits RunHaven.
+- `agmmnn/tauri-ui`: desktop-shell polish checklist, especially
+  hidden-until-first-paint startup, a dedicated app scroll shell, no page-level
+  overscroll/rubber-band scrolling, desktop-like selection defaults with
+  explicit selectable surfaces, and sensible default window sizing.
 
 ## Avoid
 
@@ -95,6 +103,12 @@ work until the maintainer explicitly asks for a distribution pass.
 - Do not copy command-string execution patterns. Several references build
   shell strings or fall back to `/bin/sh -c`; RunHaven should keep exact
   subprocess argument lists and typed backend commands.
+- Do not migrate RunHaven to React, Tailwind, shadcn/ui, Bun, or a scaffolded
+  app shell just because `tauri-ui` uses them. RunHaven already has a Svelte
+  app and pinned npm workflow.
+- Do not add opener, log, debug-panel, release-workflow, or size-optimization
+  changes from `tauri-ui` by default. Each affects dependencies, capabilities,
+  packaging, logs, or release behavior and needs its own RunHaven review.
 
 ## Current RunHaven Advantage
 

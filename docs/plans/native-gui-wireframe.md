@@ -322,6 +322,27 @@ Avoid nested cards. Use full-width panes, rows, sections, and one summary rail.
 - Keep focus states obvious.
 - Ensure all text fits at `720 x 560`.
 
+## Desktop Shell Polish
+
+Borrow these implementation checks from the `agmmnn/tauri-ui` reference, but
+adapt them to RunHaven's existing Svelte/Tauri stack:
+
+- Prevent startup flash if it appears in baseline screenshots. The app may hide
+  the main window until first paint, but only after checking Tauri behavior
+  locally and keeping error states recoverable.
+- Use one app-level scroll shell. Avoid page-level rubber-band scrolling and
+  nested `main` scroll containers.
+- Keep text selection desktop-like: disable accidental broad selection only if
+  needed, and always leave inputs, code, logs, diagnostics, and copyable command
+  details selectable.
+- Pick deliberate default window dimensions in `tauri.conf.json` only if the
+  current defaults undermine the wireframe at `1080 x 720` and `720 x 560`.
+- Keep external links in the system browser only if the GUI adds external links.
+  That requires a reviewed opener capability and should not be added as part of
+  the first visual slice.
+- Do not add a debug panel, log plugin, release workflow, or release-size
+  profile in the first GUI slice.
+
 ## Prototype Acceptance
 
 The first GUI prototype is acceptable when:
@@ -338,3 +359,5 @@ The first GUI prototype is acceptable when:
   credentials.
 - Screenshots at wide and compact sizes show no overlap, clipping, or dashboard
   clutter.
+- Startup has no obvious blank or white flash, or the remaining flash is
+  documented as a follow-up with evidence.
