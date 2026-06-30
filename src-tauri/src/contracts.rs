@@ -1,3 +1,4 @@
+use runhaven_core::ui_contracts::ManagedSessionSummaryData;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize)]
@@ -175,6 +176,21 @@ pub(crate) struct LogSnapshotResponse {
     pub truncated: bool,
     pub source: String,
     pub warnings: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ManagedSessionLogSnapshotRequest {
+    pub session_id: String,
+    pub lines: Option<u32>,
+    pub confirm_sensitive_output: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ManagedSessionLogSnapshotResponse {
+    pub session: ManagedSessionSummaryData,
+    pub snapshot: LogSnapshotResponse,
 }
 
 #[derive(Clone, Debug, Deserialize)]

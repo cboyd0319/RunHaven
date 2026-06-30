@@ -75,19 +75,23 @@ It intentionally omits:
 
 ## Tauri Surface
 
-Current read-only command:
+Current read commands:
 
 ```text
 get_managed_sessions() -> ManagedSessionListData
+get_managed_session_log_snapshot(request) -> ManagedSessionLogSnapshotResponse
 ```
 
-Capability:
+Capabilities:
 
 ```text
 main-read: allow-get-managed-sessions
+run-control: allow-get-managed-session-log-snapshot
 ```
 
-This is read-only. It does not start, stop, attach to, or write to a process.
+These commands are read-only. They do not start, stop, attach to, or write to
+a process. The raw-output command stays outside `main-read` because bounded
+container stdio can contain secrets.
 
 ## Future Session Control Surface
 
@@ -148,15 +152,17 @@ Current GUI behavior:
   summaries only for local visual QA. Real desktop data still comes from the
   typed `get_managed_sessions` Tauri command.
 - Selected sessions can load the existing bounded output snapshot through
-  `get_log_snapshot` after explicit raw-output confirmation. The card shows
-  source, captured cursor, returned line count, truncation state, backend
-  warnings, and bounded text from an additive typed snapshot entry.
+  `get_managed_session_log_snapshot` after explicit raw-output confirmation.
+  Rust resolves the managed session ID to the active run before delegating to
+  the existing log snapshot path. The card shows source, captured cursor,
+  returned line count, truncation state, backend warnings, and bounded text
+  from an additive typed snapshot entry.
 - `LogSnapshotResponse` includes a cursor and typed snapshot entries while
   keeping the previous top-level text fields for compatibility. This is not a
   streaming terminal or session-attach contract.
-- Selected-session output uses the backend-owned session run ID. It does not
-  add a new Tauri command, streaming transport, terminal input, resize, attach,
-  filesystem RPC, or process control.
+- Selected-session output uses the backend-owned session ID. It does not add
+  streaming transport, terminal input, resize, attach, filesystem RPC, or
+  process control. Raw-output permissions stay outside `main-read`.
 
 ## Verification
 
@@ -184,6 +190,12 @@ Current slice:
   entry
 - Tauri command test proves the log snapshot response maps the bounded payload
   into a cursor plus one typed entry without changing the gated backend lookup
+- Tauri command test proves selected-session output resolves the session ID in
+  Rust, rejects unknown sessions, and stays free of write-session or attach
+  affordances
+- capability guard proves raw-output permissions stay outside `main-read`
+- frontend helper test proves browser preview output loads through a managed
+  session ID and rejects unknown sessions
 
 Future embedded-session slices need focused Rust tests for session ownership,
 unknown ID rejection, bounded input, bounded resize, raw output gating, and

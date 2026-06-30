@@ -1594,9 +1594,12 @@ Latest GUI local prototype:
   `LogSnapshotResponse` now includes an additive cursor plus typed snapshot
   entries while keeping the legacy top-level text fields for compatibility. The
   output card renders source, captured cursor, returned line count, truncation
-  state, backend warnings, and bounded text from that typed entry. This reuses
-  `get_log_snapshot`; it does not add a Tauri command, streaming transport,
-  terminal input, resize, attach, or filesystem access.
+  state, backend warnings, and bounded text from that typed entry. Selected
+  sessions load output through `get_managed_session_log_snapshot`, which
+  resolves the managed session ID inside Rust before delegating to the existing
+  `get_log_snapshot` path. Raw-output commands stay out of `main-read`; a
+  Tauri guard enforces that `main-read` remains secret-free. This does not add
+  streaming transport, terminal input, resize, attach, or filesystem access.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external

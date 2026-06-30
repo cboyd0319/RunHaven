@@ -125,6 +125,11 @@ export type LogSnapshotEntry = {
   lineCount: number;
 };
 
+export type ManagedSessionLogSnapshotResponse = {
+  session: ManagedSessionSummary;
+  snapshot: LogSnapshotResponse;
+};
+
 export type ManagedSessionSummary = {
   id: string;
   runId: string;

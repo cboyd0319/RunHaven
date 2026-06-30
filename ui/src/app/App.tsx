@@ -10,6 +10,7 @@ import {
   getEgressLog,
   getImageStatus,
   getLogSnapshot,
+  getManagedSessionLogSnapshot,
   getManagedSessions,
   getRunStatus,
   isLaunchReady,
@@ -85,7 +86,7 @@ export default function App() {
   const [logSnapshot, setLogSnapshot] = useState<LogSnapshotResponse | null>(
     null,
   )
-  const [logTargetRunId, setLogTargetRunId] = useState<string | null>(null)
+  const [logTargetId, setLogTargetId] = useState<string | null>(null)
   const [logAcknowledged, setLogAcknowledged] = useState(false)
   const [logLoading, setLogLoading] = useState(false)
   const [logError, setLogError] = useState("")
@@ -126,9 +127,15 @@ export default function App() {
   const pageDescription = selectedSession
     ? "Review status and access for the selected agent session."
     : "Choose an agent and project. Review access before launch."
-  const outputRunId = selectedSession?.runId ?? lastLaunch?.runId ?? null
+  const outputSessionId = selectedSession?.id ?? null
+  const outputRunId = selectedSession ? null : lastLaunch?.runId ?? null
+  const outputTargetId = outputSessionId
+    ? `session:${outputSessionId}`
+    : outputRunId
+      ? `run:${outputRunId}`
+      : null
   const visibleLogSnapshot =
-    logTargetRunId === outputRunId ? logSnapshot : null
+    logTargetId === outputTargetId ? logSnapshot : null
 
   useEffect(() => {
     void refresh()
@@ -146,9 +153,9 @@ export default function App() {
   useEffect(() => {
     setLogAcknowledged(false)
     setLogSnapshot(null)
-    setLogTargetRunId(null)
+    setLogTargetId(null)
     setLogError("")
-  }, [outputRunId])
+  }, [outputTargetId])
 
   async function refresh() {
     setLoading(true)
@@ -290,7 +297,7 @@ export default function App() {
       })
       setLastLaunch(started)
       setLogSnapshot(null)
-      setLogTargetRunId(null)
+      setLogTargetId(null)
       setLogAcknowledged(false)
       setLogError("")
       await loadRunStatus(started.runId)
@@ -307,22 +314,29 @@ export default function App() {
     }
   }
 
-  async function loadLogSnapshot(runId: string | null) {
-    if (!runId) {
+  async function loadLogSnapshot() {
+    if (!outputTargetId) {
       return
     }
     setLogLoading(true)
     setLogError("")
     try {
-      setLogSnapshot(
-        await getLogSnapshot(runId, {
+      if (outputSessionId) {
+        const response = await getManagedSessionLogSnapshot(outputSessionId, {
           confirmSensitiveOutput: logAcknowledged,
-        }),
-      )
-      setLogTargetRunId(runId)
+        })
+        setLogSnapshot(response.snapshot)
+      } else if (outputRunId) {
+        setLogSnapshot(
+          await getLogSnapshot(outputRunId, {
+            confirmSensitiveOutput: logAcknowledged,
+          }),
+        )
+      }
+      setLogTargetId(outputTargetId)
     } catch (cause) {
       setLogSnapshot(null)
-      setLogTargetRunId(null)
+      setLogTargetId(null)
       setLogError(errorMessage(cause))
     } finally {
       setLogLoading(false)
@@ -453,7 +467,7 @@ export default function App() {
                     logError={logError}
                     logSnapshot={visibleLogSnapshot}
                     onAcknowledgedChange={setLogAcknowledged}
-                    onLoad={() => loadLogSnapshot(outputRunId)}
+                    onLoad={loadLogSnapshot}
                   />
                 </>
               ) : (
@@ -524,7 +538,7 @@ export default function App() {
                   logError={logError}
                   logSnapshot={visibleLogSnapshot}
                   onAcknowledgedChange={setLogAcknowledged}
-                  onLoad={() => loadLogSnapshot(outputRunId)}
+                  onLoad={loadLogSnapshot}
                 />
               ) : null}
 

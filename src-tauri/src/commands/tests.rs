@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use super::*;
-use crate::contracts::LogSnapshotRequest;
+use crate::contracts::{LogSnapshotRequest, ManagedSessionLogSnapshotRequest};
 use runhaven_core::runtime::active::write_active_run_payload;
 use runhaven_core::support::paths::{CacheRootOverride, override_cache_root_for_tests};
 use serde_json::json;
@@ -455,6 +455,72 @@ fn managed_sessions_response_is_read_only_and_secret_free() {
         assert!(
             !encoded.contains(forbidden),
             "managed sessions response leaked forbidden value {forbidden:?}"
+        );
+    }
+}
+
+#[test]
+fn managed_session_log_snapshot_resolves_session_id_and_stays_read_only() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "managed-session-log",
+        json!({
+            "timestamp": "2026-06-30T03:00:00Z",
+            "run_id": "managed-session-log",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/project",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-managed-session-log",
+            "state_volume": "runhaven-codex-hidden-home",
+            "session": "project",
+            "token": "should-not-leak"
+        }),
+    )
+    .expect("active run payload");
+
+    let missing = crate::commands::sessions::managed_session_log_snapshot_response_for_test(
+        ManagedSessionLogSnapshotRequest {
+            session_id: "missing-session".to_string(),
+            lines: Some(20),
+            confirm_sensitive_output: true,
+        },
+        b"",
+        1024,
+    )
+    .expect_err("unknown session rejected");
+
+    assert!(missing.contains("managed session not found"));
+
+    let response = crate::commands::sessions::managed_session_log_snapshot_response_for_test(
+        ManagedSessionLogSnapshotRequest {
+            session_id: "managed-session-log".to_string(),
+            lines: Some(20),
+            confirm_sensitive_output: true,
+        },
+        b"entry one\nentry two\n",
+        1024,
+    )
+    .expect("managed session log snapshot");
+
+    assert_eq!(response.session.id, "managed-session-log");
+    assert_eq!(response.session.project, "project");
+    assert_eq!(response.snapshot.run_id, "managed-session-log");
+    assert_eq!(response.snapshot.requested_lines, 20);
+    assert_eq!(response.snapshot.entries.len(), 1);
+    assert_eq!(response.snapshot.entries[0].text, "entry one\nentry two\n");
+
+    let encoded = serde_json::to_string(&response).expect("serialize response");
+    for forbidden in [
+        "/sensitive/workspaces",
+        "runhaven-codex-hidden-home",
+        "should-not-leak",
+        "write_session_input",
+        "attach_session",
+    ] {
+        assert!(
+            !encoded.contains(forbidden),
+            "managed session log snapshot leaked forbidden value {forbidden:?}"
         );
     }
 }

@@ -4,6 +4,7 @@ import {
   getDashboardStatus,
   getImageStatus,
   getLogSnapshot,
+  getManagedSessionLogSnapshot,
   getManagedSessions,
   getRunStatus,
   getSetupStatus,
@@ -155,6 +156,37 @@ describe("runhaven command helpers", () => {
     expect(snapshot.requestedLines).toBe(200);
     expect(snapshot.text).toContain("Preview log line");
     expect(snapshot.truncated).toBe(false);
+  });
+
+  it("loads raw log preview data through a managed session id", async () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview"
+    };
+    const started = await launchRun({
+      plan: request,
+      confirmLaunch: true,
+      confirmedWarnings: []
+    });
+    const sessions = await getManagedSessions();
+    const session = sessions.sessions.find((item) => item.runId === started.runId);
+
+    expect(session).toBeDefined();
+    await expect(
+      getManagedSessionLogSnapshot(session!.id, { confirmSensitiveOutput: false })
+    ).rejects.toThrow("Confirm raw log viewing");
+    await expect(
+      getManagedSessionLogSnapshot("missing-session", { confirmSensitiveOutput: true })
+    ).rejects.toThrow("managed session not found");
+
+    const response = await getManagedSessionLogSnapshot(session!.id, {
+      confirmSensitiveOutput: true
+    });
+
+    expect(response.session.id).toBe(session!.id);
+    expect(response.snapshot.runId).toBe(started.runId);
+    expect(response.snapshot.entries[0]?.text).toContain("Preview log line");
+    expect(JSON.stringify(response)).not.toContain("/tmp/runhaven-preview");
   });
 
   it("requires explicit confirmation before launch is available", async () => {

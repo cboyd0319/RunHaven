@@ -67,4 +67,27 @@ mod tests {
             dir.display()
         );
     }
+
+    #[test]
+    fn raw_log_permissions_stay_out_of_main_read() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("capabilities")
+            .join("main-read.json");
+        let raw = fs::read_to_string(&path).expect("read main-read capability");
+        let value: serde_json::Value =
+            serde_json::from_str(&raw).expect("parse main-read capability");
+        let permissions = value["permissions"]
+            .as_array()
+            .expect("main-read permissions array");
+
+        for forbidden in [
+            "allow-get-log-snapshot",
+            "allow-get-managed-session-log-snapshot",
+        ] {
+            assert!(
+                !permissions.iter().any(|permission| permission == forbidden),
+                "main-read must stay secret-free and cannot grant {forbidden}"
+            );
+        }
+    }
 }

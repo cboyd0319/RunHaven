@@ -108,11 +108,11 @@ The current dashboard command already returns setup, active-run, recent-run,
 agent, and warning summaries. Image and builder status are available through
 typed Rust commands. Launch resource warnings are computed in the Rust plan and
 launch-confirmation path. Live run status is exposed through a typed read-only
-Rust command that returns sanitized metadata only. Log viewing starts with a
-bounded `get_log_snapshot` command that requires a sensitive-output
-acknowledgement, returns capped container stdio for one validated active run,
-and does not add live streaming. Add dedicated typed Rust commands for
-maintenance status before parsing prose in the frontend.
+Rust command that returns sanitized metadata only. Log viewing starts with
+bounded `get_log_snapshot` and `get_managed_session_log_snapshot` commands that
+require a sensitive-output acknowledgement, return capped container stdio for
+one validated active run, and do not add live streaming. Add dedicated typed
+Rust commands for maintenance status before parsing prose in the frontend.
 
 ## Approval Gates
 
@@ -136,7 +136,8 @@ Read-only by default:
 Sensitive read acknowledgement required:
 
 - bounded raw active-container stdio snapshots from `container logs`, exposed
-  only through a typed `get_log_snapshot` command outside `main-read`.
+  only through typed `get_log_snapshot` or
+  `get_managed_session_log_snapshot` commands outside `main-read`.
 
 Explicit confirmation required:
 

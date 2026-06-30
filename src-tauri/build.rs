@@ -11,6 +11,7 @@ fn main() {
             "get_auth_log",
             "get_auth_status",
             "get_managed_sessions",
+            "get_managed_session_log_snapshot",
             "stop_run",
             "kill_run",
             "repair_run",

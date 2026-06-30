@@ -14,6 +14,7 @@ import type {
   LogSnapshotOptions,
   LogSnapshotResponse,
   ManagedSessionList,
+  ManagedSessionLogSnapshotResponse,
   ManagedSessionSummary,
   RunPlanRequest,
   RunPlanResponse,
@@ -180,30 +181,63 @@ export async function getLogSnapshot(
         confirmSensitiveOutput: options.confirmSensitiveOutput
       }
     },
+    () => previewLogSnapshot(runId, requestedLines)
+  );
+}
+
+export async function getManagedSessionLogSnapshot(
+  sessionId: string,
+  options: LogSnapshotOptions
+): Promise<ManagedSessionLogSnapshotResponse> {
+  if (!options.confirmSensitiveOutput) {
+    throw new Error("Confirm raw log viewing before loading output that may contain secrets.");
+  }
+  const requestedLines = options.lines ?? 200;
+  return call(
+    "get_managed_session_log_snapshot",
+    {
+      request: {
+        sessionId,
+        lines: options.lines ?? null,
+        confirmSensitiveOutput: options.confirmSensitiveOutput
+      }
+    },
     () => {
-      const text = "Preview log line one\nPreview log line two\n";
+      const session = previewManagedSessions.find((item) => item.id === sessionId);
+      if (!session) {
+        throw new Error("managed session not found");
+      }
 
       return {
-        runId,
-        capturedAt: "preview",
-        cursor: "preview",
-        requestedLines,
-        entries: [
-          {
-            source: "container-stdio",
-            timestamp: "preview",
-            text,
-            lineCount: 2
-          }
-        ],
-        text,
-        returnedLines: 2,
-        truncated: false,
-        source: "container-stdio",
-        warnings: ["Raw container output can contain secrets or workspace content."]
+        session: { ...session },
+        snapshot: previewLogSnapshot(session.runId, requestedLines)
       };
     }
   );
+}
+
+function previewLogSnapshot(runId: string, requestedLines: number): LogSnapshotResponse {
+  const text = "Preview log line one\nPreview log line two\n";
+
+  return {
+    runId,
+    capturedAt: "preview",
+    cursor: "preview",
+    requestedLines,
+    entries: [
+      {
+        source: "container-stdio",
+        timestamp: "preview",
+        text,
+        lineCount: 2
+      }
+    ],
+    text,
+    returnedLines: 2,
+    truncated: false,
+    source: "container-stdio",
+    warnings: ["Raw container output can contain secrets or workspace content."]
+  };
 }
 
 export async function getManagedSessions(): Promise<ManagedSessionList> {

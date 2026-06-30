@@ -349,7 +349,7 @@ The first prototype should use existing contracts:
 | Managed session list | `get_managed_sessions` |
 | Active run | `get_run_status` |
 | Stop, hard stop, repair | `stop_run`, `kill_run`, `repair_run` |
-| Logs | `get_log_snapshot` |
+| Logs | `get_managed_session_log_snapshot`, `get_log_snapshot` |
 | Diagnostics | `get_egress_log`, `get_auth_log`, `get_auth_status` |
 
 Do not add a generic command runner, filesystem bridge, PTY bridge, HTTP bridge,

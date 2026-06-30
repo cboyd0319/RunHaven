@@ -62,17 +62,21 @@ Add a bounded snapshot command before any live stream:
 
 | Command | Capability | Request | Response |
 | --- | --- | --- | --- |
-| `get_log_snapshot` | `run-control` | `run_id`, optional `lines`, `confirm_sensitive_output` | `run_id`, `captured_at`, `requested_lines`, `text`, `returned_lines`, `truncated`, `source`, `warnings` |
+| `get_log_snapshot` | `run-control` | `run_id`, optional `lines`, `confirm_sensitive_output` | `run_id`, `captured_at`, `cursor`, `requested_lines`, `entries`, `text`, `returned_lines`, `truncated`, `source`, `warnings` |
+| `get_managed_session_log_snapshot` | `run-control` | `session_id`, optional `lines`, `confirm_sensitive_output` | `session`, `snapshot` |
 
 Implementation status:
 
 - `get_log_snapshot` is implemented as a typed Tauri command behind the
   `run-control` capability.
+- `get_managed_session_log_snapshot` is implemented as a typed Tauri command
+  behind the same capability. It resolves the managed session ID inside Rust,
+  then delegates to the existing bounded log snapshot path.
 - Raw output remains hidden until the user acknowledges sensitive output.
 - The Rust path validates the active marker and RunHaven-owned container name,
   calls only `container logs -n`, drains stdout/stderr with bounded memory, and
   caps the returned text.
-- The Svelte UI stores only the current visible snapshot in component state.
+- The React UI stores only the current visible snapshot in component state.
 
 Default behavior:
 
@@ -131,14 +135,17 @@ Implementation constraints:
 2. Tauri command contract
    - Files: `src-tauri/src/contracts.rs`,
      `src-tauri/src/commands/log_snapshot.rs`,
+     `src-tauri/src/commands/sessions.rs`,
      `src-tauri/src/lib.rs`, `src-tauri/build.rs`, and
      `src-tauri/capabilities/`.
-   - Add typed request/response structs and `get_log_snapshot`.
+   - Add typed request/response structs, `get_log_snapshot`, and
+     `get_managed_session_log_snapshot`.
    - Require `confirm_sensitive_output`.
-   - Grant only the new command through the narrow run-detail capability.
+   - Grant only the raw-output commands through the narrow run-control
+     capability, outside `main-read`.
 
 3. Frontend log panel
-   - Files: `ui/src/commands/runhaven.ts`, `ui/src/app/App.svelte`,
+   - Files: `ui/src/commands/`, `ui/src/app/`,
      `ui/src/styles/global.css`, `ui/src/test/runhaven.test.ts`, and
      `ui/e2e/app.spec.ts`.
    - Keep logs hidden by default.
