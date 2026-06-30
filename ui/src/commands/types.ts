@@ -111,6 +111,7 @@ export type LogSnapshotResponse = {
   cursor: string;
   requestedLines: number;
   entries: LogSnapshotEntry[];
+  sessionEntries?: SessionLogEntry[];
   text: string;
   returnedLines: number;
   truncated: boolean;
@@ -125,9 +126,27 @@ export type LogSnapshotEntry = {
   lineCount: number;
 };
 
+export type SessionLogRedaction = {
+  status: "notApplied";
+  message: string;
+};
+
+export type SessionLogEntry = {
+  sessionId: string;
+  runId: string;
+  source: string;
+  cursor: string;
+  timestamp: string;
+  text: string;
+  lineCount: number;
+  redaction: SessionLogRedaction;
+};
+
 export type ManagedSessionLogSnapshotResponse = {
   session: ManagedSessionSummary;
   snapshot: LogSnapshotResponse;
+  cursor: string;
+  entries: SessionLogEntry[];
 };
 
 export type StopManagedSessionResponse = {

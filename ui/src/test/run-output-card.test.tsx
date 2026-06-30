@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { RunOutputCard } from "../app/RunOutputCard";
-import type { LogSnapshotResponse } from "../commands/runhaven";
+import type { LogSnapshotResponse, SessionLogEntry } from "../commands/runhaven";
 
 function snapshot(patch: Partial<LogSnapshotResponse> = {}): LogSnapshotResponse {
   return {
@@ -51,5 +51,39 @@ describe("RunOutputCard", () => {
     expect(html).toContain("entry line one");
     expect(html).not.toContain("legacy line one");
     expect(html).not.toContain("/Users/");
+  });
+
+  it("prefers session-owned log entries when present", () => {
+    const sessionEntry: SessionLogEntry = {
+      sessionId: "session-123",
+      runId: "run-123",
+      source: "container-stdio",
+      cursor: "session-cursor",
+      timestamp: "session-timestamp",
+      text: "session entry line\n",
+      lineCount: 1,
+      redaction: {
+        status: "notApplied",
+        message: "Raw output is not automatically redacted."
+      }
+    };
+    const html = renderToStaticMarkup(
+      <RunOutputCard
+        logAcknowledged={true}
+        logLoading={false}
+        logError=""
+        logSnapshot={snapshot({
+          sessionEntries: [sessionEntry]
+        })}
+        onAcknowledgedChange={() => undefined}
+        onLoad={async () => undefined}
+      />
+    );
+
+    expect(html).toContain("session-cursor");
+    expect(html).toContain("session entry line");
+    expect(html).toContain("Raw output is not automatically redacted.");
+    expect(html).not.toContain("entry-cursor");
+    expect(html).not.toContain("entry line one");
   });
 });

@@ -339,7 +339,10 @@ export default function App() {
         const response = await getManagedSessionLogSnapshot(outputSessionId, {
           confirmSensitiveOutput: logAcknowledged,
         })
-        setLogSnapshot(response.snapshot)
+        setLogSnapshot({
+          ...response.snapshot,
+          sessionEntries: response.entries,
+        })
       } else if (outputRunId) {
         setLogSnapshot(
           await getLogSnapshot(outputRunId, {

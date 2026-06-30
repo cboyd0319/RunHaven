@@ -63,7 +63,7 @@ Add a bounded snapshot command before any live stream:
 | Command | Capability | Request | Response |
 | --- | --- | --- | --- |
 | `get_log_snapshot` | `run-control` | `run_id`, optional `lines`, `confirm_sensitive_output` | `run_id`, `captured_at`, `cursor`, `requested_lines`, `entries`, `text`, `returned_lines`, `truncated`, `source`, `warnings` |
-| `get_managed_session_log_snapshot` | `run-control` | `session_id`, optional `lines`, `confirm_sensitive_output` | `session`, `snapshot` |
+| `get_managed_session_log_snapshot` | `run-control` | `session_id`, optional `lines`, `confirm_sensitive_output` | `session`, `snapshot`, `cursor`, `entries` |
 
 Implementation status:
 
@@ -72,6 +72,9 @@ Implementation status:
 - `get_managed_session_log_snapshot` is implemented as a typed Tauri command
   behind the same capability. It resolves the managed session ID inside Rust,
   then delegates to the existing bounded log snapshot path.
+- Managed-session responses add session-owned log entries with `session_id`,
+  `run_id`, `source`, `cursor`, `timestamp`, bounded `text`, `line_count`, and
+  `redaction.status: notApplied`.
 - Raw output remains hidden until the user acknowledges sensitive output.
 - The Rust path validates the active marker and RunHaven-owned container name,
   calls only `container logs -n`, drains stdout/stderr with bounded memory, and

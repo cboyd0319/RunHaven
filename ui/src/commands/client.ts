@@ -23,6 +23,7 @@ import type {
   RepairRunResponse,
   RepairManagedSessionResponse,
   RunStatusResponse,
+  SessionLogEntry,
   SetupStatus,
   StopManagedSessionResponse,
   StopRunResponse
@@ -210,13 +211,36 @@ export async function getManagedSessionLogSnapshot(
       if (!session) {
         throw new Error("managed session not found");
       }
+      const sessionSnapshot = { ...session };
+      const snapshot = previewLogSnapshot(session.runId, requestedLines);
 
       return {
-        session: { ...session },
-        snapshot: previewLogSnapshot(session.runId, requestedLines)
+        session: sessionSnapshot,
+        snapshot,
+        cursor: snapshot.cursor,
+        entries: sessionLogEntries(sessionSnapshot, snapshot)
       };
     }
   );
+}
+
+function sessionLogEntries(
+  session: ManagedSessionSummary,
+  snapshot: LogSnapshotResponse
+): SessionLogEntry[] {
+  return snapshot.entries.map((entry) => ({
+    sessionId: session.id,
+    runId: session.runId,
+    source: entry.source,
+    cursor: snapshot.cursor,
+    timestamp: entry.timestamp,
+    text: entry.text,
+    lineCount: entry.lineCount,
+    redaction: {
+      status: "notApplied",
+      message: "Raw output is not automatically redacted."
+    }
+  }));
 }
 
 function previewLogSnapshot(runId: string, requestedLines: number): LogSnapshotResponse {

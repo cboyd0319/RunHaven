@@ -178,6 +178,26 @@ pub(crate) struct LogSnapshotResponse {
     pub warnings: Vec<String>,
 }
 
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SessionLogRedaction {
+    pub status: String,
+    pub message: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SessionLogEntry {
+    pub session_id: String,
+    pub run_id: String,
+    pub source: String,
+    pub cursor: String,
+    pub timestamp: String,
+    pub text: String,
+    pub line_count: usize,
+    pub redaction: SessionLogRedaction,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ManagedSessionLogSnapshotRequest {
@@ -191,6 +211,8 @@ pub(crate) struct ManagedSessionLogSnapshotRequest {
 pub(crate) struct ManagedSessionLogSnapshotResponse {
     pub session: ManagedSessionSummaryData,
     pub snapshot: LogSnapshotResponse,
+    pub cursor: String,
+    pub entries: Vec<SessionLogEntry>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

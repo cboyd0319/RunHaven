@@ -187,9 +187,17 @@ describe("runhaven command helpers", () => {
     });
 
     expect(response.session.id).toBe(session!.id);
+    expect(response.cursor).toBe(response.snapshot.cursor);
+    expect(response.entries[0]?.sessionId).toBe(session!.id);
+    expect(response.entries[0]?.runId).toBe(started.runId);
+    expect(response.entries[0]?.cursor).toBe(response.snapshot.cursor);
+    expect(response.entries[0]?.redaction.status).toBe("notApplied");
+    expect(response.entries[0]?.redaction.message).toContain("not automatically redacted");
     expect(response.snapshot.runId).toBe(started.runId);
     expect(response.snapshot.entries[0]?.text).toContain("Preview log line");
     expect(JSON.stringify(response)).not.toContain("/tmp/runhaven-preview");
+    expect(JSON.stringify(response)).not.toContain("write_session_input");
+    expect(JSON.stringify(response)).not.toContain("resize_session");
   });
 
   it("controls preview runs through a managed session id", async () => {

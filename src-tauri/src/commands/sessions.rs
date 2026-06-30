@@ -4,8 +4,11 @@ use runhaven_core::ui_contracts::{ManagedSessionListData, ManagedSessionSummaryD
 
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{
-    LogSnapshotRequest, ManagedSessionLogSnapshotRequest, ManagedSessionLogSnapshotResponse,
+    LogSnapshotEntry, LogSnapshotRequest, LogSnapshotResponse, ManagedSessionLogSnapshotRequest,
+    ManagedSessionLogSnapshotResponse, SessionLogEntry, SessionLogRedaction,
 };
+
+const RAW_OUTPUT_REDACTION_MESSAGE: &str = "Raw output is not automatically redacted.";
 
 #[tauri::command]
 pub(crate) fn get_managed_sessions() -> Result<ManagedSessionListData, String> {
@@ -22,7 +25,7 @@ pub(crate) fn get_managed_session_log_snapshot(
         lines: request.lines,
         confirm_sensitive_output: request.confirm_sensitive_output,
     })?;
-    Ok(ManagedSessionLogSnapshotResponse { session, snapshot })
+    Ok(managed_session_log_snapshot_response(session, snapshot))
 }
 
 #[cfg(test)]
@@ -40,7 +43,45 @@ pub(crate) fn managed_session_log_snapshot_response_for_test(
     let lines = crate::commands::log_snapshot::validated_lines(&snapshot_request)?;
     let snapshot =
         crate::commands::log_snapshot::log_snapshot_response(&run_id, lines, stdout, max_bytes)?;
-    Ok(ManagedSessionLogSnapshotResponse { session, snapshot })
+    Ok(managed_session_log_snapshot_response(session, snapshot))
+}
+
+fn managed_session_log_snapshot_response(
+    session: ManagedSessionSummaryData,
+    snapshot: LogSnapshotResponse,
+) -> ManagedSessionLogSnapshotResponse {
+    let entries = snapshot
+        .entries
+        .iter()
+        .map(|entry| session_log_entry(&session, &snapshot, entry))
+        .collect();
+
+    ManagedSessionLogSnapshotResponse {
+        session,
+        cursor: snapshot.cursor.clone(),
+        entries,
+        snapshot,
+    }
+}
+
+fn session_log_entry(
+    session: &ManagedSessionSummaryData,
+    snapshot: &LogSnapshotResponse,
+    entry: &LogSnapshotEntry,
+) -> SessionLogEntry {
+    SessionLogEntry {
+        session_id: session.id.clone(),
+        run_id: session.run_id.clone(),
+        source: entry.source.clone(),
+        cursor: snapshot.cursor.clone(),
+        timestamp: entry.timestamp.clone(),
+        text: entry.text.clone(),
+        line_count: entry.line_count,
+        redaction: SessionLogRedaction {
+            status: "notApplied".to_string(),
+            message: RAW_OUTPUT_REDACTION_MESSAGE.to_string(),
+        },
+    }
 }
 
 fn managed_session_list() -> ManagedSessionListData {

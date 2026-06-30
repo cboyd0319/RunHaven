@@ -1600,6 +1600,13 @@ Latest GUI local prototype:
   `get_log_snapshot` path. Raw-output commands stay out of `main-read`; a
   Tauri guard enforces that `main-read` remains secret-free. This does not add
   streaming transport, terminal input, resize, attach, or filesystem access.
+- 2026-06-30 session log entry contract: `get_managed_session_log_snapshot`
+  now returns session-owned log entries with session ID, run ID, source,
+  cursor, timestamp, bounded text, line count, and explicit
+  `redaction.status: notApplied`. The React output card prefers those entries
+  for selected sessions while retaining the run-level snapshot as fallback.
+  This keeps session ownership and redaction posture typed before any live
+  stream, terminal input, or resize work.
 - 2026-06-30 selected-session run control: The selected-session pane now has
   confirmed stop, hard stop, and stale-marker repair controls. React sends only
   the managed session ID to `stop_managed_session`, `kill_managed_session`, or
@@ -1641,9 +1648,10 @@ Continue local GUI work on this branch. Use
 `docs/plans/native-gui-microsandbox-reference.md` before adding embedded
 terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
 boundary, make safe launch the simplest path, and keep developer details behind
-secondary views. Next useful work is the typed streaming `SessionLogEntry`
-contract with source, cursor, redaction, and ownership tests before any bounded
-session input or resize commands. A later desktop-driver pass can add native
-WebView click automation if it is worth the tooling cost.
+secondary views. Next useful work is a bounded live-output transport design
+that reuses the session-owned log entry contract, with ownership, gating,
+backpressure, and multi-session tests before any bounded session input or
+resize commands. A later desktop-driver pass can add native WebView click
+automation if it is worth the tooling cost.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.

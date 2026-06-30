@@ -167,9 +167,10 @@ Current GUI behavior:
 - Selected sessions can load the existing bounded output snapshot through
   `get_managed_session_log_snapshot` after explicit raw-output confirmation.
   Rust resolves the managed session ID to the active run before delegating to
-  the existing log snapshot path. The card shows source, captured cursor,
-  returned line count, truncation state, backend warnings, and bounded text
-  from an additive typed snapshot entry.
+  the existing log snapshot path. The response adds session-owned log entries
+  with source, cursor, timestamp, bounded text, line count, and explicit
+  `redaction.status: notApplied`. The card prefers those session entries over
+  run-level fallback fields.
 - `LogSnapshotResponse` includes a cursor and typed snapshot entries while
   keeping the previous top-level text fields for compatibility. This is not a
   streaming terminal or session-attach contract.
@@ -211,7 +212,8 @@ Current slice:
 - Tauri command test proves the log snapshot response maps the bounded payload
   into a cursor plus one typed entry without changing the gated backend lookup
 - Tauri command test proves selected-session output resolves the session ID in
-  Rust, rejects unknown sessions, and stays free of write-session or attach
+  Rust, rejects unknown sessions, returns session-owned log entries, marks
+  redaction as not applied, and stays free of write-session or attach
   affordances
 - capability guard proves raw-output permissions stay outside `main-read`
 - frontend helper test proves browser preview output loads through a managed
@@ -231,6 +233,6 @@ Current slice:
   against one live Apple `container` run. This is an opt-in local smoke, not a
   WebView click automation harness.
 
-Future embedded-session slices need focused Rust tests for session ownership,
-unknown ID rejection, bounded input, bounded resize, raw output gating, and
-multi-session isolation before adding terminal input or live session UI.
+Future embedded-session slices need focused Rust tests for unknown ID
+rejection, bounded input, bounded resize, raw output gating, and multi-session
+isolation before adding terminal input or live session UI.

@@ -29,13 +29,23 @@ export function RunOutputCard({
   onAcknowledgedChange: (checked: boolean) => void
   onLoad: () => Promise<void>
 }) {
-  const primaryEntry = logSnapshot?.entries[0]
+  const sessionEntry = logSnapshot?.sessionEntries?.[0]
+  const primaryEntry = sessionEntry ?? logSnapshot?.entries[0]
   const snapshotSource = primaryEntry?.source ?? logSnapshot?.source ?? ""
   const snapshotCaptured =
-    logSnapshot?.cursor ?? primaryEntry?.timestamp ?? logSnapshot?.capturedAt ?? ""
+    sessionEntry?.cursor ??
+    logSnapshot?.cursor ??
+    primaryEntry?.timestamp ??
+    logSnapshot?.capturedAt ??
+    ""
   const snapshotLineCount =
     primaryEntry?.lineCount ?? logSnapshot?.returnedLines ?? 0
   const snapshotText = primaryEntry?.text ?? logSnapshot?.text ?? ""
+  const warnings = logSnapshot
+    ? sessionEntry?.redaction.message
+      ? [...logSnapshot.warnings, sessionEntry.redaction.message]
+      : logSnapshot.warnings
+    : []
 
   return (
     <Card>
@@ -90,9 +100,9 @@ export function RunOutputCard({
                 value={logSnapshot.truncated ? "Yes" : "No"}
               />
             </div>
-            {logSnapshot.warnings.length > 0 ? (
+            {warnings.length > 0 ? (
               <ul className="rounded-lg border px-3 py-2 text-sm text-muted-foreground">
-                {logSnapshot.warnings.map((warning) => (
+                {warnings.map((warning) => (
                   <li key={warning}>{warning}</li>
                 ))}
               </ul>
