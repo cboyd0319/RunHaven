@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-06-29 UTC
+Last updated: 2026-06-30 UTC
 
 ## Current Objective
 
@@ -1309,6 +1309,15 @@ Latest TUI MVP module cleanup:
 - Verification for the split started with the existing MVP test baseline and
   focused `cargo test -p runhaven-tui --locked runhaven::mvp -- --show-output`.
   Final slice verification is recorded in `feature_list.json`.
+- 2026-06-30: Moved the launch wizard unit tests from inline
+  `runhaven/launch_wizard.rs` into sibling `runhaven/launch_wizard_tests.rs`,
+  reducing the active launch wizard module while preserving the same
+  BottomPane, workspace picker, review, typed confirmation, and foreground
+  handoff coverage.
+- Behavior and security boundary are unchanged: no launch flow, `app_shell.rs`,
+  native `App`, `ChatWidget`, app-server transport, filesystem RPC, MCP, login,
+  workspace command execution, session recording, or host-reaching Codex path
+  changed. Final slice verification is recorded in `feature_list.json`.
 
 ## Blockers
 
