@@ -25,12 +25,17 @@ The reference repositories were cloned under `/Users/c/Documents/GitHub/`:
 | `locustave/keel` | `gui-ref-locustave-keel` | `db0c542` |
 | `0Itsuki0/AppleContainerDesktop` | `gui-ref-0Itsuki0-AppleContainerDesktop` | `2595351` |
 | `agmmnn/tauri-ui` | `gui-ref-agmmnn-tauri-ui` | `0cfd2a7` |
+| `satnaing/shadcn-admin` | `gui-ref-satnaing-shadcn-admin` | `e16c87f` |
 
 The `0Itsuki0/AppleContainerDesktop` checkout is the source project linked from
 the Medium reference.
 
 The `agmmnn/tauri-ui` checkout is a Tauri app scaffold and documentation
 project, not an Apple `container` GUI.
+
+The `satnaing/shadcn-admin` checkout is a polished React, Vite, Tailwind, and
+shadcn admin shell reference. It is useful for layout and component patterns,
+not as a wholesale product template.
 
 ## Product Direction
 
@@ -88,6 +93,9 @@ work until the maintainer explicitly asks for a distribution pass.
   hidden-until-first-paint startup, a dedicated app scroll shell, no page-level
   overscroll/rubber-band scrolling, desktop-like selection defaults with
   explicit selectable surfaces, and sensible default window sizing.
+- `satnaing/shadcn-admin`: React shadcn sidebar composition, command-search
+  pattern, responsive shell, data-table examples, settings layout, and explicit
+  documentation of customized shadcn components.
 
 ## Avoid
 
@@ -109,6 +117,9 @@ work until the maintainer explicitly asks for a distribution pass.
 - Do not add opener, log, debug-panel, release-workflow, or size-optimization
   changes from `tauri-ui` by default. Each affects dependencies, capabilities,
   packaging, logs, or release behavior and needs its own RunHaven review.
+- Do not copy `shadcn-admin` as a full admin dashboard. Avoid its auth,
+  routing, charting, query, notification, and state dependencies unless a
+  RunHaven feature explicitly needs them.
 
 ## Current RunHaven Advantage
 
@@ -131,10 +142,10 @@ Keep that boundary even if the visual shell changes.
 Do not treat the current Svelte frontend as a constraint. The Tauri/Rust
 boundary is the valuable part to preserve; the web frontend can change.
 
-Use `docs/plans/native-gui-stack-spike.md` before writing the first real GUI
-implementation. The stack spike should compare React + shadcn/ui,
-Svelte + shadcn-svelte, the existing Svelte/plain-CSS path, and SwiftUI against
-RunHaven's security boundary and visual-quality needs.
+`docs/plans/native-gui-stack-spike.md` records the completed stack comparison.
+React + shadcn/ui + Tauri is the selected first implementation path. Svelte +
+shadcn-svelte remains a fallback only if the first real React slice hits a
+concrete blocker.
 
 Four paths are viable:
 
@@ -161,9 +172,9 @@ Four paths are viable:
    local IPC/FFI layer. It must not become a generic Apple `container` GUI.
 
 Working recommendation: keep `src-tauri` and `runhaven-core` as the secure
-backend boundary, run the stack spike, then implement the first real GUI slice
-in the stack that produces the most polished RunHaven-specific screen with the
-least custom UI code.
+backend boundary, replace the alpha Svelte frontend with a React + shadcn/ui
+frontend, and implement the first real GUI slice from
+`docs/plans/native-gui-wireframe.md`.
 
 ## Hardest Problems First
 
@@ -186,11 +197,10 @@ The next GUI work should prove these before visual polish:
 
 ## Immediate GUI Slice
 
-Use `docs/plans/native-gui-stack-spike.md` to decide the frontend stack, then
-use `docs/plans/native-gui-wireframe.md` as the implementation contract.
+Use `docs/plans/native-gui-wireframe.md` as the implementation contract.
 
 1. Keep `src-tauri` as the narrow Rust command boundary.
-2. Redesign the first screen around "Start a safe agent run":
+2. Implement the first screen in React + shadcn/ui around "Start a safe agent run":
    workspace, agent, plan review, launch, then status.
 3. Move CPU, memory, diagnostics, image builder detail, raw logs, and history
    behind secondary detail views.

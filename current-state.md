@@ -67,13 +67,13 @@ that harden the shared backend:
 - CLI pass: run the existing CLI surface check, inspect command help/output for
   stale TUI/v0.6 wording, and fix any CLI-facing mismatch before merge.
 - GUI handoff: initial Apple `container` GUI reference research is captured in
-  `docs/plans/native-gui-reference-pass.md`. The frontend stack decision gate
-  is captured in `docs/plans/native-gui-stack-spike.md`. The first GUI
+  `docs/plans/native-gui-reference-pass.md`. The completed frontend stack
+  spike is captured in `docs/plans/native-gui-stack-spike.md`. React +
+  shadcn/ui + Tauri is the selected first implementation path. The first GUI
   wireframe is captured in `docs/plans/native-gui-wireframe.md`. Next GUI work
-  should keep RunHaven's typed Tauri/Rust boundary, evaluate React + shadcn/ui,
-  Svelte + shadcn-svelte, existing Svelte/plain CSS, and SwiftUI, then
-  implement the first real GUI slice in the stack that gives the best polished
-  RunHaven-specific result with the least custom UI code.
+  should keep RunHaven's typed Tauri/Rust boundary, replace the alpha Svelte
+  frontend only at the WebView layer, and implement the first real GUI slice
+  with the least custom UI code.
 
 ## Startup State Contract
 
@@ -111,7 +111,7 @@ Load deeper docs only when the task touches that surface.
 | CLI presentation | `crates/runhaven-cli/` | Clap dispatch, setup text, and human CLI output. |
 | Terminal UI | `crates/runhaven-tui/` | Codex-vendored TUI source plus RunHaven TUI adapters. |
 | Desktop Rust shell | `src-tauri/` | Narrow typed Tauri commands over `runhaven-core`. |
-| Frontend | `ui/` | Alpha Svelte desktop UI. |
+| Frontend | `ui/` | Alpha Svelte desktop UI; next GUI slice replaces the WebView frontend with React + shadcn/ui while keeping the typed Tauri/Rust boundary. |
 
 `crates/runhaven` is binary-only. Do not rebuild a root compatibility facade.
 Shared runtime truth belongs in `runhaven-core`; presentation belongs in CLI,
@@ -1525,13 +1525,12 @@ Latest CLI surface pass:
 
 The TUI hardening plus CLI-audit branch is merged. Next product work shifts to
 a native-feeling macOS GUI as the easy path for nontechnical users. The first
-GUI slice should use `docs/plans/native-gui-reference-pass.md`: keep the typed
-RunHaven Tauri/Rust boundary, run the
-`docs/plans/native-gui-stack-spike.md` comparison, then implement from
-`docs/plans/native-gui-wireframe.md`: simplify the first screen around safe
-launch and hide developer details behind secondary views. Do not prefer Svelte
-just because it exists; choose the stack that best reduces custom UI code while
-preserving the boundary. Keep the prototype path free of paid Apple Developer
-Program requirements. Do not cut a release, tag, version bump, notarization,
-updater, or public distribution pass unless the maintainer explicitly asks for
-it.
+GUI slice should use `docs/plans/native-gui-reference-pass.md`,
+`docs/plans/native-gui-stack-spike.md`, and
+`docs/plans/native-gui-wireframe.md`: keep the typed RunHaven Tauri/Rust
+boundary, implement the first screen in React + shadcn/ui, simplify around
+safe launch, and hide developer details behind secondary views. Keep Svelte +
+shadcn-svelte as a fallback only if the first real React slice hits a concrete
+blocker. Keep the prototype path free of paid Apple Developer Program
+requirements. Do not cut a release, tag, version bump, notarization, updater,
+or public distribution pass unless the maintainer explicitly asks for it.

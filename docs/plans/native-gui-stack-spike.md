@@ -73,6 +73,19 @@ Svelte shadcn evidence:
 - It is React, Tailwind, shadcn, and Bun-oriented. That is a viable stack
   candidate, not a reason to copy the whole scaffold blindly.
 
+`satnaing/shadcn-admin` evidence:
+
+- The local checkout is `gui-ref-satnaing-shadcn-admin` at commit `e16c87f`.
+- It is a React 19, Vite 8, Tailwind 4, and shadcn-oriented admin shell under
+  the MIT license.
+- Its useful ideas are a polished sidebar layout, command-search pattern,
+  responsive shell behavior, data-table examples, settings surfaces, and
+  explicit notes about customized shadcn components.
+- It includes broad app dependencies such as Clerk, TanStack Router, TanStack
+  Query, TanStack Table, Recharts, Sonner, Zustand, Zod, and Axios. Those are
+  not needed for the first RunHaven GUI slice unless a concrete feature needs
+  them.
+
 ## Candidate Paths
 
 ### 1. React + shadcn/ui + Tauri
@@ -144,35 +157,67 @@ Risks:
 - More packaging, signing, testing, and IPC work.
 - No direct shadcn/template leverage.
 
-## Recommended Spike
+## Completed Spike
 
-Before real GUI code, build two throwaway prototypes outside committed product
-source:
+Two throwaway prototypes were built outside committed product source on
+2026-06-30.
 
-1. React + shadcn prototype:
-   - Use Vite + React + Tailwind + shadcn/ui.
-   - Try `@shadcn/sidebar`, `@shadcn/alert-dialog`, `@shadcn/dialog`,
-     `@shadcn/field`, `@shadcn/table`, `@shadcn/tabs`, `@shadcn/empty`, and
-     one sidebar block.
-   - Recreate the RunHaven start screen using static mock data and
-     `docs/assets/logo.png`.
+### React + shadcn/ui
 
-2. Svelte + shadcn-svelte prototype:
-   - Use the existing Svelte/Vite shape or a temp Svelte app.
-   - Try sidebar, alert dialog, field/input/select, table, tabs, empty, and
-     sheet/dialog.
-   - Recreate the same RunHaven start screen with the same mock data.
+Prototype path: `/private/tmp/runhaven-gui-spike-react`.
 
-For each prototype, record:
+Setup:
 
-- Screenshot at `1080 x 720`.
-- Screenshot at `720 x 560`.
-- Dependency list.
-- Approximate custom component count.
-- Whether setup was smooth or brittle.
-- Whether the result looks polished without heavy custom CSS.
-- Whether it can call the existing typed Tauri command client without a broad
-  permission change.
+- `npx shadcn@latest init --template vite --base radix --preset nova --name
+  runhaven-gui-spike-react --cwd /private/tmp --yes --no-rtl --pointer`
+- `npx shadcn@latest add sidebar alert-dialog dialog field input select
+  checkbox table tabs empty alert sheet badge separator --yes`
+- Added a static RunHaven launch shell using `docs/assets/logo.png`.
+
+Result:
+
+- Screenshot: [React 1080 x 720](../assets/gui-stack-spike/react-1080.png)
+- Screenshot: [React 720 x 560](../assets/gui-stack-spike/react-720.png)
+- Dependencies: React 19.2.6, Vite 8.1.2, Tailwind 4, shadcn 4.12.0,
+  `radix-ui`, `lucide-react`, `class-variance-authority`,
+  `tailwind-merge`, `tw-animate-css`, and Geist font assets.
+- Check: `npm run build` passed.
+- Setup was smooth. Official shadcn init and component install worked without
+  manual registry fixes.
+- The first-screen prototype looked polished with minimal custom layout code.
+- The typed Tauri command boundary can stay unchanged because React only
+  replaces the WebView frontend layer.
+
+### Svelte + shadcn-svelte
+
+Prototype path: `/private/tmp/runhaven-gui-spike-svelte`.
+
+Setup:
+
+- Created a Vite Svelte TypeScript app.
+- Installed Tailwind 4 and `@tailwindcss/vite`.
+- Generated the shadcn-svelte default preset code with
+  `shadcn-svelte/preset`, then ran `npx shadcn-svelte@latest init --preset b0`.
+- Added sidebar, alert dialog, dialog, field, input, select, checkbox, table,
+  tabs, empty, alert, sheet, badge, separator, and button components.
+- Added a static RunHaven launch shell using `docs/assets/logo.png`.
+
+Result:
+
+- Screenshot: [Svelte 1080 x 720](../assets/gui-stack-spike/svelte-1080.png)
+- Screenshot: [Svelte 720 x 560](../assets/gui-stack-spike/svelte-720.png)
+- Dependencies: Svelte 5.56.4, Vite 8.1.2, Tailwind 4.3.2,
+  `shadcn-svelte` 1.3.0, `@lucide/svelte`, `bits-ui`, `tailwind-variants`,
+  `tailwind-merge`, `tw-animate-css`, and Inter font assets.
+- Check: `npm run check` passed with one TypeScript 6 `baseUrl` deprecation
+  warning. `npm run build` passed.
+- Setup was workable but more brittle than React. It needed a non-interactive
+  preset code, Tailwind import repair, explicit Vite aliasing, and Svelte
+  snippet-oriented component wiring.
+- The visual result can match React, but it took more local framework setup
+  work and has less direct block/template leverage.
+- The typed Tauri command boundary can stay unchanged because Svelte also
+  remains only a WebView frontend layer.
 
 ## Decision Rule
 
@@ -182,3 +227,21 @@ least custom UI code while preserving the Tauri/Rust security boundary.
 Do not prefer Svelte merely because it exists. Do not prefer React merely
 because shadcn is popular. Prefer the path that visibly gets RunHaven to a
 polished, secure, maintainable GUI fastest.
+
+## Decision
+
+Use React + shadcn/ui + Tauri for the first real GUI slice.
+
+React is not the security decision. The security decision remains the existing
+typed `src-tauri` boundary over `runhaven-core`, narrow capabilities, bounded
+payloads, and no generic host bridge.
+
+React is the product and implementation decision because the spike produced the
+best RunHaven-specific screen with the least brittle setup, official shadcn
+component support, better template leverage, and a cleaner path to polished
+macOS utility screens.
+
+Keep Svelte + shadcn-svelte as a fallback only if the first real React slice
+hits a concrete blocker in Tauri integration, tests, accessibility, or bundle
+maintenance. Do not keep Svelte solely because the alpha shell currently uses
+it.
