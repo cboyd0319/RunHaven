@@ -1,0 +1,18 @@
+---
+source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
+expression: rendered
+---
+
+  RunHaven v0.5.0  Active runs
+  1 Launch  2 Runs  3 Diagnostics
+
+  Enter opens a raw log confirmation for the selected run.
+
+  > run-20260629-001  codex  provider  running
+
+  Profile     codex
+  Run ID      run-20260629-001
+  Container   runhaven-codex-001-run
+  State       runhaven-codex-shared-home
+  Session     none
+  Started     2026-06-29T17:44:00Z

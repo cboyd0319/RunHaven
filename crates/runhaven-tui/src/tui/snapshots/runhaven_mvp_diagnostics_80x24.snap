@@ -1,0 +1,21 @@
+---
+source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
+expression: rendered
+---
+
+  RunHaven v0.5.0  Diagnostics
+  1 Launch  2 Runs  3 Diagnostics
+  Secret-free status and recent broker/proxy decisions.
+
+  Auth        ready
+  Runtime     runhaven isolated login state
+
+  Auth profiles
+  codex  signed in
+  claude  login needed
+
+  Provider egress
+  codex  allowed  api.openai.com:443  count=3  provider-allowlist
+
+  Auth broker
+  codex  allowed  POST /v1/responses  upstream=200  count=1

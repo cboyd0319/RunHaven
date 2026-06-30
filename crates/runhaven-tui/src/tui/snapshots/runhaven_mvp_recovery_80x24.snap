@@ -1,0 +1,17 @@
+---
+source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
+expression: rendered
+---
+
+  RunHaven v0.5.0  Run finished
+  The terminal is back in RunHaven.
+
+  Agent       codex
+  Exit        7
+  Network     provider
+  Auth scope  agent
+  Boundary    /workspace only
+  State       runhaven-codex-shared-home
+
+  Enter starts another launch. 2 shows active runs. 3 shows diagnostics. q
+  quits.

@@ -1,0 +1,52 @@
+---
+source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
+expression: rendered
+---
+
+  RunHaven v0.5.0  Step 1/4: Choose agent
+  Pick the agent to run. You will review the plan before anything starts.
+  Agent  antigravity  Network  Provider only
+  Workspace   /tmp/runhaven-snapshot-workspace
+  Safety  /workspace only. Host home and credentials are not mounted.
+
+› 1. antigravity  Ready. Provider only. Workspace only.
+  2. shell        Needs confirmation. Review before launch.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Enter opens the plan. Nothing starts until you confirm.
+  Use ↑/↓ or j/k to choose. enter reviews. esc or q quits.

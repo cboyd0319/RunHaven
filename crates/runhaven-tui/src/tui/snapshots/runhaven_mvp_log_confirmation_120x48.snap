@@ -1,0 +1,11 @@
+---
+source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
+expression: rendered
+---
+
+  RunHaven v0.5.0  Run logs
+  Run ID  run-20260629-001  Profile  codex
+
+  Raw container output can contain secrets or workspace content.
+  Type logs, then press Enter to load a bounded snapshot.
+  Typed

@@ -1009,6 +1009,10 @@ fn exit_style(exit_code: i32, error: Option<&String>) -> Style {
 }
 
 #[cfg(test)]
+#[path = "mvp_snapshots.rs"]
+mod snapshot_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crossterm::event::KeyEvent;
@@ -1162,14 +1166,16 @@ mod tests {
                 returned_lines: 1,
                 truncated: false,
                 source: "container-stdio".to_string(),
-                warnings: vec!["Raw container output can contain secrets.".to_string()],
+                warnings: vec![
+                    "Raw container output can contain secrets or workspace content.".to_string(),
+                ],
             }),
         }));
 
         let output = render_to_text(&mut view, 120, 32);
         assert!(output.contains("Snapshot"));
         assert!(output.contains("agent output"));
-        assert!(output.contains("Raw container output can contain secrets."));
+        assert!(output.contains("Raw container output can contain secrets or workspace content."));
     }
 
     #[test]

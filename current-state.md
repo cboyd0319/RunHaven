@@ -1271,6 +1271,26 @@ Latest TUI MVP shell ownership guard:
   adversarial re-review after patching reviewer findings, and
   `git diff --check`.
 
+Latest TUI MVP snapshot matrix:
+
+- 2026-06-29: Added the authoritative RunHaven-owned MVP snapshot matrix under
+  `crates/runhaven-tui/src/tui/snapshots/`, with a test-only
+  `runhaven/mvp_snapshots.rs` module. The matrix covers the agent picker, plan
+  review, confirm launch, typed confirm-required launch, active-run list,
+  raw-log confirmation, loaded bounded log snapshot, secret-free diagnostics,
+  and post-run recovery at both `80x24` and `120x48`.
+- The snapshots use deterministic fixture data, do not touch external temp or
+  workspace state, and do not depend on host environment passthrough. Snapshot
+  verification uses repo-local `.snap` goldens. Upstream Codex `.snap` goldens
+  remain external; these are RunHaven behavior goldens only.
+- Security boundary is unchanged: app-server transport, filesystem RPC, MCP,
+  login, workspace command execution, Codex session recording, full onboarding,
+  native `App`, `ChatWidget`, and host-reaching Codex execution remain dormant
+  or fail-closed.
+- Verification started with the expected red missing-snapshot failure, then
+  generated and reran the matrix successfully, including an env-unset rerun.
+  Final slice verification is recorded in `feature_list.json`.
+
 ## Blockers
 
 - SSH forwarding remains fail-closed as described above.

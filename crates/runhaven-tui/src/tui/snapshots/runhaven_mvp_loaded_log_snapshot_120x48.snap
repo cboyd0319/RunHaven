@@ -1,0 +1,16 @@
+---
+source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
+expression: rendered
+---
+
+  RunHaven v0.5.0  Run logs
+  Run ID  run-20260629-001  Profile  codex
+
+  Captured    2026-06-29T17:45:00Z
+  Returned    3 lines
+  Raw container output can contain secrets or workspace content.
+
+  Snapshot
+  RunHaven started codex in /workspace.
+  Provider egress: allowed api.openai.com:443.
+  Agent exited with status 0.

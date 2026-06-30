@@ -119,10 +119,10 @@ Local exclusions in this baseline:
 Current vendor audit summary:
 
 - Upstream files under `codex-rs/tui/src/`: 894.
-- RunHaven files under `crates/runhaven-tui/src/tui/`: 372.
+- RunHaven files under `crates/runhaven-tui/src/tui/`: 391.
 - Common file paths: 356.
 - Upstream files not vendored: 538, all `.snap` files.
-- RunHaven-only files: 16.
+- RunHaven-only files: 35.
 - Copied Codex files with local edits: 53.
 
 RunHaven-only files:
@@ -140,10 +140,29 @@ runhaven/launch_handoff.rs
 runhaven/launch_wizard.rs
 runhaven/mod.rs
 runhaven/mvp.rs
+runhaven/mvp_snapshots.rs
 runhaven/protocol.rs
 runhaven/service.rs
 runhaven/status_format.rs
 runhaven/terminal_handoff.rs
+snapshots/runhaven_mvp_active_runs_120x48.snap
+snapshots/runhaven_mvp_active_runs_80x24.snap
+snapshots/runhaven_mvp_agent_picker_120x48.snap
+snapshots/runhaven_mvp_agent_picker_80x24.snap
+snapshots/runhaven_mvp_confirm_120x48.snap
+snapshots/runhaven_mvp_confirm_80x24.snap
+snapshots/runhaven_mvp_diagnostics_120x48.snap
+snapshots/runhaven_mvp_diagnostics_80x24.snap
+snapshots/runhaven_mvp_loaded_log_snapshot_120x48.snap
+snapshots/runhaven_mvp_loaded_log_snapshot_80x24.snap
+snapshots/runhaven_mvp_log_confirmation_120x48.snap
+snapshots/runhaven_mvp_log_confirmation_80x24.snap
+snapshots/runhaven_mvp_recovery_120x48.snap
+snapshots/runhaven_mvp_recovery_80x24.snap
+snapshots/runhaven_mvp_review_120x48.snap
+snapshots/runhaven_mvp_review_80x24.snap
+snapshots/runhaven_mvp_typed_confirm_120x48.snap
+snapshots/runhaven_mvp_typed_confirm_80x24.snap
 ```
 
 Copied Codex files with local edits:

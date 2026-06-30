@@ -1,0 +1,38 @@
+---
+source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
+expression: rendered
+---
+
+  RunHaven v0.5.0  Step 3/4: Review plan
+  Check what RunHaven will share before launch.
+
+  Agent       antigravity
+  Status      ready
+  Auth scope  agent
+  Network     provider allowlist
+  Boundary    /workspace only
+  Host home   not mounted
+  Credentials not mounted by default
+  Workspace   /tmp/runhaven-snapshot-workspace
+  Mount       /tmp/runhaven-snapshot-workspace -> /workspace
+  State       runhaven-antigravity-shared-home
+  Image       runhaven/antigravity:0.1.0
+  Worktree    off
+
+  Exact command
+  container run --rm --init --name runhaven-antigravity-snapshot-run --read-only --mount
+  type=bind,source=/tmp/runhaven-snapshot-workspace,target=/workspace --network runhaven-provider
+  runhaven/antigravity:0.1.0 antigravity
+
+  Not shared
+  - host home folder
+  - raw SSH keys
+  - browser profiles
+  - cloud credential folders
+  - arbitrary host environment variables
+
+  Provider hosts
+  - api.openai.com
+  - oauth2.googleapis.com
+
+  b or esc goes back. enter opens confirmation. q quits.

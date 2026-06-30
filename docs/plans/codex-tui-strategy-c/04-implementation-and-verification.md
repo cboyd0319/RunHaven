@@ -346,6 +346,16 @@ logging it. App-server transport, filesystem RPC, MCP, login, workspace command
 execution, Codex session recording, native `App`, and `ChatWidget` remain
 dormant or fail-closed.
 
+Progress note, 2026-06-29: The scoped RunHaven MVP now has authoritative
+RunHaven-owned snapshots under `crates/runhaven-tui/src/tui/snapshots/`.
+`runhaven/mvp_snapshots.rs` covers the agent picker, plan review, confirm
+launch, typed confirm-required launch, active runs, raw-log confirmation,
+loaded bounded log snapshot, secret-free diagnostics, and post-run recovery at
+`80x24` and `120x48`. The fixture uses deterministic data, does not touch
+external temp or workspace state, and does not depend on host environment
+passthrough; snapshot verification uses repo-local `.snap` goldens and no
+Codex upstream `.snap` goldens were imported.
+
 ### Phase 7: Cull Or Stub Unsupported Codex Product Features
 
 As the scoped MVP stabilizes, decide each dormant Codex product surface:
