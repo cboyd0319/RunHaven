@@ -3,6 +3,7 @@ import {
   Box,
   ShieldCheck,
   Terminal,
+  type LucideIcon,
 } from "lucide-react"
 
 import logo from "@/assets/logo.png"
@@ -21,11 +22,30 @@ import {
 } from "@/components/ui/sidebar"
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 
+type SidebarNavItem = {
+  label: string
+  Icon: LucideIcon
+  onClick?: () => void
+}
+
 export function RunHavenSidebar({
   sessions,
+  selectedSessionId,
+  onStartSelect,
+  onSessionSelect,
 }: {
   sessions: ManagedSessionSummary[]
+  selectedSessionId: string | null
+  onStartSelect: () => void
+  onSessionSelect: (sessionId: string) => void
 }) {
+  const navItems: SidebarNavItem[] = [
+    { label: "Start", Icon: AppWindow, onClick: onStartSelect },
+    { label: "Agents", Icon: Terminal },
+    { label: "Security", Icon: ShieldCheck },
+    { label: "History", Icon: Box },
+  ]
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -48,19 +68,16 @@ export function RunHavenSidebar({
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {[
-                ["Start", AppWindow],
-                ["Agents", Terminal],
-                ["Security", ShieldCheck],
-                ["History", Box],
-              ].map(([label, Icon]) => (
-                <SidebarMenuItem key={label as string}>
+              {navItems.map(({ label, Icon, onClick }) => (
+                <SidebarMenuItem key={label}>
                   <SidebarMenuButton
-                    isActive={label === "Start"}
-                    tooltip={label as string}
+                    isActive={label === "Start" && selectedSessionId === null}
+                    tooltip={label}
+                    type="button"
+                    onClick={onClick}
                   >
                     <Icon />
-                    <span>{label as string}</span>
+                    <span>{label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -74,7 +91,12 @@ export function RunHavenSidebar({
               <SidebarMenu>
                 {sessions.map((session) => (
                   <SidebarMenuItem key={session.id}>
-                    <SidebarMenuButton tooltip={session.title}>
+                    <SidebarMenuButton
+                      tooltip={session.title}
+                      type="button"
+                      isActive={selectedSessionId === session.id}
+                      onClick={() => onSessionSelect(session.id)}
+                    >
                       <Terminal />
                       <span>{session.title}</span>
                     </SidebarMenuButton>

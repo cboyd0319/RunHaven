@@ -41,6 +41,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { DiagnosticsCard } from "./DiagnosticsCard"
 import { LastLaunchCard } from "./LastLaunchCard"
 import { LaunchPlanCard } from "./LaunchPlanCard"
+import { ManagedSessionCard } from "./ManagedSessionCard"
 import { PlanReviewCard } from "./PlanReviewCard"
 import { RunHavenSidebar } from "./RunHavenSidebar"
 import { RunOutputCard } from "./RunOutputCard"
@@ -75,6 +76,9 @@ export default function App() {
   const [managedSessions, setManagedSessions] = useState<ManagedSessionList>({
     sessions: [],
   })
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
+    null,
+  )
   const [runStatus, setRunStatus] = useState<RunStatusResponse | null>(null)
   const [runStatusLoading, setRunStatusLoading] = useState(false)
   const [runStatusError, setRunStatusError] = useState("")
@@ -110,10 +114,30 @@ export default function App() {
       new Set(confirmedWarnings),
       launchImageReady,
     )
+  const selectedSession = useMemo(
+    () =>
+      managedSessions.sessions.find(
+        (session) => session.id === selectedSessionId,
+      ) ?? null,
+    [managedSessions.sessions, selectedSessionId],
+  )
+  const pageTitle = selectedSession ? "Session" : "Launch"
+  const pageDescription = selectedSession
+    ? "Review status and access for the selected agent session."
+    : "Choose an agent and project. Review access before launch."
 
   useEffect(() => {
     void refresh()
   }, [])
+
+  useEffect(() => {
+    if (
+      selectedSessionId &&
+      !managedSessions.sessions.some((session) => session.id === selectedSessionId)
+    ) {
+      setSelectedSessionId(null)
+    }
+  }, [managedSessions.sessions, selectedSessionId])
 
   async function refresh() {
     setLoading(true)
@@ -344,15 +368,18 @@ export default function App() {
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <RunHavenSidebar sessions={managedSessions.sessions} />
+        <RunHavenSidebar
+          sessions={managedSessions.sessions}
+          selectedSessionId={selectedSessionId}
+          onStartSelect={() => setSelectedSessionId(null)}
+          onSessionSelect={setSelectedSessionId}
+        />
         <SidebarInset className="h-screen overflow-hidden">
           <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
             <SidebarTrigger variant="outline" />
             <div className="min-w-0">
-              <h1 className="text-base font-medium">Launch</h1>
-              <p className="text-sm text-muted-foreground">
-                Choose an agent and project. Review access before launch.
-              </p>
+              <h1 className="text-base font-medium">{pageTitle}</h1>
+              <p className="text-sm text-muted-foreground">{pageDescription}</p>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <Badge
@@ -403,6 +430,8 @@ export default function App() {
 
               {!setupReady ? (
                 <SetupCard loading={loading} dashboard={dashboard} />
+              ) : selectedSession ? (
+                <ManagedSessionCard session={selectedSession} />
               ) : (
                 <>
                   {launchStep === "review" && plan ? (
@@ -441,9 +470,11 @@ export default function App() {
                 </>
               )}
 
-              {lastLaunch ? <LastLaunchCard lastLaunch={lastLaunch} /> : null}
+              {!selectedSession && lastLaunch ? (
+                <LastLaunchCard lastLaunch={lastLaunch} />
+              ) : null}
 
-              {lastLaunch ? (
+              {!selectedSession && lastLaunch ? (
                 <RunStatusCard
                   runStatus={runStatus}
                   runStatusLoading={runStatusLoading}
@@ -462,7 +493,7 @@ export default function App() {
                 />
               ) : null}
 
-              {lastLaunch ? (
+              {!selectedSession && lastLaunch ? (
                 <RunOutputCard
                   logAcknowledged={logAcknowledged}
                   logLoading={logLoading}

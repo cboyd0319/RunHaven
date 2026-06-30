@@ -1566,6 +1566,18 @@ Latest GUI local prototype:
   with `allow-get-managed-sessions`; the React command client and sidebar can
   show an `Active sessions` group only when sessions exist. The design contract
   lives in `docs/plans/native-gui-managed-sessions.md`.
+- 2026-06-30 microsandbox reference pass: Mined
+  `superradcompany/microsandbox` commit `744d7f79d815` for RunHaven GUI/runtime
+  contract ideas. Logged useful patterns in
+  `docs/plans/native-gui-microsandbox-reference.md`: lifecycle states, source
+  and cursor-based logs, per-session IDs, typed launch failure categories,
+  secondary nullable metrics, host-side credential principles, network-defense
+  evidence requirements, and recovery controls.
+- 2026-06-30 selected-session GUI surface: The React sidebar can now select an
+  active managed session and open a read-only main-pane session summary. The
+  card shows agent, project label, session, status, auth posture, network
+  posture, and start time; it does not add terminal input, resize, attach,
+  filesystem RPC, process control, raw workspace paths, or state volume names.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
@@ -1588,11 +1600,13 @@ Continue local GUI work on this branch. Use
 `docs/plans/native-gui-reference-pass.md`,
 `docs/plans/native-gui-stack-spike.md`, and
 `docs/plans/native-gui-wireframe.md` as the design contract; use
-`docs/plans/native-gui-managed-sessions.md` before adding embedded terminal or
-session-write controls. Keep the typed RunHaven Tauri/Rust boundary, make safe
-launch the simplest path, and keep developer details behind secondary views.
-Next useful work is a focused live Tauri smoke of the React shell, then continue
-managed-session hardening: auth-blocked presentation, selected-session main-pane
-state, and only then bounded session input/resize contracts.
+`docs/plans/native-gui-managed-sessions.md` and
+`docs/plans/native-gui-microsandbox-reference.md` before adding embedded
+terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
+boundary, make safe launch the simplest path, and keep developer details behind
+secondary views. Next useful work is a focused live Tauri smoke of the React
+shell, then continue managed-session hardening: richer auth-blocked next
+actions, typed lifecycle markers/log sources, and only then bounded session
+input/resize contracts.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.
