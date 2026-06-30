@@ -16,31 +16,47 @@ export function SetupCard({
   loading: boolean
   dashboard: DashboardStatus | null
 }) {
-  const setupKnown = !loading && dashboard !== null
+  const setupKnown = dashboard !== null
   const setupReady = setupKnown && dashboard.setup.ok
   const failedChecks = (dashboard?.setup.checks ?? []).filter(
     (check) => !check.ok,
   )
+  const firstFailedCheck = failedChecks[0]
+  const remainingFailures = Math.max(failedChecks.length - 1, 0)
+  const statusLabel = loading
+    ? "Checking"
+    : !setupKnown
+      ? "Unknown"
+      : setupReady
+        ? "Ready"
+        : "Blocked"
+
   return (
     <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
-          Status
+          {setupReady ? "Setup ready" : "Finish setup"}
         </CardTitle>
         <CardDescription>
-          {!setupKnown
+          {loading
             ? "Checking setup..."
-            : setupReady
+            : !setupKnown
+              ? "RunHaven could not read setup status."
+              : setupReady
               ? "Ready to launch."
-              : "Fix blockers before launch."}
+              : "Fix this before starting an agent."}
         </CardDescription>
         <CardAction>
           <Badge
             variant={
-              !setupKnown ? "outline" : setupReady ? "success" : "destructive"
+              loading || !setupKnown
+                ? "outline"
+                : setupReady
+                  ? "success"
+                  : "destructive"
             }
           >
-            {!setupKnown ? "Checking" : setupReady ? "Ready" : "Blocked"}
+            {statusLabel}
           </Badge>
         </CardAction>
       </CardHeader>
@@ -48,19 +64,38 @@ export function SetupCard({
         {loading ? (
           <p className="text-sm text-muted-foreground">Loading setup...</p>
         ) : null}
+        {!loading && !setupKnown ? (
+          <p className="text-sm text-muted-foreground">
+            Refresh status to try again.
+          </p>
+        ) : null}
         {setupReady ? (
           <p className="text-sm text-muted-foreground">All checks passed.</p>
         ) : null}
-        {failedChecks.map((check) => (
-          <div key={check.name} className="rounded-lg border p-3">
+        {firstFailedCheck ? (
+          <div className="rounded-lg border p-3">
             <div className="flex items-center justify-between gap-3">
-              <div className="font-medium">{check.name}</div>
-              <Badge variant="destructive">Fix</Badge>
+              <div className="font-medium">{firstFailedCheck.name}</div>
+              <Badge variant="destructive">Needs attention</Badge>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">{check.detail}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{check.remedy}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {firstFailedCheck.detail}
+            </p>
+            <div className="mt-3 rounded-md bg-muted p-3 text-sm">
+              <div className="font-medium">Next step</div>
+              <p className="mt-1 text-muted-foreground">
+                {firstFailedCheck.remedy}
+              </p>
+            </div>
           </div>
-        ))}
+        ) : null}
+        {remainingFailures > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {remainingFailures} more setup{" "}
+            {remainingFailures === 1 ? "check needs" : "checks need"} attention.
+            Open Diagnostics for full details.
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   )

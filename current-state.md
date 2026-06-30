@@ -1552,6 +1552,12 @@ Latest GUI local prototype:
   Codex session should occupy the main pane after launch, with Rust/Tauri
   owning the reviewed launch plan and the frontend limited to input, resize,
   and output for an existing session ID.
+- 2026-06-30 implementation follow-up: Removed the React desktop right rail.
+  Setup status now lives in the toolbar, setup blockers take over the main
+  pane before launch, diagnostics stay collapsed in the main flow, and the
+  ready launch path shows only the wizard plus secondary diagnostics.
+  Screenshots captured at `target/playwright/ui/runhaven-two-pane-1080.png`
+  and `target/playwright/ui/runhaven-two-pane-720.png`.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external

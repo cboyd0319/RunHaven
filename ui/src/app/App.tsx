@@ -43,7 +43,6 @@ import { PlanReviewCard } from "./PlanReviewCard"
 import { RunHavenSidebar } from "./RunHavenSidebar"
 import { RunOutputCard } from "./RunOutputCard"
 import { RunStatusCard } from "./RunStatusCard"
-import { SafetyCard } from "./SafetyCard"
 import { SetupCard } from "./SetupCard"
 import {
   errorMessage,
@@ -95,9 +94,11 @@ export default function App() {
     () => dashboard?.agents.find((agent) => agent.name === request.agent),
     [dashboard?.agents, request.agent],
   )
+  const setupKnown = dashboard !== null
+  const setupReady = setupKnown && dashboard.setup.ok
   const launchImageReady = request.image ? true : imageStatus?.image.ready === true
   const launchReady =
-    Boolean(dashboard?.setup.ok) &&
+    setupReady &&
     isLaunchReady(
       plan,
       launchConfirmation,
@@ -342,6 +343,21 @@ export default function App() {
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
+              <Badge
+                variant={
+                  !setupKnown || loading
+                    ? "outline"
+                    : setupReady
+                      ? "success"
+                      : "destructive"
+                }
+              >
+                {!setupKnown || loading
+                  ? "Checking"
+                  : setupReady
+                    ? "Ready"
+                    : "Blocked"}
+              </Badge>
               <Button
                 type="button"
                 variant="outline"
@@ -354,8 +370,8 @@ export default function App() {
             </div>
           </header>
 
-          <main className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-            <section className="flex min-w-0 flex-col gap-4">
+          <main className="min-h-0 flex-1 overflow-y-auto p-4">
+            <section className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-4">
               {error ? (
                 <Alert variant="destructive">
                   <CircleAlert />
@@ -373,38 +389,44 @@ export default function App() {
                 </Alert>
               ) : null}
 
-              {launchStep === "review" && plan ? (
-                <PlanReviewCard
-                  plan={plan}
-                  launchConfirmation={launchConfirmation}
-                  confirmedWarnings={confirmedWarnings}
-                  launchReady={launchReady}
-                  launching={launching}
-                  setupOk={Boolean(dashboard?.setup.ok)}
-                  launchImageReady={launchImageReady}
-                  onLaunchConfirmationChange={setLaunchConfirmation}
-                  onConfirmWarning={setWarningConfirmation}
-                  onBack={() => setLaunchStep("project")}
-                  onStart={startRun}
-                />
+              {!setupReady ? (
+                <SetupCard loading={loading} dashboard={dashboard} />
               ) : (
-                <LaunchPlanCard
-                  step={launchStep === "review" ? "project" : launchStep}
-                  agents={dashboard?.agents ?? []}
-                  request={request}
-                  selectedAgent={selectedAgent}
-                  imageLoading={imageLoading}
-                  imageStatus={imageStatus}
-                  imageError={imageError}
-                  planning={planning}
-                  onAgentChange={changeAgent}
-                  onPickFolder={pickFolder}
-                  onRequestChange={updateRequest}
-                  onNetworkChange={updateNetworkMode}
-                  onBack={() => setLaunchStep("agent")}
-                  onContinue={() => setLaunchStep("project")}
-                  onReviewPlan={reviewPlan}
-                />
+                <>
+                  {launchStep === "review" && plan ? (
+                    <PlanReviewCard
+                      plan={plan}
+                      launchConfirmation={launchConfirmation}
+                      confirmedWarnings={confirmedWarnings}
+                      launchReady={launchReady}
+                      launching={launching}
+                      setupOk={setupReady}
+                      launchImageReady={launchImageReady}
+                      onLaunchConfirmationChange={setLaunchConfirmation}
+                      onConfirmWarning={setWarningConfirmation}
+                      onBack={() => setLaunchStep("project")}
+                      onStart={startRun}
+                    />
+                  ) : (
+                    <LaunchPlanCard
+                      step={launchStep === "review" ? "project" : launchStep}
+                      agents={dashboard?.agents ?? []}
+                      request={request}
+                      selectedAgent={selectedAgent}
+                      imageLoading={imageLoading}
+                      imageStatus={imageStatus}
+                      imageError={imageError}
+                      planning={planning}
+                      onAgentChange={changeAgent}
+                      onPickFolder={pickFolder}
+                      onRequestChange={updateRequest}
+                      onNetworkChange={updateNetworkMode}
+                      onBack={() => setLaunchStep("agent")}
+                      onContinue={() => setLaunchStep("project")}
+                      onReviewPlan={reviewPlan}
+                    />
+                  )}
+                </>
               )}
 
               {lastLaunch ? <LastLaunchCard lastLaunch={lastLaunch} /> : null}
@@ -438,11 +460,7 @@ export default function App() {
                   onLoad={loadLogSnapshot}
                 />
               ) : null}
-            </section>
 
-            <aside className="flex min-w-0 flex-col gap-4">
-              <SetupCard loading={loading} dashboard={dashboard} />
-              <SafetyCard request={request} imageReady={launchImageReady} />
               <details className="rounded-xl border bg-card p-4 text-card-foreground">
                 <summary className="cursor-pointer text-sm font-medium">
                   Diagnostics
@@ -456,7 +474,7 @@ export default function App() {
                   />
                 </div>
               </details>
-            </aside>
+            </section>
           </main>
         </SidebarInset>
       </SidebarProvider>
