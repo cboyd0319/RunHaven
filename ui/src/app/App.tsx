@@ -14,11 +14,14 @@ import {
   getManagedSessions,
   getRunStatus,
   isLaunchReady,
+  killManagedSession,
   killRun,
   launchRun,
   planRun,
+  repairManagedSession,
   repairRun,
   secureNetworkDefault,
+  stopManagedSession,
   stopRun,
   type DashboardStatus,
   type ImageStatusResponse,
@@ -136,6 +139,11 @@ export default function App() {
       : null
   const visibleLogSnapshot =
     logTargetId === outputTargetId ? logSnapshot : null
+  const controlTargetId = selectedSession
+    ? `session:${selectedSession.id}`
+    : lastLaunch
+      ? `run:${lastLaunch.runId}`
+      : null
 
   useEffect(() => {
     void refresh()
@@ -156,6 +164,12 @@ export default function App() {
     setLogTargetId(null)
     setLogError("")
   }, [outputTargetId])
+
+  useEffect(() => {
+    setControlConfirmations({ stop: false, kill: false, repair: false })
+    setControlError("")
+    setControlMessage("")
+  }, [controlTargetId])
 
   async function refresh() {
     setLoading(true)
@@ -344,30 +358,52 @@ export default function App() {
   }
 
   async function runControl(action: RunControlAction) {
-    if (!lastLaunch) {
+    if (!selectedSession && !lastLaunch) {
       return
     }
-    const runId = lastLaunch.runId
     setControlBusy(true)
     setControlError("")
     setControlMessage("")
     try {
-      if (action === "stop") {
-        const result = await stopRun(runId)
-        setControlMessage(`Stop requested for ${result.runId}.`)
-      } else if (action === "kill") {
-        const result = await killRun(runId)
-        setControlMessage(`Hard stop requested for ${result.runId}.`)
+      if (selectedSession) {
+        const sessionId = selectedSession.id
+        if (action === "stop") {
+          const { result } = await stopManagedSession(sessionId)
+          setControlMessage(`Stop requested for ${result.runId}.`)
+        } else if (action === "kill") {
+          const { result } = await killManagedSession(sessionId)
+          setControlMessage(`Hard stop requested for ${result.runId}.`)
+        } else {
+          const { result } = await repairManagedSession(sessionId)
+          setControlMessage(
+            result.markerRemoved
+              ? `Stale marker cleared for ${result.runId}.`
+              : `Repair for ${result.runId}: ${result.status}.`,
+          )
+        }
+        await loadManagedSessions()
       } else {
-        const result = await repairRun(runId)
-        setControlMessage(
-          result.markerRemoved
-            ? `Stale marker cleared for ${result.runId}.`
-            : `Repair for ${result.runId}: ${result.status}.`,
-        )
+        const runId = lastLaunch?.runId
+        if (!runId) {
+          return
+        }
+        if (action === "stop") {
+          const result = await stopRun(runId)
+          setControlMessage(`Stop requested for ${result.runId}.`)
+        } else if (action === "kill") {
+          const result = await killRun(runId)
+          setControlMessage(`Hard stop requested for ${result.runId}.`)
+        } else {
+          const result = await repairRun(runId)
+          setControlMessage(
+            result.markerRemoved
+              ? `Stale marker cleared for ${result.runId}.`
+              : `Repair for ${result.runId}: ${result.status}.`,
+          )
+        }
+        await loadRunStatus(runId)
+        await loadManagedSessions()
       }
-      await loadRunStatus(runId)
-      await loadManagedSessions()
     } catch (cause) {
       setControlError(errorMessage(cause))
     } finally {
@@ -461,6 +497,25 @@ export default function App() {
               ) : selectedSession ? (
                 <>
                   <ManagedSessionCard session={selectedSession} />
+                  <RunStatusCard
+                    title="Session controls"
+                    controlTarget="session"
+                    showStatus={false}
+                    runStatus={null}
+                    runStatusLoading={false}
+                    runStatusError=""
+                    controlBusy={controlBusy}
+                    controlError={controlError}
+                    controlMessage={controlMessage}
+                    controlConfirmations={controlConfirmations}
+                    onConfirmationChange={(action, checked) =>
+                      setControlConfirmations((current) => ({
+                        ...current,
+                        [action]: checked,
+                      }))
+                    }
+                    onControl={runControl}
+                  />
                   <RunOutputCard
                     logAcknowledged={logAcknowledged}
                     logLoading={logLoading}

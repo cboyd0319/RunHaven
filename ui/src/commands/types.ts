@@ -130,6 +130,21 @@ export type ManagedSessionLogSnapshotResponse = {
   snapshot: LogSnapshotResponse;
 };
 
+export type StopManagedSessionResponse = {
+  session: ManagedSessionSummary;
+  result: StopRunResponse;
+};
+
+export type KillManagedSessionResponse = {
+  session: ManagedSessionSummary;
+  result: KillRunResponse;
+};
+
+export type RepairManagedSessionResponse = {
+  session: ManagedSessionSummary;
+  result: RepairRunResponse;
+};
+
 export type ManagedSessionSummary = {
   id: string;
   runId: string;

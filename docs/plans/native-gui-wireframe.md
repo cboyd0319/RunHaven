@@ -348,7 +348,7 @@ The first prototype should use existing contracts:
 | Launch | `launch_run` |
 | Managed session list | `get_managed_sessions` |
 | Active run | `get_run_status` |
-| Stop, hard stop, repair | `stop_run`, `kill_run`, `repair_run` |
+| Stop, hard stop, repair | `stop_managed_session`, `kill_managed_session`, `repair_managed_session` for selected sessions; `stop_run`, `kill_run`, `repair_run` for direct run targets |
 | Logs | `get_managed_session_log_snapshot`, `get_log_snapshot` |
 | Diagnostics | `get_egress_log`, `get_auth_log`, `get_auth_status` |
 

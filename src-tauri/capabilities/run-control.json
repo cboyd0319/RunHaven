@@ -8,6 +8,9 @@
     "allow-get-managed-session-log-snapshot",
     "allow-stop-run",
     "allow-kill-run",
-    "allow-repair-run"
+    "allow-repair-run",
+    "allow-stop-managed-session",
+    "allow-kill-managed-session",
+    "allow-repair-managed-session"
   ]
 }

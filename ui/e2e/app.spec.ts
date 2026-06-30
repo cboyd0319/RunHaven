@@ -50,6 +50,19 @@ test("reviews and starts a preview run", async ({ page }) => {
   await page.getByRole("button", { name: "View latest output" }).click();
   await expect(page.getByText("Preview log line")).toBeVisible();
   await expect(page.getByText("/tmp/runhaven-preview")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Session controls" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop run" })).toBeDisabled();
+  await page.getByLabel("Confirm stopping this session.").check();
+  await page.getByRole("button", { name: "Stop run" }).click();
+  await expect(page.getByText(/Stop requested for preview-/)).toBeVisible();
+
+  await page.getByLabel("Confirm hard-stopping this session.").check();
+  await page.getByRole("button", { name: "Hard stop" }).click();
+  await expect(page.getByText(/Hard stop requested for preview-/)).toBeVisible();
+
+  await page.getByLabel("Confirm clearing this session's stale marker.").check();
+  await page.getByRole("button", { name: "Repair marker" }).click();
+  await expect(page.getByText(/Stale marker cleared for preview-/)).toBeVisible();
   await page.getByRole("button", { name: "Start" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Launch" })).toBeVisible();
 

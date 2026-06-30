@@ -75,11 +75,14 @@ It intentionally omits:
 
 ## Tauri Surface
 
-Current read commands:
+Current session commands:
 
 ```text
 get_managed_sessions() -> ManagedSessionListData
 get_managed_session_log_snapshot(request) -> ManagedSessionLogSnapshotResponse
+stop_managed_session(request) -> StopManagedSessionResponse
+kill_managed_session(request) -> KillManagedSessionResponse
+repair_managed_session(request) -> RepairManagedSessionResponse
 ```
 
 Capabilities:
@@ -87,25 +90,35 @@ Capabilities:
 ```text
 main-read: allow-get-managed-sessions
 run-control: allow-get-managed-session-log-snapshot
+run-control: allow-stop-managed-session
+run-control: allow-kill-managed-session
+run-control: allow-repair-managed-session
 ```
 
-These commands are read-only. They do not start, stop, attach to, or write to
-a process. The raw-output command stays outside `main-read` because bounded
-container stdio can contain secrets.
+The status command is read-only and stays under `main-read`. Raw output and
+run-control commands stay outside `main-read` because bounded container stdio
+can contain secrets and stop/kill/repair mutate runtime state.
 
-## Future Session Control Surface
+The managed run-control commands accept only a backend-owned session ID plus
+the explicit confirmation flag for that action. Rust resolves the session ID to
+the active RunHaven run, then delegates to the existing validated
+`stop_run`/`kill_run`/`repair_run` path. The WebView cannot provide a raw run
+ID, command string, host path, mount, environment variable, provider host, or
+network setting on this path.
 
-Add these only after the read model and security tests are stable:
+## Future Embedded Session Surface
+
+Add these only after the read model, bounded output, and run-control tests are
+stable:
 
 ```text
 start_session(reviewed_plan_id)
 get_session(session_id)
 write_session_input(session_id, bytes)
 resize_session(session_id, cols, rows)
-stop_session(session_id)
 ```
 
-Guard requirements before any write-capable command:
+Guard requirements before any input-capable or process-start command:
 
 - Unknown session IDs fail closed.
 - Session IDs must refer to backend-owned RunHaven sessions.
@@ -163,6 +176,13 @@ Current GUI behavior:
 - Selected-session output uses the backend-owned session ID. It does not add
   streaming transport, terminal input, resize, attach, filesystem RPC, or
   process control. Raw-output permissions stay outside `main-read`.
+- Selected sessions can request stop, hard stop, and stale-marker repair
+  through fixed typed run-control commands after explicit per-action
+  confirmation. The frontend sends only the managed session ID; Rust resolves
+  the run ID and reuses the existing validated run-control path.
+- Selected-session controls do not add terminal input, resize, attach,
+  filesystem RPC, generic command execution, app-server transport, MCP
+  execution, login, or host-reaching Codex paths.
 
 ## Verification
 
@@ -196,7 +216,17 @@ Current slice:
 - capability guard proves raw-output permissions stay outside `main-read`
 - frontend helper test proves browser preview output loads through a managed
   session ID and rejects unknown sessions
+- Tauri command test proves selected-session stop, hard stop, and repair
+  resolve the managed session ID in Rust, reject unknown sessions, require
+  confirmation before mutation, and keep forbidden paths and command names out
+  of the serialized response
+- frontend helper test proves browser preview run control works through a
+  managed session ID and rejects unknown sessions
+- Playwright preview smoke proves selected-session stop, hard stop, and repair
+  are reachable only after explicit per-action confirmation
+- capability guard proves managed session run-control commands stay in the
+  narrow `run-control` capability
 
 Future embedded-session slices need focused Rust tests for session ownership,
 unknown ID rejection, bounded input, bounded resize, raw output gating, and
-multi-session isolation before adding UI controls.
+multi-session isolation before adding terminal input or live session UI.

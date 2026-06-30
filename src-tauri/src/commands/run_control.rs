@@ -3,8 +3,9 @@ use serde_json::Value;
 
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{
-    KillRunRequest, KillRunResponse, RepairRunRequest, RepairRunResponse, StopRunRequest,
-    StopRunResponse,
+    KillManagedSessionRequest, KillManagedSessionResponse, KillRunRequest, KillRunResponse,
+    RepairManagedSessionRequest, RepairManagedSessionResponse, RepairRunRequest, RepairRunResponse,
+    StopManagedSessionRequest, StopManagedSessionResponse, StopRunRequest, StopRunResponse,
 };
 
 #[tauri::command]
@@ -15,6 +16,38 @@ pub(crate) fn stop_run(request: StopRunRequest) -> Result<StopRunResponse, Strin
     }
     let payload = stop_active_run(&request.run_id).map_err(|error| error.to_string())?;
     stop_run_response(&payload)
+}
+
+#[tauri::command]
+pub(crate) fn stop_managed_session(
+    request: StopManagedSessionRequest,
+) -> Result<StopManagedSessionResponse, String> {
+    stop_managed_session_with(request, |run_id| {
+        stop_run(StopRunRequest {
+            run_id: run_id.to_string(),
+            confirm_stop: true,
+        })
+    })
+}
+
+fn stop_managed_session_with(
+    request: StopManagedSessionRequest,
+    stop: impl FnOnce(&str) -> Result<StopRunResponse, String>,
+) -> Result<StopManagedSessionResponse, String> {
+    if !request.confirm_stop {
+        return Err("Confirm the stop before stopping this run.".to_string());
+    }
+    let (session, run_id) = crate::commands::sessions::managed_session_for_id(&request.session_id)?;
+    let result = stop(&run_id)?;
+    Ok(StopManagedSessionResponse { session, result })
+}
+
+#[cfg(test)]
+pub(crate) fn stop_managed_session_for_test(
+    request: StopManagedSessionRequest,
+    stop: impl FnOnce(&str) -> Result<StopRunResponse, String>,
+) -> Result<StopManagedSessionResponse, String> {
+    stop_managed_session_with(request, stop)
 }
 
 fn stop_run_response(payload: &Value) -> Result<StopRunResponse, String> {
@@ -46,6 +79,38 @@ pub(crate) fn kill_run(request: KillRunRequest) -> Result<KillRunResponse, Strin
     kill_run_response(&payload)
 }
 
+#[tauri::command]
+pub(crate) fn kill_managed_session(
+    request: KillManagedSessionRequest,
+) -> Result<KillManagedSessionResponse, String> {
+    kill_managed_session_with(request, |run_id| {
+        kill_run(KillRunRequest {
+            run_id: run_id.to_string(),
+            confirm_kill: true,
+        })
+    })
+}
+
+fn kill_managed_session_with(
+    request: KillManagedSessionRequest,
+    kill: impl FnOnce(&str) -> Result<KillRunResponse, String>,
+) -> Result<KillManagedSessionResponse, String> {
+    if !request.confirm_kill {
+        return Err("Confirm the hard-stop before killing this run.".to_string());
+    }
+    let (session, run_id) = crate::commands::sessions::managed_session_for_id(&request.session_id)?;
+    let result = kill(&run_id)?;
+    Ok(KillManagedSessionResponse { session, result })
+}
+
+#[cfg(test)]
+pub(crate) fn kill_managed_session_for_test(
+    request: KillManagedSessionRequest,
+    kill: impl FnOnce(&str) -> Result<KillRunResponse, String>,
+) -> Result<KillManagedSessionResponse, String> {
+    kill_managed_session_with(request, kill)
+}
+
 fn kill_run_response(payload: &Value) -> Result<KillRunResponse, String> {
     let run_id = required_string(payload, "run_id")?;
     let container_name = required_string(payload, "container_name")?;
@@ -73,6 +138,38 @@ pub(crate) fn repair_run(request: RepairRunRequest) -> Result<RepairRunResponse,
     }
     let payload = repair_active_run(&request.run_id).map_err(|error| error.to_string())?;
     repair_run_response(&payload)
+}
+
+#[tauri::command]
+pub(crate) fn repair_managed_session(
+    request: RepairManagedSessionRequest,
+) -> Result<RepairManagedSessionResponse, String> {
+    repair_managed_session_with(request, |run_id| {
+        repair_run(RepairRunRequest {
+            run_id: run_id.to_string(),
+            confirm_repair: true,
+        })
+    })
+}
+
+fn repair_managed_session_with(
+    request: RepairManagedSessionRequest,
+    repair: impl FnOnce(&str) -> Result<RepairRunResponse, String>,
+) -> Result<RepairManagedSessionResponse, String> {
+    if !request.confirm_repair {
+        return Err("Confirm the repair before clearing a stale marker.".to_string());
+    }
+    let (session, run_id) = crate::commands::sessions::managed_session_for_id(&request.session_id)?;
+    let result = repair(&run_id)?;
+    Ok(RepairManagedSessionResponse { session, result })
+}
+
+#[cfg(test)]
+pub(crate) fn repair_managed_session_for_test(
+    request: RepairManagedSessionRequest,
+    repair: impl FnOnce(&str) -> Result<RepairRunResponse, String>,
+) -> Result<RepairManagedSessionResponse, String> {
+    repair_managed_session_with(request, repair)
 }
 
 fn repair_run_response(payload: &Value) -> Result<RepairRunResponse, String> {

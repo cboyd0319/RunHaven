@@ -9,9 +9,12 @@ import {
   getRunStatus,
   getSetupStatus,
   isLaunchReady,
+  killManagedSession,
   launchRun,
   planRun,
+  repairManagedSession,
   secureNetworkDefault,
+  stopManagedSession,
   warningPreview,
   type AgentProfile
 } from "../commands/runhaven";
@@ -187,6 +190,37 @@ describe("runhaven command helpers", () => {
     expect(response.snapshot.runId).toBe(started.runId);
     expect(response.snapshot.entries[0]?.text).toContain("Preview log line");
     expect(JSON.stringify(response)).not.toContain("/tmp/runhaven-preview");
+  });
+
+  it("controls preview runs through a managed session id", async () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview"
+    };
+    const started = await launchRun({
+      plan: request,
+      confirmLaunch: true,
+      confirmedWarnings: []
+    });
+    const sessions = await getManagedSessions();
+    const session = sessions.sessions.find((item) => item.runId === started.runId);
+
+    expect(session).toBeDefined();
+    await expect(stopManagedSession("missing-session")).rejects.toThrow(
+      "managed session not found"
+    );
+
+    const stop = await stopManagedSession(session!.id);
+    expect(stop.session.id).toBe(session!.id);
+    expect(stop.result.runId).toBe(started.runId);
+    expect(stop.result.status).toBe("stop-requested");
+
+    const kill = await killManagedSession(session!.id);
+    expect(kill.result.status).toBe("kill-requested");
+
+    const repair = await repairManagedSession(session!.id);
+    expect(repair.result.markerRemoved).toBe(true);
+    expect(JSON.stringify(repair)).not.toContain("/tmp/runhaven-preview");
   });
 
   it("requires explicit confirmation before launch is available", async () => {

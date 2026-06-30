@@ -48,7 +48,9 @@ fn managed_session_list() -> ManagedSessionListData {
     ManagedSessionListData::from_active_runs_and_auth_status(active_runs, auth_status_payload())
 }
 
-fn managed_session_for_id(session_id: &str) -> Result<(ManagedSessionSummaryData, String), String> {
+pub(crate) fn managed_session_for_id(
+    session_id: &str,
+) -> Result<(ManagedSessionSummaryData, String), String> {
     validate_text_len("session id", session_id, MAX_RUN_ID_LEN)?;
     if session_id.is_empty() {
         return Err("managed session id is required".to_string());

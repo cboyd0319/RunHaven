@@ -21,6 +21,9 @@ pub fn run() {
             commands::run_control::stop_run,
             commands::run_control::kill_run,
             commands::run_control::repair_run,
+            commands::run_control::stop_managed_session,
+            commands::run_control::kill_managed_session,
+            commands::run_control::repair_managed_session,
             commands::plan_run,
             commands::launch_run,
         ])

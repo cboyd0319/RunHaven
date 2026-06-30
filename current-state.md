@@ -1600,17 +1600,25 @@ Latest GUI local prototype:
   `get_log_snapshot` path. Raw-output commands stay out of `main-read`; a
   Tauri guard enforces that `main-read` remains secret-free. This does not add
   streaming transport, terminal input, resize, attach, or filesystem access.
+- 2026-06-30 selected-session run control: The selected-session pane now has
+  confirmed stop, hard stop, and stale-marker repair controls. React sends only
+  the managed session ID to `stop_managed_session`, `kill_managed_session`, or
+  `repair_managed_session`; Rust resolves that ID to a backend-owned active run
+  and reuses the existing validated run-control path. These commands live under
+  the narrow `run-control` capability and do not add terminal input, resize,
+  attach, generic command execution, filesystem RPC, app-server transport, MCP,
+  login, or host-reaching Codex paths.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
   placeholders. Use repo-relative paths or public URLs, and cite upstream
   source with a public repo plus pinned commit. Added
   `scripts/check-docs-local-paths.sh` as the focused guard.
-- The prototype intentionally did not change `src-tauri/`, add a generic
-  command runner, broaden plugins, add signing, add updater work, or require a
-  paid Apple Developer Program account. Visual smoke screenshots were captured
-  at `1080 x 720` and `720 x 560` under `target/playwright/ui/`. The
-  no-bundle Tauri debug build passed and produced `target/debug/runhaven-tauri`.
+- The prototype intentionally has not added a generic command runner, broadened
+  plugins, added signing, added updater work, or required a paid Apple
+  Developer Program account. Visual smoke screenshots were captured at
+  `1080 x 720` and `720 x 560` under `target/playwright/ui/`. The no-bundle
+  Tauri debug build passed and produced `target/debug/runhaven-tauri`.
 
 ## Blockers
 

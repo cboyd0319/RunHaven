@@ -18,6 +18,9 @@ import { Metric } from "./Metric"
 import { formatMemory, type RunControlAction } from "./types"
 
 type RunStatusCardProps = {
+  title?: string
+  controlTarget?: "run" | "session"
+  showStatus?: boolean
   runStatus: RunStatusResponse | null
   runStatusLoading: boolean
   runStatusError: string
@@ -30,6 +33,9 @@ type RunStatusCardProps = {
 }
 
 export function RunStatusCard({
+  title = "Run status",
+  controlTarget = "run",
+  showStatus = true,
   runStatus,
   runStatusLoading,
   runStatusError,
@@ -40,25 +46,27 @@ export function RunStatusCard({
   onConfirmationChange,
   onControl,
 }: RunStatusCardProps) {
+  const showControls = !showStatus || runStatus !== null
+
   return (
     <Card aria-live="polite">
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
-          Run status
+          {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {runStatusLoading ? (
+        {showStatus && runStatusLoading ? (
           <p className="text-sm text-muted-foreground">Refreshing status...</p>
         ) : null}
-        {runStatusError ? (
+        {showStatus && runStatusError ? (
           <Alert variant="destructive">
             <CircleAlert />
             <AlertTitle>Status unavailable</AlertTitle>
             <AlertDescription>{runStatusError}</AlertDescription>
           </Alert>
         ) : null}
-        {runStatus ? (
+        {showStatus && runStatus ? (
           <>
             <div className="grid gap-3 sm:grid-cols-3">
               <Metric label="Marker status" value={runStatus.run.status} />
@@ -98,39 +106,41 @@ export function RunStatusCard({
               </Table>
             ) : null}
 
-            <div className="grid gap-3">
-              <RunControl
-                label="Confirm stopping this run."
-                button="Stop run"
-                checked={controlConfirmations.stop}
-                disabled={controlBusy}
-                onCheckedChange={(checked) =>
-                  onConfirmationChange("stop", checked)
-                }
-                onClick={() => void onControl("stop")}
-              />
-              <RunControl
-                label="Confirm hard-stopping this run."
-                button="Hard stop"
-                checked={controlConfirmations.kill}
-                disabled={controlBusy}
-                onCheckedChange={(checked) =>
-                  onConfirmationChange("kill", checked)
-                }
-                onClick={() => void onControl("kill")}
-              />
-              <RunControl
-                label="Confirm clearing this run's stale marker."
-                button="Repair marker"
-                checked={controlConfirmations.repair}
-                disabled={controlBusy}
-                onCheckedChange={(checked) =>
-                  onConfirmationChange("repair", checked)
-                }
-                onClick={() => void onControl("repair")}
-              />
-            </div>
           </>
+        ) : null}
+        {showControls ? (
+          <div className="grid gap-3">
+            <RunControl
+              label={`Confirm stopping this ${controlTarget}.`}
+              button="Stop run"
+              checked={controlConfirmations.stop}
+              disabled={controlBusy}
+              onCheckedChange={(checked) =>
+                onConfirmationChange("stop", checked)
+              }
+              onClick={() => void onControl("stop")}
+            />
+            <RunControl
+              label={`Confirm hard-stopping this ${controlTarget}.`}
+              button="Hard stop"
+              checked={controlConfirmations.kill}
+              disabled={controlBusy}
+              onCheckedChange={(checked) =>
+                onConfirmationChange("kill", checked)
+              }
+              onClick={() => void onControl("kill")}
+            />
+            <RunControl
+              label={`Confirm clearing this ${controlTarget}'s stale marker.`}
+              button="Repair marker"
+              checked={controlConfirmations.repair}
+              disabled={controlBusy}
+              onCheckedChange={(checked) =>
+                onConfirmationChange("repair", checked)
+              }
+              onClick={() => void onControl("repair")}
+            />
+          </div>
         ) : null}
         {controlMessage ? (
           <Alert>

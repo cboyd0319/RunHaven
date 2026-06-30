@@ -19,9 +19,12 @@ import type {
   RunPlanRequest,
   RunPlanResponse,
   KillRunResponse,
+  KillManagedSessionResponse,
   RepairRunResponse,
+  RepairManagedSessionResponse,
   RunStatusResponse,
   SetupStatus,
+  StopManagedSessionResponse,
   StopRunResponse
 } from "./types";
 
@@ -311,12 +314,56 @@ export async function stopRun(runId: string): Promise<StopRunResponse> {
   }));
 }
 
+export async function stopManagedSession(
+  sessionId: string
+): Promise<StopManagedSessionResponse> {
+  return call(
+    "stop_managed_session",
+    { request: { sessionId, confirmStop: true } },
+    () => {
+      const session = previewSession(sessionId);
+      const result = {
+        runId: session.runId,
+        containerName: session.containerName,
+        status: "stop-requested"
+      };
+      updatePreviewSessionStatus(sessionId, "stop-requested", "Stop requested");
+      return {
+        session: previewSession(sessionId),
+        result
+      };
+    }
+  );
+}
+
 export async function killRun(runId: string): Promise<KillRunResponse> {
   return call("kill_run", { request: { runId, confirmKill: true } }, () => ({
     runId,
     containerName: "preview",
     status: "kill-requested"
   }));
+}
+
+export async function killManagedSession(
+  sessionId: string
+): Promise<KillManagedSessionResponse> {
+  return call(
+    "kill_managed_session",
+    { request: { sessionId, confirmKill: true } },
+    () => {
+      const session = previewSession(sessionId);
+      const result = {
+        runId: session.runId,
+        containerName: session.containerName,
+        status: "kill-requested"
+      };
+      updatePreviewSessionStatus(sessionId, "kill-requested", "Hard stop requested");
+      return {
+        session: previewSession(sessionId),
+        result
+      };
+    }
+  );
 }
 
 export async function repairRun(runId: string): Promise<RepairRunResponse> {
@@ -326,6 +373,29 @@ export async function repairRun(runId: string): Promise<RepairRunResponse> {
     status: "removed",
     markerRemoved: true
   }));
+}
+
+export async function repairManagedSession(
+  sessionId: string
+): Promise<RepairManagedSessionResponse> {
+  return call(
+    "repair_managed_session",
+    { request: { sessionId, confirmRepair: true } },
+    () => {
+      const session = previewSession(sessionId);
+      const result = {
+        runId: session.runId,
+        containerName: session.containerName,
+        status: "removed",
+        markerRemoved: true
+      };
+      updatePreviewSessionStatus(sessionId, "removed", "Marker removed");
+      return {
+        session: previewSession(sessionId),
+        result
+      };
+    }
+  );
 }
 
 function rememberPreviewManagedSession(
@@ -378,6 +448,41 @@ function rememberPreviewManagedSession(
     session,
     ...previewManagedSessions.filter((item) => item.runId !== snapshot.runId)
   ];
+}
+
+function previewSession(sessionId: string): ManagedSessionSummary {
+  const session = previewManagedSessions.find((item) => item.id === sessionId);
+  if (!session) {
+    throw new Error("managed session not found");
+  }
+  return {
+    ...session,
+    nextAction: { ...session.nextAction },
+    events: session.events.map((event) => ({ ...event }))
+  };
+}
+
+function updatePreviewSessionStatus(
+  sessionId: string,
+  status: string,
+  statusLabel: string
+) {
+  previewManagedSessions = previewManagedSessions.map((session) => {
+    if (session.id !== sessionId) {
+      return session;
+    }
+    return {
+      ...session,
+      status,
+      statusLabel,
+      lifecycle: status,
+      events: session.events.map((event) =>
+        event.source === "run"
+          ? { ...event, detail: statusLabel, timestamp: "preview" }
+          : { ...event }
+      )
+    };
+  });
 }
 
 function projectLabel(workspace: string): string {
