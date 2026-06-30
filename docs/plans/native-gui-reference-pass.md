@@ -152,6 +152,8 @@ The next GUI work should prove these before visual polish:
 
 ## Immediate GUI Slice
 
+Use `docs/plans/native-gui-wireframe.md` as the implementation contract.
+
 1. Keep `src-tauri` as the narrow Rust command boundary.
 2. Redesign the Svelte first screen around "Start a safe agent run":
    workspace, agent, plan review, launch, then status.
