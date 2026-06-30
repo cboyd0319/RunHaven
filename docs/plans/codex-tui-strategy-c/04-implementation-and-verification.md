@@ -271,6 +271,16 @@ matrix. Include at least `80x24` and `120x48` coverage for picker, review,
 confirm, transition-clearing cases, active-run log, diagnostics, recovery, and
 any visible fail-closed unsupported surface.
 
+Completion update, 2026-06-30: the MVP checkpoint is verified but is not the
+`v0.6.0` finish line. `v0.6.0` requires the full RunHaven-only terminal
+workflow: plain startup, workspace and agent choice, policy visibility, review,
+typed confirmation, foreground handoff, recovery, active-run status, bounded
+logs, diagnostics/doctor guidance, newest-first run-record review, and explicit
+finish decisions for Cubby/pet/terminal image/Zork and native
+`App`/`ChatWidget`. The RunHaven service-backed history screen omits stored
+host workspace paths. Keep non-RunHaven Codex product features dormant or
+fail-closed.
+
 ### Phase 5: Optional `ChatWidget` Transcript And Status
 
 Bring active only if RunHaven needs source-shaped conversation transcript

@@ -15,6 +15,8 @@ use runhaven_core::ui_contracts::EgressDecisionData;
 use runhaven_core::ui_contracts::LaunchBoundaryData;
 use runhaven_core::ui_contracts::LaunchNetworkData;
 use runhaven_core::ui_contracts::LaunchPlanData;
+use runhaven_core::ui_contracts::RunHistoryListData;
+use runhaven_core::ui_contracts::RunHistorySummaryData;
 
 const SNAPSHOT_WORKSPACE: &str = "/selected-workspace";
 const SNAPSHOT_NESTED_WORKSPACE: &str = "/selected-workspace/app";
@@ -87,6 +89,8 @@ fn runhaven_mvp_snapshot_matrix() {
         48,
         loaded_log_snapshot_view(),
     );
+    snapshot_static_screen("runhaven_mvp_history_80x24", 80, 24, history_view());
+    snapshot_static_screen("runhaven_mvp_history_120x48", 120, 48, history_view());
     snapshot_static_screen("runhaven_mvp_diagnostics_80x24", 80, 24, diagnostics_view());
     snapshot_static_screen(
         "runhaven_mvp_diagnostics_120x48",
@@ -291,6 +295,84 @@ fn diagnostics_view() -> RunHavenMvpView {
                 run_id: "run-20260629-001".to_string(),
             }],
         }),
+    }));
+    view
+}
+
+fn history_view() -> RunHavenMvpView {
+    let mut view = RunHavenMvpView::new(SNAPSHOT_WORKSPACE.into());
+    view.screen = MvpScreen::History(Box::new(HistoryScreen {
+        result: Ok(RunHistoryListData {
+            runs: vec![
+                RunHistorySummaryData {
+                    run_id: "run-20260629-003".to_string(),
+                    profile: "codex".to_string(),
+                    network: "provider".to_string(),
+                    status: "failed".to_string(),
+                    started_at: "2026-06-29T18:10:00Z".to_string(),
+                    finished_at: "2026-06-29T18:13:00Z".to_string(),
+                    return_code: Some(1),
+                    workspace_scope: "current".to_string(),
+                    session: "none".to_string(),
+                    state_volume: "runhaven-codex-shared-home".to_string(),
+                    provider_allowed: 2,
+                    provider_denied: 1,
+                    auth_allowed: 0,
+                    auth_denied: 1,
+                    cleanup_provider_network: "removed".to_string(),
+                    git_summary: "Git: changed=true before=abc1234 after=def5678 files=12"
+                        .to_string(),
+                    worktree_branch: Some(
+                        "runhaven/codex/run-20260629-003-long-worktree-branch".to_string(),
+                    ),
+                    review_command: "runhaven runs show run-20260629-003".to_string(),
+                },
+                RunHistorySummaryData {
+                    run_id: "run-20260629-002".to_string(),
+                    profile: "antigravity".to_string(),
+                    network: "provider".to_string(),
+                    status: "succeeded".to_string(),
+                    started_at: "2026-06-29T17:50:00Z".to_string(),
+                    finished_at: "2026-06-29T17:59:00Z".to_string(),
+                    return_code: Some(0),
+                    workspace_scope: "repository".to_string(),
+                    session: "agent".to_string(),
+                    state_volume: "runhaven-antigravity-shared-home".to_string(),
+                    provider_allowed: 8,
+                    provider_denied: 0,
+                    auth_allowed: 2,
+                    auth_denied: 0,
+                    cleanup_provider_network: "removed".to_string(),
+                    git_summary: "Git: changed=true before=1234567 after=89abcde files=3"
+                        .to_string(),
+                    worktree_branch: Some(
+                        "runhaven/antigravity/run-20260629-002-review-branch".to_string(),
+                    ),
+                    review_command: "runhaven runs show run-20260629-002".to_string(),
+                },
+                RunHistorySummaryData {
+                    run_id: "run-20260629-001".to_string(),
+                    profile: "shell".to_string(),
+                    network: "internet".to_string(),
+                    status: "succeeded".to_string(),
+                    started_at: "2026-06-29T17:44:00Z".to_string(),
+                    finished_at: "2026-06-29T17:45:00Z".to_string(),
+                    return_code: None,
+                    workspace_scope: "current".to_string(),
+                    session: "none".to_string(),
+                    state_volume: "runhaven-shell-shared-home".to_string(),
+                    provider_allowed: 0,
+                    provider_denied: 0,
+                    auth_allowed: 0,
+                    auth_denied: 0,
+                    cleanup_provider_network: "n/a".to_string(),
+                    git_summary: "Git: unavailable (not-a-git-worktree)".to_string(),
+                    worktree_branch: None,
+                    review_command: "runhaven runs show run-20260629-001".to_string(),
+                },
+            ],
+        }),
+        selected_idx: 1,
     }));
     view
 }

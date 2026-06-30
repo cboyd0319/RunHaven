@@ -124,11 +124,14 @@ Tauri launch/run-control behavior.
   mapping, RunHaven asset swaps such as `docs/assets/logo.png`, or small glue
   where no Codex equivalent exists. Document each exception in the TUI plan or
   architecture docs.
-- TUI MVP direction: avoid non-RunHaven Codex product features. Use Codex TUI
-  architecture as the source-first shell, but hard-prioritize the smallest
-  fully working RunHaven TUI: agent picker, workspace picker, plan review,
-  confirm launch, foreground launch handoff, active run transcript/logs, and
-  diagnostics. Leave unrelated Codex features dormant, fail-closed, stubbed, or
+- TUI v0.6 direction: avoid non-RunHaven Codex product features. Use Codex TUI
+  architecture as the source-first shell, but finish the complete RunHaven
+  terminal workflow before release work: clean workspace and agent selection,
+  network/auth visibility, plan review, typed launch confirmation, foreground
+  launch handoff, post-run recovery, active-run status, bounded logs,
+  diagnostics/doctor guidance, history or run records when backed by existing
+  core data, and explicit final decisions for Cubby/pet/terminal image/Zork
+  polish. Leave unrelated Codex features dormant, fail-closed, stubbed, or
   deleted with documentation instead of porting them.
 - Boring over clever: choose the obvious construct, because clever is what
   someone has to decode at 3am. Between two standard-library options of similar

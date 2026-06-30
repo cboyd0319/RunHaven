@@ -15,6 +15,8 @@ use runhaven_core::ui_contracts::ActiveRunLogSnapshotData;
 use runhaven_core::ui_contracts::ActiveRunSummaryData;
 use runhaven_core::ui_contracts::LaunchPlanData;
 use runhaven_core::ui_contracts::RunHavenDiagnosticsData;
+use runhaven_core::ui_contracts::RunHistoryListData;
+use runhaven_core::ui_contracts::RunHistorySummaryData;
 
 use super::launch_wizard::LaunchWizardView;
 use super::service::LaunchPolicySelection;
@@ -35,6 +37,7 @@ use crate::tui::bottom_pane::ViewCompletion;
 pub(crate) const RUNHAVEN_MVP_VIEW_ID: &str = "runhaven.mvp";
 const LOG_CONFIRM_PHRASE: &str = "logs";
 const DIAGNOSTICS_LIMIT: usize = 20;
+const HISTORY_LIMIT: usize = 10;
 
 #[path = "mvp_render.rs"]
 mod mvp_render;
@@ -78,6 +81,7 @@ enum MvpScreen {
     Launch,
     ActiveRuns(Box<ActiveRunsScreen>),
     RunLogs(Box<RunLogsScreen>),
+    History(Box<HistoryScreen>),
     Diagnostics(Box<DiagnosticsScreen>),
     PostRun(Box<PostRunOutcome>),
 }
@@ -108,6 +112,12 @@ enum RunLogsState {
 #[derive(Clone)]
 struct DiagnosticsScreen {
     result: Result<RunHavenDiagnosticsData, String>,
+}
+
+#[derive(Clone)]
+struct HistoryScreen {
+    result: Result<RunHistoryListData, String>,
+    selected_idx: usize,
 }
 
 impl RunHavenMvpView {
@@ -187,6 +197,16 @@ impl RunHavenMvpView {
         }));
     }
 
+    fn show_history(&mut self) {
+        self.screen = MvpScreen::History(Box::new(HistoryScreen {
+            result: self
+                .service
+                .run_history_payload(HISTORY_LIMIT)
+                .map_err(|error| error.to_string()),
+            selected_idx: 0,
+        }));
+    }
+
     fn show_logs_for_selected_run(&mut self) {
         let Some(run) = self
             .active_runs_screen()
@@ -214,7 +234,8 @@ impl RunHavenMvpView {
     fn cycle_section(&mut self) {
         match self.screen {
             MvpScreen::Launch => self.show_active_runs(),
-            MvpScreen::ActiveRuns(_) | MvpScreen::RunLogs(_) => self.show_diagnostics(),
+            MvpScreen::ActiveRuns(_) | MvpScreen::RunLogs(_) => self.show_history(),
+            MvpScreen::History(_) => self.show_diagnostics(),
             MvpScreen::Diagnostics(_) | MvpScreen::PostRun(_) => self.show_launch(),
         }
     }
@@ -256,6 +277,11 @@ impl RunHavenMvpView {
             KeyCode::Char('3') if key_event.modifiers == KeyModifiers::NONE => {
                 self.show_diagnostics();
             }
+            KeyCode::Char('4') | KeyCode::Char('h')
+                if key_event.modifiers == KeyModifiers::NONE =>
+            {
+                self.show_history();
+            }
             KeyCode::Char('n') if key_event.modifiers == KeyModifiers::NONE => {
                 self.cycle_network_policy();
             }
@@ -281,6 +307,7 @@ impl RunHavenMvpView {
         match key_event.code {
             KeyCode::Esc | KeyCode::Char('1') => ActiveRunAction::Launch,
             KeyCode::Tab | KeyCode::Char('3') => ActiveRunAction::Diagnostics,
+            KeyCode::Char('4') | KeyCode::Char('h') => ActiveRunAction::History,
             KeyCode::Char('r') => ActiveRunAction::Refresh,
             KeyCode::Up | KeyCode::Char('k') => {
                 screen.select_previous();
@@ -358,7 +385,23 @@ impl RunHavenMvpView {
         match key_event.code {
             KeyCode::Esc | KeyCode::Char('1') => self.show_launch(),
             KeyCode::Tab | KeyCode::Char('2') => self.show_active_runs(),
+            KeyCode::Char('4') | KeyCode::Char('h') => self.show_history(),
             KeyCode::Char('r') => self.show_diagnostics(),
+            _ => {}
+        }
+    }
+
+    fn handle_history_key(&mut self, key_event: KeyEvent) {
+        let MvpScreen::History(screen) = &mut self.screen else {
+            return;
+        };
+        match key_event.code {
+            KeyCode::Esc | KeyCode::Char('1') => self.show_launch(),
+            KeyCode::Char('2') => self.show_active_runs(),
+            KeyCode::Tab | KeyCode::Char('3') => self.show_diagnostics(),
+            KeyCode::Char('r') => self.show_history(),
+            KeyCode::Up | KeyCode::Char('k') => screen.select_previous(),
+            KeyCode::Down | KeyCode::Char('j') => screen.select_next(),
             _ => {}
         }
     }
@@ -368,6 +411,7 @@ impl RunHavenMvpView {
             KeyCode::Enter | KeyCode::Esc | KeyCode::Char('1') => self.show_launch(),
             KeyCode::Char('2') => self.show_active_runs(),
             KeyCode::Tab | KeyCode::Char('3') => self.show_diagnostics(),
+            KeyCode::Char('4') | KeyCode::Char('h') => self.show_history(),
             _ => {}
         }
     }
@@ -396,7 +440,10 @@ impl RunHavenMvpView {
                     boundary_style(),
                 ),
                 Span::raw(" · "),
-                Span::styled("1 launch 2 runs 3 diagnostics", muted_but_readable_style()),
+                Span::styled(
+                    "1 launch 2 runs 3 diagnostics h history",
+                    muted_but_readable_style(),
+                ),
             ]),
             MvpScreen::RunLogs(screen) => Line::from(vec![
                 Span::styled("RunHaven", selected_row_style()),
@@ -410,7 +457,17 @@ impl RunHavenMvpView {
                 Span::raw(" · diagnostics · "),
                 Span::styled("secret-free", safe_style()),
                 Span::raw(" · "),
-                Span::styled("1 launch 2 runs r refresh", muted_but_readable_style()),
+                Span::styled(
+                    "1 launch 2 runs h history r refresh",
+                    muted_but_readable_style(),
+                ),
+            ]),
+            MvpScreen::History(screen) => Line::from(vec![
+                Span::styled("RunHaven", selected_row_style()),
+                Span::raw(" · history · "),
+                Span::styled(format!("{} found", screen.run_count()), boundary_style()),
+                Span::raw(" · "),
+                Span::styled("1 launch 2 runs 3 diagnostics", muted_but_readable_style()),
             ]),
             MvpScreen::PostRun(outcome) => Line::from(vec![
                 Span::styled("RunHaven", selected_row_style()),
@@ -428,6 +485,7 @@ enum ActiveRunAction {
     None,
     Launch,
     Diagnostics,
+    History,
     Refresh,
     OpenLogs,
 }
@@ -455,6 +513,36 @@ impl ActiveRunsScreen {
     }
 }
 
+impl HistoryScreen {
+    fn runs(&self) -> &[RunHistorySummaryData] {
+        self.result.as_ref().map_or(&[], |history| &history.runs)
+    }
+
+    fn run_count(&self) -> usize {
+        self.runs().len()
+    }
+
+    fn selected_run(&self) -> Option<&RunHistorySummaryData> {
+        self.runs()
+            .get(self.selected_idx)
+            .or_else(|| self.runs().first())
+    }
+
+    fn select_previous(&mut self) {
+        if self.runs().is_empty() {
+            return;
+        }
+        self.selected_idx = self.selected_idx.saturating_sub(1);
+    }
+
+    fn select_next(&mut self) {
+        if self.runs().is_empty() {
+            return;
+        }
+        self.selected_idx = (self.selected_idx + 1).min(self.runs().len() - 1);
+    }
+}
+
 impl BottomPaneView for RunHavenMvpView {
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         if self.completion.is_some() {
@@ -468,11 +556,13 @@ impl BottomPaneView for RunHavenMvpView {
                     ActiveRunAction::None => {}
                     ActiveRunAction::Launch => self.show_launch(),
                     ActiveRunAction::Diagnostics => self.show_diagnostics(),
+                    ActiveRunAction::History => self.show_history(),
                     ActiveRunAction::Refresh => self.show_active_runs(),
                     ActiveRunAction::OpenLogs => self.show_logs_for_selected_run(),
                 }
             }
             MvpScreen::RunLogs(_) => self.handle_logs_key(key_event),
+            MvpScreen::History(_) => self.handle_history_key(key_event),
             MvpScreen::Diagnostics(_) => self.handle_diagnostics_key(key_event),
             MvpScreen::PostRun(_) => self.handle_post_run_key(key_event),
         }
@@ -490,6 +580,7 @@ impl BottomPaneView for RunHavenMvpView {
         match &self.screen {
             MvpScreen::Launch => self.launch.selected_index(),
             MvpScreen::ActiveRuns(screen) => Some(screen.selected_idx),
+            MvpScreen::History(screen) => Some(screen.selected_idx),
             _ => None,
         }
     }
@@ -506,6 +597,7 @@ impl BottomPaneView for RunHavenMvpView {
             MvpScreen::Launch => self.launch.terminal_title(),
             MvpScreen::ActiveRuns(_) => "RunHaven | Active runs".to_string(),
             MvpScreen::RunLogs(screen) => format!("RunHaven | Logs | {}", screen.run.run_id),
+            MvpScreen::History(_) => "RunHaven | History".to_string(),
             MvpScreen::Diagnostics(_) => "RunHaven | Diagnostics".to_string(),
             MvpScreen::PostRun(outcome) => {
                 format!("RunHaven | Run finished | exit {}", outcome.exit_code)
@@ -538,6 +630,7 @@ impl BottomPaneView for RunHavenMvpView {
                 ("a".to_string(), "auth scope".to_string()),
                 ("2".to_string(), "runs".to_string()),
                 ("3".to_string(), "diagnostics".to_string()),
+                ("h".to_string(), "history".to_string()),
             ],
             MvpScreen::ActiveRuns(_) => vec![
                 ("up/down".to_string(), "choose".to_string()),
@@ -545,6 +638,7 @@ impl BottomPaneView for RunHavenMvpView {
                 ("r".to_string(), "refresh".to_string()),
                 ("1".to_string(), "launch".to_string()),
                 ("3".to_string(), "diagnostics".to_string()),
+                ("h".to_string(), "history".to_string()),
             ],
             MvpScreen::RunLogs(screen) => match screen.state {
                 RunLogsState::Confirm { .. } => vec![
@@ -561,11 +655,20 @@ impl BottomPaneView for RunHavenMvpView {
                 ("r".to_string(), "refresh".to_string()),
                 ("1".to_string(), "launch".to_string()),
                 ("2".to_string(), "runs".to_string()),
+                ("h".to_string(), "history".to_string()),
+            ],
+            MvpScreen::History(_) => vec![
+                ("up/down".to_string(), "choose".to_string()),
+                ("r".to_string(), "refresh".to_string()),
+                ("1".to_string(), "launch".to_string()),
+                ("2".to_string(), "runs".to_string()),
+                ("3".to_string(), "diagnostics".to_string()),
             ],
             MvpScreen::PostRun(_) => vec![
                 ("enter".to_string(), "new launch".to_string()),
                 ("2".to_string(), "runs".to_string()),
                 ("3".to_string(), "diagnostics".to_string()),
+                ("h".to_string(), "history".to_string()),
                 ("q".to_string(), "quit".to_string()),
             ],
         };

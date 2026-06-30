@@ -89,6 +89,35 @@ pub struct ActiveRunLogSnapshotData {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RunHistoryListData {
+    pub runs: Vec<RunHistorySummaryData>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunHistorySummaryData {
+    pub run_id: String,
+    pub profile: String,
+    pub network: String,
+    pub status: String,
+    pub started_at: String,
+    pub finished_at: String,
+    pub return_code: Option<i32>,
+    pub workspace_scope: String,
+    pub session: String,
+    pub state_volume: String,
+    pub provider_allowed: u64,
+    pub provider_denied: u64,
+    pub auth_allowed: u64,
+    pub auth_denied: u64,
+    pub cleanup_provider_network: String,
+    pub git_summary: String,
+    pub worktree_branch: Option<String>,
+    pub review_command: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RunHavenDiagnosticsData {
     pub auth_status: AuthStatusData,
     pub egress_log: Vec<EgressDecisionData>,
@@ -223,6 +252,56 @@ impl ActiveRunSummaryData {
             state_volume: string_field(&record, "state_volume"),
             session: string_field(&record, "session"),
             container_name: string_field(&record, "container_name"),
+        }
+    }
+}
+
+impl RunHistoryListData {
+    pub fn from_run_records(records: impl IntoIterator<Item = serde_json::Value>) -> Self {
+        let mut runs = records
+            .into_iter()
+            .map(RunHistorySummaryData::from_run_record)
+            .collect::<Vec<_>>();
+        runs.sort_by(|left, right| {
+            right
+                .finished_at
+                .cmp(&left.finished_at)
+                .then_with(|| right.started_at.cmp(&left.started_at))
+                .then_with(|| right.run_id.cmp(&left.run_id))
+        });
+        Self { runs }
+    }
+}
+
+impl RunHistorySummaryData {
+    pub fn from_run_record(record: serde_json::Value) -> Self {
+        let run_id = string_field(&record, "run_id");
+        let worktree_branch = record
+            .get("worktree")
+            .and_then(|worktree| worktree.get("branch"))
+            .and_then(serde_json::Value::as_str)
+            .map(strip_terminal_controls);
+        Self {
+            review_command: format!("runhaven runs show {run_id}"),
+            run_id,
+            profile: string_field(&record, "profile"),
+            network: string_field(&record, "network"),
+            status: string_field(&record, "status"),
+            started_at: string_field(&record, "started_at"),
+            finished_at: string_field(&record, "finished_at"),
+            return_code: i32_field(&record, "return_code"),
+            workspace_scope: string_field(&record, "workspace_scope"),
+            session: string_field(&record, "session"),
+            state_volume: string_field(&record, "state_volume"),
+            provider_allowed: u64_pointer_field(&record, "/provider_policy/allowed"),
+            provider_denied: u64_pointer_field(&record, "/provider_policy/denied"),
+            auth_allowed: u64_pointer_field(&record, "/auth_broker/allowed"),
+            auth_denied: u64_pointer_field(&record, "/auth_broker/denied"),
+            cleanup_provider_network: string_pointer_field(&record, "/cleanup/provider_network"),
+            git_summary: strip_terminal_controls(&crate::records::format_git_summary(
+                record.get("git").unwrap_or(&serde_json::Value::Null),
+            )),
+            worktree_branch,
         }
     }
 }
@@ -390,11 +469,12 @@ impl AuthDecisionData {
 }
 
 fn string_field(record: &serde_json::Value, name: &str) -> String {
-    record
-        .get(name)
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or("-")
-        .to_string()
+    strip_terminal_controls(
+        record
+            .get(name)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("-"),
+    )
 }
 
 fn u32_field(record: &serde_json::Value, name: &str) -> u32 {
@@ -404,11 +484,38 @@ fn u32_field(record: &serde_json::Value, name: &str) -> u32 {
         .unwrap_or(0) as u32
 }
 
+fn i32_field(record: &serde_json::Value, name: &str) -> Option<i32> {
+    record
+        .get(name)
+        .and_then(serde_json::Value::as_i64)
+        .and_then(|value| i32::try_from(value).ok())
+}
+
+fn u64_pointer_field(record: &serde_json::Value, pointer: &str) -> u64 {
+    record
+        .pointer(pointer)
+        .and_then(serde_json::Value::as_u64)
+        .unwrap_or(0)
+}
+
+fn string_pointer_field(record: &serde_json::Value, pointer: &str) -> String {
+    strip_terminal_controls(
+        record
+            .pointer(pointer)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("-"),
+    )
+}
+
 fn count_field(record: &serde_json::Value) -> u64 {
     record
         .get("count")
         .and_then(serde_json::Value::as_u64)
         .unwrap_or(1)
+}
+
+fn strip_terminal_controls(text: &str) -> String {
+    text.chars().filter(|ch| !ch.is_control()).collect()
 }
 
 impl From<&AgentRunPlan> for LaunchPlanData {
@@ -703,6 +810,68 @@ mod tests {
                 "diagnostics payload leaked forbidden field/value {forbidden:?}"
             );
         }
+    }
+
+    #[test]
+    fn run_history_contract_omits_workspace_path_and_sanitizes_display_fields() {
+        let data = RunHistoryListData::from_run_records([
+            serde_json::json!({
+                "timestamp": "2026-06-30T01:00:00Z",
+                "started_at": "2026-06-30T00:00:00Z",
+                "finished_at": "2026-06-30T01:00:00Z",
+                "run_id": "run-123",
+                "profile": "codex",
+                "workspace": "/Users/c/secret/project",
+                "workspace_scope": "current",
+                "state_volume": "runhaven-codex-shared-home",
+                "session": "none",
+                "network": "provider",
+                "status": "succeeded",
+                "return_code": 0,
+                "provider_policy": {"allowed": 3, "denied": 1},
+                "auth_broker": {"allowed": 2, "denied": 0},
+                "cleanup": {"provider_network": "removed"},
+                "git": {"available": "false", "reason": "not-a-git-worktree"},
+                "worktree": {"branch": "runhaven/codex/run-\u{1b}123"}
+            }),
+            serde_json::json!({
+                "timestamp": "2026-06-30T02:00:00Z",
+                "started_at": "2026-06-30T01:30:00Z",
+                "finished_at": "2026-06-30T02:00:00Z",
+                "run_id": "run-\u{1b}456",
+                "profile": "codex",
+                "workspace": "/Users/c/secret/project",
+                "workspace_scope": "current",
+                "state_volume": "runhaven-codex-shared-home",
+                "session": "none",
+                "network": "provider",
+                "status": "failed",
+                "return_code": 1,
+                "provider_policy": {"allowed": 0, "denied": 0},
+                "auth_broker": {"allowed": 0, "denied": 0},
+                "cleanup": {"provider_network": "removed"},
+                "git": {"available": "false", "reason": "not-a-git-worktree"}
+            }),
+        ]);
+
+        assert_eq!(data.runs.len(), 2);
+        let run = &data.runs[0];
+        assert_eq!(run.run_id, "run-456");
+        assert_eq!(run.review_command, "runhaven runs show run-456");
+        assert_eq!(run.return_code, Some(1));
+
+        let run = &data.runs[1];
+        assert_eq!(run.run_id, "run-123");
+        assert_eq!(
+            run.worktree_branch.as_deref(),
+            Some("runhaven/codex/run-123")
+        );
+        assert_eq!(run.provider_denied, 1);
+        assert!(run.git_summary.contains("not-a-git-worktree"));
+
+        let encoded = serde_json::to_string(&data).expect("serialize history data");
+        assert!(!encoded.contains("/Users/c/secret/project"));
+        assert!(!encoded.contains("\\u001b"));
     }
 
     #[test]

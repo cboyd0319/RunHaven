@@ -1,4 +1,8 @@
 use super::*;
+use runhaven_core::support::paths::{
+    ensure_private_parent, override_cache_root_for_tests, runs_log_path,
+};
+use std::io::Write;
 
 fn preview<'a>(payload: &'a LaunchPreviewPayload, name: &str) -> &'a AgentLaunchPreview {
     payload
@@ -30,6 +34,49 @@ fn run_git(args: &[&str], cwd: &Path) {
         "git {args:?} failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
+}
+
+#[test]
+fn run_history_payload_omits_workspace_paths() {
+    let cache = tempfile::tempdir().expect("cache");
+    let _cache_home = override_cache_root_for_tests(cache.path());
+    ensure_private_parent(&runs_log_path()).expect("runs log parent");
+    let mut file = std::fs::File::create(runs_log_path()).expect("runs log file");
+    writeln!(
+        file,
+        "{}",
+        serde_json::json!({
+            "timestamp": "2026-06-30T01:00:00Z",
+            "started_at": "2026-06-30T00:00:00Z",
+            "finished_at": "2026-06-30T01:00:00Z",
+            "run_id": "run-\u{1b}123",
+            "profile": "codex",
+            "workspace": "/Users/c/secret/project",
+            "workspace_scope": "current",
+            "state_volume": "runhaven-codex-shared-home",
+            "session": "none",
+            "network": "provider",
+            "status": "succeeded",
+            "return_code": 0,
+            "provider_policy": {"allowed": 3, "denied": 1},
+            "auth_broker": {"allowed": 2, "denied": 0},
+            "cleanup": {"provider_network": "removed"},
+            "git": {"available": "false", "reason": "not-a-git-worktree"}
+        })
+    )
+    .expect("write run record");
+
+    let history = RunHavenTuiService::new()
+        .run_history_payload(10)
+        .expect("run history");
+    let encoded = serde_json::to_string(&history).expect("serialize history");
+
+    assert_eq!(history.runs.len(), 1);
+    assert_eq!(history.runs[0].run_id, "run-123");
+    assert_eq!(history.runs[0].return_code, Some(0));
+    assert_eq!(history.runs[0].provider_denied, 1);
+    assert!(!encoded.contains("/Users/c/secret/project"));
+    assert!(!encoded.contains("\\u001b"));
 }
 
 #[test]

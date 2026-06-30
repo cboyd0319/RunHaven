@@ -1,6 +1,7 @@
+use std::collections::VecDeque;
 use std::fs;
 use std::fs::File;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
 use anyhow::Result;
@@ -10,10 +11,28 @@ pub fn read_jsonl(path: &Path, limit: usize) -> Result<Vec<Value>> {
     if !path.exists() {
         return Ok(Vec::new());
     }
-    Ok(limit_records(
-        parse_jsonl_lines(&fs::read_to_string(path)?),
-        limit,
-    ))
+    let file = File::open(path)?;
+    let lines = BufReader::new(file).lines();
+    if limit == 0 {
+        let mut records = Vec::new();
+        for line in lines {
+            if let Some(payload) = parse_jsonl_line(&line?) {
+                records.push(payload);
+            }
+        }
+        return Ok(records);
+    }
+
+    let mut records = VecDeque::with_capacity(limit);
+    for line in lines {
+        if let Some(payload) = parse_jsonl_line(&line?) {
+            if records.len() == limit {
+                records.pop_front();
+            }
+            records.push_back(payload);
+        }
+    }
+    Ok(records.into_iter().collect())
 }
 
 pub fn read_jsonl_tail_bounded(
@@ -50,16 +69,21 @@ pub fn read_jsonl_tail_bounded(
 fn parse_jsonl_lines(text: &str) -> Vec<Value> {
     let mut records = Vec::new();
     for line in text.lines() {
-        if line.trim().is_empty() {
-            continue;
-        }
-        if let Ok(payload) = serde_json::from_str::<Value>(line)
-            && payload.is_object()
-        {
+        if let Some(payload) = parse_jsonl_line(line) {
             records.push(payload);
         }
     }
     records
+}
+
+fn parse_jsonl_line(line: &str) -> Option<Value> {
+    if line.trim().is_empty() {
+        return None;
+    }
+    let Ok(payload) = serde_json::from_str::<Value>(line) else {
+        return None;
+    };
+    payload.is_object().then_some(payload)
 }
 
 fn limit_records(records: Vec<Value>, limit: usize) -> Vec<Value> {
@@ -90,5 +114,23 @@ mod tests {
             .map(|record| record.get("idx").and_then(Value::as_u64).expect("idx"))
             .collect::<Vec<_>>();
         assert_eq!(indexes, vec![17, 18, 19]);
+    }
+
+    #[test]
+    fn read_jsonl_limit_keeps_recent_records_without_full_text_read() {
+        let dir = tempfile::tempdir().expect("dir");
+        let path = dir.path().join("events.jsonl");
+        let mut file = std::fs::File::create(&path).expect("file");
+        for idx in 0..20 {
+            writeln!(file, "{{\"idx\":{idx}}}").expect("write");
+        }
+
+        let records = read_jsonl(&path, 4).expect("limited records");
+
+        let indexes = records
+            .iter()
+            .map(|record| record.get("idx").and_then(Value::as_u64).expect("idx"))
+            .collect::<Vec<_>>();
+        assert_eq!(indexes, vec![16, 17, 18, 19]);
     }
 }

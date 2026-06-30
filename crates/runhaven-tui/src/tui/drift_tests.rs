@@ -680,7 +680,7 @@ fn app_event_shared_shrinks_only() {
 }
 
 #[test]
-fn native_app_and_chatwidget_stay_dormant_under_mvp_shell() {
+fn native_app_and_chatwidget_stay_dormant_under_runhaven_shell() {
     let module_source = include_str!("mod.rs");
     let app_shell_source = include_str!("app_shell.rs");
     let readme_source = include_str!("README.md");
@@ -688,23 +688,23 @@ fn native_app_and_chatwidget_stay_dormant_under_mvp_shell() {
     assert!(
         module_source.contains("pub(crate) use app_event_shared::app;")
             && module_source.contains("pub(crate) use app_event_shared::chatwidget;"),
-        "the active MVP shell may keep only inert app/chatwidget bridge exports"
+        "the active RunHaven shell may keep only inert app/chatwidget bridge exports"
     );
     assert!(
         !module_declared(module_source, "app")
             && !module_declared(module_source, "chatwidget")
             && !source_file_declared_by_path(module_source, "app.rs")
             && !source_file_declared_by_path(module_source, "chatwidget.rs"),
-        "native Codex App and ChatWidget must stay dormant while app_shell.rs hosts the RunHaven MVP view, including path-aliased source activation"
+        "native Codex App and ChatWidget must stay dormant while app_shell.rs hosts the RunHaven view, including path-aliased source activation"
     );
     assert!(
         app_shell_source.contains("let mvp_view = RunHavenMvpView::new(workspace.clone());")
             && app_shell_source.contains("BottomPane::new(BottomPaneParams"),
-        "the active shell should construct the RunHaven MVP view and the real BottomPane"
+        "the active shell should construct the RunHaven view and the real BottomPane"
     );
     assert!(
         app_shell_source.contains("bottom_pane.show_view(Box::new(mvp_view));"),
-        "the active shell must install the RunHaven MVP view into BottomPane"
+        "the active shell must install the RunHaven view into BottomPane"
     );
     for marker in [
         "crate::tui::app::App",
@@ -718,11 +718,14 @@ fn native_app_and_chatwidget_stay_dormant_under_mvp_shell() {
         );
     }
     assert!(
-        readme_source.contains("Current MVP ownership decision")
-            && readme_source.contains("native Codex `App` and `ChatWidget`")
-            && readme_source.contains("stay dormant for the scoped RunHaven MVP")
-            && readme_source.contains("redaction, session-recording, and app-server boundary"),
-        "README.md must record the current MVP ownership decision before native App or ChatWidget is promoted"
+        readme_source.contains("Current ownership decision")
+            && readme_source.contains("The native Codex `App` and `ChatWidget`")
+            && readme_source.contains("stay dormant because the current product flow")
+            && readme_source.contains("run history")
+            && readme_source.contains("reviewed redaction")
+            && readme_source.contains("session-recording")
+            && readme_source.contains("app-server boundary"),
+        "README.md must record the current RunHaven ownership decision before native App or ChatWidget is promoted"
     );
 }
 

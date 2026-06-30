@@ -1,0 +1,26 @@
+---
+source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
+expression: rendered
+---
+
+  RunHaven v0.5.0  Run history
+  1 Launch  2 Runs  3 Diagnostics  h History
+  Recent run records. Host workspace paths are hidden in the TUI.
+
+    run-20260629-003  codex  provider  failed  return=1
+  > run-20260629-002  antigravity  provider  succeeded  return=0
+    run-20260629-001  shell  internet  succeeded  return=-
+
+  Run ID      run-20260629-002
+  Started     2026-06-29T17:50:00Z
+  Finished    2026-06-29T17:59:00Z
+  Scope       repository
+  State       runhaven-antigravity-shared-home
+  Session     agent
+  Provider    allowed 8 denied 0
+  Auth        allowed 2 denied 0
+  Cleanup     removed
+  Git         Git: changed=true before=1234567 after=89abcde files=3
+  Worktree    runhaven/antigravity/run-20260629-002-review-branch
+
+  Review      runhaven runs show run-20260629-002

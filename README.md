@@ -33,7 +33,7 @@ login is never read or mounted.
 | Surface | Status | Use it for |
 | --- | --- | --- |
 | CLI | `v0.5.0` pre-release, complete for the current command contract | Automation, explicit commands, recovery, diagnostics, and the stable backend for every UI. |
-| Terminal UI | Active Codex-vendored MVP, unreleased | A bare interactive `runhaven` opens the RunHaven TUI for workspace choice, agent choice, network/auth policy changes, plan review, typed launch confirmation, foreground launch handoff, active-run summaries, confirmation-gated log snapshots, diagnostics, and post-run recovery. |
+| Terminal UI | Active Codex-vendored TUI, unreleased | A bare interactive `runhaven` opens the RunHaven TUI for workspace choice, agent choice, network/auth policy changes, plan review, typed launch confirmation, foreground launch handoff, active-run summaries, confirmation-gated log snapshots, run history, diagnostics, and post-run recovery. |
 | Desktop app | Alpha scaffold | Typed setup, launch, status, bounded logs, run control, and diagnostics. More maintenance and worktree flows remain CLI-first. |
 
 ## Why RunHaven
@@ -95,12 +95,13 @@ Or open the terminal UI on an interactive terminal:
 runhaven
 ```
 
-The TUI is an unreleased RunHaven-only MVP over the same Rust backend. It opens
-with a launch flow, shows the exact command and safety facts before launch,
-requires typed confirmation for lower-security plans, restores the terminal
-before starting the agent, and includes active-run summaries, confirmation-gated
-log snapshots, diagnostics, and post-run recovery. It does not replace the CLI:
-subcommands, pipes, and redirected invocations still use the CLI directly.
+The TUI is an unreleased RunHaven-only checkpoint over the same Rust backend. It
+opens with a launch flow, shows the exact command and safety facts before
+launch, requires typed confirmation for lower-security plans, restores the
+terminal before starting the agent, and includes active-run summaries,
+confirmation-gated log snapshots, run history, diagnostics, and post-run
+recovery. It does not replace the CLI: subcommands, pipes, and redirected
+invocations still use the CLI directly.
 
 Use the smallest project directory the agent needs. RunHaven mounts that
 directory at `/workspace`, not your whole home directory. See
@@ -148,8 +149,9 @@ language and the per-host detail is in `runhaven egress log`.
 
 ## Review and recovery
 
-RunHaven records secret-free run metadata and gives every owned resource an
-explicit review or cleanup path:
+RunHaven records bounded run metadata without prompts, tokens, environment
+values, or file contents, and gives every owned resource an explicit review or
+cleanup path:
 
 ```bash
 runhaven runs active
@@ -170,15 +172,15 @@ runhaven image doctor
 ```
 
 The current TUI exposes active-run summaries, bounded log snapshots only after
-you type `logs`, secret-free diagnostics, and post-run recovery over the same
-validated cores. Stop, kill, repair, run history, diff review, worktree
-merge/discard, image rebuild, state cleanup, and network cleanup remain
-CLI-first today.
+you type `logs`, run history without host workspace paths, secret-free
+diagnostics, and post-run recovery over the same validated cores. Stop, kill,
+repair, diff review, worktree merge/discard, image rebuild, state cleanup, and
+network cleanup remain CLI-first today.
 
 ## Status and roadmap
 
 RunHaven is alpha/pre-release. `v0.5.0` is the CLI-only pre-release already cut.
-This checkout now contains the unreleased RunHaven-only TUI MVP as a
+This checkout now contains the unreleased RunHaven-only TUI checkpoint as a
 first-class reference over the same CLI backend. The Tauri/Svelte desktop shell
 is alpha: it can read setup, dashboard, profile, folder-pick, and run-plan state
 and supports confirmed launch, image readiness, sanitized live status, bounded
@@ -195,7 +197,7 @@ The roadmap now separates the active TUI build from the later desktop release
 - **Runtime and security hardening:** completed slices are recorded in the
   roadmap and state files; keep runtime evidence current when the boundary is
   touched.
-- **First-class terminal UI, MVP active:** a bare interactive
+- **First-class terminal UI, v0.6 active:** a bare interactive
   `runhaven` opens the four-step launch wizard and run manager over the shared
   planner and policy. The CLI stays the complete explicit and automation
   surface.

@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use runhaven_core::diagnostics::auth_status_payload;
 use runhaven_core::diagnostics::read_auth_broker_log_tail_bounded;
 use runhaven_core::diagnostics::read_egress_policy_log_tail_bounded;
+use runhaven_core::records::read_run_records_tail_bounded;
 use runhaven_core::runtime::active::active_run_log_snapshot_payload;
 use runhaven_core::runtime::active::read_active_run_records;
 use runhaven_core::runtime::active::validate_log_snapshot_lines;
@@ -22,6 +23,7 @@ use runhaven_core::ui_contracts::AgentCatalogData;
 use runhaven_core::ui_contracts::AgentCatalogItemData;
 use runhaven_core::ui_contracts::LaunchPlanData;
 use runhaven_core::ui_contracts::RunHavenDiagnosticsData;
+use runhaven_core::ui_contracts::RunHistoryListData;
 use serde_json::Value;
 
 use super::protocol::ClientRequest;
@@ -29,6 +31,7 @@ use super::protocol::UnsupportedFamily;
 use super::protocol::ValidateWorkspaceResponse;
 
 const DIAGNOSTICS_LOG_TAIL_BYTES: u64 = 2 * 1024 * 1024;
+const RUN_HISTORY_LOG_TAIL_BYTES: u64 = 4 * 1024 * 1024;
 pub(crate) const CURRENT_DIRECTORY_WORKSPACE_LABEL: &str = "Current directory";
 pub(crate) const GIT_REPOSITORY_ROOT_WORKSPACE_LABEL: &str = "Git repository root";
 pub(crate) const GIT_REPOSITORY_ROOT_WORKSPACE_DESCRIPTION: &str =
@@ -276,6 +279,12 @@ impl RunHavenTuiService {
 
     pub(crate) fn active_runs_payload(&self) -> ActiveRunListData {
         ActiveRunListData::from_active_run_records(read_active_run_records())
+    }
+
+    pub(crate) fn run_history_payload(&self, limit: usize) -> anyhow::Result<RunHistoryListData> {
+        Ok(RunHistoryListData::from_run_records(
+            read_run_records_tail_bounded(limit, RUN_HISTORY_LOG_TAIL_BYTES)?,
+        ))
     }
 
     pub(crate) fn diagnostics_payload(

@@ -15,7 +15,7 @@ pub fn validate_run_id(run_id: &str) -> Result<()> {
         || run_id.starts_with('-')
         || run_id
             .chars()
-            .any(|c| c.is_whitespace() || matches!(c, '/' | '\\'))
+            .any(|c| c.is_control() || c.is_whitespace() || matches!(c, '/' | '\\'))
     {
         bail!("invalid run id: {run_id:?}");
     }
@@ -29,9 +29,26 @@ pub fn validate_runhaven_container_name(container_name: &str) -> Result<()> {
     if container_name.starts_with('-')
         || container_name
             .chars()
-            .any(|c| c.is_whitespace() || matches!(c, '/' | '\\' | ','))
+            .any(|c| c.is_control() || c.is_whitespace() || matches!(c, '/' | '\\' | ','))
     {
         bail!("invalid active run container name: {container_name:?}");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn run_id_rejects_terminal_control_bytes() {
+        assert!(validate_run_id("run-123").is_ok());
+        assert!(validate_run_id("run-\u{1b}]2;bad\u{7}").is_err());
+    }
+
+    #[test]
+    fn container_name_rejects_terminal_control_bytes() {
+        assert!(validate_runhaven_container_name("runhaven-codex-project-run").is_ok());
+        assert!(validate_runhaven_container_name("runhaven-\u{1b}]2;bad\u{7}").is_err());
+    }
 }

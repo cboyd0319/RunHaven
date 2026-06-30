@@ -11,6 +11,7 @@ use ratatui::widgets::Wrap;
 use runhaven_core::ui_contracts::AuthDecisionData;
 use runhaven_core::ui_contracts::EgressDecisionData;
 use runhaven_core::ui_contracts::RunHavenDiagnosticsData;
+use runhaven_core::ui_contracts::RunHistorySummaryData;
 
 use crate::key_hint;
 use crate::render::renderable::Renderable;
@@ -25,6 +26,7 @@ use crate::tui::bottom_pane::render_menu_surface;
 
 use super::ActiveRunsScreen;
 use super::DiagnosticsScreen;
+use super::HistoryScreen;
 use super::LOG_CONFIRM_PHRASE;
 use super::MvpScreen;
 use super::PostRunOutcome;
@@ -37,6 +39,7 @@ pub(super) fn render(view: &RunHavenMvpView, area: Rect, buf: &mut Buffer) {
         MvpScreen::Launch => view.launch.render(area, buf),
         MvpScreen::ActiveRuns(screen) => render_active_runs(screen, area, buf),
         MvpScreen::RunLogs(screen) => render_run_logs(screen, area, buf),
+        MvpScreen::History(screen) => render_history(screen, area, buf),
         MvpScreen::Diagnostics(screen) => render_diagnostics(screen, area, buf),
         MvpScreen::PostRun(outcome) => render_post_run(outcome, area, buf),
     }
@@ -51,6 +54,9 @@ pub(super) fn desired_height(view: &RunHavenMvpView, width: u16) -> u16 {
         }
         MvpScreen::RunLogs(screen) => {
             paragraph(run_logs_lines(screen)).line_count(width.saturating_sub(4).max(1)) as u16 + 2
+        }
+        MvpScreen::History(screen) => {
+            paragraph(history_lines(screen)).line_count(width.saturating_sub(4).max(1)) as u16 + 2
         }
         MvpScreen::Diagnostics(screen) => {
             paragraph(diagnostics_lines(screen)).line_count(width.saturating_sub(4).max(1)) as u16
@@ -208,6 +214,138 @@ fn run_logs_lines(screen: &RunLogsScreen) -> Vec<Line<'static>> {
     lines
 }
 
+fn render_history(screen: &HistoryScreen, area: Rect, buf: &mut Buffer) {
+    render_panel(area, buf, history_lines(screen));
+}
+
+fn history_lines(screen: &HistoryScreen) -> Vec<Line<'static>> {
+    let mut lines = vec![
+        header_line("Run history"),
+        tab_line(),
+        Line::from("Recent run records. Host workspace paths are hidden in the TUI."),
+        Line::from(""),
+    ];
+    match &screen.result {
+        Ok(history) if history.runs.is_empty() => {
+            lines.push(Line::from("No RunHaven run records found."));
+            lines.push(Line::from(
+                "Launch an agent, then return here after it exits.",
+            ));
+        }
+        Ok(history) => {
+            for (idx, run) in history.runs.iter().enumerate().take(10) {
+                let selected = idx == screen.selected_idx;
+                lines.push(history_row(run, selected));
+            }
+            if let Some(run) = screen.selected_run() {
+                append_history_detail(&mut lines, run);
+            }
+        }
+        Err(error) => {
+            lines.push(Line::from(Span::styled(
+                "Could not load run history.",
+                danger_style(),
+            )));
+            lines.push(Line::from(error.clone()));
+        }
+    }
+    lines
+}
+
+fn history_row(run: &RunHistorySummaryData, selected: bool) -> Line<'static> {
+    Line::from(vec![
+        Span::styled(if selected { "> " } else { "  " }, accent_style()),
+        Span::styled(
+            run.run_id.clone(),
+            if selected {
+                selected_row_style()
+            } else {
+                boundary_style()
+            },
+        ),
+        Span::raw("  "),
+        Span::styled(run.profile.clone(), accent_style()),
+        Span::raw("  "),
+        Span::styled(run.network.clone(), network_style(&run.network)),
+        Span::raw("  "),
+        Span::styled(run.status.clone(), status_style(&run.status)),
+        Span::raw("  return="),
+        Span::styled(format_return_code(run), muted_but_readable_style()),
+    ])
+}
+
+fn append_history_detail(lines: &mut Vec<Line<'static>>, run: &RunHistorySummaryData) {
+    lines.push(Line::from(""));
+    lines.push(label_value("Run ID", run.run_id.clone(), boundary_style()));
+    lines.push(label_value(
+        "Started",
+        run.started_at.clone(),
+        muted_but_readable_style(),
+    ));
+    lines.push(label_value(
+        "Finished",
+        run.finished_at.clone(),
+        muted_but_readable_style(),
+    ));
+    lines.push(label_value(
+        "Scope",
+        run.workspace_scope.clone(),
+        safe_style(),
+    ));
+    lines.push(label_value("State", run.state_volume.clone(), safe_style()));
+    lines.push(label_value(
+        "Session",
+        run.session.clone(),
+        muted_but_readable_style(),
+    ));
+    lines.push(label_value(
+        "Provider",
+        format!(
+            "allowed {} denied {}",
+            run.provider_allowed, run.provider_denied
+        ),
+        if run.provider_denied == 0 {
+            safe_style()
+        } else {
+            warning_style()
+        },
+    ));
+    lines.push(label_value(
+        "Auth",
+        format!("allowed {} denied {}", run.auth_allowed, run.auth_denied),
+        if run.auth_denied == 0 {
+            safe_style()
+        } else {
+            warning_style()
+        },
+    ));
+    lines.push(label_value(
+        "Cleanup",
+        run.cleanup_provider_network.clone(),
+        muted_but_readable_style(),
+    ));
+    lines.push(label_value(
+        "Git",
+        run.git_summary.clone(),
+        muted_but_readable_style(),
+    ));
+    if let Some(branch) = &run.worktree_branch {
+        lines.push(label_value("Worktree", branch.clone(), warning_style()));
+    }
+    lines.push(Line::from(""));
+    lines.push(label_value(
+        "Review",
+        run.review_command.clone(),
+        boundary_style(),
+    ));
+}
+
+fn format_return_code(run: &RunHistorySummaryData) -> String {
+    run.return_code
+        .map(|code| code.to_string())
+        .unwrap_or_else(|| "-".to_string())
+}
+
 fn render_diagnostics(screen: &DiagnosticsScreen, area: Rect, buf: &mut Buffer) {
     render_panel(area, buf, diagnostics_lines(screen));
 }
@@ -356,7 +494,9 @@ fn tab_line() -> Line<'static> {
         key_hint::plain(KeyCode::Char('2')).into(),
         Span::raw(" Runs  "),
         key_hint::plain(KeyCode::Char('3')).into(),
-        Span::raw(" Diagnostics"),
+        Span::raw(" Diagnostics  "),
+        key_hint::plain(KeyCode::Char('h')).into(),
+        Span::raw(" History"),
     ])
 }
 

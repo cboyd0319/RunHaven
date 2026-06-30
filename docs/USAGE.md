@@ -20,21 +20,23 @@ agents and run planner as the CLI:
 runhaven
 ```
 
-Current rebuild state: the TUI opens an unreleased RunHaven-only MVP. Use
-`1` for launch, `2` for active runs, and `3` for diagnostics. In the launch
-flow, choose a workspace and an agent, then review the launch plan. Press `n`
-to change the network policy and `a` to switch between shared agent login state
-and project-only login state. Review and confirm show auth scope, network
-posture, what is shared, what is not shared, safety notes, and the matching
-`container run` command before launch. Lower-security plans require typed
-confirmation. Press `q` or esc to quit except while typing confirmation text;
-there, esc backs out and `q` is entered as text.
+Current rebuild state: the TUI opens an unreleased RunHaven-only checkpoint. Use
+`1` for launch, `2` for active runs, `3` for diagnostics, and `h` for run
+history. In the launch flow, choose a workspace and an agent, then review the
+launch plan. Press `n` to change the network policy and `a` to switch between
+shared agent login state and project-only login state. Review and confirm show
+auth scope, network posture, what is shared, what is not shared, safety notes,
+and the matching `container run` command before launch. Lower-security plans
+require typed confirmation. Press `q` or esc to quit except while typing
+confirmation text; there, esc backs out and `q` is entered as text.
 
 The active-runs screen shows RunHaven-owned active markers without workspace
 paths. Opening logs requires typing `logs` before RunHaven reads a bounded raw
-output snapshot. Diagnostics show auth and network metadata without secrets.
+output snapshot. The history screen shows recent run records, review commands,
+and worktree branch details without host workspace paths. Diagnostics show
+auth and network metadata without secrets.
 
-Use the CLI for advanced run management, history, worktree review, cleanup, and
+Use the CLI for advanced run management, diff review, worktree review, cleanup, and
 maintenance:
 
 ```bash
@@ -593,7 +595,7 @@ copyable recovery commands.
 
 ## Run History
 
-After an actual agent run, inspect the secret-free run ledger:
+After an actual agent run, inspect the run ledger:
 
 ```bash
 runhaven runs list --limit 20

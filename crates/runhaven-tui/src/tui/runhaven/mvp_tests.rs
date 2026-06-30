@@ -5,7 +5,7 @@ use ratatui::backend::TestBackend;
 use runhaven_core::runtime::active::write_active_run_payload;
 use runhaven_core::support::paths::{
     auth_broker_log_path, egress_policy_log_path, ensure_private_parent,
-    override_cache_root_for_tests,
+    override_cache_root_for_tests, runs_log_path,
 };
 use std::io::Write;
 
@@ -92,6 +92,50 @@ fn active_runs_view_omits_workspace_paths_and_opens_log_confirmation() {
     let output = render_to_text(&mut view, 120, 32);
     assert!(output.contains("Raw container output can contain secrets"));
     assert!(output.contains("Type logs"));
+}
+
+#[test]
+fn history_view_lists_run_records_without_workspace_paths() {
+    let cache = tempfile::tempdir().expect("cache");
+    let _cache_home = override_cache_root_for_tests(cache.path());
+    ensure_private_parent(&runs_log_path()).expect("runs log parent");
+    let mut file = std::fs::File::create(runs_log_path()).expect("runs log file");
+    writeln!(
+        file,
+        "{}",
+        serde_json::json!({
+            "timestamp": "2026-06-30T01:00:00Z",
+            "started_at": "2026-06-30T00:00:00Z",
+            "finished_at": "2026-06-30T01:00:00Z",
+            "run_id": "run-\u{1b}123",
+            "profile": "codex",
+            "workspace": "/Users/c/secret/project",
+            "workspace_scope": "current",
+            "state_volume": "runhaven-codex-shared-home",
+            "session": "none",
+            "network": "provider",
+            "status": "succeeded",
+            "return_code": 0,
+            "provider_policy": {"allowed": 3, "denied": 1},
+            "auth_broker": {"allowed": 2, "denied": 0},
+            "cleanup": {"provider_network": "removed"},
+            "git": {"available": "false", "reason": "not-a-git-worktree"},
+            "worktree": {"branch": "runhaven/codex/run-\u{1b}123"}
+        })
+    )
+    .expect("write run record");
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut view = RunHavenMvpView::new(workspace.path().to_path_buf());
+
+    view.handle_key_event(key(KeyCode::Char('4')));
+    let output = render_to_text(&mut view, 120, 40);
+
+    assert!(output.contains("Run history"));
+    assert!(output.contains("run-123"));
+    assert!(output.contains("runhaven runs show run-123"));
+    assert!(output.contains("runhaven/codex/run-123"));
+    assert!(!output.contains("/Users/c/secret/project"));
+    assert!(!output.contains('\u{1b}'));
 }
 
 #[test]

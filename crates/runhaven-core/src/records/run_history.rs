@@ -16,7 +16,7 @@ use crate::runtime::worktrees::worktree_record;
 use crate::support::git::{GitChange, git_value_available};
 use crate::support::paths::{open_private_append, runs_log_path};
 
-use super::read_jsonl;
+use super::{read_jsonl, read_jsonl_tail_bounded};
 
 pub struct RunRecordInput<'a> {
     pub plan: &'a AgentRunPlan,
@@ -292,4 +292,47 @@ pub fn find_run_record(run_id: &str) -> Result<Value> {
 
 pub fn read_run_records(limit: usize) -> Result<Vec<Value>> {
     read_jsonl(&runs_log_path(), limit)
+}
+
+pub fn read_run_records_tail_bounded(limit: usize, max_tail_bytes: u64) -> Result<Vec<Value>> {
+    read_jsonl_tail_bounded(&runs_log_path(), limit, max_tail_bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::support::paths::{ensure_private_parent, override_cache_root_for_tests};
+
+    #[test]
+    fn run_records_tail_bounded_keeps_recent_records() {
+        let cache = tempfile::tempdir().expect("cache");
+        let _cache_home = override_cache_root_for_tests(cache.path());
+        ensure_private_parent(&runs_log_path()).expect("runs log parent");
+        let mut file = std::fs::File::create(runs_log_path()).expect("runs log file");
+        for idx in 0..20 {
+            writeln!(
+                file,
+                "{}",
+                json!({
+                    "run_id": format!("run-{idx:03}"),
+                    "timestamp": format!("2026-06-30T00:{idx:02}:00Z")
+                })
+            )
+            .expect("write run record");
+        }
+
+        let records = read_run_records_tail_bounded(3, 2048).expect("tail records");
+
+        let run_ids = records
+            .iter()
+            .map(|record| {
+                record
+                    .get("run_id")
+                    .and_then(Value::as_str)
+                    .expect("run id")
+                    .to_string()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(run_ids, vec!["run-017", "run-018", "run-019"]);
+    }
 }
