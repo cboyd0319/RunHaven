@@ -456,6 +456,7 @@ fn active_run_log_snapshot_route_stays_in_runhaven_facade() {
 #[test]
 fn visible_run_log_ui_stays_confirmation_gated_in_runhaven_mvp() {
     let mvp_source = include_str!("runhaven/mvp.rs");
+    let mvp_render_source = include_str!("runhaven/mvp_render.rs");
     let app_shell_source = include_str!("app_shell.rs");
     let log_text_marker = ["snapshot", ".text.lines().take"].concat();
     let owners = tui_rust_sources()
@@ -474,15 +475,16 @@ fn visible_run_log_ui_stays_confirmation_gated_in_runhaven_mvp() {
 
     assert_eq!(
         owners,
-        ["runhaven/mvp.rs"],
-        "raw log text rendering must stay in the RunHaven MVP view"
+        ["runhaven/mvp_render.rs"],
+        "raw log text rendering must stay in the RunHaven MVP render view"
     );
     assert!(
         mvp_source.contains("LOG_CONFIRM_PHRASE")
-            && mvp_source.contains("Raw container output can contain secrets")
             && mvp_source.contains("typed.trim() != LOG_CONFIRM_PHRASE")
             && mvp_source.contains("active_run_log_snapshot_data(")
-            && mvp_source.contains("\"runhaven/run/logSnapshot\""),
+            && mvp_source.contains("\"runhaven/run/logSnapshot\"")
+            && mvp_render_source.contains("Raw container output can contain secrets")
+            && mvp_render_source.contains(&log_text_marker),
         "visible log UI must require typed confirmation before loading raw output"
     );
     for marker in [

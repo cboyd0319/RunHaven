@@ -1329,6 +1329,20 @@ Latest TUI MVP module cleanup:
   `ChatWidget`, app-server transport, filesystem RPC, MCP, login, workspace
   command execution, session recording, or host-reaching Codex paths. Final
   slice verification is recorded in `feature_list.json`.
+- 2026-06-30: Split the remaining large active TUI shell/view files without
+  changing behavior. `app_shell.rs` now keeps the Codex runtime host and
+  `BottomPane` wiring while shell tests live in `app_shell_tests.rs`.
+  `runhaven/mvp.rs` now keeps MVP state/input and delegates panel rendering to
+  `runhaven/mvp_render.rs`. `runhaven/launch_wizard.rs` now keeps the wizard
+  state machine and delegates review/confirmation rendering to
+  `runhaven/launch_wizard_render.rs`. Current active file sizes are:
+  `app_shell.rs` 469 lines, `runhaven/mvp.rs` 654 lines, and
+  `runhaven/launch_wizard.rs` 1067 lines.
+- Behavior and security boundary are unchanged: this split does not change
+  launch, logs, diagnostics, service routing, native `App`, `ChatWidget`,
+  app-server transport, filesystem RPC, MCP, login, workspace command
+  execution, session recording, or host-reaching Codex paths. Final slice
+  verification is recorded in `feature_list.json`.
 
 ## Blockers
 
