@@ -50,7 +50,7 @@ image behavior should stay on the Codex-derived overlay and ambient-placement
 contracts wherever possible.
 
 Source-first rule: before adding custom TUI behavior, check the local official
-Codex TUI source at `/Users/c/Documents/GitHub/codex/codex-rs/tui` and vendor or
+Codex TUI source at `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui` and vendor or
 adapt the native implementation unless RunHaven's data model, logo asset, or
 security boundary requires a local adapter.
 
@@ -191,7 +191,7 @@ Capability detection (the practical sequence):
 RunHaven previously tested `ratatui-image` for this tier, but it selected
 iTerm2's OSC 1337 path and rendered blank in the full-screen TUI. The active
 path is Codex source-first: use the local official Codex TUI graphics protocol
-code and overlay lifecycle from `/Users/c/Documents/GitHub/codex/codex-rs/tui`,
+code and overlay lifecycle from `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui`,
 with half-block rendering as the portable floor.
 
 tmux and SSH caveats: tmux needs `set -g allow-passthrough on` (off by default);
@@ -291,8 +291,7 @@ Five hero ideas that could define the RunHaven TUI identity:
    credentials explicitly not mounted, reachable provider hosts, blocked hosts,
    and where each provider credential lives (host-side broker versus passed into
    the guest). It makes the security model legible at a glance and is the
-   inspectable companion to the egress ledger. Borrowed from Persona's trust
-   boundary lens, narrowed to RunHaven's container boundary.
+   inspectable companion to the egress ledger.
 
 ## Surface-by-Surface Design
 
@@ -326,13 +325,12 @@ Each RunHaven surface, with premium ideas drawn from named tools.
   capability probe (truecolor, graphics protocol result, unicode width behavior,
   terminal size, tmux or Zellij or SSH caveat) shown in a visible panel, so a
   user or maintainer can debug rendering. This mirrors `runhaven doctor`'s
-  transparency and is the rendering equivalent of it. Borrowed from Persona's
-  capability probe and Environment tab.
+  transparency and is the rendering equivalent of it.
 - Run receipt: after a run, a copyable, reproducible summary (run id, agent,
   workspace, network mode, egress allowed and blocked counts, git change summary,
   logs path, and the exact CLI command that reproduces the run), exportable as
   text or Markdown. More useful than a decorative success screen, and it builds
-  on the existing run records. Borrowed from Persona's receipt mode.
+  on the existing run records. Folded into this plan as a receipt mode.
 
 ## Information Architecture
 
@@ -356,8 +354,7 @@ Keyboard, with mouse optional but keyboard always complete:
 A persistent status line carries the run context: container name, network-mode
 badge, blocked-egress count, and the active keymap hint. Every action is
 discoverable on screen; there is no hidden keyboard-only workflow, and every
-mutating or destructive action routes through an explicit confirm. Borrowed from
-Persona's information architecture, narrowed to RunHaven's surfaces.
+mutating or destructive action routes through an explicit confirm.
 
 Codex-source candidates to evaluate before custom implementation: status line
 and terminal-title surfaces, `/status` cards, syntax/highlighting themes,
@@ -594,14 +591,10 @@ Inspiring TUIs to model:
 - impala (animation as real status): https://github.com/pythops/impala
 - Codex TUI and pets (ambient status mark): https://github.com/openai/codex/tree/main/codex-rs/tui
 
-Sibling RunHaven-family plans this draws from:
-
-- Tamworth brand and live-scan TUI plan (determinism, pure-Rust supply-chain
-  gate, snapshot-first harness, panic isolation):
-  `/Users/c/Documents/GitHub/Tamworth/docs/plans/tamworth-ratatui-brand-graphics-plan.md`
-- Persona ratatui experience plan (command-center framing, capability panel,
-  receipt mode, trust boundary lens, information architecture):
-  `/Users/c/Documents/GitHub/persona/docs/plans/persona-ratatui-brand-graphics-plan.md`
+RunHaven-family ideas folded into this document include deterministic
+rendering, pure-Rust supply-chain gates, snapshot-first harnessing, panic
+isolation, capability panels, receipt mode, trust-boundary review, and compact
+information architecture.
 
 ## Recommendation
 

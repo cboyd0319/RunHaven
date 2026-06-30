@@ -142,15 +142,16 @@ TUI, Tauri, or frontend layers.
   provider-owned Keychain items, browser profiles, cloud credential stores, or
   arbitrary host credentials.
 - TUI image and pet rendering must follow Codex source behavior. Use the pinned
-  upstream Codex TUI source and local Codex config evidence before writing custom pet,
-  terminal image, statusline, bottom-pane, keymap, title, or resume behavior.
+  upstream Codex TUI source and repo-vendored source evidence before writing
+  custom pet, terminal image, statusline, bottom-pane, keymap, title, or resume
+  behavior.
   Cubby, pet polish, mascot work, and terminal image polish are parked, not part
   of this branch's hardening checkpoint. Keep existing pet code as source-first
   infrastructure; do not add a live env-gated smoke path unless a future
   explicitly scoped TUI or GUI slice needs it.
 - TUI implementation slices should use the repo-local
-  `.agents/skills/codex-tui` skill first. It requires the Persona Codex TUI
-  skill (`/Users/c/Documents/GitHub/persona/content/skills/codex-tui`), then
+  `.agents/skills/codex-tui` skill first. It requires the installed
+  `codex-tui` skill, then
   `rust` and `adversarial-review` as the end-of-slice gate before commit: Rust
   crate/tooling correctness, Codex source-pattern alignment, then boundary and
   overclaim review.
@@ -313,7 +314,7 @@ diff, streaming, history-cell, session, status, pet, terminal-title, and
 VT100/snapshot-test systems.
 
 TUI architecture correction: the deeper read of
-`/Users/c/Downloads/codex-tui-capabilities.md` showed that the full
+`docs/plans/codex-tui-capabilities.md` showed that the full
 `ChatComposer` is not the next isolated seam unless RunHaven only uses the small
 `public_widgets::ComposerInput` wrapper. Native Codex TUI behavior is built as
 `Tui` runtime plus `App` event loop plus `ChatWidget` plus `BottomPane`, with
@@ -438,7 +439,7 @@ Latest TUI smoke verification:
 Latest harness review:
 
 - 2026-06-27: Reviewed
-  `/Users/c/Documents/GitHub/learn-harness-engineering/docs/en/resources/`,
+  `Learn Harness Engineering public resources`,
   including the minimal templates, reference notes, OpenAI advanced pack, SOPs,
   and repo-template docs. Decision: keep RunHaven's three-file startup contract
   and map external template concepts onto existing RunHaven owners instead of
@@ -448,8 +449,8 @@ Latest harness review:
 
 Latest TUI strategy review:
 
-- 2026-06-27: Fully read `/Users/c/Downloads/codex-tui-capabilities.md` and
-  checked the conclusion against local Codex source entrypoints for
+- 2026-06-27: Fully read `docs/plans/codex-tui-capabilities.md` and
+  checked the conclusion against repo-vendored and pinned upstream Codex source entrypoints for
   `app_server_session`, `App`, `ChatWidget`, `BottomPane`, `Tui`,
   `TuiEventStream`, and `FrameRequester`. Decision: RunHaven should follow the
   Strategy C compatible-client path, with Strategy B limited to temporary
@@ -460,7 +461,7 @@ Latest TUI strategy review:
 Latest Strategy C plan import:
 
 - 2026-06-27: Imported the split Strategy C plan from
-  `/Users/c/Downloads/runhaven-codex-tui-strategy-c/` into
+  `docs/plans/codex-tui-strategy-c/` into
   `docs/plans/codex-tui-strategy-c/`. Read all five plan files and ran
   read-only adversarial, Rust architecture, and Rust test-architecture reviews.
   The repo copy incorporates the review fixes: do not broadly add Codex backend
@@ -758,7 +759,7 @@ Latest Codex utility crate vendoring:
 
 - 2026-06-27: Added original-name vendored workspace crates for
   `codex-utils-cli`, `codex-utils-elapsed`, and
-  `codex-utils-sleep-inhibitor`, copied from the pinned local Codex source.
+  `codex-utils-sleep-inhibitor`, copied from the pinned upstream Codex source.
   `runhaven-tui` now depends on those authorities for dormant Codex TUI CLI,
   history, exec-cell, and chat turn-lifecycle imports.
 - `codex-utils-sleep-inhibitor` has a scoped `unsafe_code = "allow"` lint
@@ -818,7 +819,7 @@ Latest Codex terminal-detection crate vendoring:
 - 2026-06-28: Promoted `codex-terminal-detection` from the temporary
   `runhaven-tui` self-alias to a real original-name vendored crate under
   `crates/codex/terminal-detection`. The copied source and tests are
-  byte-identical to the pinned local Codex source. `runhaven-tui` now depends
+  byte-identical to the pinned upstream Codex source. `runhaven-tui` now depends
   on the crate directly, and the duplicate local `terminal_detection.rs` and
   `terminal_tests.rs` files were deleted. This removes the last `codex_*`
   self-alias from `runhaven-tui` without changing active TUI behavior.
@@ -1539,6 +1540,16 @@ Latest GUI local prototype:
   wizard: choose agent, choose project, then review access. Each step shows
   only its own controls. The main content area now scrolls inside the app shell
   so compact windows keep the primary action reachable.
+- 2026-06-30 follow-up: Applied the design-spec color and visual decisions to
+  the GUI tokens. The desktop shell now uses native system fonts, teal primary
+  actions, explicit amber warning semantics, and the existing dark navy/slate
+  surface direction. The bundled Geist font dependency was removed.
+- 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
+  skills, examples, and generated docs metadata must not cite machine-local
+  paths, sibling checkouts, download folders, or symbolic local-external
+  placeholders. Use repo-relative paths or public URLs, and cite upstream
+  source with a public repo plus pinned commit. Added
+  `scripts/check-docs-local-paths.sh` as the focused guard.
 - The prototype intentionally did not change `src-tauri/`, add a generic
   command runner, broaden plugins, add signing, add updater work, or require a
   paid Apple Developer Program account. Visual smoke screenshots were captured

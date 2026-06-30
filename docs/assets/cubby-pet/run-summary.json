@@ -1,9 +1,9 @@
 {
   "ok": true,
-  "run_dir": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run",
-  "spritesheet": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/final/spritesheet.webp",
-  "validation": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/final/validation.json",
-  "contact_sheet": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/qa/contact-sheet.png",
-  "review": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/qa/review.json",
-  "package": "/Users/c/.codex/pets/cubby"
+  "run_dir": "docs/assets/generated-pet-run/runhaven-cube-pet-run",
+  "spritesheet": "docs/assets/generated-pet-run/runhaven-cube-pet-run/final/spritesheet.webp",
+  "validation": "docs/assets/generated-pet-run/runhaven-cube-pet-run/final/validation.json",
+  "contact_sheet": "docs/assets/generated-pet-run/runhaven-cube-pet-run/qa/contact-sheet.png",
+  "review": "docs/assets/generated-pet-run/runhaven-cube-pet-run/qa/review.json",
+  "package": "Codex custom pet packagescubby"
 }

@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "frames_root": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames",
+  "frames_root": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames",
   "errors": [],
   "warnings": [
     "jumping used extraction method stable-slots; confirm motion playback remains stable and unclipped"
@@ -17,7 +17,7 @@
       "frames": [
         {
           "index": 0,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/idle/00.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/idle/00.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 26187,
@@ -32,7 +32,7 @@
         },
         {
           "index": 1,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/idle/01.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/idle/01.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25770,
@@ -47,7 +47,7 @@
         },
         {
           "index": 2,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/idle/02.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/idle/02.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25564,
@@ -62,7 +62,7 @@
         },
         {
           "index": 3,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/idle/03.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/idle/03.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25930,
@@ -77,7 +77,7 @@
         },
         {
           "index": 4,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/idle/04.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/idle/04.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 26011,
@@ -92,7 +92,7 @@
         },
         {
           "index": 5,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/idle/05.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/idle/05.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25997,
@@ -118,7 +118,7 @@
       "frames": [
         {
           "index": 0,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-right/00.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-right/00.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25192,
@@ -133,7 +133,7 @@
         },
         {
           "index": 1,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-right/01.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-right/01.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 26623,
@@ -148,7 +148,7 @@
         },
         {
           "index": 2,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-right/02.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-right/02.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 26338,
@@ -163,7 +163,7 @@
         },
         {
           "index": 3,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-right/03.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-right/03.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 27048,
@@ -178,7 +178,7 @@
         },
         {
           "index": 4,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-right/04.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-right/04.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 27286,
@@ -193,7 +193,7 @@
         },
         {
           "index": 5,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-right/05.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-right/05.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25282,
@@ -208,7 +208,7 @@
         },
         {
           "index": 6,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-right/06.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-right/06.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 27785,
@@ -223,7 +223,7 @@
         },
         {
           "index": 7,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-right/07.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-right/07.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 27296,
@@ -249,7 +249,7 @@
       "frames": [
         {
           "index": 0,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-left/00.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-left/00.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25192,
@@ -264,7 +264,7 @@
         },
         {
           "index": 1,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-left/01.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-left/01.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 26623,
@@ -279,7 +279,7 @@
         },
         {
           "index": 2,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-left/02.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-left/02.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 26338,
@@ -294,7 +294,7 @@
         },
         {
           "index": 3,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-left/03.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-left/03.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 27048,
@@ -309,7 +309,7 @@
         },
         {
           "index": 4,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-left/04.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-left/04.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 27286,
@@ -324,7 +324,7 @@
         },
         {
           "index": 5,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-left/05.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-left/05.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25282,
@@ -339,7 +339,7 @@
         },
         {
           "index": 6,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-left/06.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-left/06.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 27785,
@@ -354,7 +354,7 @@
         },
         {
           "index": 7,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running-left/07.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running-left/07.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 27296,
@@ -380,7 +380,7 @@
       "frames": [
         {
           "index": 0,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/waving/00.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/waving/00.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25305,
@@ -395,7 +395,7 @@
         },
         {
           "index": 1,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/waving/01.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/waving/01.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25743,
@@ -410,7 +410,7 @@
         },
         {
           "index": 2,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/waving/02.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/waving/02.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24337,
@@ -425,7 +425,7 @@
         },
         {
           "index": 3,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/waving/03.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/waving/03.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25469,
@@ -453,7 +453,7 @@
       "frames": [
         {
           "index": 0,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/jumping/00.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/jumping/00.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 8350,
@@ -468,7 +468,7 @@
         },
         {
           "index": 1,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/jumping/01.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/jumping/01.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 7693,
@@ -483,7 +483,7 @@
         },
         {
           "index": 2,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/jumping/02.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/jumping/02.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 8152,
@@ -498,7 +498,7 @@
         },
         {
           "index": 3,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/jumping/03.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/jumping/03.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 8128,
@@ -513,7 +513,7 @@
         },
         {
           "index": 4,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/jumping/04.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/jumping/04.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 8354,
@@ -539,7 +539,7 @@
       "frames": [
         {
           "index": 0,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/failed/00.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/failed/00.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24775,
@@ -554,7 +554,7 @@
         },
         {
           "index": 1,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/failed/01.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/failed/01.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 26014,
@@ -569,7 +569,7 @@
         },
         {
           "index": 2,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/failed/02.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/failed/02.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25285,
@@ -584,7 +584,7 @@
         },
         {
           "index": 3,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/failed/03.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/failed/03.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25810,
@@ -599,7 +599,7 @@
         },
         {
           "index": 4,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/failed/04.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/failed/04.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 26425,
@@ -614,7 +614,7 @@
         },
         {
           "index": 5,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/failed/05.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/failed/05.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 27106,
@@ -629,7 +629,7 @@
         },
         {
           "index": 6,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/failed/06.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/failed/06.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24868,
@@ -644,7 +644,7 @@
         },
         {
           "index": 7,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/failed/07.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/failed/07.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25050,
@@ -670,7 +670,7 @@
       "frames": [
         {
           "index": 0,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/waiting/00.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/waiting/00.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 26190,
@@ -685,7 +685,7 @@
         },
         {
           "index": 1,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/waiting/01.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/waiting/01.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25679,
@@ -700,7 +700,7 @@
         },
         {
           "index": 2,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/waiting/02.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/waiting/02.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25765,
@@ -715,7 +715,7 @@
         },
         {
           "index": 3,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/waiting/03.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/waiting/03.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24330,
@@ -730,7 +730,7 @@
         },
         {
           "index": 4,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/waiting/04.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/waiting/04.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 26359,
@@ -745,7 +745,7 @@
         },
         {
           "index": 5,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/waiting/05.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/waiting/05.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24496,
@@ -771,7 +771,7 @@
       "frames": [
         {
           "index": 0,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running/00.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running/00.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24267,
@@ -786,7 +786,7 @@
         },
         {
           "index": 1,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running/01.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running/01.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24723,
@@ -801,7 +801,7 @@
         },
         {
           "index": 2,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running/02.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running/02.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24863,
@@ -816,7 +816,7 @@
         },
         {
           "index": 3,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running/03.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running/03.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24940,
@@ -831,7 +831,7 @@
         },
         {
           "index": 4,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running/04.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running/04.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24858,
@@ -846,7 +846,7 @@
         },
         {
           "index": 5,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/running/05.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/running/05.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25225,
@@ -872,7 +872,7 @@
       "frames": [
         {
           "index": 0,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/review/00.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/review/00.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24603,
@@ -887,7 +887,7 @@
         },
         {
           "index": 1,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/review/01.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/review/01.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25092,
@@ -902,7 +902,7 @@
         },
         {
           "index": 2,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/review/02.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/review/02.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25316,
@@ -917,7 +917,7 @@
         },
         {
           "index": 3,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/review/03.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/review/03.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24573,
@@ -932,7 +932,7 @@
         },
         {
           "index": 4,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/review/04.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/review/04.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 25140,
@@ -947,7 +947,7 @@
         },
         {
           "index": 5,
-          "file": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/frames/review/05.png",
+          "file": "docs/assets/generated-pet-run/runhaven-cube-pet-run/frames/review/05.png",
           "width": 192,
           "height": 208,
           "nontransparent_pixels": 24717,

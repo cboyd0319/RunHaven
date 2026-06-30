@@ -193,8 +193,8 @@ state changes, no trademark use). Attribution lives in `THIRD_PARTY_NOTICES.md`
 and `licenses/codex-Apache-2.0.txt`. Vendored files carry a derived-from header
 and `#[allow(dead_code, clippy::all, clippy::pedantic)]` until wired.
 
-Source-first rule: for any TUI behavior with an equivalent in the local official
-Codex source at `/Users/c/Documents/GitHub/codex/codex-rs/tui`, vendor or adapt
+Source-first rule: for any TUI behavior with an equivalent in the pinned
+upstream Codex source at `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui`, vendor or adapt
 that source before writing custom code. Rare exceptions are RunHaven domain data,
 RunHaven security-boundary mapping, RunHaven asset swaps such as
 `docs/assets/logo.png`, and small glue where Codex has no equivalent. Every
@@ -290,7 +290,8 @@ Key corrections from the Strategy C review:
 - Vendor Codex protocol, utility, and TUI-adjacent crates first, preserving
   original crate names where practical. Keep active RunHaven behavior behind
   the RunHaven backend boundary.
-- Upstream `.snap` files remain external by default in the local Codex checkout.
+- Upstream `.snap` files remain external by default in the pinned upstream
+  baseline.
   RunHaven snapshots are generated only for wired RunHaven behavior.
 
 ## Reference-quality bar (every phase)

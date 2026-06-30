@@ -15,7 +15,6 @@
     "tauri:build": "cd .. && CARGO_TARGET_DIR=\"$PWD/target\" ./ui/node_modules/.bin/tauri build --config src-tauri/tauri.conf.json --debug --no-bundle"
   },
   "dependencies": {
-    "@fontsource-variable/geist": "5.2.9",
     "@tauri-apps/api": "2.11.1",
     "@tauri-apps/plugin-dialog": "2.7.1",
     "class-variance-authority": "0.7.1",

@@ -13,7 +13,7 @@ these projects without a separate license, security, and architecture review.
 
 ## Local Reference Checkouts
 
-The reference repositories were cloned under `/Users/c/Documents/GitHub/`:
+The reference repositories were cloned under `<local-github-workspace>/`:
 
 | Source | Local checkout | Commit reviewed |
 | --- | --- | --- |

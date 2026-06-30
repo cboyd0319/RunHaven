@@ -24,7 +24,7 @@ material.
 The local Learn Harness Engineering resource tree was reviewed from:
 
 ```text
-/Users/c/Documents/GitHub/learn-harness-engineering/docs/en/resources/
+Learn Harness Engineering public resources
 ```
 
 The review covered the minimal templates, reference startup flow, failure-mode

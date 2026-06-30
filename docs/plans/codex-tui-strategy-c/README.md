@@ -103,7 +103,7 @@ that upstream Codex TUI can be diffed and merged later.
 
 Primary sources checked:
 
-- `/Users/c/Downloads/codex-tui-capabilities.md`
+- `docs/plans/codex-tui-capabilities.md`
 - `https://github.com/openai/codex.git`, commit
   `5267e805fb830891c0b23376bcd9cbd382c3473c`
 - `openai/codex:codex-rs/tui/src/`

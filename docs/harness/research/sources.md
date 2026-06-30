@@ -12,7 +12,7 @@ platform support, and packaging practice change over time.
 - Walking Labs, Learn Harness Engineering:
   <https://walkinglabs.github.io/learn-harness-engineering/en/>
 - Local Learn Harness Engineering resource tree:
-  `/Users/c/Documents/GitHub/learn-harness-engineering/docs/en/resources/`
+  `Learn Harness Engineering public resources`
 - AGENTS.md open format:
   <https://agents.md/>
 - Project research ledger:

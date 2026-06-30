@@ -85,6 +85,7 @@ npm --prefix ui run check
 npm --prefix ui test
 npm --prefix ui run test:e2e
 npm --prefix ui run build
+scripts/check-docs-local-paths.sh
 git diff --check
 ```
 
@@ -111,6 +112,15 @@ Tauri launch/run-control behavior.
   gate, including the security and correctness carve-outs.
 - Documentation is product: if a behavior is not documented it does not exist.
   Ship the doc change in the same slice as the behavior.
+- Never commit machine-local absolute paths or local external-source references
+  in docs, startup state, repo-local skills, examples, or generated docs
+  artifacts. This includes personal home-directory paths, download folders,
+  sibling checkouts, local workspace roots, and symbolic local placeholders for
+  those paths. Use repo-relative paths or public URLs. For upstream source,
+  cite a public repository plus pinned commit, for example
+  `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui`. If a
+  local external document is needed as a source, import or summarize it into
+  `docs/` first, then cite the repo copy.
 - User-facing writing is part of the product boundary. Write UI text, menus,
   prompts, warnings, README/usage docs, and setup instructions for
   non-technical users at roughly an 8th grade reading level. Prefer short
@@ -118,8 +128,9 @@ Tauri launch/run-control behavior.
   commands, paths, hosts, and security facts when they matter; explain them in
   plain language instead of hiding them.
 - TUI source-first rule: for `crates/runhaven-tui/src/tui/`, vendor or adapt
-  from the official local Codex TUI source at
-  `/Users/c/Documents/GitHub/codex/codex-rs/tui` before writing custom code.
+  from the pinned upstream Codex TUI source
+  (`openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui`) or
+  the repo-vendored Codex files before writing custom code.
   Custom TUI code is allowed only for RunHaven domain data, security-boundary
   mapping, RunHaven asset swaps such as `docs/assets/logo.png`, or small glue
   where no Codex equivalent exists. Document each exception in the TUI plan or
@@ -176,8 +187,7 @@ Tauri launch/run-control behavior.
 
 ## Specialist Routing
 
-- For Rust work in this repo, use
-  `/Users/c/Documents/GitHub/persona/content/skills/rust`.
+- For Rust work in this repo, use the installed `rust` skill.
 - For non-trivial Rust implementation, review, debugging, or test-gate work,
   use the `rust-expert` and `rust-test-debug-architect` agents with bounded
   ownership, then verify their findings against live files.
@@ -188,10 +198,10 @@ Tauri launch/run-control behavior.
   end-of-slice code review, adversarial review, verification, or proof of
   correctness.
 - For direct Codex CLI behavior or vendored Codex TUI behavior, use
-  `codex-cli-guide` and the local Codex source/config as evidence.
+  `codex-cli-guide`, repo-vendored Codex files, and pinned upstream Codex
+  source as evidence.
 - For RunHaven TUI work, use the repo-local `.agents/skills/codex-tui`
-  skill first. It requires the Persona Codex TUI skill at
-  `/Users/c/Documents/GitHub/persona/content/skills/codex-tui`, then `rust`
+  skill first. It requires the installed `codex-tui` skill, then `rust`
   and `adversarial-review` as the end-of-slice gate before commit: Rust
   crate/tooling correctness, Codex source-pattern alignment, then boundary and
   overclaim review.

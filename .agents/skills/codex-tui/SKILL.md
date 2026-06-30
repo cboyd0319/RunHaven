@@ -14,15 +14,12 @@ RunHaven follows a source-first Strategy C reset. The active goal is to replace
 the former custom TUI with Codex's TUI architecture while keeping RunHaven's
 security boundary intact.
 
-## Required Source Skill
+## Supporting Source Skill
 
-Read the Persona Codex TUI skill before making source-level Codex claims:
+Use the installed `codex-tui` skill before making source-level Codex claims,
+when it is available.
 
-```text
-/Users/c/Documents/GitHub/persona/content/skills/codex-tui
-```
-
-Then load only the Persona references that match the touched surface:
+Load only references that match the touched surface:
 
 - `references/source-map.md` for navigation and source claims.
 - `references/architecture-patterns.md` for app loop, widget ownership, input,
@@ -30,20 +27,20 @@ Then load only the Persona references that match the touched surface:
 - `references/testing-and-build.md` for snapshots, VT100 tests, terminal
   behavior, features, workspace, or packaging.
 
-If the Persona skill or local Codex checkout is unavailable, stop and report
-that gap instead of guessing Codex TUI behavior.
+If the installed skill is unavailable, continue from repo docs, repo-vendored
+source, and pinned upstream source instead of guessing Codex TUI behavior.
 
 ## Evidence Order
 
 Use evidence in this order:
 
 1. RunHaven live files and docs.
-2. Local Codex checkout:
-   `/Users/c/Documents/GitHub/codex/codex-rs/tui`.
-3. Pinned upstream Codex baseline recorded in `current-state.md` and
-   `feature_list.json`.
+2. Repo-vendored Codex files under `crates/codex/` and
+   `crates/runhaven-tui/src/tui/`.
+3. Pinned upstream Codex baseline recorded in `current-state.md`,
+   `feature_list.json`, and `scripts/compare-codex-tui.sh`.
 4. DeepWiki or generated docs as source maps only, verified against local
-   source before acting.
+   repo source before acting.
 
 For active strategy work, read the focused plan file under:
 
@@ -160,7 +157,8 @@ For RunHaven TUI implementation slices, run the requested review sequence
 before commit:
 
 1. `rust`: crate/tooling correctness, ownership, features, and tests.
-2. Persona `codex-tui`: source-pattern alignment with local Codex.
+2. `codex-tui`: source-pattern alignment with repo-vendored and pinned
+   upstream Codex.
 3. `adversarial-review`: boundary, overclaim, dormant-path, and simplification
    review.
 

@@ -61,8 +61,8 @@ RunHaven safety layer, not like a data operations console.
 
 ## Codex Source First
 
-The TUI implementation vendors first from the official local Codex source at
-`/Users/c/Documents/GitHub/codex/codex-rs/tui`. Before adding custom TUI code,
+The TUI implementation vendors first from the pinned upstream Codex source at
+`openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui`. Before adding custom TUI code,
 check that source for an equivalent behavior and vendor or adapt it with
 attribution. This is mandatory for pet behavior, animation timing, ambient
 placement, terminal image protocols, welcome/header layout patterns, terminal

@@ -179,13 +179,13 @@
   ],
   "references": [
     {
-      "path": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/references/reference-01.png",
+      "path": "docs/assets/generated-pet-run/runhaven-cube-pet-run/references/reference-01.png",
       "width": 1254,
       "height": 1254,
       "mode": "RGB",
       "format": "PNG",
-      "source_path": "/Users/c/Downloads/runhaven/ChatGPT Image Jun 26, 2026, 07_10_26 PM (1).png",
-      "copied_path": "/Users/c/Downloads/runhaven/runhaven-cube-pet-run/references/reference-01.png"
+      "source_path": "source not retained in repo",
+      "copied_path": "docs/assets/generated-pet-run/runhaven-cube-pet-run/references/reference-01.png"
     }
   ],
   "chroma_key": {

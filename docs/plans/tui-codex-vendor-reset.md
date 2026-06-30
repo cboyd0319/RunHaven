@@ -17,8 +17,7 @@ culling decisions, and user-facing copy that non-technical users can understand.
 
 ## Comparison Evidence
 
-The dbt-wizard comparison note at
-`/Users/c/Downloads/runhaven-dbt-wizard-codex-tui-direction.md` is useful
+An earlier dbt-wizard comparison note was folded into this plan. It is useful
 evidence, not a product direction to copy wholesale.
 
 The Codex capability map at
@@ -51,13 +50,14 @@ future Tauri/React surface should consume the same payload shape.
 Primary source:
 
 ```text
-/Users/c/Documents/GitHub/codex/codex-rs/tui/src/
+openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/
 ```
 
-The intent is to fully replace the current custom `crates/runhaven-tui/src/tui/` tree
-with vendored Codex TUI source, then make RunHaven changes from that baseline.
+The intent is to fully replace the current custom `crates/runhaven-tui/src/tui/`
+tree with vendored Codex TUI source, then make RunHaven changes from that
+baseline.
 
-Local Codex configuration evidence:
+Codex configuration shape to preserve where useful:
 
 ```toml
 [tui]
@@ -74,21 +74,19 @@ status_line_use_colors = true
 pet = "custom:cubby"
 ```
 
-Observed local custom pet packages:
+Codex custom pet package shape:
 
 ```text
-/Users/c/.codex/pets/cubby/pet.json
-/Users/c/.codex/pets/cubby/spritesheet.webp
-/Users/c/.codex/pets/ginger/pet.json
-/Users/c/.codex/pets/ginger/spritesheet.webp
-/Users/c/.codex/pets/prism-pip/pet.json
-/Users/c/.codex/pets/prism-pip/spritesheet.webp
+Codex custom pet package cubby/pet.json
+Codex custom pet package cubby/spritesheet.webp
+Codex custom pet package ginger/pet.json
+Codex custom pet package ginger/spritesheet.webp
+Codex custom pet package prism-pip/pet.json
+Codex custom pet package prism-pip/spritesheet.webp
 ```
 
-Each observed spritesheet is a `1536x1872` WebP, matching the Codex custom pet
-contract. Treat `/Users/c/.codex/config.toml` and `/Users/c/.codex/pets/` as
-local evidence for Codex behavior, not as repo source to copy wholesale. Do not
-commit auth files, history, logs, SQLite state, or private user config.
+Codex custom pet spritesheets use the Codex package contract. Do not commit
+auth files, history, logs, SQLite state, or private user config.
 
 ## Desired Foundation
 
@@ -213,10 +211,8 @@ pet picker, and ambient rendering path.
 
 Why leaving and adapting is better than removing:
 
-- `/Users/c/.codex/config.toml` already uses `pet = "custom:cubby"` under the
-  native `[tui]` table.
-- `/Users/c/.codex/pets/cubby/` already matches the Codex custom pet package
-  contract and loads through the same picker path as other custom pets.
+- The desired RunHaven pet package should use the Codex custom pet package
+  contract and load through the same picker path as other custom pets.
 - Removing this path would force RunHaven to rebuild pet selection, package
   loading, preview, cache, animation, and terminal-image behavior.
 - RunHaven's desired Cubby default can be a configuration/default-selection
@@ -238,7 +234,7 @@ Why leaving and adapting is better than removing:
 - The Codex frame scheduler from `tui/frame_requester.rs` now compiles with
   Tokio, matching upstream behavior instead of replacing it with a custom loop.
 - `terminal_detection.rs` and `terminal_tests.rs` are copied from
-  `/Users/c/Documents/GitHub/codex/codex-rs/terminal-detection/src/` because
+  `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/terminal-detection/src/` because
   the pet protocol decision needs the same iTerm2, Kitty, Sixel, tmux, and
   Zellij behavior as Codex.
 - `pets/picker.rs` and `pets/preview.rs` stay vendored but are staged until the

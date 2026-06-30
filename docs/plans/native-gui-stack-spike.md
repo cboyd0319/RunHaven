@@ -65,7 +65,7 @@ Svelte shadcn evidence:
 
 `agmmnn/tauri-ui` evidence:
 
-- The local checkout is `gui-ref-agmmnn-tauri-ui` at commit `0cfd2a7`.
+- Reviewed `agmmnn/tauri-ui` at commit `0cfd2a7`.
 - It is a scaffold and docs project, not an Apple `container` GUI.
 - Its useful ideas are desktop shell defaults: hidden-until-first-paint,
   dedicated scroll shell, no rubber-band overscroll, desktop-like selection
@@ -75,7 +75,7 @@ Svelte shadcn evidence:
 
 `satnaing/shadcn-admin` evidence:
 
-- The local checkout is `gui-ref-satnaing-shadcn-admin` at commit `e16c87f`.
+- Reviewed `satnaing/shadcn-admin` at commit `e16c87f`.
 - It is a React 19, Vite 8, Tailwind 4, and shadcn-oriented admin shell under
   the MIT license.
 - Its useful ideas are a polished sidebar layout, command-search pattern,

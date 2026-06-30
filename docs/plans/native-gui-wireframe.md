@@ -81,7 +81,7 @@ Use a simple macOS-style layout:
 │ Start         │ Start a safe agent run            │ Safety summary         │
 │ Runs          │                                   │                        │
 │ History       │ Project                           │ Shared with agent      │
-│ Diagnostics   │ [ /Users/c/project          Pick ]│ - this project folder  │
+│ Diagnostics   │ [ <project-folder>          Pick ]│ - this project folder  │
 │ Settings      │                                   │ - isolated agent state │
 │               │ Agent                             │                        │
 │               │ [ Claude Code             v ]     │ Not shared             │
@@ -165,7 +165,7 @@ dashboards.
 ```text
 Start a safe agent run
 
-Project        /Users/c/project
+Project        <project-folder>
 Agent          Claude Code
 
 Claude is not ready yet.
@@ -190,7 +190,7 @@ Plan review is a sheet or in-page review step, not a wall of command output.
 │ Review safe plan                                     │
 │                                                      │
 │ Agent        Claude Code                             │
-│ Project      /Users/c/project                        │
+│ Project      <project-folder>                        │
 │ Network      Provider only                           │
 │ Workspace    Current folder only                     │
 │ State        Isolated Claude state                   │
@@ -226,7 +226,7 @@ through logs or diagnostics to see whether the run is alive.
 │ RunHaven                                                   Claude Running │
 ├───────────────┬───────────────────────────────────┬────────────────────────┤
 │ Start         │ Claude is running                 │ Run details            │
-│ Runs          │ Project: /Users/c/project          │                        │
+│ Runs          │ Project: <project-folder>          │                        │
 │ History       │ Network: Provider only             │ Started 2 minutes ago  │
 │ Diagnostics   │ State: running                     │ Container healthy      │
 │ Settings      │                                   │ Provider only network  │
@@ -255,8 +255,8 @@ showing a forensic interface first.
 History
 
 Today
-Claude Code     /Users/c/project       finished       18 minutes ago
-Codex           /Users/c/other         stopped        1 hour ago
+Claude Code     <project-folder>       finished       18 minutes ago
+Codex           <other-project-folder>         stopped        1 hour ago
 
 [ Review run ] opens a readable summary.
 [ Show diff ] requires confirmation before loading content.

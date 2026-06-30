@@ -6,7 +6,7 @@ vendor-first plan.
 - Audit date: 2026-06-27
 - Auditor scope: `crates/runhaven-tui/`, the vendored Codex baseline, and
   RunHaven state docs.
-- Baseline for drift: local Codex checkout `5267e805fb830891c0b23376bcd9cbd382c3473c`,
+- Baseline for drift: upstream Codex commit `5267e805fb830891c0b23376bcd9cbd382c3473c`,
   verified to be exactly the commit pinned in
   `crates/runhaven-tui/src/tui/README.md` (0 commits ahead). Every "modified"
   finding below is a RunHaven edit, not upstream drift.
@@ -99,7 +99,7 @@ A residue of the abandoned custom TUI survives in the current scaffolding:
 
 At audit time, the plan existed in two places and was **not** in sync:
 
-| File | Downloads copy (this folder) | In-repo `docs/plans/codex-tui-strategy-c/` |
+| File | Pre-import draft | In-repo `docs/plans/codex-tui-strategy-c/` |
 | --- | --- | --- |
 | README.md | baseline | +20/-11 |
 | 01-source-inventory.md | baseline | +25/-22 |
@@ -107,7 +107,7 @@ At audit time, the plan existed in two places and was **not** in sync:
 | 03-runtime-wiring.md | baseline | +15/-7 |
 | 04-implementation-and-verification.md | baseline (Phases 0-7) | **+211/-46** (Phases 0-8, with per-phase Status) |
 
-The repo copy inserted two phases the Downloads copy lacked ("Phase 3: Compile
+The repo copy inserted two phases the pre-import draft lacked ("Phase 3: Compile
 The Dormant Runtime Spine", "Phase 4: Prove Terminal Handoff"), renumbered
 App/BottomPane to Phase 5, ChatWidget to 6, product screens to 7, cull to 8,
 and added explicit `Status:` blocks marking Phases 0-4 complete.
@@ -349,8 +349,8 @@ are now real vendored modules. The remaining D2 debt is `app_event_shared.rs`,
   in `tui/README.md` flagging `with_restored` as a known non-mergeable region so
   the next upstream sync expects a manual reconcile.
 - Audit correction: an earlier pass speculated `terminal_palette.rs` "predates
-  an upstream fix." That is wrong. The local Codex checkout is the exact pinned
-  commit, so the `terminal_palette.rs` change is a deliberate RunHaven edit
+  an upstream fix." That is wrong. The comparison baseline is the exact pinned
+  upstream commit, so the `terminal_palette.rs` change is a deliberate RunHaven edit
   (documented: it substitutes the bounded probe because RunHaven did not adopt
   Codex's pinned crossterm fork), not upstream moving ahead.
 
@@ -516,8 +516,8 @@ Verdict: **intact in compiled code; guarded latent risk remains.**
   `launch_wizard.rs`, `app_server_client.rs`, `app_server_session.rs`,
   `terminal_handoff.rs`, and the modified vendored files.
 - State reconciliation: `feature_list.json`, `current-state.md`,
-  `docs/plans/codex-tui-strategy-c/*` vs this Downloads copy.
-- Baseline verification: local Codex `git rev-parse HEAD` == pinned commit.
+  `docs/plans/codex-tui-strategy-c/*` vs the pre-import draft.
+- Baseline verification: upstream Codex source matched the pinned commit.
 
 Confidence: high on structural and security findings (commit-exact diff, direct
 reads). The active-file count (~14%) is an inspection estimate, not a build

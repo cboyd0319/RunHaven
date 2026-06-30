@@ -2,7 +2,8 @@
 
 Reviewed: 2026-06-15
 
-Scope: manual review of sibling local checkouts `awman`, `aspec`, and `maki`.
+Scope: manual review of sibling repository snapshots `awman`, `aspec`, and
+`maki`.
 AGY/Antigravity was not used for this pass.
 
 RunHaven remains macOS 26+ only and Apple `container` only. The goal of this

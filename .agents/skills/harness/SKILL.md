@@ -31,10 +31,10 @@ RunHaven uses a lightweight five-part harness:
   before adding a new harness file.
 - Do not require HarnessForge or any optional owner tool for ordinary
   contributor verification.
-- Do not add new machine-local paths, personal tool mandates, credential
-  rotation, cloud-cost actions, pushes, PRs, or broad automation. Existing
-  repo-approved Persona and local Codex evidence paths in `AGENTS.md` are the
-  narrow exception for Codex TUI source-first work.
+- Do not add new machine-local paths, local external-source references,
+  personal tool mandates, credential rotation, cloud-cost actions, pushes,
+  PRs, or broad automation. Use repo-owned files, public URLs, or pinned
+  upstream source references instead.
 - Treat structural scores as advisory signals, not proof of agent
   effectiveness.
 - Record only current state and meaningful verification. Keep raw logs and long

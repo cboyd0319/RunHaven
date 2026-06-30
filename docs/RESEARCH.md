@@ -60,12 +60,12 @@ Important distinction:
 
 - Runtime pins follow the installed, signed Apple `container` 1.0.0 release and
   live CLI output.
-- The local Apple `container` checkout was observed at
+- An upstream Apple `container` source snapshot was observed at
   `c8b4fd73a1b1696a1c6533e4de85bdedfa8fc5fc` (`1.0.0-4-gc8b4fd7`) on
   2026-06-14, which is newer than the installed release commit. Do not update
-  runtime pins from that local checkout unless the installed runtime is also
+  runtime pins from that source snapshot unless the installed runtime is also
   updated and verified.
-- The local checkout also references `containerization` `0.33.4`; the installed
+- The source snapshot also references `containerization` `0.33.4`; the installed
   runtime reports `ghcr.io/apple/containerization/vminit:0.33.3`. The installed
   runtime is authoritative for this repo's current pins.
 
@@ -238,9 +238,9 @@ Live agent egress observation on 2026-06-26:
   `*-cloudcode-pa.googleapis.com` so region or channel prefixes need no re-pin
   while `storage.googleapis.com` and other googleapis.com services stay denied.
 
-Local reference harness:
+Reference harness materials:
 
-- A local reference harness repo was consulted for instruction, pin-check, and
+- Reference harness material was consulted for instruction, pin-check, and
   package layout patterns. Machine-specific paths are intentionally omitted
   from this ledger.
 

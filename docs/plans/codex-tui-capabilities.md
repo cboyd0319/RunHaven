@@ -1,9 +1,10 @@
 # Codex TUI Capabilities And Reuse Guide
 
-Locked into the RunHaven repo on 2026-06-27 from the local reference:
+Locked into the RunHaven repo on 2026-06-27 as a repo-owned source map for the
+pinned upstream Codex baseline:
 
 ```text
-/Users/c/Downloads/codex-tui-capabilities.md
+openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c
 ```
 
 Use this as the source map for deciding which Codex TUI capabilities to vendor,
@@ -24,7 +25,7 @@ them.
 
 This document summarizes the open source `codex-tui` crate under:
 
-`/Users/c/Documents/GitHub/codex/codex-rs/tui`
+`openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui`
 
 It is written for someone evaluating whether to reuse the TUI in another project. The short version: this is not just a widget crate. It is a full terminal client for an agent product, with a mature terminal runtime, chat composer, streaming transcript renderer, approval UX, session management, extension surfaces, and app-server integration.
 
@@ -36,13 +37,13 @@ The repository root describes Codex CLI as a coding agent from OpenAI that runs 
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/README.md:1`
-- `/Users/c/Documents/GitHub/codex/README.md:71`
-- `/Users/c/Documents/GitHub/codex/LICENSE:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/Cargo.toml:129`
-- `/Users/c/Documents/GitHub/codex/codex-rs/Cargo.toml:136`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/Cargo.toml:2`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/Cargo.toml:5`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:README.md:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:README.md:71`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:LICENSE:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/Cargo.toml:129`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/Cargo.toml:136`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/Cargo.toml:2`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/Cargo.toml:5`
 
 ## Crate Shape
 
@@ -56,14 +57,14 @@ The manifest shows the crate is built on `crossterm`, `ratatui`, `tokio`, `pulld
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/Cargo.toml:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/Cargo.toml:8`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/Cargo.toml:18`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/Cargo.toml:24`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/Cargo.toml:71`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/Cargo.toml:82`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/Cargo.toml:116`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/Cargo.toml:147`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/Cargo.toml:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/Cargo.toml:8`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/Cargo.toml:18`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/Cargo.toml:24`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/Cargo.toml:71`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/Cargo.toml:82`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/Cargo.toml:116`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/Cargo.toml:147`
 
 ## High-Level Architecture
 
@@ -80,14 +81,14 @@ The TUI is organized around these layers:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/main.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/lib.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/lib.rs:849`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/mod.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/main.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/lib.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/lib.rs:849`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/mod.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui.rs:1`
 
 ## Terminal Runtime Capabilities
 
@@ -109,17 +110,17 @@ The terminal layer handles many edge cases that are easy to miss in custom TUIs:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui.rs:175`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui.rs:282`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui.rs:302`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui.rs:376`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui.rs:513`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui.rs:633`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui.rs:690`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui/event_stream.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui/event_stream.rs:51`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui/event_stream.rs:139`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/notifications/mod.rs:14`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui.rs:175`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui.rs:282`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui.rs:302`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui.rs:376`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui.rs:513`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui.rs:633`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui.rs:690`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui/event_stream.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui/event_stream.rs:51`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui/event_stream.rs:139`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/notifications/mod.rs:14`
 
 ## CLI And Launch Capabilities
 
@@ -139,17 +140,17 @@ The TUI supports:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/cli.rs:10`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/cli.rs:13`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/cli.rs:17`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/cli.rs:62`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/cli.rs:66`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/cli.rs:72`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/lib.rs:347`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/lib.rs:849`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/lib.rs:868`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/lib.rs:1723`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/lib.rs:1865`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/cli.rs:10`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/cli.rs:13`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/cli.rs:17`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/cli.rs:62`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/cli.rs:66`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/cli.rs:72`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/lib.rs:347`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/lib.rs:849`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/lib.rs:868`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/lib.rs:1723`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/lib.rs:1865`
 
 ## App-Server Integration
 
@@ -175,19 +176,19 @@ It can:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:229`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:252`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:421`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:493`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:519`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:749`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:813`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:827`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:916`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:1074`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs:1093`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session/fs.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:229`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:252`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:421`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:493`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:519`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:749`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:813`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:827`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:916`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:1074`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs:1093`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session/fs.rs:1`
 
 ## Main Chat Surface
 
@@ -207,13 +208,13 @@ Important behaviors include:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget.rs:203`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_event.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_event.rs:139`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_event.rs:250`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_event.rs:520`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_event.rs:753`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget.rs:203`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_event.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_event.rs:139`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_event.rs:250`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_event.rs:520`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_event.rs:753`
 
 ## Composer And Bottom Pane
 
@@ -240,19 +241,19 @@ The easiest standalone component is `public_widgets::ComposerInput`, which wraps
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/mod.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/mod.rs:79`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/mod.rs:85`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/mod.rs:208`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/chat_composer.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/chat_composer.rs:12`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/chat_composer.rs:19`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/chat_composer.rs:62`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/chat_composer.rs:73`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/chat_composer.rs:92`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/chat_composer.rs:127`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/public_widgets/composer_input.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/public_widgets/composer_input.rs:28`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/mod.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/mod.rs:79`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/mod.rs:85`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/mod.rs:208`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/chat_composer.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/chat_composer.rs:12`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/chat_composer.rs:19`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/chat_composer.rs:62`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/chat_composer.rs:73`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/chat_composer.rs:92`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/chat_composer.rs:127`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/public_widgets/composer_input.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/public_widgets/composer_input.rs:28`
 
 ## Slash Commands
 
@@ -283,11 +284,11 @@ Available commands include:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/slash_command.rs:12`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/slash_command.rs:65`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/slash_command.rs:133`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/slash_command.rs:162`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/slash_command.rs:258`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/slash_command.rs:12`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/slash_command.rs:65`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/slash_command.rs:133`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/slash_command.rs:162`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/slash_command.rs:258`
 
 ## Selection Views And Popups
 
@@ -312,13 +313,13 @@ This is a good source of patterns for building dense, keyboard-driven operationa
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/mod.rs:35`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/mod.rs:111`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/mod.rs:122`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/list_selection_view.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/multi_select_picker.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/request_user_input/mod.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/mcp_server_elicitation.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/mod.rs:35`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/mod.rs:111`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/mod.rs:122`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/list_selection_view.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/multi_select_picker.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/request_user_input/mod.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/mcp_server_elicitation.rs`
 
 ## Approval And Permission UX
 
@@ -336,11 +337,11 @@ This is a useful model for any app that needs human-in-the-loop approval of risk
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/approval_overlay.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/approval_overlay.rs:72`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/approval_overlay.rs:159`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_approval_conversions.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/permission_compat.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/approval_overlay.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/approval_overlay.rs:72`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/approval_overlay.rs:159`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_approval_conversions.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/permission_compat.rs:1`
 
 ## Transcript And History Cells
 
@@ -358,13 +359,13 @@ This design is valuable if your app has multiple output types and needs consiste
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/history_cell/mod.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/history_cell/mod.rs:111`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/history_cell/mod.rs:145`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/history_cell/mod.rs:189`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/thread_transcript.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/thread_transcript.rs:23`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/thread_transcript.rs:35`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/history_cell/mod.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/history_cell/mod.rs:111`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/history_cell/mod.rs:145`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/history_cell/mod.rs:189`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/thread_transcript.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/thread_transcript.rs:23`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/thread_transcript.rs:35`
 
 ## Markdown Rendering
 
@@ -380,15 +381,15 @@ The markdown renderer is built on `pulldown-cmark` and emits styled ratatui line
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/markdown_render.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/markdown_render.rs:13`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/markdown_render.rs:298`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/terminal_hyperlinks.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/terminal_hyperlinks.rs:33`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/terminal_hyperlinks.rs:147`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/wrapping.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/wrapping.rs:508`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/wrapping.rs:528`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/markdown_render.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/markdown_render.rs:13`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/markdown_render.rs:298`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/terminal_hyperlinks.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/terminal_hyperlinks.rs:33`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/terminal_hyperlinks.rs:147`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/wrapping.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/wrapping.rs:508`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/wrapping.rs:528`
 
 ## Syntax Highlighting And Themes
 
@@ -403,10 +404,10 @@ The syntax highlighter wraps syntect with two-face grammars and themes. It provi
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/render/highlight.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/render/highlight.rs:81`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/render/highlight.rs:136`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/render/highlight.rs:199`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/render/highlight.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/render/highlight.rs:81`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/render/highlight.rs:136`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/render/highlight.rs:199`
 
 ## Diff Rendering
 
@@ -422,11 +423,11 @@ The diff renderer is one of the more polished standalone pieces. It renders unif
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/diff_render.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/diff_render.rs:86`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/diff_render.rs:189`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/diff_render.rs:199`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/diff_render.rs:215`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/diff_render.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/diff_render.rs:86`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/diff_render.rs:189`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/diff_render.rs:199`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/diff_render.rs:215`
 
 ## Streaming Output
 
@@ -444,18 +445,18 @@ This design is worth studying if your project streams model output, logs, test o
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/controller.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/controller.rs:12`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/controller.rs:22`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/controller.rs:73`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/controller.rs:462`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/controller.rs:574`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/chunking.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/chunking.rs:119`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/chunking.rs:137`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/chunking.rs:157`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/markdown_stream.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/markdown_stream.rs:30`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/controller.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/controller.rs:12`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/controller.rs:22`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/controller.rs:73`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/controller.rs:462`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/controller.rs:574`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/chunking.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/chunking.rs:119`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/chunking.rs:137`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/chunking.rs:157`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/markdown_stream.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/markdown_stream.rs:30`
 
 ## Keymap System
 
@@ -473,14 +474,14 @@ The keymap system resolves config into a runtime snapshot. It handles:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/keymap.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/keymap.rs:44`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/keymap.rs:58`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/keymap.rs:146`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/keymap.rs:255`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/keymap_setup.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/keymap_setup.rs:70`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/keymap_setup.rs:74`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/keymap.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/keymap.rs:44`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/keymap.rs:58`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/keymap.rs:146`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/keymap.rs:255`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/keymap_setup.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/keymap_setup.rs:70`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/keymap_setup.rs:74`
 
 ## File Search And Mentions
 
@@ -488,12 +489,12 @@ The TUI supports `@` file search and a unified mention popup. File search is ses
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/file_search.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/file_search.rs:16`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/file_search.rs:29`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/mentions_v2/mod.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/mention_codec.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/plugin_mentions.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/file_search.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/file_search.rs:16`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/file_search.rs:29`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/mentions_v2/mod.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/mention_codec.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/plugin_mentions.rs`
 
 ## Apps, Skills, Plugins, MCP, And Hooks
 
@@ -537,25 +538,25 @@ Hooks:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/connectors.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/connectors.rs:16`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/connectors.rs:57`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/connectors.rs:142`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/skills.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/skills.rs:73`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/skills.rs:154`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/plugins.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/plugins.rs:42`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/plugins.rs:49`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/plugins.rs:64`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/plugins.rs:202`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_event.rs:638`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_event.rs:644`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/mcp_startup.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/mcp_startup.rs:18`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/hooks_browser_view.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/hooks_rpc.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/startup_hooks_review.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/connectors.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/connectors.rs:16`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/connectors.rs:57`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/connectors.rs:142`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/skills.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/skills.rs:73`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/skills.rs:154`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/plugins.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/plugins.rs:42`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/plugins.rs:49`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/plugins.rs:64`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/plugins.rs:202`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_event.rs:638`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_event.rs:644`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/mcp_startup.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/mcp_startup.rs:18`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/hooks_browser_view.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/hooks_rpc.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/startup_hooks_review.rs`
 
 ## Sessions, Resume, Fork, Archive, And Delete
 
@@ -576,15 +577,15 @@ The session layer supports:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/resume_picker.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/resume_picker.rs:66`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/resume_picker.rs:97`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/resume_picker.rs:105`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/resume_picker.rs:209`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/session_archive_commands.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/session_archive_commands.rs:216`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/session_resume.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/thread_transcript.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/resume_picker.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/resume_picker.rs:66`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/resume_picker.rs:97`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/resume_picker.rs:105`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/resume_picker.rs:209`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/session_archive_commands.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/session_archive_commands.rs:216`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/session_resume.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/thread_transcript.rs:1`
 
 ## Onboarding And Auth
 
@@ -601,12 +602,12 @@ The onboarding UI includes:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/onboarding/mod.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/onboarding/auth.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/onboarding/auth.rs:48`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/onboarding/auth.rs:74`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/onboarding/auth/headless_chatgpt_login.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/onboarding/trust_directory.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/onboarding/mod.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/onboarding/auth.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/onboarding/auth.rs:48`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/onboarding/auth.rs:74`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/onboarding/auth/headless_chatgpt_login.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/onboarding/trust_directory.rs`
 
 ## Clipboard, Images, External Editor, And Terminal Extras
 
@@ -625,15 +626,15 @@ The TUI has robust local terminal utilities:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/clipboard_copy.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/clipboard_copy.rs:26`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/clipboard_copy.rs:40`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/clipboard_paste.rs:51`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/clipboard_paste.rs:121`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/external_editor.rs:33`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/external_editor.rs:54`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/title_setup.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/status_line_setup.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/clipboard_copy.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/clipboard_copy.rs:26`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/clipboard_copy.rs:40`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/clipboard_paste.rs:51`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/clipboard_paste.rs:121`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/external_editor.rs:33`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/external_editor.rs:54`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/title_setup.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/status_line_setup.rs`
 
 ## Terminal Pets
 
@@ -653,14 +654,14 @@ This is less relevant to most operational apps, but it is a useful reference for
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/pets/mod.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/pets/mod.rs:50`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/pets/mod.rs:51`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/pets/mod.rs:60`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/pets/mod.rs:100`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/pets/image_protocol.rs:27`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/pets/image_protocol.rs:34`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/pets/image_protocol.rs:112`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/pets/mod.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/pets/mod.rs:50`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/pets/mod.rs:51`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/pets/mod.rs:60`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/pets/mod.rs:100`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/pets/image_protocol.rs:27`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/pets/image_protocol.rs:34`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/pets/image_protocol.rs:112`
 
 ## Status, Usage, Rate Limits, Goals, And Plans
 
@@ -679,13 +680,13 @@ These are mostly Codex-specific, but the display patterns are reusable for any t
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/status/mod.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/token_usage.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/goal_display.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/goal_files.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/goal_status.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/plan_implementation.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/history_cell/plans.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/status/mod.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/token_usage.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/goal_display.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/goal_files.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/goal_status.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/plan_implementation.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/history_cell/plans.rs`
 
 ## Testing And Verification Infrastructure
 
@@ -699,14 +700,14 @@ The crate has meaningful test infrastructure:
 
 References:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/tests/all.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/tests/suite/mod.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/test_backend.rs:21`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/tests/suite/vt100_history.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/tests/suite/vt100_live_commit.rs:1`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/BUILD.bazel:3`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/BUILD.bazel:25`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/BUILD.bazel:27`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/tests/all.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/tests/suite/mod.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/test_backend.rs:21`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/tests/suite/vt100_history.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/tests/suite/vt100_live_commit.rs:1`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/BUILD.bazel:3`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/BUILD.bazel:25`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/BUILD.bazel:27`
 
 Typical local commands from the repo instructions:
 
@@ -726,7 +727,7 @@ Best if you want a polished prompt input without inheriting the full Codex app. 
 
 Source:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/public_widgets/composer_input.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/public_widgets/composer_input.rs`
 
 ### 2. Markdown, Hyperlink, Wrapping, And Diff Rendering
 
@@ -734,12 +735,12 @@ Best if your app renders model output, logs, diffs, findings, file links, or tab
 
 Sources:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/markdown_render.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/markdown.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/terminal_hyperlinks.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/wrapping.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/diff_render.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/render/highlight.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/markdown_render.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/markdown.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/terminal_hyperlinks.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/wrapping.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/diff_render.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/render/highlight.rs`
 
 ### 3. Streaming Controller Design
 
@@ -747,9 +748,9 @@ Best if your app streams generated text or command output. The stable/tail split
 
 Sources:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/controller.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/chunking.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/markdown_stream.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/controller.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/chunking.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/markdown_stream.rs`
 
 ### 4. Terminal Runtime
 
@@ -757,11 +758,11 @@ Best if you need robust terminal setup/restore and event handling.
 
 Sources:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui/event_stream.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui/frame_requester.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui/frame_rate_limiter.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui/job_control.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui/event_stream.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui/frame_requester.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui/frame_rate_limiter.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui/job_control.rs`
 
 ### 5. Keymap And Picker Patterns
 
@@ -769,10 +770,10 @@ Best if your app needs user-customizable keyboard shortcuts and searchable comma
 
 Sources:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/keymap.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/keymap_setup.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/list_selection_view.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/selection_tabs.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/keymap.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/keymap_setup.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/list_selection_view.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/selection_tabs.rs`
 
 ### 6. Approval Overlay Pattern
 
@@ -780,7 +781,7 @@ Best if your app executes commands, edits files, or performs risky operations th
 
 Source:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/approval_overlay.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/approval_overlay.rs`
 
 ### 7. Testing Approach
 
@@ -788,11 +789,11 @@ Best if you want reliable terminal UI regression tests.
 
 Sources:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/test_backend.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/tests/suite/vt100_history.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/tests/suite/vt100_live_commit.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/snapshots`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/history_cell/snapshots`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/test_backend.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/tests/suite/vt100_history.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/tests/suite/vt100_live_commit.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/snapshots`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/history_cell/snapshots`
 
 ## Harder Reuse Areas
 
@@ -873,71 +874,71 @@ That gives you the most value while avoiding the heavy Codex-specific app-server
 
 Core entrypoints:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/main.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/lib.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/main.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/lib.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget.rs`
 
 Terminal runtime:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui/event_stream.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui/frame_requester.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/tui/frame_rate_limiter.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/custom_terminal.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui/event_stream.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui/frame_requester.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/tui/frame_rate_limiter.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/custom_terminal.rs`
 
 Composer and bottom pane:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/public_widgets/composer_input.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/mod.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/chat_composer.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/list_selection_view.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/bottom_pane/approval_overlay.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/public_widgets/composer_input.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/mod.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/chat_composer.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/list_selection_view.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/bottom_pane/approval_overlay.rs`
 
 Rendering:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/history_cell/mod.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/markdown_render.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/markdown.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/diff_render.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/render/highlight.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/terminal_hyperlinks.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/wrapping.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/history_cell/mod.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/markdown_render.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/markdown.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/diff_render.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/render/highlight.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/terminal_hyperlinks.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/wrapping.rs`
 
 Streaming:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/controller.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/chunking.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/streaming/table_holdback.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/markdown_stream.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/controller.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/chunking.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/streaming/table_holdback.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/markdown_stream.rs`
 
 App-server and sessions:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/app_server_session/fs.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/resume_picker.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/session_resume.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/session_archive_commands.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/app_server_session/fs.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/resume_picker.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/session_resume.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/session_archive_commands.rs`
 
 Extensions:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/connectors.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/plugins.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/skills.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/chatwidget/mcp_startup.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/hooks_rpc.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/connectors.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/plugins.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/skills.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/chatwidget/mcp_startup.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/hooks_rpc.rs`
 
 Utilities:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/clipboard_copy.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/clipboard_paste.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/external_editor.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/pets/mod.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/clipboard_copy.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/clipboard_paste.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/external_editor.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/pets/mod.rs`
 
 Tests:
 
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/tests/all.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/tests/suite/mod.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/test_backend.rs`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/snapshots`
-- `/Users/c/Documents/GitHub/codex/codex-rs/tui/src/history_cell/snapshots`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/tests/all.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/tests/suite/mod.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/test_backend.rs`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/snapshots`
+- `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui/src/history_cell/snapshots`

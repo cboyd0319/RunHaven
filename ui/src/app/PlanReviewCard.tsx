@@ -85,7 +85,7 @@ export function PlanReviewCard({
         <p className="text-sm text-muted-foreground">{plan.egressSummary}</p>
 
         {plan.warnings.length > 0 ? (
-          <Alert>
+          <Alert variant="warning">
             <CircleAlert />
             <AlertTitle>Warnings need confirmation</AlertTitle>
             <AlertDescription>

@@ -76,8 +76,8 @@ problem, user outcome, security boundary, and verification are clear.
 
 A landscape scan of similar agent-sandbox projects surfaced these candidates.
 Each still requires the design gate above before implementation; provenance is
-recorded for evidence, not endorsement. Source clones for inspection live under
-`~/Documents/GitHub/` (`sand`, `container-use`, `agent-sandbox`).
+recorded for evidence, not endorsement. Source repositories reviewed: `sand`,
+`container-use`, and `agent-sandbox`.
 
 | Idea | Source | Fit / Extends | Risk Note |
 | --- | --- | --- | --- |
