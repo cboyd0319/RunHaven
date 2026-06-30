@@ -66,9 +66,11 @@ that harden the shared backend:
   check.
 - CLI pass: run the existing CLI surface check, inspect command help/output for
   stale TUI/v0.6 wording, and fix any CLI-facing mismatch before merge.
-- GUI handoff: after merge, research existing Apple `container` GUI projects on
-  GitHub and decide whether to build, adapt, or avoid them before starting the
-  native macOS GUI.
+- GUI handoff: initial Apple `container` GUI reference research is captured in
+  `docs/plans/native-gui-reference-pass.md`. Next GUI work should keep
+  RunHaven's typed Tauri boundary, prototype a calmer native-feeling first
+  screen, and switch to SwiftUI only if that prototype fails the native-feel
+  acceptance bar.
 
 ## Startup State Contract
 
@@ -158,6 +160,10 @@ TUI, Tauri, or frontend layers.
 - User-facing writing is product behavior. UI text, menus, prompts, warnings,
   README/usage docs, and setup instructions target non-technical users at about
   an 8th grade reading level.
+- Current GUI prototype work should not require a paid Apple Developer Program
+  membership. Use local dev, no-sign builds, or ad-hoc signing until the
+  maintainer explicitly asks for a distribution pass. Signed and notarized
+  public artifacts remain a later release gate.
 - The hidden Zork I easter egg remains wanted. The current reset keeps the
   MIT-licensed `historicalsource/zork1` collection under `third_party/zork1/`.
   The earlier Ferrif-derived TUI engine was removed with the old custom TUI and
@@ -1511,9 +1517,12 @@ Latest CLI surface pass:
 
 ## Next Step
 
-Commit and push this TUI hardening plus CLI-audit branch, then merge the
-branch/PR. After merge, shift focus to a native-feeling macOS GUI as the easy
-path for nontechnical users. Before designing that GUI, research the existing
-GitHub-hosted Apple `container` GUI work and decide whether RunHaven should
-build, adapt, or avoid it. Do not cut a release, tag, or version bump unless
-the maintainer explicitly asks for a release pass.
+The TUI hardening plus CLI-audit branch is merged. Next product work shifts to
+a native-feeling macOS GUI as the easy path for nontechnical users. The first
+GUI slice should use `docs/plans/native-gui-reference-pass.md`: keep the typed
+RunHaven Tauri boundary, simplify the first screen around safe launch, hide
+developer details behind secondary views, and decide whether SwiftUI is needed
+only after a focused native-feel prototype. Keep the prototype path free of paid
+Apple Developer Program requirements. Do not cut a release, tag, version bump,
+notarization, updater, or public distribution pass unless the maintainer
+explicitly asks for it.
