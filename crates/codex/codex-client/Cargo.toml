@@ -39,7 +39,7 @@ windows-sys = { version = "=0.52.0", features = [
 
 [dev-dependencies]
 codex-utils-cargo-bin = { path = "../utils/cargo-bin" }
-opentelemetry_sdk = { version = "=0.31.0" }
+opentelemetry_sdk = { version = "=0.32.1" }
 pretty_assertions = { version = "=1.4.1" }
 rcgen = { version = "=0.14.7", default-features = false, features = ["aws_lc_rs", "pem"] }
 tempfile = { version = "=3.27.0" }

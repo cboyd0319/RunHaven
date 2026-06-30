@@ -71,7 +71,7 @@ anyhow = { version = "=1.0.102" }
 ctor = { version = "=0.6.3" }
 http = { version = "=1.4.0" }
 opentelemetry = { version = "=0.31.0" }
-opentelemetry_sdk = { version = "=0.31.0" }
+opentelemetry_sdk = { version = "=0.32.1" }
 pretty_assertions = { version = "=1.4.1" }
 rcgen = { version = "=0.14.7", default-features = false, features = ["aws_lc_rs", "pem"] }
 rustls = { version = "=0.23.36", default-features = false, features = ["aws_lc_rs", "std"] }

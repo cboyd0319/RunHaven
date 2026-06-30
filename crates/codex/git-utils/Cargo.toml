@@ -14,7 +14,7 @@ codex-protocol = { path = "../protocol" }
 codex-utils-absolute-path = { path = "../utils/absolute-path" }
 codex-utils-path-uri = { path = "../utils/path-uri" }
 futures = { version = "=0.3.32", default-features = false, features = ["alloc"] }
-gix = { version = "=0.81.0", default-features = false, features = ["sha1"] }
+gix = { version = "=0.83.0", default-features = false, features = ["sha1"] }
 once_cell = { version = "=1.21.4" }
 regex = { version = "=1.12.4" }
 schemars = { version = "=0.8.22" }
