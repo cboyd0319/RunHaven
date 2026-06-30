@@ -70,30 +70,37 @@ Target first pass: one window, about `1080 x 720`, responsive down to
 Use a simple macOS-style layout:
 
 - Left sidebar for sections.
-- Center content for the selected workflow.
-- Right summary rail on wide windows only.
-- On narrow windows, the summary rail stacks below the workflow.
+- Main content for the selected workflow.
+- No persistent right sidebar or default three-pane layout.
+- Plan, access, logs, diagnostics, and advanced details appear as the active
+  main view, a review sheet, or a temporary inspector. They should not compete
+  with the primary workflow by default.
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ [logo] RunHaven                                   Setup Ready       Refresh │
-├───────────────┬───────────────────────────────────┬────────────────────────┤
-│ Start         │ Start a safe agent run            │ Safety summary         │
-│ Runs          │                                   │                        │
-│ History       │ Project                           │ Shared with agent      │
-│ Diagnostics   │ [ <project-folder>          Pick ]│ - this project folder  │
-│ Settings      │                                   │ - isolated agent state │
-│               │ Agent                             │                        │
-│               │ [ Claude Code             v ]     │ Not shared             │
-│               │ Claude Code with isolated state.  │ - home folder          │
-│               │                                   │ - browser profiles     │
-│               │ Network                           │ - cloud credentials    │
-│               │ Provider only                     │ - raw SSH keys         │
-│               │ Only Anthropic hosts are allowed. │                        │
-│               │                                   │ Network                │
-│               │ [ Review safe plan ]              │ Provider only          │
-└───────────────┴───────────────────────────────────┴────────────────────────┘
+├───────────────┬────────────────────────────────────────────────────────────┤
+│ Start         │ Start an agent                                           │
+│ Runs          │                                                           │
+│ History       │ Project                                                   │
+│ Diagnostics   │ [ <project-folder>                                Pick ]  │
+│ Settings      │                                                           │
+│               │ Agent                                                     │
+│               │ [ Claude Code                                      v ]    │
+│               │ Claude Code with isolated project state.                  │
+│               │                                                           │
+│               │ Access                                                    │
+│               │ Shared: this project folder and isolated agent state.     │
+│               │ Not shared: home folder, browser profiles, credentials,   │
+│               │ and raw SSH keys.                                         │
+│               │                                                           │
+│               │ [ Review plan ]                                           │
+└───────────────┴────────────────────────────────────────────────────────────┘
 ```
+
+The wide-window layout may use generous whitespace, but it should not fill that
+space with another permanent column. The app should feel focused, not like a
+dashboard.
 
 ## Start Screen
 
@@ -224,19 +231,19 @@ through logs or diagnostics to see whether the run is alive.
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ RunHaven                                                   Claude Running │
-├───────────────┬───────────────────────────────────┬────────────────────────┤
-│ Start         │ Claude is running                 │ Run details            │
-│ Runs          │ Project: <project-folder>          │                        │
-│ History       │ Network: Provider only             │ Started 2 minutes ago  │
-│ Diagnostics   │ State: running                     │ Container healthy      │
-│ Settings      │                                   │ Provider only network  │
-│               │ [ Stop ] [ Hard stop ] [ Repair ] │                        │
-│               │                                   │ Not shared             │
-│               │ Recent activity                   │ home, browser profiles │
-│               │ Agent started.                    │ credentials, SSH keys  │
-│               │ Provider request allowed.          │                        │
-│               │                                   │ [ Show raw output ]    │
-└───────────────┴───────────────────────────────────┴────────────────────────┘
+├───────────────┬────────────────────────────────────────────────────────────┤
+│ Start         │ Claude is running                                         │
+│ Runs          │ Project: <project-folder>                                │
+│ History       │ Network: Provider only                                   │
+│ Diagnostics   │                                                           │
+│ Settings      │ [ Stop ] [ Hard stop ] [ Repair ]      [ Show details ]  │
+│               │                                                           │
+│               │ Recent activity                                           │
+│               │ Agent started.                                            │
+│               │ Provider request allowed.                                 │
+│               │                                                           │
+│               │ [ Show raw output ]                                       │
+└───────────────┴────────────────────────────────────────────────────────────┘
 ```
 
 Rules:
@@ -245,6 +252,40 @@ Rules:
 - Raw output stays hidden until acknowledged.
 - Logs are bounded.
 - Failure states should lead with the fix, then details.
+- Run details, active mounts, network policy, and approvals open from
+  `Show details` as a sheet, popover, drawer, or replacement detail view. They
+  are not a permanent right pane.
+
+## Embedded Session Direction
+
+The likely long-term active-run shape is a live agent session embedded in the
+main content area. If RunHaven embeds a Codex session, the session should be
+the primary surface after launch, not a third pane.
+
+```text
+┌────────────────────────────────────────────────────────────────────────────┐
+│ RunHaven                                                   Claude Running │
+├───────────────┬────────────────────────────────────────────────────────────┤
+│ Start         │ Claude session                         [ Details ]        │
+│ Runs          │ ┌────────────────────────────────────────────────────────┐ │
+│ History       │ │ live terminal or richer session view                  │ │
+│ Diagnostics   │ │                                                        │ │
+│ Settings      │ │                                                        │ │
+│               │ └────────────────────────────────────────────────────────┘ │
+│               │ [ Stop ] [ Hard stop ] [ Repair ]   [ Show raw output ]  │
+└───────────────┴────────────────────────────────────────────────────────────┘
+```
+
+Security rules for any embedded session:
+
+- Rust/Tauri owns process creation and the reviewed launch plan.
+- The frontend sends input and resize events only for an existing session ID.
+- The frontend cannot request arbitrary host commands, shells, mounts,
+  environment variables, or network policy changes.
+- Session output is bounded or streamed with backpressure, and raw log access
+  keeps the existing warning gate.
+- This wireframe does not authorize a generic PTY bridge. A future embedded
+  session slice must add focused backend contracts and guard tests first.
 
 ## History
 
@@ -327,7 +368,8 @@ by this wireframe.
   activity.
 - Existing diagnostics and output panels move behind the Diagnostics section.
 
-Avoid nested cards. Use full-width panes, rows, sections, and one summary rail.
+Avoid nested cards. Use full-width panes, rows, sections, sheets, and temporary
+inspectors. Do not use a persistent right summary rail in the default layout.
 
 If the stack spike chooses React + shadcn/ui, map the wireframe to shadcn
 primitives first:

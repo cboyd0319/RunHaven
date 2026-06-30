@@ -1544,6 +1544,14 @@ Latest GUI local prototype:
   the GUI tokens. The desktop shell now uses native system fonts, teal primary
   actions, explicit amber warning semantics, and the existing dark navy/slate
   surface direction. The bundled Geist font dependency was removed.
+- 2026-06-30 direction update: The default native GUI layout is two-pane,
+  not a persistent left + center + right dashboard. Keep the left sidebar for
+  app sections and the main pane for the current workflow. Plan details,
+  mounts, network policy, approvals, logs, and diagnostics should open as
+  the active view, a review sheet, or a temporary inspector. A future embedded
+  Codex session should occupy the main pane after launch, with Rust/Tauri
+  owning the reviewed launch plan and the frontend limited to input, resize,
+  and output for an existing session ID.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
