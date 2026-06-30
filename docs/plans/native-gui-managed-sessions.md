@@ -226,6 +226,10 @@ Current slice:
   are reachable only after explicit per-action confirmation
 - capability guard proves managed session run-control commands stay in the
   narrow `run-control` capability
+- `scripts/gui_tauri_live_smoke.sh` proves the no-bundle Tauri shell builds and
+  the selected-session bounded-output plus confirmed-stop command path works
+  against one live Apple `container` run. This is an opt-in local smoke, not a
+  WebView click automation harness.
 
 Future embedded-session slices need focused Rust tests for session ownership,
 unknown ID rejection, bounded input, bounded resize, raw output gating, and

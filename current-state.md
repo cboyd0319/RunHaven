@@ -1608,6 +1608,13 @@ Latest GUI local prototype:
   the narrow `run-control` capability and do not add terminal input, resize,
   attach, generic command execution, filesystem RPC, app-server transport, MCP,
   login, or host-reaching Codex paths.
+- 2026-06-30 GUI/Tauri live smoke: `scripts/gui_tauri_live_smoke.sh` now builds
+  the no-bundle Tauri debug shell, starts one real internal `shell` run through
+  Apple `container`, reads bounded output through
+  `get_managed_session_log_snapshot`, stops the run through
+  `stop_managed_session`, and cleans owned run/state/network resources. The
+  smoke passed locally on macOS 27.0 with Apple `container` 1.0.0. It is an
+  opt-in typed-command live smoke, not WebView click automation.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
@@ -1634,9 +1641,9 @@ Continue local GUI work on this branch. Use
 `docs/plans/native-gui-microsandbox-reference.md` before adding embedded
 terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
 boundary, make safe launch the simplest path, and keep developer details behind
-secondary views. Next useful work is a focused live Tauri smoke of the React
-shell, then design the future typed streaming `SessionLogEntry` contract with
-source, cursor, redaction, and ownership tests before any bounded session input
-or resize commands.
+secondary views. Next useful work is the typed streaming `SessionLogEntry`
+contract with source, cursor, redaction, and ownership tests before any bounded
+session input or resize commands. A later desktop-driver pass can add native
+WebView click automation if it is worth the tooling cost.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.

@@ -13,6 +13,7 @@ changes a security boundary.
 | Rust code | `cargo fmt --check`; focused `cargo test` target; `cargo test --workspace --locked`; `cargo clippy --workspace --all-targets --locked -- -D warnings`; maintainability check for touched modules and duplication |
 | Frontend UI | `npm --prefix ui run check`; `npm --prefix ui test`; `npm --prefix ui run test:e2e`; `npm --prefix ui run build`; relevant Tauri command tests; maintainability check for touched components and adapters |
 | Tauri shell | Frontend checks plus `cargo fmt --check`; `cargo test --workspace --locked` (includes the `capability_guard` scope test); `cargo clippy --workspace --all-targets --locked -- -D warnings`; capability review |
+| GUI/Tauri live managed-session path | `scripts/gui_tauri_live_smoke.sh` on macOS 26+ Apple silicon with Apple `container`; confirms no-bundle Tauri build plus live selected-session bounded output and confirmed stop through typed Tauri commands |
 | CLI command construction | Rust checks plus focused CLI and planning tests |
 | Full CLI surface confirmation | `scripts/cli_surface_check.sh` (breadth: every command family); `scripts/apple_container_smoke.sh --with-provider --with-ssh` (depth: provider egress denial and SSH fail-closed); coverage indexed in `docs/CLI_SURFACE_COVERAGE.md` |
 | Code organization or modularity | Focused tests for moved behavior; stale import/reference scan with `rg`; relevant Rust, Tauri, or frontend checks; verify duplicated logic was deleted or intentionally kept |
@@ -36,6 +37,7 @@ npm --prefix ui test
 npm --prefix ui run test:e2e
 npm --prefix ui run build
 npm --prefix ui run tauri:build
+scripts/gui_tauri_live_smoke.sh
 scripts/check-docs-local-paths.sh
 git diff --check
 ```

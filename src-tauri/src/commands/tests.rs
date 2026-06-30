@@ -661,3 +661,52 @@ fn log_snapshot_reads_live_active_run() {
         assert!(response.truncated);
     }
 }
+
+#[test]
+#[ignore = "requires RUNHAVEN_LIVE_MANAGED_SESSION_RUN_ID and a live RunHaven container"]
+fn managed_session_live_smoke_reads_output_and_stops_run() {
+    let run_id =
+        std::env::var("RUNHAVEN_LIVE_MANAGED_SESSION_RUN_ID").expect("live managed session run id");
+    let expected =
+        std::env::var("RUNHAVEN_LIVE_MANAGED_SESSION_EXPECT").expect("expected log marker");
+    let forbidden_workspace = std::env::var("RUNHAVEN_LIVE_MANAGED_SESSION_FORBIDDEN").ok();
+
+    let sessions = crate::commands::sessions::get_managed_sessions().expect("managed sessions");
+    let session = sessions
+        .sessions
+        .iter()
+        .find(|session| session.run_id == run_id)
+        .expect("live managed session")
+        .clone();
+    let session_id = session.id.clone();
+
+    let encoded_session = serde_json::to_string(&session).expect("serialize managed session");
+    if let Some(workspace) = forbidden_workspace.as_deref() {
+        assert!(
+            !encoded_session.contains(workspace),
+            "managed session leaked workspace path"
+        );
+    }
+    assert!(!encoded_session.contains("write_session_input"));
+    assert!(!encoded_session.contains("attach_session"));
+
+    let log = crate::commands::sessions::get_managed_session_log_snapshot(
+        ManagedSessionLogSnapshotRequest {
+            session_id: session_id.clone(),
+            lines: Some(20),
+            confirm_sensitive_output: true,
+        },
+    )
+    .expect("managed session log snapshot");
+    assert_eq!(log.session.id, session_id);
+    assert_eq!(log.snapshot.run_id, run_id);
+    assert!(log.snapshot.text.contains(&expected));
+
+    let stopped = crate::commands::run_control::stop_managed_session(StopManagedSessionRequest {
+        session_id,
+        confirm_stop: true,
+    })
+    .expect("stop managed session");
+    assert_eq!(stopped.result.run_id, run_id);
+    assert_eq!(stopped.result.status, "stop-requested");
+}
