@@ -5,9 +5,7 @@ use tauri_plugin_dialog::MessageDialogKind;
 use super::dialog::confirm_native;
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{WriteSessionInputRequest, WriteSessionInputResponse};
-use crate::session_input::SessionInputRegistry;
-
-const MAX_SESSION_INPUT_BYTES: usize = 8 * 1024;
+use crate::session_input::{MAX_SESSION_INPUT_BYTES, SessionInputRegistry};
 
 #[tauri::command]
 pub(crate) async fn write_session_input(

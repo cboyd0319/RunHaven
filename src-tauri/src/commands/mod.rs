@@ -4,6 +4,7 @@ use runhaven_core::records::read_run_records;
 use runhaven_core::runtime::active::read_active_run_records;
 use runhaven_core::runtime::login::supports_sandbox_login;
 use runhaven_core::runtime::profiles::profiles;
+use runhaven_core::ui_contracts::project_label;
 use serde_json::Value;
 
 #[cfg(test)]
@@ -134,36 +135,25 @@ fn collect_dashboard_status() -> DashboardStatus {
 
 fn run_summary(record: &Value) -> RunSummary {
     RunSummary {
-        run_id: field(record, "run_id"),
-        profile: field(record, "profile"),
-        workspace: workspace_label(&field(record, "workspace")),
-        network: field(record, "network"),
-        status: field(record, "status"),
-        timestamp: field(record, "timestamp"),
-        auth_scope: field(record, "auth_scope"),
-        session: field(record, "session"),
+        run_id: string_field(record, "run_id"),
+        profile: string_field(record, "profile"),
+        workspace: project_label(&string_field(record, "workspace")),
+        network: string_field(record, "network"),
+        status: string_field(record, "status"),
+        timestamp: string_field(record, "timestamp"),
+        auth_scope: string_field(record, "auth_scope"),
+        session: string_field(record, "session"),
     }
 }
 
-fn field(record: &Value, name: &str) -> String {
-    record
-        .get(name)
-        .and_then(Value::as_str)
-        .unwrap_or("-")
-        .to_string()
-}
-
-fn workspace_label(workspace: &str) -> String {
-    let trimmed = workspace.trim();
-    if trimmed.is_empty() || trimmed == "-" {
-        return "-".to_string();
-    }
-    trimmed
-        .rsplit(['/', '\\'])
-        .find(|part| !part.is_empty())
-        .map(crate::registry_support::strip_control_chars)
-        .filter(|label| !label.is_empty())
-        .unwrap_or_else(|| "-".to_string())
+/// Canonical string-field extractor for command responses. Every value here is
+/// rendered in the WebView, so control characters (terminal escapes included)
+/// are stripped. Command modules under `commands` share this single helper
+/// instead of keeping their own raw copies.
+pub(super) fn string_field(record: &Value, name: &str) -> String {
+    crate::registry_support::strip_control_chars(
+        record.get(name).and_then(Value::as_str).unwrap_or("-"),
+    )
 }
 
 fn defaulted(value: &str, fallback: &str) -> String {

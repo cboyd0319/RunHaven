@@ -23,7 +23,10 @@ pub(super) fn auth_profiles_by_name(payload: &serde_json::Value) -> BTreeMap<Str
         .unwrap_or_default()
 }
 
-pub(super) fn project_label(workspace: &str) -> String {
+/// Reduce a workspace path to a display-safe basename. This is the single label
+/// vocabulary shared by the session list and the desktop dashboard/run status so
+/// the same record cannot render two different labels for edge-case paths.
+pub fn project_label(workspace: &str) -> String {
     let trimmed = workspace.trim();
     if trimmed.is_empty() || trimmed == "-" {
         return "-".to_string();

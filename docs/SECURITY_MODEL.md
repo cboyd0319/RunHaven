@@ -169,6 +169,30 @@ must follow [`EXTENSION_MCP_BOUNDARY.md`](EXTENSION_MCP_BOUNDARY.md): no host
 socket, credential helper, extension, or MCP server is exposed unless the user
 explicitly enables it and the plan can show the exact access before launch.
 
+## Session Input Grant
+
+The desktop app can send typed messages to a running managed session. Sending
+input is a mutating action, so it is gated the same careful way as stop, kill,
+and cleanup: RunHaven shows a native macOS confirmation dialog that names the
+session and its run before any message reaches the agent. The WebView cannot
+approve on its own.
+
+Each message is bounded before it is sent. RunHaven rejects an empty message, a
+message over 8 KB, a message with a NUL byte, and a message that carries a
+terminal escape sequence. It also checks that the selected session still matches
+the one the message was typed for. Any of these checks failing stops the send
+(fail closed).
+
+One confirmation does not last forever. The approval is a grant tied to the
+exact run id, and it only applies while the session is in its normal
+"monitor" state. The grant is metered: RunHaven asks for a fresh native
+confirmation once the messages sent under it add up to 256 KB, or once 30
+minutes have passed, whichever comes first. This keeps a normal back-and-forth
+smooth while making sure a long-lived session cannot be driven indefinitely
+after a single click. The grant is cleared as soon as the session's input
+transport is unregistered (for example when the run ends), so a later run that
+happens to reuse a session name never inherits an old approval.
+
 ## What This Does Not Solve Yet
 
 Internet mode is unrestricted egress within the host's network policy. It is the

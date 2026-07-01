@@ -36,6 +36,7 @@ mod session_cleanup;
 mod session_input;
 mod session_worktree;
 mod sessions;
+mod sessions_diagnostics;
 mod sessions_status;
 mod validation;
 

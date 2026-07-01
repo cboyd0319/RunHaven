@@ -3,6 +3,7 @@ use runhaven_core::diagnostics::{
 };
 use serde_json::Value;
 
+pub(super) use super::string_field;
 use super::validation::{MAX_AGENT_NAME_LEN, validate_text_len};
 use crate::contracts::{
     AuthExplainResponse, AuthLogEntry, AuthLogResponse, AuthProfileStatus, AuthStatusResponse,
@@ -121,14 +122,6 @@ pub(super) fn string_list_field(record: &Value, name: &str) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
-}
-
-pub(super) fn string_field(record: &Value, name: &str) -> String {
-    record
-        .get(name)
-        .and_then(Value::as_str)
-        .unwrap_or("-")
-        .to_string()
 }
 
 /// Like [`string_field`], but returns an empty string when the field is absent.

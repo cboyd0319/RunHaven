@@ -1,4 +1,5 @@
 use runhaven_core::runtime::active::active_run_status_payload;
+use runhaven_core::ui_contracts::project_label;
 use serde_json::Value;
 
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
@@ -26,7 +27,7 @@ pub(crate) fn run_status_response(payload: Value) -> Result<RunStatusResponse, S
         run: RunStatusRun {
             run_id: field(active_run, "run_id"),
             profile: field(active_run, "profile"),
-            workspace: super::workspace_label(&field(active_run, "workspace")),
+            workspace: project_label(&field(active_run, "workspace")),
             network_mode: field(active_run, "network"),
             status: field(active_run, "status"),
             timestamp: field(active_run, "timestamp"),
