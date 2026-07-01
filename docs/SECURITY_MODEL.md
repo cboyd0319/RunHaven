@@ -99,9 +99,8 @@ security notice and is never blocked; choose it explicitly with `--network
 internet` when a run needs package installs or other hosts.
 
 Unsupported, invalid, or nonfunctional paths still fail closed. Examples include
-failed setup checks, invalid input, missing confirmations, unsupported platform
-state, and `--ssh` while the verified Apple `container` non-root forwarding path
-does not work. This is not a policy block around a supported choice; it is a
+failed setup checks, invalid input, missing confirmations, and unsupported
+platform state. This is not a policy block around a supported choice; it is a
 runtime correctness and safety failure.
 
 ## Container Machine Is Not Default
@@ -304,7 +303,8 @@ Use this order:
    volume when possible.
 4. Use `--env NAME` only when a headless run needs a token.
 5. Use `--read-only-workspace` for review and audit tasks.
-6. Treat `--ssh` as disabled until Apple `container` non-root forwarding is
-   verified; do not mount raw SSH keys as a workaround.
+6. Use `--ssh` only when a run needs Git-over-SSH or remote access: it forwards
+   your SSH agent socket (never raw keys) so the sandboxed agent can use your
+   host SSH identities, which is a warned lower-security choice.
 7. Use `--allow-sensitive-workspace` or `--allow-root-user` only when the
    security tradeoff is intentional.
