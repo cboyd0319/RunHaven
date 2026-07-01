@@ -18,6 +18,11 @@ writes when no backend transport is registered or when the registered run no
 longer matches the active session. No production launch path registers a writer
 yet.
 
+RunHaven core now also has an `AgentCommandRunner` seam for standard
+non-provider launches. The normal CLI path still uses `Command::status`, while
+a future GUI runner can retain a backend-owned child stdin handle and register
+it with `SessionInputRegistry`.
+
 Contract checklist: backend-owned session ID, explicit user intent, bounded input,
 cancellation, stale target, multi-session, auth, and resize remains out of scope.
 
@@ -160,6 +165,19 @@ Multi-session:
 - Tests must cover at least two active preview sessions and prove input for one
   session does not appear in the other session's UI state.
 
+Transport evidence:
+
+- Installed Apple `container` 1.0.0 help says `container run --interactive`
+  keeps standard input open and `--tty` opens a TTY.
+- `apple/container@9bd3c473451a40a1ee28f02104826d224636948d` documents that
+  `container run` closes stdin unless `--interactive` is set.
+- The same source shows `container start` does not support attaching to already
+  running containers, and `container exec` creates a new process. Neither is a
+  safe shortcut for sending input to the original agent process.
+- For the GUI, the correct path is to retain the original launch process handle
+  and register a backend-owned writer. If a later TTY session needs a PTY,
+  evaluate the smallest fitting existing utility before writing custom code.
+
 ## Required Tests Before Exposing A Command
 
 Current preflight coverage:
@@ -219,16 +237,19 @@ Live smoke:
 1. Add Rust contract tests around a test-only write seam. Done.
 2. Add request and response structs without granting a capability. Done.
 3. Add a backend-owned input registry without granting a capability. Done.
-4. Decide the real launch transport from RunHaven's GUI needs first. Reuse a
+4. Add a core launch runner seam before changing GUI launch ownership. In
+   progress for standard non-provider launches; provider launches need the same
+   treatment before agent input is exposed.
+5. Decide the real launch transport from RunHaven's GUI needs first. Reuse a
    repo-vendored utility such as `codex-utils-pty` only if it fits the retained
    process-handle model. Do not import Codex app-server, exec-server, MCP,
    login, or filesystem surfaces for GUI input.
-5. Add the fixed Tauri command only after the fail-closed tests exist and the
+6. Add the fixed Tauri command only after the fail-closed tests exist and the
    launch path registers a Rust-owned writer for the session.
-6. Grant only `allow-write-session-input` under `run-control`, not `main-read`.
-7. Add a minimal selected-session composer that calls only the typed command.
-8. Add preview and Playwright tests for two selected sessions.
-9. Add a live smoke only after the Rust path can write to a real backend-owned
+7. Grant only `allow-write-session-input` under `run-control`, not `main-read`.
+8. Add a minimal selected-session composer that calls only the typed command.
+9. Add preview and Playwright tests for two selected sessions.
+10. Add a live smoke only after the Rust path can write to a real backend-owned
    session.
 
 The first implementation must not add `resize_session`. Resize remains out of
