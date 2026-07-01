@@ -172,4 +172,37 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn session_input_registry_stays_off_dormant_codex_transports() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let protected_files = [
+            manifest_dir.join("Cargo.toml"),
+            manifest_dir.join("src").join("session_input.rs"),
+        ];
+        let forbidden = [
+            "codex-app-server",
+            "codex-exec-server",
+            "codex-file-system",
+            "codex-core",
+            "rmcp",
+            "app_server",
+            "exec_server",
+            "filesystem_rpc",
+            "mcp",
+        ];
+
+        for path in protected_files {
+            let raw = fs::read_to_string(&path).expect("read session input boundary file");
+            let normalized = raw.to_ascii_lowercase().replace('-', "_");
+            for item in forbidden {
+                let normalized_item = item.replace('-', "_");
+                assert!(
+                    !normalized.contains(&normalized_item),
+                    "{} pulls dormant Codex transport marker `{item}` into the GUI session input boundary",
+                    path.display()
+                );
+            }
+        }
+    }
 }

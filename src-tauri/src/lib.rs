@@ -2,10 +2,12 @@
 mod capability_guard;
 mod commands;
 mod contracts;
+pub mod session_input;
 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .manage(session_input::SessionInputRegistry::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_setup_status,
             commands::list_agents,

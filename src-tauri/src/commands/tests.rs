@@ -6,6 +6,7 @@ use crate::contracts::{
     ManagedSessionLogSnapshotRequest, RepairManagedSessionRequest, RepairRunResponse,
     StopManagedSessionRequest, StopRunResponse, WriteSessionInputRequest,
 };
+use crate::session_input::SessionInputRegistry;
 use runhaven_core::runtime::active::write_active_run_payload;
 use runhaven_core::support::paths::{CacheRootOverride, override_cache_root_for_tests};
 use serde_json::json;
@@ -660,6 +661,7 @@ fn managed_session_run_control_resolves_session_id_and_stays_confirmed() {
 #[test]
 fn managed_session_input_contract_rejects_before_write() {
     let (_cache, _cache_home) = isolated_cache();
+    let registry = SessionInputRegistry::default();
     write_active_run_payload(
         "managed-session-input",
         json!({
@@ -684,7 +686,7 @@ fn managed_session_input_contract_rejects_before_write() {
             confirm_send: true,
             client_target: "session:missing-session".to_string(),
         },
-        |_, _| unreachable!("unknown sessions must fail before write"),
+        &registry,
     )
     .expect_err("unknown session rejected");
     assert!(missing.contains("managed session not found"));
@@ -696,7 +698,7 @@ fn managed_session_input_contract_rejects_before_write() {
             confirm_send: true,
             client_target: format!("session:{}", "s".repeat(129)),
         },
-        |_, _| unreachable!("oversized session id must fail before write"),
+        &registry,
     )
     .expect_err("oversized session id rejected");
     assert!(oversized_id.contains("session id is too long"));
@@ -708,7 +710,7 @@ fn managed_session_input_contract_rejects_before_write() {
             confirm_send: false,
             client_target: "session:managed-session-input".to_string(),
         },
-        |_, _| unreachable!("unconfirmed input must fail before write"),
+        &registry,
     )
     .expect_err("confirmation required");
     assert!(unconfirmed.contains("Confirm the send"));
@@ -726,7 +728,7 @@ fn managed_session_input_contract_rejects_before_write() {
                 confirm_send: true,
                 client_target: "session:managed-session-input".to_string(),
             },
-            |_, _| unreachable!("{label} must fail before write"),
+            &registry,
         )
         .expect_err(label);
         assert!(
@@ -742,7 +744,7 @@ fn managed_session_input_contract_rejects_before_write() {
             confirm_send: true,
             client_target: "session:older-session".to_string(),
         },
-        |_, _| unreachable!("stale target must fail before write"),
+        &registry,
     )
     .expect_err("stale target rejected");
     assert!(stale_target.contains("Selected session changed"));
@@ -751,6 +753,7 @@ fn managed_session_input_contract_rejects_before_write() {
 #[test]
 fn managed_session_input_contract_accepts_only_ready_session() {
     let (_cache, _cache_home) = isolated_cache();
+    let registry = SessionInputRegistry::default();
     write_active_run_payload(
         "managed-session-ready-input",
         json!({
@@ -791,11 +794,21 @@ fn managed_session_input_contract_accepts_only_ready_session() {
             confirm_send: true,
             client_target: "session:managed-session-auth-input".to_string(),
         },
-        |_, _| unreachable!("auth attention must fail before write"),
+        &registry,
     )
     .expect_err("auth attention rejected");
     assert!(auth_blocked.contains("auth"));
 
+    registry
+        .register_writer(
+            "managed-session-ready-input",
+            "managed-session-ready-input",
+            |input| {
+                assert_eq!(String::from_utf8_lossy(input), "hello\nthere");
+                Ok(input.len())
+            },
+        )
+        .expect("register ready session writer");
     let response = crate::commands::sessions::write_session_input_for_test(
         WriteSessionInputRequest {
             session_id: "managed-session-ready-input".to_string(),
@@ -803,11 +816,7 @@ fn managed_session_input_contract_accepts_only_ready_session() {
             confirm_send: true,
             client_target: "session:managed-session-ready-input".to_string(),
         },
-        |run_id, input| {
-            assert_eq!(run_id, "managed-session-ready-input");
-            assert_eq!(input, "hello\nthere");
-            Ok(input.len())
-        },
+        &registry,
     )
     .expect("ready session input");
 
@@ -831,6 +840,125 @@ fn managed_session_input_contract_accepts_only_ready_session() {
             "managed session input response leaked forbidden value {forbidden:?}"
         );
     }
+}
+
+#[test]
+fn managed_session_input_requires_backend_owned_transport() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "managed-session-transport-a",
+        json!({
+            "timestamp": "2026-06-30T08:00:00Z",
+            "run_id": "managed-session-transport-a",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/a",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-transport-a",
+            "state_volume": "runhaven-codex-hidden-home-a",
+            "session": "a"
+        }),
+    )
+    .expect("active run payload a");
+    write_active_run_payload(
+        "managed-session-transport-b",
+        json!({
+            "timestamp": "2026-06-30T08:01:00Z",
+            "run_id": "managed-session-transport-b",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/b",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-transport-b",
+            "state_volume": "runhaven-codex-hidden-home-b",
+            "session": "b"
+        }),
+    )
+    .expect("active run payload b");
+
+    let registry = SessionInputRegistry::default();
+    let missing = crate::commands::sessions::write_session_input_for_test(
+        WriteSessionInputRequest {
+            session_id: "managed-session-transport-a".to_string(),
+            input: "hello".to_string(),
+            confirm_send: true,
+            client_target: "session:managed-session-transport-a".to_string(),
+        },
+        &registry,
+    )
+    .expect_err("unregistered transport rejected");
+    assert!(missing.contains("session input transport not found"));
+
+    registry
+        .register_writer("managed-session-transport-a", "older-run", |_| Ok(1))
+        .expect("register mismatched transport");
+    let mismatch = crate::commands::sessions::write_session_input_for_test(
+        WriteSessionInputRequest {
+            session_id: "managed-session-transport-a".to_string(),
+            input: "hello".to_string(),
+            confirm_send: true,
+            client_target: "session:managed-session-transport-a".to_string(),
+        },
+        &registry,
+    )
+    .expect_err("mismatched run rejected");
+    assert!(mismatch.contains("session input transport no longer matches"));
+
+    let session_a_writes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let session_b_writes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let session_a_capture = std::sync::Arc::clone(&session_a_writes);
+    registry
+        .register_writer(
+            "managed-session-transport-a",
+            "managed-session-transport-a",
+            move |input| {
+                session_a_capture
+                    .lock()
+                    .expect("session a writes lock")
+                    .push(String::from_utf8_lossy(input).to_string());
+                Ok(input.len())
+            },
+        )
+        .expect("register session a transport");
+    let session_b_capture = std::sync::Arc::clone(&session_b_writes);
+    registry
+        .register_writer(
+            "managed-session-transport-b",
+            "managed-session-transport-b",
+            move |input| {
+                session_b_capture
+                    .lock()
+                    .expect("session b writes lock")
+                    .push(String::from_utf8_lossy(input).to_string());
+                Ok(input.len())
+            },
+        )
+        .expect("register session b transport");
+
+    let response = crate::commands::sessions::write_session_input_for_test(
+        WriteSessionInputRequest {
+            session_id: "managed-session-transport-a".to_string(),
+            input: "message for a".to_string(),
+            confirm_send: true,
+            client_target: "session:managed-session-transport-a".to_string(),
+        },
+        &registry,
+    )
+    .expect("session a input accepted");
+
+    assert!(response.accepted);
+    assert_eq!(response.accepted_bytes, "message for a".len());
+    assert_eq!(
+        *session_a_writes.lock().expect("session a writes lock"),
+        vec!["message for a".to_string()]
+    );
+    assert!(
+        session_b_writes
+            .lock()
+            .expect("session b writes lock")
+            .is_empty(),
+        "session b must not receive session a input"
+    );
 }
 
 #[test]

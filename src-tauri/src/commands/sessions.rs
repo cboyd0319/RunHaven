@@ -9,6 +9,8 @@ use crate::contracts::{
 };
 #[cfg(test)]
 use crate::contracts::{WriteSessionInputRequest, WriteSessionInputResponse};
+#[cfg(test)]
+use crate::session_input::SessionInputRegistry;
 
 const RAW_OUTPUT_REDACTION_MESSAGE: &str = "Raw output is not automatically redacted.";
 #[cfg(test)]
@@ -112,7 +114,7 @@ pub(crate) fn managed_session_for_id(
 #[cfg(test)]
 pub(crate) fn write_session_input_for_test(
     request: WriteSessionInputRequest,
-    write: impl FnOnce(&str, &str) -> Result<usize, String>,
+    registry: &SessionInputRegistry,
 ) -> Result<WriteSessionInputResponse, String> {
     validate_text_len("session id", &request.session_id, MAX_RUN_ID_LEN)?;
     validate_session_input_request(&request)?;
@@ -130,7 +132,7 @@ pub(crate) fn write_session_input_for_test(
         ));
     }
 
-    let accepted_bytes = write(&run_id, &request.input)?;
+    let accepted_bytes = registry.write(&session.id, &run_id, &request.input)?;
     if accepted_bytes > request.input.len() {
         return Err("session input write reported more bytes than were sent".to_string());
     }

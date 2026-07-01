@@ -1647,6 +1647,16 @@ Latest GUI local prototype:
   sessions before any write callback runs. It accepts only a ready monitored
   session and returns a typed response with the backend-owned session and run
   IDs.
+- 2026-06-30 session input transport registry: Added Tauri-managed
+  `SessionInputRegistry` backend state without exposing a command, capability,
+  or frontend composer. The test seam now requires a registered Rust-owned
+  writer before input can be accepted, rejects missing transports, rejects
+  transports registered for older run IDs, and proves two sessions do not share
+  writers. The real GUI launch path still does not register a writer; current
+  `launch_run` starts `launch_run_plan` on a background thread and drops process
+  handles. Reuse repo-vendored utility code only when it fits this RunHaven
+  launch ownership model; do not import Codex app-server, exec-server, MCP,
+  login, filesystem, or host-reaching surfaces as GUI shortcuts.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external

@@ -35,6 +35,9 @@ Rules:
 - A future frontend input bridge can send input only to an existing
   backend-owned session ID after the design gate in
   `docs/plans/native-gui-session-input-contract.md` is satisfied.
+- Backend input transport is RunHaven-owned. Repo-vendored utility code can be
+  reused only when it fits this contract; Codex app-server, exec-server, MCP,
+  login, and filesystem transports are not GUI input shortcuts.
 - The frontend cannot request arbitrary commands, shells, mounts, environment
   variables, network modes, provider hosts, or workspace paths.
 - Rust/Tauri owns process creation, launch review, auth setup, run records, and
@@ -193,6 +196,9 @@ Current GUI behavior:
 - Selected-session controls do not add terminal input, resize, attach,
   filesystem RPC, generic command execution, app-server transport, MCP
   execution, login, or host-reaching Codex paths.
+- A Tauri-managed `SessionInputRegistry` now exists as backend state for a
+  future writer. It is not exposed as a command. It rejects missing transports,
+  stale run/session mappings, and cross-session writer reuse in Rust tests.
 
 ## Verification
 
@@ -256,6 +262,10 @@ Current slice:
   and auth-attention sessions before a write callback runs. A ready monitored
   session can produce a typed accepted response without leaking workspace paths
   or state volume names.
+- Tauri contract tests prove the input seam now requires a registered
+  `SessionInputRegistry` transport. Missing transports fail closed, transports
+  registered for older run IDs fail closed, and two active sessions do not share
+  writers.
 
 Future embedded-session slices need focused Rust tests for unknown ID
 rejection, bounded input, auth attention, stale targets, raw output gating, and

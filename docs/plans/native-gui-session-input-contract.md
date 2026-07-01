@@ -10,7 +10,13 @@ This document is the design gate before RunHaven exposes any GUI session input
 or resize command. The current desktop app can observe sessions, load bounded
 raw output after acknowledgement, keep selected-session output updated through
 bounded polling, and request fixed run-control actions. It still cannot write
-bytes to an agent session.
+bytes to an agent session from the WebView.
+
+The backend now has a Tauri-managed `SessionInputRegistry` for future input.
+The registry can accept a Rust-owned writer for an existing session and rejects
+writes when no backend transport is registered or when the registered run no
+longer matches the active session. No production launch path registers a writer
+yet.
 
 Contract checklist: backend-owned session ID, explicit user intent, bounded input,
 cancellation, stale target, multi-session, auth, and resize remains out of scope.
@@ -58,6 +64,7 @@ Sensitive:
 - No filesystem RPC.
 - No MCP execution.
 - No app-server transport.
+- No Codex exec-server transport.
 - No login or host-reaching Codex path.
 - No host path, mount, environment variable, provider host, or network setting
   accepted from the WebView.
@@ -166,6 +173,9 @@ Current preflight coverage:
   frontend targets, and auth-attention sessions before any write callback runs.
 - It accepts only a ready managed session whose backend-owned next action is
   `monitor`.
+- The test seam now routes accepted input through `SessionInputRegistry`, not a
+  one-off callback. Missing transports fail closed, stale run/session mappings
+  fail closed, and two sessions cannot share a writer.
 - It still exposes no Tauri command, no capability grant, and no frontend input
   path.
 
@@ -180,6 +190,10 @@ Rust/Tauri:
 - auth-attention sessions are rejected;
 - stale `client_target` is rejected;
 - resolved run ID and session ID stay in the typed response;
+- a registered Rust-owned writer is required before bytes can be accepted;
+- a writer registered for an older run ID is rejected before input is sent;
+- multi-session tests prove one session's input is not delivered to another
+  session's writer;
 - forbidden strings such as `attach_session`, `resize_session`, filesystem RPC,
   generic command execution, MCP, login, and app-server transport do not appear
   in the response or capability grants.
@@ -202,13 +216,19 @@ Live smoke:
 
 ## First Implementation Sequence
 
-1. Add Rust contract tests around a test-only write seam.
-2. Add request and response structs without granting a capability.
-3. Add the fixed Tauri command only after the fail-closed tests exist.
-4. Grant only `allow-write-session-input` under `run-control`, not `main-read`.
-5. Add a minimal selected-session composer that calls only the typed command.
-6. Add preview and Playwright tests for two selected sessions.
-7. Add a live smoke only after the Rust path can write to a real backend-owned
+1. Add Rust contract tests around a test-only write seam. Done.
+2. Add request and response structs without granting a capability. Done.
+3. Add a backend-owned input registry without granting a capability. Done.
+4. Decide the real launch transport from RunHaven's GUI needs first. Reuse a
+   repo-vendored utility such as `codex-utils-pty` only if it fits the retained
+   process-handle model. Do not import Codex app-server, exec-server, MCP,
+   login, or filesystem surfaces for GUI input.
+5. Add the fixed Tauri command only after the fail-closed tests exist and the
+   launch path registers a Rust-owned writer for the session.
+6. Grant only `allow-write-session-input` under `run-control`, not `main-read`.
+7. Add a minimal selected-session composer that calls only the typed command.
+8. Add preview and Playwright tests for two selected sessions.
+9. Add a live smoke only after the Rust path can write to a real backend-owned
    session.
 
 The first implementation must not add `resize_session`. Resize remains out of
