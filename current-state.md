@@ -154,7 +154,9 @@ contracts, Tauri plan/launch/status/session responses, and the GUI session and
 plan cards. Managed sessions now merge active markers with a bounded tail of
 recent run records so just-finished GUI sessions remain visible; active markers
 still win for control/input, and desktop output keeps a bounded recent buffer
-after process exit. Continue the CLI+GUI goal from the hardest problems first:
-real-agent auth/session behavior, multi-session isolation under real Apple
-container runs, typed status reporting, and fail-closed security boundaries.
-Keep the safe path short, stable, and nontechnical.
+after process exit. Live Apple `container` shell smokes now prove GUI-managed
+single-session input/output/stop and two-session input/output isolation against
+the built `runhaven/base:0.1.0` shell image, with no active RunHaven runs left
+after cleanup. Continue the CLI+GUI goal from the hardest problems first:
+real-agent auth/session behavior, typed status reporting, and fail-closed
+security boundaries. Keep the safe path short, stable, and nontechnical.

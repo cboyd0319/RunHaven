@@ -131,7 +131,9 @@ fn managed_session_live_smoke_writes_input_and_reads_output() {
     .expect("stop live managed session");
     assert_eq!(stopped.result.run_id, launched.run_id);
     assert_eq!(stopped.result.status, "stop-requested");
-    wait_for_live_session_removed(&launched.run_id);
+    let finished = wait_for_live_session_inactive(&launched.run_id);
+    assert_eq!(finished.lifecycle, "stopped");
+    assert!(!finished.input.attached);
 }
 
 #[test]
@@ -241,8 +243,10 @@ fn managed_session_live_smoke_isolates_two_sessions() {
     assert_eq!(stopped_beta.result.run_id, beta.run_id);
     assert_eq!(stopped_beta.result.status, "stop-requested");
 
-    wait_for_live_session_removed(&alpha.run_id);
-    wait_for_live_session_removed(&beta.run_id);
+    let finished_alpha = wait_for_live_session_inactive(&alpha.run_id);
+    let finished_beta = wait_for_live_session_inactive(&beta.run_id);
+    assert_eq!(finished_alpha.lifecycle, "stopped");
+    assert_eq!(finished_beta.lifecycle, "stopped");
 }
 
 struct LiveTauriRunCleanup {
@@ -376,21 +380,22 @@ fn assert_live_session_output_excludes(
     );
 }
 
-fn wait_for_live_session_removed(run_id: &str) {
+fn wait_for_live_session_inactive(run_id: &str) -> ManagedSessionSummaryData {
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         let sessions = crate::commands::sessions::get_managed_sessions_for_test(None)
             .expect("read live managed sessions");
-        if !sessions
+        if let Some(session) = sessions
             .sessions
-            .iter()
-            .any(|session| session.run_id == run_id)
+            .into_iter()
+            .find(|session| session.run_id == run_id)
+            && !matches!(session.lifecycle.as_str(), "running" | "starting")
         {
-            return;
+            return session;
         }
         assert!(
             Instant::now() < deadline,
-            "live managed session stayed active for run {run_id}"
+            "live managed session stayed running for run {run_id}"
         );
         sleep(Duration::from_millis(250));
     }
