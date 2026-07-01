@@ -323,6 +323,11 @@ export function useAppController() {
     }
   }
 
+  async function refreshAfterWorktree() {
+    await selectedSessionStatus.loadStatus()
+    await loadManagedSessions()
+  }
+
   async function sendSelectedSessionInput() {
     if (!selectedSession || sessionInput.sending) {
       return
@@ -415,6 +420,7 @@ export function useAppController() {
     setWarningConfirmation,
     startRun,
     runControl,
+    refreshAfterWorktree,
     sendSelectedSessionInput,
     loadSelectedSessionDiagnostics: selectedSessionDiagnostics.load,
     loadDiagnostics: diagnostics.load,

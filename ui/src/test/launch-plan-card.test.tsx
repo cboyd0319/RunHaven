@@ -35,6 +35,7 @@ function request(patch: Partial<RunPlanRequest> = {}): RunPlanRequest {
     allowSensitiveWorkspace: false,
     allowRootUser: false,
     user: "runner",
+    worktree: false,
     ...patch
   };
 }
@@ -115,6 +116,13 @@ describe("LaunchPlanCard", () => {
     expect(html).toContain(">Back</");
     expect(html).toContain("Review access");
     expect(html).toContain("Read-only project folder");
+  });
+
+  it("offers the isolated-copy toggle on the project step", () => {
+    const html = renderToStaticMarkup(<LaunchPlanCard {...projectProps()} />);
+
+    expect(html).toContain("Run in an isolated copy (git worktree)");
+    expect(html).toContain("Your project folder must be a clean git repo.");
   });
 
   it("warns that full internet access is only allowed after a warning", () => {

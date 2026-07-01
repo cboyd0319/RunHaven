@@ -274,7 +274,7 @@ fn trusted_launch_prompt_contains_reviewable_launch_facts() {
     let plan = build_agent_run_plan(&plan_request, Some("prompt-review-run".to_string()))
         .expect("launch plan");
 
-    let message = trusted_launch_message_for_test(&plan, &[]);
+    let message = trusted_launch_message_for_test(&plan, &[], false);
 
     assert!(message.contains("Agent: codex"));
     assert!(message.contains(&format!("Workspace: {}", plan.workspace.display())));
@@ -283,6 +283,11 @@ fn trusted_launch_prompt_contains_reviewable_launch_facts() {
     assert!(message.contains("Network: provider"));
     assert!(message.contains("Provider hosts: "));
     assert!(message.contains("API key broker: OPENAI_API_KEY"));
+    assert!(message.contains("Worktree: no"));
+
+    let worktree_message = trusted_launch_message_for_test(&plan, &[], true);
+    assert!(worktree_message.contains("Worktree: yes"));
+    assert!(worktree_message.contains("isolated git branch"));
 }
 
 #[test]

@@ -300,7 +300,7 @@ function nextPreviewSessionLogRead(sessionId: string): number {
   return nextRead;
 }
 
-function previewSession(sessionId: string): ManagedSessionSummary {
+export function previewSession(sessionId: string): ManagedSessionSummary {
   const session = previewManagedSessions.find((item) => item.id === sessionId);
   if (!session) {
     throw new Error("managed session not found");

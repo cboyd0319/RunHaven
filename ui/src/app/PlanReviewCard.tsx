@@ -1,4 +1,4 @@
-import { CircleAlert, FileText, ShieldCheck } from "lucide-react"
+import { CircleAlert, FileText, GitBranch, ShieldCheck } from "lucide-react"
 
 import { authScopeLabels, type RunPlanResponse } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -73,6 +73,17 @@ export function PlanReviewCard({
             ))}
           </TableBody>
         </Table>
+
+        {plan.worktree ? (
+          <Alert>
+            <GitBranch />
+            <AlertTitle>Isolated copy (git worktree)</AlertTitle>
+            <AlertDescription>
+              {plan.worktreeNote ??
+                "RunHaven will run this agent in an isolated copy of your project on a new git branch."}
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
         {plan.workspaceScopeNote ? (
           <Alert>

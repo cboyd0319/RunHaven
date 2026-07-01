@@ -18,6 +18,7 @@ use crate::contracts::{
 pub(crate) use crate::contracts::{LaunchRunRequest, RunPlanRequest};
 
 mod access;
+mod active_marker;
 pub(crate) mod diagnostics;
 pub(crate) mod diagnostics_why;
 pub(crate) mod image_status;
@@ -31,6 +32,7 @@ pub(crate) mod run_control;
 pub(crate) mod run_status;
 pub(crate) mod session_cleanup;
 pub(crate) mod session_diagnostics;
+pub(crate) mod session_worktree;
 pub(crate) mod sessions;
 mod validation;
 mod warnings;

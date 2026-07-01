@@ -21,6 +21,7 @@
     "allow-get-managed-sessions",
     "allow-get-managed-session-status",
     "allow-get-managed-session-diagnostics",
+    "allow-get-managed-session-worktree",
     "allow-get-launch-status"
   ]
 }

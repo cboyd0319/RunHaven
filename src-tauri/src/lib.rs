@@ -41,6 +41,11 @@ pub fn run() {
             commands::run_control::kill_managed_session,
             commands::run_control::repair_managed_session,
             commands::session_cleanup::cleanup_managed_session,
+            commands::session_worktree::get_managed_session_worktree,
+            commands::session_worktree::actions::keep_managed_session_worktree,
+            commands::session_worktree::actions::merge_managed_session_worktree,
+            commands::session_worktree::actions::recover_managed_session_worktree,
+            commands::session_worktree::actions::discard_managed_session_worktree,
             commands::launch::plan_run,
             commands::launch::launch_run,
         ])

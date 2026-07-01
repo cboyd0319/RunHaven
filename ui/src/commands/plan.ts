@@ -53,7 +53,8 @@ export function defaultRunPlanRequest(agent: AgentProfile | undefined): RunPlanR
     image: null,
     allowSensitiveWorkspace: false,
     allowRootUser: false,
-    user: "agent"
+    user: "agent",
+    worktree: false
   };
 }
 

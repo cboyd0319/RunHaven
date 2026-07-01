@@ -6,6 +6,7 @@ mod launch;
 mod logs;
 mod run_control;
 mod run_status;
+mod worktree;
 
 pub(crate) use dashboard::*;
 pub(crate) use diagnostics::*;
@@ -15,3 +16,4 @@ pub(crate) use launch::*;
 pub(crate) use logs::*;
 pub(crate) use run_control::*;
 pub(crate) use run_status::*;
+pub(crate) use worktree::*;

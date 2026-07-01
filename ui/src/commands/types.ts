@@ -281,6 +281,7 @@ export type RunPlanRequest = {
   allowSensitiveWorkspace: boolean;
   allowRootUser: boolean;
   user: string;
+  worktree: boolean;
 };
 
 export type PlanWarning = {
@@ -315,6 +316,8 @@ export type RunPlanResponse = {
   preflightCount: number;
   access: RunPlanAccess;
   warnings: PlanWarning[];
+  worktree: boolean;
+  worktreeNote: string | null;
 };
 
 export type LaunchRunRequest = {
@@ -436,3 +439,9 @@ export type {
   HostExplanationResponse,
   WorkspaceExplanationResponse
 } from "./why_types";
+
+export type {
+  WorktreeReviewResponse,
+  WorktreeActionResult,
+  WorktreeActionResponse
+} from "./worktree_types";

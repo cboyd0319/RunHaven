@@ -1,9 +1,6 @@
-use std::io::ErrorKind;
-
 use runhaven_core::runtime::worktrees::{
     discard_worktree_for_run, load_worktree_lifecycle, verify_lifecycle,
 };
-use runhaven_core::support::paths::active_run_path;
 use runhaven_core::ui_contracts::{ManagedSessionCleanupData, ManagedSessionSummaryData};
 use tauri::AppHandle;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
@@ -140,11 +137,10 @@ fn cleanup_target_checked(
 }
 
 fn ensure_no_active_run_marker(run_id: &str) -> Result<(), String> {
-    let path = active_run_path(run_id).map_err(|_| FAILED_CLEANUP_ERROR.to_string())?;
-    match std::fs::symlink_metadata(path) {
-        Ok(_) => Err(ACTIVE_CLEANUP_ERROR.to_string()),
-        Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
-        Err(_) => Err(FAILED_CLEANUP_ERROR.to_string()),
+    match super::active_marker::active_run_marker_present(run_id) {
+        Ok(true) => Err(ACTIVE_CLEANUP_ERROR.to_string()),
+        Ok(false) => Ok(()),
+        Err(()) => Err(FAILED_CLEANUP_ERROR.to_string()),
     }
 }
 

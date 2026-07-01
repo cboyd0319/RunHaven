@@ -23,6 +23,11 @@ pub(crate) struct RunPlanRequest {
     pub allow_sensitive_workspace: bool,
     pub allow_root_user: bool,
     pub user: String,
+    /// Opt-in isolation: run the agent inside a fresh RunHaven-owned git
+    /// worktree on a new branch instead of the source checkout. Secure default
+    /// is `false` (no worktree) so opting in is an explicit, reviewed choice.
+    #[serde(default)]
+    pub worktree: bool,
 }
 
 fn default_auth_scope() -> String {
@@ -67,6 +72,10 @@ pub(crate) struct RunPlanResponse {
     pub preflight_count: usize,
     pub access: RunPlanAccess,
     pub warnings: Vec<PlanWarning>,
+    /// Echoes the requested worktree opt-in so the plan review and confirmation
+    /// can show that RunHaven will create an isolated branch for this run.
+    pub worktree: bool,
+    pub worktree_note: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

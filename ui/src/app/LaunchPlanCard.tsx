@@ -243,6 +243,27 @@ export function LaunchPlanCard({
                     />
                     <span>Read-only project folder</span>
                   </label>
+
+                  <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                    <Checkbox
+                      checked={request.worktree}
+                      onCheckedChange={(checked) =>
+                        onRequestChange({ worktree: checked === true })
+                      }
+                      aria-label="Run in an isolated copy (git worktree)"
+                    />
+                    <span className="flex flex-col gap-1">
+                      <span className="font-medium">
+                        Run in an isolated copy (git worktree)
+                      </span>
+                      <span className="text-muted-foreground">
+                        RunHaven makes a separate copy of your project on a new
+                        git branch. Your project folder must be a clean git repo.
+                        Your original files change only if you merge the copy
+                        back later.
+                      </span>
+                    </span>
+                  </label>
                 </div>
               </details>
 

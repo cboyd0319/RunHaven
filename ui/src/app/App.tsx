@@ -58,6 +58,7 @@ export default function App() {
             controlConfirmations={app.controlConfirmations}
             onControlConfirmationChange={app.setControlConfirmation}
             onControl={app.runControl}
+            onWorktreeResolved={app.refreshAfterWorktree}
             launchStep={app.launchStep}
             plan={app.plan}
             launchConfirmation={app.launchConfirmation}

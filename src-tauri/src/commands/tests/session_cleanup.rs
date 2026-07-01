@@ -1,12 +1,9 @@
-use std::fs::{self, File};
-use std::io::Write;
-use std::process::Command;
+use std::fs;
 
 use super::*;
 use crate::contracts::CleanupManagedSessionRequest;
 use runhaven_core::runtime::plans::WorkspaceScope;
 use runhaven_core::runtime::worktrees::{create_worktree_for_run, worktree_record};
-use runhaven_core::support::paths::{ensure_private_parent, runs_log_path};
 
 #[test]
 fn managed_session_cleanup_rejects_unknown_unconfirmed_and_ineligible_targets() {
@@ -330,53 +327,4 @@ fn managed_session_cleanup_stops_when_trusted_confirmation_is_denied() {
         git_branch_exists(repo.path(), &branch),
         "worktree branch should stay in place after denial"
     );
-}
-
-fn write_history_run_record(record: serde_json::Value) {
-    ensure_private_parent(&runs_log_path()).expect("runs log parent");
-    let mut file = if runs_log_path().exists() {
-        fs::OpenOptions::new()
-            .append(true)
-            .open(runs_log_path())
-            .expect("append runs log")
-    } else {
-        File::create(runs_log_path()).expect("create runs log")
-    };
-    writeln!(file, "{record}").expect("write run record");
-}
-
-fn init_git_repo(path: &std::path::Path) {
-    let project = path.join("project");
-    fs::create_dir_all(&project).expect("project dir");
-    git(path, &["init"]);
-    git(path, &["config", "user.name", "RunHaven Test"]);
-    git(path, &["config", "user.email", "runhaven-test@example.com"]);
-    fs::write(project.join("README.md"), "hello\n").expect("write README");
-    git(path, &["add", "."]);
-    git(path, &["commit", "-m", "initial"]);
-}
-
-fn git_branch_exists(repo_root: &std::path::Path, branch: &str) -> bool {
-    Command::new("git")
-        .args(["-C"])
-        .arg(repo_root)
-        .args([
-            "show-ref",
-            "--verify",
-            "--quiet",
-            &format!("refs/heads/{branch}"),
-        ])
-        .status()
-        .map(|status| status.success())
-        .unwrap_or(false)
-}
-
-fn git(repo_root: &std::path::Path, args: &[&str]) {
-    let status = Command::new("git")
-        .args(["-C"])
-        .arg(repo_root)
-        .args(args)
-        .status()
-        .expect("run git");
-    assert!(status.success(), "git {:?} failed", args);
 }

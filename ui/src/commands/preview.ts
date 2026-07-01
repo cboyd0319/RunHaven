@@ -32,6 +32,10 @@ export {
   previewManagedStop,
   previewSessionInput
 } from "./preview_sessions";
+export {
+  previewManagedSessionWorktree,
+  previewManagedWorktreeAction
+} from "./preview_worktree";
 
 const mockAgents: AgentProfile[] = [
   {
@@ -184,7 +188,11 @@ export function previewPlanRun(request: RunPlanRequest): RunPlanResponse {
     providerAllowedHosts: request.providerHosts,
     preflightCount: 0,
     access: previewAccess(request),
-    warnings: warningPreview(request)
+    warnings: warningPreview(request),
+    worktree: request.worktree,
+    worktreeNote: request.worktree
+      ? "RunHaven will make an isolated copy of your project on a new git branch. Your original files change only if you merge later."
+      : null
   };
 }
 

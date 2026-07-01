@@ -104,6 +104,21 @@ Useful GUI design docs:
 
 ## Latest State
 
+- The GUI now has parity for git-worktree runs and their review lifecycle (V1
+  milestone M4). The launch flow has an opt-in worktree choice (secure default
+  off): `RunPlanRequest.worktree` threads into the planner, the plan review and
+  native confirm dialog both show that an isolated branch will be created, and
+  the branch is created only after confirmation (no git mutation before
+  approval). A read-only `get_managed_session_worktree` (main-read capability)
+  returns a sanitized review (branch, change counts, status, available actions)
+  for eligible stopped worktree sessions. Four run-control commands
+  (`keep`/`merge`/`recover`/`discard`_managed_session_worktree) resolve the
+  backend-owned run in Rust, verify the worktree is RunHaven-owned and not
+  active/stale/foreign (the same `verify_lifecycle` gate cleanup uses), require
+  native confirmation, reuse the tested core functions, and return sanitized
+  results. No worktree command exposes raw host paths, state volumes, or
+  secrets (proven by no-leak tests). Shared launch-plan and capability-guard
+  files were split by ownership to stay under structure ceilings.
 - CLI-complete v0.5.0 scope remains closed and was reverified on 2026-07-01:
   CLI surface breadth 39/39, CLI/core tests, CLI/core clippy, non-TTY CLI help
   routing, pin policy, structure guard, docs local-path guard, JSON validation,

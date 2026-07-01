@@ -76,6 +76,13 @@ only a verdict, such as whether the folder can be mounted, never the full path.
 These are read-only checks; they do not change your run and show no secrets or
 file paths.
 
+On the Review step you can also turn on `Run in an isolated copy (git
+worktree)`. This is off by default. When it is on, RunHaven runs the agent on a
+new branch in a separate copy of your project, so your original files do not
+change until you choose to merge. The review and the confirm dialog both say
+when a worktree will be created. Your folder must be a clean git repository for
+this to work.
+
 The safe defaults are the easiest path. By default a run gets provider-only
 network access, no access to your home folder, cloud keys, SSH keys, or browser
 profiles, and it does not run as root. See
@@ -111,12 +118,22 @@ For an active session you can Stop it, Hard stop it, or Repair its record. Every
 one of these asks you to confirm and shows the exact target first. Stop asks the
 run to end. Hard stop ends it right away. Repair clears a stale record.
 
-## Clean up
+## Review a worktree run
 
-When a run that used its own worktree has finished, the app can offer to clean up
-that worktree. It shows what it will remove and asks you to confirm. It only
-removes the worktree it created for that run, and it refuses if anything looks
-unexpected.
+When a run that used its own worktree has finished, the app shows a review for
+that session. It shows the branch name and how many files changed, and it offers
+four choices, each behind its own confirm step:
+
+- Merge: apply the worktree's changes back into your project, then remove the
+  worktree and branch.
+- Keep: leave the worktree and branch in place so you can work on them yourself.
+- Recover: show safe, plain-language next steps if a merge cannot finish cleanly.
+- Discard: delete the worktree and branch for that finished run.
+
+The app resolves the run in the backend, checks that the worktree is one
+RunHaven made and that the run has stopped, and refuses if anything is still
+active or looks unexpected. It never shows raw file paths, saved state, or
+secrets.
 
 ## Check diagnostics
 
@@ -130,8 +147,6 @@ For now, do these tasks with the `runhaven` command line
 ([docs/USAGE.md](USAGE.md)):
 
 - Full sign-in for every agent.
-- Creating a run in a new git worktree, and the review, keep, merge, recover, or
-  discard steps for it.
 - Maintenance such as resetting or pruning saved state, pruning networks, and
   building or rebuilding agent images.
 - The `why` checks that explain host, workspace, network, and state.

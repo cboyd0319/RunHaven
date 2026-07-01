@@ -10,9 +10,14 @@ use crate::launch_status::LaunchStatusRegistry;
 use crate::session_input::SessionInputRegistry;
 use crate::session_output::SessionOutputRegistry;
 use runhaven_core::runtime::active::write_active_run_payload;
-use runhaven_core::support::paths::{CacheRootOverride, override_cache_root_for_tests};
+use runhaven_core::support::paths::{
+    CacheRootOverride, ensure_private_parent, override_cache_root_for_tests, runs_log_path,
+};
 use serde_json::json;
-use std::path::PathBuf;
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 mod auth;
 mod image;
@@ -26,6 +31,7 @@ mod run_control;
 mod run_status;
 mod session_cleanup;
 mod session_input;
+mod session_worktree;
 mod sessions;
 mod sessions_status;
 mod validation;
@@ -54,6 +60,7 @@ fn request(workspace: PathBuf) -> RunPlanRequest {
         allow_sensitive_workspace: false,
         allow_root_user: false,
         user: "agent".to_string(),
+        worktree: false,
     }
 }
 
@@ -75,7 +82,61 @@ fn shell_request(workspace: PathBuf, session: String) -> RunPlanRequest {
         allow_sensitive_workspace: false,
         allow_root_user: false,
         user: "agent".to_string(),
+        worktree: false,
     }
+}
+
+/// Append a finished run record to the history log so managed-session lookups
+/// resolve the run. Shared by the cleanup and worktree review suites.
+fn write_history_run_record(record: serde_json::Value) {
+    ensure_private_parent(&runs_log_path()).expect("runs log parent");
+    let mut file = if runs_log_path().exists() {
+        fs::OpenOptions::new()
+            .append(true)
+            .open(runs_log_path())
+            .expect("append runs log")
+    } else {
+        File::create(runs_log_path()).expect("create runs log")
+    };
+    writeln!(file, "{record}").expect("write run record");
+}
+
+/// Hermetic git repo with a committed `project/` subdirectory, matching the
+/// worktree source layout the core create/verify path expects.
+fn init_git_repo(path: &Path) {
+    let project = path.join("project");
+    fs::create_dir_all(&project).expect("project dir");
+    git(path, &["init"]);
+    git(path, &["config", "user.name", "RunHaven Test"]);
+    git(path, &["config", "user.email", "runhaven-test@example.com"]);
+    fs::write(project.join("README.md"), "hello\n").expect("write README");
+    git(path, &["add", "."]);
+    git(path, &["commit", "-m", "initial"]);
+}
+
+fn git_branch_exists(repo_root: &Path, branch: &str) -> bool {
+    Command::new("git")
+        .args(["-C"])
+        .arg(repo_root)
+        .args([
+            "show-ref",
+            "--verify",
+            "--quiet",
+            &format!("refs/heads/{branch}"),
+        ])
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+fn git(repo_root: &Path, args: &[&str]) {
+    let status = Command::new("git")
+        .args(["-C"])
+        .arg(repo_root)
+        .args(args)
+        .status()
+        .expect("run git");
+    assert!(status.success(), "git {args:?} failed");
 }
 
 fn write_active_run(run_id: &str) {

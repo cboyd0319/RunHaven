@@ -18,6 +18,8 @@ import {
   previewManagedSessionStatus,
   previewManagedSessionsList,
   previewManagedStop,
+  previewManagedSessionWorktree,
+  previewManagedWorktreeAction,
   previewPlanRun,
   previewRunStatus,
   previewSessionInput,
@@ -59,6 +61,8 @@ import type {
   SetupStatus,
   StopManagedSessionResponse,
   StopRunResponse,
+  WorktreeActionResponse,
+  WorktreeReviewResponse,
   WriteSessionInputResponse
 } from "./types";
 
@@ -236,6 +240,56 @@ export async function cleanupManagedSession(
     "cleanup_managed_session",
     { request: { sessionId, confirmCleanup: true } },
     () => previewManagedCleanup(sessionId)
+  );
+}
+
+export async function getManagedSessionWorktree(
+  sessionId: string
+): Promise<WorktreeReviewResponse> {
+  return call(
+    "get_managed_session_worktree",
+    { request: { sessionId } },
+    () => previewManagedSessionWorktree(sessionId)
+  );
+}
+
+export async function keepManagedSessionWorktree(
+  sessionId: string
+): Promise<WorktreeActionResponse> {
+  return call(
+    "keep_managed_session_worktree",
+    { request: { sessionId, confirm: true } },
+    () => previewManagedWorktreeAction(sessionId, "keep")
+  );
+}
+
+export async function mergeManagedSessionWorktree(
+  sessionId: string
+): Promise<WorktreeActionResponse> {
+  return call(
+    "merge_managed_session_worktree",
+    { request: { sessionId, confirm: true } },
+    () => previewManagedWorktreeAction(sessionId, "merge")
+  );
+}
+
+export async function recoverManagedSessionWorktree(
+  sessionId: string
+): Promise<WorktreeActionResponse> {
+  return call(
+    "recover_managed_session_worktree",
+    { request: { sessionId, confirm: true } },
+    () => previewManagedWorktreeAction(sessionId, "recover")
+  );
+}
+
+export async function discardManagedSessionWorktree(
+  sessionId: string
+): Promise<WorktreeActionResponse> {
+  return call(
+    "discard_managed_session_worktree",
+    { request: { sessionId, confirm: true } },
+    () => previewManagedWorktreeAction(sessionId, "discard")
   );
 }
 

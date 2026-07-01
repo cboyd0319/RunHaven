@@ -34,6 +34,9 @@ import { SessionInputCard } from "./SessionInputCard"
 import { SetupCard } from "./SetupCard"
 import type { DiagnosticsState, LaunchStep, RunControlAction } from "./types"
 import type { useRunOutput } from "./useRunOutput"
+import { useWorktreeReview } from "./useWorktreeReview"
+import { sessionAllowsWorktreeReview } from "./worktreeReview"
+import { WorktreeReviewCard } from "./WorktreeReviewCard"
 
 type AppMainContentProps = {
   error: string
@@ -66,6 +69,7 @@ type AppMainContentProps = {
   controlConfirmations: Record<RunControlAction, boolean>
   onControlConfirmationChange: (action: RunControlAction, checked: boolean) => void
   onControl: (action: RunControlAction) => Promise<void>
+  onWorktreeResolved: () => Promise<void>
   launchStep: LaunchStep
   plan: RunPlanResponse | null
   launchConfirmation: boolean
@@ -157,7 +161,11 @@ function SessionView(
   props: AppMainContentProps & { selectedSession: ManagedSessionSummary },
 ) {
   const runControlsAvailable = sessionAllowsRunControl(props.selectedSession)
-  const cleanupAvailable = sessionAllowsCleanup(props.selectedSession)
+  const worktreeReviewEligible = sessionAllowsWorktreeReview(props.selectedSession)
+  // The worktree review card owns discard, so hide the standalone delete control
+  // when it is showing to avoid two ways to remove the same copy.
+  const cleanupAvailable =
+    sessionAllowsCleanup(props.selectedSession) && !worktreeReviewEligible
   const showRunControlCard =
     runControlsAvailable ||
     cleanupAvailable ||
@@ -166,6 +174,12 @@ function SessionView(
   return (
     <>
       <ManagedSessionCard session={props.selectedSession} />
+      {worktreeReviewEligible ? (
+        <SessionWorktreeReview
+          session={props.selectedSession}
+          onResolved={props.onWorktreeResolved}
+        />
+      ) : null}
       <ManagedSessionStatusCard
         status={props.selectedSessionStatus}
         loading={props.selectedSessionStatusLoading}
@@ -273,6 +287,30 @@ function RunView(
       />
       <OutputView runOutput={props.runOutput} />
     </>
+  )
+}
+
+function SessionWorktreeReview({
+  session,
+  onResolved,
+}: {
+  session: ManagedSessionSummary
+  onResolved: () => Promise<void>
+}) {
+  const review = useWorktreeReview(session.id, onResolved)
+  return (
+    <WorktreeReviewCard
+      review={review.review}
+      loading={review.loading}
+      loadError={review.loadError}
+      confirmations={review.confirmations}
+      busy={review.busy}
+      message={review.message}
+      nextSteps={review.nextSteps}
+      actionError={review.actionError}
+      onConfirmationChange={review.setConfirmation}
+      onAction={review.runAction}
+    />
   )
 }
 

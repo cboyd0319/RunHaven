@@ -197,5 +197,6 @@ fn real_agent_request(agent: &str, workspace: PathBuf, session: String) -> RunPl
         allow_sensitive_workspace: false,
         allow_root_user: false,
         user: "agent".to_string(),
+        worktree: false,
     }
 }

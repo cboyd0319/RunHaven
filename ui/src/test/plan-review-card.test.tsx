@@ -32,6 +32,8 @@ function plan(patch: Partial<RunPlanResponse> = {}): RunPlanResponse {
       apiKeyBrokerEnvPresent: null
     },
     warnings: [],
+    worktree: false,
+    worktreeNote: null,
     ...patch
   };
 }
@@ -109,6 +111,25 @@ describe("PlanReviewCard", () => {
     expect(html).toContain("The agent can change your project files.");
     expect(html).toContain('aria-label="Confirm full-internet warning"');
     expect(html).toContain('aria-label="Confirm read-write warning"');
+  });
+
+  it("shows the isolated-copy note only when the plan uses a worktree", () => {
+    const without = renderToStaticMarkup(<PlanReviewCard plan={plan()} {...ready} />);
+    expect(without).not.toContain("Isolated copy (git worktree)");
+
+    const withWorktree = renderToStaticMarkup(
+      <PlanReviewCard
+        plan={plan({
+          worktree: true,
+          worktreeNote: "RunHaven will make a separate copy on a new git branch.",
+        })}
+        {...ready}
+      />,
+    );
+    expect(withWorktree).toContain("Isolated copy (git worktree)");
+    expect(withWorktree).toContain(
+      "RunHaven will make a separate copy on a new git branch.",
+    );
   });
 
   it("shows a workspace scope note when the plan carries one", () => {
