@@ -49,7 +49,8 @@ const EXPECTED_INVOKED_COMMANDS = [
   "write_session_input",
   "get_egress_log",
   "get_auth_log",
-  "get_auth_status"
+  "get_auth_status",
+  "get_auth_explain"
 ];
 
 type SourceEntry = {

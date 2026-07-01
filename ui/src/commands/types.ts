@@ -417,3 +417,15 @@ export type AuthStatusResponse = {
   runtime: string;
   profiles: AuthProfileStatus[];
 };
+
+export type AuthExplainResponse = {
+  name: string;
+  status: string;
+  runtime: string;
+  supportedAuth: string[];
+  hostKeeps: string[];
+  guestReceives: string[];
+  providerHosts: string[];
+  currentSafePath: string;
+  notes: string[];
+};

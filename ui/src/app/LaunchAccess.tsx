@@ -14,6 +14,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 
+import { authStatusBadgeVariant, authStatusLabel } from "./authDetails"
+
 export function AgentAccessSummary({
   agent,
   authStatus,
@@ -182,40 +184,4 @@ function authProfileStatus(
   authStatus: AuthStatusResponse | null,
 ): string {
   return authStatus?.profiles.find((profile) => profile.name === agent.name)?.status ?? "-"
-}
-
-function authStatusLabel(status: string): string {
-  switch (status.trim().toLowerCase()) {
-    case "api-key-broker":
-    case "brokered":
-      return "API key broker"
-    case "ready":
-    case "available":
-      return "Ready"
-    case "n/a":
-      return "Not needed"
-    case "-":
-      return "Unknown"
-    case "design-only":
-      return "Not ready"
-    default:
-      return status
-  }
-}
-
-function authStatusBadgeVariant(
-  status: string,
-): "destructive" | "secondary" | "success" | "warning" {
-  switch (status.trim().toLowerCase()) {
-    case "api-key-broker":
-    case "brokered":
-    case "ready":
-    case "available":
-    case "n/a":
-      return "success"
-    case "design-only":
-      return "warning"
-    default:
-      return "secondary"
-  }
 }

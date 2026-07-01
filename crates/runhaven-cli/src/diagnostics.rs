@@ -1,8 +1,8 @@
 use anyhow::Result;
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use runhaven_core::diagnostics::{
-    auth_status_payload, read_auth_broker_log, read_egress_policy_log,
+    auth_explain_payload, auth_status_payload, read_auth_broker_log, read_egress_policy_log,
 };
 use runhaven_core::provider::auth_profiles::{
     AUTH_BROKER_RUNTIME, AUTH_BROKER_STATUS, auth_broker_profiles, get_auth_broker_profile,
@@ -147,26 +147,15 @@ pub fn auth_status(json_output: bool) -> Result<i32> {
 }
 
 pub fn auth_explain(agent: &str, json_output: bool) -> Result<i32> {
-    let profile = get_profile(agent)?;
-    let auth_profile = get_auth_broker_profile(profile.name)?;
-    let payload = json!({
-        "name": auth_profile.name,
-        "status": auth_profile.status,
-        "supported_auth": auth_profile.supported_auth,
-        "host_keeps": auth_profile.host_keeps,
-        "guest_receives": auth_profile.guest_receives,
-        "current_safe_path": auth_profile.current_safe_path,
-        "notes": auth_profile.notes,
-        "runtime": AUTH_BROKER_RUNTIME,
-        "credential_stores_inspected": false,
-        "environment_values_inspected": false,
-        "secrets_printed": false,
-        "provider_hosts": profile.provider_hosts,
-    });
     if json_output {
-        println!("{}", serde_json::to_string_pretty(&payload)?);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&auth_explain_payload(agent)?)?
+        );
         return Ok(0);
     }
+    let profile = get_profile(agent)?;
+    let auth_profile = get_auth_broker_profile(profile.name)?;
     println!("Profile: {}", profile.name);
     println!("Auth broker: {}", auth_profile.status);
     println!("Runtime: {AUTH_BROKER_RUNTIME}");

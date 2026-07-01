@@ -64,6 +64,11 @@ network setting, and the sign-in it will use. Nothing starts until you confirm.
 If a choice is less safe than the default (for example, opening the internet or
 passing an extra environment value), the app says so first.
 
+On the Agent step you can open `Auth details` to see, for the chosen agent, how
+it signs in, what stays on this Mac, what the agent gets, and which provider
+hosts it can reach. These are read-only summaries with no secrets, tokens, or
+file paths.
+
 The safe defaults are the easiest path. By default a run gets provider-only
 network access, no access to your home folder, cloud keys, SSH keys, or browser
 profiles, and it does not run as root. See

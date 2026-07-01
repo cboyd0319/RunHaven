@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import { AgentAuthDetailsCard } from "./AgentAuthDetailsCard"
 import {
   AgentAccessSummary,
   ApiKeyBrokerField,
@@ -132,6 +133,12 @@ export function LaunchPlanCard({
                 authStatus={authStatus}
                 authScope={request.authScope}
               />
+              {selectedAgent ? (
+                <AgentAuthDetailsCard
+                  key={selectedAgent.name}
+                  agentName={selectedAgent.name}
+                />
+              ) : null}
             </>
           ) : null}
 

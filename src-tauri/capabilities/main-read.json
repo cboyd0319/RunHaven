@@ -13,6 +13,7 @@
     "allow-get-egress-log",
     "allow-get-auth-log",
     "allow-get-auth-status",
+    "allow-get-auth-explain",
     "allow-get-managed-sessions",
     "allow-get-managed-session-status",
     "allow-get-managed-session-diagnostics",

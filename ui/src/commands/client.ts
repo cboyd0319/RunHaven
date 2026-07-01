@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 
 import {
   previewAgents,
+  previewAuthExplain,
   previewAuthStatus,
   previewDashboardStatus,
   previewImageStatus,
@@ -24,6 +25,7 @@ import {
 } from "./preview";
 import type {
   AgentProfile,
+  AuthExplainResponse,
   AuthLogResponse,
   AuthStatusResponse,
   DashboardStatus,
@@ -258,6 +260,10 @@ export async function getAuthLog(): Promise<AuthLogResponse> {
 
 export async function getAuthStatus(): Promise<AuthStatusResponse> {
   return call("get_auth_status", {}, previewAuthStatus);
+}
+
+export async function getAuthExplain(agent: string): Promise<AuthExplainResponse> {
+  return call("get_auth_explain", { agent }, () => previewAuthExplain(agent));
 }
 
 export async function chooseProjectFolder(): Promise<string | null> {

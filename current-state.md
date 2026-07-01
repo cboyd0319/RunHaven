@@ -232,6 +232,16 @@ Useful GUI design docs:
   the desktop status now reads "Early preview". The CLI `login` help text was
   corrected from "(currently: claude)" to list all supported agents (claude,
   codex, copilot, antigravity), matching `docs/USAGE.md`.
+- The desktop app now shows read-only per-agent auth details (`auth explain`
+  parity). One shared core builder (`auth_explain_payload`) feeds both the CLI
+  `auth explain --json` and a new `get_auth_explain` Tauri command under the
+  read-only `main-read` capability. The command validates the agent and
+  `get_profile` enforces the known-agent allowlist; the typed
+  `AuthExplainResponse` maps only static, secret-free fields (status, supported
+  auth, what the host keeps, what the guest receives, provider hosts, safe-path
+  guidance, notes), never credential values, tokens, env values, or raw paths
+  (proven by a no-leak test). The GUI shows it on demand in the launch Agent step
+  (`AgentAuthDetailsCard`), with shared label logic factored into `authDetails.ts`.
 
 ## Current Branch Work
 

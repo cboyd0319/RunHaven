@@ -23,6 +23,7 @@ pub fn run() {
             commands::diagnostics::get_egress_log,
             commands::diagnostics::get_auth_log,
             commands::diagnostics::get_auth_status,
+            commands::diagnostics::get_auth_explain,
             commands::sessions::get_managed_sessions,
             commands::managed_session_status::get_managed_session_status,
             commands::session_diagnostics::get_managed_session_diagnostics,

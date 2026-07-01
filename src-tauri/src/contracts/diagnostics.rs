@@ -64,6 +64,23 @@ pub(crate) struct AuthStatusResponse {
     pub profiles: Vec<AuthProfileStatus>,
 }
 
+/// Per-agent auth explanation exposed to the untrusted WebView. Only the static,
+/// secret-free description fields from the core profile tables are surfaced: no
+/// credential value, environment value, token, or raw host filesystem path.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct AuthExplainResponse {
+    pub name: String,
+    pub status: String,
+    pub runtime: String,
+    pub supported_auth: Vec<String>,
+    pub host_keeps: Vec<String>,
+    pub guest_receives: Vec<String>,
+    pub provider_hosts: Vec<String>,
+    pub current_safe_path: String,
+    pub notes: Vec<String>,
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ManagedSessionDiagnosticsResponse {

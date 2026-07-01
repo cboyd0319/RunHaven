@@ -2,6 +2,7 @@ import { isLaunchReady, warningPreview } from "./plan";
 import { rememberPreviewManagedSession } from "./preview_sessions";
 import type {
   AgentProfile,
+  AuthExplainResponse,
   AuthStatusResponse,
   DashboardStatus,
   ImageStatusResponse,
@@ -278,6 +279,20 @@ export function previewLaunchStatus(runId: string): LaunchStatusResponse {
     label: "Running",
     detail: "The managed session is running in preview mode.",
     updatedAt: "preview"
+  };
+}
+
+export function previewAuthExplain(agent: string): AuthExplainResponse {
+  return {
+    name: agent,
+    status: "api-key-broker",
+    runtime: "preview",
+    supportedAuth: ["API key through the host-side broker"],
+    hostKeeps: ["the host environment variable value you name"],
+    guestReceives: ["a placeholder API key value"],
+    providerHosts: ["api.example.com"],
+    currentSafePath: "Use the API key broker for a headless run.",
+    notes: ["Preview data only."]
   };
 }
 
