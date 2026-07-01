@@ -33,6 +33,7 @@ import {
   type LaunchStep,
   type RunControlAction,
 } from "./types"
+import { sessionIdForRun } from "./sessionSelection"
 import { useDiagnosticsState } from "./useDiagnosticsState"
 import { useAppDerivedState } from "./useAppDerivedState"
 
@@ -168,7 +169,9 @@ export function useAppController() {
   }
 
   async function loadManagedSessions() {
-    setManagedSessions(await getManagedSessions())
+    const nextSessions = await getManagedSessions()
+    setManagedSessions(nextSessions)
+    return nextSessions
   }
 
   function selectSession(sessionId: string | null) {
@@ -266,7 +269,11 @@ export function useAppController() {
       setLastLaunch(started)
       await loadRunStatus(started.runId)
       setLaunchMessage(`Run started: ${started.runId}`)
-      await loadManagedSessions()
+      const nextSessions = await loadManagedSessions()
+      const launchedSessionId = sessionIdForRun(nextSessions, started.runId)
+      if (launchedSessionId) {
+        selectSession(launchedSessionId)
+      }
       setPlan(null)
       setLaunchConfirmation(false)
       setConfirmedWarnings([])

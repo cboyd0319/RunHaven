@@ -32,14 +32,6 @@ test("reviews and starts a preview run", async ({ page }) => {
   await page.getByRole("button", { name: "Launch run" }).click();
 
   await expect(page.getByText(/Run started: preview-/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Last launch" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Run status" })).toBeVisible();
-  await expect(page.getByText("Container state")).toBeVisible();
-  await expect(page.getByText("running").first()).toBeVisible();
-  await expect(page.getByText("Container", { exact: true })).toBeVisible();
-
-  await expect(page.getByText("Active sessions")).toBeVisible();
-  await page.getByText("Claude - runhaven-preview").click();
   await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Claude - runhaven-preview" })).toBeVisible();
   await expect(page.getByText("Monitor session")).toBeVisible();
@@ -110,13 +102,15 @@ test("keeps selected-session message drafts isolated", async ({ page }) => {
   await page.goto("/");
 
   await startPreviewRun(page, "/tmp/runhaven-alpha");
-  await page.getByText("Claude - runhaven-alpha").click();
   await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
   await page.getByLabel("Message").fill("alpha draft");
+  await page.getByLabel("Refresh status").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
+  await expect(page.getByLabel("Message")).toHaveValue("alpha draft");
+  await expect(page.getByRole("heading", { name: "Choose agent" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Start" }).click();
   await startPreviewRun(page, "/tmp/runhaven-beta");
-  await page.getByText("Claude - runhaven-beta").click();
   await expect(page.getByLabel("Message")).toHaveValue("");
   await page.getByLabel("Message").fill("beta message");
   await page.getByRole("button", { name: "Send" }).click();
