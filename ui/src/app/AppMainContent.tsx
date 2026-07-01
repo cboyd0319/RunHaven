@@ -134,6 +134,10 @@ export function AppMainContent(props: AppMainContentProps) {
 function SessionView(
   props: AppMainContentProps & { selectedSession: ManagedSessionSummary },
 ) {
+  const runControlsAvailable = sessionAllowsRunControl(props.selectedSession)
+  const showRunControlCard =
+    runControlsAvailable || Boolean(props.controlMessage || props.controlError)
+
   return (
     <>
       <ManagedSessionCard session={props.selectedSession} />
@@ -146,11 +150,12 @@ function SessionView(
         onDraftChange={props.onSessionInputDraftChange}
         onSend={props.onSendSelectedSessionInput}
       />
-      {sessionAllowsRunControl(props.selectedSession) ? (
+      {showRunControlCard ? (
         <RunStatusCard
           title="Session controls"
           controlTarget="session"
           showStatus={false}
+          controlsAvailable={runControlsAvailable}
           runStatus={null}
           runStatusLoading={false}
           runStatusError=""

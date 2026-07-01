@@ -125,6 +125,7 @@ Hidden behind `Advanced`:
 
 - Network mode override.
 - Read-only project folder.
+- API key variable name for brokered Codex, Claude, and Gemini runs.
 - CPU and memory.
 - Custom image.
 - Extra provider hosts.

@@ -1,15 +1,16 @@
 import {
+  apiKeyBrokerEnvPlaceholder,
+  supportsApiKeyBroker,
+  type AgentProfile,
+  type ImageStatusResponse,
+  type RunPlanRequest,
+} from "@/commands/runhaven"
+import {
   CircleAlert,
   ClipboardCheck,
   FolderOpen,
   ShieldCheck,
 } from "lucide-react"
-
-import type {
-  AgentProfile,
-  ImageStatusResponse,
-  RunPlanRequest,
-} from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -70,6 +71,9 @@ export function LaunchPlanCard({
   onContinue,
   onReviewPlan,
 }: LaunchPlanCardProps) {
+  const brokerAvailable = supportsApiKeyBroker(selectedAgent)
+  const brokerPlaceholder = apiKeyBrokerEnvPlaceholder(selectedAgent)
+
   return (
     <Card>
       <CardHeader>
@@ -207,6 +211,27 @@ export function LaunchPlanCard({
                       />
                     </label>
                   </div>
+
+                  {brokerAvailable ? (
+                    <label className="flex flex-col gap-1.5 text-sm font-medium">
+                      API key variable
+                      <Input
+                        value={request.apiKeyBrokerEnv ?? ""}
+                        onChange={(event) =>
+                          onRequestChange({
+                            apiKeyBrokerEnv:
+                              event.currentTarget.value.trim() || null,
+                          })
+                        }
+                        placeholder={brokerPlaceholder}
+                        aria-label="API key broker environment variable"
+                      />
+                      <span className="text-sm font-normal text-muted-foreground">
+                        Enter the host variable name. RunHaven keeps the key on
+                        this Mac and gives the session a placeholder.
+                      </span>
+                    </label>
+                  ) : null}
 
                   <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
                     <Checkbox

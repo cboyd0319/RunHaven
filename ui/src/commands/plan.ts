@@ -1,9 +1,38 @@
 import type { AgentProfile, PlanWarning, RunPlanRequest, RunPlanResponse } from "./types";
 
 let launchSessionSequence = 0;
+const apiKeyBrokerEnvPlaceholders: Record<string, string> = {
+  claude: "ANTHROPIC_API_KEY",
+  codex: "OPENAI_API_KEY",
+  gemini: "GEMINI_API_KEY"
+};
 
 export function secureNetworkDefault(agent: AgentProfile | undefined): RunPlanRequest["networkMode"] {
   return agent && agent.providerHosts.length > 0 ? "provider" : "internal";
+}
+
+export function supportsApiKeyBroker(agent: AgentProfile | undefined): boolean {
+  return agent?.broker === "yes";
+}
+
+export function apiKeyBrokerEnvPlaceholder(agent: AgentProfile | undefined): string {
+  return agent ? (apiKeyBrokerEnvPlaceholders[agent.name] ?? "PROVIDER_API_KEY") : "PROVIDER_API_KEY";
+}
+
+export function reconcileRunPlanRequest(
+  current: RunPlanRequest,
+  agent: AgentProfile | undefined
+): RunPlanRequest {
+  if (!agent) {
+    return current;
+  }
+  const agentChanged = current.agent !== agent.name;
+  return {
+    ...current,
+    agent: agent.name,
+    networkMode: agentChanged ? secureNetworkDefault(agent) : current.networkMode,
+    apiKeyBrokerEnv: agentChanged || !supportsApiKeyBroker(agent) ? null : current.apiKeyBrokerEnv
+  };
 }
 
 export function defaultRunPlanRequest(agent: AgentProfile | undefined): RunPlanRequest {
@@ -18,6 +47,7 @@ export function defaultRunPlanRequest(agent: AgentProfile | undefined): RunPlanR
     memory: "4g",
     providerHosts: [],
     envNames: [],
+    apiKeyBrokerEnv: null,
     image: null,
     allowSensitiveWorkspace: false,
     allowRootUser: false,

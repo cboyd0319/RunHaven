@@ -108,6 +108,9 @@ Useful GUI design docs:
 - Desktop/Tauri managed-session work has live evidence for launch, bounded
   output, input, stop, cleanup, distinct GUI session identity, and per-session
   state naming.
+- API key broker env-var names now flow through the shared planner, typed Tauri
+  plan/launch request, and GUI advanced launch field for brokered Codex, Claude,
+  and Gemini profiles only. Raw env passthrough remains a separate warned path.
 - Tauri command tests are split under `src-tauri/src/commands/tests/`; the old
   monolithic `tests.rs` file must not return.
 - Shared UI contracts are split under `crates/runhaven-core/src/ui_contracts/`.

@@ -22,6 +22,7 @@ pub use validation::{
     validate_workspace,
 };
 
+use crate::provider::auth_broker::{GuestRedirect, broker_profile_for_agent};
 use crate::runtime::session_state::{session_digest, shared_state_volume_name, state_volume_name};
 use crate::support::validators::validate_run_id;
 
@@ -53,11 +54,14 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     }
     if let Some(name) = &options.api_key_broker_env {
         validate_env_name(name)?;
-        if options.profile.name != "codex" {
-            bail!("Codex API key broker requires codex profile");
-        }
+        let Some(_) = broker_profile_for_agent(options.profile.name) else {
+            bail!(
+                "the {} profile has no API-key broker; remove --api-key-broker-env",
+                options.profile.name
+            );
+        };
         if options.network != NetworkMode::Provider {
-            bail!("Codex API key broker requires --network provider");
+            bail!("API key broker requires --network provider");
         }
     }
     validate_resource_options(&options.cpus, &options.memory, &options.user)?;
@@ -231,7 +235,16 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
             .map(|s| (*s).to_string())
             .collect();
     }
-    if options.api_key_broker_env.is_some()
+    if options
+        .api_key_broker_env
+        .as_ref()
+        .and_then(|_| broker_profile_for_agent(options.profile.name))
+        .is_some_and(|profile| {
+            matches!(
+                profile.guest_redirect,
+                GuestRedirect::CodexCustomProvider { .. }
+            )
+        })
         && agent_command.first().map(String::as_str) != Some("codex")
     {
         bail!("Codex API key broker requires the agent command to start with codex");

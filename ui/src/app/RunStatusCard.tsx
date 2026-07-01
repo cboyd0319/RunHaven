@@ -21,6 +21,7 @@ type RunStatusCardProps = {
   title?: string
   controlTarget?: "run" | "session"
   showStatus?: boolean
+  controlsAvailable?: boolean
   runStatus: RunStatusResponse | null
   runStatusLoading: boolean
   runStatusError: string
@@ -36,6 +37,7 @@ export function RunStatusCard({
   title = "Run status",
   controlTarget = "run",
   showStatus = true,
+  controlsAvailable = true,
   runStatus,
   runStatusLoading,
   runStatusError,
@@ -46,7 +48,7 @@ export function RunStatusCard({
   onConfirmationChange,
   onControl,
 }: RunStatusCardProps) {
-  const showControls = !showStatus || runStatus !== null
+  const showControls = controlsAvailable && (!showStatus || runStatus !== null)
 
   return (
     <Card aria-live="polite">

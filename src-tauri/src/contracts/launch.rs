@@ -15,6 +15,8 @@ pub(crate) struct RunPlanRequest {
     pub provider_hosts: Vec<String>,
     #[serde(default)]
     pub env_names: Vec<String>,
+    #[serde(default)]
+    pub api_key_broker_env: Option<String>,
     pub image: Option<String>,
     pub allow_sensitive_workspace: bool,
     pub allow_root_user: bool,

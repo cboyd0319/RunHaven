@@ -56,6 +56,11 @@ pub(super) fn validate_plan_request_bounds(request: &RunPlanRequest) -> Result<(
         &request.env_names,
         MAX_ENV_NAMES,
         MAX_ENV_NAME_LEN,
+    )?;
+    validate_optional_text_len(
+        "API key broker environment variable",
+        request.api_key_broker_env.as_deref(),
+        MAX_ENV_NAME_LEN,
     )
 }
 

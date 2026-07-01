@@ -12,6 +12,7 @@ import {
   launchRun,
   nextLaunchSessionName,
   planRun,
+  reconcileRunPlanRequest,
   repairManagedSession,
   repairRun,
   secureNetworkDefault,
@@ -116,11 +117,19 @@ export function useAppController() {
         nextDashboard.agents.find((item) => item.name === request.agent) ??
         nextDashboard.agents[0]
       if (agent) {
-        setRequest((current) => ({
-          ...defaultRunPlanRequest(agent),
-          workspacePath: current.workspacePath,
-          sessionName: current.sessionName,
-        }))
+        const initializingDashboard = dashboard === null
+        setRequest((current) =>
+          reconcileRunPlanRequest(
+            initializingDashboard
+              ? {
+                  ...defaultRunPlanRequest(agent),
+                  workspacePath: current.workspacePath,
+                  sessionName: current.sessionName,
+                }
+              : current,
+            agent,
+          ),
+        )
         await loadImageStatus(agent.name)
       }
       if (lastLaunch) {
@@ -167,11 +176,16 @@ export function useAppController() {
 
   function changeAgent(agentName: string) {
     const agent = dashboard?.agents.find((item) => item.name === agentName)
-    setRequest((current) => ({
-      ...current,
-      agent: agentName,
-      networkMode: secureNetworkDefault(agent),
-    }))
+    setRequest((current) =>
+      agent
+        ? reconcileRunPlanRequest(current, agent)
+        : {
+            ...current,
+            agent: agentName,
+            networkMode: secureNetworkDefault(undefined),
+            apiKeyBrokerEnv: null,
+          },
+    )
     invalidatePlan()
     void loadImageStatus(agentName)
   }

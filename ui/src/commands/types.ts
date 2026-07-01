@@ -236,6 +236,7 @@ export type RunPlanRequest = {
   memory: string;
   providerHosts: string[];
   envNames: string[];
+  apiKeyBrokerEnv: string | null;
   image: string | null;
   allowSensitiveWorkspace: boolean;
   allowRootUser: boolean;

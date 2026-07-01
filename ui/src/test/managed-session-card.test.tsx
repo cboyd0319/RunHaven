@@ -109,6 +109,8 @@ describe("ManagedSessionCard", () => {
   it("allows run controls only while a session is active", () => {
     expect(sessionAllowsRunControl(session({ lifecycle: "running" }))).toBe(true);
     expect(sessionAllowsRunControl(session({ lifecycle: "starting" }))).toBe(true);
+    expect(sessionAllowsRunControl(session({ lifecycle: "stop-requested" }))).toBe(true);
+    expect(sessionAllowsRunControl(session({ lifecycle: "kill-requested" }))).toBe(true);
     expect(sessionAllowsRunControl(session({ lifecycle: "finished" }))).toBe(false);
     expect(sessionAllowsRunControl(session({ lifecycle: "failed" }))).toBe(false);
   });

@@ -58,6 +58,19 @@ fn build_plan_response_warns_for_supported_advanced_choices() {
 }
 
 #[test]
+fn build_plan_response_accepts_api_key_broker_env_name() {
+    let (_cache, _cache_home) = isolated_cache();
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut request = request(workspace.path().to_path_buf());
+    request.api_key_broker_env = Some("OPENAI_API_KEY".to_string());
+
+    let response = build_plan_response(request).expect("broker plan");
+
+    assert!(response.egress_summary.contains("API key broker enabled"));
+    assert_eq!(response.warnings.len(), 0);
+}
+
+#[test]
 fn build_plan_response_warns_for_active_runs_and_material_memory() {
     let (_cache, _cache_home) = isolated_cache();
     write_active_run("active-warning-run");
@@ -105,6 +118,13 @@ fn build_plan_response_rejects_oversized_ipc_fields() {
     let error = build_plan_response(plan_request).expect_err("env name count cap");
 
     assert!(error.contains("environment variable names"));
+
+    let mut plan_request = request(workspace.path().to_path_buf());
+    plan_request.api_key_broker_env = Some("A".repeat(129));
+
+    let error = build_plan_response(plan_request).expect_err("broker env cap");
+
+    assert!(error.contains("API key broker environment variable"));
 }
 
 #[test]

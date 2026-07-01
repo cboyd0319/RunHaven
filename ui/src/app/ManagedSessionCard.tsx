@@ -109,7 +109,12 @@ export function sessionNeedsAttention(session: ManagedSessionSummary): boolean {
 
 export function sessionAllowsRunControl(session: ManagedSessionSummary): boolean {
   const lifecycle = session.lifecycle.trim().toLowerCase()
-  return lifecycle === "running" || lifecycle === "starting"
+  return (
+    lifecycle === "running" ||
+    lifecycle === "starting" ||
+    lifecycle === "stop-requested" ||
+    lifecycle === "kill-requested"
+  )
 }
 
 function sessionBadgeVariant(

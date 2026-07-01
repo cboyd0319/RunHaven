@@ -170,12 +170,22 @@ export function previewPlanRun(request: RunPlanRequest): RunPlanResponse {
     containerName: "preview",
     networkMode: request.networkMode,
     networkName: request.networkMode === "internet" ? null : "preview-network",
-    egressSummary: request.networkMode === "internet" ? "unrestricted internet egress" : "restricted preview egress",
+    egressSummary: previewEgressSummary(request),
     image: request.image || "runhaven/preview:0.1.0",
     providerAllowedHosts: request.providerHosts,
     preflightCount: 0,
     warnings: warningPreview(request)
   };
+}
+
+function previewEgressSummary(request: RunPlanRequest): string {
+  if (request.networkMode === "internet") {
+    return "unrestricted internet egress"
+  }
+  if (request.apiKeyBrokerEnv?.trim()) {
+    return "restricted preview egress; API key broker enabled"
+  }
+  return "restricted preview egress"
 }
 
 export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {

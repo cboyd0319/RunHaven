@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  apiKeyBrokerEnvPlaceholder,
   defaultRunPlanRequest,
   getDashboardStatus,
   getImageStatus,
@@ -13,8 +14,10 @@ import {
   launchRun,
   planRun,
   repairManagedSession,
+  reconcileRunPlanRequest,
   secureNetworkDefault,
   stopManagedSession,
+  supportsApiKeyBroker,
   warningPreview,
   withLaunchSessionName,
   writeSessionInput,
@@ -66,6 +69,34 @@ describe("runhaven command helpers", () => {
       "custom-image",
       "provider-host"
     ]);
+  });
+
+  it("keeps API key broker env separate from raw env passthrough", async () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview",
+      apiKeyBrokerEnv: "OPENAI_API_KEY"
+    };
+
+    expect(defaultRunPlanRequest(providerAgent).apiKeyBrokerEnv).toBeNull();
+    expect(warningPreview(request).map((warning) => warning.code)).toEqual([]);
+
+    const plan = await planRun(request);
+
+    expect(plan.egressSummary).toContain("API key broker enabled");
+  });
+
+  it("keeps broker fields tied to brokered agents", () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      apiKeyBrokerEnv: "OPENAI_API_KEY"
+    };
+
+    expect(supportsApiKeyBroker(providerAgent)).toBe(true);
+    expect(supportsApiKeyBroker(localAgent)).toBe(false);
+    expect(apiKeyBrokerEnvPlaceholder(providerAgent)).toBe("OPENAI_API_KEY");
+    expect(reconcileRunPlanRequest(request, providerAgent).apiKeyBrokerEnv).toBe("OPENAI_API_KEY");
+    expect(reconcileRunPlanRequest(request, localAgent).apiKeyBrokerEnv).toBeNull();
   });
 
   it("previews active-run resource warnings when context has active runs", () => {

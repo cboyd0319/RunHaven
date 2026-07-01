@@ -212,7 +212,7 @@ fn build_agent_run_plan(
         allow_sensitive_workspace: request.allow_sensitive_workspace,
         allow_root_user: request.allow_root_user,
         provider_hosts,
-        api_key_broker_env: None,
+        api_key_broker_env: non_empty(request.api_key_broker_env.clone()),
         worktree: None,
         run_id,
     })

@@ -229,6 +229,50 @@ fn provider_plan_normalizes_extra_hosts_and_rejects_ip_literals() {
 }
 
 #[test]
+fn api_key_broker_accepts_brokered_profiles_only_on_provider_network() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let options_for = |agent: &str, network: NetworkMode| RunOptions {
+        profile: get_profile(agent).expect("profile"),
+        workspace: workspace.path().to_path_buf(),
+        agent_args: Vec::new(),
+        image: None,
+        cpus: "4".to_string(),
+        memory: "4g".to_string(),
+        network,
+        workspace_scope: WorkspaceScope::Current,
+        session: None,
+        auth_scope: AuthScope::Project,
+        read_only_workspace: false,
+        ssh: false,
+        env: Vec::new(),
+        user: "agent".to_string(),
+        interactive: false,
+        tty: false,
+        allow_sensitive_workspace: false,
+        allow_root_user: false,
+        provider_hosts: Vec::new(),
+        api_key_broker_env: Some("PROVIDER_KEY".to_string()),
+        worktree: None,
+        run_id: None,
+    };
+
+    for agent in ["codex", "claude", "gemini"] {
+        let plan = build_run_plan(options_for(agent, NetworkMode::Provider))
+            .unwrap_or_else(|error| panic!("{agent} broker should plan: {error}"));
+        assert_eq!(plan.api_key_broker_env.as_deref(), Some("PROVIDER_KEY"));
+        assert!(plan.egress_summary.contains("API key broker enabled"));
+    }
+
+    let shell_error = build_run_plan(options_for("shell", NetworkMode::Provider))
+        .expect_err("shell has no broker");
+    assert!(shell_error.to_string().contains("has no API-key broker"));
+
+    let network_error = build_run_plan(options_for("codex", NetworkMode::Internet))
+        .expect_err("broker requires provider network");
+    assert!(network_error.to_string().contains("--network provider"));
+}
+
+#[test]
 fn security_notices_track_lower_security_choices() {
     let workspace = tempfile::tempdir().expect("workspace");
     let base = || RunOptions {

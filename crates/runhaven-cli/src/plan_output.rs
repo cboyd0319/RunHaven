@@ -28,7 +28,7 @@ pub(super) fn print_run_plan(plan: &AgentRunPlan) {
     }
     if let Some(name) = &plan.api_key_broker_env {
         println!(
-            "Codex API key broker: enabled from host environment variable {name}; value is not printed or planned."
+            "API key broker: enabled from host environment variable {name}; value is not printed or planned."
         );
     }
     if !plan.preflight.is_empty() {
