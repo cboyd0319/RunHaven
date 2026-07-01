@@ -231,7 +231,7 @@ fn provider_plan_normalizes_extra_hosts_and_rejects_ip_literals() {
 #[test]
 fn api_key_broker_accepts_brokered_profiles_only_on_provider_network() {
     let workspace = tempfile::tempdir().expect("workspace");
-    let options_for = |agent: &str, network: NetworkMode| RunOptions {
+    let options_for = |agent: &str, network: NetworkMode, api_key_broker_env: &str| RunOptions {
         profile: get_profile(agent).expect("profile"),
         workspace: workspace.path().to_path_buf(),
         agent_args: Vec::new(),
@@ -251,24 +251,44 @@ fn api_key_broker_accepts_brokered_profiles_only_on_provider_network() {
         allow_sensitive_workspace: false,
         allow_root_user: false,
         provider_hosts: Vec::new(),
-        api_key_broker_env: Some("PROVIDER_KEY".to_string()),
+        api_key_broker_env: Some(api_key_broker_env.to_string()),
         worktree: None,
         run_id: None,
     };
 
-    for agent in ["codex", "claude", "gemini"] {
-        let plan = build_run_plan(options_for(agent, NetworkMode::Provider))
+    for (agent, env_name) in [
+        ("codex", "OPENAI_API_KEY"),
+        ("claude", "ANTHROPIC_API_KEY"),
+        ("gemini", "GEMINI_API_KEY"),
+    ] {
+        let plan = build_run_plan(options_for(agent, NetworkMode::Provider, env_name))
             .unwrap_or_else(|error| panic!("{agent} broker should plan: {error}"));
-        assert_eq!(plan.api_key_broker_env.as_deref(), Some("PROVIDER_KEY"));
+        assert_eq!(plan.api_key_broker_env.as_deref(), Some(env_name));
         assert!(plan.egress_summary.contains("API key broker enabled"));
     }
 
-    let shell_error = build_run_plan(options_for("shell", NetworkMode::Provider))
-        .expect_err("shell has no broker");
+    let wrong_env_error = build_run_plan(options_for(
+        "codex",
+        NetworkMode::Provider,
+        "AWS_SECRET_ACCESS_KEY",
+    ))
+    .expect_err("broker rejects unrelated host env");
+    assert!(wrong_env_error.to_string().contains("OPENAI_API_KEY"));
+
+    let shell_error = build_run_plan(options_for(
+        "shell",
+        NetworkMode::Provider,
+        "OPENAI_API_KEY",
+    ))
+    .expect_err("shell has no broker");
     assert!(shell_error.to_string().contains("has no API-key broker"));
 
-    let network_error = build_run_plan(options_for("codex", NetworkMode::Internet))
-        .expect_err("broker requires provider network");
+    let network_error = build_run_plan(options_for(
+        "codex",
+        NetworkMode::Internet,
+        "OPENAI_API_KEY",
+    ))
+    .expect_err("broker requires provider network");
     assert!(network_error.to_string().contains("--network provider"));
 }
 

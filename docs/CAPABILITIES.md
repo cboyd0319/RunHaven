@@ -69,12 +69,16 @@ detail.
 
 | Profile | Provider hosts | Interactive auth | Headless broker | Key limit |
 | --- | --- | --- | --- | --- |
-| `claude` | Bundled: `api.anthropic.com`, `claude.ai`, `platform.claude.com` | `runhaven login claude` (host setup-token, injected at run time), or Claude.ai/subscription login in isolated state | API-key broker: `--api-key-broker-env`, `x-api-key` via `ANTHROPIC_BASE_URL` | API key brokered host-side; OAuth and subscription logins use isolated state |
-| `codex` | Bundled: `api.openai.com`, `chatgpt.com`, `auth.openai.com` | `runhaven login codex` (`codex login --device-auth`), or ChatGPT sign-in in isolated state | API-key broker: `--api-key-broker-env`, Responses API (`/v1/responses`) | Key brokered host-side; device-code login needs the ChatGPT account setting on |
-| `gemini` | Partial: only `generativelanguage.googleapis.com` bundled; `accounts.google.com` and Vertex hosts are candidates | Google account login or API key in isolated state (no `runhaven login`) | API-key broker: `--api-key-broker-env`, `x-goog-api-key` via base-URL redirect | Redirect env is undocumented upstream and version-fragile; Vertex and account login are not brokered |
+| `claude` | Bundled: `api.anthropic.com`, `claude.ai`, `platform.claude.com` | `runhaven login claude` (host setup-token, injected at run time), or Claude.ai/subscription login in isolated state | API-key broker: `--api-key-broker-env ANTHROPIC_API_KEY`, `x-api-key` via `ANTHROPIC_BASE_URL` | API key brokered host-side; OAuth and subscription logins use isolated state |
+| `codex` | Bundled: `api.openai.com`, `chatgpt.com`, `auth.openai.com` | `runhaven login codex` (`codex login --device-auth`), or ChatGPT sign-in in isolated state | API-key broker: `--api-key-broker-env OPENAI_API_KEY`, Responses API (`/v1/responses`) | Key brokered host-side; device-code login needs the ChatGPT account setting on |
+| `gemini` | Partial: only `generativelanguage.googleapis.com` bundled; `accounts.google.com` and Vertex hosts are candidates | Google account login or API key in isolated state (no `runhaven login`) | API-key broker: `--api-key-broker-env GEMINI_API_KEY`, `x-goog-api-key` via base-URL redirect | Redirect env is undocumented upstream and version-fragile; Vertex and account login are not brokered |
 | `copilot` | Bundled: the `githubcopilot.com` hosts plus `github.com` and `api.github.com` for the device login | `runhaven login copilot` (GitHub device flow) | Design-only (cannot be brokered cleanly) | Token exchange + dynamically-routed API host; the in-container login stores the token in the isolated volume |
 | `antigravity` | Bundled: Google OAuth, userinfo, and Cloud Code hosts plus the `*-cloudcode-pa.googleapis.com` model-endpoint family | First-run Google login in isolated state (`runhaven login antigravity`) | None | No API-key broker; uses isolated login state. Google sign-in consent and redirect happen in the host browser |
 | `shell` | None | Decided by the custom image | None | Generic base for custom images; you supply image and credentials |
+
+The API-key broker only accepts the fixed per-agent host env names above:
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `GEMINI_API_KEY`. Arbitrary host env
+names are rejected.
 
 "Design-only" means no credential broker is wired yet, so headless use relies on
 isolated login state or an explicit `--env NAME`. See

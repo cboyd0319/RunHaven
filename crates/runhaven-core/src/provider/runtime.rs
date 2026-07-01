@@ -205,6 +205,13 @@ fn run_provider_agent_command_with_runner(
 pub fn require_api_key_broker_secret(
     plan: &AgentRunPlan,
 ) -> Result<Option<(ProviderBrokerProfile, String)>> {
+    require_api_key_broker_secret_with_env(plan, |name| std::env::var(name).ok())
+}
+
+fn require_api_key_broker_secret_with_env(
+    plan: &AgentRunPlan,
+    env_value: impl Fn(&str) -> Option<String>,
+) -> Result<Option<(ProviderBrokerProfile, String)>> {
     let Some(name) = &plan.api_key_broker_env else {
         return Ok(None);
     };
@@ -214,7 +221,14 @@ pub fn require_api_key_broker_secret(
             plan.profile_name
         );
     };
-    let value = std::env::var(name).unwrap_or_default();
+    if name != profile.host_env {
+        bail!(
+            "{} API key broker only accepts host environment variable {}",
+            plan.profile_name,
+            profile.host_env
+        );
+    }
+    let value = env_value(name).unwrap_or_default();
     if value.trim().is_empty() {
         bail!("{name} is not set on the host; export it before using --api-key-broker-env");
     }

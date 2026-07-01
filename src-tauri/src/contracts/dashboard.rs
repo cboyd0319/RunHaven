@@ -40,7 +40,6 @@ pub(crate) struct RunSummary {
     pub status: String,
     pub timestamp: String,
     pub auth_scope: String,
-    pub state_volume: String,
     pub session: String,
 }
 

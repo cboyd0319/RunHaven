@@ -30,7 +30,6 @@ export type RunSummary = {
   status: string;
   timestamp: string;
   authScope: string;
-  stateVolume: string;
   session: string;
 };
 
@@ -78,7 +77,6 @@ export type RunStatusRun = {
   status: string;
   timestamp: string;
   authScope: string;
-  stateVolume: string;
   session: string;
   containerName: string;
 };

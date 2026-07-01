@@ -1,7 +1,7 @@
 import type { AgentProfile, PlanWarning, RunPlanRequest, RunPlanResponse } from "./types";
 
 let launchSessionSequence = 0;
-const apiKeyBrokerEnvPlaceholders: Record<string, string> = {
+const apiKeyBrokerEnvByAgent: Record<string, string> = {
   claude: "ANTHROPIC_API_KEY",
   codex: "OPENAI_API_KEY",
   gemini: "GEMINI_API_KEY"
@@ -12,11 +12,11 @@ export function secureNetworkDefault(agent: AgentProfile | undefined): RunPlanRe
 }
 
 export function supportsApiKeyBroker(agent: AgentProfile | undefined): boolean {
-  return agent?.broker === "yes";
+  return agent?.broker === "yes" && apiKeyBrokerEnvForAgent(agent) !== null;
 }
 
-export function apiKeyBrokerEnvPlaceholder(agent: AgentProfile | undefined): string {
-  return agent ? (apiKeyBrokerEnvPlaceholders[agent.name] ?? "PROVIDER_API_KEY") : "PROVIDER_API_KEY";
+export function apiKeyBrokerEnvForAgent(agent: AgentProfile | undefined): string | null {
+  return agent ? (apiKeyBrokerEnvByAgent[agent.name] ?? null) : null;
 }
 
 export function reconcileRunPlanRequest(
@@ -27,11 +27,12 @@ export function reconcileRunPlanRequest(
     return current;
   }
   const agentChanged = current.agent !== agent.name;
+  const fixedBrokerEnv = apiKeyBrokerEnvForAgent(agent);
   return {
     ...current,
     agent: agent.name,
     networkMode: agentChanged ? secureNetworkDefault(agent) : current.networkMode,
-    apiKeyBrokerEnv: agentChanged || !supportsApiKeyBroker(agent) ? null : current.apiKeyBrokerEnv
+    apiKeyBrokerEnv: !fixedBrokerEnv || agentChanged || !current.apiKeyBrokerEnv ? null : fixedBrokerEnv
   };
 }
 

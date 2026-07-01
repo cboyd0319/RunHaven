@@ -172,6 +172,33 @@ fn broker_plan(profile_name: &str, agent: &str) -> AgentRunPlan {
 }
 
 #[test]
+fn api_key_broker_secret_requires_fixed_host_env() {
+    let mut plan = broker_plan("codex", "codex");
+    plan.api_key_broker_env = Some("OPENAI_API_KEY".to_string());
+
+    let secret = require_api_key_broker_secret_with_env(&plan, |name| {
+        (name == "OPENAI_API_KEY").then(|| "test-openai-key".to_string())
+    })
+    .expect("broker secret")
+    .expect("broker enabled");
+
+    assert_eq!(secret.0.host_env, "OPENAI_API_KEY");
+    assert_eq!(secret.1, "test-openai-key");
+
+    plan.api_key_broker_env = Some("AWS_SECRET_ACCESS_KEY".to_string());
+    let wrong_env =
+        require_api_key_broker_secret_with_env(&plan, |_| Some("must-not-be-read".to_string()))
+            .expect_err("unrelated env rejected");
+    assert!(wrong_env.to_string().contains("OPENAI_API_KEY"));
+
+    plan.api_key_broker_env = Some("OPENAI_API_KEY".to_string());
+    let missing = require_api_key_broker_secret_with_env(&plan, |_| None)
+        .expect_err("missing fixed env rejected");
+    assert!(missing.to_string().contains("OPENAI_API_KEY"));
+    assert!(missing.to_string().contains("not set on the host"));
+}
+
+#[test]
 fn claude_broker_redirects_base_url_and_gives_guest_only_placeholder() {
     let plan = broker_plan("claude", "claude");
     let result = with_api_key_broker_config(

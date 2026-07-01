@@ -38,6 +38,7 @@ fn run_status_response_maps_sanitized_payload_without_raw_fields() {
     .expect("status response");
 
     assert_eq!(response.run.run_id, "runhaven-status-test");
+    assert_eq!(response.run.workspace, "runhaven-status");
     assert_eq!(response.run.auth_scope, "project");
     assert_eq!(response.container.state, "running");
     assert_eq!(
@@ -50,6 +51,72 @@ fn run_status_response_maps_sanitized_payload_without_raw_fields() {
     );
     let serialized = serde_json::to_string(&response).expect("json");
     assert!(!serialized.contains("fake-secret"));
+    assert!(!serialized.contains("/tmp/runhaven-status"));
+    assert!(!serialized.contains("stateVolume"));
+    assert!(!serialized.contains("runhaven-codex-status-home"));
     assert!(!serialized.contains("/Users/example"));
     assert!(!serialized.contains("secret-flag"));
+}
+
+#[test]
+fn dashboard_status_omits_raw_workspace_paths_and_state_volumes() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "dashboard-active-run",
+        json!({
+            "timestamp": "2026-07-01T12:00:00Z",
+            "run_id": "dashboard-active-run",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/active-project",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-dashboard-active",
+            "state_volume": "runhaven-codex-active-secret-home",
+            "auth_scope": "project",
+            "session": "active-session"
+        }),
+    )
+    .expect("active run payload");
+    runhaven_core::support::paths::ensure_private_parent(
+        &runhaven_core::support::paths::runs_log_path(),
+    )
+    .expect("runs log parent");
+    let mut file =
+        std::fs::File::create(runhaven_core::support::paths::runs_log_path()).expect("runs log");
+    use std::io::Write;
+    writeln!(
+        file,
+        "{}",
+        json!({
+            "timestamp": "2026-07-01T12:30:00Z",
+            "started_at": "2026-07-01T12:00:00Z",
+            "finished_at": "2026-07-01T12:30:00Z",
+            "run_id": "dashboard-recent-run",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/recent-project",
+            "network": "provider",
+            "status": "succeeded",
+            "auth_scope": "project",
+            "state_volume": "runhaven-codex-recent-secret-home",
+            "session": "recent-session"
+        })
+    )
+    .expect("write run record");
+
+    let dashboard = collect_dashboard_status();
+
+    assert_eq!(dashboard.active_runs[0].workspace, "active-project");
+    assert_eq!(dashboard.recent_runs[0].workspace, "recent-project");
+    let serialized = serde_json::to_string(&dashboard).expect("serialize dashboard");
+    for forbidden in [
+        "/sensitive/workspaces",
+        "stateVolume",
+        "runhaven-codex-active-secret-home",
+        "runhaven-codex-recent-secret-home",
+    ] {
+        assert!(
+            !serialized.contains(forbidden),
+            "dashboard leaked forbidden value {forbidden:?}"
+        );
+    }
 }

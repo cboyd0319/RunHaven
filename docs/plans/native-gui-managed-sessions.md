@@ -118,16 +118,17 @@ login state before launch:
 - `Shared agent login` reuses the per-agent login created by `runhaven login`
   across projects on this Mac.
 - `Project session login` keeps login state separate for this project session.
-- `API key variable found` means the named host environment variable is present
-  for this app process.
-- `API key variable missing` blocks launch until the variable is set or the user
-  removes the API key variable and signs in inside the session.
+- `API key variable found` means the fixed per-agent host environment variable
+  is present for this app process.
+- `API key variable missing` blocks launch until that fixed variable is set or
+  the user removes the API key variable and signs in inside the session.
 
 The frontend renders this summary in the review step and disables launch when
 `access.blocking` is true. The response may include the environment variable
 name, but never includes the value. The backend repeats the API-key environment
 check before spawning the background launch thread, so the GUI cannot report an
-accepted launch when broker credentials are missing.
+accepted launch when broker credentials are missing. Arbitrary host env names
+are rejected before launch.
 
 The GUI says `Run accepted` after the typed launch command returns. That means
 RunHaven accepted the reviewed plan and started backend launch ownership; it is
@@ -323,8 +324,10 @@ Current slice:
   narrow `run-control` capability
 - `scripts/gui_tauri_live_smoke.sh` proves the no-bundle Tauri shell builds and
   the selected-session bounded-output plus confirmed-stop command path works
-  against one live Apple `container` run. This is an opt-in local smoke, not a
-  WebView click automation harness.
+  against one live Apple `container` run. When exercised with a real-agent
+  profile, it uses the explicit broker env for that profile. This is an opt-in
+  local smoke, not a WebView click automation harness or a TTY/OAuth parity
+  check.
 - capability guard proves no resize, attach, app-server transport, filesystem
   RPC, MCP, generic command execution, login, or host-reaching bridge is
   exposed while `write_session_input` stays in the narrow `run-control`

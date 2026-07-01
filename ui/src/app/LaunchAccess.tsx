@@ -1,5 +1,5 @@
 import {
-  apiKeyBrokerEnvPlaceholder,
+  apiKeyBrokerEnvForAgent,
   authScopeHelp,
   authScopeLabels,
   supportsApiKeyBroker,
@@ -12,7 +12,7 @@ import { CircleAlert, ShieldCheck } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export function AgentAccessSummary({
   agent,
@@ -27,6 +27,7 @@ export function AgentAccessSummary({
     return null
   }
   const profileStatus = authProfileStatus(agent, authStatus)
+  const brokerAvailable = supportsApiKeyBroker(agent)
   return (
     <div className="grid gap-3 rounded-lg border p-3 text-sm sm:grid-cols-4">
       <div>
@@ -35,8 +36,8 @@ export function AgentAccessSummary({
       </div>
       <div>
         <div className="text-muted-foreground">Credential broker</div>
-        <Badge variant={agent.broker === "yes" ? "success" : "secondary"}>
-          {brokerLabel(agent.broker)}
+        <Badge variant={brokerAvailable ? "success" : "secondary"}>
+          {brokerCapabilityLabel(agent)}
         </Badge>
       </div>
       <div>
@@ -95,21 +96,26 @@ export function ApiKeyBrokerField({
   value: string | null
   onChange: (value: string | null) => void
 }) {
-  if (!supportsApiKeyBroker(agent)) {
+  const envName = apiKeyBrokerEnvForAgent(agent)
+  if (!envName || !supportsApiKeyBroker(agent)) {
     return null
   }
   return (
-    <label className="flex flex-col gap-1.5 text-sm font-medium">
-      API key variable
-      <Input
-        value={value ?? ""}
-        onChange={(event) => onChange(event.currentTarget.value.trim() || null)}
-        placeholder={apiKeyBrokerEnvPlaceholder(agent)}
-        aria-label="API key broker environment variable"
+    <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+      <Checkbox
+        checked={value !== null}
+        onCheckedChange={(checked) =>
+          onChange(checked === true ? envName : null)
+        }
+        aria-label={`Use API key broker with ${envName}`}
       />
-      <span className="text-sm font-normal text-muted-foreground">
-        Enter the host variable name. RunHaven keeps the key on this Mac and
-        gives the session a placeholder.
+      <span className="flex flex-col gap-1">
+        <span className="font-medium">Use API key broker</span>
+        <span className="text-muted-foreground">
+          Fixed host variable: <code className="font-mono">{envName}</code>.
+          RunHaven keeps the key on this Mac and gives the session a
+          placeholder value.
+        </span>
       </span>
     </label>
   )
@@ -161,11 +167,11 @@ function authMethodLabel(value: string): string {
   return value
 }
 
-function brokerLabel(value: string): string {
-  if (value === "yes") {
+function brokerCapabilityLabel(agent: AgentProfile): string {
+  if (supportsApiKeyBroker(agent)) {
     return "Available"
   }
-  if (value === "n/a") {
+  if (agent.broker === "n/a") {
     return "Not needed"
   }
   return "Not available"

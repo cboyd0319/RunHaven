@@ -66,39 +66,33 @@ fn build_plan_response_warns_for_supported_advanced_choices() {
 }
 
 #[test]
-fn build_plan_response_reports_missing_api_key_broker_env() {
+fn build_plan_response_accepts_allowed_api_key_broker_env_name() {
     let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
     let mut request = request(workspace.path().to_path_buf());
-    let missing_env = missing_broker_env_name();
-    request.api_key_broker_env = Some(missing_env.clone());
+    request.api_key_broker_env = Some("OPENAI_API_KEY".to_string());
 
     let response = build_plan_response(request).expect("broker plan");
 
     assert!(response.egress_summary.contains("API key broker enabled"));
-    assert_eq!(response.access.status, "blocked");
-    assert_eq!(response.access.api_key_broker_env, Some(missing_env));
-    assert_eq!(response.access.api_key_broker_env_present, Some(false));
-    assert!(response.access.blocking);
+    assert_eq!(
+        response.access.api_key_broker_env,
+        Some("OPENAI_API_KEY".to_string())
+    );
+    assert!(response.access.api_key_broker_env_present.is_some());
     assert_eq!(response.warnings.len(), 0);
 }
 
 #[test]
-fn build_plan_response_reports_present_api_key_broker_env_without_value() {
+fn build_plan_response_rejects_unrelated_api_key_broker_env() {
     let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
-    let path_value = std::env::var("PATH").expect("PATH should be set for tests");
     let mut request = request(workspace.path().to_path_buf());
     request.api_key_broker_env = Some("PATH".to_string());
 
-    let response = build_plan_response(request).expect("broker plan");
-    let serialized = serde_json::to_string(&response).expect("serialize response");
+    let error = build_plan_response(request).expect_err("broker env allowlist");
 
-    assert_eq!(response.access.status, "ready");
-    assert_eq!(response.access.api_key_broker_env, Some("PATH".to_string()));
-    assert_eq!(response.access.api_key_broker_env_present, Some(true));
-    assert!(!response.access.blocking);
-    assert!(!serialized.contains(&path_value));
+    assert!(error.contains("OPENAI_API_KEY"));
 }
 
 #[test]

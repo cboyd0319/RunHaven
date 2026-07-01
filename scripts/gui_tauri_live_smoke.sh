@@ -2,12 +2,13 @@
 # Local live smoke for the GUI/Tauri managed-session command path.
 # Builds the desktop shell and runs the ignored live Tauri command test that
 # launches two shell sessions, writes isolated input, reads isolated output,
-# and stops both sessions.
+# and stops both sessions. Use --with-agent to additionally launch a real
+# provider agent through the same Tauri-owned path.
 set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: scripts/gui_tauri_live_smoke.sh [--skip-tauri-build]
+Usage: scripts/gui_tauri_live_smoke.sh [--skip-tauri-build] [--with-agent AGENT] [--agent-api-key-env NAME]
 
 Runs an opt-in local smoke for the desktop/Tauri managed-session path.
 
@@ -18,6 +19,7 @@ Checks:
   - two live Tauri-owned shell runs on the internal network
   - selected-session Tauri command path for isolated bounded input, isolated
     bounded output, and confirmed stop
+  - optional brokered real-agent Tauri-owned launch with --with-agent
 
 This does not automate WebView clicks. It proves the desktop build plus the
 same typed Tauri commands the React shell calls for selected-session input,
@@ -45,12 +47,33 @@ print_file() {
   fi
 }
 
+expected_broker_env() {
+  case "$1" in
+    codex) printf '%s\n' "OPENAI_API_KEY" ;;
+    claude) printf '%s\n' "ANTHROPIC_API_KEY" ;;
+    gemini) printf '%s\n' "GEMINI_API_KEY" ;;
+    *) return 1 ;;
+  esac
+}
+
 SKIP_TAURI_BUILD=0
+LIVE_AGENT="${RUNHAVEN_GUI_LIVE_AGENT:-}"
+LIVE_AGENT_API_KEY_ENV="${RUNHAVEN_GUI_LIVE_AGENT_API_KEY_ENV:-}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --skip-tauri-build)
       SKIP_TAURI_BUILD=1
+      ;;
+    --with-agent)
+      shift
+      [ "$#" -gt 0 ] || fail "--with-agent requires an agent name"
+      LIVE_AGENT="$1"
+      ;;
+    --agent-api-key-env)
+      shift
+      [ "$#" -gt 0 ] || fail "--agent-api-key-env requires an environment variable name"
+      LIVE_AGENT_API_KEY_ENV="$1"
       ;;
     -h|--help)
       usage
@@ -109,9 +132,50 @@ grep -F "Builder status" "$image_doctor_log" >/dev/null 2>&1 || {
 }
 rm -f "$image_doctor_log"
 
+if [ -n "$LIVE_AGENT" ]; then
+  expected_env="$(expected_broker_env "$LIVE_AGENT")" || {
+    fail "--with-agent currently supports brokered agents only: codex, claude, gemini"
+  }
+  if [ -z "$LIVE_AGENT_API_KEY_ENV" ]; then
+    fail "--with-agent $LIVE_AGENT requires --agent-api-key-env $expected_env"
+  fi
+  [ "$LIVE_AGENT_API_KEY_ENV" = "$expected_env" ] || {
+    fail "$LIVE_AGENT broker smoke requires --agent-api-key-env $expected_env"
+  }
+  step "check real-agent image ($LIVE_AGENT)"
+  agent_image_doctor_log="$(mktemp "${TMPDIR:-/tmp}/runhaven-gui-agent-image-doctor.XXXXXX")"
+  if ! "$RUNHAVEN_BIN" image doctor "$LIVE_AGENT" >"$agent_image_doctor_log" 2>&1; then
+    print_file "$agent_image_doctor_log"
+    rm -f "$agent_image_doctor_log"
+    fail "bundled $LIVE_AGENT image is missing or stale; run: $RUNHAVEN_BIN image build $LIVE_AGENT"
+  fi
+  grep -F "Builder status" "$agent_image_doctor_log" >/dev/null 2>&1 || {
+    print_file "$agent_image_doctor_log"
+    rm -f "$agent_image_doctor_log"
+    fail "image doctor did not report builder status for $LIVE_AGENT"
+  }
+  rm -f "$agent_image_doctor_log"
+
+  if ! [[ "$LIVE_AGENT_API_KEY_ENV" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+    fail "--agent-api-key-env must be a valid environment variable name"
+  fi
+  if [ -z "${!LIVE_AGENT_API_KEY_ENV:-}" ]; then
+    fail "$LIVE_AGENT_API_KEY_ENV is not set; export it before running the real-agent smoke"
+  fi
+fi
+
 step "exercise live Tauri multi-session input path"
 cargo test -p runhaven-tauri --locked \
   managed_session_live_smoke_isolates_two_sessions \
   -- --ignored --show-output
+
+if [ -n "$LIVE_AGENT" ]; then
+  step "exercise live Tauri real-agent launch path ($LIVE_AGENT)"
+  RUNHAVEN_GUI_LIVE_AGENT="$LIVE_AGENT" \
+  RUNHAVEN_GUI_LIVE_AGENT_API_KEY_ENV="$LIVE_AGENT_API_KEY_ENV" \
+    cargo test -p runhaven-tauri --locked \
+      managed_session_live_smoke_launches_real_agent_profile \
+      -- --ignored --show-output
+fi
 
 echo "GUI Tauri live smoke checks passed."

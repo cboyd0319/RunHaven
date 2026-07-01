@@ -4,7 +4,6 @@ use crate::contracts::{
     ManagedSessionDiagnosticsRequest, ManagedSessionLogSnapshotRequest,
     ManagedSessionStatusRequest, RepairManagedSessionRequest, RepairRunResponse,
     StopManagedSessionRequest, StopRunResponse, WriteSessionInputRequest,
-    WriteSessionInputResponse,
 };
 use crate::session_input::SessionInputRegistry;
 use crate::session_output::SessionOutputRegistry;
@@ -16,6 +15,8 @@ use std::path::PathBuf;
 mod auth;
 mod image;
 mod live;
+mod live_agent;
+mod live_support;
 mod log_snapshot;
 mod plan;
 mod run_control;
@@ -57,7 +58,7 @@ fn shell_request(workspace: PathBuf, session: String) -> RunPlanRequest {
         workspace_path: workspace.display().to_string(),
         network_mode: "internal".to_string(),
         workspace_scope: "current".to_string(),
-        auth_scope: "agent".to_string(),
+        auth_scope: "project".to_string(),
         session_name: Some(session),
         read_only_workspace: true,
         cpus: "1".to_string(),
@@ -88,23 +89,4 @@ fn write_active_run(run_id: &str) {
         }),
     )
     .expect("active run payload");
-}
-
-fn missing_broker_env_name() -> String {
-    let seed = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .expect("system time")
-        .as_nanos();
-    for attempt in 0..8 {
-        let name = format!(
-            "RUNHAVEN_TEST_MISSING_BROKER_{}_{}_{}",
-            std::process::id(),
-            seed,
-            attempt
-        );
-        if std::env::var_os(&name).is_none() {
-            return name;
-        }
-    }
-    panic!("could not find an unused broker env name");
 }

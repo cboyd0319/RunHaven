@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  apiKeyBrokerEnvPlaceholder,
+  apiKeyBrokerEnvForAgent,
   defaultRunPlanRequest,
   getAuthStatus,
   getDashboardStatus,
@@ -64,6 +64,14 @@ describe("runhaven command helpers", () => {
     expect(plan.access.blocking).toBe(false);
   });
 
+  it("uses fixed API key broker env names by agent", () => {
+    expect(apiKeyBrokerEnvForAgent({ ...providerAgent, name: "codex" })).toBe("OPENAI_API_KEY");
+    expect(apiKeyBrokerEnvForAgent({ ...providerAgent, name: "claude" })).toBe("ANTHROPIC_API_KEY");
+    expect(apiKeyBrokerEnvForAgent({ ...providerAgent, name: "gemini" })).toBe("GEMINI_API_KEY");
+    expect(apiKeyBrokerEnvForAgent({ ...providerAgent, name: "other" })).toBeNull();
+    expect(supportsApiKeyBroker({ ...providerAgent, name: "other" })).toBe(false);
+  });
+
   it("defaults GUI launches to shared agent login state", () => {
     const request = defaultRunPlanRequest(providerAgent);
 
@@ -73,13 +81,14 @@ describe("runhaven command helpers", () => {
   it("keeps broker fields tied to brokered agents", () => {
     const request = {
       ...defaultRunPlanRequest(providerAgent),
-      apiKeyBrokerEnv: "OPENAI_API_KEY"
+      apiKeyBrokerEnv: "CUSTOM_API_KEY"
     };
 
     expect(supportsApiKeyBroker(providerAgent)).toBe(true);
     expect(supportsApiKeyBroker(localAgent)).toBe(false);
-    expect(apiKeyBrokerEnvPlaceholder(providerAgent)).toBe("OPENAI_API_KEY");
+    expect(apiKeyBrokerEnvForAgent(providerAgent)).toBe("OPENAI_API_KEY");
     expect(reconcileRunPlanRequest(request, providerAgent).apiKeyBrokerEnv).toBe("OPENAI_API_KEY");
+    expect(reconcileRunPlanRequest(defaultRunPlanRequest(providerAgent), providerAgent).apiKeyBrokerEnv).toBeNull();
     expect(reconcileRunPlanRequest(request, localAgent).apiKeyBrokerEnv).toBeNull();
   });
 

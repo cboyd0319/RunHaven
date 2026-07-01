@@ -17,7 +17,6 @@ pub(crate) struct RunStatusRun {
     pub status: String,
     pub timestamp: String,
     pub auth_scope: String,
-    pub state_volume: String,
     pub session: String,
     pub container_name: String,
 }

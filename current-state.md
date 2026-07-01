@@ -120,9 +120,15 @@ Useful GUI design docs:
 - The GUI quietly refreshes active/recent managed sessions after launch or
   selection and suppresses no-op session-list updates to avoid visible page
   blink while status changes.
-- API key broker env-var names now flow through the shared planner, typed Tauri
-  plan/launch request, and GUI advanced launch field for brokered Codex, Claude,
-  and Gemini profiles only. Raw env passthrough remains a separate warned path.
+- Legacy WebView-readable dashboard and run-status responses now omit state
+  volume names and return display-safe workspace labels instead of raw host
+  paths. Plan and launch review still carry reviewed launch details.
+- API key broker env-var names are fixed per agent: `OPENAI_API_KEY`,
+  `ANTHROPIC_API_KEY`, and `GEMINI_API_KEY`. Those names flow through the
+  shared planner, typed Tauri plan/launch request, and GUI advanced launch
+  field for brokered Codex, Claude, and Gemini profiles only. Raw env
+  passthrough remains a separate warned path, and arbitrary host env names fail
+  closed.
 - GUI launch review now shows a typed access preflight. It defaults to the
   shared agent login state created by `runhaven login`, explicitly says that
   state is shared across projects on this Mac, still lets users choose a
@@ -130,6 +136,9 @@ Useful GUI design docs:
   broker variable name is present but not set. The GUI success message says
   `Run accepted`, not `Run started`, because the Tauri command returns before
   the background container is fully proven running.
+- The real-agent GUI live smoke requires an explicit broker env for the chosen
+  profile, waits for a running monitor session, and requires bounded non-empty
+  output. It is brokered-launch coverage, not TTY or OAuth/login parity.
 - Selected-session runtime status now returns typed recovery guidance when live
   container status is unavailable. Generic failures use refresh/diagnostics
   guidance first; marker repair is reserved for a proven available next action.

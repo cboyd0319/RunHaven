@@ -77,6 +77,8 @@ pub enum GuestRedirect {
 pub struct ProviderBrokerProfile {
     /// Agent profile id this broker serves (`codex`, `claude`, `gemini`).
     pub agent: &'static str,
+    /// Host environment variable RunHaven may read for this broker.
+    pub host_env: &'static str,
     /// Human label used in config and decisions.
     pub label: &'static str,
     /// Pinned upstream host the broker forwards to.
@@ -98,6 +100,7 @@ pub const BROKER_PLACEHOLDER_VALUE: &str = "runhaven-broker-placeholder";
 /// Codex broker: the original prototype, preserved exactly.
 pub const CODEX_BROKER: ProviderBrokerProfile = ProviderBrokerProfile {
     agent: "codex",
+    host_env: "OPENAI_API_KEY",
     label: "RunHaven OpenAI API-key broker",
     upstream_host: "api.openai.com",
     path_rule: PathRule::Exact("/v1/responses"),
@@ -115,6 +118,7 @@ pub const CODEX_BROKER: ProviderBrokerProfile = ProviderBrokerProfile {
 /// enumerating which `/v1/*` endpoints the CLI version hits.
 pub const CLAUDE_BROKER: ProviderBrokerProfile = ProviderBrokerProfile {
     agent: "claude",
+    host_env: "ANTHROPIC_API_KEY",
     label: "RunHaven Anthropic API-key broker",
     upstream_host: "api.anthropic.com",
     path_rule: PathRule::Prefix("/v1/"),
@@ -134,6 +138,7 @@ pub const CLAUDE_BROKER: ProviderBrokerProfile = ProviderBrokerProfile {
 /// version-fragile; gate it behind a per-version smoke.
 pub const GEMINI_BROKER: ProviderBrokerProfile = ProviderBrokerProfile {
     agent: "gemini",
+    host_env: "GEMINI_API_KEY",
     label: "RunHaven Gemini API-key broker",
     upstream_host: "generativelanguage.googleapis.com",
     path_rule: PathRule::Prefix("/v1beta/"),

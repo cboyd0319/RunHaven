@@ -338,12 +338,11 @@ fn run_summary(record: &Value) -> RunSummary {
     RunSummary {
         run_id: field(record, "run_id"),
         profile: field(record, "profile"),
-        workspace: field(record, "workspace"),
+        workspace: workspace_label(&field(record, "workspace")),
         network: field(record, "network"),
         status: field(record, "status"),
         timestamp: field(record, "timestamp"),
         auth_scope: field(record, "auth_scope"),
-        state_volume: field(record, "state_volume"),
         session: field(record, "session"),
     }
 }
@@ -354,6 +353,23 @@ fn field(record: &Value, name: &str) -> String {
         .and_then(Value::as_str)
         .unwrap_or("-")
         .to_string()
+}
+
+fn workspace_label(workspace: &str) -> String {
+    let trimmed = workspace.trim();
+    if trimmed.is_empty() || trimmed == "-" {
+        return "-".to_string();
+    }
+    trimmed
+        .rsplit(['/', '\\'])
+        .find(|part| !part.is_empty())
+        .map(strip_control_chars)
+        .filter(|label| !label.is_empty())
+        .unwrap_or_else(|| "-".to_string())
+}
+
+fn strip_control_chars(text: &str) -> String {
+    text.chars().filter(|ch| !ch.is_control()).collect()
 }
 
 fn defaulted(value: &str, fallback: &str) -> String {

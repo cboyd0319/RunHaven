@@ -54,12 +54,19 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     }
     if let Some(name) = &options.api_key_broker_env {
         validate_env_name(name)?;
-        let Some(_) = broker_profile_for_agent(options.profile.name) else {
+        let Some(broker_profile) = broker_profile_for_agent(options.profile.name) else {
             bail!(
                 "the {} profile has no API-key broker; remove --api-key-broker-env",
                 options.profile.name
             );
         };
+        if name != broker_profile.host_env {
+            bail!(
+                "{} API key broker only accepts host environment variable {}",
+                options.profile.name,
+                broker_profile.host_env
+            );
+        }
         if options.network != NetworkMode::Provider {
             bail!("API key broker requires --network provider");
         }

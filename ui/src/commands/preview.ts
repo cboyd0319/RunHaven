@@ -136,7 +136,6 @@ export function previewRunStatus(runId: string): RunStatusResponse {
       status: "running",
       timestamp: "preview",
       authScope: "project",
-      stateVolume: "preview",
       session: "default",
       containerName: "preview"
     },

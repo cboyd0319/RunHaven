@@ -26,12 +26,11 @@ pub(crate) fn run_status_response(payload: Value) -> Result<RunStatusResponse, S
         run: RunStatusRun {
             run_id: field(active_run, "run_id"),
             profile: field(active_run, "profile"),
-            workspace: field(active_run, "workspace"),
+            workspace: super::workspace_label(&field(active_run, "workspace")),
             network_mode: field(active_run, "network"),
             status: field(active_run, "status"),
             timestamp: field(active_run, "timestamp"),
             auth_scope: field(active_run, "auth_scope"),
-            state_volume: field(active_run, "state_volume"),
             session: field(active_run, "session"),
             container_name: field(active_run, "container_name"),
         },
