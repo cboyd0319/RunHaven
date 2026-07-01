@@ -55,16 +55,6 @@ pub(crate) use launch::{
 };
 
 #[tauri::command]
-pub(crate) fn get_setup_status() -> SetupStatus {
-    collect_setup_status()
-}
-
-#[tauri::command]
-pub(crate) fn list_agents() -> Vec<AgentProfileSummary> {
-    agent_summaries()
-}
-
-#[tauri::command]
 pub(crate) fn get_dashboard_status() -> DashboardStatus {
     collect_dashboard_status()
 }

@@ -20,8 +20,6 @@ pub fn run() {
         .manage(tail_status::ImageBuildStatusRegistry::default())
         .manage(tail_status::AgentSignInStatusRegistry::default())
         .invoke_handler(tauri::generate_handler![
-            commands::get_setup_status,
-            commands::list_agents,
             commands::get_dashboard_status,
             commands::image_status::get_image_status,
             commands::image_build_status::get_image_build_status,

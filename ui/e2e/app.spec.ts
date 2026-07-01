@@ -32,13 +32,13 @@ test("reviews and starts a preview run", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Review access" })).toBeVisible();
   await expect(page.getByRole("rowheader", { name: "Login state" })).toBeVisible();
-  await expect(page.getByText("RunHaven will use the shared claude login state across projects on this Mac.")).toBeVisible();
+  await expect(page.getByText("RunHaven will use the shared codex login state across projects on this Mac.")).toBeVisible();
   await page.getByLabel("I reviewed this plan and want to start this run.").check();
   await page.getByRole("button", { name: "Launch run" }).click();
 
   await expect(page.getByText(/Run accepted: preview-/)).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Claude - runhaven-preview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Codex - runhaven-preview" })).toBeVisible();
   await expect(page.getByText("Monitor session")).toBeVisible();
   await expect(page.getByText("Run record")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Message" })).toBeVisible();
@@ -48,7 +48,7 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
   await page.getByLabel("Message").fill("draft for selected session");
   await page.getByRole("button", { name: "Start" }).click();
-  await page.getByText("Claude - runhaven-preview").click();
+  await page.getByText("Codex - runhaven-preview").click();
   await expect(page.getByLabel("Message")).toHaveValue("draft for selected session");
   await page.getByLabel("Message").fill("hello session");
   await page.getByRole("button", { name: "Send" }).click();
@@ -74,24 +74,20 @@ test("reviews and starts a preview run", async ({ page }) => {
   await page.getByRole("button", { name: "Hard stop" }).click();
   await expect(page.getByText(/Hard stop requested for preview-/)).toBeVisible();
 
-  await page.getByLabel("Confirm clearing this session's stale marker.").check();
-  await page.getByRole("button", { name: "Repair marker" }).click();
-  await expect(page.getByText(/Stale marker cleared for preview-/)).toBeVisible();
+  await page.getByLabel("Confirm clearing this session's stale session record.").check();
+  await page.getByRole("button", { name: "Repair session record" }).click();
+  await expect(page.getByText(/Stale session record cleared for preview-/)).toBeVisible();
   await page.getByRole("button", { name: "Start" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Launch" })).toBeVisible();
 
-  await expect(page.getByRole("button", { name: "Stop run" })).toBeDisabled();
-  await page.getByLabel("Confirm stopping this run.").check();
-  await page.getByRole("button", { name: "Stop run" }).click();
-  await expect(page.getByText(/Stop requested for preview-/)).toBeVisible();
-
-  await page.getByLabel("Confirm hard-stopping this run.").check();
-  await page.getByRole("button", { name: "Hard stop" }).click();
-  await expect(page.getByText(/Hard stop requested for preview-/)).toBeVisible();
-
-  await page.getByLabel("Confirm clearing this run's stale marker.").check();
-  await page.getByRole("button", { name: "Repair marker" }).click();
-  await expect(page.getByText(/Stale marker cleared for preview-/)).toBeVisible();
+  // Once the launched run is a managed session, the Start screen must not offer
+  // a second control surface for it: only the one-line notice remains, and the
+  // run's controls live in the per-session view.
+  await expect(page.getByText("Run started - find it in your sidebar")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop run" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Hard stop" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Open session" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
 });
 
 test("loads secret-free diagnostics", async ({ page }) => {
@@ -124,7 +120,7 @@ test("keeps selected-session message drafts isolated", async ({ page }) => {
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText("Message sent")).toBeVisible();
 
-  await page.getByText("Claude - runhaven-alpha").click();
+  await page.getByText("Codex - runhaven-alpha").click();
   await expect(page.getByLabel("Message")).toHaveValue("alpha draft");
   await expect(page.getByText("beta message")).toHaveCount(0);
 });
