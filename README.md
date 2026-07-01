@@ -34,7 +34,7 @@ login is never read or mounted.
 | --- | --- | --- |
 | CLI | `v0.5.0` pre-release, complete for the current command contract | Automation, explicit commands, recovery, diagnostics, and the stable backend for every UI. |
 | Terminal UI | Active Codex-vendored TUI, unreleased | A bare interactive `runhaven` opens the RunHaven TUI for workspace choice, agent choice, network/auth policy changes, plan review, typed launch confirmation, foreground launch handoff, active-run summaries, typed run control, confirmation-gated log snapshots, confirmation-gated run diff review, run history, diagnostics, and post-run recovery. |
-| Desktop app | Alpha scaffold | Typed setup, launch, status, bounded logs, run control, and diagnostics. More maintenance and worktree flows remain CLI-first. |
+| Desktop app | Early preview | Typed setup, launch, multi-session status, bounded logs, session input, run control, orphaned-session recovery, and diagnostics. See the [desktop app guide](docs/DESKTOP_APP.md). Full sign-in, worktree runs, and maintenance flows remain CLI-first. |
 
 ## Why RunHaven
 
@@ -230,7 +230,7 @@ Use the smallest doc that matches the question:
 | Security and runtime boundary | [Security model](docs/SECURITY_MODEL.md), [Apple Container gap analysis](docs/APPLE_CONTAINER_GAP_ANALYSIS.md) |
 | Architecture and research | [Architecture](docs/ARCHITECTURE.md), [Research](docs/RESEARCH.md) |
 | Terminal UI | [TUI build plan](docs/plans/tui-build-plan.md), [TUI architecture](docs/plans/tui-architecture.md), [TUI brand graphics](docs/plans/ratatui-brand-graphics.md) |
-| Desktop UI | [Tauri UI guardrails](docs/TAURI_UI_GUARDRAILS.md), [Tauri log viewing design](docs/TAURI_LOG_VIEWING_DESIGN.md), [Tauri UI research plan](docs/TAURI_UI_RESEARCH_PLAN.md) |
+| Desktop UI | [Desktop app guide](docs/DESKTOP_APP.md), [Tauri UI guardrails](docs/TAURI_UI_GUARDRAILS.md), [Tauri log viewing design](docs/TAURI_LOG_VIEWING_DESIGN.md), [Tauri UI research plan](docs/TAURI_UI_RESEARCH_PLAN.md) |
 | Release planning | [Roadmap](docs/ROADMAP.md), [v0.5.0 release plan](docs/V1_RELEASE_PLAN.md), [Release gap analysis](docs/RELEASE_GAP_ANALYSIS.md), [CLI surface coverage](docs/CLI_SURFACE_COVERAGE.md), [Pinning policy](docs/PINNING.md) |
 | Project operations | [Harness](docs/harness/README.md), [Contributing](CONTRIBUTING.md), [Security policy](SECURITY.md) |
 

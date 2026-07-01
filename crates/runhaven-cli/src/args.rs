@@ -40,7 +40,7 @@ pub(super) enum TopCommand {
     Run(RunCommand),
     #[command(about = "log in to an agent once and reuse the login across runs")]
     Login {
-        #[arg(help = "agent profile to log in (currently: claude)")]
+        #[arg(help = "agent profile to log in (claude, codex, copilot, antigravity)")]
         agent: String,
         #[arg(long, help = "clear the stored login for this agent")]
         clear: bool,

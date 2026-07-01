@@ -224,6 +224,14 @@ Useful GUI design docs:
   stays fail-closed (only a `monitor` action accepts input). An earlier
   `host_pid` liveness probe was rejected in review because a launcher-dead but
   container-alive session would be mislabeled and dead-end against repair.
+- The desktop app now has an end-user guide, `docs/DESKTOP_APP.md`: what the app
+  does, how to open it, sign-in (still started from `runhaven login`), the
+  three-step run flow with plan and access review, watching multi-session status,
+  bounded output and input, orphaned-session recovery, run control, worktree
+  cleanup, diagnostics, and which tasks still need the CLI. README links it and
+  the desktop status now reads "Early preview". The CLI `login` help text was
+  corrected from "(currently: claude)" to list all supported agents (claude,
+  codex, copilot, antigravity), matching `docs/USAGE.md`.
 
 ## Current Branch Work
 
