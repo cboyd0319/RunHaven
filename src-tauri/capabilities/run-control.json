@@ -12,6 +12,7 @@
     "allow-repair-run",
     "allow-stop-managed-session",
     "allow-kill-managed-session",
-    "allow-repair-managed-session"
+    "allow-repair-managed-session",
+    "allow-cleanup-managed-session"
   ]
 }

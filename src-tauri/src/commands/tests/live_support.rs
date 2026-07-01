@@ -2,15 +2,20 @@ use std::process::Command;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
-use runhaven_core::runtime::active::{repair_active_run, stop_active_run};
+use runhaven_core::runtime::active::{
+    active_run_status_payload, repair_active_run, stop_active_run,
+};
 use runhaven_core::runtime::network::is_runhaven_managed_network;
 use runhaven_core::runtime::state::delete_volume;
 use runhaven_core::ui_contracts::ManagedSessionSummaryData;
+use serde::Serialize;
 
 use crate::contracts::{
-    ManagedSessionLogSnapshotRequest, ManagedSessionLogSnapshotResponse, StopManagedSessionRequest,
-    WriteSessionInputRequest, WriteSessionInputResponse,
+    LaunchStatusRequest, LaunchStatusResponse, ManagedSessionLogSnapshotRequest,
+    ManagedSessionLogSnapshotResponse, ManagedSessionStatusRequest, ManagedSessionStatusResponse,
+    StopManagedSessionRequest, WriteSessionInputRequest, WriteSessionInputResponse,
 };
+use crate::launch_status::LaunchStatusRegistry;
 use crate::session_input::SessionInputRegistry;
 use crate::session_output::SessionOutputRegistry;
 
@@ -101,6 +106,80 @@ pub(super) fn wait_for_live_monitor_session(run_id: &str) -> ManagedSessionSumma
             _ => panic!(
                 "live real-agent session did not reach monitor state for run {run_id}; last lifecycle={}, action={}",
                 session.lifecycle, session.next_action.kind
+            ),
+        }
+    }
+}
+
+pub(super) fn wait_for_live_launch_status(
+    run_id: &str,
+    launch_status: &LaunchStatusRegistry,
+    expected_states: &[&str],
+) -> LaunchStatusResponse {
+    let deadline = Instant::now() + Duration::from_secs(45);
+    let mut last_state = None;
+    loop {
+        let status = crate::commands::launch_status::get_launch_status_for_test(
+            LaunchStatusRequest {
+                run_id: run_id.to_string(),
+            },
+            launch_status,
+        )
+        .unwrap_or_else(|error| panic!("live launch status unavailable for {run_id}: {error}"));
+        if expected_states.iter().any(|state| status.state == *state) {
+            return status;
+        }
+        match status.state.as_str() {
+            "failed" | "finished" => {
+                panic!(
+                    "live launch status reached {} before {:?} for run {run_id}",
+                    status.state, expected_states
+                );
+            }
+            _ if Instant::now() < deadline => {
+                last_state = Some(status.state);
+                sleep(Duration::from_millis(250));
+            }
+            _ => panic!(
+                "live launch status did not reach {:?} for run {run_id}; last state={}",
+                expected_states,
+                last_state.unwrap_or(status.state)
+            ),
+        }
+    }
+}
+
+pub(super) fn wait_for_live_managed_session_status(
+    session_id: &str,
+    input_registry: &SessionInputRegistry,
+) -> ManagedSessionStatusResponse {
+    let deadline = Instant::now() + Duration::from_secs(45);
+    let mut last_error = None;
+    loop {
+        let (session, _) = crate::commands::sessions::managed_session_for_id_with_input(
+            session_id,
+            Some(input_registry),
+        )
+        .unwrap_or_else(|error| panic!("live managed session lookup failed: {error}"));
+        match active_run_status_payload(&session.run_id) {
+            Ok(payload) => {
+                return crate::commands::sessions::managed_session_status_response_for_test(
+                    ManagedSessionStatusRequest {
+                        session_id: session_id.to_string(),
+                    },
+                    Some(input_registry),
+                    Some(payload),
+                    false,
+                )
+                .expect("live managed session status");
+            }
+            Err(error) if Instant::now() < deadline => {
+                last_error = Some(error.to_string());
+                sleep(Duration::from_millis(250));
+            }
+            Err(error) => panic!(
+                "live managed session status was unavailable for {session_id}: {}",
+                last_error.unwrap_or_else(|| error.to_string())
             ),
         }
     }
@@ -203,6 +282,20 @@ fn session_output_has_text(log: &ManagedSessionLogSnapshotResponse) -> bool {
             .entries
             .iter()
             .any(|entry| !entry.text.trim().is_empty())
+}
+
+pub(super) fn assert_live_response_excludes<T: Serialize>(
+    label: &str,
+    value: &T,
+    forbidden: &[(&str, String)],
+) {
+    let encoded = serde_json::to_string(value).expect("serialize live response");
+    for (forbidden_label, fragment) in forbidden {
+        assert!(
+            !fragment.is_empty() && !encoded.contains(fragment),
+            "{label} leaked forbidden value labelled {forbidden_label}"
+        );
+    }
 }
 
 pub(super) fn assert_live_session_output_excludes(

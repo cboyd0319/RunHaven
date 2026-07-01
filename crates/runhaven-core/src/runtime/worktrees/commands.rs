@@ -151,6 +151,12 @@ pub fn runs_worktree_discard(run_id: &str) -> Result<i32> {
     Ok(0)
 }
 
+pub fn discard_worktree_for_run(run_id: &str) -> Result<()> {
+    let lifecycle = load_worktree_lifecycle(run_id)?;
+    verify_lifecycle(&lifecycle)?;
+    cleanup_worktree(&lifecycle)
+}
+
 fn print_status(title: &str, lines: &[String]) {
     println!("{title}:");
     if lines.is_empty() {

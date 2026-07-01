@@ -35,6 +35,7 @@ pub fn run() {
             commands::run_control::stop_managed_session,
             commands::run_control::kill_managed_session,
             commands::run_control::repair_managed_session,
+            commands::session_cleanup::cleanup_managed_session,
             commands::launch::plan_run,
             commands::launch::launch_run,
         ])

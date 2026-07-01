@@ -1,5 +1,6 @@
 import { previewLogSnapshot } from "./preview_output";
 import type {
+  CleanupManagedSessionResponse,
   KillManagedSessionResponse,
   LaunchRunResponse,
   ManagedSessionDiagnosticsResponse,
@@ -172,6 +173,23 @@ export function previewManagedRepair(sessionId: string): RepairManagedSessionRes
     markerRemoved: true
   };
   updatePreviewSessionStatus(sessionId, "removed", "Marker removed");
+  return {
+    session: previewSession(sessionId),
+    result
+  };
+}
+
+export function previewManagedCleanup(sessionId: string): CleanupManagedSessionResponse {
+  const session = previewSession(sessionId);
+  if (session.cleanup?.available !== true) {
+    throw new Error("Managed session cleanup is only available for saved worktree sessions.");
+  }
+  const result = {
+    runId: session.runId,
+    target: session.cleanup.target || "worktree",
+    status: "discarded"
+  };
+  updatePreviewSessionStatus(sessionId, "cleaned-up", "Cleaned up");
   return {
     session: previewSession(sessionId),
     result

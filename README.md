@@ -172,12 +172,13 @@ runhaven network list
 runhaven image doctor
 ```
 
-The current TUI exposes active-run summaries, typed stop/hard-stop/repair
+The terminal checkpoint exposes active-run summaries, typed stop/hard-stop/repair
 controls, bounded log snapshots only after you type `logs`, run history without
 host workspace paths, run diff review only after you type `diff`, preflight
 checks, secret-free diagnostics, and post-run recovery over the same validated
-cores. Worktree merge/discard, image rebuild, state cleanup, and network
-cleanup remain CLI-first today.
+cores. The desktop app now has a narrow cleanup control for eligible stopped
+managed-session worktrees. Worktree diff/merge review, image rebuild, state
+cleanup, and network cleanup remain CLI-first today.
 
 ## Status and roadmap
 
@@ -186,9 +187,9 @@ This checkout now contains the unreleased RunHaven-only TUI checkpoint as a
 terminal reference over the same CLI backend. The Tauri/React desktop shell is
 alpha: it can read setup, dashboard, profile, folder-pick, and run-plan state
 and supports reviewed launch, image readiness, sanitized live status, bounded
-output snapshots, session input, stop, kill, repair, and secret-free
-diagnostics. Image build, state cleanup, network cleanup, and worktree review
-remain CLI-first.
+output snapshots, session input, stop, kill, repair, eligible worktree cleanup,
+and secret-free diagnostics. Image build, state cleanup, network cleanup, and
+worktree diff/merge review remain CLI-first.
 
 The roadmap now treats the CLI as the complete technical surface, the TUI as a
 hardened terminal checkpoint, and the desktop app as the future easiest path

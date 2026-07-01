@@ -125,7 +125,7 @@ describe("RunOutputCard", () => {
       />
     );
 
-    expect(acknowledged).toContain("Updating output every few seconds.");
+    expect(acknowledged).toContain("Updates every few seconds.");
     expect(acknowledged).not.toContain('disabled=""');
   });
 });

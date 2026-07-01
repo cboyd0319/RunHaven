@@ -90,6 +90,7 @@ write_session_input(request) -> WriteSessionInputResponse
 stop_managed_session(request) -> StopManagedSessionResponse
 kill_managed_session(request) -> KillManagedSessionResponse
 repair_managed_session(request) -> RepairManagedSessionResponse
+cleanup_managed_session(request) -> CleanupManagedSessionResponse
 ```
 
 Capabilities:
@@ -103,6 +104,7 @@ run-control: allow-write-session-input
 run-control: allow-stop-managed-session
 run-control: allow-kill-managed-session
 run-control: allow-repair-managed-session
+run-control: allow-cleanup-managed-session
 ```
 
 The managed session list and selected-session status commands are read-only and
@@ -316,16 +318,24 @@ Current slice:
   resolve the managed session ID in Rust, reject unknown sessions, require
   confirmation before mutation, and keep forbidden paths and command names out
   of the serialized response
+- Tauri command test proves selected-session worktree cleanup resolves the
+  managed session ID in Rust, rejects active markers, stale worktrees,
+  unsupported history, and unconfirmed requests before mutation, requires native
+  confirmation, and keeps forbidden paths, state volume names, and secrets out
+  of the serialized response
 - frontend helper test proves browser preview run control works through a
   managed session ID and rejects unknown sessions
 - Playwright preview smoke proves selected-session stop, hard stop, and repair
   are reachable only after explicit per-action confirmation
+- Playwright preview smoke proves worktree cleanup stays hidden unless the Rust
+  contract advertises an eligible cleanup target
 - capability guard proves managed session run-control commands stay in the
   narrow `run-control` capability
 - `scripts/gui_tauri_live_smoke.sh` proves the no-bundle Tauri shell builds and
   the selected-session bounded-output plus confirmed-stop command path works
-  against one live Apple `container` run. When exercised with a real-agent
-  profile, it uses the explicit broker env for that profile. This is an opt-in
+  against one live Apple `container` run. Set
+  `RUNHAVEN_GUI_LIVE_REAL_AGENT=1` when exercising a real-agent profile; the
+  script then requires the fixed broker env for that profile. This is an opt-in
   local smoke, not a WebView click automation harness or a TTY/OAuth parity
   check.
 - capability guard proves no resize, attach, app-server transport, filesystem

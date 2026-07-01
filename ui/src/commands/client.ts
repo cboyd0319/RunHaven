@@ -10,6 +10,7 @@ import {
   previewLaunchRun,
   previewLogSnapshot,
   previewManagedKill,
+  previewManagedCleanup,
   previewManagedSessionDiagnostics,
   previewManagedRepair,
   previewManagedSessionLogSnapshot,
@@ -41,6 +42,7 @@ import type {
   RunPlanResponse,
   KillRunResponse,
   KillManagedSessionResponse,
+  CleanupManagedSessionResponse,
   RepairRunResponse,
   RepairManagedSessionResponse,
   RunStatusResponse,
@@ -214,6 +216,16 @@ export async function repairManagedSession(
     "repair_managed_session",
     { request: { sessionId, confirmRepair: true } },
     () => previewManagedRepair(sessionId)
+  );
+}
+
+export async function cleanupManagedSession(
+  sessionId: string
+): Promise<CleanupManagedSessionResponse> {
+  return call(
+    "cleanup_managed_session",
+    { request: { sessionId, confirmCleanup: true } },
+    () => previewManagedCleanup(sessionId)
   );
 }
 

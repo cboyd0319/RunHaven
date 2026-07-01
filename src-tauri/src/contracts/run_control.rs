@@ -88,3 +88,25 @@ pub(crate) struct RepairManagedSessionResponse {
     pub session: ManagedSessionSummaryData,
     pub result: RepairRunResponse,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct CleanupManagedSessionRequest {
+    pub session_id: String,
+    pub confirm_cleanup: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct CleanupManagedSessionResult {
+    pub run_id: String,
+    pub target: String,
+    pub status: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct CleanupManagedSessionResponse {
+    pub session: ManagedSessionSummaryData,
+    pub result: CleanupManagedSessionResult,
+}

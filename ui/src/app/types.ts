@@ -11,7 +11,7 @@ export type DiagnosticsState = {
   egressLog: EgressLogResponse
 }
 
-export type RunControlAction = "stop" | "kill" | "repair"
+export type RunControlAction = "stop" | "kill" | "repair" | "cleanup"
 
 export type LaunchStep = "agent" | "project" | "review"
 

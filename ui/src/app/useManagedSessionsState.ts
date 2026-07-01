@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import {
   getManagedSessions,
@@ -14,8 +14,14 @@ export function useManagedSessionsState(lastLaunchRunId: string | null) {
   const [managedSessions, setManagedSessions] = useState<ManagedSessionList>({
     sessions: [],
   })
+  const managedSessionsRef = useRef(managedSessions)
+  const requestSeq = useRef(0)
   const { selectedSessionId, selectedSessionIdRef, selectSession } =
     useSelectedSessionId(managedSessions)
+
+  useEffect(() => {
+    managedSessionsRef.current = managedSessions
+  }, [managedSessions])
 
   useEffect(() => {
     const hasSessionContext =
@@ -43,7 +49,13 @@ export function useManagedSessionsState(lastLaunchRunId: string | null) {
   }, [lastLaunchRunId, managedSessions.sessions.length, selectedSessionId])
 
   async function loadManagedSessions() {
+    const requestId = requestSeq.current + 1
+    requestSeq.current = requestId
     const nextSessions = await getManagedSessions()
+    if (requestSeq.current !== requestId) {
+      return managedSessionsRef.current
+    }
+    managedSessionsRef.current = nextSessions
     setManagedSessions((current) =>
       sameManagedSessionList(current, nextSessions) ? current : nextSessions,
     )

@@ -15,29 +15,42 @@ export function useLaunchStatus(runId: string | null) {
   const [error, setError] = useState("")
   const inFlight = useRef(false)
   const dataRef = useRef<LaunchStatusResponse | null>(null)
+  const requestSeq = useRef(0)
 
   const loadStatus = useCallback(async () => {
     if (!runId || inFlight.current) {
       return
     }
+    const requestId = requestSeq.current + 1
+    requestSeq.current = requestId
     inFlight.current = true
     setLoading(dataRef.current === null)
     setError("")
     try {
       const nextStatus = await getLaunchStatus(runId)
+      if (requestSeq.current !== requestId) {
+        return
+      }
       dataRef.current = nextStatus
       setData((current) =>
         current && sameLaunchStatus(current, nextStatus) ? current : nextStatus,
       )
     } catch (cause) {
-      setError(errorMessage(cause))
+      if (requestSeq.current === requestId) {
+        dataRef.current = null
+        setData(null)
+        setError(errorMessage(cause))
+      }
     } finally {
-      inFlight.current = false
-      setLoading(false)
+      if (requestSeq.current === requestId) {
+        inFlight.current = false
+        setLoading(false)
+      }
     }
   }, [runId])
 
   useEffect(() => {
+    requestSeq.current += 1
     dataRef.current = null
     setData(null)
     setError("")

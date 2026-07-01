@@ -1,7 +1,8 @@
 use super::*;
+#[allow(unused_imports)]
 use crate::contracts::{
-    KillManagedSessionRequest, KillRunResponse, LaunchStatusRequest, LogSnapshotRequest,
-    ManagedSessionDiagnosticsRequest, ManagedSessionLogSnapshotRequest,
+    CleanupManagedSessionRequest, KillManagedSessionRequest, KillRunResponse, LaunchStatusRequest,
+    LogSnapshotRequest, ManagedSessionDiagnosticsRequest, ManagedSessionLogSnapshotRequest,
     ManagedSessionStatusRequest, RepairManagedSessionRequest, RepairRunResponse,
     StopManagedSessionRequest, StopRunResponse, WriteSessionInputRequest,
 };
@@ -23,6 +24,7 @@ mod log_snapshot;
 mod plan;
 mod run_control;
 mod run_status;
+mod session_cleanup;
 mod session_input;
 mod sessions;
 mod sessions_status;

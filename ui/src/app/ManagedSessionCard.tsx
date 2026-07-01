@@ -35,9 +35,7 @@ export function ManagedSessionCard({
             <CardTitle role="heading" aria-level={2}>
               {session.title}
             </CardTitle>
-            <CardDescription>
-              RunHaven is monitoring this session.
-            </CardDescription>
+            <CardDescription>Selected session overview.</CardDescription>
           </div>
           <Badge variant={sessionBadgeVariant(session)}>
             {needsAttention ? "Needs attention" : session.statusLabel}
@@ -54,13 +52,11 @@ export function ManagedSessionCard({
             </AlertDescription>
           </Alert>
         ) : (
-          <Alert>
+          <Alert role="status">
             <ShieldCheck />
             <AlertTitle>{displayValue(action.label)}</AlertTitle>
             <AlertDescription>
-              {displayValue(action.detail)} Host home, browser profiles, cloud
-              credentials, and raw SSH keys are not part of this session
-              summary.
+              {displayValue(action.detail)}
             </AlertDescription>
           </Alert>
         )}
@@ -82,7 +78,7 @@ export function ManagedSessionCard({
               id="managed-session-events"
               className="mb-2 text-sm font-medium"
             >
-              Session events
+              Recent events
             </h3>
             <ul className="divide-y rounded-lg border">
               {session.events.map((event) => (
@@ -123,6 +119,10 @@ export function sessionAllowsRunControl(session: ManagedSessionSummary): boolean
   )
 }
 
+export function sessionAllowsCleanup(session: ManagedSessionSummary): boolean {
+  return session.cleanup?.available === true
+}
+
 function sessionBadgeVariant(
   session: ManagedSessionSummary,
 ): "destructive" | "secondary" | "success" | "warning" {
@@ -132,9 +132,13 @@ function sessionBadgeVariant(
 
   switch (session.lifecycle.trim().toLowerCase()) {
     case "running":
-    case "starting":
       return "success"
+    case "starting":
+      return "secondary"
     case "failed":
+      return "destructive"
+    case "stop-requested":
+    case "kill-requested":
       return "warning"
     default:
       return "secondary"

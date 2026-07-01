@@ -36,11 +36,33 @@ export function sameManagedSession(
     current.input.attached === next.input.attached &&
     current.input.status === next.input.status &&
     current.input.detail === next.input.detail &&
+    sameSessionCleanup(current, next) &&
     current.nextAction.kind === next.nextAction.kind &&
     current.nextAction.label === next.nextAction.label &&
     current.nextAction.detail === next.nextAction.detail &&
     sameSessionEvents(current, next)
   )
+}
+
+function sameSessionCleanup(
+  current: ManagedSessionSummary,
+  next: ManagedSessionSummary,
+): boolean {
+  const currentCleanup = current.cleanup ?? emptyCleanup
+  const nextCleanup = next.cleanup ?? emptyCleanup
+  return (
+    currentCleanup.available === nextCleanup.available &&
+    currentCleanup.target === nextCleanup.target &&
+    currentCleanup.label === nextCleanup.label &&
+    currentCleanup.detail === nextCleanup.detail
+  )
+}
+
+const emptyCleanup = {
+  available: false,
+  target: "",
+  label: "",
+  detail: "",
 }
 
 function sameSessionEvents(

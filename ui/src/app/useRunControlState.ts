@@ -6,6 +6,7 @@ const emptyConfirmations: Record<RunControlAction, boolean> = {
   stop: false,
   kill: false,
   repair: false,
+  cleanup: false,
 }
 
 export function useRunControlState(controlTargetId: string | null) {
@@ -28,6 +29,10 @@ export function useRunControlState(controlTargetId: string | null) {
     }))
   }
 
+  function resetConfirmations() {
+    setConfirmations(emptyConfirmations)
+  }
+
   return {
     busy,
     setBusy,
@@ -37,5 +42,6 @@ export function useRunControlState(controlTargetId: string | null) {
     setMessage,
     confirmations,
     setConfirmation,
+    resetConfirmations,
   }
 }

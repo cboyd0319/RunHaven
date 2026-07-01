@@ -77,6 +77,7 @@ describe("ManagedSessionStatusCard", () => {
 
     expect(html).toContain("Runtime status");
     expect(html).toContain("Container");
+    expect(html).toContain("Current state for this session.");
     expect(html).toContain("runhaven/codex:0.1.0");
     expect(html).toContain("4096 MiB");
     expect(html).toContain("runhaven-provider-preview");
@@ -109,7 +110,7 @@ describe("ManagedSessionStatusCard", () => {
       />
     );
 
-    expect(html).toContain("Status unavailable");
+    expect(html).toContain("Live status not available");
     expect(html).toContain("may have stopped");
     expect(html).toContain("Runtime status unavailable");
     expect(html).toContain("Refresh sessions");

@@ -59,16 +59,15 @@ export function RunOutputCard({
     <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
-          Run output
+          Latest output
         </CardTitle>
-        <CardDescription>
-          Raw output can contain secrets. Confirm before loading it.
-        </CardDescription>
+        <CardDescription>Load a bounded output snapshot.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
           <Checkbox
             checked={logAcknowledged}
+            aria-label="I understand raw output may include private data."
             onCheckedChange={(checked) => {
               const acknowledged = checked === true
               onAcknowledgedChange(acknowledged)
@@ -77,23 +76,26 @@ export function RunOutputCard({
               }
             }}
           />
-          <span>Show raw container output for this run.</span>
+          <span>I understand raw output may include private data.</span>
         </label>
         {liveOutputAvailable ? (
           <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
             <Checkbox
               checked={liveOutputEnabled}
               disabled={!logAcknowledged}
+              aria-label="Keep output updated"
               onCheckedChange={(checked) => onLiveOutputChange(checked === true)}
             />
             <span className="flex min-w-0 flex-col gap-1">
               <span>Keep output updated</span>
               <span className="text-muted-foreground">
-                {liveOutputEnabled
+                {!logAcknowledged
+                  ? "Confirm raw output first."
+                  : liveOutputEnabled
                   ? liveOutputRefreshing
-                    ? "Checking for new output."
-                    : "Updating output every few seconds."
-                  : "Refreshes every few seconds while this view is open."}
+                    ? "Checking for new lines."
+                    : "Updates every few seconds."
+                  : "Refresh while this view stays open."}
               </span>
             </span>
           </label>
@@ -102,9 +104,16 @@ export function RunOutputCard({
           type="button"
           variant="outline"
           disabled={!logAcknowledged || logLoading}
+          aria-label={
+            logLoading
+              ? "Loading latest output"
+              : logAcknowledged
+              ? "Load latest output"
+              : "Load latest output: confirm raw output first"
+          }
           onClick={() => void onLoad()}
         >
-          {logLoading ? "Loading..." : "View latest output"}
+          {logLoading ? "Loading..." : "Load latest output"}
         </Button>
         {logError ? (
           <Alert variant="destructive">
@@ -134,7 +143,10 @@ export function RunOutputCard({
               />
             </div>
             {warnings.length > 0 ? (
-              <ul className="rounded-lg border px-3 py-2 text-sm text-muted-foreground">
+              <ul
+                aria-label="Output warnings"
+                className="rounded-lg border px-3 py-2 text-sm text-muted-foreground"
+              >
                 {warnings.map((warning) => (
                   <li key={warning}>{warning}</li>
                 ))}

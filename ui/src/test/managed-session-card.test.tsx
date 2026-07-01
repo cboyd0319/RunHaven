@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ManagedSessionCard,
+  sessionAllowsCleanup,
   sessionAllowsRunControl,
   sessionNeedsAttention
 } from "../app/ManagedSessionCard";
@@ -71,7 +72,7 @@ describe("ManagedSessionCard", () => {
     expect(html).toContain("Provider only");
     expect(html).toContain("Login state");
     expect(html).toContain("Project");
-    expect(html).toContain("RunHaven is monitoring this session.");
+    expect(html).toContain("Selected session overview.");
     expect(html).toContain("Monitor session");
     expect(html).toContain("Run record");
     expect(html).not.toContain("/Users/");
@@ -104,6 +105,7 @@ describe("ManagedSessionCard", () => {
 
     expect(html).toContain("Finish auth setup");
     expect(html).toContain("Auth is not ready for Codex.");
+    expect(html).toContain("Needs attention");
     expect(html).not.toContain("Start session");
   });
 
@@ -114,6 +116,36 @@ describe("ManagedSessionCard", () => {
     expect(sessionAllowsRunControl(session({ lifecycle: "kill-requested" }))).toBe(true);
     expect(sessionAllowsRunControl(session({ lifecycle: "finished" }))).toBe(false);
     expect(sessionAllowsRunControl(session({ lifecycle: "failed" }))).toBe(false);
+  });
+
+  it("allows cleanup only when a session advertises a cleanup target", () => {
+    expect(sessionAllowsCleanup(session({ lifecycle: "finished" }))).toBe(false);
+    expect(
+      sessionAllowsCleanup(
+        session({
+          lifecycle: "finished",
+          cleanup: {
+            available: false,
+            target: "worktree",
+            label: "Clean up worktree",
+            detail: "Delete the recorded worktree and branch for this session."
+          }
+        })
+      )
+    ).toBe(false);
+    expect(
+      sessionAllowsCleanup(
+        session({
+          lifecycle: "finished",
+          cleanup: {
+            available: true,
+            target: "worktree",
+            label: "Clean up worktree",
+            detail: "Delete the recorded worktree and branch for this session."
+          }
+        })
+      )
+    ).toBe(true);
   });
 
   it("detects real managed-session status changes for quiet refresh", () => {

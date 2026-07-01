@@ -20,7 +20,11 @@ import { DiagnosticsCard } from "./DiagnosticsCard"
 import { LastLaunchCard } from "./LastLaunchCard"
 import { LaunchStatusCard } from "./LaunchStatusCard"
 import { LaunchPlanCard } from "./LaunchPlanCard"
-import { ManagedSessionCard, sessionAllowsRunControl } from "./ManagedSessionCard"
+import {
+  ManagedSessionCard,
+  sessionAllowsCleanup,
+  sessionAllowsRunControl,
+} from "./ManagedSessionCard"
 import { ManagedSessionDiagnosticsCard } from "./ManagedSessionDiagnosticsCard"
 import { ManagedSessionStatusCard } from "./ManagedSessionStatusCard"
 import { PlanReviewCard } from "./PlanReviewCard"
@@ -119,7 +123,7 @@ export function AppMainContent(props: AppMainContentProps) {
           <Alert>
             <CheckCircle2 />
             <AlertTitle>{launchMessage}</AlertTitle>
-            <AlertDescription>RunHaven is tracking the run below.</AlertDescription>
+            <AlertDescription>You can follow it below.</AlertDescription>
           </Alert>
         ) : null}
 
@@ -153,8 +157,11 @@ function SessionView(
   props: AppMainContentProps & { selectedSession: ManagedSessionSummary },
 ) {
   const runControlsAvailable = sessionAllowsRunControl(props.selectedSession)
+  const cleanupAvailable = sessionAllowsCleanup(props.selectedSession)
   const showRunControlCard =
-    runControlsAvailable || Boolean(props.controlMessage || props.controlError)
+    runControlsAvailable ||
+    cleanupAvailable ||
+    Boolean(props.controlMessage || props.controlError)
 
   return (
     <>
@@ -185,6 +192,7 @@ function SessionView(
           controlTarget="session"
           showStatus={false}
           controlsAvailable={runControlsAvailable}
+          cleanupAvailable={cleanupAvailable}
           runStatus={null}
           runStatusLoading={false}
           runStatusError=""

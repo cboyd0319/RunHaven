@@ -2,11 +2,10 @@ import { useEffect, useState } from "react"
 
 import {
   chooseProjectFolder,
+  cleanupManagedSession,
   defaultRunPlanRequest,
   getDashboardStatus,
   getAuthStatus,
-  getImageStatus,
-  getRunStatus,
   killManagedSession,
   killRun,
   launchRun,
@@ -22,20 +21,22 @@ import {
   writeSessionInput,
   type DashboardStatus,
   type AuthStatusResponse,
-  type ImageStatusResponse,
   type LaunchRunResponse,
   type RunPlanRequest,
   type RunPlanResponse,
-  type RunStatusResponse,
 } from "@/commands/runhaven"
 
+import { sameDashboardStatus } from "./appStatusEquality"
 import {
   errorMessage,
   type LaunchStep,
   type RunControlAction,
 } from "./types"
 import { loadSessionsUntilRunPresent } from "./sessionSelection"
-import { useDiagnosticsState } from "./useDiagnosticsState"
+import {
+  sameAuthStatusResponse,
+  useDiagnosticsState,
+} from "./useDiagnosticsState"
 import { useAppDerivedState } from "./useAppDerivedState"
 import { useManagedSessionsState } from "./useManagedSessionsState"
 import { useManagedSessionDiagnostics } from "./useManagedSessionDiagnostics"
@@ -43,6 +44,7 @@ import { useManagedSessionStatus } from "./useManagedSessionStatus"
 import { useLaunchStatus } from "./useLaunchStatus"
 import { useRunControlState } from "./useRunControlState"
 import { useSessionInputState } from "./useSessionInputState"
+import { useStatusLoaders } from "./useStatusLoaders"
 
 export function useAppController() {
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null)
@@ -55,9 +57,6 @@ export function useAppController() {
   const [loading, setLoading] = useState(true)
   const [planning, setPlanning] = useState(false)
   const [launching, setLaunching] = useState(false)
-  const [imageLoading, setImageLoading] = useState(false)
-  const [imageStatus, setImageStatus] = useState<ImageStatusResponse | null>(null)
-  const [imageError, setImageError] = useState("")
   const [launchConfirmation, setLaunchConfirmation] = useState(false)
   const [confirmedWarnings, setConfirmedWarnings] = useState<string[]>([])
   const [launchMessage, setLaunchMessage] = useState("")
@@ -69,16 +68,14 @@ export function useAppController() {
     selectSession,
     loadManagedSessions,
   } = useManagedSessionsState(lastLaunch?.runId ?? null)
-  const [runStatus, setRunStatus] = useState<RunStatusResponse | null>(null)
-  const [runStatusLoading, setRunStatusLoading] = useState(false)
-  const [runStatusError, setRunStatusError] = useState("")
+  const statusLoaders = useStatusLoaders()
   const diagnostics = useDiagnosticsState()
   const [error, setError] = useState("")
 
   const derived = useAppDerivedState({
     dashboard,
     request,
-    imageStatus,
+    imageStatus: statusLoaders.imageStatus,
     plan,
     launchConfirmation,
     confirmedWarnings,
@@ -106,8 +103,16 @@ export function useAppController() {
     try {
       const nextDashboard = await getDashboardStatus()
       const nextAuthStatus = await getAuthStatus()
-      setDashboard(nextDashboard)
-      setAuthStatus(nextAuthStatus)
+      setDashboard((current) =>
+        current && sameDashboardStatus(current, nextDashboard)
+          ? current
+          : nextDashboard,
+      )
+      setAuthStatus((current) =>
+        current && sameAuthStatusResponse(current, nextAuthStatus)
+          ? current
+          : nextAuthStatus,
+      )
       await loadManagedSessions()
       const agent =
         nextDashboard.agents.find((item) => item.name === request.agent) ??
@@ -126,41 +131,15 @@ export function useAppController() {
             agent,
           ),
         )
-        await loadImageStatus(agent.name)
+        await statusLoaders.loadImageStatus(agent.name)
       }
       if (lastLaunch) {
-        await loadRunStatus(lastLaunch.runId)
+        await statusLoaders.loadRunStatus(lastLaunch.runId)
       }
     } catch (cause) {
       setError(errorMessage(cause))
     } finally {
       setLoading(false)
-    }
-  }
-
-  async function loadImageStatus(agentName: string) {
-    setImageLoading(true)
-    setImageError("")
-    try {
-      setImageStatus(await getImageStatus(agentName))
-    } catch (cause) {
-      setImageStatus(null)
-      setImageError(errorMessage(cause))
-    } finally {
-      setImageLoading(false)
-    }
-  }
-
-  async function loadRunStatus(runId: string) {
-    setRunStatusLoading(true)
-    setRunStatusError("")
-    try {
-      setRunStatus(await getRunStatus(runId))
-    } catch (cause) {
-      setRunStatus(null)
-      setRunStatusError(errorMessage(cause))
-    } finally {
-      setRunStatusLoading(false)
     }
   }
 
@@ -177,7 +156,7 @@ export function useAppController() {
           },
     )
     invalidatePlan()
-    void loadImageStatus(agentName)
+    void statusLoaders.loadImageStatus(agentName)
   }
 
   function updateNetworkMode(networkMode: RunPlanRequest["networkMode"]) {
@@ -257,7 +236,7 @@ export function useAppController() {
         confirmedWarnings,
       })
       setLastLaunch(started)
-      await loadRunStatus(started.runId)
+      await statusLoaders.loadRunStatus(started.runId)
       setLaunchMessage(`Run accepted: ${started.runId}`)
       const { sessionId } = await loadSessionsUntilRunPresent(
         loadManagedSessions,
@@ -297,12 +276,17 @@ export function useAppController() {
         } else if (action === "kill") {
           const { result } = await killManagedSession(sessionId)
           runControlState.setMessage(`Hard stop requested for ${result.runId}.`)
-        } else {
+        } else if (action === "repair") {
           const { result } = await repairManagedSession(sessionId)
           runControlState.setMessage(
             result.markerRemoved
               ? `Stale marker cleared for ${result.runId}.`
               : `Repair for ${result.runId}: ${result.status}.`,
+          )
+        } else {
+          const { result } = await cleanupManagedSession(sessionId)
+          runControlState.setMessage(
+            `Cleaned up ${result.target} for ${result.runId}.`,
           )
         }
         await selectedSessionStatus.loadStatus()
@@ -318,20 +302,23 @@ export function useAppController() {
         } else if (action === "kill") {
           const result = await killRun(runId)
           runControlState.setMessage(`Hard stop requested for ${result.runId}.`)
-        } else {
+        } else if (action === "repair") {
           const result = await repairRun(runId)
           runControlState.setMessage(
             result.markerRemoved
               ? `Stale marker cleared for ${result.runId}.`
               : `Repair for ${result.runId}: ${result.status}.`,
           )
+        } else {
+          return
         }
-        await loadRunStatus(runId)
+        await statusLoaders.loadRunStatus(runId)
         await loadManagedSessions()
       }
     } catch (cause) {
       runControlState.setError(errorMessage(cause))
     } finally {
+      runControlState.resetConfirmations()
       runControlState.setBusy(false)
     }
   }
@@ -376,9 +363,9 @@ export function useAppController() {
     loading,
     planning,
     launching,
-    imageLoading,
-    imageStatus,
-    imageError,
+    imageLoading: statusLoaders.imageLoading,
+    imageStatus: statusLoaders.imageStatus,
+    imageError: statusLoaders.imageError,
     launchConfirmation,
     confirmedWarnings,
     launchMessage,
@@ -389,9 +376,9 @@ export function useAppController() {
     sessionInputSending: sessionInput.sending,
     sessionInputError: sessionInput.error,
     sessionInputAcceptedMessage: sessionInput.acceptedMessage,
-    runStatus,
-    runStatusLoading,
-    runStatusError,
+    runStatus: statusLoaders.runStatus,
+    runStatusLoading: statusLoaders.runStatusLoading,
+    runStatusError: statusLoaders.runStatusError,
     controlBusy: runControlState.busy,
     controlError: runControlState.error,
     controlMessage: runControlState.message,

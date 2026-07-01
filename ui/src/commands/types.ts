@@ -188,6 +188,17 @@ export type RepairManagedSessionResponse = {
   result: RepairRunResponse;
 };
 
+export type CleanupManagedSessionResult = {
+  runId: string;
+  target: string;
+  status: string;
+};
+
+export type CleanupManagedSessionResponse = {
+  session: ManagedSessionSummary;
+  result: CleanupManagedSessionResult;
+};
+
 export type WriteSessionInputResponse = {
   session: ManagedSessionSummary;
   accepted: boolean;
@@ -213,6 +224,7 @@ export type ManagedSessionSummary = {
   detailCommand: string;
   lifecycle: string;
   input: ManagedSessionInput;
+  cleanup?: ManagedSessionCleanup;
   nextAction: ManagedSessionNextAction;
   events: ManagedSessionEvent[];
 };
@@ -220,6 +232,13 @@ export type ManagedSessionSummary = {
 export type ManagedSessionInput = {
   attached: boolean;
   status: string;
+  detail: string;
+};
+
+export type ManagedSessionCleanup = {
+  available: boolean;
+  target: string;
+  label: string;
   detail: string;
 };
 

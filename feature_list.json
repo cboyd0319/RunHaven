@@ -58,7 +58,8 @@
         "Raw logs stay hidden by default and are not durably stored in frontend state"
       ],
       "evidence": [
-        "2026-06-16: Tauri/Svelte scaffold, launch execution, image readiness, resource warnings, live status, raw-log design, and bounded log snapshot slices passed focused Rust, Tauri, frontend, Playwright, and Apple container checks. See docs/harness/evidence/evidence-log.md for command detail."
+        "2026-06-16: Tauri/Svelte scaffold, launch execution, image readiness, resource warnings, live status, raw-log design, and bounded log snapshot slices passed focused Rust, Tauri, frontend, Playwright, and Apple container checks. See docs/harness/evidence/evidence-log.md for command detail.",
+        "2026-07-01: Hardened the React/Tauri managed-session path for external testing: Rust-owned launch status, selected-session status, no-blink polling, multi-session sidebar identity, narrowed raw-output/input/run-control state, and eligible stopped-session worktree cleanup. Cleanup resolves the backend session/run in Rust, rejects active markers and stale or unsupported worktrees before native confirmation, discards only verified RunHaven worktrees, and clears stale cleanup affordances. Added static GUI command-surface guards for direct Tauri imports and sensitive run-control capability placement; tightened the GUI live-smoke script so real-agent broker coverage is explicit opt-in and failure output is bounded/redacted."
       ],
       "notes": "This compact row replaces the previous per-slice startup ledger. Detailed slice history remains in the evidence log."
     },

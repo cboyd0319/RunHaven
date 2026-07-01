@@ -2,6 +2,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
+use crate::runtime::worktrees::{load_worktree_lifecycle, verify_lifecycle};
+
 use super::helpers::{
     auth_profiles_by_name, display_agent_name, project_label, status_label, string_field,
 };
@@ -31,6 +33,7 @@ pub struct ManagedSessionSummaryData {
     pub detail_command: String,
     pub lifecycle: String,
     pub input: ManagedSessionInputData,
+    pub cleanup: ManagedSessionCleanupData,
     pub next_action: ManagedSessionNextActionData,
     pub events: Vec<ManagedSessionEventData>,
 }
@@ -49,6 +52,26 @@ pub struct ManagedSessionInputData {
     pub attached: bool,
     pub status: String,
     pub detail: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedSessionCleanupData {
+    pub available: bool,
+    pub target: String,
+    pub label: String,
+    pub detail: String,
+}
+
+impl ManagedSessionCleanupData {
+    fn unavailable() -> Self {
+        Self {
+            available: false,
+            target: String::new(),
+            label: String::new(),
+            detail: String::new(),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -119,6 +142,7 @@ impl ManagedSessionSummaryData {
         let network = string_field(&record, "network");
         let started_at = string_field(&record, "timestamp");
         let lifecycle = managed_session_lifecycle(&status);
+        let cleanup = ManagedSessionCleanupData::unavailable();
         Self {
             id: run_id.clone(),
             run_id: run_id.clone(),
@@ -135,6 +159,7 @@ impl ManagedSessionSummaryData {
             container_name: string_field(&record, "container_name"),
             detail_command: format!("runhaven runs show {run_id}"),
             input: ManagedSessionInputData::detached(),
+            cleanup,
             next_action: managed_session_next_action(&agent, &auth_status, &lifecycle),
             events: managed_session_events(&status_label, &auth_status, &network, &started_at),
             lifecycle,
@@ -161,6 +186,7 @@ impl ManagedSessionSummaryData {
             string_field(&record, "timestamp"),
         );
         let lifecycle = managed_session_lifecycle(&status);
+        let cleanup = managed_session_cleanup(&record, &lifecycle);
         Self {
             id: run_id.clone(),
             run_id: run_id.clone(),
@@ -177,6 +203,7 @@ impl ManagedSessionSummaryData {
             container_name: string_field(&record, "container_name"),
             detail_command: format!("runhaven runs show {run_id}"),
             input: ManagedSessionInputData::detached(),
+            cleanup,
             next_action: managed_session_next_action(&agent, &auth_status, &lifecycle),
             events: managed_session_events(&status_label, &auth_status, &network, &started_at),
             lifecycle,
@@ -251,6 +278,41 @@ fn managed_session_next_action(
             detail: "RunHaven does not recognize this session state.".to_string(),
         },
     }
+}
+
+fn managed_session_cleanup(
+    record: &serde_json::Value,
+    lifecycle: &str,
+) -> ManagedSessionCleanupData {
+    if matches!(lifecycle, "finished" | "failed" | "stopped")
+        && managed_session_worktree_cleanup_available(record)
+    {
+        return ManagedSessionCleanupData {
+            available: true,
+            target: "worktree".to_string(),
+            label: "Clean up worktree".to_string(),
+            detail: "Delete the recorded worktree and branch for this session.".to_string(),
+        };
+    }
+    ManagedSessionCleanupData::unavailable()
+}
+
+fn managed_session_worktree_cleanup_available(record: &serde_json::Value) -> bool {
+    if record
+        .get("worktree")
+        .and_then(serde_json::Value::as_object)
+        .is_none()
+    {
+        return false;
+    }
+    let run_id = string_field(record, "run_id");
+    if run_id.is_empty() {
+        return false;
+    }
+    let Ok(lifecycle) = load_worktree_lifecycle(&run_id) else {
+        return false;
+    };
+    verify_lifecycle(&lifecycle).is_ok()
 }
 
 fn first_non_empty(primary: String, fallback: String) -> String {

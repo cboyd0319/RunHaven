@@ -42,18 +42,98 @@ function session(
 }
 
 describe("RunHavenSidebar", () => {
-  it("shows distinct session identity in the session picker", () => {
+  it("groups sessions by agent with compact counts", () => {
     const html = renderToStaticMarkup(
       <TooltipProvider>
         <SidebarProvider>
           <RunHavenSidebar
             sessions={[
+              session("gamma", {
+                agent: "codex",
+                session: "gamma",
+                title: "Codex - gamma",
+                project: "sandbox",
+                authStatus: "ready",
+                authScope: "project",
+                network: "internet",
+                input: {
+                  attached: false,
+                  status: "detached",
+                  detail: "Input is not attached for this session.",
+                },
+                statusLabel: "Needs auth",
+              }),
               session("alpha"),
               session("beta", {
-                agent: "codex",
+                agent: "claude",
                 session: "beta",
-                title: "Codex - beta",
+                title: "Claude - beta",
                 project: "beta",
+                authStatus: "ready",
+                authScope: "project",
+                network: "internal",
+                input: {
+                  attached: false,
+                  status: "detached",
+                  detail: "Input is not attached for this session.",
+                },
+                statusLabel: "Waiting",
+              }),
+            ]}
+            selectedSessionId="gamma"
+            onStartSelect={() => undefined}
+            onSessionSelect={() => undefined}
+          />
+        </SidebarProvider>
+      </TooltipProvider>,
+    )
+
+    expect(html).toContain("Sessions (3)")
+    expect(html).toContain("Claude")
+    expect(html).toContain("Codex")
+    expect(html).toContain(">2<")
+    expect(html).toContain(">1<")
+
+    const claudeIndex = html.indexOf('aria-label="Claude sessions"')
+    const codexIndex = html.indexOf('aria-label="Codex sessions"')
+    expect(claudeIndex).toBeGreaterThanOrEqual(0)
+    expect(codexIndex).toBeGreaterThan(claudeIndex)
+  })
+
+  it("keeps same-agent and mixed-agent sessions distinguishable", () => {
+    const html = renderToStaticMarkup(
+      <TooltipProvider>
+        <SidebarProvider>
+          <RunHavenSidebar
+            sessions={[
+              session("alpha", {
+                session: "planning",
+                title: "Claude - docs",
+                project: "docs",
+                containerName: "runhaven-codex-hidden-home",
+                detailCommand:
+                  "runhaven runs show /Users/c/private/docs --env TOKEN=value",
+              }),
+              session("beta", {
+                agent: "claude",
+                session: "review",
+                title: "Claude - docs",
+                project: "/Users/c/private/docs",
+                authStatus: "ready",
+                authScope: "project",
+                network: "internal",
+                input: {
+                  attached: false,
+                  status: "detached",
+                  detail: "Input is not attached for this session.",
+                },
+                statusLabel: "Waiting",
+              }),
+              session("gamma", {
+                agent: "codex",
+                session: "gamma",
+                title: "Codex - gamma",
+                project: "sandbox",
                 authStatus: "ready",
                 authScope: "project",
                 network: "internet",
@@ -73,14 +153,24 @@ describe("RunHavenSidebar", () => {
       </TooltipProvider>,
     )
 
-    expect(html).toContain("Claude - alpha")
-    expect(html).toContain("Codex - beta")
+    expect(html).toContain("Claude - docs")
+    expect(html).toContain("Codex - gamma")
+    expect(html).toContain("Project docs / Session planning")
+    expect(html).toContain("Project docs / Session review")
+    expect(html).toContain("Project sandbox / Session gamma")
     expect(html).toContain("API key broker")
+    expect(html).toContain("Ready")
     expect(html).toContain("Shared agent login")
     expect(html).toContain("Project")
     expect(html).toContain("Provider only")
+    expect(html).toContain("Local only")
     expect(html).toContain("Internet")
     expect(html).toContain("Input ready")
     expect(html).toContain("Input blocked")
+    expect(html.match(/data-active="true"/g) ?? []).toHaveLength(1)
+    expect(html).toContain('aria-current="page"')
+    expect(html).not.toContain("/Users/c/private")
+    expect(html).not.toContain("TOKEN=value")
+    expect(html).not.toContain("runhaven-codex-hidden-home")
   })
 })

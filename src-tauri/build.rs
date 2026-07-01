@@ -22,6 +22,7 @@ fn main() {
             "stop_managed_session",
             "kill_managed_session",
             "repair_managed_session",
+            "cleanup_managed_session",
             "plan_run",
             "launch_run",
         ]),

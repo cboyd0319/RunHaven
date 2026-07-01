@@ -10,8 +10,8 @@ mod lifecycle;
 mod merge;
 
 pub use commands::{
-    runs_worktree_discard, runs_worktree_keep, runs_worktree_merge, runs_worktree_recover,
-    worktree_recovery_commands, worktree_recovery_payload,
+    discard_worktree_for_run, runs_worktree_discard, runs_worktree_keep, runs_worktree_merge,
+    runs_worktree_recover, worktree_recovery_commands, worktree_recovery_payload,
 };
 pub use lifecycle::{WorktreeLifecycle, load_worktree_lifecycle, verify_lifecycle};
 pub use merge::ensure_source_ready_for_merge;

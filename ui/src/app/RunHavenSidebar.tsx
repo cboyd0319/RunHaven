@@ -24,9 +24,11 @@ import {
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 
 import {
+  agentLabel,
   authLabel,
   authScopeLabel,
   networkLabel,
+  sessionIdentityLabel,
   sessionInputLabel,
 } from "./sessionIdentity"
 
@@ -94,46 +96,61 @@ export function RunHavenSidebar({
         </SidebarGroup>
         {sessions.length > 0 ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Sessions</SidebarGroupLabel>
+            <SidebarGroupLabel>Sessions ({sessions.length})</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {sessions.map((session) => (
-                  <SidebarMenuItem key={session.id}>
-                    <SidebarMenuButton
-                      className="h-auto items-start gap-3 pr-20 py-3"
-                      tooltip={session.title}
-                      type="button"
-                      isActive={selectedSessionId === session.id}
-                      onClick={() => onSessionSelect(session.id)}
-                    >
-                      <Terminal />
-                      <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                        <div className="truncate text-sm font-medium">
-                          {session.title}
-                        </div>
-                        <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-                          <SidebarSessionBadge>{session.agent}</SidebarSessionBadge>
-                          <SidebarSessionBadge>
-                            {authLabel(session.authStatus)}
-                          </SidebarSessionBadge>
-                          <SidebarSessionBadge>
-                            {authScopeLabel(session.authScope)}
-                          </SidebarSessionBadge>
-                          <SidebarSessionBadge>
-                            {networkLabel(session.network)}
-                          </SidebarSessionBadge>
-                          <SidebarSessionBadge>
-                            {sessionInputLabel(session)}
-                          </SidebarSessionBadge>
-                        </div>
+              <div className="flex flex-col gap-4">
+                {groupSessionsByAgent(sessions).map(([agent, agentSessions]) => (
+                  <section key={agent} aria-label={`${agentLabel(agent)} sessions`}>
+                    <div className="mb-2 flex items-center justify-between px-2 group-data-[collapsible=icon]:hidden">
+                      <div className="text-[11px] font-medium tracking-[0.2em] text-muted-foreground uppercase">
+                        {agentLabel(agent)}
                       </div>
-                    </SidebarMenuButton>
-                    <SidebarMenuBadge className="max-w-16 truncate">
-                      {session.statusLabel}
-                    </SidebarMenuBadge>
-                  </SidebarMenuItem>
+                      <SidebarSessionBadge>{String(agentSessions.length)}</SidebarSessionBadge>
+                    </div>
+                    <SidebarMenu>
+                      {agentSessions.map((session) => {
+                        const selected = selectedSessionId === session.id
+
+                        return (
+                          <SidebarMenuItem key={session.id}>
+                            <SidebarMenuButton
+                              aria-current={selected ? "page" : undefined}
+                              className="h-auto items-start gap-3 rounded-xl border border-transparent py-3 pr-24 data-[active=true]:border-sidebar-primary/25 data-[active=true]:bg-sidebar-accent/70"
+                              tooltip={session.title}
+                              type="button"
+                              isActive={selected}
+                              onClick={() => onSessionSelect(session.id)}
+                            >
+                              <Terminal />
+                              <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                                <div className="truncate text-sm font-medium">
+                                  {session.title}
+                                </div>
+                                <div className="truncate text-[11px] text-muted-foreground">
+                                  {sessionIdentityLabel(session)}
+                                </div>
+                                <div className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                                  {authLabel(session.authStatus)}
+                                  {" • "}
+                                  {authScopeLabel(session.authScope)}
+                                </div>
+                                <div className="text-[11px] leading-4 text-muted-foreground">
+                                  {networkLabel(session.network)}
+                                  {" • "}
+                                  {sessionInputLabel(session)}
+                                </div>
+                              </div>
+                            </SidebarMenuButton>
+                            <SidebarMenuBadge className="max-w-20 truncate">
+                              {session.statusLabel}
+                            </SidebarMenuBadge>
+                          </SidebarMenuItem>
+                        )
+                      })}
+                    </SidebarMenu>
+                  </section>
                 ))}
-              </SidebarMenu>
+              </div>
             </SidebarGroupContent>
           </SidebarGroup>
         ) : null}
@@ -152,4 +169,21 @@ function SidebarSessionBadge({ children }: { children: string }) {
       {children}
     </Badge>
   )
+}
+
+function groupSessionsByAgent(
+  sessions: ManagedSessionSummary[],
+): Array<[agent: string, sessions: ManagedSessionSummary[]]> {
+  const groups = new Map<string, ManagedSessionSummary[]>()
+  for (const session of sessions) {
+    const agentSessions = groups.get(session.agent) ?? []
+    agentSessions.push(session)
+    groups.set(session.agent, agentSessions)
+  }
+  return [...groups.entries()].sort(([left], [right]) => {
+    const labelOrder = agentLabel(left).localeCompare(agentLabel(right), undefined, {
+      sensitivity: "base",
+    })
+    return labelOrder || left.localeCompare(right)
+  })
 }

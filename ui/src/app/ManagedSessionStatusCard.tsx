@@ -39,15 +39,13 @@ export function ManagedSessionStatusCard({
         <CardTitle role="heading" aria-level={2}>
           Runtime status
         </CardTitle>
-        <CardDescription>
-          Current status for the selected RunHaven session.
-        </CardDescription>
+        <CardDescription>Current state for this session.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {loading ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <RefreshCw className="size-4" />
-            Checking runtime status.
+            Checking status...
           </p>
         ) : null}
         {error ? (
@@ -58,14 +56,17 @@ export function ManagedSessionStatusCard({
           </Alert>
         ) : null}
         {status?.statusUnavailable ? (
-          <Alert>
+          <Alert role="status">
             <CircleAlert />
-            <AlertTitle>Status unavailable</AlertTitle>
+            <AlertTitle>Live status not available</AlertTitle>
             <AlertDescription>{status.statusUnavailable}</AlertDescription>
           </Alert>
         ) : null}
         {status?.recovery ? (
-          <Alert variant={status.recovery.repairAvailable ? "warning" : undefined}>
+          <Alert
+            role={status.recovery.repairAvailable ? "alert" : "status"}
+            variant={status.recovery.repairAvailable ? "warning" : undefined}
+          >
             <CircleAlert />
             <AlertTitle>{status.recovery.title}</AlertTitle>
             <AlertDescription>
@@ -79,7 +80,7 @@ export function ManagedSessionStatusCard({
         ) : null}
         {status ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Metric label="Session state" value={status.session.statusLabel} />
+            <Metric label="State" value={status.session.statusLabel} />
             <Metric label="Input" value={status.session.input.status} />
             <Metric label="Container" value={container?.state ?? "Unavailable"} />
             <Metric label="Image" value={container?.image ?? "Unknown"} />

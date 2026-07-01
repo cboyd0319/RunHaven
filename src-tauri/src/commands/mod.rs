@@ -28,16 +28,19 @@ pub(crate) mod managed_session_output;
 pub(crate) mod managed_session_status;
 pub(crate) mod run_control;
 pub(crate) mod run_status;
+pub(crate) mod session_cleanup;
 pub(crate) mod session_diagnostics;
 pub(crate) mod sessions;
 mod validation;
 mod warnings;
 
 #[cfg(test)]
+#[allow(unused_imports)]
 pub(crate) use launch::{
     build_agent_run_plan, build_launch_response, build_plan_response, image_readiness_error,
     launch_prepared_with_approval_for_test, launch_run_with_registries,
-    trusted_launch_message_for_test, validate_launch_confirmation,
+    launch_run_with_registries_status_and_approval, trusted_launch_message_for_test,
+    validate_launch_confirmation,
 };
 
 #[tauri::command]

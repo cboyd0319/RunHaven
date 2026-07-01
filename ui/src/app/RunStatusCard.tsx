@@ -22,6 +22,7 @@ type RunStatusCardProps = {
   controlTarget?: "run" | "session"
   showStatus?: boolean
   controlsAvailable?: boolean
+  cleanupAvailable?: boolean
   runStatus: RunStatusResponse | null
   runStatusLoading: boolean
   runStatusError: string
@@ -38,6 +39,7 @@ export function RunStatusCard({
   controlTarget = "run",
   showStatus = true,
   controlsAvailable = true,
+  cleanupAvailable = false,
   runStatus,
   runStatusLoading,
   runStatusError,
@@ -48,7 +50,8 @@ export function RunStatusCard({
   onConfirmationChange,
   onControl,
 }: RunStatusCardProps) {
-  const showControls = controlsAvailable && (!showStatus || runStatus !== null)
+  const showControls =
+    (controlsAvailable || cleanupAvailable) && (!showStatus || runStatus !== null)
 
   return (
     <Card aria-live="polite">
@@ -112,40 +115,56 @@ export function RunStatusCard({
         ) : null}
         {showControls ? (
           <div className="grid gap-3">
-            <RunControl
-              label={`Confirm stopping this ${controlTarget}.`}
-              button="Stop run"
-              checked={controlConfirmations.stop}
-              disabled={controlBusy}
-              onCheckedChange={(checked) =>
-                onConfirmationChange("stop", checked)
-              }
-              onClick={() => void onControl("stop")}
-            />
-            <RunControl
-              label={`Confirm hard-stopping this ${controlTarget}.`}
-              button="Hard stop"
-              checked={controlConfirmations.kill}
-              disabled={controlBusy}
-              onCheckedChange={(checked) =>
-                onConfirmationChange("kill", checked)
-              }
-              onClick={() => void onControl("kill")}
-            />
-            <RunControl
-              label={`Confirm clearing this ${controlTarget}'s stale marker.`}
-              button="Repair marker"
-              checked={controlConfirmations.repair}
-              disabled={controlBusy}
-              onCheckedChange={(checked) =>
-                onConfirmationChange("repair", checked)
-              }
-              onClick={() => void onControl("repair")}
-            />
+            {controlsAvailable ? (
+              <>
+                <RunControl
+                  label={`Confirm stopping this ${controlTarget}.`}
+                  button="Stop run"
+                  checked={controlConfirmations.stop}
+                  disabled={controlBusy}
+                  onCheckedChange={(checked) =>
+                    onConfirmationChange("stop", checked)
+                  }
+                  onClick={() => void onControl("stop")}
+                />
+                <RunControl
+                  label={`Confirm hard-stopping this ${controlTarget}.`}
+                  button="Hard stop"
+                  checked={controlConfirmations.kill}
+                  disabled={controlBusy}
+                  onCheckedChange={(checked) =>
+                    onConfirmationChange("kill", checked)
+                  }
+                  onClick={() => void onControl("kill")}
+                />
+                <RunControl
+                  label={`Confirm clearing this ${controlTarget}'s stale marker.`}
+                  button="Repair marker"
+                  checked={controlConfirmations.repair}
+                  disabled={controlBusy}
+                  onCheckedChange={(checked) =>
+                    onConfirmationChange("repair", checked)
+                  }
+                  onClick={() => void onControl("repair")}
+                />
+              </>
+            ) : null}
+            {cleanupAvailable ? (
+              <RunControl
+                label="Confirm deleting this session's saved worktree."
+                button="Delete worktree"
+                checked={controlConfirmations.cleanup}
+                disabled={controlBusy}
+                onCheckedChange={(checked) =>
+                  onConfirmationChange("cleanup", checked)
+                }
+                onClick={() => void onControl("cleanup")}
+              />
+            ) : null}
           </div>
         ) : null}
         {controlMessage ? (
-          <Alert>
+          <Alert role="status">
             <CheckCircle2 />
             <AlertTitle>{controlMessage}</AlertTitle>
           </Alert>
@@ -177,11 +196,18 @@ function RunControl({
   onCheckedChange: (checked: boolean) => void
   onClick: () => void
 }) {
+  const buttonLabel = !checked
+    ? `${button}: confirmation required`
+    : disabled
+      ? `${button}: action in progress`
+      : button
+
   return (
     <div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_auto] sm:items-center">
       <label className="flex items-center gap-3 text-sm">
         <Checkbox
           checked={checked}
+          aria-label={label}
           onCheckedChange={(value) => onCheckedChange(value === true)}
         />
         <span>{label}</span>
@@ -190,6 +216,7 @@ function RunControl({
         type="button"
         variant="outline"
         disabled={!checked || disabled}
+        aria-label={buttonLabel}
         onClick={onClick}
       >
         {button}

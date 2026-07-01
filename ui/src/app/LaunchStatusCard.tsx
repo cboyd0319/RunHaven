@@ -28,9 +28,7 @@ export function LaunchStatusCard({
             <CardTitle role="heading" aria-level={2}>
               Launch status
             </CardTitle>
-            <CardDescription>
-              Backend status for the most recent launch.
-            </CardDescription>
+            <CardDescription>Latest launch state.</CardDescription>
           </div>
           {status ? (
             <Badge variant={launchStatusVariant(status.state)}>
@@ -43,13 +41,13 @@ export function LaunchStatusCard({
         {loading ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <LoaderCircle className="size-4" />
-            Checking launch status.
+            Checking launch...
           </p>
         ) : null}
         {error ? (
           <Alert variant="destructive">
             <CircleAlert />
-            <AlertTitle>Launch status unavailable</AlertTitle>
+            <AlertTitle>Launch status not available</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
@@ -77,6 +75,6 @@ function launchStatusVariant(
     case "failed":
       return "destructive"
     default:
-      return "warning"
+      return "secondary"
   }
 }

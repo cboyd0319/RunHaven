@@ -163,10 +163,27 @@ Useful GUI design docs:
   run ID, and the grant is cleared when the Rust-owned writer unregisters.
   Frontend confirmation fields remain user-intent preconditions, not security
   approval.
+- Selected GUI sessions now support narrow worktree cleanup for eligible stopped
+  managed sessions. The frontend sends only the managed session ID plus user
+  intent; Rust resolves the backend run, rejects active markers, stale
+  worktrees, unsupported history, and unconfirmed requests before mutation,
+  asks for native confirmation, discards only the verified RunHaven worktree,
+  and clears stale cleanup affordances from the response.
+- Managed-session cleanup availability now fails closed from the Rust-owned read
+  model: active records never advertise cleanup, and recent records advertise it
+  only when the recorded worktree lifecycle still verifies.
+- The GUI command-surface guards now positively pin sensitive run-control
+  commands, including cleanup, to the `run-control` capability and scan
+  production frontend code for direct Tauri imports or forbidden host-reaching
+  command names.
 - GUI session switching preserves per-session message drafts, sending state,
   accepted notices, and errors. Quiet managed-session refreshes now compare all
   rendered identity, display, input, and next-action fields so meaningful state
   changes are not hidden while no-op refreshes stay stable.
+- The GUI live smoke script keeps real-agent broker coverage opt-in via
+  `RUNHAVEN_GUI_LIVE_REAL_AGENT=1`, bounds and redacts captured output on
+  failure, and keeps the default smoke focused on live shell multi-session
+  input/output/control without requiring credentials.
 - Pre-release native design resources are recorded in
   `docs/plans/native-gui-reference-pass.md` for the later macOS design and app
   asset audit. That audit is deferred until CLI and GUI workflows are
@@ -217,6 +234,6 @@ them.
 CLI is reverified and should stay contract-preserving except for bug fixes,
 security fixes, docs corrections, pin updates, or internal GUI support that
 preserves CLI semantics. Continue hardest-first on real-agent auth/session
-correctness beyond shell, session-scoped cleanup and recovery from the GUI,
+correctness beyond shell, GUI recovery beyond verified worktree cleanup,
 CLI/GUI parity checks, fail-closed security boundary checks, and a current
 visual screenshot pass. Keep the safe path short, stable, and nontechnical.
