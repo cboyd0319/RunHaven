@@ -15,7 +15,6 @@ pub(crate) struct SetupStatus {
     pub ok: bool,
     pub checks: Vec<CheckStatus>,
     pub blocker_count: usize,
-    pub ssh_available: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]

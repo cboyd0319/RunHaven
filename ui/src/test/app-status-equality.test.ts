@@ -46,7 +46,6 @@ function dashboard(patch: Partial<DashboardStatus> = {}): DashboardStatus {
     setup: {
       ok: true,
       blockerCount: 0,
-      sshAvailable: false,
       checks: [{ name: "container", ok: true, detail: "ready", remedy: "" }],
     },
     agents: [agent()],
@@ -123,7 +122,7 @@ describe("sameDashboardStatus", () => {
 
   it("treats two empty dashboards as unchanged", () => {
     const empty = dashboard({
-      setup: { ok: true, blockerCount: 0, sshAvailable: false, checks: [] },
+      setup: { ok: true, blockerCount: 0, checks: [] },
       agents: [],
       activeRuns: [],
       recentRuns: [],
@@ -144,12 +143,6 @@ describe("sameDashboardStatus", () => {
       sameDashboardStatus(base, {
         ...base,
         setup: { ...base.setup, blockerCount: 1 },
-      }),
-    ).toBe(false)
-    expect(
-      sameDashboardStatus(base, {
-        ...base,
-        setup: { ...base.setup, sshAvailable: true },
       }),
     ).toBe(false)
   })

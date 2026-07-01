@@ -11,7 +11,6 @@ export function sameDashboardStatus(
   return (
     current.setup.ok === next.setup.ok &&
     current.setup.blockerCount === next.setup.blockerCount &&
-    current.setup.sshAvailable === next.setup.sshAvailable &&
     current.setup.checks.length === next.setup.checks.length &&
     current.setup.checks.every((check, index) => {
       const nextCheck = next.setup.checks[index]

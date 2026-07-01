@@ -15,7 +15,6 @@ export type SetupStatus = {
   ok: boolean;
   checks: CheckStatus[];
   blockerCount: number;
-  sshAvailable: boolean;
 };
 
 export type AgentProfile = {

@@ -84,7 +84,6 @@ export function previewDashboardStatus(): DashboardStatus {
     setup: {
       ok: true,
       blockerCount: 0,
-      sshAvailable: false,
       checks: [
         {
           name: "Preview mode",

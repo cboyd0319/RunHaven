@@ -22,8 +22,7 @@ function dashboard(patch: Partial<DashboardStatus> = {}): DashboardStatus {
     setup: {
       ok: true,
       checks: [check()],
-      blockerCount: 0,
-      sshAvailable: true
+      blockerCount: 0
     },
     agents: [],
     activeRuns: [
@@ -102,7 +101,6 @@ describe("SetupCard", () => {
           setup: {
             ok: false,
             blockerCount: 1,
-            sshAvailable: true,
             checks: [
               check({
                 name: "Container CLI",
@@ -133,7 +131,6 @@ describe("SetupCard", () => {
           setup: {
             ok: false,
             blockerCount: 2,
-            sshAvailable: true,
             checks: [
               check({ name: "Container CLI", ok: false }),
               check({ name: "Image cache", ok: false })
@@ -151,7 +148,6 @@ describe("SetupCard", () => {
           setup: {
             ok: false,
             blockerCount: 3,
-            sshAvailable: true,
             checks: [
               check({ name: "Container CLI", ok: false }),
               check({ name: "Image cache", ok: false }),

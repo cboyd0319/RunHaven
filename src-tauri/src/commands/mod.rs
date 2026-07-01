@@ -83,7 +83,6 @@ fn collect_setup_status() -> SetupStatus {
         ok: blocker_count == 0,
         checks,
         blocker_count,
-        ssh_available: false,
     }
 }
 
