@@ -120,6 +120,8 @@ Useful GUI design docs:
 - `docs/plans/native-gui-managed-sessions.md`
 - `docs/plans/native-gui-session-input-contract.md`
 - `docs/plans/native-gui-microsandbox-reference.md`
+- `docs/plans/native-gui-design-resources.md` (Apple HIG + macOS design
+  references for the deferred comprehensive visual redesign)
 
 ## Latest State
 
