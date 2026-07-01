@@ -253,85 +253,19 @@ Useful GUI design docs:
   routing, pin policy, structure guard, docs local-path guard, JSON validation,
   diff hygiene, and the full Apple container smoke with provider egress plus
   SSH fail-closed all passed.
-- Desktop/Tauri managed-session work has live evidence for launch, bounded
-  output, input, stop, cleanup, distinct GUI session identity, and per-session
-  state naming.
-- GUI launches now have a Rust-owned launch status path. `launch_run` records
-  backend-owned starting, running, finished, or failed state after native
-  confirmation, and `get_launch_status` exposes only sanitized status metadata
-  while the GUI waits for a managed session to appear.
-- Managed-session input visibility now fails closed: sessions are marked
-  input-attached only while the backend next action is `monitor`, and selected
-  session runtime status detaches input when container status is unavailable.
-- Multi-session sidebar rows now show compact agent, auth, login, network, and
-  input identity so users can distinguish sessions before selecting them.
-- Selected GUI sessions now have a read-only typed runtime status path:
-  `get_managed_session_status` resolves the backend-owned session ID in Rust
-  and returns sanitized container status for the runtime card without exposing
-  raw workspace paths, state volumes, mounts, environment values, or launch
-  arguments.
-- The GUI quietly refreshes active/recent managed sessions after launch or
-  selection and suppresses no-op session-list updates to avoid visible page
-  blink while status changes.
-- Legacy WebView-readable dashboard and run-status responses now omit state
-  volume names and return display-safe workspace labels instead of raw host
-  paths. Plan and launch review still carry reviewed launch details.
-- API key broker env-var names are fixed per agent: `OPENAI_API_KEY`,
-  `ANTHROPIC_API_KEY`, and `GEMINI_API_KEY`. Those names flow through the
-  shared planner, typed Tauri plan/launch request, and GUI advanced launch
-  field for brokered Codex, Claude, and Gemini profiles only. Raw env
-  passthrough remains a separate warned path, and arbitrary host env names fail
-  closed.
-- GUI launch review now shows a typed access preflight. It defaults to the
-  shared agent login state created by `runhaven login`, explicitly says that
-  state is shared across projects on this Mac, still lets users choose a
-  project session, and blocks launch before background start if an API key
-  broker variable name is present but not set. The GUI success message says
-  `Run accepted`, not `Run started`, because the Tauri command returns before
-  the background container is fully proven running.
-- The real-agent GUI live smoke requires an explicit broker env for the chosen
-  profile, waits for a running monitor session, and requires bounded non-empty
-  output. It is brokered-launch coverage, not TTY or OAuth/login parity.
-- Selected-session runtime status now returns typed recovery guidance when live
-  container status is unavailable. Generic failures use refresh/diagnostics
-  guidance first; marker repair is reserved for a proven available next action.
-  The GUI can show a plain next step without exposing backend errors, raw
-  paths, mounts, state volumes, environment values, or launch arguments.
-- Selected sessions now have on-demand session-scoped diagnostics. The GUI sends
-  only the managed session ID; Rust resolves the backend-owned run and returns
-  bounded auth broker and provider network records filtered to that run.
-- GUI sensitive actions no longer rely on WebView booleans as the trust
-  boundary. Launch, raw output viewing, stop, hard stop, and repair use
-  Rust-owned native confirmation before the backend starts or mutates anything.
-  Session input uses a backend-held grant bound to the selected session ID plus
-  run ID, and the grant is cleared when the Rust-owned writer unregisters.
-  Frontend confirmation fields remain user-intent preconditions, not security
-  approval.
-- Selected GUI sessions now support narrow worktree cleanup for eligible stopped
-  managed sessions. The frontend sends only the managed session ID plus user
-  intent; Rust resolves the backend run, rejects active markers, stale
-  worktrees, unsupported history, and unconfirmed requests before mutation,
-  asks for native confirmation, discards only the verified RunHaven worktree,
-  and clears stale cleanup affordances from the response.
-- Managed-session cleanup availability now fails closed from the Rust-owned read
-  model: active records never advertise cleanup, and recent records advertise it
-  only when the recorded worktree lifecycle still verifies.
-- The GUI command-surface guards now positively pin sensitive run-control
-  commands, including cleanup, to the `run-control` capability and scan
-  production frontend code for direct Tauri imports or forbidden host-reaching
-  command names.
-- GUI session switching preserves per-session message drafts, sending state,
-  accepted notices, and errors. Quiet managed-session refreshes now compare all
-  rendered identity, display, input, and next-action fields so meaningful state
-  changes are not hidden while no-op refreshes stay stable.
-- The GUI live smoke script keeps real-agent broker coverage opt-in via
-  `RUNHAVEN_GUI_LIVE_REAL_AGENT=1`, bounds and redacts captured output on
-  failure, and keeps the default smoke focused on live shell multi-session
-  input/output/control without requiring credentials.
-- Pre-release native design resources are recorded in
-  `docs/plans/native-gui-reference-pass.md` for the later macOS design and app
-  asset audit. That audit is deferred until CLI and GUI workflows are
-  functionally complete.
+- Earlier GUI milestones (compact; details in `feature_list.json` evidence,
+  `docs/SECURITY_MODEL.md`, and `docs/DESKTOP_APP.md`): managed sessions have
+  live evidence for launch, bounded output, input, stop, and cleanup; launch,
+  session status, session diagnostics, and recovery guidance are Rust-owned,
+  typed, and sanitized (no raw paths, volumes, env values, or launch args);
+  sensitive actions use Rust-owned native confirmation, never WebView
+  booleans, and session input uses a backend-held run-bound grant; the API-key
+  broker uses fixed per-agent env names with arbitrary names failing closed;
+  quiet refresh compares all rendered fields so updates are in place without
+  blink and drafts survive switching; worktree cleanup verifies RunHaven
+  ownership before discard and availability fails closed; command-surface
+  guards pin run-control commands to their capability; the GUI live smoke
+  keeps real-agent broker coverage opt-in and bounded.
 - Tauri command tests are split under `src-tauri/src/commands/tests/`; the old
   monolithic `tests.rs` file must not return.
 - Shared UI contracts are split under `crates/runhaven-core/src/ui_contracts/`.
