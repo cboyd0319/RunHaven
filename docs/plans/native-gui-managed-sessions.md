@@ -33,7 +33,8 @@ Rules:
 - The frontend can observe sessions through typed read-only commands.
 - The current frontend cannot send session input.
 - A future frontend input bridge can send input only to an existing
-  backend-owned session ID after ownership and bounds tests exist.
+  backend-owned session ID after the design gate in
+  `docs/plans/native-gui-session-input-contract.md` is satisfied.
 - The frontend cannot request arbitrary commands, shells, mounts, environment
   variables, network modes, provider hosts, or workspace paths.
 - Rust/Tauri owns process creation, launch review, auth setup, run records, and
@@ -108,26 +109,29 @@ network setting on this path.
 
 ## Future Embedded Session Surface
 
-Add these only after the read model, bounded output, and run-control tests are
-stable:
+Input remains design-only. No `write_session_input`, `resize_session`, or
+session attach command is exposed by the current desktop app.
+
+Read-only session commands may expand first:
 
 ```text
 start_session(reviewed_plan_id)
 get_session(session_id)
-write_session_input(session_id, bytes)
-resize_session(session_id, cols, rows)
 ```
 
-Guard requirements before any input-capable or process-start command:
+Before any input-capable command is exposed, use
+`docs/plans/native-gui-session-input-contract.md` as the required contract.
+Guard requirements include:
 
 - Unknown session IDs fail closed.
 - Session IDs must refer to backend-owned RunHaven sessions.
-- Frontend input is bounded.
-- Resize dimensions are bounded.
+- Frontend input is bounded and explicit.
+- Auth attention and stale frontend targets fail closed.
 - Process creation accepts only reviewed RunHaven launch plans.
 - No command string, host path, mount, env, provider host, or network setting
   is accepted from the WebView on the write path.
 - Multiple sessions cannot overwrite one another's records, logs, or controls.
+- Resize stays out of scope until there is a separate design and test gate.
 
 ## GUI Shape
 
@@ -243,7 +247,10 @@ Current slice:
   the selected-session bounded-output plus confirmed-stop command path works
   against one live Apple `container` run. This is an opt-in local smoke, not a
   WebView click automation harness.
+- capability guard proves no session-input, resize, attach, app-server
+  transport, filesystem RPC, MCP, generic command execution, login, or
+  host-reaching bridge is exposed before the input contract is implemented
 
 Future embedded-session slices need focused Rust tests for unknown ID
-rejection, bounded input, bounded resize, raw output gating, and multi-session
-isolation before adding terminal input or live session UI.
+rejection, bounded input, auth attention, stale targets, raw output gating, and
+multi-session isolation before adding terminal input or live session UI.

@@ -1550,8 +1550,9 @@ Latest GUI local prototype:
   mounts, network policy, approvals, logs, and diagnostics should open as
   the active view, a review sheet, or a temporary inspector. A future embedded
   Codex session should occupy the main pane after launch, with Rust/Tauri
-  owning the reviewed launch plan and the frontend limited to input, resize,
-  and output for an existing session ID.
+  owning the reviewed launch plan. Output is the only live session surface
+  exposed today; input stays design-only and resize stays out of scope until
+  separate guard tests promote them.
 - 2026-06-30 implementation follow-up: Removed the React desktop right rail.
   Setup status now lives in the toolbar, setup blockers take over the main
   pane before launch, diagnostics stay collapsed in the main flow, and the
@@ -1630,6 +1631,14 @@ Latest GUI local prototype:
   `stop_managed_session`, and cleans owned run/state/network resources. The
   smoke passed locally on macOS 27.0 with Apple `container` 1.0.0. It is an
   opt-in typed-command live smoke, not WebView click automation.
+- 2026-06-30 session input design gate: Added
+  `docs/plans/native-gui-session-input-contract.md` before exposing any
+  session input or resize command. The contract requires backend-owned session
+  IDs, explicit user intent, bounded input, auth checks, cancellation handling,
+  stale-target rejection, and multi-session isolation. A Tauri capability guard
+  now fails if `write_session_input`, resize, attach, filesystem RPC, generic
+  command execution, MCP, app-server transport, login, or host-reaching bridges
+  appear before that boundary is implemented and tested.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
@@ -1652,14 +1661,17 @@ Continue local GUI work on this branch. Use
 `docs/plans/native-gui-reference-pass.md`,
 `docs/plans/native-gui-stack-spike.md`, and
 `docs/plans/native-gui-wireframe.md` as the design contract; use
-`docs/plans/native-gui-managed-sessions.md` and
+`docs/plans/native-gui-managed-sessions.md`,
+`docs/plans/native-gui-session-input-contract.md`, and
 `docs/plans/native-gui-microsandbox-reference.md` before adding embedded
 terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
 boundary, make safe launch the simplest path, and keep developer details behind
-secondary views. Next useful work is a design-first bounded session input
-contract, including auth behavior, cancellation, per-session ownership,
-explicit user intent, and stale-target tests before any input or resize command
-is exposed. A later desktop-driver pass can add native WebView click automation
-if it is worth the tooling cost.
+secondary views. Next useful work is the first implementation step from the
+session-input contract: Rust contract tests around a test-only write seam,
+then request/response structs without a capability grant. Do not expose an
+input command, resize command, attach bridge, app-server transport, filesystem
+RPC, MCP, generic command execution, login, or host-reaching Codex path in that
+slice. A later desktop-driver pass can add native WebView click automation if
+it is worth the tooling cost.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.
