@@ -41,6 +41,7 @@ export function defaultRunPlanRequest(agent: AgentProfile | undefined): RunPlanR
     workspacePath: "",
     networkMode: secureNetworkDefault(agent),
     workspaceScope: "current",
+    authScope: "agent",
     sessionName: null,
     readOnlyWorkspace: false,
     cpus: "4",
@@ -53,6 +54,18 @@ export function defaultRunPlanRequest(agent: AgentProfile | undefined): RunPlanR
     allowRootUser: false,
     user: "agent"
   };
+}
+
+export const authScopeLabels: Record<RunPlanRequest["authScope"], string> = {
+  agent: "Shared agent login",
+  project: "Project session"
+};
+
+export function authScopeHelp(scope: RunPlanRequest["authScope"]): string {
+  if (scope === "agent") {
+    return "Reuse the login from runhaven login for this agent across projects on this Mac.";
+  }
+  return "Keep login state separate for this project and session.";
 }
 
 export function withLaunchSessionName(request: RunPlanRequest): RunPlanRequest {
@@ -160,12 +173,12 @@ function memoryBytes(memory: string): number | null {
 }
 
 export function isLaunchReady(
-  plan: Pick<RunPlanResponse, "warnings"> | null,
+  plan: Pick<RunPlanResponse, "warnings" | "access"> | null,
   confirmLaunch: boolean,
   confirmedWarnings: Set<string>,
   imageReady = true
 ): boolean {
-  if (!plan || !confirmLaunch || !imageReady) {
+  if (!plan || !confirmLaunch || !imageReady || plan.access.blocking) {
     return false;
   }
   return plan.warnings.every((warning) => confirmedWarnings.has(warning.code));

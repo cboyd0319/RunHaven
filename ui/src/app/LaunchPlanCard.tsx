@@ -1,19 +1,10 @@
 import {
-  apiKeyBrokerEnvPlaceholder,
-  supportsApiKeyBroker,
   type AgentProfile,
   type AuthStatusResponse,
   type ImageStatusResponse,
   type RunPlanRequest,
 } from "@/commands/runhaven"
-import {
-  CircleAlert,
-  ClipboardCheck,
-  FolderOpen,
-  ShieldCheck,
-} from "lucide-react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
+import { ClipboardCheck, FolderOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -33,6 +24,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import {
+  AgentAccessSummary,
+  ApiKeyBrokerField,
+  AuthScopePicker,
+  ImageReadiness,
+} from "./LaunchAccess"
 import { LaunchSteps } from "./LaunchSteps"
 import { networkHelp, networkLabels } from "./types"
 import type { LaunchStep } from "./types"
@@ -74,9 +71,6 @@ export function LaunchPlanCard({
   onContinue,
   onReviewPlan,
 }: LaunchPlanCardProps) {
-  const brokerAvailable = supportsApiKeyBroker(selectedAgent)
-  const brokerPlaceholder = apiKeyBrokerEnvPlaceholder(selectedAgent)
-
   return (
     <Card>
       <CardHeader>
@@ -133,7 +127,11 @@ export function LaunchPlanCard({
                 imageStatus={imageStatus}
                 imageError={imageError}
               />
-              <AgentAccessSummary agent={selectedAgent} authStatus={authStatus} />
+              <AgentAccessSummary
+                agent={selectedAgent}
+                authStatus={authStatus}
+                authScope={request.authScope}
+              />
             </>
           ) : null}
 
@@ -161,6 +159,11 @@ export function LaunchPlanCard({
                   </Button>
                 </div>
               </label>
+
+              <AuthScopePicker
+                value={request.authScope}
+                onChange={(authScope) => onRequestChange({ authScope })}
+              />
 
               <details className="rounded-lg border p-3">
                 <summary className="cursor-pointer text-sm font-medium">
@@ -215,26 +218,13 @@ export function LaunchPlanCard({
                     </label>
                   </div>
 
-                  {brokerAvailable ? (
-                    <label className="flex flex-col gap-1.5 text-sm font-medium">
-                      API key variable
-                      <Input
-                        value={request.apiKeyBrokerEnv ?? ""}
-                        onChange={(event) =>
-                          onRequestChange({
-                            apiKeyBrokerEnv:
-                              event.currentTarget.value.trim() || null,
-                          })
-                        }
-                        placeholder={brokerPlaceholder}
-                        aria-label="API key broker environment variable"
-                      />
-                      <span className="text-sm font-normal text-muted-foreground">
-                        Enter the host variable name. RunHaven keeps the key on
-                        this Mac and gives the session a placeholder.
-                      </span>
-                    </label>
-                  ) : null}
+                  <ApiKeyBrokerField
+                    agent={selectedAgent}
+                    value={request.apiKeyBrokerEnv}
+                    onChange={(apiKeyBrokerEnv) =>
+                      onRequestChange({ apiKeyBrokerEnv })
+                    }
+                  />
 
                   <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
                     <Checkbox
@@ -276,136 +266,4 @@ export function LaunchPlanCard({
       </CardContent>
     </Card>
   )
-}
-
-function AgentAccessSummary({
-  agent,
-  authStatus,
-}: {
-  agent: AgentProfile | undefined
-  authStatus: AuthStatusResponse | null
-}) {
-  if (!agent) {
-    return null
-  }
-  const profileStatus = authProfileStatus(agent, authStatus)
-  return (
-    <div className="grid gap-3 rounded-lg border p-3 text-sm sm:grid-cols-3">
-      <div>
-        <div className="text-muted-foreground">Sign-in method</div>
-        <div className="font-medium">{authMethodLabel(agent.signIn)}</div>
-      </div>
-      <div>
-        <div className="text-muted-foreground">Credential broker</div>
-        <Badge variant={agent.broker === "yes" ? "success" : "secondary"}>
-          {brokerLabel(agent.broker)}
-        </Badge>
-      </div>
-      <div>
-        <div className="text-muted-foreground">Auth status</div>
-        <Badge variant={authStatusBadgeVariant(profileStatus)}>
-          {authStatusLabel(profileStatus)}
-        </Badge>
-      </div>
-    </div>
-  )
-}
-
-function ImageReadiness({
-  imageLoading,
-  imageStatus,
-  imageError,
-}: {
-  imageLoading: boolean
-  imageStatus: ImageStatusResponse | null
-  imageError: string
-}) {
-  if (imageLoading) {
-    return <p className="text-sm text-muted-foreground">Checking image...</p>
-  }
-  if (imageError) {
-    return (
-      <Alert variant="destructive">
-        <CircleAlert />
-        <AlertTitle>Image status unavailable</AlertTitle>
-        <AlertDescription>{imageError}</AlertDescription>
-      </Alert>
-    )
-  }
-  if (!imageStatus) {
-    return null
-  }
-  return (
-    <Alert>
-      <ShieldCheck />
-      <AlertTitle>
-        {imageStatus.image.ready ? "Agent ready" : "Agent setup needed"}
-      </AlertTitle>
-      <AlertDescription>
-        {imageStatus.image.ready
-          ? "This agent is installed."
-          : imageStatus.image.fixCommand}
-      </AlertDescription>
-    </Alert>
-  )
-}
-
-function authMethodLabel(value: string): string {
-  if (value === "n/a") {
-    return "Not needed"
-  }
-  return value
-}
-
-function brokerLabel(value: string): string {
-  if (value === "yes") {
-    return "Available"
-  }
-  if (value === "n/a") {
-    return "Not needed"
-  }
-  return "Not available"
-}
-
-function authProfileStatus(
-  agent: AgentProfile,
-  authStatus: AuthStatusResponse | null,
-): string {
-  return authStatus?.profiles.find((profile) => profile.name === agent.name)?.status ?? "-"
-}
-
-function authStatusLabel(status: string): string {
-  switch (status.trim().toLowerCase()) {
-    case "api-key-broker":
-    case "brokered":
-      return "API key broker"
-    case "ready":
-    case "available":
-      return "Ready"
-    case "n/a":
-      return "Not needed"
-    case "-":
-      return "Unknown"
-    case "design-only":
-      return "Not ready"
-    default:
-      return status
-  }
-}
-
-function authStatusBadgeVariant(
-  status: string,
-): "destructive" | "secondary" | "success" | "warning" {
-  switch (status.trim().toLowerCase()) {
-    case "api-key-broker":
-    case "brokered":
-    case "ready":
-    case "available":
-    case "n/a":
-      return "success"
-    case "design-only":
-      return "warning"
-    default:
-      return "secondary"
-  }
 }

@@ -7,6 +7,7 @@ import type {
   ImageStatusResponse,
   LaunchRunRequest,
   LaunchRunResponse,
+  RunPlanAccess,
   RunPlanRequest,
   RunPlanResponse,
   RunStatusResponse,
@@ -165,7 +166,7 @@ export function previewPlanRun(request: RunPlanRequest): RunPlanResponse {
     workspace: request.workspacePath || ".",
     workspaceScope: request.workspaceScope,
     workspaceScopeNote: null,
-    authScope: "project",
+    authScope: request.authScope,
     stateVolume: "preview",
     session: request.sessionName || "default",
     containerName: "preview",
@@ -175,7 +176,48 @@ export function previewPlanRun(request: RunPlanRequest): RunPlanResponse {
     image: request.image || "runhaven/preview:0.1.0",
     providerAllowedHosts: request.providerHosts,
     preflightCount: 0,
+    access: previewAccess(request),
     warnings: warningPreview(request)
+  };
+}
+
+function previewAccess(request: RunPlanRequest): RunPlanAccess {
+  if (request.apiKeyBrokerEnv?.trim()) {
+    return {
+      status: "ready",
+      label: "API key variable found",
+      detail: `${request.apiKeyBrokerEnv} is set for this preview.`,
+      remedy: "",
+      blocking: false,
+      apiKeyBrokerEnv: request.apiKeyBrokerEnv,
+      apiKeyBrokerEnvPresent: true
+    };
+  }
+  if (request.agent === "shell") {
+    return {
+      status: "not-needed",
+      label: "No sign-in needed",
+      detail: "This shell profile does not need RunHaven-managed sign-in.",
+      remedy: "",
+      blocking: false,
+      apiKeyBrokerEnv: null,
+      apiKeyBrokerEnvPresent: null
+    };
+  }
+  return {
+    status: "setup",
+    label: request.authScope === "agent" ? "Shared agent login" : "Project session login",
+    detail:
+      request.authScope === "agent"
+        ? `RunHaven will use the shared ${request.agent} login state across projects on this Mac.`
+        : "RunHaven will keep login state separate for this project session.",
+    remedy:
+      request.authScope === "agent"
+        ? `If the agent asks for sign-in, finish it in the session or run runhaven login ${request.agent}.`
+        : "If the agent asks for sign-in, finish it inside this session.",
+    blocking: false,
+    apiKeyBrokerEnv: null,
+    apiKeyBrokerEnvPresent: null
   };
 }
 
@@ -192,6 +234,7 @@ function previewEgressSummary(request: RunPlanRequest): string {
 export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {
   const plan = {
     ...request.plan,
+    access: previewAccess(request.plan),
     warnings: warningPreview(request.plan)
   };
   if (!isLaunchReady(plan, request.confirmLaunch, new Set(request.confirmedWarnings))) {
@@ -204,7 +247,7 @@ export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {
     profile: request.plan.agent,
     workspace: request.plan.workspacePath || ".",
     stateVolume: "preview",
-    authScope: "project",
+    authScope: request.plan.authScope,
     session: request.plan.sessionName || "default",
     networkMode: request.plan.networkMode,
     containerName: "preview"

@@ -36,6 +36,7 @@ pub(super) fn validate_plan_request_bounds(request: &RunPlanRequest) -> Result<(
         &request.workspace_scope,
         MAX_SHORT_FIELD_LEN,
     )?;
+    validate_text_len("auth scope", &request.auth_scope, MAX_SHORT_FIELD_LEN)?;
     validate_optional_text_len(
         "session name",
         request.session_name.as_deref(),

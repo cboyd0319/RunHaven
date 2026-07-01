@@ -25,9 +25,17 @@ fn build_plan_response_uses_existing_runhaven_planner() {
     let workspace = tempfile::tempdir().expect("workspace");
     let response = build_plan_response(request(workspace.path().to_path_buf())).expect("plan");
     assert_eq!(response.profile, "codex");
-    assert_eq!(response.auth_scope, "project");
+    assert_eq!(response.auth_scope, "agent");
     assert_eq!(response.network_mode, "provider");
     assert!(response.egress_summary.contains("provider allowlist"));
+    assert_eq!(response.access.label, "Shared agent login");
+    assert!(
+        response
+            .access
+            .detail
+            .contains("across projects on this Mac")
+    );
+    assert!(!response.access.blocking);
     assert_eq!(response.warnings.len(), 0);
 }
 
@@ -58,16 +66,39 @@ fn build_plan_response_warns_for_supported_advanced_choices() {
 }
 
 #[test]
-fn build_plan_response_accepts_api_key_broker_env_name() {
+fn build_plan_response_reports_missing_api_key_broker_env() {
     let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
     let mut request = request(workspace.path().to_path_buf());
-    request.api_key_broker_env = Some("OPENAI_API_KEY".to_string());
+    let missing_env = missing_broker_env_name();
+    request.api_key_broker_env = Some(missing_env.clone());
 
     let response = build_plan_response(request).expect("broker plan");
 
     assert!(response.egress_summary.contains("API key broker enabled"));
+    assert_eq!(response.access.status, "blocked");
+    assert_eq!(response.access.api_key_broker_env, Some(missing_env));
+    assert_eq!(response.access.api_key_broker_env_present, Some(false));
+    assert!(response.access.blocking);
     assert_eq!(response.warnings.len(), 0);
+}
+
+#[test]
+fn build_plan_response_reports_present_api_key_broker_env_without_value() {
+    let (_cache, _cache_home) = isolated_cache();
+    let workspace = tempfile::tempdir().expect("workspace");
+    let path_value = std::env::var("PATH").expect("PATH should be set for tests");
+    let mut request = request(workspace.path().to_path_buf());
+    request.api_key_broker_env = Some("PATH".to_string());
+
+    let response = build_plan_response(request).expect("broker plan");
+    let serialized = serde_json::to_string(&response).expect("serialize response");
+
+    assert_eq!(response.access.status, "ready");
+    assert_eq!(response.access.api_key_broker_env, Some("PATH".to_string()));
+    assert_eq!(response.access.api_key_broker_env_present, Some(true));
+    assert!(!response.access.blocking);
+    assert!(!serialized.contains(&path_value));
 }
 
 #[test]
@@ -202,11 +233,25 @@ fn launch_run_response_uses_reserved_run_id_without_starting() {
     assert_eq!(response.run_id, "runhaven-test-run");
     assert_eq!(response.status, "started");
     assert_eq!(response.profile, "codex");
-    assert_eq!(response.auth_scope, "project");
+    assert_eq!(response.auth_scope, "agent");
     assert_eq!(response.snapshot.run_id, "runhaven-test-run");
     assert_eq!(response.snapshot.status, "started");
-    assert_eq!(response.snapshot.auth_scope, "project");
+    assert_eq!(response.snapshot.auth_scope, "agent");
     assert!(!response.snapshot.container_name.is_empty());
+}
+
+#[test]
+fn launch_run_response_round_trips_project_auth_scope_without_starting() {
+    let (_cache, _cache_home) = isolated_cache();
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut plan_request = request(workspace.path().to_path_buf());
+    plan_request.auth_scope = "project".to_string();
+
+    let response = build_launch_response(plan_request, "runhaven-project-auth-test".to_string())
+        .expect("launch response");
+
+    assert_eq!(response.auth_scope, "project");
+    assert_eq!(response.snapshot.auth_scope, "project");
 }
 
 #[test]
@@ -228,19 +273,69 @@ fn launch_plan_for_desktop_keeps_piped_stdin_open_without_tty() {
 fn launch_plan_for_desktop_uses_session_scoped_state() {
     let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
-    let alpha = build_agent_run_plan(
-        &shell_request(workspace.path().to_path_buf(), "alpha".to_string()),
-        Some("desktop-alpha-plan".to_string()),
-    )
-    .expect("alpha launch plan");
-    let beta = build_agent_run_plan(
-        &shell_request(workspace.path().to_path_buf(), "beta".to_string()),
-        Some("desktop-beta-plan".to_string()),
-    )
-    .expect("beta launch plan");
+    let mut alpha_request = shell_request(workspace.path().to_path_buf(), "alpha".to_string());
+    let mut beta_request = shell_request(workspace.path().to_path_buf(), "beta".to_string());
+    alpha_request.auth_scope = "project".to_string();
+    beta_request.auth_scope = "project".to_string();
+    let alpha = build_agent_run_plan(&alpha_request, Some("desktop-alpha-plan".to_string()))
+        .expect("alpha launch plan");
+    let beta = build_agent_run_plan(&beta_request, Some("desktop-beta-plan".to_string()))
+        .expect("beta launch plan");
 
     assert_eq!(alpha.auth_scope, AuthScope::Project);
     assert_eq!(beta.auth_scope, AuthScope::Project);
     assert_ne!(alpha.state_volume, beta.state_volume);
     assert_ne!(alpha.container_name, beta.container_name);
+}
+
+#[test]
+fn launch_plan_for_desktop_defaults_to_shared_agent_login_state() {
+    let (_cache, _cache_home) = isolated_cache();
+    let workspace = tempfile::tempdir().expect("workspace");
+
+    let plan = build_agent_run_plan(
+        &request(workspace.path().to_path_buf()),
+        Some("desktop-agent-auth-plan".to_string()),
+    )
+    .expect("desktop launch plan");
+
+    assert_eq!(plan.auth_scope, AuthScope::Agent);
+    assert_eq!(plan.state_volume, "runhaven-codex-shared-home");
+}
+
+#[test]
+fn build_plan_response_rejects_invalid_auth_scope() {
+    let (_cache, _cache_home) = isolated_cache();
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut plan_request = request(workspace.path().to_path_buf());
+    plan_request.auth_scope = "host-home".to_string();
+
+    let error = build_plan_response(plan_request).expect_err("invalid auth scope");
+
+    assert!(error.contains("invalid auth scope"));
+}
+
+#[test]
+fn run_plan_request_defaults_missing_auth_scope_to_agent() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    let request: RunPlanRequest = serde_json::from_value(json!({
+        "agent": "codex",
+        "workspacePath": workspace.path().display().to_string(),
+        "networkMode": "provider",
+        "workspaceScope": "current",
+        "sessionName": null,
+        "readOnlyWorkspace": false,
+        "cpus": "4",
+        "memory": "4g",
+        "providerHosts": [],
+        "envNames": [],
+        "apiKeyBrokerEnv": null,
+        "image": null,
+        "allowSensitiveWorkspace": false,
+        "allowRootUser": false,
+        "user": "agent"
+    }))
+    .expect("deserialize request");
+
+    assert_eq!(request.auth_scope, "agent");
 }

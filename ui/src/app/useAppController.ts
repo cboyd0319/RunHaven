@@ -252,7 +252,7 @@ export function useAppController() {
       })
       setLastLaunch(started)
       await loadRunStatus(started.runId)
-      setLaunchMessage(`Run started: ${started.runId}`)
+      setLaunchMessage(`Run accepted: ${started.runId}`)
       const { sessionId } = await loadSessionsUntilRunPresent(
         loadManagedSessions,
         started.runId,

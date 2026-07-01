@@ -236,6 +236,7 @@ export type RunPlanRequest = {
   workspacePath: string;
   networkMode: "provider" | "internal" | "internet";
   workspaceScope: "current" | "git-root";
+  authScope: "agent" | "project";
   sessionName: string | null;
   readOnlyWorkspace: boolean;
   cpus: string;
@@ -254,6 +255,16 @@ export type PlanWarning = {
   message: string;
 };
 
+export type RunPlanAccess = {
+  status: string;
+  label: string;
+  detail: string;
+  remedy: string;
+  blocking: boolean;
+  apiKeyBrokerEnv: string | null;
+  apiKeyBrokerEnvPresent: boolean | null;
+};
+
 export type RunPlanResponse = {
   profile: string;
   workspace: string;
@@ -269,6 +280,7 @@ export type RunPlanResponse = {
   image: string;
   providerAllowedHosts: string[];
   preflightCount: number;
+  access: RunPlanAccess;
   warnings: PlanWarning[];
 };
 

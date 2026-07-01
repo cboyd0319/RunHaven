@@ -7,6 +7,8 @@ pub(crate) struct RunPlanRequest {
     pub workspace_path: String,
     pub network_mode: String,
     pub workspace_scope: String,
+    #[serde(default = "default_auth_scope")]
+    pub auth_scope: String,
     pub session_name: Option<String>,
     pub read_only_workspace: bool,
     pub cpus: String,
@@ -23,11 +25,27 @@ pub(crate) struct RunPlanRequest {
     pub user: String,
 }
 
+fn default_auth_scope() -> String {
+    "agent".to_string()
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PlanWarning {
     pub code: String,
     pub message: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RunPlanAccess {
+    pub status: String,
+    pub label: String,
+    pub detail: String,
+    pub remedy: String,
+    pub blocking: bool,
+    pub api_key_broker_env: Option<String>,
+    pub api_key_broker_env_present: Option<bool>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -47,6 +65,7 @@ pub(crate) struct RunPlanResponse {
     pub image: String,
     pub provider_allowed_hosts: Vec<String>,
     pub preflight_count: usize,
+    pub access: RunPlanAccess,
     pub warnings: Vec<PlanWarning>,
 }
 

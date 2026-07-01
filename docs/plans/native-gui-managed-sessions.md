@@ -108,6 +108,29 @@ stay under `main-read`. Raw output, input, and run-control commands stay outside
 `main-read` because bounded container stdio can contain secrets and input,
 stop, kill, and repair mutate runtime state.
 
+## Launch Access Preflight
+
+Desktop launch planning returns a typed `access` summary with the reviewed
+login state before launch:
+
+- `Shared agent login` reuses the per-agent login created by `runhaven login`
+  across projects on this Mac.
+- `Project session login` keeps login state separate for this project session.
+- `API key variable found` means the named host environment variable is present
+  for this app process.
+- `API key variable missing` blocks launch until the variable is set or the user
+  removes the API key variable and signs in inside the session.
+
+The frontend renders this summary in the review step and disables launch when
+`access.blocking` is true. The response may include the environment variable
+name, but never includes the value. The backend repeats the API-key environment
+check before spawning the background launch thread, so the GUI cannot report an
+accepted launch when broker credentials are missing.
+
+The GUI says `Run accepted` after the typed launch command returns. That means
+RunHaven accepted the reviewed plan and started backend launch ownership; it is
+not a claim that the container has already reached a running state.
+
 `get_managed_session_status` accepts only a managed session ID. Rust resolves
 that session to the active RunHaven run, checks whether input is attached in the
 backend registry, and returns the managed session summary plus sanitized

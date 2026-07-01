@@ -26,15 +26,17 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByRole("alert").filter({ hasText: "Agent ready" })).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByRole("heading", { name: "Choose project" })).toBeVisible();
+  await expect(page.getByText("Reuse the login from runhaven login for this agent across projects on this Mac.")).toBeVisible();
   await page.getByLabel("Project folder path").fill("/tmp/runhaven-preview");
   await page.getByRole("button", { name: "Review access" }).click();
 
   await expect(page.getByRole("heading", { name: "Review access" })).toBeVisible();
-  await expect(page.getByText("Auth scope")).toBeVisible();
+  await expect(page.getByRole("rowheader", { name: "Login state" })).toBeVisible();
+  await expect(page.getByText("RunHaven will use the shared claude login state across projects on this Mac.")).toBeVisible();
   await page.getByLabel("I reviewed this plan and want to start this run.").check();
   await page.getByRole("button", { name: "Launch run" }).click();
 
-  await expect(page.getByText(/Run started: preview-/)).toBeVisible();
+  await expect(page.getByText(/Run accepted: preview-/)).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Claude - runhaven-preview" })).toBeVisible();
   await expect(page.getByText("Monitor session")).toBeVisible();
@@ -131,5 +133,5 @@ async function startPreviewRun(page: Page, workspacePath: string) {
   await page.getByRole("button", { name: "Review access" }).click();
   await page.getByLabel("I reviewed this plan and want to start this run.").check();
   await page.getByRole("button", { name: "Launch run" }).click();
-  await expect(page.getByText(/Run started: preview-/)).toBeVisible();
+  await expect(page.getByText(/Run accepted: preview-/)).toBeVisible();
 }

@@ -1,6 +1,6 @@
-import { CircleAlert, FileText } from "lucide-react"
+import { CircleAlert, FileText, ShieldCheck } from "lucide-react"
 
-import type { RunPlanResponse } from "@/commands/runhaven"
+import { authScopeLabels, type RunPlanResponse } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -62,11 +62,9 @@ export function PlanReviewCard({
               ["Agent", plan.profile],
               ["Project", plan.workspace],
               ["Session", plan.session],
-              ["Auth scope", authScopeLabel(plan.authScope)],
-              ["Agent memory", plan.stateVolume],
+              ["Login state", authScopeLabel(plan.authScope)],
               ["Network", plan.networkMode],
               ["Image", plan.image],
-              ["Preflight steps", String(plan.preflightCount)],
             ].map(([label, value]) => (
               <TableRow key={label}>
                 <TableHead className="w-40">{label}</TableHead>
@@ -83,6 +81,15 @@ export function PlanReviewCard({
             <AlertDescription>{plan.workspaceScopeNote}</AlertDescription>
           </Alert>
         ) : null}
+
+        <Alert variant={plan.access.blocking ? "destructive" : undefined}>
+          {plan.access.blocking ? <CircleAlert /> : <ShieldCheck />}
+          <AlertTitle>{plan.access.label}</AlertTitle>
+          <AlertDescription>
+            <p>{plan.access.detail}</p>
+            {plan.access.remedy ? <p>{plan.access.remedy}</p> : null}
+          </AlertDescription>
+        </Alert>
 
         <p className="text-sm text-muted-foreground">{plan.egressSummary}</p>
 
@@ -131,6 +138,11 @@ export function PlanReviewCard({
             Fix image readiness before launching a run.
           </p>
         ) : null}
+        {plan.access.blocking ? (
+          <p className="text-sm text-muted-foreground">
+            Fix access before launching a run.
+          </p>
+        ) : null}
 
         <div className="flex justify-between gap-3">
           <Button type="button" variant="outline" onClick={onBack}>
@@ -150,12 +162,9 @@ export function PlanReviewCard({
 }
 
 function authScopeLabel(value: string): string {
-  switch (value.trim().toLowerCase()) {
-    case "agent":
-      return "Shared agent login"
-    case "project":
-      return "Project session"
-    default:
-      return value.trim() || "Unknown"
+  const scope = value.trim().toLowerCase()
+  if (scope === "agent" || scope === "project") {
+    return authScopeLabels[scope]
   }
+  return value.trim() || "Unknown"
 }

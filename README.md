@@ -18,7 +18,7 @@
 > outputs may still change before a stable release.
 
 RunHaven is a Rust CLI with an unreleased terminal UI and an alpha
-Tauri/Svelte desktop shell for running Claude Code, Codex, Gemini, Antigravity,
+Tauri/React desktop shell for running Claude Code, Codex, Gemini, Antigravity,
 Copilot, or custom coding agents inside Apple `container` on macOS 26+ (Apple
 silicon only). It does not replace those tools. It gives them a repeatable local
 boundary so the secure way to run an agent is also the easy way.
@@ -183,11 +183,12 @@ cleanup remain CLI-first today.
 
 RunHaven is alpha/pre-release. `v0.5.0` is the CLI-only pre-release already cut.
 This checkout now contains the unreleased RunHaven-only TUI checkpoint as a
-first-class reference over the same CLI backend. The Tauri/Svelte desktop shell
-is alpha: it can read setup, dashboard, profile, folder-pick, and run-plan state
-and supports confirmed launch, image readiness, sanitized live status, bounded
-output snapshots, stop, kill, repair, and secret-free diagnostics. Image build,
-state cleanup, network cleanup, and worktree review remain CLI-first.
+terminal reference over the same CLI backend. The Tauri/React desktop shell is
+alpha: it can read setup, dashboard, profile, folder-pick, and run-plan state
+and supports reviewed launch, image readiness, sanitized live status, bounded
+output snapshots, session input, stop, kill, repair, and secret-free
+diagnostics. Image build, state cleanup, network cleanup, and worktree review
+remain CLI-first.
 
 The roadmap now treats the CLI as the complete technical surface, the TUI as a
 hardened terminal checkpoint, and the desktop app as the future easiest path

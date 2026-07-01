@@ -59,6 +59,15 @@ describe("runhaven command helpers", () => {
     const plan = await planRun(request);
 
     expect(plan.egressSummary).toContain("API key broker enabled");
+    expect(plan.access.apiKeyBrokerEnv).toBe("OPENAI_API_KEY");
+    expect(plan.access.apiKeyBrokerEnvPresent).toBe(true);
+    expect(plan.access.blocking).toBe(false);
+  });
+
+  it("defaults GUI launches to shared agent login state", () => {
+    const request = defaultRunPlanRequest(providerAgent);
+
+    expect(request.authScope).toBe("agent");
   });
 
   it("keeps broker fields tied to brokered agents", () => {
@@ -147,6 +156,8 @@ describe("runhaven command helpers", () => {
 
     expect(plan.workspace).toBe("/tmp/runhaven-preview");
     expect(plan.networkMode).toBe("internet");
+    expect(plan.authScope).toBe("agent");
+    expect(plan.access.detail).toContain("across projects on this Mac");
     expect(plan.warnings.map((warning) => warning.code)).toEqual(["full-internet"]);
   });
 
@@ -207,8 +218,14 @@ describe("runhaven command helpers", () => {
     };
     const warnings = warningPreview(request, { activeRunCount: 1 });
 
-    expect(isLaunchReady({ warnings }, true, new Set())).toBe(false);
-    expect(isLaunchReady({ warnings }, true, new Set(["active-runs", "resource-memory"]))).toBe(true);
+    expect(isLaunchReady(planWithWarnings(warnings), true, new Set())).toBe(false);
+    expect(isLaunchReady(planWithWarnings(warnings), true, new Set(["active-runs", "resource-memory"]))).toBe(true);
+  });
+
+  it("blocks launch when plan access is blocked", () => {
+    const warnings: Array<{ code: string; message: string }> = [];
+
+    expect(isLaunchReady(planWithWarnings(warnings, true), true, new Set())).toBe(false);
   });
 
   it("returns a launch preview outside the Tauri runtime", async () => {
@@ -229,3 +246,18 @@ describe("runhaven command helpers", () => {
     expect(started.snapshot.containerName).toBe("preview");
   });
 });
+
+function planWithWarnings(warnings: Array<{ code: string; message: string }>, blocking = false) {
+  return {
+    warnings,
+    access: {
+      status: blocking ? "blocked" : "setup",
+      label: blocking ? "API key variable missing" : "Shared agent login",
+      detail: "",
+      remedy: "",
+      blocking,
+      apiKeyBrokerEnv: null,
+      apiKeyBrokerEnvPresent: null
+    }
+  };
+}

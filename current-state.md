@@ -123,6 +123,13 @@ Useful GUI design docs:
 - API key broker env-var names now flow through the shared planner, typed Tauri
   plan/launch request, and GUI advanced launch field for brokered Codex, Claude,
   and Gemini profiles only. Raw env passthrough remains a separate warned path.
+- GUI launch review now shows a typed access preflight. It defaults to the
+  shared agent login state created by `runhaven login`, explicitly says that
+  state is shared across projects on this Mac, still lets users choose a
+  project session, and blocks launch before background start if an API key
+  broker variable name is present but not set. The GUI success message says
+  `Run accepted`, not `Run started`, because the Tauri command returns before
+  the background container is fully proven running.
 - Tauri command tests are split under `src-tauri/src/commands/tests/`; the old
   monolithic `tests.rs` file must not return.
 - Shared UI contracts are split under `crates/runhaven-core/src/ui_contracts/`.
@@ -169,6 +176,6 @@ them.
 CLI is reverified and should stay contract-preserving except for bug fixes,
 security fixes, docs corrections, pin updates, or internal GUI support that
 preserves CLI semantics. Continue the CLI+GUI goal on the GUI side from the
-hardest problems first: real-agent auth/session behavior, recovery/diagnostics
-for managed sessions, CLI/GUI parity checks, and fail-closed security
-boundaries. Keep the safe path short, stable, and nontechnical.
+hardest remaining problems first: managed-session recovery/diagnostics,
+CLI/GUI parity checks, real-agent launch smokes beyond shell, and fail-closed
+security boundary checks. Keep the safe path short, stable, and nontechnical.

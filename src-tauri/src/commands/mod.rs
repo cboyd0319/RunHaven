@@ -5,6 +5,7 @@ use std::thread;
 use runhaven_core::doctor::collect_checks;
 use runhaven_core::image::doctor::collect_image_status;
 use runhaven_core::provider::auth_profiles::{agent_broker, agent_sign_in};
+use runhaven_core::provider::runtime::validate_runtime_auth_broker_environment;
 use runhaven_core::records::read_run_records;
 use runhaven_core::runtime::active::read_active_run_records;
 use runhaven_core::runtime::launch::{launch_run_plan_with_runner, new_run_id};
@@ -24,6 +25,7 @@ use crate::launch_runner::TauriLaunchRunner;
 use crate::session_input::SessionInputRegistry;
 use crate::session_output::SessionOutputRegistry;
 
+mod access;
 pub(crate) mod diagnostics;
 pub(crate) mod image_status;
 pub(crate) mod log_snapshot;
@@ -33,6 +35,7 @@ pub(crate) mod sessions;
 mod validation;
 mod warnings;
 
+use access::plan_access;
 use validation::{validate_launch_request_bounds, validate_plan_request_bounds};
 use warnings::plan_warnings;
 
@@ -161,6 +164,7 @@ fn build_plan_response(request: RunPlanRequest) -> Result<RunPlanResponse, Strin
     let active_run_count = active_run_count();
     let warnings = plan_warnings(&request, active_run_count);
     let plan = build_agent_run_plan(&request, None)?;
+    let access = plan_access(&plan);
     Ok(RunPlanResponse {
         profile: plan.profile_name,
         workspace: plan.workspace.display().to_string(),
@@ -176,6 +180,7 @@ fn build_plan_response(request: RunPlanRequest) -> Result<RunPlanResponse, Strin
         image: plan.image,
         provider_allowed_hosts: plan.provider_allowed_hosts,
         preflight_count: plan.preflight.len(),
+        access,
         warnings,
     })
 }
@@ -190,6 +195,8 @@ fn build_agent_run_plan(
         NetworkMode::try_from(request.network_mode.as_str()).map_err(|error| error.to_string())?;
     let workspace_scope = WorkspaceScope::try_from(request.workspace_scope.as_str())
         .map_err(|error| error.to_string())?;
+    let auth_scope =
+        AuthScope::try_from(request.auth_scope.as_str()).map_err(|error| error.to_string())?;
     let provider_hosts =
         normalize_provider_hosts(&request.provider_hosts).map_err(|error| error.to_string())?;
     build_run_plan(RunOptions {
@@ -202,7 +209,7 @@ fn build_agent_run_plan(
         network,
         workspace_scope,
         session: non_empty(request.session_name.clone()),
-        auth_scope: AuthScope::Project,
+        auth_scope,
         read_only_workspace: request.read_only_workspace,
         ssh: false,
         env: request.env_names.clone(),
@@ -224,6 +231,7 @@ fn prepare_launch(
     run_id: String,
 ) -> Result<(AgentRunPlan, LaunchRunResponse), String> {
     let plan = build_agent_run_plan(&request, Some(run_id.clone()))?;
+    validate_runtime_auth_broker_environment(&plan).map_err(|error| error.to_string())?;
     let response = LaunchRunResponse {
         run_id: run_id.clone(),
         status: "started".to_string(),
