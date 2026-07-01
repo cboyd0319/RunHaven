@@ -1,3 +1,9 @@
+import type {
+  AuthLogEntry,
+  AuthProfileStatus,
+  EgressLogEntry
+} from "./diagnostics_types";
+
 export type CheckStatus = {
   name: string;
   ok: boolean;
@@ -20,6 +26,10 @@ export type AgentProfile = {
   providerHosts: string[];
   signIn: string;
   broker: string;
+  // True when the desktop app can sign this agent in fully in-app (device-code
+  // login). False agents (like claude) sign in from a terminal. Derived from
+  // core in the backend, never re-decided here.
+  supportsInAppSignIn: boolean;
 };
 
 export type RunSummary = {
@@ -377,61 +387,15 @@ export type RepairRunResponse = {
   markerRemoved: boolean;
 };
 
-export type EgressLogEntry = {
-  timestamp: string;
-  profile: string;
-  decision: string;
-  host: string;
-  port: number;
-  count: number;
-  reason: string;
-  matchedRule: string;
-  runId: string;
-};
-
-export type EgressLogResponse = {
-  entries: EgressLogEntry[];
-};
-
-export type AuthLogEntry = {
-  timestamp: string;
-  profile: string;
-  broker: string;
-  decision: string;
-  method: string;
-  path: string;
-  upstreamStatus: number | null;
-  count: number;
-  reason: string;
-  runId: string;
-};
-
-export type AuthLogResponse = {
-  entries: AuthLogEntry[];
-};
-
-export type AuthProfileStatus = {
-  name: string;
-  status: string;
-};
-
-export type AuthStatusResponse = {
-  status: string;
-  runtime: string;
-  profiles: AuthProfileStatus[];
-};
-
-export type AuthExplainResponse = {
-  name: string;
-  status: string;
-  runtime: string;
-  supportedAuth: string[];
-  hostKeeps: string[];
-  guestReceives: string[];
-  providerHosts: string[];
-  currentSafePath: string;
-  notes: string[];
-};
+export type {
+  EgressLogEntry,
+  EgressLogResponse,
+  AuthLogEntry,
+  AuthLogResponse,
+  AuthProfileStatus,
+  AuthStatusResponse,
+  AuthExplainResponse
+} from "./diagnostics_types";
 
 export type {
   NetworkExplanationResponse,

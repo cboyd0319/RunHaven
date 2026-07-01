@@ -13,6 +13,7 @@ function agent(patch: Partial<AgentProfile> = {}): AgentProfile {
     providerHosts: ["api.openai.com"],
     signIn: "api-key",
     broker: "codex-api-key",
+    supportsInAppSignIn: true,
     ...patch
   };
 }
@@ -47,7 +48,8 @@ const handlers = {
   onNetworkChange: () => {},
   onBack: () => {},
   onContinue: () => {},
-  onReviewPlan: async () => {}
+  onReviewPlan: async () => {},
+  onSignedIn: () => {}
 };
 
 function agentProps() {

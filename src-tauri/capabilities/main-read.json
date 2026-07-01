@@ -9,6 +9,7 @@
     "allow-get-dashboard-status",
     "allow-get-image-status",
     "allow-get-image-build-status",
+    "allow-get-agent-sign-in-status",
     "allow-get-network-prune-preview",
     "allow-get-run-status",
     "allow-plan-run",

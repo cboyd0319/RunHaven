@@ -20,6 +20,8 @@ import type {
   WorkspaceExplanationResponse
 } from "./types";
 import type {
+  AgentSignInStartResponse,
+  AgentSignInStatusResponse,
   ImageBuildStartResponse,
   ImageBuildStatusResponse,
   NetworkPrunePreview,
@@ -51,7 +53,8 @@ const mockAgents: AgentProfile[] = [
     defaultCommand: ["claude"],
     providerHosts: ["api.anthropic.com"],
     signIn: "runhaven login",
-    broker: "yes"
+    broker: "yes",
+    supportsInAppSignIn: false
   },
   {
     name: "codex",
@@ -60,7 +63,8 @@ const mockAgents: AgentProfile[] = [
     defaultCommand: ["codex"],
     providerHosts: ["api.openai.com", "chatgpt.com"],
     signIn: "runhaven login",
-    broker: "yes"
+    broker: "yes",
+    supportsInAppSignIn: true
   },
   {
     name: "shell",
@@ -69,7 +73,8 @@ const mockAgents: AgentProfile[] = [
     defaultCommand: ["/bin/bash"],
     providerHosts: [],
     signIn: "n/a",
-    broker: "n/a"
+    broker: "n/a",
+    supportsInAppSignIn: false
   }
 ];
 
@@ -398,6 +403,28 @@ export function previewImageBuildStatus(buildId: string): ImageBuildStatusRespon
     label: "Succeeded",
     detail: "Preview mode: rebuild status is simulated.",
     outputTail: "Preview build output.",
+    updatedAt: "1970-01-01T00:00:00Z"
+  };
+}
+
+export function previewAgentSignInStart(agent: string): AgentSignInStartResponse {
+  return {
+    signInId: `preview-sign-in-${agent}`,
+    agent,
+    state: "starting",
+    label: "Starting",
+    detail: "Preview mode: no sign-in runs without the desktop app."
+  };
+}
+
+export function previewAgentSignInStatus(signInId: string): AgentSignInStatusResponse {
+  return {
+    signInId,
+    agent: "preview",
+    state: "needs_browser",
+    label: "Open your browser",
+    detail: "Preview mode: sign-in progress is simulated.",
+    outputTail: "Open https://example.com/device and enter CODE-1234.",
     updatedAt: "1970-01-01T00:00:00Z"
   };
 }

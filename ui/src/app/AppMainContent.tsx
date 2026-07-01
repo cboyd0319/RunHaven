@@ -93,6 +93,7 @@ type AppMainContentProps = {
   onRequestChange: (patch: Partial<RunPlanRequest>) => void
   onNetworkChange: (networkMode: RunPlanRequest["networkMode"]) => void
   onReviewPlan: () => Promise<void>
+  onSignedIn: () => void
   lastLaunch: LaunchRunResponse | null
   runStatus: RunStatusResponse | null
   runStatusLoading: boolean
@@ -269,6 +270,7 @@ function LaunchView(props: AppMainContentProps) {
       onBack={() => props.onLaunchStepChange("agent")}
       onContinue={() => props.onLaunchStepChange("project")}
       onReviewPlan={props.onReviewPlan}
+      onSignedIn={props.onSignedIn}
     />
   )
 }

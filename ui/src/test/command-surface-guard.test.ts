@@ -32,6 +32,8 @@ const EXPECTED_INVOKED_COMMANDS = [
   "get_image_status",
   "rebuild_agent_image",
   "get_image_build_status",
+  "start_agent_sign_in",
+  "get_agent_sign_in_status",
   "get_network_prune_preview",
   "prune_managed_networks",
   "get_run_status",

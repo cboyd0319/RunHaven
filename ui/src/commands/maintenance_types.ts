@@ -22,6 +22,30 @@ export type ImageBuildStatusResponse = {
   updatedAt: string;
 };
 
+// In-app agent sign-in. The desktop app only triggers sign-in and watches
+// sanitized progress; the credential stays with RunHaven core. No token, host
+// path, or unbounded log is present in these shapes.
+
+export type AgentSignInStartResponse = {
+  signInId: string;
+  agent: string;
+  state: string;
+  label: string;
+  detail: string;
+};
+
+export type AgentSignInStatusResponse = {
+  signInId: string;
+  agent: string;
+  state: "starting" | "needs_browser" | "succeeded" | "failed" | string;
+  label: string;
+  detail: string;
+  // Bounded, secret-redacted tail of the login output, so the sign-in link and
+  // short-lived device code show while any token or key is scrubbed.
+  outputTail: string;
+  updatedAt: string;
+};
+
 export type NetworkPrunePreview = {
   count: number;
 };

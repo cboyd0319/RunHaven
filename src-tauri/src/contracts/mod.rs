@@ -1,3 +1,4 @@
+mod agent_sign_in;
 mod dashboard;
 mod diagnostics;
 mod diagnostics_why;
@@ -9,6 +10,7 @@ mod run_control;
 mod run_status;
 mod worktree;
 
+pub(crate) use agent_sign_in::*;
 pub(crate) use dashboard::*;
 pub(crate) use diagnostics::*;
 pub(crate) use diagnostics_why::*;

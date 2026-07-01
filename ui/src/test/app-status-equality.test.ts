@@ -36,6 +36,7 @@ function agent(patch: Partial<AgentProfile> = {}): AgentProfile {
     providerHosts: ["api.openai.com"],
     signIn: "api-key",
     broker: "codex-api-key",
+    supportsInAppSignIn: true,
     ...patch,
   }
 }

@@ -9,6 +9,8 @@ import {
   previewImageStatus,
   previewImageBuildStart,
   previewImageBuildStatus,
+  previewAgentSignInStart,
+  previewAgentSignInStatus,
   previewNetworkPrunePreview,
   previewNetworkPrune,
   previewLaunchStatus,
@@ -70,6 +72,8 @@ import type {
   WriteSessionInputResponse
 } from "./types";
 import type {
+  AgentSignInStartResponse,
+  AgentSignInStatusResponse,
   ImageBuildStartResponse,
   ImageBuildStatusResponse,
   NetworkPrunePreview,
@@ -116,6 +120,24 @@ export async function getImageBuildStatus(buildId: string): Promise<ImageBuildSt
     "get_image_build_status",
     { request: { buildId } },
     () => previewImageBuildStatus(buildId)
+  );
+}
+
+export async function startAgentSignIn(agent: string): Promise<AgentSignInStartResponse> {
+  return call(
+    "start_agent_sign_in",
+    { request: { agent, confirm: true } },
+    () => previewAgentSignInStart(agent)
+  );
+}
+
+export async function getAgentSignInStatus(
+  signInId: string
+): Promise<AgentSignInStatusResponse> {
+  return call(
+    "get_agent_sign_in_status",
+    { request: { signInId } },
+    () => previewAgentSignInStatus(signInId)
   );
 }
 

@@ -36,20 +36,27 @@ fails, the app shows a short, plain fix. Follow it, then reopen or refresh.
 
 ## Sign in to an agent
 
-Signing in stores your agent login once so your runs can reuse it. Right now you
-start sign-in from a terminal, and the app shows the result:
+Signing in stores your agent login once so your runs can reuse it. Pick an agent
+in the first step of a run; the app shows its sign-in state and, for most agents,
+a **Sign in** button.
 
-```bash
-runhaven login claude
-```
+- Codex, Copilot, and Antigravity sign in right in the app. Click **Sign in**,
+  confirm the box the app pops up, then open the link it shows and enter the
+  short code in your browser. The app waits and updates when you are done. It
+  shows the link and code, never your token or key.
+- Claude signs in from a terminal, because its sign-in needs a code pasted back
+  in. The app shows this and the exact command to run:
 
-`runhaven login` supports `claude`, `codex`, `copilot`, and `antigravity`. Other
+  ```bash
+  runhaven login claude
+  ```
+
+  Run it in your terminal, then come back and refresh.
+
+Either way, RunHaven keeps the login safe on this Mac and injects it into the
+sandbox only at run time. The app never shows or stores your token or key. Other
 agents sign in inside the sandbox on first run, or you can pass an API key by its
 environment variable name.
-
-The app shows each agent's sign-in state so you know what is ready before you
-start. It never shows your token or key. In-app sign-in is planned; until then,
-use the command above.
 
 ## Start a run
 
@@ -167,7 +174,8 @@ guess.
 For now, do these tasks with the `runhaven` command line
 ([docs/USAGE.md](USAGE.md)):
 
-- Full sign-in for every agent.
+- Signing in to Claude (it needs a code pasted back in a terminal). Codex,
+  Copilot, and Antigravity now sign in from the app.
 - Resetting or pruning saved state.
 - The `why` checks that explain host, workspace, network, and state.
 

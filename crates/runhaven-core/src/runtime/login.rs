@@ -61,6 +61,30 @@ pub fn supports_login(agent: &str) -> bool {
     crate::provider::auth_profiles::agent_sign_in_mode(agent).supports_login()
 }
 
+/// Whether this agent signs in through an in-sandbox device-code login
+/// (Codex/Copilot/Antigravity). These are the only agents the desktop app can
+/// drive fully in-app: the CLI prints a URL and short-lived device code, the
+/// user finishes in a browser, and the tool polls to completion with no secret
+/// pasted back. Claude is deliberately excluded: its host `claude setup-token`
+/// needs a token pasted into stdin, which the GUI does not host (see
+/// docs/DESKTOP_APP.md), so it stays a terminal step.
+pub fn supports_sandbox_login(agent: &str) -> bool {
+    sandbox_login_command(agent).is_some()
+}
+
+/// Build the in-sandbox login run plan for a device-code agent without running
+/// it, so a caller (the desktop app) can run the exact same login under its own
+/// output-capturing runner. Fails for agents without an in-sandbox device login
+/// (claude uses the host setup-token instead). The plan is capture-friendly
+/// (`tty` off) because the desktop app reads stdout/stderr through pipes rather
+/// than a terminal.
+pub fn build_sandbox_login_plan(agent: &str) -> Result<AgentRunPlan> {
+    let login_args = sandbox_login_command(agent).ok_or_else(|| {
+        anyhow::anyhow!("{agent} has no in-sandbox device login; nothing was started")
+    })?;
+    build_sandbox_login_run_plan(agent, login_args, false)
+}
+
 /// The command to run inside the sandbox to log in. Codex and Copilot have
 /// device-code login subcommands; Antigravity (agy) has no login subcommand, so
 /// it runs the agent, which prompts a Google sign-in on first run.
@@ -132,11 +156,22 @@ fn logout_shared_volume(agent: &str) -> Result<i32> {
 /// the device-flow URL (and any code prompt) reaches the terminal directly and
 /// the credential lands in the isolated volume; RunHaven never sees the token.
 fn login_in_sandbox(agent: &str, login_args: &[&'static str], guidance: &str) -> Result<i32> {
-    let profile = get_profile(agent)?;
-    let network = default_network_mode(&profile);
     let tty = std::io::stdin().is_terminal() && std::io::stdout().is_terminal();
     eprintln!("{guidance}");
-    let plan = build_run_plan(RunOptions {
+    let plan = build_sandbox_login_run_plan(agent, login_args, tty)?;
+    launch_run_plan(&plan)
+}
+
+/// Shared plan builder for an in-sandbox device-code login. `tty` is on for the
+/// interactive CLI and off for the desktop app's captured-output runner.
+fn build_sandbox_login_run_plan(
+    agent: &str,
+    login_args: &[&'static str],
+    tty: bool,
+) -> Result<AgentRunPlan> {
+    let profile = get_profile(agent)?;
+    let network = default_network_mode(&profile);
+    build_run_plan(RunOptions {
         profile,
         workspace: login_workspace_dir()?,
         agent_args: login_args.iter().map(|s| (*s).to_string()).collect(),
@@ -159,8 +194,7 @@ fn login_in_sandbox(agent: &str, login_args: &[&'static str], guidance: &str) ->
         api_key_broker_env: None,
         worktree: None,
         run_id: None,
-    })?;
-    launch_run_plan(&plan)
+    })
 }
 
 fn login_claude() -> Result<i32> {
@@ -295,6 +329,45 @@ mod tests {
         assert!(policy.allows("daily-cloudcode-pa.googleapis.com", 443));
         assert!(policy.allows("us-cloudcode-pa.googleapis.com", 443));
         assert!(!policy.allows("storage.googleapis.com", 443));
+    }
+
+    #[test]
+    fn supports_sandbox_login_covers_only_device_code_agents() {
+        // The desktop app can drive these fully in-app: URL plus device code,
+        // no secret pasted back.
+        for agent in ["codex", "copilot", "antigravity"] {
+            assert!(
+                supports_sandbox_login(agent),
+                "{agent} should support in-app device-code sign-in"
+            );
+        }
+        // Claude needs a token pasted into stdin on the host, so it is not an
+        // in-app sign-in target.
+        for agent in ["claude", "gemini", "shell", "unknown"] {
+            assert!(
+                !supports_sandbox_login(agent),
+                "{agent} must not be treated as an in-app device-code sign-in"
+            );
+        }
+    }
+
+    #[test]
+    fn build_sandbox_login_plan_uses_the_device_flow_command_and_refuses_claude() {
+        // Keep the login-workspace directory under a temp cache root, not the
+        // real user cache.
+        let cache = tempfile::tempdir().expect("cache");
+        let _cache_home = crate::support::paths::override_cache_root_for_tests(cache.path());
+        let plan = build_sandbox_login_plan("codex").expect("codex login plan");
+        // The plan runs the device-auth login inside the sandbox, never a raw
+        // host login, and carries no token or API-key broker.
+        assert!(plan.command.iter().any(|arg| arg == "codex"));
+        assert!(plan.command.iter().any(|arg| arg == "--device-auth"));
+        assert!(plan.api_key_broker_env.is_none());
+        // Captured-output runner: no --tty is added to the run command.
+        assert!(!plan.command.iter().any(|arg| arg == "--tty"));
+        // Claude has no in-sandbox device login, so plan building fails closed.
+        assert!(build_sandbox_login_plan("claude").is_err());
+        assert!(build_sandbox_login_plan("unknown").is_err());
     }
 
     #[test]

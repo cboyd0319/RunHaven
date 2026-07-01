@@ -19,6 +19,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod agent_sign_in;
 mod auth;
 mod image;
 mod image_build;

@@ -7,7 +7,8 @@ export const providerAgent: AgentProfile = {
   defaultCommand: ["codex"],
   providerHosts: ["api.openai.com"],
   signIn: "runhaven login",
-  broker: "yes"
+  broker: "yes",
+  supportsInAppSignIn: true
 };
 
 export const localAgent: AgentProfile = {
@@ -17,5 +18,6 @@ export const localAgent: AgentProfile = {
   defaultCommand: ["/bin/bash"],
   providerHosts: [],
   signIn: "n/a",
-  broker: "n/a"
+  broker: "n/a",
+  supportsInAppSignIn: false
 };

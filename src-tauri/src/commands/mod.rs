@@ -2,6 +2,7 @@ use runhaven_core::doctor::collect_checks;
 use runhaven_core::provider::auth_profiles::{agent_broker, agent_sign_in};
 use runhaven_core::records::read_run_records;
 use runhaven_core::runtime::active::read_active_run_records;
+use runhaven_core::runtime::login::supports_sandbox_login;
 use runhaven_core::runtime::profiles::profiles;
 use serde_json::Value;
 
@@ -19,6 +20,8 @@ pub(crate) use crate::contracts::{LaunchRunRequest, RunPlanRequest};
 
 mod access;
 mod active_marker;
+pub(crate) mod agent_sign_in;
+pub(crate) mod agent_sign_in_status;
 pub(crate) mod diagnostics;
 pub(crate) mod diagnostics_why;
 pub(crate) mod image_build;
@@ -102,6 +105,7 @@ fn agent_summaries() -> Vec<AgentProfileSummary> {
                 .collect(),
             sign_in: agent_sign_in(profile.name).to_string(),
             broker: agent_broker(profile.name).to_string(),
+            supports_in_app_sign_in: supports_sandbox_login(profile.name),
         })
         .collect()
 }

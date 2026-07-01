@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react"
 
 import {
+  getAgentSignInStatus,
   getImageBuildStatus,
   getNetworkPrunePreview,
   pruneManagedNetworks,
   rebuildAgentImage,
+  startAgentSignIn,
+  type AgentSignInStatusResponse,
   type ImageBuildStatusResponse,
   type NetworkPruneResponse,
 } from "@/commands/runhaven"
@@ -12,6 +15,7 @@ import {
 import { errorMessage } from "./types"
 
 const BUILD_POLL_MS = 1500
+const SIGN_IN_POLL_MS = 1500
 
 // The read-only status commands the hook uses are exported so tests can prove
 // the client mapping without driving polling timers.
@@ -20,6 +24,8 @@ export const maintenanceClients = {
   getImageBuildStatus,
   getNetworkPrunePreview,
   pruneManagedNetworks,
+  startAgentSignIn,
+  getAgentSignInStatus,
 }
 
 function isTerminal(state: string): boolean {
@@ -90,6 +96,83 @@ export function useImageRebuild() {
   }
 
   return { confirm, setConfirm, busy, error, status, rebuild }
+}
+
+// Drives an in-app agent sign-in: it triggers the backend sign-in (which shows
+// a native confirmation before anything runs), then polls sanitized progress so
+// the sign-in link and short-lived device code show. On success it calls
+// `onSignedIn` once so the app can refresh auth status. No secret is handled
+// here; the credential stays with RunHaven core.
+export function useAgentSignIn(onSignedIn?: () => void) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
+  const [status, setStatus] = useState<AgentSignInStatusResponse | null>(null)
+  const signInIdRef = useRef<string>("")
+  const signedInRef = useRef(false)
+
+  useEffect(() => {
+    if (!status) {
+      return
+    }
+    if (isTerminal(status.state)) {
+      if (status.state === "succeeded" && !signedInRef.current) {
+        signedInRef.current = true
+        onSignedIn?.()
+      }
+      return
+    }
+    const signInId = signInIdRef.current
+    if (!signInId) {
+      return
+    }
+    let active = true
+    const timer = setInterval(() => {
+      void getAgentSignInStatus(signInId)
+        .then((next) => {
+          if (active) {
+            setStatus(next)
+          }
+        })
+        .catch((cause) => {
+          if (active) {
+            setError(errorMessage(cause))
+          }
+        })
+    }, SIGN_IN_POLL_MS)
+    return () => {
+      active = false
+      clearInterval(timer)
+    }
+  }, [status, onSignedIn])
+
+  async function signIn(agent: string) {
+    if (busy || !agent) {
+      return
+    }
+    setBusy(true)
+    setError("")
+    setStatus(null)
+    signedInRef.current = false
+    try {
+      const started = await startAgentSignIn(agent)
+      signInIdRef.current = started.signInId
+      setStatus({
+        signInId: started.signInId,
+        agent: started.agent,
+        state: started.state,
+        label: started.label,
+        detail: started.detail,
+        outputTail: "",
+        updatedAt: "",
+      })
+    } catch (cause) {
+      setError(errorMessage(cause))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return { busy, error, status, signIn }
 }
 
 export function useNetworkCleanup() {

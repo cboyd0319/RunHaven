@@ -81,6 +81,7 @@ export default function App() {
             onRequestChange={app.updateRequest}
             onNetworkChange={app.updateNetworkMode}
             onReviewPlan={app.reviewPlan}
+            onSignedIn={() => void app.refresh()}
             lastLaunch={app.lastLaunch}
             runStatus={app.runStatus}
             runStatusLoading={app.runStatusLoading}

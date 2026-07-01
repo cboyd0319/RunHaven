@@ -34,6 +34,9 @@ static SECRET_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
         r"sk-[A-Za-z0-9]{20,}",        // OpenAI-style API keys
         r"gh[opsru]_[A-Za-z0-9]{20,}", // GitHub tokens (Copilot)
         r"AIza[A-Za-z0-9_-]{20,}",     // Google API keys (Gemini, Antigravity)
+        r"ya29\.[A-Za-z0-9_-]{20,}",   // Google OAuth access tokens (Antigravity device flow)
+        r"1//[A-Za-z0-9_-]{20,}",      // Google OAuth refresh tokens
+        r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}", // JWTs (OAuth/device-code)
         r"(?i)bearer\s+[A-Za-z0-9._~+/-]{16,}={0,2}", // Authorization: Bearer <token>
     ]
     .into_iter()
@@ -64,6 +67,9 @@ mod tests {
             "ghp_ABCDEFGHIJ0123456789abcdefghij",
             "gho_ABCDEFGHIJ0123456789abcdefghij",
             "AIzaSyABCDEFGHIJ0123456789_abcdefghij",
+            "ya29.A0ARrdaM-abcdefghij0123456789_KLmnop",
+            "1//0abcdefghij0123456789_KLmnopqrstuv",
+            "eyJhbGciOiJIUzI1.eyJzdWIiOiIxMjM0NTY.SflKxwRJSMeKKF2QT4f",
         ];
         for secret in cases {
             let line = format!("agent said: {secret} done");

@@ -46,6 +46,7 @@ function sameAgents(
         agent.image === nextAgent.image &&
         agent.signIn === nextAgent.signIn &&
         agent.broker === nextAgent.broker &&
+        agent.supportsInAppSignIn === nextAgent.supportsInAppSignIn &&
         agent.defaultCommand.length === nextAgent.defaultCommand.length &&
         agent.defaultCommand.every(
           (value, valueIndex) => value === nextAgent.defaultCommand[valueIndex],

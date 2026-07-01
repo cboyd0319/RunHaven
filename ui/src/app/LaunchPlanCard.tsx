@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select"
 
 import { AgentAuthDetailsCard } from "./AgentAuthDetailsCard"
+import { AgentSignIn } from "./AgentSignIn"
 import {
   AgentAccessSummary,
   ApiKeyBrokerField,
@@ -53,6 +54,7 @@ type LaunchPlanCardProps = {
   onBack: () => void
   onContinue: () => void
   onReviewPlan: () => Promise<void>
+  onSignedIn: () => void
 }
 
 export function LaunchPlanCard({
@@ -72,6 +74,7 @@ export function LaunchPlanCard({
   onBack,
   onContinue,
   onReviewPlan,
+  onSignedIn,
 }: LaunchPlanCardProps) {
   return (
     <Card>
@@ -134,6 +137,7 @@ export function LaunchPlanCard({
                 authStatus={authStatus}
                 authScope={request.authScope}
               />
+              <AgentSignIn agent={selectedAgent} onSignedIn={onSignedIn} />
               {selectedAgent ? (
                 <AgentAuthDetailsCard
                   key={selectedAgent.name}

@@ -114,6 +114,26 @@ Useful GUI design docs:
 
 ## Latest State
 
+- In-app agent sign-in landed seam-first (live verification is a documented
+  follow-up). Codex, Copilot, and Antigravity now sign in from the app. A
+  mutating `start_agent_sign_in` command lives behind its own isolated
+  `agent-sign-in` capability (not run-control): it validates the agent against
+  core `supports_sandbox_login`, fails closed on unconfirmed, unknown, or
+  non-device-code input, requires a Rust-owned native confirmation, then runs
+  the tested core device-code login plan on a background thread through the
+  `AgentCommandRunner` seam. Claude is deliberately not an in-app target because
+  its host `claude setup-token` needs a code pasted into stdin; the app shows a
+  clear instruction to run `runhaven login claude` in a terminal instead of
+  hosting a secret paste field. A read-only `get_agent_sign_in_status`
+  (main-read) returns sanitized progress (starting/needs_browser/succeeded/
+  failed) plus a bounded, `redact_run_output`-scrubbed output tail, so the
+  sign-in link and short-lived device code show while any leaked token or key is
+  scrubbed. The GUI only triggers sign-in and shows progress; RunHaven core
+  still owns the token at its unchanged 0600 path, and no command returns, logs,
+  or stores it. On success the app refreshes auth status. Core reuse: new
+  `supports_sandbox_login` and `build_sandbox_login_plan` in
+  `crates/runhaven-core/src/runtime/login.rs`; a new
+  `AgentProfileSummary.supportsInAppSignIn` (from core) drives the GUI button.
 - The GUI now has parity for git-worktree runs and their review lifecycle (V1
   milestone M4). The launch flow has an opt-in worktree choice (secure default
   off): `RunPlanRequest.worktree` threads into the planner, the plan review and

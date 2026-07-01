@@ -45,6 +45,7 @@ pub(super) const MAIN_READ_FORBIDDEN_PERMISSIONS: &[&str] = &[
     "allow-discard-managed-session-worktree",
     "allow-rebuild-agent-image",
     "allow-prune-managed-networks",
+    "allow-start-agent-sign-in",
 ];
 pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-get-log-snapshot", "get_log_snapshot"),

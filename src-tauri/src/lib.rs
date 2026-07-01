@@ -1,3 +1,5 @@
+mod agent_sign_in_runner;
+mod agent_sign_in_status;
 #[cfg(test)]
 mod capability_guard;
 mod commands;
@@ -16,6 +18,7 @@ pub fn run() {
         .manage(session_output::SessionOutputRegistry::default())
         .manage(launch_status::LaunchStatusRegistry::default())
         .manage(image_build_status::ImageBuildStatusRegistry::default())
+        .manage(agent_sign_in_status::AgentSignInStatusRegistry::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_setup_status,
             commands::list_agents,
@@ -52,6 +55,8 @@ pub fn run() {
             commands::session_worktree::actions::recover_managed_session_worktree,
             commands::session_worktree::actions::discard_managed_session_worktree,
             commands::image_build::rebuild_agent_image,
+            commands::agent_sign_in::start_agent_sign_in,
+            commands::agent_sign_in_status::get_agent_sign_in_status,
             commands::network::prune_managed_networks,
             commands::launch::plan_run,
             commands::launch::launch_run,
