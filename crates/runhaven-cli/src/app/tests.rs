@@ -1,6 +1,11 @@
 use super::*;
 use std::fs;
 
+use runhaven_core::runtime::launch::run_standard_agent;
+use runhaven_core::runtime::plans::{
+    AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
+};
+use runhaven_core::runtime::profiles::get_profile;
 use runhaven_core::support::paths::{
     active_run_path, override_cache_root_for_tests, runs_log_path,
 };

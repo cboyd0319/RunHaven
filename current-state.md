@@ -4,11 +4,12 @@ Last updated: 2026-07-01 UTC
 
 ## Current Direction
 
-RunHaven is shifting from terminal-first polish to a native-feeling macOS GUI as
-the primary easy path. The CLI remains the complete technical, automation,
-recovery, and verification surface. The TUI remains a fallback/dev surface and
-should be finished only where it hardens the shared launch, session, security,
-and verification contracts.
+RunHaven's active product work is now CLI plus native-feeling desktop GUI only.
+The CLI remains the complete technical, automation, recovery, and verification
+surface. The GUI is the primary easy path for nontechnical users. TUI work is
+backlogged for the foreseeable future and should not be expanded, polished,
+refactored, tested, or planned unless the user explicitly reopens that scope or
+a CLI/GUI change requires compile-only maintenance.
 
 Do not push this branch, tag, version-bump, cut a release, notarize, add an
 updater, or do public distribution work unless the maintainer explicitly asks
@@ -48,7 +49,7 @@ only when the task touches that surface.
 
 | Area | Path | Owns |
 | --- | --- | --- |
-| Binary entrypoints | `crates/runhaven/` | `runhaven` and `runhaven-check-pins`; bare-interactive TUI routing. |
+| Binary entrypoints | `crates/runhaven/` | `runhaven` and `runhaven-check-pins`; bare-interactive TUI routing stays compile-only/backlogged. |
 | Core library | `crates/runhaven-core/` | Runtime, provider, records, image, doctor, diagnostics, support, harness pins, and shared UI contracts. |
 | CLI presentation | `crates/runhaven-cli/` | Clap dispatch, setup text, and human CLI output. |
 | Terminal UI | `crates/runhaven-tui/` | Codex-vendored TUI source plus RunHaven TUI adapters. |
@@ -56,7 +57,8 @@ only when the task touches that surface.
 | Frontend | `ui/` | React + shadcn/ui desktop WebView prototype over typed Tauri commands. |
 
 `crates/runhaven` stays binary-only. Shared runtime truth belongs in
-`runhaven-core`; presentation belongs in CLI, TUI, Tauri, or frontend layers.
+`runhaven-core`; active presentation work belongs in CLI, Tauri, or frontend
+layers. TUI presentation work is backlogged.
 
 ## Harness Rules
 
@@ -111,16 +113,18 @@ Useful GUI design docs:
   `docs/harness/feedback/sensor-registry.md`.
 - Large or near-ceiling owned files were split by ownership across Tauri tests,
   shared UI contracts, runtime/provider helpers, CLI plan output, React GUI
-  helpers, TUI launch/MVP/service modules, TUI tests, usage docs, release docs,
-  and the Codex TUI source-map doc.
+  helpers, usage docs, release docs, and prior TUI checkpoint files. Current
+  active work should not continue TUI splits.
 
 ## Current Branch Work
 
 Branch: `docs/native-gui-wireframe`.
 
-Active slice: finish verification for the hard structure guard, then turn the
-GUI push from an informal direction into a hard goal prompt aimed at getting
-from roughly 20-25 percent polished to 90 percent external-tester-ready.
+Active slice: bring CLI plus native-feeling desktop GUI to 100 percent ready
+for real external user testing. Start by keeping TUI work out of scope, then
+continue hardest-first through live session ownership, real-agent auth/session
+behavior, multi-session isolation, typed status, run control, recovery, and
+fail-closed boundaries before visual polish.
 
 Smallest relevant checks for this slice:
 
@@ -136,7 +140,8 @@ them.
 
 ## Next Step
 
-Finish focused verification, then start the GUI goal from the hardest problems
+Commit a clean CLI/core structure and state-alignment slice locally after
+focused verification. Then continue the CLI+GUI goal from the hardest problems
 first: live container session ownership, real-agent auth/session behavior,
 multi-session isolation, typed status reporting, and fail-closed security
 boundaries. Keep the safe path short and nontechnical.

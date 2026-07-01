@@ -5,8 +5,10 @@ use anyhow::{Result, bail};
 use serde_json::Value as JsonValue;
 use toml::Value;
 
+mod image_pins;
 mod script_descriptions;
 
+use image_pins::check_image_pins;
 use script_descriptions::check_script_descriptions;
 
 pub fn check_pins() -> Result<()> {
@@ -316,90 +318,7 @@ fn check_text_policy(root: &Path) -> Vec<String> {
     failures
 }
 
-fn check_image_pins(root: &Path, pins: &Value) -> Vec<String> {
-    let mut failures = Vec::new();
-    for path in image_files(root, "Containerfile") {
-        let relative = path
-            .strip_prefix(root)
-            .unwrap_or(&path)
-            .display()
-            .to_string();
-        let Ok(text) = fs::read_to_string(&path) else {
-            continue;
-        };
-        for (index, line) in text.lines().enumerate() {
-            let value = line.trim();
-            if value.starts_with("FROM ") && !value.contains("@sha256:") {
-                failures.push(format!(
-                    "{relative}:{}: base image is not digest-pinned",
-                    index + 1
-                ));
-            }
-        }
-        let node_digest = toml_path(pins, &["container_images", "node_26_trixie_slim", "digest"])
-            .and_then(Value::as_str)
-            .unwrap_or("");
-        let debian_digest = toml_path(pins, &["container_images", "debian_trixie_slim", "digest"])
-            .and_then(Value::as_str)
-            .unwrap_or("");
-        if relative.contains("/claude/")
-            || relative.contains("/codex/")
-            || relative.contains("/gemini/")
-            || relative.contains("/copilot/")
-        {
-            if !text.contains(node_digest) {
-                failures.push(format!(
-                    "{relative}: node base image digest does not match pins.toml"
-                ));
-            }
-        } else if !text.contains(debian_digest) {
-            failures.push(format!(
-                "{relative}: Debian base image digest does not match pins.toml"
-            ));
-        }
-    }
-    if let Ok(text) = fs::read_to_string(root.join("images/common/debian-packages.txt")) {
-        for (index, line) in text.lines().enumerate() {
-            let value = line.trim();
-            if !value.is_empty() && !value.contains('=') {
-                failures.push(format!(
-                    "images/common/debian-packages.txt:{}: unpinned apt package",
-                    index + 1
-                ));
-            }
-        }
-    }
-    for package_json in image_files(root, "package.json") {
-        let relative = package_json
-            .strip_prefix(root)
-            .unwrap_or(&package_json)
-            .display()
-            .to_string();
-        let Ok(text) = fs::read_to_string(&package_json) else {
-            continue;
-        };
-        let Ok(json) = serde_json::from_str::<JsonValue>(&text) else {
-            failures.push(format!("{relative}: invalid JSON"));
-            continue;
-        };
-        for section in ["dependencies", "devDependencies", "optionalDependencies"] {
-            if let Some(object) = json.get(section).and_then(JsonValue::as_object) {
-                for (name, version) in object {
-                    let Some(version) = version.as_str() else {
-                        failures.push(format!("{relative}: {section}.{name} is not a string"));
-                        continue;
-                    };
-                    if !is_exact_npm_version(version) {
-                        failures.push(format!("{relative}: {section}.{name} is not exact-pinned"));
-                    }
-                }
-            }
-        }
-    }
-    failures
-}
-
-fn is_exact_npm_version(version: &str) -> bool {
+pub(super) fn is_exact_npm_version(version: &str) -> bool {
     !(version.starts_with('^')
         || version.starts_with('~')
         || version.contains('*')
@@ -410,19 +329,7 @@ fn is_exact_npm_version(version: &str) -> bool {
         || version == "latest")
 }
 
-fn image_files(root: &Path, name: &str) -> Vec<PathBuf> {
-    let images = root.join("images");
-    let Ok(entries) = fs::read_dir(images) else {
-        return Vec::new();
-    };
-    entries
-        .flatten()
-        .map(|entry| entry.path().join(name))
-        .filter(|path| path.is_file())
-        .collect()
-}
-
-fn toml_path<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
+pub(super) fn toml_path<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
     let mut current = value;
     for key in path {
         current = current.get(*key)?;

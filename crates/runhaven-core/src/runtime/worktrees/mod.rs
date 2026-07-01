@@ -6,32 +6,24 @@ use anyhow::{Context, Result, bail};
 use serde_json::{Value, json};
 
 mod commands;
+mod lifecycle;
 mod merge;
 
 pub use commands::{
     runs_worktree_discard, runs_worktree_keep, runs_worktree_merge, runs_worktree_recover,
     worktree_recovery_commands, worktree_recovery_payload,
 };
+pub use lifecycle::{WorktreeLifecycle, load_worktree_lifecycle, verify_lifecycle};
 pub use merge::ensure_source_ready_for_merge;
 
-use crate::records::find_run_record;
+use lifecycle::{git_bytes, git_checked, git_status_lines, git_stdout};
+
 use crate::runtime::plans::{
     WorkspaceScope, WorktreeRun, apply_workspace_scope, validate_workspace,
 };
 use crate::support::git::{GitSnapshot, capture_git_snapshot, git_head, git_repo_root};
 use crate::support::paths::worktrees_dir;
 use crate::support::shell;
-use crate::support::validators::{require_string, validate_run_id};
-
-#[derive(Clone, Debug)]
-pub struct WorktreeLifecycle {
-    pub run_id: String,
-    pub source_repo_root: PathBuf,
-    pub worktree_root: PathBuf,
-    pub mounted_workspace: PathBuf,
-    pub branch: String,
-    pub base_head: String,
-}
 
 pub fn preview_worktree(
     workspace: &Path,
@@ -190,184 +182,6 @@ pub fn worktree_record(worktree: &WorktreeRun) -> Value {
         "base_head": worktree.base_head,
         "recovery_commands": worktree.recovery_commands.iter().cloned().collect::<std::collections::BTreeMap<_, _>>(),
     })
-}
-
-pub fn load_worktree_lifecycle(run_id: &str) -> Result<WorktreeLifecycle> {
-    validate_run_id(run_id)?;
-    let record = find_run_record(run_id)?;
-    let worktree = record
-        .get("worktree")
-        .ok_or_else(|| anyhow::anyhow!("run {run_id} is not a worktree run"))?;
-    let source_repo_root = PathBuf::from(require_string(
-        worktree.get("source_repo_root"),
-        "worktree run record is missing source repo root",
-    )?)
-    .canonicalize()?;
-    let worktree_root = PathBuf::from(require_string(
-        worktree.get("worktree_root"),
-        "worktree run record is missing worktree",
-    )?)
-    .canonicalize()?;
-    let mounted_workspace = PathBuf::from(require_string(
-        worktree.get("mounted_workspace"),
-        "worktree run record is missing mounted workspace",
-    )?)
-    .canonicalize()?;
-    let branch = require_string(
-        worktree.get("branch"),
-        "worktree run record is missing branch",
-    )?
-    .to_string();
-    let base_head = require_string(
-        worktree.get("base_head"),
-        "worktree run record is missing base HEAD",
-    )?
-    .to_string();
-    Ok(WorktreeLifecycle {
-        run_id: run_id.to_string(),
-        source_repo_root,
-        worktree_root,
-        mounted_workspace,
-        branch,
-        base_head,
-    })
-}
-
-pub fn verify_lifecycle(lifecycle: &WorktreeLifecycle) -> Result<()> {
-    if !lifecycle.branch.starts_with("runhaven/") {
-        bail!("recorded branch is not RunHaven-owned; refusing worktree action");
-    }
-    if !lifecycle
-        .branch
-        .ends_with(&format!("/{}", lifecycle.run_id))
-    {
-        bail!("recorded branch does not match the run id; refusing worktree action");
-    }
-    if lifecycle
-        .worktree_root
-        .file_name()
-        .and_then(|name| name.to_str())
-        != Some(&lifecycle.run_id)
-    {
-        bail!("recorded worktree path does not match the run id; refusing action");
-    }
-    if !lifecycle.source_repo_root.is_dir() {
-        bail!("recorded source repository no longer exists");
-    }
-    if !lifecycle.worktree_root.is_dir() {
-        bail!("recorded worktree no longer exists");
-    }
-    if !lifecycle.mounted_workspace.exists() {
-        bail!("recorded mounted workspace no longer exists");
-    }
-    if lifecycle.source_repo_root == lifecycle.worktree_root {
-        bail!("recorded worktree matches source repository; refusing action");
-    }
-    let source_root = PathBuf::from(git_stdout(
-        &lifecycle.source_repo_root,
-        &["rev-parse", "--show-toplevel"],
-    )?)
-    .canonicalize()?;
-    if source_root != lifecycle.source_repo_root {
-        bail!("recorded source repository does not match git toplevel");
-    }
-    let worktree_root = PathBuf::from(git_stdout(
-        &lifecycle.worktree_root,
-        &["rev-parse", "--show-toplevel"],
-    )?)
-    .canonicalize()?;
-    if worktree_root != lifecycle.worktree_root {
-        bail!("recorded worktree does not match git toplevel");
-    }
-    git_checked(
-        &lifecycle.source_repo_root,
-        &[
-            "rev-parse",
-            "--verify",
-            "--quiet",
-            &format!("refs/heads/{}", lifecycle.branch),
-        ],
-        None,
-        "verify recorded branch",
-    )?;
-    let current_branch = git_stdout(&lifecycle.worktree_root, &["branch", "--show-current"])?;
-    if current_branch != lifecycle.branch {
-        bail!("recorded worktree is not on the recorded branch; refusing action");
-    }
-    git_checked(
-        &lifecycle.source_repo_root,
-        &[
-            "merge-base",
-            "--is-ancestor",
-            &lifecycle.base_head,
-            &lifecycle.branch,
-        ],
-        None,
-        "verify recorded branch ancestry",
-    )
-}
-
-pub fn git_stdout(cwd: &Path, args: &[&str]) -> Result<String> {
-    let output = git_bytes(cwd, args, None, "run git command")?;
-    Ok(String::from_utf8_lossy(&output).trim().to_string())
-}
-
-pub(super) fn git_status_lines(cwd: &Path) -> Result<Vec<String>> {
-    let text = git_stdout(cwd, &["status", "--short"])?;
-    Ok(text
-        .lines()
-        .filter(|line| !line.is_empty())
-        .map(str::to_string)
-        .collect())
-}
-
-pub(super) fn git_checked(
-    cwd: &Path,
-    args: &[&str],
-    input: Option<&[u8]>,
-    action: &str,
-) -> Result<()> {
-    git_bytes(cwd, args, input, action).map(|_| ())
-}
-
-pub(super) fn git_bytes(
-    cwd: &Path,
-    args: &[&str],
-    input: Option<&[u8]>,
-    action: &str,
-) -> Result<Vec<u8>> {
-    let mut command = Command::new("git");
-    command.args(["-C"]).arg(cwd).args(args);
-    if input.is_some() {
-        command.stdin(std::process::Stdio::piped());
-    }
-    command
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped());
-    let mut child = command
-        .spawn()
-        .with_context(|| format!("{action} failed: git is unavailable"))?;
-    if let Some(input) = input {
-        use std::io::Write;
-        child
-            .stdin
-            .as_mut()
-            .context("git stdin missing")?
-            .write_all(input)?;
-    }
-    let output = child.wait_with_output()?;
-    if !output.status.success() {
-        let detail = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        bail!(
-            "{action} failed: {}",
-            if detail.is_empty() {
-                output.status.to_string()
-            } else {
-                detail
-            }
-        );
-    }
-    Ok(output.stdout)
 }
 
 #[cfg(test)]

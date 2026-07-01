@@ -124,21 +124,16 @@ Tauri launch/run-control behavior.
   sentences, plain verbs, concrete nouns, and clear next actions. Keep exact
   commands, paths, hosts, and security facts when they matter; explain them in
   plain language instead of hiding them.
-- TUI source-first rule: for `crates/runhaven-tui/src/tui/`, vendor or adapt
-  from the pinned upstream Codex TUI source
+- TUI backlog rule: during the current CLI plus native GUI push, do not spend
+  implementation time on `crates/runhaven-tui` or Codex TUI surfaces except to
+  revert accidental edits, preserve workspace compilation after CLI/GUI
+  changes, or update docs/state saying TUI is deferred. Do not expand, polish,
+  refactor, test, or plan TUI features. TUI may be exercised only indirectly by
+  repo-level checks when unavoidable.
+- If explicit future TUI work reopens, restore the source-first rule: vendor or
+  adapt from the pinned upstream Codex TUI source
   (`openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui`) or
-  the repo-vendored Codex files before writing custom code.
-  Custom TUI code is allowed only for RunHaven domain data, security-boundary
-  mapping, RunHaven asset swaps such as `docs/assets/logo.png`, or small glue
-  where no Codex equivalent exists. Document each exception in the TUI plan or
-  architecture docs.
-- TUI direction: avoid non-RunHaven Codex product features. Use Codex TUI
-  architecture as the source-first terminal checkpoint, but finish only surfaces
-  that harden shared RunHaven launch, session, security, and verification
-  workflows. Leave Cubby/pet, terminal-image, Zork, native Codex App, native
-  ChatWidget, and unrelated Codex product features dormant, fail-closed, parked,
-  or documented unless they harden the RunHaven boundary. After this branch is
-  merged, shift product focus to a native-feeling macOS GUI.
+  repo-vendored Codex files before writing custom TUI code.
 - Boring over clever: choose the obvious construct, because clever is what
   someone has to decode at 3am. Between two standard-library options of similar
   size, take the one correct on edge cases; lazy means writing less code, not
@@ -190,14 +185,11 @@ Tauri launch/run-control behavior.
 - Antigravity (`agy`) is research-only in this repo. Do not use it for
   end-of-slice code review, adversarial review, verification, or proof of
   correctness.
-- For direct Codex CLI behavior or vendored Codex TUI behavior, use
-  `codex-cli-guide`, repo-vendored Codex files, and pinned upstream Codex
-  source as evidence.
-- For RunHaven TUI work, use the repo-local `.agents/skills/codex-tui`
-  skill first. It requires the installed `codex-tui` skill, then `rust`
-  and `adversarial-review` as the end-of-slice gate before commit: Rust
-  crate/tooling correctness, Codex source-pattern alignment, then boundary and
-  overclaim review.
+- For direct Codex CLI behavior, use `codex-cli-guide`, repo-vendored Codex
+  files, and pinned upstream Codex source as evidence.
+- For RunHaven TUI work, do nothing unless the user explicitly reopens TUI
+  scope or a CLI/GUI change requires compile-only maintenance. If explicit TUI
+  work reopens, use the repo-local `.agents/skills/codex-tui` skill first.
 - For Codex-vendored TUI and `codex-*` dependencies, preserving the original
   Codex package name, crate name, and module path is the default. Use a local
   bridge only when compiling or activating the real Codex surface would cross a
