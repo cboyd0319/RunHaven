@@ -17,6 +17,7 @@ import type {
 export { previewLogSnapshot } from "./preview_output";
 export {
   previewManagedKill,
+  previewManagedSessionDiagnostics,
   previewManagedRepair,
   previewManagedSessionLogSnapshot,
   previewManagedSessionStatus,

@@ -38,6 +38,10 @@ export default function App() {
             selectedSessionStatus={app.selectedSessionStatus}
             selectedSessionStatusLoading={app.selectedSessionStatusLoading}
             selectedSessionStatusError={app.selectedSessionStatusError}
+            selectedSessionDiagnostics={app.selectedSessionDiagnostics}
+            selectedSessionDiagnosticsLoading={app.selectedSessionDiagnosticsLoading}
+            selectedSessionDiagnosticsError={app.selectedSessionDiagnosticsError}
+            onLoadSelectedSessionDiagnostics={app.loadSelectedSessionDiagnostics}
             sessionInputDraft={app.sessionInputDraft}
             sessionInputSending={app.sessionInputSending}
             sessionInputError={app.sessionInputError}

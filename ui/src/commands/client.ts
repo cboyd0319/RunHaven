@@ -9,6 +9,7 @@ import {
   previewLaunchRun,
   previewLogSnapshot,
   previewManagedKill,
+  previewManagedSessionDiagnostics,
   previewManagedRepair,
   previewManagedSessionLogSnapshot,
   previewManagedSessionStatus,
@@ -31,6 +32,7 @@ import type {
   LogSnapshotOptions,
   LogSnapshotResponse,
   ManagedSessionList,
+  ManagedSessionDiagnosticsResponse,
   ManagedSessionLogSnapshotResponse,
   ManagedSessionStatusResponse,
   RunPlanRequest,
@@ -129,6 +131,16 @@ export async function getManagedSessionStatus(
     "get_managed_session_status",
     { request: { sessionId } },
     () => previewManagedSessionStatus(sessionId)
+  );
+}
+
+export async function getManagedSessionDiagnostics(
+  sessionId: string
+): Promise<ManagedSessionDiagnosticsResponse> {
+  return call(
+    "get_managed_session_diagnostics",
+    { request: { sessionId } },
+    () => previewManagedSessionDiagnostics(sessionId)
   );
 }
 

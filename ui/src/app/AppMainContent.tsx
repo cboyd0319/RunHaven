@@ -7,6 +7,7 @@ import type {
   ImageStatusResponse,
   LaunchRunResponse,
   ManagedSessionStatusResponse,
+  ManagedSessionDiagnosticsResponse,
   ManagedSessionSummary,
   RunPlanRequest,
   RunPlanResponse,
@@ -18,6 +19,7 @@ import { DiagnosticsCard } from "./DiagnosticsCard"
 import { LastLaunchCard } from "./LastLaunchCard"
 import { LaunchPlanCard } from "./LaunchPlanCard"
 import { ManagedSessionCard, sessionAllowsRunControl } from "./ManagedSessionCard"
+import { ManagedSessionDiagnosticsCard } from "./ManagedSessionDiagnosticsCard"
 import { ManagedSessionStatusCard } from "./ManagedSessionStatusCard"
 import { PlanReviewCard } from "./PlanReviewCard"
 import { RunOutputCard } from "./RunOutputCard"
@@ -38,6 +40,10 @@ type AppMainContentProps = {
   selectedSessionStatus: ManagedSessionStatusResponse | null
   selectedSessionStatusLoading: boolean
   selectedSessionStatusError: string
+  selectedSessionDiagnostics: ManagedSessionDiagnosticsResponse | null
+  selectedSessionDiagnosticsLoading: boolean
+  selectedSessionDiagnosticsError: string
+  onLoadSelectedSessionDiagnostics: () => Promise<void>
   sessionInputDraft: string
   sessionInputSending: boolean
   sessionInputError: string
@@ -152,6 +158,12 @@ function SessionView(
         status={props.selectedSessionStatus}
         loading={props.selectedSessionStatusLoading}
         error={props.selectedSessionStatusError}
+      />
+      <ManagedSessionDiagnosticsCard
+        diagnostics={props.selectedSessionDiagnostics}
+        loading={props.selectedSessionDiagnosticsLoading}
+        error={props.selectedSessionDiagnosticsError}
+        onLoad={props.onLoadSelectedSessionDiagnostics}
       />
       <SessionInputCard
         session={props.selectedSession}

@@ -1,8 +1,9 @@
 use super::*;
 use crate::contracts::{
     KillManagedSessionRequest, KillRunResponse, LogSnapshotRequest,
-    ManagedSessionLogSnapshotRequest, ManagedSessionStatusRequest, RepairManagedSessionRequest,
-    RepairRunResponse, StopManagedSessionRequest, StopRunResponse, WriteSessionInputRequest,
+    ManagedSessionDiagnosticsRequest, ManagedSessionLogSnapshotRequest,
+    ManagedSessionStatusRequest, RepairManagedSessionRequest, RepairRunResponse,
+    StopManagedSessionRequest, StopRunResponse, WriteSessionInputRequest,
     WriteSessionInputResponse,
 };
 use crate::session_input::SessionInputRegistry;

@@ -2,6 +2,7 @@ import { previewLogSnapshot } from "./preview_output";
 import type {
   KillManagedSessionResponse,
   LaunchRunResponse,
+  ManagedSessionDiagnosticsResponse,
   ManagedSessionList,
   ManagedSessionLogSnapshotResponse,
   ManagedSessionStatusResponse,
@@ -91,6 +92,46 @@ export function previewManagedSessionStatus(
             "Refresh sessions or open diagnostics before taking action.",
           repairAvailable: false
         }
+  };
+}
+
+export function previewManagedSessionDiagnostics(
+  sessionId: string
+): ManagedSessionDiagnosticsResponse {
+  const session = previewSession(sessionId);
+  return {
+    session,
+    authStatus: {
+      name: session.agent,
+      status: session.authStatus
+    },
+    authLogEntries: [
+      {
+        timestamp: "preview",
+        profile: session.agent,
+        broker: "preview",
+        decision: "allowed",
+        method: "POST",
+        path: "/v1/responses",
+        upstreamStatus: 200,
+        count: 1,
+        reason: "preview",
+        runId: session.runId
+      }
+    ],
+    egressLogEntries: [
+      {
+        timestamp: "preview",
+        profile: session.agent,
+        decision: "allowed",
+        host: "api.openai.com",
+        port: 443,
+        count: 1,
+        reason: "provider-host",
+        matchedRule: "api.openai.com",
+        runId: session.runId
+      }
+    ]
   };
 }
 

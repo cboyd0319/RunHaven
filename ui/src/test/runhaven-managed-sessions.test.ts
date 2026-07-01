@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   defaultRunPlanRequest,
   getLogSnapshot,
+  getManagedSessionDiagnostics,
   getManagedSessionLogSnapshot,
   getManagedSessionStatus,
   getManagedSessions,
@@ -125,6 +126,37 @@ describe("runhaven managed session helpers", () => {
     expect(JSON.stringify(status)).not.toContain("stateVolume");
     expect(JSON.stringify(status)).not.toContain("write_session_input");
     expect(JSON.stringify(status)).not.toContain("attach_session");
+  });
+
+  it("returns selected managed session diagnostics without raw paths", async () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-diagnostics-preview",
+      sessionName: "diagnostics"
+    };
+    const started = await launchRun({
+      plan: request,
+      confirmLaunch: true,
+      confirmedWarnings: []
+    });
+    const sessions = await getManagedSessions();
+    const session = sessions.sessions.find((item) => item.runId === started.runId);
+
+    expect(session).toBeDefined();
+    await expect(getManagedSessionDiagnostics("missing-session")).rejects.toThrow(
+      "managed session not found"
+    );
+
+    const diagnostics = await getManagedSessionDiagnostics(session!.id);
+
+    expect(diagnostics.session.id).toBe(session!.id);
+    expect(diagnostics.authStatus.name).toBe(session!.agent);
+    expect(diagnostics.authLogEntries[0]?.runId).toBe(started.runId);
+    expect(diagnostics.egressLogEntries[0]?.runId).toBe(started.runId);
+    expect(JSON.stringify(diagnostics)).not.toContain("/tmp/runhaven-diagnostics-preview");
+    expect(JSON.stringify(diagnostics)).not.toContain("token=");
+    expect(JSON.stringify(diagnostics)).not.toContain("write_session_input");
+    expect(JSON.stringify(diagnostics)).not.toContain("attach_session");
   });
 
   it("keeps managed session output refreshes isolated by session", async () => {

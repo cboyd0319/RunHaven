@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { ManagedSessionStatusCard } from "../app/ManagedSessionStatusCard";
+import { sameManagedSessionStatus } from "../app/useManagedSessionStatus";
 import type {
   ManagedSessionStatusResponse,
   ManagedSessionSummary
@@ -115,5 +116,29 @@ describe("ManagedSessionStatusCard", () => {
     expect(html).not.toContain("Repair marker");
     expect(html).not.toContain("Repair available");
     expect(html).not.toContain("container inspect");
+  });
+
+  it("treats recovery guidance changes as status changes", () => {
+    const current = status({
+      container: null,
+      statusUnavailable: "Container status is unavailable. The run may have stopped.",
+      recovery: {
+        status: "attention",
+        title: "Runtime status unavailable",
+        detail:
+          "RunHaven can still see this session record, but Apple container status is unavailable.",
+        remedy: "Refresh sessions or open diagnostics before taking action.",
+        repairAvailable: false
+      }
+    });
+    const next = {
+      ...current,
+      recovery: {
+        ...current.recovery!,
+        remedy: "Open diagnostics before taking action."
+      }
+    };
+
+    expect(sameManagedSessionStatus(current, next)).toBe(false);
   });
 });

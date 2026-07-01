@@ -160,6 +160,13 @@ export type ManagedSessionStatusResponse = {
   recovery: ManagedSessionRecovery | null;
 };
 
+export type ManagedSessionDiagnosticsResponse = {
+  session: ManagedSessionSummary;
+  authStatus: AuthProfileStatus;
+  authLogEntries: AuthLogEntry[];
+  egressLogEntries: EgressLogEntry[];
+};
+
 export type ManagedSessionRecovery = {
   status: string;
   title: string;

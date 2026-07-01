@@ -31,6 +31,7 @@ pub(crate) mod image_status;
 pub(crate) mod log_snapshot;
 pub(crate) mod run_control;
 pub(crate) mod run_status;
+pub(crate) mod session_diagnostics;
 pub(crate) mod sessions;
 mod validation;
 mod warnings;

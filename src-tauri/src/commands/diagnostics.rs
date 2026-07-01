@@ -11,7 +11,7 @@ use crate::contracts::{
 /// Upper bound on log entries returned to the frontend. The records are
 /// append-only and read fully into memory by the CLI; the desktop reads only a
 /// bounded recent window.
-const MAX_LOG_ENTRIES: usize = 100;
+pub(super) const MAX_LOG_ENTRIES: usize = 100;
 
 #[tauri::command]
 pub(crate) fn get_egress_log() -> Result<EgressLogResponse, String> {
@@ -34,7 +34,7 @@ pub(crate) fn get_auth_status() -> AuthStatusResponse {
     auth_status_response(&auth_status_payload())
 }
 
-fn egress_entry(record: &Value) -> EgressLogEntry {
+pub(super) fn egress_entry(record: &Value) -> EgressLogEntry {
     EgressLogEntry {
         timestamp: string_field(record, "timestamp"),
         profile: string_field(record, "profile"),
@@ -48,7 +48,7 @@ fn egress_entry(record: &Value) -> EgressLogEntry {
     }
 }
 
-fn auth_entry(record: &Value) -> AuthLogEntry {
+pub(super) fn auth_entry(record: &Value) -> AuthLogEntry {
     AuthLogEntry {
         timestamp: string_field(record, "timestamp"),
         profile: string_field(record, "profile"),
@@ -66,7 +66,7 @@ fn auth_entry(record: &Value) -> AuthLogEntry {
     }
 }
 
-fn auth_status_response(payload: &Value) -> AuthStatusResponse {
+pub(super) fn auth_status_response(payload: &Value) -> AuthStatusResponse {
     let profiles = payload
         .get("profiles")
         .and_then(Value::as_array)

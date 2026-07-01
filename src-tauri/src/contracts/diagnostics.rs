@@ -1,4 +1,12 @@
+use runhaven_core::ui_contracts::ManagedSessionSummaryData;
+use serde::Deserialize;
 use serde::Serialize;
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ManagedSessionDiagnosticsRequest {
+    pub session_id: String,
+}
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -54,4 +62,13 @@ pub(crate) struct AuthStatusResponse {
     pub status: String,
     pub runtime: String,
     pub profiles: Vec<AuthProfileStatus>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ManagedSessionDiagnosticsResponse {
+    pub session: ManagedSessionSummaryData,
+    pub auth_status: AuthProfileStatus,
+    pub auth_log_entries: Vec<AuthLogEntry>,
+    pub egress_log_entries: Vec<EgressLogEntry>,
 }

@@ -84,6 +84,7 @@ Current session commands:
 ```text
 get_managed_sessions() -> ManagedSessionListData
 get_managed_session_status(request) -> ManagedSessionStatusResponse
+get_managed_session_diagnostics(request) -> ManagedSessionDiagnosticsResponse
 get_managed_session_log_snapshot(request) -> ManagedSessionLogSnapshotResponse
 write_session_input(request) -> WriteSessionInputResponse
 stop_managed_session(request) -> StopManagedSessionResponse
@@ -96,6 +97,7 @@ Capabilities:
 ```text
 main-read: allow-get-managed-sessions
 main-read: allow-get-managed-session-status
+main-read: allow-get-managed-session-diagnostics
 run-control: allow-get-managed-session-log-snapshot
 run-control: allow-write-session-input
 run-control: allow-stop-managed-session
@@ -141,6 +143,12 @@ recovery guidance with a title, detail, remedy, and whether marker repair is a
 proven available next action. Generic status failures use non-mutating guidance
 such as refresh or diagnostics first. This keeps recovery judgment in Rust and
 gives the WebView plain next-step text without exposing backend errors.
+
+`get_managed_session_diagnostics` accepts only a managed session ID. Rust
+resolves it to the backend-owned run, then returns bounded auth broker and
+provider network records filtered to that run. The frontend cannot provide a
+raw run ID, path, command, mount, environment value, provider host, or network
+setting on this path.
 
 The managed run-control commands accept only a backend-owned session ID plus
 the explicit confirmation flag for that action. Rust resolves the session ID to
@@ -214,6 +222,9 @@ Current GUI behavior:
   refresh or diagnostics first; marker repair is shown only when Rust has proven
   it is an available next action. Historical sessions explain that live runtime
   status is no longer available.
+- Selected sessions can load session-scoped diagnostics on demand. The response
+  is filtered by the Rust-resolved run ID and shows only bounded auth/network
+  records for that session.
 - Auth states that need attention use a backend-owned next action such as
   `auth_attention`.
 - The summary does not expose raw workspace paths, state volume names, raw

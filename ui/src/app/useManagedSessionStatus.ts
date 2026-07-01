@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
   getManagedSessionStatus,
+  type ManagedSessionRecovery,
   type ManagedSessionStatusResponse,
   type RunStatusContainer,
 } from "@/commands/runhaven"
@@ -84,7 +85,24 @@ export function sameManagedSessionStatus(
   return (
     sameManagedSession(current.session, next.session) &&
     current.statusUnavailable === next.statusUnavailable &&
+    sameRecovery(current.recovery, next.recovery) &&
     sameContainerStatus(current.container, next.container)
+  )
+}
+
+function sameRecovery(
+  current: ManagedSessionRecovery | null,
+  next: ManagedSessionRecovery | null,
+): boolean {
+  if (current === null || next === null) {
+    return current === next
+  }
+  return (
+    current.status === next.status &&
+    current.title === next.title &&
+    current.detail === next.detail &&
+    current.remedy === next.remedy &&
+    current.repairAvailable === next.repairAvailable
   )
 }
 

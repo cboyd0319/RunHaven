@@ -38,6 +38,7 @@ import { loadSessionsUntilRunPresent } from "./sessionSelection"
 import { useDiagnosticsState } from "./useDiagnosticsState"
 import { useAppDerivedState } from "./useAppDerivedState"
 import { useManagedSessionsState } from "./useManagedSessionsState"
+import { useManagedSessionDiagnostics } from "./useManagedSessionDiagnostics"
 import { useManagedSessionStatus } from "./useManagedSessionStatus"
 import { useRunControlState } from "./useRunControlState"
 import { useSessionInputState } from "./useSessionInputState"
@@ -85,6 +86,7 @@ export function useAppController() {
     lastLaunch,
   })
   const selectedSessionStatus = useManagedSessionStatus(selectedSessionId)
+  const selectedSessionDiagnostics = useManagedSessionDiagnostics(selectedSessionId)
   const selectedSession =
     selectedSessionStatus.data?.session ?? derived.selectedSession
   const sessionInput = useSessionInputState(selectedSessionId)
@@ -405,6 +407,9 @@ export function useAppController() {
     selectedSessionStatus: selectedSessionStatus.data,
     selectedSessionStatusLoading: selectedSessionStatus.loading,
     selectedSessionStatusError: selectedSessionStatus.error,
+    selectedSessionDiagnostics: selectedSessionDiagnostics.data,
+    selectedSessionDiagnosticsLoading: selectedSessionDiagnostics.loading,
+    selectedSessionDiagnosticsError: selectedSessionDiagnostics.error,
     pageTitle: derived.pageTitle,
     pageDescription: derived.pageDescription,
     runOutput: derived.runOutput,
@@ -419,6 +424,7 @@ export function useAppController() {
     startRun,
     runControl,
     sendSelectedSessionInput,
+    loadSelectedSessionDiagnostics: selectedSessionDiagnostics.load,
     loadDiagnostics: diagnostics.load,
     setLaunchConfirmation,
     setLaunchStep,

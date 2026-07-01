@@ -42,6 +42,9 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByText("Monitor session")).toBeVisible();
   await expect(page.getByText("Run record")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Message" })).toBeVisible();
+  await page.getByRole("button", { name: "Load session diagnostics" }).click();
+  await expect(page.getByText("Auth state: api-key-broker")).toBeVisible();
+  await expect(page.getByText("api.openai.com")).toBeVisible();
   await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
   await page.getByLabel("Message").fill("draft for selected session");
   await page.getByRole("button", { name: "Start" }).click();

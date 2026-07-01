@@ -135,6 +135,9 @@ Useful GUI design docs:
   guidance first; marker repair is reserved for a proven available next action.
   The GUI can show a plain next step without exposing backend errors, raw
   paths, mounts, state volumes, environment values, or launch arguments.
+- Selected sessions now have on-demand session-scoped diagnostics. The GUI sends
+  only the managed session ID; Rust resolves the backend-owned run and returns
+  bounded auth broker and provider network records filtered to that run.
 - Pre-release native design resources are recorded in
   `docs/plans/native-gui-reference-pass.md` for the later macOS design and app
   asset audit. That audit is deferred until CLI and GUI workflows are
