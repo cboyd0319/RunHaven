@@ -130,6 +130,15 @@ Useful GUI design docs:
   broker variable name is present but not set. The GUI success message says
   `Run accepted`, not `Run started`, because the Tauri command returns before
   the background container is fully proven running.
+- Selected-session runtime status now returns typed recovery guidance when live
+  container status is unavailable. Generic failures use refresh/diagnostics
+  guidance first; marker repair is reserved for a proven available next action.
+  The GUI can show a plain next step without exposing backend errors, raw
+  paths, mounts, state volumes, environment values, or launch arguments.
+- Pre-release native design resources are recorded in
+  `docs/plans/native-gui-reference-pass.md` for the later macOS design and app
+  asset audit. That audit is deferred until CLI and GUI workflows are
+  functionally complete.
 - Tauri command tests are split under `src-tauri/src/commands/tests/`; the old
   monolithic `tests.rs` file must not return.
 - Shared UI contracts are split under `crates/runhaven-core/src/ui_contracts/`.

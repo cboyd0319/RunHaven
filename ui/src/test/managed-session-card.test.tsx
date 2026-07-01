@@ -69,7 +69,7 @@ describe("ManagedSessionCard", () => {
     expect(html).toContain("Codex - project");
     expect(html).toContain("secret-project");
     expect(html).toContain("Provider only");
-    expect(html).toContain("Auth scope");
+    expect(html).toContain("Login state");
     expect(html).toContain("Project");
     expect(html).toContain("RunHaven is monitoring this session.");
     expect(html).toContain("Monitor session");

@@ -139,9 +139,16 @@ fn managed_session_status_reports_unavailable_without_leaking_backend_errors() {
     assert!(response.container.is_none());
     assert_eq!(
         response.status_unavailable.as_deref(),
-        Some("Container status is unavailable. The run may have stopped or may need repair.")
+        Some("Container status is unavailable. The run may have stopped.")
     );
+    let recovery = response.recovery.as_ref().expect("recovery guidance");
+    assert_eq!(recovery.status, "attention");
+    assert_eq!(recovery.title, "Runtime status unavailable");
+    assert!(recovery.remedy.contains("Refresh sessions"));
+    assert!(!recovery.remedy.contains("Repair marker"));
+    assert!(!recovery.repair_available);
     let encoded = serde_json::to_string(&response).expect("serialize status");
     assert!(!encoded.contains("/sensitive/workspaces"));
     assert!(!encoded.contains("runhaven-codex-status-home"));
+    assert!(!encoded.contains("container inspect"));
 }

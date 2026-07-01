@@ -136,6 +136,11 @@ that session to the active RunHaven run, checks whether input is attached in the
 backend registry, and returns the managed session summary plus sanitized
 container status. The response omits raw workspace paths, state volume names,
 mounts, environment values, raw command arguments, and backend error text.
+When live container status is unavailable, the response also returns typed
+recovery guidance with a title, detail, remedy, and whether marker repair is a
+proven available next action. Generic status failures use non-mutating guidance
+such as refresh or diagnostics first. This keeps recovery judgment in Rust and
+gives the WebView plain next-step text without exposing backend errors.
 
 The managed run-control commands accept only a backend-owned session ID plus
 the explicit confirmation flag for that action. Rust resolves the session ID to
@@ -205,6 +210,10 @@ Current GUI behavior:
 - Runtime status failures are bounded and generic. They do not expose raw
   backend errors, raw launch arguments, host paths, state volumes, mounts, or
   environment values.
+- Runtime status failures include typed recovery guidance. Generic failures use
+  refresh or diagnostics first; marker repair is shown only when Rust has proven
+  it is an available next action. Historical sessions explain that live runtime
+  status is no longer available.
 - Auth states that need attention use a backend-owned next action such as
   `auth_attention`.
 - The summary does not expose raw workspace paths, state volume names, raw

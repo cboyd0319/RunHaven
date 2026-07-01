@@ -71,6 +71,26 @@ screenshot, and maintainer trial runs. Do not add updater, notarization,
 Developer ID, App Store, certificate, keychain import, or release-publication
 work until the maintainer explicitly asks for a distribution pass.
 
+## Pre-Release Native Design Audit
+
+Before any first external GUI release, run a deeper native macOS design and app
+asset audit against current primary resources. This is intentionally deferred
+until the CLI and GUI workflows are functionally complete, so implementation
+time stays focused on the hard runtime, auth, recovery, and safety paths first.
+
+Audit resources to review at that point:
+
+- <https://developer.apple.com/design/human-interface-guidelines/>
+- <https://www.figma.com/community/file/1651309434229735362>
+- <https://www.sketch.com/s/57153a31-3379-4737-8ac6-dbfd6525f052>
+- <https://developer.apple.com/icon-composer/>
+- <https://developer.apple.com/sf-symbols/>
+
+Expected output: one focused pass on macOS layout, sidebar behavior, controls,
+copy density, iconography, app icon/export readiness, and SF Symbols usage.
+Do not add release, signing, notarization, updater, or store work as part of
+that audit unless the maintainer explicitly opens release work.
+
 ## Borrow
 
 - Orchard: native macOS information architecture. The sidebar, list, detail,

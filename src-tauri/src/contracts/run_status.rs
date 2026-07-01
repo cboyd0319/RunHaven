@@ -68,4 +68,15 @@ pub(crate) struct ManagedSessionStatusResponse {
     pub session: ManagedSessionSummaryData,
     pub container: Option<RunStatusContainer>,
     pub status_unavailable: Option<String>,
+    pub recovery: Option<ManagedSessionRecovery>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ManagedSessionRecovery {
+    pub status: String,
+    pub title: String,
+    pub detail: String,
+    pub remedy: String,
+    pub repair_available: bool,
 }

@@ -63,6 +63,7 @@ function status(
       ]
     },
     statusUnavailable: null,
+    recovery: null,
     ...patch
   };
 }
@@ -91,7 +92,16 @@ describe("ManagedSessionStatusCard", () => {
         status={status({
           container: null,
           statusUnavailable:
-            "Container status is unavailable. The run may have stopped or may need repair."
+            "Container status is unavailable. The run may have stopped.",
+          recovery: {
+            status: "attention",
+            title: "Runtime status unavailable",
+            detail:
+              "RunHaven can still see this session record, but Apple container status is unavailable.",
+            remedy:
+              "Refresh sessions or open diagnostics before taking action.",
+            repairAvailable: false
+          }
         })}
         loading={false}
         error=""
@@ -99,7 +109,11 @@ describe("ManagedSessionStatusCard", () => {
     );
 
     expect(html).toContain("Status unavailable");
-    expect(html).toContain("may need repair");
+    expect(html).toContain("may have stopped");
+    expect(html).toContain("Runtime status unavailable");
+    expect(html).toContain("Refresh sessions");
+    expect(html).not.toContain("Repair marker");
+    expect(html).not.toContain("Repair available");
     expect(html).not.toContain("container inspect");
   });
 });

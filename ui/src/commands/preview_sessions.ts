@@ -79,7 +79,18 @@ export function previewManagedSessionStatus(
       : null,
     statusUnavailable: active
       ? null
-      : "Container status is unavailable. The run may have stopped or may need repair."
+      : "Container status is unavailable. The run may have stopped.",
+    recovery: active
+      ? null
+      : {
+          status: "attention",
+          title: "Runtime status unavailable",
+          detail:
+            "RunHaven can still see this session record, but Apple container status is unavailable.",
+          remedy:
+            "Refresh sessions or open diagnostics before taking action.",
+          repairAvailable: false
+        }
   };
 }
 

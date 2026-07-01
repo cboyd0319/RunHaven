@@ -9,13 +9,16 @@ use runhaven_core::ui_contracts::{
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{
     LogSnapshotEntry, LogSnapshotRequest, LogSnapshotResponse, ManagedSessionLogSnapshotRequest,
-    ManagedSessionLogSnapshotResponse, ManagedSessionStatusRequest, ManagedSessionStatusResponse,
-    SessionLogEntry, SessionLogRedaction, WriteSessionInputRequest, WriteSessionInputResponse,
+    ManagedSessionLogSnapshotResponse, ManagedSessionRecovery, ManagedSessionStatusRequest,
+    ManagedSessionStatusResponse, SessionLogEntry, SessionLogRedaction, WriteSessionInputRequest,
+    WriteSessionInputResponse,
 };
 use crate::session_input::SessionInputRegistry;
 use crate::session_output::SessionOutputRegistry;
 
 const RAW_OUTPUT_REDACTION_MESSAGE: &str = "Raw output is not automatically redacted.";
+const MANAGED_SESSION_STATUS_UNAVAILABLE_MESSAGE: &str =
+    "Container status is unavailable. The run may have stopped.";
 const MAX_SESSION_INPUT_BYTES: usize = 8 * 1024;
 const MANAGED_SESSION_HISTORY_LIMIT: usize = 20;
 const MANAGED_SESSION_HISTORY_TAIL_BYTES: u64 = 256 * 1024;
@@ -63,12 +66,10 @@ fn get_managed_session_status_with_input(
     let status_unavailable = if container.is_some() {
         None
     } else {
-        Some(
-            "Container status is unavailable. The run may have stopped or may need repair."
-                .to_string(),
-        )
+        Some(MANAGED_SESSION_STATUS_UNAVAILABLE_MESSAGE.to_string())
     };
     Ok(ManagedSessionStatusResponse {
+        recovery: managed_session_recovery(&session, container.is_some()),
         session,
         container,
         status_unavailable,
@@ -89,16 +90,62 @@ pub(crate) fn managed_session_status_response_for_test(
     let status_unavailable = if container.is_some() {
         None
     } else {
-        Some(
-            "Container status is unavailable. The run may have stopped or may need repair."
-                .to_string(),
-        )
+        Some(MANAGED_SESSION_STATUS_UNAVAILABLE_MESSAGE.to_string())
     };
     Ok(ManagedSessionStatusResponse {
+        recovery: managed_session_recovery(&session, container.is_some()),
         session,
         container,
         status_unavailable,
     })
+}
+
+fn managed_session_recovery(
+    session: &ManagedSessionSummaryData,
+    container_available: bool,
+) -> Option<ManagedSessionRecovery> {
+    if container_available {
+        return None;
+    }
+
+    match session.lifecycle.trim().to_lowercase().as_str() {
+        "running" | "starting" | "stop-requested" | "kill-requested" => {
+            Some(ManagedSessionRecovery {
+                status: "attention".to_string(),
+                title: "Runtime status unavailable".to_string(),
+                detail:
+                    "RunHaven can still see this session record, but Apple container status is unavailable."
+                        .to_string(),
+                remedy:
+                    "Refresh sessions or open diagnostics. Use session controls only after confirming the session still needs action."
+                        .to_string(),
+                repair_available: false,
+            })
+        }
+        "failed" => Some(ManagedSessionRecovery {
+            status: "attention".to_string(),
+            title: "Run ended with an error".to_string(),
+            detail: "This session is no longer running.".to_string(),
+            remedy: "Review output or diagnostics. Use session controls only if the session still appears active."
+                .to_string(),
+            repair_available: false,
+        }),
+        "finished" | "stopped" => Some(ManagedSessionRecovery {
+            status: "history".to_string(),
+            title: "Run no longer active".to_string(),
+            detail: "This session is from run history, so live runtime status is no longer available."
+                .to_string(),
+            remedy: "Review output or start a new run.".to_string(),
+            repair_available: false,
+        }),
+        _ => Some(ManagedSessionRecovery {
+            status: "unknown".to_string(),
+            title: "Runtime status unavailable".to_string(),
+            detail: "RunHaven cannot read live status for this session.".to_string(),
+            remedy: "Refresh sessions or open diagnostics before taking action.".to_string(),
+            repair_available: false,
+        }),
+    }
 }
 
 #[tauri::command]

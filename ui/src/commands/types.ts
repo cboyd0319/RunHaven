@@ -157,6 +157,15 @@ export type ManagedSessionStatusResponse = {
   session: ManagedSessionSummary;
   container: RunStatusContainer | null;
   statusUnavailable: string | null;
+  recovery: ManagedSessionRecovery | null;
+};
+
+export type ManagedSessionRecovery = {
+  status: string;
+  title: string;
+  detail: string;
+  remedy: string;
+  repairAvailable: boolean;
 };
 
 export type StopManagedSessionResponse = {

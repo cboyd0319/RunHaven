@@ -2,6 +2,7 @@ import { CircleAlert, RefreshCw } from "lucide-react"
 
 import type { ManagedSessionStatusResponse } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardContent,
@@ -61,6 +62,19 @@ export function ManagedSessionStatusCard({
             <CircleAlert />
             <AlertTitle>Status unavailable</AlertTitle>
             <AlertDescription>{status.statusUnavailable}</AlertDescription>
+          </Alert>
+        ) : null}
+        {status?.recovery ? (
+          <Alert variant={status.recovery.repairAvailable ? "warning" : undefined}>
+            <CircleAlert />
+            <AlertTitle>{status.recovery.title}</AlertTitle>
+            <AlertDescription>
+              <p>{status.recovery.detail}</p>
+              <p>{status.recovery.remedy}</p>
+              {status.recovery.repairAvailable ? (
+                <Badge variant="warning">Repair available</Badge>
+              ) : null}
+            </AlertDescription>
           </Alert>
         ) : null}
         {status ? (
