@@ -28,6 +28,7 @@ mod session_cleanup;
 mod session_input;
 mod sessions;
 mod sessions_status;
+mod validation;
 
 fn isolated_cache() -> (tempfile::TempDir, CacheRootOverride) {
     let cache = tempfile::tempdir().expect("cache");
