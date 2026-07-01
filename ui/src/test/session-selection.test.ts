@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sessionIdForRun } from "../app/sessionSelection";
+import { loadSessionsUntilRunPresent, sessionIdForRun } from "../app/sessionSelection";
 import type { ManagedSessionList, ManagedSessionSummary } from "../commands/runhaven";
 
 function session(id: string, runId: string): ManagedSessionSummary {
@@ -46,5 +46,49 @@ describe("sessionIdForRun", () => {
     const sessions = sessionList([session("session-collision", "run-other")]);
 
     expect(sessionIdForRun(sessions, "run-new")).toBeNull();
+  });
+
+  it("waits briefly for a launched run to become a managed session", async () => {
+    const loads = [
+      sessionList([session("session-old", "run-old")]),
+      sessionList([session("session-new", "run-new")])
+    ];
+    const sleeps: number[] = [];
+
+    const result = await loadSessionsUntilRunPresent(
+      async () => loads.shift() ?? sessionList([]),
+      "run-new",
+      {
+        attempts: 3,
+        delayMs: 25,
+        sleep: async (delayMs) => {
+          sleeps.push(delayMs);
+        }
+      }
+    );
+
+    expect(result.sessionId).toBe("session-new");
+    expect(result.sessions.sessions.map((item) => item.id)).toEqual(["session-new"]);
+    expect(sleeps).toEqual([25]);
+  });
+
+  it("returns the last loaded sessions when the launched run never appears", async () => {
+    const loads = [
+      sessionList([session("session-old", "run-old")]),
+      sessionList([session("session-final", "run-final")])
+    ];
+
+    const result = await loadSessionsUntilRunPresent(
+      async () => loads.shift() ?? sessionList([]),
+      "run-new",
+      {
+        attempts: 2,
+        delayMs: 0,
+        sleep: async () => {}
+      }
+    );
+
+    expect(result.sessionId).toBeNull();
+    expect(result.sessions.sessions.map((item) => item.id)).toEqual(["session-final"]);
   });
 });

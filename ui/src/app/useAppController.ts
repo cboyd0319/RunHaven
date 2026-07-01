@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 import {
   chooseProjectFolder,
@@ -33,9 +33,10 @@ import {
   type LaunchStep,
   type RunControlAction,
 } from "./types"
-import { sessionIdForRun } from "./sessionSelection"
+import { loadSessionsUntilRunPresent } from "./sessionSelection"
 import { useDiagnosticsState } from "./useDiagnosticsState"
 import { useAppDerivedState } from "./useAppDerivedState"
+import { useSelectedSessionId } from "./useSelectedSessionId"
 
 export function useAppController() {
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null)
@@ -57,8 +58,8 @@ export function useAppController() {
   const [managedSessions, setManagedSessions] = useState<ManagedSessionList>({
     sessions: [],
   })
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
-  const selectedSessionIdRef = useRef<string | null>(null)
+  const { selectedSessionId, selectedSessionIdRef, selectSession } =
+    useSelectedSessionId(managedSessions)
   const [sessionInputDraft, setSessionInputDraft] = useState("")
   const [sessionInputSending, setSessionInputSending] = useState(false)
   const [sessionInputError, setSessionInputError] = useState("")
@@ -92,16 +93,6 @@ export function useAppController() {
   }, [])
 
   useEffect(() => {
-    if (
-      selectedSessionId &&
-      !managedSessions.sessions.some((session) => session.id === selectedSessionId)
-    ) {
-      selectSession(null)
-    }
-  }, [managedSessions.sessions, selectedSessionId])
-
-  useEffect(() => {
-    selectedSessionIdRef.current = selectedSessionId
     setSessionInputDraft("")
     setSessionInputSending(false)
     setSessionInputError("")
@@ -172,11 +163,6 @@ export function useAppController() {
     const nextSessions = await getManagedSessions()
     setManagedSessions(nextSessions)
     return nextSessions
-  }
-
-  function selectSession(sessionId: string | null) {
-    selectedSessionIdRef.current = sessionId
-    setSelectedSessionId(sessionId)
   }
 
   function changeAgent(agentName: string) {
@@ -269,10 +255,12 @@ export function useAppController() {
       setLastLaunch(started)
       await loadRunStatus(started.runId)
       setLaunchMessage(`Run started: ${started.runId}`)
-      const nextSessions = await loadManagedSessions()
-      const launchedSessionId = sessionIdForRun(nextSessions, started.runId)
-      if (launchedSessionId) {
-        selectSession(launchedSessionId)
+      const { sessionId } = await loadSessionsUntilRunPresent(
+        loadManagedSessions,
+        started.runId,
+      )
+      if (sessionId) {
+        selectSession(sessionId)
       }
       setPlan(null)
       setLaunchConfirmation(false)

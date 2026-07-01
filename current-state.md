@@ -88,6 +88,11 @@ feeling. Use a dark navy base, subtle glass-like panels, blue primary actions,
 teal/green ready states, amber warnings, and red only for blocked or destructive
 states. Avoid corny safety copy. The canonical logo is `docs/assets/logo.png`.
 
+Refresh, polling, and status updates must keep the current workspace stable.
+Session views should update panels in place without full-page blink/remounts,
+without clearing user input drafts, and without falling back to the launch
+wizard unless the user changes context or the selected session disappears.
+
 Useful GUI design docs:
 
 - `docs/plans/native-gui-reference-pass.md`
@@ -126,6 +131,10 @@ continue hardest-first through live session ownership, real-agent auth/session
 behavior, multi-session isolation, typed status, run control, recovery, and
 fail-closed boundaries before visual polish.
 
+For this CLI+GUI completion goal, local downloads, installs, tool runs, and
+external research are authorized when they directly reduce risk or accelerate
+the work.
+
 Smallest relevant checks for this slice:
 
 ```bash
@@ -140,8 +149,7 @@ them.
 
 ## Next Step
 
-Commit a clean CLI/core structure and state-alignment slice locally after
-focused verification. Then continue the CLI+GUI goal from the hardest problems
-first: live container session ownership, real-agent auth/session behavior,
-multi-session isolation, typed status reporting, and fail-closed security
-boundaries. Keep the safe path short and nontechnical.
+Continue the CLI+GUI goal from the hardest problems first: live container
+session ownership, real-agent auth/session behavior, multi-session isolation,
+typed status reporting, and fail-closed security boundaries. Keep the safe path
+short, stable, and nontechnical.
