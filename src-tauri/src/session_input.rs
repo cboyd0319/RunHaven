@@ -81,6 +81,18 @@ impl SessionInputRegistry {
 
         (registered.writer)(input.as_bytes())
     }
+
+    pub fn has_writer(&self, session_id: &str, expected_run_id: &str) -> Result<bool, String> {
+        validate_session_id(session_id)?;
+        validate_run_id(expected_run_id).map_err(|error| error.to_string())?;
+        let writers = self
+            .writers
+            .lock()
+            .map_err(|_| "session input registry is unavailable".to_string())?;
+        Ok(writers
+            .get(session_id)
+            .is_some_and(|registered| registered.run_id == expected_run_id))
+    }
 }
 
 fn validate_session_id(session_id: &str) -> Result<(), String> {

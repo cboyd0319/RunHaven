@@ -23,6 +23,11 @@ function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSumm
     containerName: "runhaven-codex-project",
     detailCommand: "runhaven runs show run-123",
     lifecycle: "running",
+    input: {
+      attached: true,
+      status: "attached",
+      detail: "Session input is ready."
+    },
     nextAction: {
       kind: "monitor",
       label: "Monitor session",

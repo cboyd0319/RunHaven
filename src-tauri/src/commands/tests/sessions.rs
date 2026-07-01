@@ -20,8 +20,8 @@ fn managed_sessions_response_is_read_only_and_secret_free() {
     )
     .expect("active run payload");
 
-    let response =
-        crate::commands::sessions::get_managed_sessions().expect("managed sessions response");
+    let response = crate::commands::sessions::get_managed_sessions_for_test(None)
+        .expect("managed sessions response");
 
     assert_eq!(response.sessions.len(), 1);
     let session = &response.sessions[0];
@@ -54,6 +54,45 @@ fn managed_sessions_response_is_read_only_and_secret_free() {
             "managed sessions response leaked forbidden value {forbidden:?}"
         );
     }
+}
+
+#[test]
+fn managed_sessions_report_input_transport_attachment() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "managed-session-input-attached",
+        json!({
+            "timestamp": "2026-06-30T02:15:00Z",
+            "run_id": "managed-session-input-attached",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/project",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-managed-session-input-attached",
+            "state_volume": "runhaven-codex-secret-home",
+            "session": "project"
+        }),
+    )
+    .expect("active run payload");
+    let registry = SessionInputRegistry::default();
+
+    let detached = crate::commands::sessions::get_managed_sessions_for_test(Some(&registry))
+        .expect("detached managed sessions response");
+    assert!(!detached.sessions[0].input.attached);
+    assert!(detached.sessions[0].input.detail.contains("not attached"));
+
+    registry
+        .register_writer(
+            "managed-session-input-attached",
+            "managed-session-input-attached",
+            |_| Ok(0),
+        )
+        .expect("register input transport");
+
+    let attached = crate::commands::sessions::get_managed_sessions_for_test(Some(&registry))
+        .expect("attached managed sessions response");
+    assert!(attached.sessions[0].input.attached);
+    assert!(attached.sessions[0].input.detail.contains("ready"));
 }
 
 #[test]

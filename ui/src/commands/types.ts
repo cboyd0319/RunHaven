@@ -187,8 +187,15 @@ export type ManagedSessionSummary = {
   containerName: string;
   detailCommand: string;
   lifecycle: string;
+  input: ManagedSessionInput;
   nextAction: ManagedSessionNextAction;
   events: ManagedSessionEvent[];
+};
+
+export type ManagedSessionInput = {
+  attached: boolean;
+  status: string;
+  detail: string;
 };
 
 export type ManagedSessionNextAction = {

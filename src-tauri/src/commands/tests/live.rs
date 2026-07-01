@@ -41,7 +41,8 @@ fn managed_session_live_smoke_reads_output_and_stops_run() {
         std::env::var("RUNHAVEN_LIVE_MANAGED_SESSION_EXPECT").expect("expected log marker");
     let forbidden_workspace = std::env::var("RUNHAVEN_LIVE_MANAGED_SESSION_FORBIDDEN").ok();
 
-    let sessions = crate::commands::sessions::get_managed_sessions().expect("managed sessions");
+    let sessions =
+        crate::commands::sessions::get_managed_sessions_for_test(None).expect("managed sessions");
     let session = sessions
         .sessions
         .iter()
@@ -273,8 +274,8 @@ impl Drop for LiveTauriRunCleanup {
 fn wait_for_live_session(run_id: &str) -> ManagedSessionSummaryData {
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
-        let sessions =
-            crate::commands::sessions::get_managed_sessions().expect("read live managed sessions");
+        let sessions = crate::commands::sessions::get_managed_sessions_for_test(None)
+            .expect("read live managed sessions");
         if let Some(session) = sessions
             .sessions
             .into_iter()
@@ -378,8 +379,8 @@ fn assert_live_session_output_excludes(
 fn wait_for_live_session_removed(run_id: &str) {
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
-        let sessions =
-            crate::commands::sessions::get_managed_sessions().expect("read live managed sessions");
+        let sessions = crate::commands::sessions::get_managed_sessions_for_test(None)
+            .expect("read live managed sessions");
         if !sessions
             .sessions
             .iter()

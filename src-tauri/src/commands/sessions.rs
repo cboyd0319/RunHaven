@@ -1,6 +1,8 @@
 use runhaven_core::diagnostics::auth_status_payload;
 use runhaven_core::runtime::active::read_active_run_records;
-use runhaven_core::ui_contracts::{ManagedSessionListData, ManagedSessionSummaryData};
+use runhaven_core::ui_contracts::{
+    ManagedSessionInputData, ManagedSessionListData, ManagedSessionSummaryData,
+};
 
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{
@@ -15,8 +17,23 @@ const RAW_OUTPUT_REDACTION_MESSAGE: &str = "Raw output is not automatically reda
 const MAX_SESSION_INPUT_BYTES: usize = 8 * 1024;
 
 #[tauri::command]
-pub(crate) fn get_managed_sessions() -> Result<ManagedSessionListData, String> {
-    Ok(managed_session_list())
+pub(crate) fn get_managed_sessions(
+    input_registry: tauri::State<'_, SessionInputRegistry>,
+) -> Result<ManagedSessionListData, String> {
+    get_managed_sessions_with_input(Some(input_registry.inner()))
+}
+
+fn get_managed_sessions_with_input(
+    input_registry: Option<&SessionInputRegistry>,
+) -> Result<ManagedSessionListData, String> {
+    managed_session_list(input_registry)
+}
+
+#[cfg(test)]
+pub(crate) fn get_managed_sessions_for_test(
+    input_registry: Option<&SessionInputRegistry>,
+) -> Result<ManagedSessionListData, String> {
+    get_managed_sessions_with_input(input_registry)
 }
 
 #[tauri::command]
@@ -131,9 +148,30 @@ fn session_log_entry(
     }
 }
 
-fn managed_session_list() -> ManagedSessionListData {
+fn managed_session_list(
+    input_registry: Option<&SessionInputRegistry>,
+) -> Result<ManagedSessionListData, String> {
     let active_runs = read_active_run_records();
-    ManagedSessionListData::from_active_runs_and_auth_status(active_runs, auth_status_payload())
+    let mut sessions = ManagedSessionListData::from_active_runs_and_auth_status(
+        active_runs,
+        auth_status_payload(),
+    );
+    if let Some(input_registry) = input_registry {
+        mark_session_input_transports(&mut sessions, input_registry)?;
+    }
+    Ok(sessions)
+}
+
+fn mark_session_input_transports(
+    sessions: &mut ManagedSessionListData,
+    input_registry: &SessionInputRegistry,
+) -> Result<(), String> {
+    for session in &mut sessions.sessions {
+        if input_registry.has_writer(&session.id, &session.run_id)? {
+            session.input = ManagedSessionInputData::attached();
+        }
+    }
+    Ok(())
 }
 
 pub(crate) fn managed_session_for_id(
@@ -143,7 +181,7 @@ pub(crate) fn managed_session_for_id(
     if session_id.is_empty() {
         return Err("managed session id is required".to_string());
     }
-    let session = managed_session_list()
+    let session = managed_session_list(None)?
         .sessions
         .into_iter()
         .find(|session| session.id == session_id)
@@ -167,7 +205,7 @@ fn write_session_input_with_registry(
     validate_text_len("session id", &request.session_id, MAX_RUN_ID_LEN)?;
     validate_session_input_request(&request)?;
 
-    let (session, run_id) = managed_session_for_id(&request.session_id)?;
+    let (mut session, run_id) = managed_session_for_id(&request.session_id)?;
     if session.next_action.kind == "auth_attention" {
         return Err(
             "Session auth is not ready. Finish auth setup before sending input.".to_string(),
@@ -184,6 +222,7 @@ fn write_session_input_with_registry(
     if accepted_bytes > request.input.len() {
         return Err("session input write reported more bytes than were sent".to_string());
     }
+    session.input = ManagedSessionInputData::attached();
 
     Ok(WriteSessionInputResponse {
         cursor: format!("session:{}:input:{accepted_bytes}", session.id),

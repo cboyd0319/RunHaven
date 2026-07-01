@@ -29,6 +29,7 @@ pub struct ManagedSessionSummaryData {
     pub container_name: String,
     pub detail_command: String,
     pub lifecycle: String,
+    pub input: ManagedSessionInputData,
     pub next_action: ManagedSessionNextActionData,
     pub events: Vec<ManagedSessionEventData>,
 }
@@ -38,6 +39,14 @@ pub struct ManagedSessionSummaryData {
 pub struct ManagedSessionNextActionData {
     pub kind: String,
     pub label: String,
+    pub detail: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ManagedSessionInputData {
+    pub attached: bool,
+    pub status: String,
     pub detail: String,
 }
 
@@ -101,9 +110,28 @@ impl ManagedSessionSummaryData {
             started_at: started_at.clone(),
             container_name: string_field(&record, "container_name"),
             detail_command: format!("runhaven runs show {run_id}"),
+            input: ManagedSessionInputData::detached(),
             next_action: managed_session_next_action(&agent, &auth_status, &lifecycle),
             events: managed_session_events(&status_label, &auth_status, &network, &started_at),
             lifecycle,
+        }
+    }
+}
+
+impl ManagedSessionInputData {
+    pub fn attached() -> Self {
+        Self {
+            attached: true,
+            status: "attached".to_string(),
+            detail: "Session input is ready in this RunHaven window.".to_string(),
+        }
+    }
+
+    pub fn detached() -> Self {
+        Self {
+            attached: false,
+            status: "detached".to_string(),
+            detail: "Session input is not attached in this RunHaven window.".to_string(),
         }
     }
 }

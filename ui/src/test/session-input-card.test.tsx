@@ -28,6 +28,11 @@ function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSumm
       label: "Monitor session",
       detail: "RunHaven is tracking status for this session."
     },
+    input: {
+      attached: true,
+      status: "attached",
+      detail: "Session input is ready."
+    },
     events: [],
     ...patch
   };
@@ -56,6 +61,35 @@ describe("SessionInputCard", () => {
     expect(html).not.toContain("/Users/");
     expect(html).not.toContain("resize_session");
     expect(html).not.toContain("attach_session");
+  });
+
+  it("shows when a running session cannot accept input in this window", () => {
+    const detached = session({
+      input: {
+        attached: false,
+        status: "detached",
+        detail: "Session input transport is not attached in this RunHaven window."
+      }
+    });
+
+    expect(sessionCanAcceptInput(detached)).toBe(false);
+
+    const html = renderToStaticMarkup(
+      <SessionInputCard
+        session={detached}
+        draft="hello"
+        sending={false}
+        error=""
+        acceptedMessage=""
+        onDraftChange={() => undefined}
+        onSend={() => undefined}
+      />
+    );
+
+    expect(html).toContain("Message");
+    expect(html).toContain("Input unavailable");
+    expect(html).toContain("not attached");
+    expect(html).toContain("disabled=\"\"");
   });
 
   it("stays hidden when the session needs auth attention", () => {

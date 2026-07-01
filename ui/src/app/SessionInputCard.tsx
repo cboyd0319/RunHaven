@@ -31,12 +31,14 @@ export function SessionInputCard({
   onDraftChange: (value: string) => void
   onSend: () => void
 }) {
-  if (!sessionCanAcceptInput(session)) {
+  if (session.nextAction.kind !== "monitor") {
     return null
   }
 
   const draftBytes = sessionInputBytes(draft)
-  const canSend = draft.length > 0 && draftBytes <= MAX_SESSION_INPUT_BYTES && !sending
+  const inputAttached = session.input.attached
+  const canSend =
+    inputAttached && draft.length > 0 && draftBytes <= MAX_SESSION_INPUT_BYTES && !sending
 
   return (
     <Card>
@@ -45,7 +47,9 @@ export function SessionInputCard({
           Message
         </CardTitle>
         <CardDescription>
-          Send text to this selected session.
+          {inputAttached
+            ? "Send text to this selected session."
+            : "Input is not attached for this session."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -65,7 +69,7 @@ export function SessionInputCard({
               className="min-h-24 w-full min-w-0 resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80"
               maxLength={MAX_SESSION_INPUT_BYTES}
               value={draft}
-              disabled={sending}
+              disabled={!inputAttached || sending}
               onChange={(event) => onDraftChange(event.currentTarget.value)}
               placeholder="Type a message for this session."
             />
@@ -91,6 +95,13 @@ export function SessionInputCard({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
+          {!inputAttached ? (
+            <Alert>
+              <CircleAlert />
+              <AlertTitle>Input unavailable</AlertTitle>
+              <AlertDescription>{session.input.detail}</AlertDescription>
+            </Alert>
+          ) : null}
           {acceptedMessage ? (
             <Alert>
               <CheckCircle2 />
@@ -107,7 +118,7 @@ export function SessionInputCard({
 }
 
 export function sessionCanAcceptInput(session: ManagedSessionSummary): boolean {
-  return session.nextAction.kind === "monitor"
+  return session.nextAction.kind === "monitor" && session.input.attached
 }
 
 function sessionInputBytes(input: string): number {

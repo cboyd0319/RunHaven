@@ -129,6 +129,11 @@ export function rememberPreviewManagedSession(snapshot: LaunchRunResponse["snaps
     containerName: snapshot.containerName,
     detailCommand: `runhaven runs show ${snapshot.runId}`,
     lifecycle: "running",
+    input: {
+      attached: true,
+      status: "attached",
+      detail: "Session input is ready in this preview window."
+    },
     nextAction: {
       kind: "monitor",
       label: "Monitor session",

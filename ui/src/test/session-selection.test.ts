@@ -19,6 +19,11 @@ function session(id: string, runId: string): ManagedSessionSummary {
     containerName: `runhaven-${id}`,
     detailCommand: `runhaven runs show ${runId}`,
     lifecycle: "running",
+    input: {
+      attached: true,
+      status: "attached",
+      detail: "Session input is ready."
+    },
     nextAction: {
       kind: "monitor",
       label: "Monitor session",
