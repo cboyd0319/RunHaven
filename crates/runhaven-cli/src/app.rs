@@ -81,14 +81,20 @@ fn dispatch(cli: Cli, agent_args: Vec<String>) -> Result<i32> {
             AuthCommand::Log { limit, json } => auth_log(limit, json),
         },
         TopCommand::Why { command } => match command {
-            WhyCommand::Host { host, port, agent } => why_host(&host, port, agent.as_deref()),
+            WhyCommand::Host {
+                host,
+                port,
+                agent,
+                json,
+            } => why_host(&host, port, agent.as_deref(), json),
             WhyCommand::Workspace {
                 path,
                 workspace_scope,
                 allow_sensitive_workspace,
-            } => why_workspace(&path, &workspace_scope, allow_sensitive_workspace),
-            WhyCommand::Network { mode } => why_network(&mode),
-            WhyCommand::State { agent } => why_state(&agent),
+                json,
+            } => why_workspace(&path, &workspace_scope, allow_sensitive_workspace, json),
+            WhyCommand::Network { mode, json } => why_network(&mode, json),
+            WhyCommand::State { agent, json } => why_state(&agent, json),
         },
     }
 }

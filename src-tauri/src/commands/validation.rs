@@ -2,11 +2,11 @@ use crate::contracts::{LaunchRunRequest, RunPlanRequest};
 
 pub(crate) const MAX_AGENT_NAME_LEN: usize = 64;
 pub(crate) const MAX_RUN_ID_LEN: usize = 128;
-const MAX_WORKSPACE_PATH_LEN: usize = 4096;
-const MAX_SHORT_FIELD_LEN: usize = 64;
+pub(crate) const MAX_WORKSPACE_PATH_LEN: usize = 4096;
+pub(crate) const MAX_SHORT_FIELD_LEN: usize = 64;
 const MAX_SESSION_NAME_LEN: usize = 128;
 const MAX_IMAGE_REF_LEN: usize = 512;
-const MAX_PROVIDER_HOST_LEN: usize = 253;
+pub(crate) const MAX_PROVIDER_HOST_LEN: usize = 253;
 const MAX_ENV_NAME_LEN: usize = 128;
 const MAX_WARNING_CODE_LEN: usize = 64;
 const MAX_PROVIDER_HOSTS: usize = 50;

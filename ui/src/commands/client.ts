@@ -21,7 +21,11 @@ import {
   previewPlanRun,
   previewRunStatus,
   previewSessionInput,
-  previewSetupStatus
+  previewSetupStatus,
+  previewWhyHost,
+  previewWhyNetwork,
+  previewWhyState,
+  previewWhyWorkspace
 } from "./preview";
 import type {
   AgentProfile,
@@ -30,12 +34,16 @@ import type {
   AuthStatusResponse,
   DashboardStatus,
   EgressLogResponse,
+  HostExplanationResponse,
   ImageStatusResponse,
   LaunchRunRequest,
   LaunchRunResponse,
   LaunchStatusResponse,
   LogSnapshotOptions,
   LogSnapshotResponse,
+  NetworkExplanationResponse,
+  StateExplanationResponse,
+  WorkspaceExplanationResponse,
   ManagedSessionList,
   ManagedSessionDiagnosticsResponse,
   ManagedSessionLogSnapshotResponse,
@@ -264,6 +272,38 @@ export async function getAuthStatus(): Promise<AuthStatusResponse> {
 
 export async function getAuthExplain(agent: string): Promise<AuthExplainResponse> {
   return call("get_auth_explain", { agent }, () => previewAuthExplain(agent));
+}
+
+export async function getWhyNetwork(mode: string): Promise<NetworkExplanationResponse> {
+  return call("get_why_network", { mode }, () => previewWhyNetwork(mode));
+}
+
+export async function getWhyState(agent: string): Promise<StateExplanationResponse> {
+  return call("get_why_state", { agent }, () => previewWhyState(agent));
+}
+
+export async function getWhyHost(
+  host: string,
+  port: number,
+  agent: string | null
+): Promise<HostExplanationResponse> {
+  return call(
+    "get_why_host",
+    { request: { host, port, agent } },
+    () => previewWhyHost(host)
+  );
+}
+
+export async function getWhyWorkspace(
+  path: string,
+  workspaceScope: string,
+  allowSensitiveWorkspace: boolean
+): Promise<WorkspaceExplanationResponse> {
+  return call(
+    "get_why_workspace",
+    { request: { path, workspaceScope, allowSensitiveWorkspace } },
+    () => previewWhyWorkspace(workspaceScope)
+  );
 }
 
 export async function chooseProjectFolder(): Promise<string | null> {

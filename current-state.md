@@ -242,6 +242,17 @@ Useful GUI design docs:
   guidance, notes), never credential values, tokens, env values, or raw paths
   (proven by a no-leak test). The GUI shows it on demand in the launch Agent step
   (`AgentAuthDetailsCard`), with shared label logic factored into `authDetails.ts`.
+- The desktop app now explains the network, host, workspace, and state security
+  boundaries read-only (`why` parity). Four shared core builders in
+  `crates/runhaven-core/src/diagnostics/why.rs` feed both the CLI `why ... --json`
+  paths (new flag; human text unchanged) and four `get_why_*` Tauri commands under
+  the read-only `main-read` capability. Each command length-validates its
+  WebView input before calling core. `why workspace` is path-hardened: the core
+  payload keeps raw paths for CLI parity, but `WorkspaceExplanationResponse` maps
+  only the path-free decision, verdict, next action, and boundary (no-leak test
+  seeds fake absolute host paths and asserts none serialize). The GUI surfaces
+  all four on demand in the launch Project step (`WhyBoundaryCard`), with pure
+  label logic in `whyExplain.ts`; `capability_guard` stays green.
 - Raw run output now passes through a shared best-effort redaction step before any
   viewer sees it. `redact_run_output` (`crates/runhaven-core/src/support/redact.rs`)
   strips terminal control sequences and redacts well-known secret token shapes

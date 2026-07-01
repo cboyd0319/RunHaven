@@ -109,7 +109,7 @@ pub(super) fn auth_explain_response(payload: &Value) -> AuthExplainResponse {
     }
 }
 
-fn string_list_field(record: &Value, name: &str) -> Vec<String> {
+pub(super) fn string_list_field(record: &Value, name: &str) -> Vec<String> {
     record
         .get(name)
         .and_then(Value::as_array)
@@ -123,7 +123,7 @@ fn string_list_field(record: &Value, name: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn string_field(record: &Value, name: &str) -> String {
+pub(super) fn string_field(record: &Value, name: &str) -> String {
     record
         .get(name)
         .and_then(Value::as_str)
@@ -131,7 +131,21 @@ fn string_field(record: &Value, name: &str) -> String {
         .to_string()
 }
 
-fn u32_field(record: &Value, name: &str) -> u32 {
+/// Like [`string_field`], but returns an empty string when the field is absent.
+/// Used where "-" placeholders would be shown to the user for optional text.
+pub(super) fn optional_string_field(record: &Value, name: &str) -> String {
+    record
+        .get(name)
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string()
+}
+
+pub(super) fn bool_field(record: &Value, name: &str) -> bool {
+    record.get(name).and_then(Value::as_bool).unwrap_or(false)
+}
+
+pub(super) fn u32_field(record: &Value, name: &str) -> u32 {
     record.get(name).and_then(Value::as_u64).unwrap_or(0) as u32
 }
 

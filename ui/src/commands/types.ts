@@ -429,3 +429,10 @@ export type AuthExplainResponse = {
   currentSafePath: string;
   notes: string[];
 };
+
+export type {
+  NetworkExplanationResponse,
+  StateExplanationResponse,
+  HostExplanationResponse,
+  WorkspaceExplanationResponse
+} from "./why_types";

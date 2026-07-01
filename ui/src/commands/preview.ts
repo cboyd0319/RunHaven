@@ -5,15 +5,19 @@ import type {
   AuthExplainResponse,
   AuthStatusResponse,
   DashboardStatus,
+  HostExplanationResponse,
   ImageStatusResponse,
   LaunchRunRequest,
   LaunchRunResponse,
   LaunchStatusResponse,
+  NetworkExplanationResponse,
   RunPlanAccess,
   RunPlanRequest,
   RunPlanResponse,
   RunStatusResponse,
-  SetupStatus
+  SetupStatus,
+  StateExplanationResponse,
+  WorkspaceExplanationResponse
 } from "./types";
 
 export { previewLogSnapshot } from "./preview_output";
@@ -293,6 +297,57 @@ export function previewAuthExplain(agent: string): AuthExplainResponse {
     providerHosts: ["api.example.com"],
     currentSafePath: "Use the API key broker for a headless run.",
     notes: ["Preview data only."]
+  };
+}
+
+export function previewWhyNetwork(mode: string): NetworkExplanationResponse {
+  return {
+    mode,
+    behavior: "routes egress through RunHaven's allowlist proxy.",
+    boundary: "only bundled provider hosts and explicit hosts are eligible.",
+    useWhen: "",
+    dnsSafety: "IP literals and single-label names are denied.",
+    inspect: "Preview data only."
+  };
+}
+
+export function previewWhyState(agent: string): StateExplanationResponse {
+  return {
+    profile: agent,
+    defaultSession: "default",
+    homeMount: "/home/agent",
+    stateVolumePattern: `runhaven-${agent}-<project-id>-home`,
+    namedSessionPattern: `runhaven-${agent}-<project-id>-s-<session>-<digest>-home`,
+    boundary: "workspace files are mounted separately at /workspace.",
+    projectId: "derived from the workspace path; the path is not stored in the name.",
+    manage: "Preview data only."
+  };
+}
+
+export function previewWhyHost(host: string): HostExplanationResponse {
+  return {
+    host,
+    port: 443,
+    decision: "allowed",
+    reason: "",
+    nextAction: "",
+    agent: "",
+    profile: "",
+    matchedRules: [`${host} (preview)`],
+    bundledHosts: [],
+    endpointNotes: [],
+    dnsSafety: "Preview data only."
+  };
+}
+
+export function previewWhyWorkspace(scope: string): WorkspaceExplanationResponse {
+  return {
+    scope,
+    decision: "allowed",
+    verdict: "RunHaven can mount this folder safely.",
+    nextAction: "",
+    boundary: "only the mounted path is exposed at /workspace; agent home stays in a state volume.",
+    sensitiveOverrideUsed: false
   };
 }
 

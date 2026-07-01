@@ -8,6 +8,10 @@ use crate::records::{read_jsonl, read_jsonl_tail_bounded};
 use crate::runtime::profiles::get_profile;
 use crate::support::paths::{auth_broker_log_path, egress_policy_log_path};
 
+mod why;
+
+pub use why::{why_host_payload, why_network_payload, why_state_payload, why_workspace_payload};
+
 pub fn read_egress_policy_log(limit: usize) -> anyhow::Result<Vec<Value>> {
     read_jsonl(&egress_policy_log_path(), limit)
 }

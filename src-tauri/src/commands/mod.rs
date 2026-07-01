@@ -19,6 +19,7 @@ pub(crate) use crate::contracts::{LaunchRunRequest, RunPlanRequest};
 
 mod access;
 pub(crate) mod diagnostics;
+pub(crate) mod diagnostics_why;
 pub(crate) mod image_status;
 pub(crate) mod launch;
 pub(crate) mod launch_status;

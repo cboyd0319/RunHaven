@@ -515,6 +515,10 @@ whether the path is rejected by the sensitive-workspace guard. `why network`
 explains `internet`, `internal`, and `provider` behavior. `why state` explains
 how RunHaven names and isolates per-project agent home volumes.
 
+Each `why` command also accepts `--json` for a machine-readable version of the
+same explanation. The desktop app uses the same explanation data, but it never
+returns raw host paths for `why workspace`, only the verdict.
+
 Inspect recent provider proxy policy decisions:
 
 ```bash

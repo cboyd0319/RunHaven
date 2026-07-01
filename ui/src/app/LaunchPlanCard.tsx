@@ -31,6 +31,7 @@ import {
   AuthScopePicker,
   ImageReadiness,
 } from "./LaunchAccess"
+import { WhyBoundaryCard } from "./WhyBoundaryCard"
 import { LaunchSteps } from "./LaunchSteps"
 import { networkHelp, networkLabels } from "./types"
 import type { LaunchStep } from "./types"
@@ -244,6 +245,14 @@ export function LaunchPlanCard({
                   </label>
                 </div>
               </details>
+
+              <WhyBoundaryCard
+                agentName={selectedAgent?.name}
+                networkMode={request.networkMode}
+                workspacePath={request.workspacePath}
+                workspaceScope={request.workspaceScope}
+                allowSensitiveWorkspace={request.allowSensitiveWorkspace}
+              />
             </>
           ) : null}
 

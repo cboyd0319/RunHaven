@@ -55,6 +55,8 @@ pub(crate) enum WhyCommand {
             help = "agent profile whose bundled provider hosts should be checked"
         )]
         agent: Option<String>,
+        #[arg(long, help = "print JSON output")]
+        json: bool,
     },
     #[command(about = "explain workspace mount validation")]
     Workspace {
@@ -67,9 +69,19 @@ pub(crate) enum WhyCommand {
         workspace_scope: String,
         #[arg(long, help = "evaluate with the sensitive-workspace override enabled")]
         allow_sensitive_workspace: bool,
+        #[arg(long, help = "print JSON output")]
+        json: bool,
     },
     #[command(about = "explain network mode behavior")]
-    Network { mode: String },
+    Network {
+        mode: String,
+        #[arg(long, help = "print JSON output")]
+        json: bool,
+    },
     #[command(about = "explain agent state-volume isolation")]
-    State { agent: String },
+    State {
+        agent: String,
+        #[arg(long, help = "print JSON output")]
+        json: bool,
+    },
 }

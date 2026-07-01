@@ -69,6 +69,13 @@ it signs in, what stays on this Mac, what the agent gets, and which provider
 hosts it can reach. These are read-only summaries with no secrets, tokens, or
 file paths.
 
+On the Project step, the `Why is this safe?` panel explains four boundaries in
+plain language: the network setting, the workspace folder, a provider host you
+type in, and where the agent's saved state is kept. The workspace answer shows
+only a verdict, such as whether the folder can be mounted, never the full path.
+These are read-only checks; they do not change your run and show no secrets or
+file paths.
+
 The safe defaults are the easiest path. By default a run gets provider-only
 network access, no access to your home folder, cloud keys, SSH keys, or browser
 profiles, and it does not run as root. See

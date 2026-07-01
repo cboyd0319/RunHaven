@@ -2,6 +2,9 @@ use std::path::Path;
 
 use anyhow::{Result, bail};
 
+use runhaven_core::diagnostics::{
+    why_host_payload, why_network_payload, why_state_payload, why_workspace_payload,
+};
 use runhaven_core::provider::egress::{EgressPolicy, is_ip_literal, normalize_host};
 use runhaven_core::provider::endpoints::{ProviderEndpoint, match_provider_endpoints};
 use runhaven_core::runtime::plans::{
@@ -10,7 +13,14 @@ use runhaven_core::runtime::plans::{
 use runhaven_core::runtime::profiles::{AgentProfile, get_profile, profiles};
 use runhaven_core::runtime::session_state::SESSION_DEFAULT;
 
-pub fn why_host(host: &str, port: u16, agent: Option<&str>) -> Result<i32> {
+pub fn why_host(host: &str, port: u16, agent: Option<&str>, json_output: bool) -> Result<i32> {
+    if json_output {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&why_host_payload(host, port, agent)?)?
+        );
+        return Ok(0);
+    }
     if port == 0 {
         bail!("--port must be between 1 and 65535");
     }
@@ -93,7 +103,19 @@ pub fn why_workspace(
     workspace: &Path,
     workspace_scope: &str,
     allow_sensitive_workspace: bool,
+    json_output: bool,
 ) -> Result<i32> {
+    if json_output {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&why_workspace_payload(
+                workspace,
+                workspace_scope,
+                allow_sensitive_workspace
+            )?)?
+        );
+        return Ok(0);
+    }
     let scope = WorkspaceScope::try_from(workspace_scope)?;
     println!("Workspace input: {}", workspace.display());
     println!("Workspace scope: {}", scope.as_str());
@@ -155,7 +177,14 @@ fn print_workspace_allowed(mounted: &Path, allow_sensitive_workspace: bool) {
     );
 }
 
-pub fn why_network(mode: &str) -> Result<i32> {
+pub fn why_network(mode: &str, json_output: bool) -> Result<i32> {
+    if json_output {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&why_network_payload(mode)?)?
+        );
+        return Ok(0);
+    }
     let network_mode = match NetworkMode::try_from(mode) {
         Ok(mode) => mode,
         Err(_) => bail!(
@@ -197,7 +226,14 @@ fn print_provider_mode() {
     println!("Inspect: runhaven why host HOST --agent AGENT, then runhaven egress log.");
 }
 
-pub fn why_state(agent: &str) -> Result<i32> {
+pub fn why_state(agent: &str, json_output: bool) -> Result<i32> {
+    if json_output {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&why_state_payload(agent)?)?
+        );
+        return Ok(0);
+    }
     let profile = get_profile(agent)?;
     print_state_explanation(profile);
     Ok(0)
