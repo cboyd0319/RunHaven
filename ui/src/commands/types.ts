@@ -328,6 +328,14 @@ export type LaunchRunResponse = {
   snapshot: StartedRunSnapshot;
 };
 
+export type LaunchStatusResponse = {
+  runId: string;
+  state: "starting" | "running" | "finished" | "failed" | string;
+  label: string;
+  detail: string;
+  updatedAt: string;
+};
+
 export type StopRunResponse = {
   runId: string;
   containerName: string;

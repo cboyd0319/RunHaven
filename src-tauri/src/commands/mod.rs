@@ -21,6 +21,7 @@ mod access;
 pub(crate) mod diagnostics;
 pub(crate) mod image_status;
 pub(crate) mod launch;
+pub(crate) mod launch_status;
 pub(crate) mod log_snapshot;
 pub(crate) mod managed_session_input;
 pub(crate) mod managed_session_output;

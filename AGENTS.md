@@ -140,6 +140,9 @@ Tauri launch/run-control behavior.
   picking the flimsier algorithm.
 - Eliminate meaningful duplication everywhere. Prefer deletion or one small
   shared helper over copy/paste, but do not add speculative abstractions.
+- Work hardest-first. Start each slice with the largest remaining risk or
+  blocker, especially where security, real runtime behavior, or data loss can
+  fail. Do smaller cleanup only after the hard path is proven.
 - Think before coding: define success criteria, surface uncertainty, and name
   meaningful tradeoffs before implementation.
 - Design workflows so the secure path is the default and easiest path; make

@@ -112,6 +112,15 @@ Useful GUI design docs:
 - Desktop/Tauri managed-session work has live evidence for launch, bounded
   output, input, stop, cleanup, distinct GUI session identity, and per-session
   state naming.
+- GUI launches now have a Rust-owned launch status path. `launch_run` records
+  backend-owned starting, running, finished, or failed state after native
+  confirmation, and `get_launch_status` exposes only sanitized status metadata
+  while the GUI waits for a managed session to appear.
+- Managed-session input visibility now fails closed: sessions are marked
+  input-attached only while the backend next action is `monitor`, and selected
+  session runtime status detaches input when container status is unavailable.
+- Multi-session sidebar rows now show compact agent, auth, login, network, and
+  input identity so users can distinguish sessions before selecting them.
 - Selected GUI sessions now have a read-only typed runtime status path:
   `get_managed_session_status` resolves the backend-owned session ID in Rust
   and returns sanitized container status for the runtime card without exposing
@@ -207,8 +216,7 @@ them.
 
 CLI is reverified and should stay contract-preserving except for bug fixes,
 security fixes, docs corrections, pin updates, or internal GUI support that
-preserves CLI semantics. Continue the CLI+GUI goal on the GUI side from the
-hardest remaining problems first: live trusted-approval smokes, real-agent
-launch smokes beyond shell, multi-session GUI control polish, CLI/GUI parity
-checks, and fail-closed security boundary checks. Keep the safe path short,
-stable, and nontechnical.
+preserves CLI semantics. Continue hardest-first on real-agent auth/session
+correctness beyond shell, session-scoped cleanup and recovery from the GUI,
+CLI/GUI parity checks, fail-closed security boundary checks, and a current
+visual screenshot pass. Keep the safe path short, stable, and nontechnical.

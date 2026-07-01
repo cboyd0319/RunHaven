@@ -6,6 +6,7 @@ import {
   previewAuthStatus,
   previewDashboardStatus,
   previewImageStatus,
+  previewLaunchStatus,
   previewLaunchRun,
   previewLogSnapshot,
   previewManagedKill,
@@ -29,6 +30,7 @@ import type {
   ImageStatusResponse,
   LaunchRunRequest,
   LaunchRunResponse,
+  LaunchStatusResponse,
   LogSnapshotOptions,
   LogSnapshotResponse,
   ManagedSessionList,
@@ -150,6 +152,14 @@ export async function planRun(request: RunPlanRequest): Promise<RunPlanResponse>
 
 export async function launchRun(request: LaunchRunRequest): Promise<LaunchRunResponse> {
   return call("launch_run", { request }, () => previewLaunchRun(request));
+}
+
+export async function getLaunchStatus(runId: string): Promise<LaunchStatusResponse> {
+  return call(
+    "get_launch_status",
+    { request: { runId } },
+    () => previewLaunchStatus(runId)
+  );
 }
 
 export async function stopRun(runId: string): Promise<StopRunResponse> {

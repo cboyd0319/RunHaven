@@ -3,6 +3,7 @@ mod capability_guard;
 mod commands;
 mod contracts;
 mod launch_runner;
+mod launch_status;
 pub mod session_input;
 mod session_output;
 
@@ -11,6 +12,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(session_input::SessionInputRegistry::default())
         .manage(session_output::SessionOutputRegistry::default())
+        .manage(launch_status::LaunchStatusRegistry::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_setup_status,
             commands::list_agents,
@@ -26,6 +28,7 @@ pub fn run() {
             commands::session_diagnostics::get_managed_session_diagnostics,
             commands::managed_session_output::get_managed_session_log_snapshot,
             commands::managed_session_input::write_session_input,
+            commands::launch_status::get_launch_status,
             commands::run_control::stop_run,
             commands::run_control::kill_run,
             commands::run_control::repair_run,

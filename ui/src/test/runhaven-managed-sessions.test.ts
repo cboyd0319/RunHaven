@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   defaultRunPlanRequest,
+  getLaunchStatus,
   getLogSnapshot,
   getManagedSessionDiagnostics,
   getManagedSessionLogSnapshot,
@@ -36,10 +37,13 @@ describe("runhaven managed session helpers", () => {
 
     const sessions = await getManagedSessions();
     const session = sessions.sessions.find((item) => item.runId === started.runId);
+    const launchStatus = await getLaunchStatus(started.runId);
 
     expect(session?.project).toBe("runhaven-preview");
     expect(session?.lifecycle).toBe("running");
     expect(session?.nextAction.kind).toBe("monitor");
+    expect(launchStatus.state).toBe("running");
+    expect(launchStatus.runId).toBe(started.runId);
     expect(session?.events.map((event) => event.source)).toEqual(["run", "auth", "network"]);
     expect(JSON.stringify(session)).not.toContain("/tmp/runhaven-preview");
   });

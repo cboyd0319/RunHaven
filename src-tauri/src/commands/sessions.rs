@@ -70,11 +70,17 @@ fn mark_session_input_transports(
     input_registry: &SessionInputRegistry,
 ) -> Result<(), String> {
     for session in &mut sessions.sessions {
-        if input_registry.has_writer(&session.id, &session.run_id)? {
+        if managed_session_accepts_input(session)
+            && input_registry.has_writer(&session.id, &session.run_id)?
+        {
             session.input = ManagedSessionInputData::attached();
         }
     }
     Ok(())
+}
+
+pub(crate) fn managed_session_accepts_input(session: &ManagedSessionSummaryData) -> bool {
+    session.next_action.kind == "monitor"
 }
 
 pub(crate) fn managed_session_for_id(

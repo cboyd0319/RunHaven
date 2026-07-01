@@ -49,7 +49,7 @@ test("reviews and starts a preview run", async ({ page }) => {
   await page.getByLabel("Message").fill("draft for selected session");
   await page.getByRole("button", { name: "Start" }).click();
   await page.getByText("Claude - runhaven-preview").click();
-  await expect(page.getByLabel("Message")).toHaveValue("");
+  await expect(page.getByLabel("Message")).toHaveValue("draft for selected session");
   await page.getByLabel("Message").fill("hello session");
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText("Message sent")).toBeVisible();
@@ -125,7 +125,7 @@ test("keeps selected-session message drafts isolated", async ({ page }) => {
   await expect(page.getByText("Message sent")).toBeVisible();
 
   await page.getByText("Claude - runhaven-alpha").click();
-  await expect(page.getByLabel("Message")).toHaveValue("");
+  await expect(page.getByLabel("Message")).toHaveValue("alpha draft");
   await expect(page.getByText("beta message")).toHaveCount(0);
 });
 

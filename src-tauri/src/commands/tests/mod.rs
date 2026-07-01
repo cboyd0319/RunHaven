@@ -1,10 +1,11 @@
 use super::*;
 use crate::contracts::{
-    KillManagedSessionRequest, KillRunResponse, LogSnapshotRequest,
+    KillManagedSessionRequest, KillRunResponse, LaunchStatusRequest, LogSnapshotRequest,
     ManagedSessionDiagnosticsRequest, ManagedSessionLogSnapshotRequest,
     ManagedSessionStatusRequest, RepairManagedSessionRequest, RepairRunResponse,
     StopManagedSessionRequest, StopRunResponse, WriteSessionInputRequest,
 };
+use crate::launch_status::LaunchStatusRegistry;
 use crate::session_input::SessionInputRegistry;
 use crate::session_output::SessionOutputRegistry;
 use runhaven_core::runtime::active::write_active_run_payload;
@@ -14,6 +15,7 @@ use std::path::PathBuf;
 
 mod auth;
 mod image;
+mod launch_status;
 mod live;
 mod live_agent;
 mod live_support;

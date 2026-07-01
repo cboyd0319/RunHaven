@@ -6,6 +6,7 @@ import type {
   DashboardStatus,
   ImageStatusResponse,
   LaunchRunResponse,
+  LaunchStatusResponse,
   ManagedSessionStatusResponse,
   ManagedSessionDiagnosticsResponse,
   ManagedSessionSummary,
@@ -17,6 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 import { DiagnosticsCard } from "./DiagnosticsCard"
 import { LastLaunchCard } from "./LastLaunchCard"
+import { LaunchStatusCard } from "./LaunchStatusCard"
 import { LaunchPlanCard } from "./LaunchPlanCard"
 import { ManagedSessionCard, sessionAllowsRunControl } from "./ManagedSessionCard"
 import { ManagedSessionDiagnosticsCard } from "./ManagedSessionDiagnosticsCard"
@@ -44,6 +46,9 @@ type AppMainContentProps = {
   selectedSessionDiagnosticsLoading: boolean
   selectedSessionDiagnosticsError: string
   onLoadSelectedSessionDiagnostics: () => Promise<void>
+  launchStatus: LaunchStatusResponse | null
+  launchStatusLoading: boolean
+  launchStatusError: string
   sessionInputDraft: string
   sessionInputSending: boolean
   sessionInputError: string
@@ -242,6 +247,11 @@ function RunView(
   return (
     <>
       <LastLaunchCard lastLaunch={props.lastLaunch} />
+      <LaunchStatusCard
+        status={props.launchStatus}
+        loading={props.launchStatusLoading}
+        error={props.launchStatusError}
+      />
       <RunStatusCard
         runStatus={props.runStatus}
         runStatusLoading={props.runStatusLoading}

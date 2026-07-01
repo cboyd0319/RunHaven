@@ -19,6 +19,7 @@ use crate::contracts::{
     StartedRunSnapshot,
 };
 use crate::launch_runner::TauriLaunchRunner;
+use crate::launch_status::LaunchStatusRegistry;
 use crate::session_input::SessionInputRegistry;
 use crate::session_output::SessionOutputRegistry;
 
@@ -38,14 +39,26 @@ pub(crate) async fn launch_run(
     request: LaunchRunRequest,
     input_registry: State<'_, SessionInputRegistry>,
     output_registry: State<'_, SessionOutputRegistry>,
+    launch_status: State<'_, LaunchStatusRegistry>,
 ) -> Result<LaunchRunResponse, String> {
     let input_registry = input_registry.inner().clone();
     let output_registry = output_registry.inner().clone();
+    let launch_status = launch_status.inner().clone();
     let (run_id, plan, response, warnings) = prepare_confirmed_launch(request)?;
     if !trusted_launch_confirmed(app, &plan, &warnings).await? {
         return Err("Launch canceled before starting the run.".to_string());
     }
-    spawn_launch_thread(run_id, plan, input_registry, output_registry)?;
+    launch_status.mark_starting(&run_id, &plan.profile_name, &plan.session)?;
+    if let Err(error) = spawn_launch_thread(
+        run_id.clone(),
+        plan,
+        input_registry,
+        output_registry,
+        launch_status.clone(),
+    ) {
+        let _ = launch_status.mark_failed(&run_id);
+        return Err(error);
+    }
     Ok(response)
 }
 
@@ -67,11 +80,38 @@ pub(crate) fn launch_run_with_registries_and_approval(
     output_registry: SessionOutputRegistry,
     approve: impl FnOnce(&AgentRunPlan, &[PlanWarning]) -> Result<bool, String>,
 ) -> Result<LaunchRunResponse, String> {
+    launch_run_with_registries_status_and_approval(
+        request,
+        input_registry,
+        output_registry,
+        LaunchStatusRegistry::default(),
+        approve,
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn launch_run_with_registries_status_and_approval(
+    request: LaunchRunRequest,
+    input_registry: SessionInputRegistry,
+    output_registry: SessionOutputRegistry,
+    launch_status: LaunchStatusRegistry,
+    approve: impl FnOnce(&AgentRunPlan, &[PlanWarning]) -> Result<bool, String>,
+) -> Result<LaunchRunResponse, String> {
     let (run_id, plan, response, warnings) = prepare_confirmed_launch(request)?;
     if !approve(&plan, &warnings)? {
         return Err("Launch canceled before starting the run.".to_string());
     }
-    spawn_launch_thread(run_id, plan, input_registry, output_registry)?;
+    launch_status.mark_starting(&run_id, &plan.profile_name, &plan.session)?;
+    if let Err(error) = spawn_launch_thread(
+        run_id.clone(),
+        plan,
+        input_registry,
+        output_registry,
+        launch_status.clone(),
+    ) {
+        let _ = launch_status.mark_failed(&run_id);
+        return Err(error);
+    }
     Ok(response)
 }
 
@@ -88,7 +128,18 @@ pub(crate) fn launch_prepared_with_approval_for_test(
     if !approve(&plan, &warnings)? {
         return Err("Launch canceled before starting the run.".to_string());
     }
-    spawn_launch_thread(run_id, plan, input_registry, output_registry)?;
+    let launch_status = LaunchStatusRegistry::default();
+    launch_status.mark_starting(&run_id, &plan.profile_name, &plan.session)?;
+    if let Err(error) = spawn_launch_thread(
+        run_id.clone(),
+        plan,
+        input_registry,
+        output_registry,
+        launch_status.clone(),
+    ) {
+        let _ = launch_status.mark_failed(&run_id);
+        return Err(error);
+    }
     Ok(response)
 }
 
@@ -97,13 +148,25 @@ fn spawn_launch_thread(
     plan: AgentRunPlan,
     input_registry: SessionInputRegistry,
     output_registry: SessionOutputRegistry,
+    launch_status: LaunchStatusRegistry,
 ) -> Result<(), String> {
     thread::Builder::new()
         .name(format!("runhaven-launch-{run_id}"))
         .spawn(move || {
-            let mut runner = TauriLaunchRunner::new(input_registry, output_registry);
-            if let Err(error) = launch_run_plan_with_runner(&plan, &mut runner) {
-                eprintln!("runhaven launch {run_id} failed: {error}");
+            let mut runner =
+                TauriLaunchRunner::new(input_registry, output_registry, launch_status.clone());
+            match launch_run_plan_with_runner(&plan, &mut runner) {
+                Ok(code) => {
+                    if let Err(error) = launch_status.mark_finished(&run_id, code) {
+                        eprintln!("runhaven launch {run_id} status update failed: {error}");
+                    }
+                }
+                Err(error) => {
+                    if let Err(status_error) = launch_status.mark_failed(&run_id) {
+                        eprintln!("runhaven launch {run_id} status update failed: {status_error}");
+                    }
+                    eprintln!("runhaven launch {run_id} failed: {error}");
+                }
             }
         })
         .map_err(|error| format!("could not start background run: {error}"))?;

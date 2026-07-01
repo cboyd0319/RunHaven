@@ -195,6 +195,59 @@ fn managed_session_status_marks_repair_available_for_missing_container() {
 }
 
 #[test]
+fn managed_session_status_detaches_input_when_runtime_status_is_unavailable() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "managed-session-status-detached",
+        json!({
+            "timestamp": "2026-07-01T02:50:00Z",
+            "run_id": "managed-session-status-detached",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/status",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-status-detached",
+            "state_volume": "runhaven-codex-status-home",
+            "session": "status"
+        }),
+    )
+    .expect("active run payload");
+    let registry = SessionInputRegistry::default();
+    registry
+        .register_writer(
+            "managed-session-status-detached",
+            "managed-session-status-detached",
+            |_| Ok(0),
+        )
+        .expect("register input transport");
+
+    let response = crate::commands::sessions::managed_session_status_response_for_test(
+        ManagedSessionStatusRequest {
+            session_id: "managed-session-status-detached".to_string(),
+        },
+        Some(&registry),
+        None,
+        true,
+    )
+    .expect("managed session status");
+
+    assert!(response.container.is_none());
+    assert!(!response.session.input.attached);
+    assert!(response.session.input.detail.contains("not attached"));
+    assert_eq!(
+        response.status_unavailable.as_deref(),
+        Some("Container status is unavailable. The run may have stopped.")
+    );
+    assert!(
+        response
+            .recovery
+            .as_ref()
+            .expect("recovery guidance")
+            .repair_available
+    );
+}
+
+#[test]
 fn managed_session_diagnostics_are_scoped_to_selected_session() {
     use runhaven_core::support::paths::{
         auth_broker_log_path, egress_policy_log_path, ensure_private_parent,

@@ -105,3 +105,19 @@ pub(crate) struct LaunchRunResponse {
     pub network_mode: String,
     pub snapshot: StartedRunSnapshot,
 }
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct LaunchStatusRequest {
+    pub run_id: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct LaunchStatusResponse {
+    pub run_id: String,
+    pub state: String,
+    pub label: String,
+    pub detail: String,
+    pub updated_at: String,
+}

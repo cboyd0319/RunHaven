@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 
 import logo from "@/assets/logo.png"
+import { Badge } from "@/components/ui/badge"
 import {
   Sidebar,
   SidebarContent,
@@ -21,6 +22,13 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import type { ManagedSessionSummary } from "@/commands/runhaven"
+
+import {
+  authLabel,
+  authScopeLabel,
+  networkLabel,
+  sessionInputLabel,
+} from "./sessionIdentity"
 
 type SidebarNavItem = {
   label: string
@@ -92,14 +100,33 @@ export function RunHavenSidebar({
                 {sessions.map((session) => (
                   <SidebarMenuItem key={session.id}>
                     <SidebarMenuButton
-                      className="pr-20"
+                      className="h-auto items-start gap-3 pr-20 py-3"
                       tooltip={session.title}
                       type="button"
                       isActive={selectedSessionId === session.id}
                       onClick={() => onSessionSelect(session.id)}
                     >
                       <Terminal />
-                      <span>{session.title}</span>
+                      <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                        <div className="truncate text-sm font-medium">
+                          {session.title}
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                          <SidebarSessionBadge>{session.agent}</SidebarSessionBadge>
+                          <SidebarSessionBadge>
+                            {authLabel(session.authStatus)}
+                          </SidebarSessionBadge>
+                          <SidebarSessionBadge>
+                            {authScopeLabel(session.authScope)}
+                          </SidebarSessionBadge>
+                          <SidebarSessionBadge>
+                            {networkLabel(session.network)}
+                          </SidebarSessionBadge>
+                          <SidebarSessionBadge>
+                            {sessionInputLabel(session)}
+                          </SidebarSessionBadge>
+                        </div>
+                      </div>
                     </SidebarMenuButton>
                     <SidebarMenuBadge className="max-w-16 truncate">
                       {session.statusLabel}
@@ -113,5 +140,16 @@ export function RunHavenSidebar({
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
+  )
+}
+
+function SidebarSessionBadge({ children }: { children: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className="h-auto rounded-md px-1.5 py-0 text-[10px] leading-4 whitespace-normal"
+    >
+      {children}
+    </Badge>
   )
 }

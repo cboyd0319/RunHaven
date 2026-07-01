@@ -7,6 +7,7 @@ import type {
   ImageStatusResponse,
   LaunchRunRequest,
   LaunchRunResponse,
+  LaunchStatusResponse,
   RunPlanAccess,
   RunPlanRequest,
   RunPlanResponse,
@@ -263,6 +264,19 @@ export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {
     session: snapshot.session,
     networkMode: snapshot.networkMode,
     snapshot
+  };
+}
+
+export function previewLaunchStatus(runId: string): LaunchStatusResponse {
+  if (!runId.trim()) {
+    throw new Error("launch status not found");
+  }
+  return {
+    runId,
+    state: "running",
+    label: "Running",
+    detail: "The managed session is running in preview mode.",
+    updatedAt: "preview"
   };
 }
 

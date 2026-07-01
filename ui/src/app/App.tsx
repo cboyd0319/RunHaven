@@ -42,6 +42,9 @@ export default function App() {
             selectedSessionDiagnosticsLoading={app.selectedSessionDiagnosticsLoading}
             selectedSessionDiagnosticsError={app.selectedSessionDiagnosticsError}
             onLoadSelectedSessionDiagnostics={app.loadSelectedSessionDiagnostics}
+            launchStatus={app.launchStatus}
+            launchStatusLoading={app.launchStatusLoading}
+            launchStatusError={app.launchStatusError}
             sessionInputDraft={app.sessionInputDraft}
             sessionInputSending={app.sessionInputSending}
             sessionInputError={app.sessionInputError}

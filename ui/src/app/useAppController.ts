@@ -40,6 +40,7 @@ import { useAppDerivedState } from "./useAppDerivedState"
 import { useManagedSessionsState } from "./useManagedSessionsState"
 import { useManagedSessionDiagnostics } from "./useManagedSessionDiagnostics"
 import { useManagedSessionStatus } from "./useManagedSessionStatus"
+import { useLaunchStatus } from "./useLaunchStatus"
 import { useRunControlState } from "./useRunControlState"
 import { useSessionInputState } from "./useSessionInputState"
 
@@ -89,6 +90,9 @@ export function useAppController() {
   const selectedSessionDiagnostics = useManagedSessionDiagnostics(selectedSessionId)
   const selectedSession =
     selectedSessionStatus.data?.session ?? derived.selectedSession
+  const launchStatus = useLaunchStatus(
+    lastLaunch && !selectedSession ? lastLaunch.runId : null,
+  )
   const sessionInput = useSessionInputState(selectedSessionId)
   const runControlState = useRunControlState(derived.controlTargetId)
 
@@ -408,6 +412,9 @@ export function useAppController() {
     selectedSessionDiagnostics: selectedSessionDiagnostics.data,
     selectedSessionDiagnosticsLoading: selectedSessionDiagnostics.loading,
     selectedSessionDiagnosticsError: selectedSessionDiagnostics.error,
+    launchStatus: launchStatus.data,
+    launchStatusLoading: launchStatus.loading,
+    launchStatusError: launchStatus.error,
     pageTitle: derived.pageTitle,
     pageDescription: derived.pageDescription,
     runOutput: derived.runOutput,

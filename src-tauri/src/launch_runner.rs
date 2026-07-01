@@ -6,22 +6,26 @@ use std::thread;
 use anyhow::{Context, Result, bail};
 use runhaven_core::runtime::launch::{AgentCommandContext, AgentCommandRunner};
 
+use crate::launch_status::LaunchStatusRegistry;
 use crate::session_input::SessionInputRegistry;
 use crate::session_output::SessionOutputRegistry;
 
 pub(crate) struct TauriLaunchRunner {
     input_registry: SessionInputRegistry,
     output_registry: SessionOutputRegistry,
+    launch_status: LaunchStatusRegistry,
 }
 
 impl TauriLaunchRunner {
     pub(crate) fn new(
         input_registry: SessionInputRegistry,
         output_registry: SessionOutputRegistry,
+        launch_status: LaunchStatusRegistry,
     ) -> Self {
         Self {
             input_registry,
             output_registry,
+            launch_status,
         }
     }
 
@@ -130,6 +134,9 @@ impl AgentCommandRunner for TauriLaunchRunner {
         };
         let stdout_handle = self.capture_output(context.run_id, stdout);
         let stderr_handle = self.capture_output(context.run_id, stderr);
+        self.launch_status
+            .mark_running(context.run_id)
+            .map_err(anyhow::Error::msg)?;
 
         let status = child
             .wait()
@@ -172,6 +179,7 @@ mod tests {
     use runhaven_core::runtime::launch::{AgentCommandContext, AgentCommandRunner};
     use runhaven_core::runtime::plans::{AgentRunPlan, AuthScope, NetworkMode, WorkspaceScope};
 
+    use crate::launch_status::LaunchStatusRegistry;
     use crate::session_input::SessionInputRegistry;
     use crate::session_output::SessionOutputRegistry;
 
@@ -223,10 +231,15 @@ mod tests {
         let plan = test_plan(workspace.path());
         let registry = SessionInputRegistry::default();
         let runner_registry = registry.clone();
+        let launch_status = LaunchStatusRegistry::default();
+        let runner_launch_status = launch_status.clone();
 
         let handle = thread::spawn(move || {
-            let mut runner =
-                super::TauriLaunchRunner::new(runner_registry, SessionOutputRegistry::default());
+            let mut runner = super::TauriLaunchRunner::new(
+                runner_registry,
+                SessionOutputRegistry::default(),
+                runner_launch_status,
+            );
             runner.run_agent_command(
                 &stdin_wait_command(),
                 None,
@@ -256,6 +269,13 @@ mod tests {
         assert_eq!(
             handle.join().expect("runner thread").expect("runner exit"),
             0
+        );
+        assert_eq!(
+            launch_status
+                .get("tauri-runner-seam")
+                .expect("launch status")
+                .state,
+            "running"
         );
         let missing = registry
             .write("tauri-runner-seam", "tauri-runner-seam", "again\n")

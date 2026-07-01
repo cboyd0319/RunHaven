@@ -15,6 +15,7 @@ fn main() {
             "get_managed_session_diagnostics",
             "get_managed_session_log_snapshot",
             "write_session_input",
+            "get_launch_status",
             "stop_run",
             "kill_run",
             "repair_run",

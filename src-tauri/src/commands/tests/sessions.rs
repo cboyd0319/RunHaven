@@ -98,6 +98,42 @@ fn managed_sessions_report_input_transport_attachment() {
 }
 
 #[test]
+fn managed_sessions_do_not_report_input_ready_for_non_monitor_sessions() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "managed-session-stop-requested",
+        json!({
+            "timestamp": "2026-07-01T06:00:00Z",
+            "run_id": "managed-session-stop-requested",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/project",
+            "network": "provider",
+            "status": "stop-requested",
+            "container_name": "runhaven-codex-managed-session-stop-requested",
+            "state_volume": "runhaven-codex-secret-home",
+            "session": "project"
+        }),
+    )
+    .expect("active run payload");
+    let registry = SessionInputRegistry::default();
+    registry
+        .register_writer(
+            "managed-session-stop-requested",
+            "managed-session-stop-requested",
+            |_| Ok(0),
+        )
+        .expect("register input transport");
+
+    let response = crate::commands::sessions::get_managed_sessions_for_test(Some(&registry))
+        .expect("managed sessions response");
+    let session = &response.sessions[0];
+    assert_eq!(session.lifecycle, "stop-requested");
+    assert_eq!(session.next_action.kind, "review");
+    assert!(!session.input.attached);
+    assert!(session.input.detail.contains("not attached"));
+}
+
+#[test]
 fn managed_sessions_include_recent_finished_records() {
     let (_cache, _cache_home) = isolated_cache();
     runhaven_core::support::paths::ensure_private_parent(

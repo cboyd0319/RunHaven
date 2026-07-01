@@ -1,5 +1,5 @@
 use runhaven_core::runtime::active::{active_run_repair_available, active_run_status_payload};
-use runhaven_core::ui_contracts::ManagedSessionSummaryData;
+use runhaven_core::ui_contracts::{ManagedSessionInputData, ManagedSessionSummaryData};
 
 use crate::contracts::{
     ManagedSessionRecovery, ManagedSessionStatusRequest, ManagedSessionStatusResponse,
@@ -59,10 +59,13 @@ pub(crate) fn managed_session_status_response_for_test(
 }
 
 fn managed_session_status_response(
-    session: ManagedSessionSummaryData,
+    mut session: ManagedSessionSummaryData,
     container: Option<RunStatusContainer>,
     repair_available: bool,
 ) -> ManagedSessionStatusResponse {
+    if container.is_none() {
+        session.input = ManagedSessionInputData::detached();
+    }
     let status_unavailable = if container.is_some() {
         None
     } else {
