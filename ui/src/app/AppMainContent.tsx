@@ -158,17 +158,22 @@ export function AppMainContent(props: AppMainContentProps) {
           )
         ) : null}
 
-        <details className="rounded-xl border bg-card p-4 text-card-foreground">
-          <summary className="cursor-pointer text-sm font-medium">Diagnostics</summary>
-          <div className="mt-4">
-            <DiagnosticsCard
-              diagnostics={props.diagnostics}
-              loading={props.diagnosticsLoading}
-              error={props.diagnosticsError}
-              onLoad={props.onLoadDiagnostics}
-            />
-          </div>
-        </details>
+        {/* The session view has its own "Session diagnostics" card, so the
+            global accordion shows only on the Start screen to avoid two
+            diagnostics surfaces at once. */}
+        {!selectedSession ? (
+          <details className="rounded-xl border bg-card p-4 text-card-foreground">
+            <summary className="cursor-pointer text-sm font-medium">Diagnostics</summary>
+            <div className="mt-4">
+              <DiagnosticsCard
+                diagnostics={props.diagnostics}
+                loading={props.diagnosticsLoading}
+                error={props.diagnosticsError}
+                onLoad={props.onLoadDiagnostics}
+              />
+            </div>
+          </details>
+        ) : null}
 
         {setupReady ? (
           <details className="rounded-xl border bg-card p-4 text-card-foreground">

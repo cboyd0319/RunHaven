@@ -7,6 +7,17 @@ import {
 
 import { errorMessage } from "./types"
 
+// Compile-time drift guard for sameLaunchStatus; see appStatusEquality.ts for
+// the pattern.
+const launchStatusResponseChecked = {
+  runId: true,
+  state: true,
+  label: true,
+  detail: true,
+  updatedAt: true,
+} satisfies Record<keyof LaunchStatusResponse, true>
+void launchStatusResponseChecked
+
 const LAUNCH_STATUS_POLL_MS = 2_000
 
 type StoredLaunchStatus = {

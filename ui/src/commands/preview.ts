@@ -256,7 +256,7 @@ export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {
     networkMode: request.plan.networkMode,
     containerName: "preview"
   };
-  rememberPreviewManagedSession(snapshot);
+  rememberPreviewManagedSession(snapshot, request.plan.worktree);
   return {
     runId,
     status: "started",
@@ -426,10 +426,16 @@ export function previewAgentSignInStatus(signInId: string): AgentSignInStatusRes
   };
 }
 
+// One stale preview network per page load, so the browser-preview and e2e paths
+// can exercise the confirm-gated cleanup flow and see the count drop to zero.
+let previewStaleNetworkCount = 1;
+
 export function previewNetworkPrunePreview(): NetworkPrunePreview {
-  return { count: 0 };
+  return { count: previewStaleNetworkCount };
 }
 
 export function previewNetworkPrune(): NetworkPruneResponse {
-  return { removed: 0, failed: 0 };
+  const removed = previewStaleNetworkCount;
+  previewStaleNetworkCount = 0;
+  return { removed, failed: 0 };
 }

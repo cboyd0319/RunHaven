@@ -7,8 +7,28 @@ import {
   type RunStatusContainer,
 } from "@/commands/runhaven"
 
+import { sameRunStatusContainer } from "./appStatusEquality"
 import { sameManagedSession } from "./sessionList"
 import { errorMessage } from "./types"
+
+// Compile-time drift guards for the equality helpers below; see
+// appStatusEquality.ts for the pattern.
+const managedSessionStatusResponseChecked = {
+  session: true,
+  container: true,
+  statusUnavailable: true,
+  recovery: true,
+} satisfies Record<keyof ManagedSessionStatusResponse, true>
+void managedSessionStatusResponseChecked
+
+const managedSessionRecoveryChecked = {
+  status: true,
+  title: true,
+  detail: true,
+  remedy: true,
+  repairAvailable: true,
+} satisfies Record<keyof ManagedSessionRecovery, true>
+void managedSessionRecoveryChecked
 
 const MANAGED_SESSION_STATUS_POLL_MS = 4_000
 
@@ -26,52 +46,76 @@ export function useManagedSessionStatus(sessionId: string | null) {
   const [error, setError] = useState("")
   const storedRef = useRef<StoredStatus | null>(null)
   const requestSeq = useRef(0)
-  const inFlight = useRef(false)
+  const inFlight = useRef<Promise<void> | null>(null)
 
   const data = stored?.sessionId === sessionId ? stored.data : null
 
   const loadStatus = useCallback(
     async ({ background = false }: { background?: boolean } = {}) => {
-      if (!sessionId || inFlight.current) {
+      if (!sessionId) {
         return
       }
-      const requestId = requestSeq.current + 1
-      requestSeq.current = requestId
-      inFlight.current = true
-      setLoading(storedRef.current?.sessionId !== sessionId)
-      try {
-        const nextStatus = await getManagedSessionStatus(sessionId)
-        if (requestSeq.current !== requestId) {
-          return
-        }
-        const nextStored: StoredStatus = { sessionId, data: nextStatus }
-        storedRef.current = nextStored
-        setError("")
-        setStored((current) =>
-          current &&
-          current.sessionId === sessionId &&
-          sameManagedSessionStatus(current.data, nextStatus)
-            ? current
-            : nextStored,
-        )
-      } catch (cause) {
-        if (requestSeq.current === requestId) {
-          setError(errorMessage(cause))
-          // A single failed background poll must not blank the last-good card.
-          // An explicit (user-initiated) reload may clear to surface the error.
-          if (!background) {
-            if (storedRef.current?.sessionId === sessionId) {
-              storedRef.current = null
+      const fetchStatus = async (isBackground: boolean) => {
+        const requestId = requestSeq.current + 1
+        requestSeq.current = requestId
+        setLoading(storedRef.current?.sessionId !== sessionId)
+        try {
+          const nextStatus = await getManagedSessionStatus(sessionId)
+          if (requestSeq.current !== requestId) {
+            return
+          }
+          const nextStored: StoredStatus = { sessionId, data: nextStatus }
+          storedRef.current = nextStored
+          setError("")
+          setStored((current) =>
+            current &&
+            current.sessionId === sessionId &&
+            sameManagedSessionStatus(current.data, nextStatus)
+              ? current
+              : nextStored,
+          )
+        } catch (cause) {
+          if (requestSeq.current === requestId) {
+            setError(errorMessage(cause))
+            // A single failed background poll must not blank the last-good card.
+            // An explicit (user-initiated) reload may clear to surface the error.
+            if (!isBackground) {
+              if (storedRef.current?.sessionId === sessionId) {
+                storedRef.current = null
+              }
+              setStored((current) =>
+                current?.sessionId === sessionId ? null : current,
+              )
             }
-            setStored((current) =>
-              current?.sessionId === sessionId ? null : current,
-            )
+          }
+        } finally {
+          if (requestSeq.current === requestId) {
+            setLoading(false)
           }
         }
+      }
+      const pending = inFlight.current
+      if (pending) {
+        if (background) {
+          return
+        }
+        // An explicit (user-initiated) reload must observe status at least as
+        // fresh as the moment it was requested. Wait for the in-flight request
+        // to settle, then take one follow-up load; if another explicit caller
+        // already started that follow-up, share it instead of stacking more.
+        await pending
+        if (inFlight.current) {
+          await inFlight.current
+          return
+        }
+      }
+      const request = fetchStatus(background)
+      inFlight.current = request
+      try {
+        await request
       } finally {
-        if (requestSeq.current === requestId) {
-          setLoading(false)
-          inFlight.current = false
+        if (inFlight.current === request) {
+          inFlight.current = null
         }
       }
     },
@@ -80,7 +124,7 @@ export function useManagedSessionStatus(sessionId: string | null) {
 
   useEffect(() => {
     requestSeq.current += 1
-    inFlight.current = false
+    inFlight.current = null
     storedRef.current = null
     setStored(null)
     setError("")
@@ -141,23 +185,5 @@ function sameContainerStatus(
   if (current === null || next === null) {
     return current === next
   }
-  return (
-    current.state === next.state &&
-    current.image === next.image &&
-    current.startedAt === next.startedAt &&
-    current.resources.cpus === next.resources.cpus &&
-    current.resources.memoryBytes === next.resources.memoryBytes &&
-    current.networks.length === next.networks.length &&
-    current.networks.every((network, index) => {
-      const nextNetwork = next.networks[index]
-      return (
-        nextNetwork !== undefined &&
-        network.network === nextNetwork.network &&
-        network.hostname === nextNetwork.hostname &&
-        network.ipv4Address === nextNetwork.ipv4Address &&
-        network.ipv4Gateway === nextNetwork.ipv4Gateway &&
-        network.ipv6Address === nextNetwork.ipv6Address
-      )
-    })
-  )
+  return sameRunStatusContainer(current, next)
 }

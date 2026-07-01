@@ -1,4 +1,4 @@
-import { previewSession } from "./preview_sessions";
+import { previewSession, resolvePreviewSessionWorktree } from "./preview_sessions";
 import type {
   ManagedSessionSummary,
   WorktreeActionResponse,
@@ -41,6 +41,9 @@ export function previewManagedWorktreeAction(
     recover: "recovered",
     discard: "discarded"
   };
+  if (action === "merge" || action === "discard") {
+    resolvePreviewSessionWorktree(sessionId);
+  }
   return {
     session,
     result: {

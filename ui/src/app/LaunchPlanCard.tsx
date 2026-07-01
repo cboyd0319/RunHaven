@@ -213,7 +213,7 @@ export function LaunchPlanCard({
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="flex flex-col gap-1.5 text-sm font-medium">
-                      CPU
+                      CPU cores
                       <Input
                         value={request.cpus}
                         onChange={(event) =>
@@ -222,7 +222,7 @@ export function LaunchPlanCard({
                       />
                     </label>
                     <label className="flex flex-col gap-1.5 text-sm font-medium">
-                      Memory
+                      Memory (4g = 4 GB)
                       <Input
                         value={request.memory}
                         onChange={(event) =>

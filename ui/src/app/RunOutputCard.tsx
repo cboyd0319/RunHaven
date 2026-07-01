@@ -112,10 +112,16 @@ export function RunOutputCard({
               ? "Load latest output"
               : "Load latest output: confirm raw output first"
           }
+          aria-describedby={logAcknowledged ? undefined : "run-output-ack-hint"}
           onClick={() => void onLoad()}
         >
           {logLoading ? "Loading..." : "Load latest output"}
         </Button>
+        {!logAcknowledged ? (
+          <p id="run-output-ack-hint" className="text-sm text-muted-foreground">
+            To load output, first check the box above to confirm raw output.
+          </p>
+        ) : null}
         {logError ? (
           <Alert variant="destructive">
             <CircleAlert />

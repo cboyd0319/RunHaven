@@ -1,25 +1,17 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import {
   chooseProjectFolder,
-  cleanupManagedSession,
   defaultRunPlanRequest,
   getDashboardStatus,
   getAuthStatus,
-  killManagedSession,
-  killRun,
   launchRun,
   nextLaunchSessionName,
   planRun,
   preferredDefaultAgent,
   reconcileRunPlanRequest,
-  repairManagedSession,
-  repairRun,
   secureNetworkDefault,
-  stopManagedSession,
-  stopRun,
   withLaunchSessionName,
-  writeSessionInput,
   type DashboardStatus,
   type AuthStatusResponse,
   type LaunchRunResponse,
@@ -28,11 +20,8 @@ import {
 } from "@/commands/runhaven"
 
 import { sameDashboardStatus } from "./appStatusEquality"
-import {
-  errorMessage,
-  type LaunchStep,
-  type RunControlAction,
-} from "./types"
+import { errorMessage, type LaunchStep } from "./types"
+import { createSessionActions } from "./sessionActions"
 import { loadSessionsUntilRunPresent } from "./sessionSelection"
 import {
   sameAuthStatusResponse,
@@ -73,6 +62,13 @@ export function useAppController() {
   const statusLoaders = useStatusLoaders()
   const diagnostics = useDiagnosticsState()
   const [error, setError] = useState("")
+  // The agent name the UI currently targets, readable from async refresh
+  // completions. Null until the first refresh applies the default selection;
+  // that null doubles as the "apply defaults exactly once" guard, so two
+  // refreshes racing before the first render commit (a render-closure read of
+  // `dashboard` sees null twice) cannot both take the initializing branch and
+  // reset the user's networkMode/apiKeyBrokerEnv edits or the default agent.
+  const agentNameRef = useRef<string | null>(null)
 
   const derived = useAppDerivedState({
     dashboard,
@@ -121,12 +117,14 @@ export function useAppController() {
           : nextAuthStatus,
       )
       await loadManagedSessions()
-      const initializingDashboard = dashboard === null
+      const initializingDashboard = agentNameRef.current === null
       const agent = initializingDashboard
         ? preferredDefaultAgent(nextDashboard.agents)
-        : nextDashboard.agents.find((item) => item.name === request.agent) ??
-          nextDashboard.agents[0]
+        : nextDashboard.agents.find(
+            (item) => item.name === agentNameRef.current,
+          ) ?? nextDashboard.agents[0]
       if (agent) {
+        agentNameRef.current = agent.name
         setRequest((current) =>
           reconcileRunPlanRequest(
             initializingDashboard
@@ -152,6 +150,7 @@ export function useAppController() {
   }
 
   function changeAgent(agentName: string) {
+    agentNameRef.current = agentName
     const agent = dashboard?.agents.find((item) => item.name === agentName)
     setRequest((current) =>
       agent
@@ -268,100 +267,16 @@ export function useAppController() {
     }
   }
 
-  async function runControl(action: RunControlAction) {
-    if (!selectedSession && !lastLaunch) {
-      return
-    }
-    runControlState.setBusy(true)
-    runControlState.setError("")
-    runControlState.setMessage("")
-    try {
-      if (selectedSession) {
-        const sessionId = selectedSession.id
-        if (action === "stop") {
-          const { result } = await stopManagedSession(sessionId)
-          runControlState.setMessage(`Stop requested for ${result.runId}.`)
-        } else if (action === "kill") {
-          const { result } = await killManagedSession(sessionId)
-          runControlState.setMessage(`Hard stop requested for ${result.runId}.`)
-        } else if (action === "repair") {
-          const { result } = await repairManagedSession(sessionId)
-          runControlState.setMessage(
-            result.markerRemoved
-              ? `Stale session record cleared for ${result.runId}.`
-              : `Repair for ${result.runId}: ${result.status}.`,
-          )
-        } else {
-          const { result } = await cleanupManagedSession(sessionId)
-          runControlState.setMessage(
-            `Cleaned up ${result.target} for ${result.runId}.`,
-          )
-        }
-        await selectedSessionStatus.loadStatus()
-        await loadManagedSessions()
-      } else {
-        const runId = lastLaunch?.runId
-        if (!runId) {
-          return
-        }
-        if (action === "stop") {
-          const result = await stopRun(runId)
-          runControlState.setMessage(`Stop requested for ${result.runId}.`)
-        } else if (action === "kill") {
-          const result = await killRun(runId)
-          runControlState.setMessage(`Hard stop requested for ${result.runId}.`)
-        } else if (action === "repair") {
-          const result = await repairRun(runId)
-          runControlState.setMessage(
-            result.markerRemoved
-              ? `Stale session record cleared for ${result.runId}.`
-              : `Repair for ${result.runId}: ${result.status}.`,
-          )
-        } else {
-          return
-        }
-        await statusLoaders.loadRunStatus(runId)
-        await loadManagedSessions()
-      }
-    } catch (cause) {
-      runControlState.setError(errorMessage(cause))
-    } finally {
-      runControlState.resetConfirmations()
-      runControlState.setBusy(false)
-    }
-  }
-
-  async function refreshAfterWorktree() {
-    await selectedSessionStatus.loadStatus()
-    await loadManagedSessions()
-  }
-
-  async function sendSelectedSessionInput() {
-    if (!selectedSession || sessionInput.sending) {
-      return
-    }
-    const targetSessionId = selectedSession.id
-    const input = sessionInput.draft
-    sessionInput.setSendingFor(targetSessionId, true)
-    sessionInput.setErrorFor(targetSessionId, "")
-    sessionInput.setAcceptedMessageFor(targetSessionId, "")
-    try {
-      const response = await writeSessionInput(targetSessionId, input)
-      sessionInput.setDraftFor(targetSessionId, "")
-      sessionInput.setAcceptedMessageFor(
-        targetSessionId,
-        `Sent ${response.acceptedBytes} bytes.`,
-      )
-      if (selectedSessionIdRef.current === targetSessionId) {
-        await selectedSessionStatus.loadStatus()
-      }
-      await loadManagedSessions()
-    } catch (cause) {
-      sessionInput.setErrorFor(targetSessionId, errorMessage(cause))
-    } finally {
-      sessionInput.setSendingFor(targetSessionId, false)
-    }
-  }
+  const sessionActions = createSessionActions({
+    selectedSession,
+    lastLaunch,
+    selectedSessionIdRef,
+    selectedSessionStatus,
+    sessionInput,
+    runControlState,
+    statusLoaders,
+    loadManagedSessions,
+  })
 
   function changeSessionInputDraft(value: string) {
     sessionInput.changeDraft(value)
@@ -381,7 +296,10 @@ export function useAppController() {
     imageError: statusLoaders.imageError,
     launchConfirmation,
     confirmedWarnings,
-    launchMessage,
+    // The "Run accepted" alert lives only until the launched run shows up as a
+    // managed session; after that the one-line sidebar notice is the durable
+    // affordance, so the alert clears instead of persisting forever.
+    launchMessage: derived.lastLaunchSessionId ? "" : launchMessage,
     lastLaunch,
     lastLaunchSessionId: derived.lastLaunchSessionId,
     managedSessions,
@@ -428,9 +346,9 @@ export function useAppController() {
     reviewPlan,
     setWarningConfirmation,
     startRun,
-    runControl,
-    refreshAfterWorktree,
-    sendSelectedSessionInput,
+    runControl: sessionActions.runControl,
+    refreshAfterWorktree: sessionActions.refreshAfterWorktree,
+    sendSelectedSessionInput: sessionActions.sendSelectedSessionInput,
     loadSelectedSessionDiagnostics: selectedSessionDiagnostics.load,
     loadDiagnostics: diagnostics.load,
     setLaunchConfirmation,

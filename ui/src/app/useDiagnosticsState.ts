@@ -4,12 +4,64 @@ import {
   getAuthLog,
   getAuthStatus,
   getEgressLog,
+  type AuthLogEntry,
   type AuthLogResponse,
+  type AuthProfileStatus,
   type AuthStatusResponse,
+  type EgressLogEntry,
   type EgressLogResponse,
 } from "@/commands/runhaven"
 
 import { errorMessage, type DiagnosticsState } from "./types"
+
+// Compile-time drift guards for the equality helpers below; see
+// appStatusEquality.ts for the pattern.
+const diagnosticsStateChecked = {
+  authStatus: true,
+  authLog: true,
+  egressLog: true,
+} satisfies Record<keyof DiagnosticsState, true>
+void diagnosticsStateChecked
+
+const authStatusResponseChecked = {
+  status: true,
+  runtime: true,
+  profiles: true,
+} satisfies Record<keyof AuthStatusResponse, true>
+void authStatusResponseChecked
+
+const authProfileStatusChecked = {
+  name: true,
+  status: true,
+} satisfies Record<keyof AuthProfileStatus, true>
+void authProfileStatusChecked
+
+const authLogEntryChecked = {
+  timestamp: true,
+  profile: true,
+  broker: true,
+  decision: true,
+  method: true,
+  path: true,
+  upstreamStatus: true,
+  count: true,
+  reason: true,
+  runId: true,
+} satisfies Record<keyof AuthLogEntry, true>
+void authLogEntryChecked
+
+const egressLogEntryChecked = {
+  timestamp: true,
+  profile: true,
+  decision: true,
+  host: true,
+  port: true,
+  count: true,
+  reason: true,
+  matchedRule: true,
+  runId: true,
+} satisfies Record<keyof EgressLogEntry, true>
+void egressLogEntryChecked
 
 export function useDiagnosticsState() {
   const [data, setData] = useState<DiagnosticsState | null>(null)

@@ -1,4 +1,66 @@
-import type { ManagedSessionList, ManagedSessionSummary } from "@/commands/runhaven"
+import type {
+  ManagedSessionCleanup,
+  ManagedSessionEvent,
+  ManagedSessionInput,
+  ManagedSessionList,
+  ManagedSessionNextAction,
+  ManagedSessionSummary,
+} from "@/commands/runhaven"
+
+// Compile-time drift guards for the equality helpers below; see
+// appStatusEquality.ts for the pattern.
+const managedSessionSummaryChecked = {
+  id: true,
+  runId: true,
+  agent: true,
+  session: true,
+  title: true,
+  project: true,
+  status: true,
+  statusLabel: true,
+  authStatus: true,
+  authScope: true,
+  network: true,
+  startedAt: true,
+  containerName: true,
+  detailCommand: true,
+  lifecycle: true,
+  input: true,
+  cleanup: true,
+  nextAction: true,
+  events: true,
+} satisfies Record<keyof ManagedSessionSummary, true>
+void managedSessionSummaryChecked
+
+const managedSessionInputChecked = {
+  attached: true,
+  status: true,
+  detail: true,
+} satisfies Record<keyof ManagedSessionInput, true>
+void managedSessionInputChecked
+
+const managedSessionCleanupChecked = {
+  available: true,
+  target: true,
+  label: true,
+  detail: true,
+} satisfies Record<keyof ManagedSessionCleanup, true>
+void managedSessionCleanupChecked
+
+const managedSessionNextActionChecked = {
+  kind: true,
+  label: true,
+  detail: true,
+} satisfies Record<keyof ManagedSessionNextAction, true>
+void managedSessionNextActionChecked
+
+const managedSessionEventChecked = {
+  source: true,
+  label: true,
+  detail: true,
+  timestamp: true,
+} satisfies Record<keyof ManagedSessionEvent, true>
+void managedSessionEventChecked
 
 export function sameManagedSessionList(
   current: ManagedSessionList,

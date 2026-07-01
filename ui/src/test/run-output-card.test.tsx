@@ -111,6 +111,12 @@ describe("RunOutputCard", () => {
 
     expect(unacknowledged).toContain("Keep output updated");
     expect(unacknowledged).toContain('disabled=""');
+    // The disabled load button points at the ack checkbox so the gate reads as
+    // intentional, not broken.
+    expect(unacknowledged).toContain('aria-describedby="run-output-ack-hint"');
+    expect(unacknowledged).toContain(
+      "To load output, first check the box above to confirm raw output."
+    );
 
     const acknowledged = renderToStaticMarkup(
       <RunOutputCard
@@ -128,5 +134,6 @@ describe("RunOutputCard", () => {
 
     expect(acknowledged).toContain("Updates every few seconds.");
     expect(acknowledged).not.toContain('disabled=""');
+    expect(acknowledged).not.toContain("run-output-ack-hint");
   });
 });

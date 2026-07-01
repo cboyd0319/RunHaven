@@ -31,9 +31,12 @@ describe("MaintenanceCard", () => {
   });
 
   it("keeps preview fallbacks to sanitized counts only", async () => {
+    // The preview starts with one stale network so the confirm-gated cleanup
+    // flow is reachable, then drops to zero after a prune.
     const preview = await getNetworkPrunePreview();
-    expect(preview).toEqual({ count: 0 });
+    expect(preview).toEqual({ count: 1 });
     const outcome = await pruneManagedNetworks();
-    expect(Object.keys(outcome).sort()).toEqual(["failed", "removed"]);
+    expect(outcome).toEqual({ removed: 1, failed: 0 });
+    expect(await getNetworkPrunePreview()).toEqual({ count: 0 });
   });
 });

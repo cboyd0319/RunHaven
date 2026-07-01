@@ -8,7 +8,6 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -25,10 +24,9 @@ export type MaintenanceCardProps = {
 export function MaintenanceCard({ agents }: MaintenanceCardProps) {
   return (
     <Card aria-live="polite">
+      {/* The "Maintenance" accordion header already names this card, so the
+          header carries only the description instead of repeating the title. */}
       <CardHeader>
-        <CardTitle role="heading" aria-level={2}>
-          Maintenance
-        </CardTitle>
         <CardDescription>
           Rebuild an agent image or clean up stale RunHaven networks. Each action
           asks you to confirm before anything changes.

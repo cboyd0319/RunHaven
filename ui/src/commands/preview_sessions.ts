@@ -17,6 +17,9 @@ import type {
 
 let previewManagedSessions: ManagedSessionSummary[] = [];
 let previewSessionLogReads = new Map<string, number>();
+// Preview runs launched with the isolated-copy (worktree) option. Stopping one
+// finishes it with a saved worktree so the review flow is reachable in preview.
+const previewWorktreeSessions = new Set<string>();
 
 export function previewManagedSessionLogSnapshot(
   sessionId: string,
@@ -143,11 +146,40 @@ export function previewManagedStop(sessionId: string): StopManagedSessionRespons
     containerName: session.containerName,
     status: "stop-requested"
   };
-  updatePreviewSessionStatus(sessionId, "stop-requested", "Stop requested");
+  if (previewWorktreeSessions.has(sessionId)) {
+    finishPreviewWorktreeSession(sessionId);
+  } else {
+    updatePreviewSessionStatus(sessionId, "stop-requested", "Stop requested");
+  }
   return {
     session: previewSession(sessionId),
     result
   };
+}
+
+function finishPreviewWorktreeSession(sessionId: string) {
+  updatePreviewSessionStatus(sessionId, "finished", "Finished");
+  previewManagedSessions = previewManagedSessions.map((session) =>
+    session.id === sessionId
+      ? {
+          ...session,
+          cleanup: {
+            available: true,
+            target: "worktree",
+            label: "Discard saved copy",
+            detail: "This session saved an isolated copy of your project."
+          }
+        }
+      : session
+  );
+}
+
+// Merge and discard remove the isolated copy, so the preview session stops
+// offering worktree review afterward.
+export function resolvePreviewSessionWorktree(sessionId: string) {
+  previewManagedSessions = previewManagedSessions.map((session) =>
+    session.id === sessionId ? { ...session, cleanup: undefined } : session
+  );
 }
 
 export function previewManagedKill(sessionId: string): KillManagedSessionResponse {
@@ -218,7 +250,15 @@ export function previewSessionInput(
   };
 }
 
-export function rememberPreviewManagedSession(snapshot: LaunchRunResponse["snapshot"]) {
+export function rememberPreviewManagedSession(
+  snapshot: LaunchRunResponse["snapshot"],
+  worktree = false
+) {
+  if (worktree) {
+    previewWorktreeSessions.add(snapshot.runId);
+  } else {
+    previewWorktreeSessions.delete(snapshot.runId);
+  }
   const project = projectLabel(snapshot.workspace);
   const session: ManagedSessionSummary = {
     id: snapshot.runId,

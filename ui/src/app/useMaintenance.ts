@@ -18,6 +18,31 @@ import { errorMessage } from "./types"
 const BUILD_POLL_MS = 1500
 const SIGN_IN_POLL_MS = 1500
 
+// Compile-time drift guards for the equality helpers below; see
+// appStatusEquality.ts for the pattern.
+const imageBuildStatusChecked = {
+  buildId: true,
+  agent: true,
+  tag: true,
+  state: true,
+  label: true,
+  detail: true,
+  outputTail: true,
+  updatedAt: true,
+} satisfies Record<keyof ImageBuildStatusResponse, true>
+void imageBuildStatusChecked
+
+const agentSignInStatusChecked = {
+  signInId: true,
+  agent: true,
+  state: true,
+  label: true,
+  detail: true,
+  outputTail: true,
+  updatedAt: true,
+} satisfies Record<keyof AgentSignInStatusResponse, true>
+void agentSignInStatusChecked
+
 // The read-only status commands the hook uses are exported so tests can prove
 // the client mapping without driving polling timers.
 export const maintenanceClients = {
@@ -268,7 +293,8 @@ export function useNetworkCleanup() {
       const outcome = await pruneManagedNetworks()
       setResult(outcome)
       setConfirm(false)
-      await loadPreview()
+      // Refresh the count directly; loadPreview would clear the success alert.
+      setCount((await getNetworkPrunePreview()).count)
     } catch (cause) {
       setActionError(errorMessage(cause))
     } finally {

@@ -95,7 +95,8 @@ profiles, and it does not run as root. See
 [docs/SECURITY_MODEL.md](SECURITY_MODEL.md) for the full boundary.
 
 The app says `Run accepted` when it hands the run to the sandbox. The run then
-shows up in your sessions as it comes up.
+shows up in your sessions as it comes up. Once it does, the acceptance notice
+clears and a one-line notice points you at the new session in the sidebar.
 
 ## Watch your sessions
 
@@ -150,7 +151,10 @@ secrets.
 
 The app can show read-only diagnostics for a session: recent sign-in broker
 decisions and network decisions for that run. These show only safe summary
-details, never full paths, secrets, or request bodies.
+details, never full paths, secrets, or request bodies. App-wide diagnostics
+live in a Diagnostics panel on the launch screen; while a session is open, the
+session view shows only that session's diagnostics so there is one surface at
+a time.
 
 ## Maintenance
 

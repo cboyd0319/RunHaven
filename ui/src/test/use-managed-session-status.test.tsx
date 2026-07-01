@@ -134,6 +134,52 @@ describe("useManagedSessionStatus", () => {
     await hook.unmount()
   })
 
+  it("takes a fresh load when an explicit reload arrives during an in-flight poll", async () => {
+    getStatus.mockResolvedValueOnce(status("a"))
+    const hook = await renderHook((id: string) => useManagedSessionStatus(id), "a" as string)
+    expect(hook.result.current.data?.session.id).toBe("a")
+
+    // A background poll hangs in flight (pre-action snapshot).
+    const stale = deferred<ManagedSessionStatusResponse>()
+    getStatus.mockReturnValueOnce(stale.promise)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4_000)
+    })
+
+    // An explicit reload (post-action refresh) must not silently return: it
+    // waits for the in-flight poll, then fetches once more and resolves with
+    // the fresh status.
+    const fresh = status("a", { statusUnavailable: "stopped" })
+    getStatus.mockResolvedValueOnce(fresh)
+    await act(async () => {
+      const explicit = hook.result.current.loadStatus()
+      stale.resolve(status("a"))
+      await explicit
+    })
+    expect(getStatus).toHaveBeenCalledTimes(3)
+    expect(hook.result.current.data?.statusUnavailable).toBe("stopped")
+    await hook.unmount()
+  })
+
+  it("still skips overlapping background polls", async () => {
+    const hanging = deferred<ManagedSessionStatusResponse>()
+    getStatus.mockReturnValueOnce(hanging.promise)
+    const hook = await renderHook((id: string) => useManagedSessionStatus(id), "a" as string)
+
+    // Two poll ticks while the first request is still in flight: no stacking.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8_000)
+    })
+    expect(getStatus).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      hanging.resolve(status("a"))
+      await hanging.promise
+    })
+    expect(hook.result.current.data?.session.id).toBe("a")
+    await hook.unmount()
+  })
+
   it("stops polling after unmount", async () => {
     getStatus.mockResolvedValue(status("a"))
     const hook = await renderHook((id: string) => useManagedSessionStatus(id), "a" as string)

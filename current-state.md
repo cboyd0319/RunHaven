@@ -125,6 +125,26 @@ Useful GUI design docs:
 
 ## Latest State
 
+- The frontend punch list closed (uncommitted; pending lead review): explicit
+  session-status reloads now coalesce onto an in-flight poll and take one
+  follow-up fetch, so post-action success messages never show against stale
+  status; first-load request defaults apply exactly once via an agent-name ref
+  (a double-invoked mount refresh can no longer reset networkMode or the Codex
+  default); every `same*` equality helper now carries a compile-time
+  `satisfies Record<keyof T, true>` checklist so a new backend field fails
+  `tsc` until it is compared (shared `sameRunStatusContainer` replaced the
+  duplicated container comparison); UX: the global Diagnostics accordion hides
+  while a session is open, the duplicate inner Maintenance title is gone, the
+  "Run accepted" alert clears once the run appears as a managed session,
+  Advanced options say "CPU cores" / "Memory (4g = 4 GB)", and the disabled
+  "Load latest output" button points at the ack checkbox with visible helper
+  text (ack gate unchanged); the network-cleanup success alert no longer
+  self-clears (prune refreshes the count without wiping the result); e2e grew
+  to 7/7 covering preview sign-in to `succeeded`, both confirm-gated
+  maintenance flows, and worktree review (preview fixtures now finish a stopped
+  worktree run with a saved copy and one stale preview network);
+  `useAppController` split `sessionActions.ts` out by ownership for the
+  structure gate; 191 unit tests pass.
 - A whole-GUI analysis pass (security, frontend, shell architecture, empirical
   UX with screenshots) ran over the accumulated desktop surface, and its fixes
   landed in three verified waves. Verdict: the trust boundary held under a

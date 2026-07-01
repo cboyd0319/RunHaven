@@ -36,12 +36,17 @@ test("reviews and starts a preview run", async ({ page }) => {
   await page.getByLabel("I reviewed this plan and want to start this run.").check();
   await page.getByRole("button", { name: "Launch run" }).click();
 
-  await expect(page.getByText(/Run accepted: preview-/)).toBeVisible();
   await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
+  // Once the run shows up as a managed session, the "Run accepted" launch
+  // alert clears instead of persisting forever.
+  await expect(page.getByText(/Run accepted: preview-/)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Codex - runhaven-preview" })).toBeVisible();
   await expect(page.getByText("Monitor session")).toBeVisible();
   await expect(page.getByText("Run record")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Message" })).toBeVisible();
+  // The session view has its own Session diagnostics card, so the global
+  // Diagnostics accordion stays on the Start screen only.
+  await expect(page.getByText("Diagnostics", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Load session diagnostics" }).click();
   await expect(page.getByText("Auth state: api-key-broker")).toBeVisible();
   await expect(page.getByText("api.openai.com")).toBeVisible();
@@ -125,12 +130,97 @@ test("keeps selected-session message drafts isolated", async ({ page }) => {
   await expect(page.getByText("beta message")).toHaveCount(0);
 });
 
-async function startPreviewRun(page: Page, workspacePath: string) {
+test("signs in a preview agent from the Agent step", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  // The preview sign-in surfaces the device link and code, then succeeds.
+  await expect(
+    page.getByText("Open https://example.com/device and enter CODE-1234."),
+  ).toBeVisible();
+  await expect(page.getByText("Signed in (preview)")).toBeVisible();
+  await expect(page.getByText("Sign-in complete.")).toBeVisible();
+});
+
+test("runs the maintenance preview flows behind confirm gates", async ({ page }) => {
+  await page.goto("/");
+
+  await page.getByText("Maintenance", { exact: true }).click();
+
+  // Image rebuild stays gated until the user confirms.
+  const rebuildButton = page.getByRole("button", { name: "Rebuild image" });
+  await expect(rebuildButton).toBeDisabled();
+  await page.getByLabel("Confirm agent image rebuild").check();
+  await rebuildButton.click();
+  await expect(page.getByText("Succeeded (preview)")).toBeVisible();
+  await expect(page.getByText("Preview build output.")).toBeVisible();
+
+  // Network cleanup previews a count first, then gates the prune.
+  await page.getByRole("button", { name: "Check for stale networks" }).click();
+  await expect(page.getByText(/Stale RunHaven networks found:/)).toBeVisible();
+  const removeButton = page.getByRole("button", { name: "Remove stale networks" });
+  await expect(removeButton).toBeDisabled();
+  await page.getByLabel("Confirm network cleanup").check();
+  await removeButton.click();
+  await expect(page.getByText("Cleanup finished")).toBeVisible();
+  await expect(page.getByText("Removed 1. Skipped 0 still in use.")).toBeVisible();
+});
+
+test("reviews a finished worktree session with per-action confirm gating", async ({ page }) => {
+  await page.goto("/");
+
+  await startPreviewRun(page, "/tmp/runhaven-worktree", { worktree: true });
+
+  // Stopping the run finishes the preview session with a saved isolated copy.
+  await page.getByLabel("Confirm stopping this session.").check();
+  await page.getByRole("button", { name: "Stop run" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review the isolated copy" }),
+  ).toBeVisible();
+  await expect(page.getByText("2 files changed in the isolated copy.")).toBeVisible();
+
+  // Every action is gated on its own confirmation checkbox.
+  const mergeButton = page.getByRole("button", { name: "Merge into project" });
+  const keepButton = page.getByRole("button", { name: "Keep for later" });
+  await expect(mergeButton).toBeDisabled();
+  await expect(keepButton).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Recover by hand" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Discard changes" })).toBeDisabled();
+
+  // Confirming one action does not unlock the others, and confirmations reset
+  // after the action runs.
+  await page.getByLabel("Confirm keeping the isolated copy for now.").check();
+  await expect(mergeButton).toBeDisabled();
+  await keepButton.click();
+  await expect(
+    page.getByText("Kept the isolated copy so you can review it later."),
+  ).toBeVisible();
+  await expect(keepButton).toBeDisabled();
+
+  // Discard removes the copy, so the review card closes and the session stays.
+  await page.getByLabel("Confirm discarding the isolated copy and its changes.").check();
+  await page.getByRole("button", { name: "Discard changes" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Review the isolated copy" }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
+});
+
+async function startPreviewRun(
+  page: Page,
+  workspacePath: string,
+  { worktree = false } = {},
+) {
   await expect(page.getByRole("heading", { level: 1, name: "Launch" })).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Project folder path").fill(workspacePath);
+  if (worktree) {
+    await page.getByText("Advanced options").click();
+    await page.getByLabel("Run in an isolated copy (git worktree)").check();
+  }
   await page.getByRole("button", { name: "Review access" }).click();
   await page.getByLabel("I reviewed this plan and want to start this run.").check();
   await page.getByRole("button", { name: "Launch run" }).click();
-  await expect(page.getByText(/Run accepted: preview-/)).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
 }
