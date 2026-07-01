@@ -1,7 +1,6 @@
 import {
   apiKeyBrokerEnvForAgent,
   authScopeHelp,
-  authScopeLabels,
   supportsApiKeyBroker,
   type AgentProfile,
   type AuthStatusResponse,
@@ -14,7 +13,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 
-import { authStatusBadgeVariant, authStatusLabel } from "./authDetails"
+import { authStatusBadgeVariant } from "./authDetails"
+import { authScopeLabels, authStatusLabel, safeBackendLabel } from "./labels"
 
 export function AgentAccessSummary({
   agent,
@@ -166,7 +166,7 @@ function authMethodLabel(value: string): string {
   if (value === "n/a") {
     return "Not needed"
   }
-  return value
+  return safeBackendLabel(value, "Unknown")
 }
 
 function brokerCapabilityLabel(agent: AgentProfile): string {

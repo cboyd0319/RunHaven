@@ -6,7 +6,6 @@ import {
   getDashboardStatus,
   getImageStatus,
   getRunStatus,
-  getSetupStatus,
   isLaunchReady,
   launchRun,
   planRun,
@@ -126,13 +125,6 @@ describe("runhaven command helpers", () => {
     expect(named.sessionName).toBe("custom-session");
   });
 
-  it("returns setup preview data outside the Tauri runtime", async () => {
-    const setup = await getSetupStatus();
-
-    expect(setup.ok).toBe(true);
-    expect(setup.checks[0]?.name).toBe("Preview mode");
-  });
-
   it("returns dashboard preview data outside the Tauri runtime", async () => {
     const dashboard = await getDashboardStatus();
 
@@ -148,8 +140,7 @@ describe("runhaven command helpers", () => {
     expect(authStatus.profiles).toEqual(
       expect.arrayContaining([
         { name: "claude", status: "api-key-broker" },
-        { name: "codex", status: "api-key-broker" },
-        { name: "gemini", status: "api-key-broker" }
+        { name: "codex", status: "api-key-broker" }
       ])
     );
   });

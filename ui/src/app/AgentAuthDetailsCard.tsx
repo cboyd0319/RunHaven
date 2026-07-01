@@ -6,11 +6,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
-import {
-  authDetailSections,
-  authStatusBadgeVariant,
-  authStatusLabel,
-} from "./authDetails"
+import { authDetailSections, authStatusBadgeVariant } from "./authDetails"
+import { authStatusLabel } from "./labels"
 import { errorMessage } from "./types"
 
 // On-demand, read-only auth details for the selected agent. State is local and

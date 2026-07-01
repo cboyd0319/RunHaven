@@ -2,7 +2,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 
 import {
-  previewAgents,
   previewAuthExplain,
   previewAuthStatus,
   previewDashboardStatus,
@@ -29,14 +28,12 @@ import {
   previewPlanRun,
   previewRunStatus,
   previewSessionInput,
-  previewSetupStatus,
   previewWhyHost,
   previewWhyNetwork,
   previewWhyState,
   previewWhyWorkspace
 } from "./preview";
 import type {
-  AgentProfile,
   AuthExplainResponse,
   AuthLogResponse,
   AuthStatusResponse,
@@ -64,7 +61,6 @@ import type {
   RepairRunResponse,
   RepairManagedSessionResponse,
   RunStatusResponse,
-  SetupStatus,
   StopManagedSessionResponse,
   StopRunResponse,
   WorktreeActionResponse,
@@ -89,14 +85,6 @@ async function call<T>(command: string, args: Record<string, unknown>, fallback:
     return fallback();
   }
   return invoke<T>(command, args);
-}
-
-export async function getSetupStatus(): Promise<SetupStatus> {
-  return call("get_setup_status", {}, previewSetupStatus);
-}
-
-export async function listAgents(): Promise<AgentProfile[]> {
-  return call("list_agents", {}, previewAgents);
 }
 
 export async function getDashboardStatus(): Promise<DashboardStatus> {

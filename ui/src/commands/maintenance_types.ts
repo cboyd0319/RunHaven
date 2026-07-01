@@ -2,6 +2,21 @@
 // cleanup. Both mirror the sanitized Tauri command responses; counts and
 // bounded, redacted output only, never raw host paths or network names.
 
+// Closed progress states for the two long-running maintenance flows. The wire
+// field stays a raw string because the backend contract is open; these unions
+// name the values the UI reasons about, and `isTerminalState` is the one place
+// that narrows a progress state to "done".
+export type ImageBuildState = "building" | "succeeded" | "failed";
+export type AgentSignInState =
+  | "starting"
+  | "needs_browser"
+  | "succeeded"
+  | "failed";
+
+export function isTerminalState(state: string): boolean {
+  return state === "succeeded" || state === "failed";
+}
+
 export type ImageBuildStartResponse = {
   buildId: string;
   agent: string;
@@ -15,7 +30,7 @@ export type ImageBuildStatusResponse = {
   buildId: string;
   agent: string;
   tag: string;
-  state: "building" | "succeeded" | "failed" | string;
+  state: string;
   label: string;
   detail: string;
   outputTail: string;
@@ -37,7 +52,7 @@ export type AgentSignInStartResponse = {
 export type AgentSignInStatusResponse = {
   signInId: string;
   agent: string;
-  state: "starting" | "needs_browser" | "succeeded" | "failed" | string;
+  state: string;
   label: string;
   detail: string;
   // Bounded, secret-redacted tail of the login output, so the sign-in link and

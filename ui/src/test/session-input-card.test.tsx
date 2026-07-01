@@ -1,10 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import {
-  SessionInputCard,
-  sessionCanAcceptInput
-} from "../app/SessionInputCard";
+import { SessionInputCard } from "../app/SessionInputCard";
 import type { ManagedSessionSummary } from "../commands/runhaven";
 
 function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSummary {
@@ -41,8 +38,6 @@ function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSumm
 
 describe("SessionInputCard", () => {
   it("renders a bounded composer for sessions that can accept input", () => {
-    expect(sessionCanAcceptInput(session())).toBe(true);
-
     const html = renderToStaticMarkup(
       <SessionInputCard
         session={session()}
@@ -73,8 +68,6 @@ describe("SessionInputCard", () => {
       }
     });
 
-    expect(sessionCanAcceptInput(detached)).toBe(false);
-
     const html = renderToStaticMarkup(
       <SessionInputCard
         session={detached}
@@ -102,7 +95,6 @@ describe("SessionInputCard", () => {
       }
     });
 
-    expect(sessionCanAcceptInput(blocked)).toBe(false);
     expect(
       renderToStaticMarkup(
         <SessionInputCard

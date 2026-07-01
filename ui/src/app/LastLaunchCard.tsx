@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
+import { authScopeLabel } from "./labels"
 import { Metric } from "./Metric"
 
 export function LastLaunchCard({ lastLaunch }: { lastLaunch: LaunchRunResponse }) {
@@ -28,15 +29,4 @@ export function LastLaunchCard({ lastLaunch }: { lastLaunch: LaunchRunResponse }
       </CardContent>
     </Card>
   )
-}
-
-function authScopeLabel(value: string): string {
-  switch (value.trim().toLowerCase()) {
-    case "agent":
-      return "Shared agent login"
-    case "project":
-      return "Project session"
-    default:
-      return value.trim() || "Unknown"
-  }
 }

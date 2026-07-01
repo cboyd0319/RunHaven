@@ -15,7 +15,6 @@ import type {
   RunPlanRequest,
   RunPlanResponse,
   RunStatusResponse,
-  SetupStatus,
   StateExplanationResponse,
   WorkspaceExplanationResponse
 } from "./types";
@@ -79,26 +78,6 @@ const mockAgents: AgentProfile[] = [
 ];
 
 let previewRunSequence = 0;
-
-export function previewSetupStatus(): SetupStatus {
-  return {
-    ok: true,
-    blockerCount: 0,
-    sshAvailable: false,
-    checks: [
-      {
-        name: "Preview mode",
-        ok: true,
-        detail: "Tauri runtime is not attached",
-        remedy: "Open the desktop app to read local setup status."
-      }
-    ]
-  };
-}
-
-export function previewAgents(): AgentProfile[] {
-  return mockAgents;
-}
 
 export function previewDashboardStatus(): DashboardStatus {
   return {
@@ -371,13 +350,14 @@ export function previewWhyWorkspace(scope: string): WorkspaceExplanationResponse
 }
 
 export function previewAuthStatus(): AuthStatusResponse {
+  // One profile per mock agent, so the preview never advertises an agent the
+  // launch flow cannot actually offer.
   return {
     status: "preview",
     runtime: "preview",
     profiles: [
       { name: "claude", status: "api-key-broker" },
       { name: "codex", status: "api-key-broker" },
-      { name: "gemini", status: "api-key-broker" },
       { name: "shell", status: "n/a" }
     ]
   };
@@ -407,7 +387,10 @@ export function previewImageBuildStatus(buildId: string): ImageBuildStatusRespon
   };
 }
 
+const previewSignInReads = new Map<string, number>();
+
 export function previewAgentSignInStart(agent: string): AgentSignInStartResponse {
+  previewSignInReads.delete(`preview-sign-in-${agent}`);
   return {
     signInId: `preview-sign-in-${agent}`,
     agent,
@@ -418,14 +401,29 @@ export function previewAgentSignInStart(agent: string): AgentSignInStartResponse
 }
 
 export function previewAgentSignInStatus(signInId: string): AgentSignInStatusResponse {
+  // Progress across polls so the browser-preview and e2e paths can cover a
+  // successful sign-in: the first poll shows the device link, the next succeeds.
+  const reads = (previewSignInReads.get(signInId) ?? 0) + 1;
+  previewSignInReads.set(signInId, reads);
+  if (reads <= 1) {
+    return {
+      signInId,
+      agent: "preview",
+      state: "needs_browser",
+      label: "Open your browser",
+      detail: "Preview mode: sign-in progress is simulated.",
+      outputTail: "Open https://example.com/device and enter CODE-1234.",
+      updatedAt: "1970-01-01T00:00:00Z"
+    };
+  }
   return {
     signInId,
     agent: "preview",
-    state: "needs_browser",
-    label: "Open your browser",
-    detail: "Preview mode: sign-in progress is simulated.",
-    outputTail: "Open https://example.com/device and enter CODE-1234.",
-    updatedAt: "1970-01-01T00:00:00Z"
+    state: "succeeded",
+    label: "Signed in",
+    detail: "Preview mode: simulated sign-in finished.",
+    outputTail: "Sign-in complete.",
+    updatedAt: "1970-01-01T00:00:01Z"
   };
 }
 

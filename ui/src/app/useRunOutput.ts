@@ -23,7 +23,13 @@ export function useRunOutput({
 }) {
   const [snapshot, setSnapshot] = useState<LogSnapshotResponse | null>(null)
   const [snapshotTargetId, setSnapshotTargetId] = useState<string | null>(null)
-  const [acknowledged, setAcknowledged] = useState(false)
+  // The acknowledgement is bound to the target it was given for. Deriving
+  // `acknowledged` from a target match means a target change flips it false in
+  // the same render, before any effect runs, so the live poll can never fetch
+  // bounded output for a target the user has not re-acknowledged. Fail-closed.
+  const [acknowledgedTargetId, setAcknowledgedTargetId] = useState<string | null>(
+    null,
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [liveEnabled, setLiveEnabled] = useState(false)
@@ -31,6 +37,13 @@ export function useRunOutput({
   const targetRef = useRef<string | null>(targetId)
   const requestInFlight = useRef(false)
 
+  const acknowledged = targetId !== null && acknowledgedTargetId === targetId
+  const setAcknowledged = useCallback(
+    (value: boolean) => {
+      setAcknowledgedTargetId(value ? targetId : null)
+    },
+    [targetId],
+  )
   const visibleSnapshot = snapshotTargetId === targetId ? snapshot : null
   const liveAvailable = Boolean(sessionId)
 
@@ -124,7 +137,7 @@ export function useRunOutput({
   }, [targetId])
 
   useEffect(() => {
-    setAcknowledged(false)
+    setAcknowledgedTargetId(null)
     setSnapshot(null)
     setSnapshotTargetId(null)
     setError("")

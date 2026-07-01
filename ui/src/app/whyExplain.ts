@@ -5,6 +5,8 @@ import type {
   WorkspaceExplanationResponse,
 } from "@/commands/runhaven"
 
+import { safeBackendLabel } from "./labels"
+
 // Pure mapping and label helpers for the read-only "Why is this safe?" panel.
 // The backend contracts are already secret-free and path-free; these helpers
 // only turn them into beginner-friendly labels and drop empty rows. No secret,
@@ -32,7 +34,7 @@ export function decisionLabel(decision: string): string {
     case "":
       return "Unknown"
     default:
-      return decision
+      return safeBackendLabel(decision, "Unknown")
   }
 }
 

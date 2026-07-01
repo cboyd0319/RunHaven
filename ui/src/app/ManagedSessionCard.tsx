@@ -1,6 +1,10 @@
 import { CircleAlert, ShieldCheck } from "lucide-react"
 
-import type { ManagedSessionSummary } from "@/commands/runhaven"
+import type {
+  ManagedSessionSummary,
+  SessionLifecycle,
+  SessionNextActionKind,
+} from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -12,12 +16,8 @@ import {
 } from "@/components/ui/card"
 
 import { Metric } from "./Metric"
-import {
-  authLabel,
-  authScopeLabel,
-  displayValue,
-  networkLabel,
-} from "./sessionIdentity"
+import { authScopeLabel, authStatusLabel, networkLabel } from "./labels"
+import { displayValue } from "./sessionIdentity"
 
 export function ManagedSessionCard({
   session,
@@ -66,7 +66,7 @@ export function ManagedSessionCard({
           <Metric label="Project" value={displayValue(session.project)} />
           <Metric label="Session" value={displayValue(session.session)} />
           <Metric label="Status" value={displayValue(session.statusLabel)} />
-          <Metric label="Auth" value={authLabel(session.authStatus)} />
+          <Metric label="Auth" value={authStatusLabel(session.authStatus)} />
           <Metric label="Login state" value={authScopeLabel(session.authScope)} />
           <Metric label="Network" value={networkLabel(session.network)} />
           <Metric label="Started" value={displayValue(session.startedAt)} />
@@ -105,21 +105,28 @@ export function ManagedSessionCard({
   )
 }
 
+// The next-action kinds that mean the session needs the user, and the lifecycle
+// states that still accept run controls. `satisfies` ties each literal set to
+// the closed union at the commands boundary, so a typo or a dropped backend
+// value is a compile error; the Set keeps the runtime check a simple lookup.
+const ATTENTION_ACTION_KINDS = new Set<string>([
+  "auth_attention",
+  "recover",
+] satisfies SessionNextActionKind[])
+
+const RUN_CONTROL_LIFECYCLES = new Set<string>([
+  "running",
+  "starting",
+  "stop-requested",
+  "kill-requested",
+] satisfies SessionLifecycle[])
+
 export function sessionNeedsAttention(session: ManagedSessionSummary): boolean {
-  return (
-    session.nextAction.kind === "auth_attention" ||
-    session.nextAction.kind === "recover"
-  )
+  return ATTENTION_ACTION_KINDS.has(session.nextAction.kind)
 }
 
 export function sessionAllowsRunControl(session: ManagedSessionSummary): boolean {
-  const lifecycle = session.lifecycle.trim().toLowerCase()
-  return (
-    lifecycle === "running" ||
-    lifecycle === "starting" ||
-    lifecycle === "stop-requested" ||
-    lifecycle === "kill-requested"
-  )
+  return RUN_CONTROL_LIFECYCLES.has(session.lifecycle.trim().toLowerCase())
 }
 
 export function sessionAllowsCleanup(session: ManagedSessionSummary): boolean {

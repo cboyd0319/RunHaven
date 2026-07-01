@@ -10,12 +10,13 @@ const steps: Array<{ id: LaunchStep; title: string; description: string }> = [
 
 export function LaunchSteps({ step }: { step: LaunchStep }) {
   return (
-    <div className="grid gap-2 rounded-lg border p-3 text-sm sm:grid-cols-3">
+    <ol className="grid list-none gap-2 rounded-lg border p-3 text-sm sm:grid-cols-3">
       {steps.map((item) => {
         const active = item.id === step
         return (
-          <div
+          <li
             key={item.id}
+            aria-current={active ? "step" : undefined}
             className={cn(
               "rounded-md p-2",
               active ? "bg-accent text-accent-foreground" : "text-muted-foreground",
@@ -25,9 +26,9 @@ export function LaunchSteps({ step }: { step: LaunchStep }) {
             <div className={cn("text-muted-foreground", active && "text-accent-foreground")}>
               {item.description}
             </div>
-          </div>
+          </li>
         )
       })}
-    </div>
+    </ol>
   )
 }

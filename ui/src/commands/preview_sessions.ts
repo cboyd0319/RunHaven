@@ -1,4 +1,5 @@
 import { previewLogSnapshot } from "./preview_output";
+import { MAX_SESSION_INPUT_BYTES, sessionInputBytes } from "./types";
 import type {
   CleanupManagedSessionResponse,
   KillManagedSessionResponse,
@@ -16,7 +17,6 @@ import type {
 
 let previewManagedSessions: ManagedSessionSummary[] = [];
 let previewSessionLogReads = new Map<string, number>();
-const MAX_SESSION_INPUT_BYTES = 8 * 1024;
 
 export function previewManagedSessionLogSnapshot(
   sessionId: string,
@@ -350,10 +350,6 @@ function validatePreviewSessionInput(input: string) {
   if (containsTerminalEscape(input)) {
     throw new Error("session input contains a terminal escape sequence");
   }
-}
-
-function sessionInputBytes(input: string): number {
-  return new TextEncoder().encode(input).length;
 }
 
 function containsTerminalEscape(input: string): boolean {

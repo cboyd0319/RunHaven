@@ -26,8 +26,6 @@ const FORBIDDEN_HOST_MARKERS = [
 ];
 const EXPECTED_TAURI_MODULES = ["@tauri-apps/api/core", "@tauri-apps/plugin-dialog"];
 const EXPECTED_INVOKED_COMMANDS = [
-  "get_setup_status",
-  "list_agents",
   "get_dashboard_status",
   "get_image_status",
   "rebuild_agent_image",

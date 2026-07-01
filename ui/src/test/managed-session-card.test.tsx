@@ -8,7 +8,7 @@ import {
   sessionNeedsAttention
 } from "../app/ManagedSessionCard";
 import { sameManagedSessionList } from "../app/sessionList";
-import { authLabel } from "../app/sessionIdentity";
+import { authStatusLabel } from "../app/labels";
 import type { ManagedSessionSummary } from "../commands/runhaven";
 
 function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSummary {
@@ -144,7 +144,7 @@ describe("ManagedSessionCard", () => {
         <ManagedSessionCard session={session({ authStatus, events: [] })} />
       );
 
-      expect(authLabel(authStatus)).toBe(label);
+      expect(authStatusLabel(authStatus)).toBe(label);
       expect(html).toContain(
         `class="mt-1 break-all font-medium">${label}</div>`
       );

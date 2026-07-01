@@ -10,26 +10,6 @@ export type AuthDetailSection = {
   items: string[]
 }
 
-export function authStatusLabel(status: string): string {
-  switch (status.trim().toLowerCase()) {
-    case "api-key-broker":
-    case "brokered":
-      return "API key broker"
-    case "ready":
-    case "available":
-      return "Ready"
-    case "n/a":
-      return "Not needed"
-    case "-":
-    case "":
-      return "Unknown"
-    case "design-only":
-      return "Not ready"
-    default:
-      return status
-  }
-}
-
 export function authStatusBadgeVariant(
   status: string,
 ): "destructive" | "secondary" | "success" | "warning" {

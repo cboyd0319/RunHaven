@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  authDetailSections,
-  authStatusBadgeVariant,
-  authStatusLabel,
-} from "../app/authDetails";
+import { authDetailSections, authStatusBadgeVariant } from "../app/authDetails";
+import { authStatusLabel } from "../app/labels";
 import type { AuthExplainResponse } from "../commands/runhaven";
 
 function response(overrides: Partial<AuthExplainResponse> = {}): AuthExplainResponse {
@@ -26,7 +23,7 @@ describe("authStatusLabel", () => {
   it("maps known statuses to beginner-friendly text", () => {
     expect(authStatusLabel("api-key-broker")).toBe("API key broker");
     expect(authStatusLabel("design-only")).toBe("Not ready");
-    expect(authStatusLabel("n/a")).toBe("Not needed");
+    expect(authStatusLabel("n/a")).toBe("No auth needed");
   });
 
   it("treats missing status as unknown", () => {
@@ -34,8 +31,8 @@ describe("authStatusLabel", () => {
     expect(authStatusLabel("")).toBe("Unknown");
   });
 
-  it("passes through an unrecognized status unchanged", () => {
-    expect(authStatusLabel("custom")).toBe("custom");
+  it("guards and title-cases an unrecognized status", () => {
+    expect(authStatusLabel("custom")).toBe("Custom");
   });
 });
 

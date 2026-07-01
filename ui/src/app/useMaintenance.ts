@@ -4,6 +4,7 @@ import {
   getAgentSignInStatus,
   getImageBuildStatus,
   getNetworkPrunePreview,
+  isTerminalState,
   pruneManagedNetworks,
   rebuildAgentImage,
   startAgentSignIn,
@@ -26,10 +27,6 @@ export const maintenanceClients = {
   pruneManagedNetworks,
   startAgentSignIn,
   getAgentSignInStatus,
-}
-
-function isTerminal(state: string): boolean {
-  return state === "succeeded" || state === "failed"
 }
 
 function sameImageBuildStatus(
@@ -89,7 +86,7 @@ export function useImageRebuild() {
           setStatus((current) =>
             current && sameImageBuildStatus(current, next) ? current : next,
           )
-          if (isTerminal(next.state)) {
+          if (isTerminalState(next.state)) {
             terminalRef.current = true
             active = false
             clearInterval(timer)
@@ -117,7 +114,7 @@ export function useImageRebuild() {
     terminalRef.current = false
     try {
       const started = await rebuildAgentImage(agent)
-      terminalRef.current = isTerminal(started.state)
+      terminalRef.current = isTerminalState(started.state)
       setStatus({
         buildId: started.buildId,
         agent: started.agent,
@@ -184,7 +181,7 @@ export function useAgentSignIn(onSignedIn?: () => void) {
           setStatus((current) =>
             current && sameAgentSignInStatus(current, next) ? current : next,
           )
-          if (isTerminal(next.state)) {
+          if (isTerminalState(next.state)) {
             terminalRef.current = true
             active = false
             clearInterval(timer)
@@ -217,7 +214,7 @@ export function useAgentSignIn(onSignedIn?: () => void) {
     terminalRef.current = false
     try {
       const started = await startAgentSignIn(agent)
-      terminalRef.current = isTerminal(started.state)
+      terminalRef.current = isTerminalState(started.state)
       setStatus({
         signInId: started.signInId,
         agent: started.agent,

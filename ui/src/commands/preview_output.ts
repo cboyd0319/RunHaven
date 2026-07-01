@@ -8,6 +8,7 @@ export function previewLogSnapshot(
   const text = patch.text ?? "Preview log line one\nPreview log line two\n";
   const capturedAt = patch.capturedAt ?? patch.cursor ?? "preview";
   const cursor = patch.cursor ?? capturedAt;
+  const lineCount = text.split("\n").filter(Boolean).length;
   return {
     runId,
     capturedAt,
@@ -18,11 +19,11 @@ export function previewLogSnapshot(
         source: "container-stdio",
         timestamp: capturedAt,
         text,
-        lineCount: text.split("\n").filter(Boolean).length
+        lineCount
       }
     ],
     text,
-    returnedLines: 2,
+    returnedLines: lineCount,
     truncated: false,
     source: "container-stdio",
     warnings: ["Raw container output can contain secrets or workspace content."]

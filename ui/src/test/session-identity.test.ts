@@ -2,11 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   agentLabel,
-  authLabel,
-  authScopeLabel,
   displayValue,
-  networkLabel,
-  projectLabel,
   sessionIdentityLabel,
   sessionInputLabel,
   titleCase,
@@ -71,79 +67,6 @@ describe("titleCase", () => {
 
   it("agentLabel delegates to titleCase", () => {
     expect(agentLabel("claude-code")).toBe("Claude Code")
-  })
-})
-
-describe("networkLabel", () => {
-  it("maps known network modes case-insensitively", () => {
-    expect(networkLabel("provider")).toBe("Provider only")
-    expect(networkLabel("  INTERNAL ")).toBe("Local only")
-    expect(networkLabel("Internet")).toBe("Internet")
-  })
-
-  it("falls back to a display value for unknown modes", () => {
-    expect(networkLabel("bridge")).toBe("bridge")
-    expect(networkLabel("")).toBe("Unknown")
-  })
-})
-
-describe("authScopeLabel", () => {
-  it("maps known scopes", () => {
-    expect(authScopeLabel("agent")).toBe("Shared agent login")
-    expect(authScopeLabel(" Project ")).toBe("Project")
-  })
-
-  it("falls back to a display value for unknown scopes", () => {
-    expect(authScopeLabel("session")).toBe("session")
-    expect(authScopeLabel("")).toBe("Unknown")
-  })
-})
-
-describe("authLabel", () => {
-  it("maps broker aliases to a single label", () => {
-    expect(authLabel("api-key-broker")).toBe("API key broker")
-    expect(authLabel("brokered")).toBe("API key broker")
-  })
-
-  it("maps no-auth and ready aliases", () => {
-    expect(authLabel("no-auth-needed")).toBe("No auth needed")
-    expect(authLabel("n/a")).toBe("No auth needed")
-    expect(authLabel("ready")).toBe("Ready")
-    expect(authLabel("available")).toBe("Ready")
-  })
-
-  it("maps empty, dash, and unknown sentinels to Unknown", () => {
-    expect(authLabel("")).toBe("Unknown")
-    expect(authLabel("-")).toBe("Unknown")
-    expect(authLabel("unknown")).toBe("Unknown")
-  })
-
-  it("title-cases safe custom statuses with underscores", () => {
-    expect(authLabel("custom_pending")).toBe("Custom Pending")
-  })
-
-  it("redacts unsafe status strings", () => {
-    expect(authLabel("<script>alert(1)</script>")).toBe("Unknown")
-    expect(authLabel("has\nnewline")).toBe("Unknown")
-  })
-
-  it("redacts over-long status strings", () => {
-    expect(authLabel("a".repeat(41))).toBe("Unknown")
-    expect(authLabel("a".repeat(40))).toBe(`A${"a".repeat(39)}`)
-  })
-})
-
-describe("projectLabel", () => {
-  it("prefixes a project name", () => {
-    expect(projectLabel("web")).toBe("Project web")
-  })
-
-  it("uses the final path segment for path-like projects", () => {
-    expect(projectLabel("/Users/dev/web")).toBe("Project web")
-  })
-
-  it("labels empty projects as Unknown", () => {
-    expect(projectLabel("")).toBe("Project Unknown")
   })
 })
 

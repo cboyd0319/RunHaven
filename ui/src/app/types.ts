@@ -15,12 +15,6 @@ export type RunControlAction = "stop" | "kill" | "repair" | "cleanup"
 
 export type LaunchStep = "agent" | "project" | "review"
 
-export const networkLabels: Record<RunPlanRequest["networkMode"], string> = {
-  provider: "Provider allowlist",
-  internal: "Local only",
-  internet: "Full internet",
-}
-
 export function networkHelp(mode: RunPlanRequest["networkMode"]): string {
   if (mode === "provider") {
     return "Only reviewed provider hosts."

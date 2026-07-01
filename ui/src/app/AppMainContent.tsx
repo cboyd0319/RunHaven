@@ -34,6 +34,7 @@ import { RunStatusCard } from "./RunStatusCard"
 import { SessionInputCard } from "./SessionInputCard"
 import { SetupCard } from "./SetupCard"
 import type { DiagnosticsState, LaunchStep, RunControlAction } from "./types"
+import { useFocusOnChange } from "./useFocusOnChange"
 import type { useRunOutput } from "./useRunOutput"
 import { useWorktreeReview } from "./useWorktreeReview"
 import { sessionAllowsWorktreeReview } from "./worktreeReview"
@@ -182,8 +183,21 @@ function SessionView(
     cleanupAvailable ||
     Boolean(props.controlMessage || props.controlError)
 
+  // Land focus on this view when a session is opened (launch success or sidebar
+  // select) and again when the worktree review resolves and its card unmounts,
+  // so keyboard and AT users are not dropped onto <body>.
+  const focusRef = useFocusOnChange<HTMLDivElement>(
+    `${props.selectedSession.id}:${worktreeReviewEligible}`,
+    { focusOnMount: true },
+  )
+
   return (
-    <>
+    <div
+      ref={focusRef}
+      tabIndex={-1}
+      aria-label="Session details"
+      className="flex flex-col gap-4 outline-none"
+    >
       <ManagedSessionCard session={props.selectedSession} />
       {worktreeReviewEligible ? (
         <SessionWorktreeReview
@@ -230,13 +244,16 @@ function SessionView(
         />
       ) : null}
       <OutputView runOutput={props.runOutput} />
-    </>
+    </div>
   )
 }
 
 function LaunchView(props: AppMainContentProps) {
-  if (props.launchStep === "review" && props.plan) {
-    return (
+  // Focus the launch view when the step changes (Back/Continue/Review), but not
+  // on first paint since the launch view can be the initial screen.
+  const focusRef = useFocusOnChange<HTMLDivElement>(props.launchStep)
+  const content =
+    props.launchStep === "review" && props.plan ? (
       <PlanReviewCard
         plan={props.plan}
         launchConfirmation={props.launchConfirmation}
@@ -250,28 +267,36 @@ function LaunchView(props: AppMainContentProps) {
         onBack={() => props.onLaunchStepChange("project")}
         onStart={props.onStart}
       />
+    ) : (
+      <LaunchPlanCard
+        step={props.launchStep === "review" ? "project" : props.launchStep}
+        agents={props.dashboard?.agents ?? []}
+        request={props.request}
+        selectedAgent={props.selectedAgent}
+        authStatus={props.authStatus}
+        imageLoading={props.imageLoading}
+        imageStatus={props.imageStatus}
+        imageError={props.imageError}
+        planning={props.planning}
+        onAgentChange={props.onAgentChange}
+        onPickFolder={props.onPickFolder}
+        onRequestChange={props.onRequestChange}
+        onNetworkChange={props.onNetworkChange}
+        onBack={() => props.onLaunchStepChange("agent")}
+        onContinue={() => props.onLaunchStepChange("project")}
+        onReviewPlan={props.onReviewPlan}
+        onSignedIn={props.onSignedIn}
+      />
     )
-  }
   return (
-    <LaunchPlanCard
-      step={props.launchStep === "review" ? "project" : props.launchStep}
-      agents={props.dashboard?.agents ?? []}
-      request={props.request}
-      selectedAgent={props.selectedAgent}
-      authStatus={props.authStatus}
-      imageLoading={props.imageLoading}
-      imageStatus={props.imageStatus}
-      imageError={props.imageError}
-      planning={props.planning}
-      onAgentChange={props.onAgentChange}
-      onPickFolder={props.onPickFolder}
-      onRequestChange={props.onRequestChange}
-      onNetworkChange={props.onNetworkChange}
-      onBack={() => props.onLaunchStepChange("agent")}
-      onContinue={() => props.onLaunchStepChange("project")}
-      onReviewPlan={props.onReviewPlan}
-      onSignedIn={props.onSignedIn}
-    />
+    <div
+      ref={focusRef}
+      tabIndex={-1}
+      aria-label="Launch a run"
+      className="flex flex-col gap-4 outline-none"
+    >
+      {content}
+    </div>
   )
 }
 

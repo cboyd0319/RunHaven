@@ -130,9 +130,9 @@ describe("LaunchPlanCard", () => {
   it("warns that full internet access is only allowed after a warning", () => {
     const html = renderToStaticMarkup(<LaunchPlanCard {...projectProps()} />);
 
-    expect(html).toContain("Full internet");
+    expect(html).toContain("Internet");
     expect(html).toContain("Allowed only after warning.");
-    expect(html).toContain("Provider allowlist");
+    expect(html).toContain("Provider only");
     expect(html).toContain("Only reviewed provider hosts.");
   });
 

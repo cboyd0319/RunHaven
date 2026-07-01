@@ -1,6 +1,10 @@
 import { CheckCircle2, CircleAlert, Send } from "lucide-react"
 
-import type { ManagedSessionSummary } from "@/commands/runhaven"
+import {
+  MAX_SESSION_INPUT_BYTES,
+  sessionInputBytes,
+  type ManagedSessionSummary,
+} from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -11,8 +15,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-
-const MAX_SESSION_INPUT_BYTES = 8 * 1024
 
 export function SessionInputCard({
   session,
@@ -115,12 +117,4 @@ export function SessionInputCard({
       </CardContent>
     </Card>
   )
-}
-
-export function sessionCanAcceptInput(session: ManagedSessionSummary): boolean {
-  return session.nextAction.kind === "monitor" && session.input.attached
-}
-
-function sessionInputBytes(input: string): number {
-  return new TextEncoder().encode(input).length
 }

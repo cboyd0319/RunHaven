@@ -1,6 +1,6 @@
 import { CircleAlert, FileText, GitBranch, ShieldCheck } from "lucide-react"
 
-import { authScopeLabels, type RunPlanResponse } from "@/commands/runhaven"
+import type { RunPlanResponse } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table"
 
+import { authScopeLabel } from "./labels"
 import { LaunchSteps } from "./LaunchSteps"
 
 type PlanReviewCardProps = {
@@ -140,17 +141,17 @@ export function PlanReviewCard({
         </label>
 
         {!setupOk ? (
-          <p className="text-sm text-muted-foreground">
+          <p id="launch-reason-setup" className="text-sm text-muted-foreground">
             Fix setup blockers before launching a run.
           </p>
         ) : null}
         {!launchImageReady ? (
-          <p className="text-sm text-muted-foreground">
+          <p id="launch-reason-image" className="text-sm text-muted-foreground">
             Fix image readiness before launching a run.
           </p>
         ) : null}
         {plan.access.blocking ? (
-          <p className="text-sm text-muted-foreground">
+          <p id="launch-reason-access" className="text-sm text-muted-foreground">
             Fix access before launching a run.
           </p>
         ) : null}
@@ -162,6 +163,11 @@ export function PlanReviewCard({
           <Button
             type="button"
             disabled={!launchReady || launching}
+            aria-describedby={launchBlockedReasonIds(
+              setupOk,
+              launchImageReady,
+              plan.access.blocking,
+            )}
             onClick={() => void onStart()}
           >
             {launching ? "Launching..." : "Launch run"}
@@ -172,10 +178,17 @@ export function PlanReviewCard({
   )
 }
 
-function authScopeLabel(value: string): string {
-  const scope = value.trim().toLowerCase()
-  if (scope === "agent" || scope === "project") {
-    return authScopeLabels[scope]
-  }
-  return value.trim() || "Unknown"
+// Point the disabled "Launch run" button at whichever blocking reasons are on
+// screen, so assistive tech reads why it cannot be pressed.
+function launchBlockedReasonIds(
+  setupOk: boolean,
+  launchImageReady: boolean,
+  accessBlocking: boolean,
+): string | undefined {
+  const ids = [
+    setupOk ? null : "launch-reason-setup",
+    launchImageReady ? null : "launch-reason-image",
+    accessBlocking ? "launch-reason-access" : null,
+  ].filter((id): id is string => id !== null)
+  return ids.length > 0 ? ids.join(" ") : undefined
 }

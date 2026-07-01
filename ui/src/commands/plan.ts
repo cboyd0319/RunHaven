@@ -58,11 +58,6 @@ export function defaultRunPlanRequest(agent: AgentProfile | undefined): RunPlanR
   };
 }
 
-export const authScopeLabels: Record<RunPlanRequest["authScope"], string> = {
-  agent: "Shared agent login",
-  project: "Project session"
-};
-
 export function authScopeHelp(scope: RunPlanRequest["authScope"]): string {
   if (scope === "agent") {
     return "Reuse the login from runhaven login for this agent across projects on this Mac.";

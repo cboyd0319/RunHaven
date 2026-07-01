@@ -33,8 +33,9 @@ import {
   ImageReadiness,
 } from "./LaunchAccess"
 import { WhyBoundaryCard } from "./WhyBoundaryCard"
+import { networkLabels } from "./labels"
 import { LaunchSteps } from "./LaunchSteps"
-import { networkHelp, networkLabels } from "./types"
+import { networkHelp } from "./types"
 import type { LaunchStep } from "./types"
 
 type LaunchPlanCardProps = {

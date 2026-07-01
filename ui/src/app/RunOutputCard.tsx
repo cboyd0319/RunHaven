@@ -13,6 +13,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 
 import { Metric } from "./Metric"
+import { displayValue } from "./sessionIdentity"
 
 export function RunOutputCard({
   logAcknowledged,
@@ -172,8 +173,4 @@ function outputSourceLabel(source: string): string {
     default:
       return displayValue(source)
   }
-}
-
-function displayValue(value: string): string {
-  return value.trim() || "Unknown"
 }

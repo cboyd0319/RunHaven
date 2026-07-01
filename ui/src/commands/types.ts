@@ -51,10 +51,14 @@ export type DashboardStatus = {
   warnings: string[];
 };
 
+// Known image states. The wire field stays a raw string (open backend
+// contract); the union names the values the UI understands.
+export type ProfileImageState = "ok" | "missing" | "stale";
+
 export type ProfileImageStatus = {
   agent: string;
   image: string;
-  status: "ok" | "missing" | "stale" | string;
+  status: string;
   ready: boolean;
   expectedSourceDigest: string;
   localSourceDigest: string | null;
@@ -217,6 +221,25 @@ export type WriteSessionInputResponse = {
   status: string;
 };
 
+// Known managed-session lifecycle and next-action values. The wire fields stay
+// raw strings (open backend contract); these unions name the values the UI
+// reasons about, and the session guards in ManagedSessionCard validate their
+// literal sets against them with `satisfies`.
+export type SessionLifecycle =
+  | "starting"
+  | "running"
+  | "stop-requested"
+  | "kill-requested"
+  | "finished"
+  | "failed"
+  | "removed"
+  | "cleaned-up";
+
+export type SessionNextActionKind =
+  | "monitor"
+  | "auth_attention"
+  | "recover";
+
 export type ManagedSessionSummary = {
   id: string;
   runId: string;
@@ -273,6 +296,14 @@ export type LogSnapshotOptions = {
   lines?: number;
   confirmSensitiveOutput: boolean;
 };
+
+// Bounded session-input contract, shared by the composer and the browser
+// preview so the byte ceiling has a single source of truth.
+export const MAX_SESSION_INPUT_BYTES = 8 * 1024;
+
+export function sessionInputBytes(input: string): number {
+  return new TextEncoder().encode(input).length;
+}
 
 export type RunPlanRequest = {
   agent: string;
@@ -360,9 +391,13 @@ export type LaunchRunResponse = {
   snapshot: StartedRunSnapshot;
 };
 
+// Known launch states. The wire field stays a raw string (open backend
+// contract); the union names the values the UI understands.
+export type LaunchState = "starting" | "running" | "finished" | "failed";
+
 export type LaunchStatusResponse = {
   runId: string;
-  state: "starting" | "running" | "finished" | "failed" | string;
+  state: string;
   label: string;
   detail: string;
   updatedAt: string;

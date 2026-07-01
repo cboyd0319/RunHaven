@@ -8,6 +8,7 @@ import {
 } from "@/commands/runhaven"
 
 import { sameManagedSession } from "./sessionList"
+import { errorMessage } from "./types"
 
 const MANAGED_SESSION_STATUS_POLL_MS = 4_000
 
@@ -159,8 +160,4 @@ function sameContainerStatus(
       )
     })
   )
-}
-
-function errorMessage(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause)
 }

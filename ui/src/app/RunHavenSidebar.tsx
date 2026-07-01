@@ -24,10 +24,13 @@ import {
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 
 import {
-  agentLabel,
-  authLabel,
   authScopeLabel,
+  authStatusLabel,
   networkLabel,
+  safeBackendLabel,
+} from "./labels"
+import {
+  agentLabel,
   sessionIdentityLabel,
   sessionInputLabel,
 } from "./sessionIdentity"
@@ -130,7 +133,7 @@ export function RunHavenSidebar({
                                   {sessionIdentityLabel(session)}
                                 </div>
                                 <div className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                                  {authLabel(session.authStatus)}
+                                  {authStatusLabel(session.authStatus)}
                                   {" • "}
                                   {authScopeLabel(session.authScope)}
                                 </div>
@@ -142,7 +145,7 @@ export function RunHavenSidebar({
                               </div>
                             </SidebarMenuButton>
                             <SidebarMenuBadge className="max-w-20 truncate">
-                              {session.statusLabel}
+                              {safeBackendLabel(session.statusLabel, "Unknown")}
                             </SidebarMenuBadge>
                           </SidebarMenuItem>
                         )
