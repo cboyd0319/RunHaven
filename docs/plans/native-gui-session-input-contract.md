@@ -155,6 +155,20 @@ Multi-session:
 
 ## Required Tests Before Exposing A Command
 
+Current preflight coverage:
+
+- `WriteSessionInputRequest`, `WriteSessionInputResponse`, and
+  `write_session_input_for_test` exist only for Rust tests.
+- The test seam resolves the backend-owned session ID before a write can be
+  accepted.
+- It rejects unknown sessions, oversized session IDs, missing confirmation,
+  empty input, input above 8 KiB, NUL bytes, terminal escape sequences, stale
+  frontend targets, and auth-attention sessions before any write callback runs.
+- It accepts only a ready managed session whose backend-owned next action is
+  `monitor`.
+- It still exposes no Tauri command, no capability grant, and no frontend input
+  path.
+
 Rust/Tauri:
 
 - unknown session ID is rejected before any write attempt;

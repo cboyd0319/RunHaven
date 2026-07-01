@@ -4,7 +4,7 @@ use super::*;
 use crate::contracts::{
     KillManagedSessionRequest, KillRunResponse, LogSnapshotRequest,
     ManagedSessionLogSnapshotRequest, RepairManagedSessionRequest, RepairRunResponse,
-    StopManagedSessionRequest, StopRunResponse,
+    StopManagedSessionRequest, StopRunResponse, WriteSessionInputRequest,
 };
 use runhaven_core::runtime::active::write_active_run_payload;
 use runhaven_core::support::paths::{CacheRootOverride, override_cache_root_for_tests};
@@ -653,6 +653,182 @@ fn managed_session_run_control_resolves_session_id_and_stays_confirmed() {
         assert!(
             !encoded.contains(forbidden),
             "managed session run-control leaked forbidden value {forbidden:?}"
+        );
+    }
+}
+
+#[test]
+fn managed_session_input_contract_rejects_before_write() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "managed-session-input",
+        json!({
+            "timestamp": "2026-06-30T05:00:00Z",
+            "run_id": "managed-session-input",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/project",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-managed-session-input",
+            "state_volume": "runhaven-codex-hidden-home",
+            "session": "project",
+            "token": "should-not-leak"
+        }),
+    )
+    .expect("active run payload");
+
+    let missing = crate::commands::sessions::write_session_input_for_test(
+        WriteSessionInputRequest {
+            session_id: "missing-session".to_string(),
+            input: "hello".to_string(),
+            confirm_send: true,
+            client_target: "session:missing-session".to_string(),
+        },
+        |_, _| unreachable!("unknown sessions must fail before write"),
+    )
+    .expect_err("unknown session rejected");
+    assert!(missing.contains("managed session not found"));
+
+    let oversized_id = crate::commands::sessions::write_session_input_for_test(
+        WriteSessionInputRequest {
+            session_id: "s".repeat(129),
+            input: "hello".to_string(),
+            confirm_send: true,
+            client_target: format!("session:{}", "s".repeat(129)),
+        },
+        |_, _| unreachable!("oversized session id must fail before write"),
+    )
+    .expect_err("oversized session id rejected");
+    assert!(oversized_id.contains("session id is too long"));
+
+    let unconfirmed = crate::commands::sessions::write_session_input_for_test(
+        WriteSessionInputRequest {
+            session_id: "managed-session-input".to_string(),
+            input: "hello".to_string(),
+            confirm_send: false,
+            client_target: "session:managed-session-input".to_string(),
+        },
+        |_, _| unreachable!("unconfirmed input must fail before write"),
+    )
+    .expect_err("confirmation required");
+    assert!(unconfirmed.contains("Confirm the send"));
+
+    for (label, input) in [
+        ("empty input", ""),
+        ("oversized input", &"a".repeat(8 * 1024 + 1)),
+        ("nul input", "hello\0there"),
+        ("escape input", "hello\x1b[31mthere"),
+    ] {
+        let error = crate::commands::sessions::write_session_input_for_test(
+            WriteSessionInputRequest {
+                session_id: "managed-session-input".to_string(),
+                input: input.to_string(),
+                confirm_send: true,
+                client_target: "session:managed-session-input".to_string(),
+            },
+            |_, _| unreachable!("{label} must fail before write"),
+        )
+        .expect_err(label);
+        assert!(
+            error.contains("input"),
+            "{label} returned unexpected error: {error}"
+        );
+    }
+
+    let stale_target = crate::commands::sessions::write_session_input_for_test(
+        WriteSessionInputRequest {
+            session_id: "managed-session-input".to_string(),
+            input: "hello".to_string(),
+            confirm_send: true,
+            client_target: "session:older-session".to_string(),
+        },
+        |_, _| unreachable!("stale target must fail before write"),
+    )
+    .expect_err("stale target rejected");
+    assert!(stale_target.contains("Selected session changed"));
+}
+
+#[test]
+fn managed_session_input_contract_accepts_only_ready_session() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "managed-session-ready-input",
+        json!({
+            "timestamp": "2026-06-30T06:00:00Z",
+            "run_id": "managed-session-ready-input",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/ready",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-ready-input",
+            "state_volume": "runhaven-codex-hidden-home",
+            "session": "ready",
+            "token": "should-not-leak"
+        }),
+    )
+    .expect("ready active run payload");
+    write_active_run_payload(
+        "managed-session-auth-input",
+        json!({
+            "timestamp": "2026-06-30T07:00:00Z",
+            "run_id": "managed-session-auth-input",
+            "profile": "antigravity",
+            "workspace": "/sensitive/workspaces/auth",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-antigravity-auth-input",
+            "state_volume": "runhaven-antigravity-hidden-home",
+            "session": "auth",
+            "token": "should-not-leak"
+        }),
+    )
+    .expect("auth active run payload");
+
+    let auth_blocked = crate::commands::sessions::write_session_input_for_test(
+        WriteSessionInputRequest {
+            session_id: "managed-session-auth-input".to_string(),
+            input: "hello".to_string(),
+            confirm_send: true,
+            client_target: "session:managed-session-auth-input".to_string(),
+        },
+        |_, _| unreachable!("auth attention must fail before write"),
+    )
+    .expect_err("auth attention rejected");
+    assert!(auth_blocked.contains("auth"));
+
+    let response = crate::commands::sessions::write_session_input_for_test(
+        WriteSessionInputRequest {
+            session_id: "managed-session-ready-input".to_string(),
+            input: "hello\nthere".to_string(),
+            confirm_send: true,
+            client_target: "session:managed-session-ready-input".to_string(),
+        },
+        |run_id, input| {
+            assert_eq!(run_id, "managed-session-ready-input");
+            assert_eq!(input, "hello\nthere");
+            Ok(input.len())
+        },
+    )
+    .expect("ready session input");
+
+    assert!(response.accepted);
+    assert_eq!(response.accepted_bytes, "hello\nthere".len());
+    assert_eq!(response.session.id, "managed-session-ready-input");
+    assert_eq!(response.session.run_id, "managed-session-ready-input");
+    assert_eq!(response.status, "accepted");
+
+    let encoded = serde_json::to_string(&response).expect("serialize response");
+    for forbidden in [
+        "/sensitive/workspaces",
+        "runhaven-codex-hidden-home",
+        "should-not-leak",
+        "attach_session",
+        "resize_session",
+        "filesystem_rpc",
+    ] {
+        assert!(
+            !encoded.contains(forbidden),
+            "managed session input response leaked forbidden value {forbidden:?}"
         );
     }
 }

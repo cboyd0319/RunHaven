@@ -215,6 +215,27 @@ pub(crate) struct ManagedSessionLogSnapshotResponse {
     pub entries: Vec<SessionLogEntry>,
 }
 
+#[cfg(test)]
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct WriteSessionInputRequest {
+    pub session_id: String,
+    pub input: String,
+    pub confirm_send: bool,
+    pub client_target: String,
+}
+
+#[cfg(test)]
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct WriteSessionInputResponse {
+    pub session: ManagedSessionSummaryData,
+    pub accepted: bool,
+    pub accepted_bytes: usize,
+    pub cursor: String,
+    pub status: String,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RunPlanRequest {

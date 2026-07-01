@@ -250,6 +250,12 @@ Current slice:
 - capability guard proves no session-input, resize, attach, app-server
   transport, filesystem RPC, MCP, generic command execution, login, or
   host-reaching bridge is exposed before the input contract is implemented
+- Tauri contract tests prove the test-only session input seam rejects unknown
+  sessions, oversized session IDs, missing confirmation, empty input, input
+  above 8 KiB, NUL bytes, terminal escape sequences, stale frontend targets,
+  and auth-attention sessions before a write callback runs. A ready monitored
+  session can produce a typed accepted response without leaking workspace paths
+  or state volume names.
 
 Future embedded-session slices need focused Rust tests for unknown ID
 rejection, bounded input, auth attention, stale targets, raw output gating, and

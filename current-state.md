@@ -1639,6 +1639,14 @@ Latest GUI local prototype:
   now fails if `write_session_input`, resize, attach, filesystem RPC, generic
   command execution, MCP, app-server transport, login, or host-reaching bridges
   appear before that boundary is implemented and tested.
+- 2026-06-30 session input test seam: Added a Rust-only preflight seam for
+  selected-session input without exposing a Tauri command, capability grant, or
+  frontend input path. The seam rejects unknown sessions, oversized session
+  IDs, missing confirmation, empty input, input above 8 KiB, NUL bytes,
+  terminal escape sequences, stale frontend targets, and auth-attention
+  sessions before any write callback runs. It accepts only a ready monitored
+  session and returns a typed response with the backend-owned session and run
+  IDs.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
@@ -1666,12 +1674,14 @@ Continue local GUI work on this branch. Use
 `docs/plans/native-gui-microsandbox-reference.md` before adding embedded
 terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
 boundary, make safe launch the simplest path, and keep developer details behind
-secondary views. Next useful work is the first implementation step from the
-session-input contract: Rust contract tests around a test-only write seam,
-then request/response structs without a capability grant. Do not expose an
-input command, resize command, attach bridge, app-server transport, filesystem
-RPC, MCP, generic command execution, login, or host-reaching Codex path in that
-slice. A later desktop-driver pass can add native WebView click automation if
-it is worth the tooling cost.
+secondary views. Next useful work is to identify and implement the real
+backend-owned write transport for a live GUI-managed session without exposing
+the command yet. Current active-run records and bounded output snapshots do
+not preserve a stdin handle by themselves, so this must start from the runtime
+ownership model, not from a frontend composer. Do not expose an input command,
+resize command, attach bridge, app-server transport, filesystem RPC, MCP,
+generic command execution, login, or host-reaching Codex path in that slice. A
+later desktop-driver pass can add native WebView click automation if it is
+worth the tooling cost.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.

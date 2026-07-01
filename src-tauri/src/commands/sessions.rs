@@ -7,8 +7,12 @@ use crate::contracts::{
     LogSnapshotEntry, LogSnapshotRequest, LogSnapshotResponse, ManagedSessionLogSnapshotRequest,
     ManagedSessionLogSnapshotResponse, SessionLogEntry, SessionLogRedaction,
 };
+#[cfg(test)]
+use crate::contracts::{WriteSessionInputRequest, WriteSessionInputResponse};
 
 const RAW_OUTPUT_REDACTION_MESSAGE: &str = "Raw output is not automatically redacted.";
+#[cfg(test)]
+const MAX_SESSION_INPUT_BYTES: usize = 8 * 1024;
 
 #[tauri::command]
 pub(crate) fn get_managed_sessions() -> Result<ManagedSessionListData, String> {
@@ -103,4 +107,74 @@ pub(crate) fn managed_session_for_id(
         .ok_or_else(|| "managed session not found".to_string())?;
     let run_id = session.run_id.clone();
     Ok((session, run_id))
+}
+
+#[cfg(test)]
+pub(crate) fn write_session_input_for_test(
+    request: WriteSessionInputRequest,
+    write: impl FnOnce(&str, &str) -> Result<usize, String>,
+) -> Result<WriteSessionInputResponse, String> {
+    validate_text_len("session id", &request.session_id, MAX_RUN_ID_LEN)?;
+    validate_session_input_request(&request)?;
+
+    let (session, run_id) = managed_session_for_id(&request.session_id)?;
+    if session.next_action.kind == "auth_attention" {
+        return Err(
+            "Session auth is not ready. Finish auth setup before sending input.".to_string(),
+        );
+    }
+    if session.next_action.kind != "monitor" {
+        return Err(format!(
+            "Session cannot accept input while action is {}.",
+            session.next_action.kind
+        ));
+    }
+
+    let accepted_bytes = write(&run_id, &request.input)?;
+    if accepted_bytes > request.input.len() {
+        return Err("session input write reported more bytes than were sent".to_string());
+    }
+
+    Ok(WriteSessionInputResponse {
+        cursor: format!("session:{}:input:{accepted_bytes}", session.id),
+        session,
+        accepted: true,
+        accepted_bytes,
+        status: "accepted".to_string(),
+    })
+}
+
+#[cfg(test)]
+fn validate_session_input_request(request: &WriteSessionInputRequest) -> Result<(), String> {
+    if !request.confirm_send {
+        return Err("Confirm the send before sending input.".to_string());
+    }
+    if request.input.is_empty() {
+        return Err("session input is required".to_string());
+    }
+    if request.input.len() > MAX_SESSION_INPUT_BYTES {
+        return Err(format!(
+            "session input is too long; keep each send at or below {MAX_SESSION_INPUT_BYTES} bytes"
+        ));
+    }
+    if request.input.contains('\0') {
+        return Err("session input contains a NUL byte".to_string());
+    }
+    if contains_terminal_escape(&request.input) {
+        return Err("session input contains a terminal escape sequence".to_string());
+    }
+
+    let expected_target = format!("session:{}", request.session_id);
+    if request.client_target != expected_target {
+        return Err(
+            "Selected session changed. Choose the session again before sending input.".to_string(),
+        );
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+fn contains_terminal_escape(input: &str) -> bool {
+    input.chars().any(|ch| matches!(ch, '\u{1b}' | '\u{9b}'))
 }
