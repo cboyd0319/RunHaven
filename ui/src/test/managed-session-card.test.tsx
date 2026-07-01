@@ -6,6 +6,7 @@ import {
   sessionAllowsRunControl,
   sessionNeedsAttention
 } from "../app/ManagedSessionCard";
+import { sameManagedSessionList } from "../app/sessionList";
 import type { ManagedSessionSummary } from "../commands/runhaven";
 
 function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSummary {
@@ -113,5 +114,30 @@ describe("ManagedSessionCard", () => {
     expect(sessionAllowsRunControl(session({ lifecycle: "kill-requested" }))).toBe(true);
     expect(sessionAllowsRunControl(session({ lifecycle: "finished" }))).toBe(false);
     expect(sessionAllowsRunControl(session({ lifecycle: "failed" }))).toBe(false);
+  });
+
+  it("detects real managed-session status changes for quiet refresh", () => {
+    const current = { sessions: [session()] };
+
+    expect(sameManagedSessionList(current, { sessions: [session()] })).toBe(true);
+    expect(
+      sameManagedSessionList(current, {
+        sessions: [
+          session({
+            status: "stop-requested",
+            statusLabel: "Stop requested",
+            lifecycle: "stop-requested",
+            events: [
+              {
+                source: "run",
+                label: "Run record",
+                detail: "Stop requested",
+                timestamp: "2026-06-30T02:00:01Z"
+              }
+            ]
+          })
+        ]
+      })
+    ).toBe(false);
   });
 });

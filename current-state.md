@@ -108,6 +108,9 @@ Useful GUI design docs:
 - Desktop/Tauri managed-session work has live evidence for launch, bounded
   output, input, stop, cleanup, distinct GUI session identity, and per-session
   state naming.
+- The GUI quietly refreshes active/recent managed sessions after launch or
+  selection and suppresses no-op session-list updates to avoid visible page
+  blink while status changes.
 - API key broker env-var names now flow through the shared planner, typed Tauri
   plan/launch request, and GUI advanced launch field for brokered Codex, Claude,
   and Gemini profiles only. Raw env passthrough remains a separate warned path.

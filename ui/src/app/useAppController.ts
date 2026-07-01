@@ -6,7 +6,6 @@ import {
   getDashboardStatus,
   getAuthStatus,
   getImageStatus,
-  getManagedSessions,
   getRunStatus,
   killManagedSession,
   killRun,
@@ -25,7 +24,6 @@ import {
   type AuthStatusResponse,
   type ImageStatusResponse,
   type LaunchRunResponse,
-  type ManagedSessionList,
   type RunPlanRequest,
   type RunPlanResponse,
   type RunStatusResponse,
@@ -39,7 +37,7 @@ import {
 import { loadSessionsUntilRunPresent } from "./sessionSelection"
 import { useDiagnosticsState } from "./useDiagnosticsState"
 import { useAppDerivedState } from "./useAppDerivedState"
-import { useSelectedSessionId } from "./useSelectedSessionId"
+import { useManagedSessionsState } from "./useManagedSessionsState"
 
 export function useAppController() {
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null)
@@ -59,11 +57,13 @@ export function useAppController() {
   const [confirmedWarnings, setConfirmedWarnings] = useState<string[]>([])
   const [launchMessage, setLaunchMessage] = useState("")
   const [lastLaunch, setLastLaunch] = useState<LaunchRunResponse | null>(null)
-  const [managedSessions, setManagedSessions] = useState<ManagedSessionList>({
-    sessions: [],
-  })
-  const { selectedSessionId, selectedSessionIdRef, selectSession } =
-    useSelectedSessionId(managedSessions)
+  const {
+    managedSessions,
+    selectedSessionId,
+    selectedSessionIdRef,
+    selectSession,
+    loadManagedSessions,
+  } = useManagedSessionsState(lastLaunch?.runId ?? null)
   const [sessionInputDraft, setSessionInputDraft] = useState("")
   const [sessionInputSending, setSessionInputSending] = useState(false)
   const [sessionInputError, setSessionInputError] = useState("")
@@ -171,12 +171,6 @@ export function useAppController() {
     } finally {
       setRunStatusLoading(false)
     }
-  }
-
-  async function loadManagedSessions() {
-    const nextSessions = await getManagedSessions()
-    setManagedSessions(nextSessions)
-    return nextSessions
   }
 
   function changeAgent(agentName: string) {

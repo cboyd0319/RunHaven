@@ -158,6 +158,8 @@ Current GUI behavior:
 
 - Active sessions appear in the sidebar only when the read model returns at
   least one session.
+- Active and recent managed sessions refresh quietly in the background after a
+  launch or selection, updating only when the typed session data changes.
 - Selecting a session opens a read-only main-pane summary.
 - The summary shows agent, project label, session name, status, auth posture,
   network posture, and start time.
