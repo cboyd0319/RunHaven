@@ -14,9 +14,9 @@ struct RegisteredSessionInput {
     writer: Arc<SessionInputWriter>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct SessionInputRegistry {
-    writers: Mutex<HashMap<String, RegisteredSessionInput>>,
+    writers: Arc<Mutex<HashMap<String, RegisteredSessionInput>>>,
 }
 
 impl SessionInputRegistry {

@@ -2,6 +2,7 @@
 mod capability_guard;
 mod commands;
 mod contracts;
+mod launch_runner;
 pub mod session_input;
 
 pub fn run() {

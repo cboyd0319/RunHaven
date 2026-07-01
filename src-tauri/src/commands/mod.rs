@@ -6,18 +6,21 @@ use runhaven_core::doctor::collect_checks;
 use runhaven_core::image::doctor::collect_image_status;
 use runhaven_core::records::read_run_records;
 use runhaven_core::runtime::active::read_active_run_records;
-use runhaven_core::runtime::launch::{launch_run_plan, new_run_id};
+use runhaven_core::runtime::launch::{launch_run_plan_with_runner, new_run_id};
 use runhaven_core::runtime::plans::{
     AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
     normalize_provider_hosts,
 };
 use runhaven_core::runtime::profiles::{get_profile, profiles};
 use serde_json::Value;
+use tauri::State;
 
 use crate::contracts::{
     AgentProfileSummary, CheckStatus, DashboardStatus, LaunchRunRequest, LaunchRunResponse,
     RunPlanRequest, RunPlanResponse, RunSummary, SetupStatus, StartedRunSnapshot,
 };
+use crate::launch_runner::TauriLaunchRunner;
+use crate::session_input::SessionInputRegistry;
 
 pub(crate) mod diagnostics;
 pub(crate) mod image_status;
@@ -52,7 +55,17 @@ pub(crate) fn plan_run(request: RunPlanRequest) -> Result<RunPlanResponse, Strin
 }
 
 #[tauri::command]
-pub(crate) fn launch_run(request: LaunchRunRequest) -> Result<LaunchRunResponse, String> {
+pub(crate) fn launch_run(
+    request: LaunchRunRequest,
+    registry: State<'_, SessionInputRegistry>,
+) -> Result<LaunchRunResponse, String> {
+    launch_run_with_registry(request, registry.inner().clone())
+}
+
+fn launch_run_with_registry(
+    request: LaunchRunRequest,
+    registry: SessionInputRegistry,
+) -> Result<LaunchRunResponse, String> {
     validate_launch_confirmation(&request)?;
     let setup = collect_setup_status();
     if !setup.ok {
@@ -66,7 +79,8 @@ pub(crate) fn launch_run(request: LaunchRunRequest) -> Result<LaunchRunResponse,
     thread::Builder::new()
         .name(format!("runhaven-launch-{run_id}"))
         .spawn(move || {
-            if let Err(error) = launch_run_plan(&plan) {
+            let mut runner = TauriLaunchRunner::new(registry);
+            if let Err(error) = launch_run_plan_with_runner(&plan, &mut runner) {
                 eprintln!("runhaven launch {run_id} failed: {error}");
             }
         })
@@ -182,8 +196,8 @@ fn build_agent_run_plan(
         ssh: false,
         env: request.env_names.clone(),
         user: defaulted(&request.user, "agent"),
-        interactive: false,
-        tty: false,
+        interactive: true,
+        tty: true,
         allow_sensitive_workspace: request.allow_sensitive_workspace,
         allow_root_user: request.allow_root_user,
         provider_hosts,

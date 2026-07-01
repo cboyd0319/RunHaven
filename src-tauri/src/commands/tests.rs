@@ -229,6 +229,21 @@ fn launch_run_response_uses_reserved_run_id_without_starting() {
 }
 
 #[test]
+fn launch_plan_for_desktop_keeps_container_stdin_open() {
+    let (_cache, _cache_home) = isolated_cache();
+    let workspace = tempfile::tempdir().expect("workspace");
+
+    let plan = build_agent_run_plan(
+        &request(workspace.path().to_path_buf()),
+        Some("desktop-stdin-plan".to_string()),
+    )
+    .expect("desktop launch plan");
+
+    assert!(plan.command.iter().any(|arg| arg == "--interactive"));
+    assert!(plan.command.iter().any(|arg| arg == "--tty"));
+}
+
+#[test]
 fn launch_run_blocks_missing_bundled_image() {
     let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");

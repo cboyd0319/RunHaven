@@ -1671,6 +1671,13 @@ Latest GUI local prototype:
   input work should move Tauri launch ownership to a backend runner that keeps a
   child stdin handle and registers it with `SessionInputRegistry`, without
   exposing a write command or capability first.
+- 2026-06-30 Tauri launch stdin ownership: `launch_run` now uses the
+  Tauri-owned runner and requests `container run --interactive --tty`. The
+  runner registers a run-id-scoped stdin writer while the child is alive and
+  unregisters it on exit. No input command, permission, frontend composer,
+  resize, attach, app-server transport, filesystem RPC, MCP, or host-reaching
+  Codex path was added. Next: add the fixed input command under the existing
+  fail-closed request contract.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
