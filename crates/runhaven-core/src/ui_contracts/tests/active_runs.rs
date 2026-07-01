@@ -82,6 +82,7 @@ fn active_run_list_contract_omits_workspace_paths() {
         "workspace": "/Users/c/secret/project",
         "network": "provider",
         "status": "running",
+        "auth_scope": "project",
         "container_name": "runhaven-codex-project-run",
         "state_volume": "runhaven-codex-shared-home",
         "session": "none"
@@ -90,6 +91,7 @@ fn active_run_list_contract_omits_workspace_paths() {
     assert_eq!(data.runs.len(), 1);
     assert_eq!(data.runs[0].run_id, "run-123");
     assert_eq!(data.runs[0].profile, "codex");
+    assert_eq!(data.runs[0].auth_scope, "project");
     let serialized = serde_json::to_string(&data).expect("serialize");
     assert!(
         !serialized.contains("/Users/c/secret/project"),

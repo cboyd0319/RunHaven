@@ -29,6 +29,7 @@ export type RunSummary = {
   network: string;
   status: string;
   timestamp: string;
+  authScope: string;
   stateVolume: string;
   session: string;
 };
@@ -76,6 +77,7 @@ export type RunStatusRun = {
   networkMode: string;
   status: string;
   timestamp: string;
+  authScope: string;
   stateVolume: string;
   session: string;
   containerName: string;
@@ -184,6 +186,7 @@ export type ManagedSessionSummary = {
   status: string;
   statusLabel: string;
   authStatus: string;
+  authScope: string;
   network: string;
   startedAt: string;
   containerName: string;
@@ -249,6 +252,7 @@ export type RunPlanResponse = {
   workspace: string;
   workspaceScope: string;
   workspaceScopeNote: string | null;
+  authScope: string;
   stateVolume: string;
   session: string;
   containerName: string;
@@ -273,6 +277,7 @@ export type StartedRunSnapshot = {
   profile: string;
   workspace: string;
   stateVolume: string;
+  authScope: string;
   session: string;
   networkMode: string;
   containerName: string;
@@ -284,6 +289,7 @@ export type LaunchRunResponse = {
   profile: string;
   workspace: string;
   stateVolume: string;
+  authScope: string;
   session: string;
   networkMode: string;
   snapshot: StartedRunSnapshot;

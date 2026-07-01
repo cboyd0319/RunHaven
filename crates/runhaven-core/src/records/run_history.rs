@@ -41,6 +41,7 @@ pub fn write_run_record(input: RunRecordInput<'_>) -> Result<()> {
         "profile": input.plan.profile_name,
         "workspace": input.plan.workspace.display().to_string(),
         "workspace_scope": input.plan.workspace_scope.as_str(),
+        "auth_scope": input.plan.auth_scope.as_str(),
         "state_volume": input.plan.state_volume,
         "session": input.plan.session,
         "network": input.plan.network_mode.as_str(),
@@ -182,6 +183,9 @@ pub fn print_run_record(record: &Value) {
     }
     if let Some(session) = record.get("session").and_then(Value::as_str) {
         println!("Session: {session}");
+    }
+    if let Some(scope) = record.get("auth_scope").and_then(Value::as_str) {
+        println!("Auth scope: {scope}");
     }
     if let Some(volume) = record.get("state_volume").and_then(Value::as_str) {
         println!("State volume: {volume}");

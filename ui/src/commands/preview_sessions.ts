@@ -124,6 +124,7 @@ export function rememberPreviewManagedSession(snapshot: LaunchRunResponse["snaps
     status: "running",
     statusLabel: "Running",
     authStatus: "api-key-broker",
+    authScope: snapshot.authScope,
     network: snapshot.networkMode,
     startedAt: "preview",
     containerName: snapshot.containerName,

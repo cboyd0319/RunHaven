@@ -219,6 +219,7 @@ mod tests {
         expected_run_id: String,
         command: Option<Vec<String>>,
         saw_active_marker: bool,
+        active_marker_auth_scope: Option<String>,
     }
 
     struct FailingRunner {
@@ -240,8 +241,13 @@ mod tests {
             );
             assert!(env.is_none());
             self.command = Some(command.to_vec());
-            self.saw_active_marker =
-                crate::runtime::active::find_active_run_record(context.run_id).is_ok();
+            if let Ok(record) = crate::runtime::active::find_active_run_record(context.run_id) {
+                self.saw_active_marker = true;
+                self.active_marker_auth_scope = record
+                    .get("auth_scope")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string);
+            }
             Ok(0)
         }
     }
@@ -309,6 +315,7 @@ mod tests {
             expected_run_id: "runner-seam".to_string(),
             command: None,
             saw_active_marker: false,
+            active_marker_auth_scope: None,
         };
 
         let code = run_standard_agent_with_runner(&plan, &mut runner).expect("standard launch");
@@ -316,6 +323,7 @@ mod tests {
         assert_eq!(code, 0);
         assert_eq!(runner.command.as_deref(), Some(plan.command.as_slice()));
         assert!(runner.saw_active_marker);
+        assert_eq!(runner.active_marker_auth_scope.as_deref(), Some("agent"));
         assert!(crate::runtime::active::find_active_run_record("runner-seam").is_err());
     }
 

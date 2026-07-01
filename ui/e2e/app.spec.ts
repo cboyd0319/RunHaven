@@ -29,6 +29,7 @@ test("reviews and starts a preview run", async ({ page }) => {
   await page.getByRole("button", { name: "Review access" }).click();
 
   await expect(page.getByRole("heading", { name: "Review access" })).toBeVisible();
+  await expect(page.getByText("Auth scope")).toBeVisible();
   await page.getByLabel("I reviewed this plan and want to start this run.").check();
   await page.getByRole("button", { name: "Launch run" }).click();
 

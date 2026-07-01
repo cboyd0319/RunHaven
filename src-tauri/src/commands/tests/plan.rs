@@ -25,6 +25,7 @@ fn build_plan_response_uses_existing_runhaven_planner() {
     let workspace = tempfile::tempdir().expect("workspace");
     let response = build_plan_response(request(workspace.path().to_path_buf())).expect("plan");
     assert_eq!(response.profile, "codex");
+    assert_eq!(response.auth_scope, "project");
     assert_eq!(response.network_mode, "provider");
     assert!(response.egress_summary.contains("provider allowlist"));
     assert_eq!(response.warnings.len(), 0);
@@ -181,8 +182,10 @@ fn launch_run_response_uses_reserved_run_id_without_starting() {
     assert_eq!(response.run_id, "runhaven-test-run");
     assert_eq!(response.status, "started");
     assert_eq!(response.profile, "codex");
+    assert_eq!(response.auth_scope, "project");
     assert_eq!(response.snapshot.run_id, "runhaven-test-run");
     assert_eq!(response.snapshot.status, "started");
+    assert_eq!(response.snapshot.auth_scope, "project");
     assert!(!response.snapshot.container_name.is_empty());
 }
 

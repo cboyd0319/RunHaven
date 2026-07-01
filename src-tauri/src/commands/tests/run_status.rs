@@ -10,6 +10,7 @@ fn run_status_response_maps_sanitized_payload_without_raw_fields() {
             "workspace": "/tmp/runhaven-status",
             "network": "provider",
             "status": "running",
+            "auth_scope": "project",
             "container_name": "runhaven-codex-status-test",
             "state_volume": "runhaven-codex-status-home",
             "session": "default",
@@ -37,6 +38,7 @@ fn run_status_response_maps_sanitized_payload_without_raw_fields() {
     .expect("status response");
 
     assert_eq!(response.run.run_id, "runhaven-status-test");
+    assert_eq!(response.run.auth_scope, "project");
     assert_eq!(response.container.state, "running");
     assert_eq!(
         response.container.resources.memory_bytes,

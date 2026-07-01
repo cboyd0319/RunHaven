@@ -17,6 +17,7 @@ pub fn write_active_run_record(plan: &AgentRunPlan, run_id: &str, started_at: &s
         "workspace": plan.workspace.display().to_string(),
         "workspace_scope": plan.workspace_scope.as_str(),
         "network": plan.network_mode.as_str(),
+        "auth_scope": plan.auth_scope.as_str(),
         "status": "running",
         "container_name": plan.container_name,
         "state_volume": plan.state_volume,

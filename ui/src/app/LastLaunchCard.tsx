@@ -21,10 +21,22 @@ export function LastLaunchCard({ lastLaunch }: { lastLaunch: LaunchRunResponse }
       <CardContent>
         <div className="grid gap-3 sm:grid-cols-3">
           <Metric label="Agent" value={lastLaunch.profile} />
+          <Metric label="Auth scope" value={authScopeLabel(lastLaunch.authScope)} />
           <Metric label="Network" value={lastLaunch.networkMode} />
           <Metric label="Container" value={lastLaunch.snapshot.containerName} />
         </div>
       </CardContent>
     </Card>
   )
+}
+
+function authScopeLabel(value: string): string {
+  switch (value.trim().toLowerCase()) {
+    case "agent":
+      return "Shared agent login"
+    case "project":
+      return "Project session"
+    default:
+      return value.trim() || "Unknown"
+  }
 }

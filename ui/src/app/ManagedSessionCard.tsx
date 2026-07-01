@@ -65,6 +65,7 @@ export function ManagedSessionCard({
           <Metric label="Session" value={displayValue(session.session)} />
           <Metric label="Status" value={displayValue(session.statusLabel)} />
           <Metric label="Auth" value={authLabel(session.authStatus)} />
+          <Metric label="Auth scope" value={authScopeLabel(session.authScope)} />
           <Metric label="Network" value={networkLabel(session.network)} />
           <Metric label="Started" value={displayValue(session.startedAt)} />
         </div>
@@ -134,6 +135,17 @@ function networkLabel(network: string): string {
       return "Internet"
     default:
       return displayValue(network)
+  }
+}
+
+function authScopeLabel(scope: string): string {
+  switch (scope.trim().toLowerCase()) {
+    case "agent":
+      return "Shared agent login"
+    case "project":
+      return "Project"
+    default:
+      return displayValue(scope)
   }
 }
 

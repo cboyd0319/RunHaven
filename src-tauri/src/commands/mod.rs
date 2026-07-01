@@ -166,6 +166,7 @@ fn build_plan_response(request: RunPlanRequest) -> Result<RunPlanResponse, Strin
         workspace: plan.workspace.display().to_string(),
         workspace_scope: plan.workspace_scope.as_str().to_string(),
         workspace_scope_note: plan.workspace_scope_note,
+        auth_scope: plan.auth_scope.as_str().to_string(),
         state_volume: plan.state_volume,
         session: plan.session,
         container_name: plan.container_name,
@@ -229,6 +230,7 @@ fn prepare_launch(
         profile: plan.profile_name.clone(),
         workspace: plan.workspace.display().to_string(),
         state_volume: plan.state_volume.clone(),
+        auth_scope: plan.auth_scope.as_str().to_string(),
         session: plan.session.clone(),
         network_mode: plan.network_mode.as_str().to_string(),
         snapshot: StartedRunSnapshot {
@@ -237,6 +239,7 @@ fn prepare_launch(
             profile: plan.profile_name.clone(),
             workspace: plan.workspace.display().to_string(),
             state_volume: plan.state_volume.clone(),
+            auth_scope: plan.auth_scope.as_str().to_string(),
             session: plan.session.clone(),
             network_mode: plan.network_mode.as_str().to_string(),
             container_name: plan.container_name.clone(),
@@ -330,6 +333,7 @@ fn run_summary(record: &Value) -> RunSummary {
         network: field(record, "network"),
         status: field(record, "status"),
         timestamp: field(record, "timestamp"),
+        auth_scope: field(record, "auth_scope"),
         state_volume: field(record, "state_volume"),
         session: field(record, "session"),
     }

@@ -14,6 +14,7 @@ function session(id: string, runId: string): ManagedSessionSummary {
     status: "running",
     statusLabel: "Running",
     authStatus: "ready",
+    authScope: "project",
     network: "provider",
     startedAt: "2026-06-30T02:00:00Z",
     containerName: `runhaven-${id}`,

@@ -14,6 +14,7 @@ fn managed_sessions_response_is_read_only_and_secret_free() {
             "status": "running",
             "container_name": "runhaven-codex-managed-session",
             "state_volume": "runhaven-codex-secret-home",
+            "auth_scope": "project",
             "session": "project",
             "token": "should-not-leak"
         }),
@@ -30,6 +31,7 @@ fn managed_sessions_response_is_read_only_and_secret_free() {
     assert_eq!(session.project, "project");
     assert_eq!(session.status, "running");
     assert_eq!(session.auth_status, "api-key-broker");
+    assert_eq!(session.auth_scope, "project");
     assert_eq!(session.lifecycle, "running");
     assert_eq!(session.next_action.kind, "monitor");
     assert_eq!(

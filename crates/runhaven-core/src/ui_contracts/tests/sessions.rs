@@ -13,6 +13,7 @@ fn managed_session_list_contract_merges_active_runs_with_auth_status() {
                 "status": "running",
                 "container_name": "runhaven-codex-docs-run",
                 "state_volume": "runhaven-codex-docs-home",
+                "auth_scope": "project",
                 "session": "docs"
             }),
             serde_json::json!({
@@ -24,6 +25,7 @@ fn managed_session_list_contract_merges_active_runs_with_auth_status() {
                 "status": "running",
                 "container_name": "runhaven-claude-backend-run",
                 "state_volume": "runhaven-claude-backend-home",
+                "auth_scope": "agent",
                 "session": "backend"
             }),
         ],
@@ -47,6 +49,7 @@ fn managed_session_list_contract_merges_active_runs_with_auth_status() {
     assert_eq!(first.status, "running");
     assert_eq!(first.status_label, "Running");
     assert_eq!(first.auth_status, "api-key-broker");
+    assert_eq!(first.auth_scope, "agent");
     assert_eq!(first.detail_command, "runhaven runs show run-newer");
 
     let encoded = serde_json::to_string(&data).expect("serialize managed sessions");

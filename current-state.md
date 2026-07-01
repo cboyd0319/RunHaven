@@ -149,7 +149,9 @@ them.
 
 ## Next Step
 
-Continue the CLI+GUI goal from the hardest problems first: live container
-session ownership, real-agent auth/session behavior, multi-session isolation,
-typed status reporting, and fail-closed security boundaries. Keep the safe path
-short, stable, and nontechnical.
+Auth scope is now carried through active markers, run records, shared UI
+contracts, Tauri plan/launch/status/session responses, and the GUI session and
+plan cards. Continue the CLI+GUI goal from the hardest problems first: live
+container session ownership, real-agent auth/session behavior, multi-session
+isolation, typed status reporting, and fail-closed security boundaries. Keep
+the safe path short, stable, and nontechnical.

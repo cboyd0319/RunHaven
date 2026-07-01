@@ -18,6 +18,7 @@ function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSumm
     status: "running",
     statusLabel: "Running",
     authStatus: "api-key-broker",
+    authScope: "project",
     network: "provider",
     startedAt: "2026-06-30T02:00:00Z",
     containerName: "runhaven-codex-project",

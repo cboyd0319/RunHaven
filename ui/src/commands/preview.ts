@@ -132,6 +132,7 @@ export function previewRunStatus(runId: string): RunStatusResponse {
       networkMode: "provider",
       status: "running",
       timestamp: "preview",
+      authScope: "project",
       stateVolume: "preview",
       session: "default",
       containerName: "preview"
@@ -163,6 +164,7 @@ export function previewPlanRun(request: RunPlanRequest): RunPlanResponse {
     workspace: request.workspacePath || ".",
     workspaceScope: request.workspaceScope,
     workspaceScopeNote: null,
+    authScope: "project",
     stateVolume: "preview",
     session: request.sessionName || "default",
     containerName: "preview",
@@ -191,6 +193,7 @@ export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {
     profile: request.plan.agent,
     workspace: request.plan.workspacePath || ".",
     stateVolume: "preview",
+    authScope: "project",
     session: request.plan.sessionName || "default",
     networkMode: request.plan.networkMode,
     containerName: "preview"
@@ -202,6 +205,7 @@ export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {
     profile: snapshot.profile,
     workspace: snapshot.workspace,
     stateVolume: snapshot.stateVolume,
+    authScope: snapshot.authScope,
     session: snapshot.session,
     networkMode: snapshot.networkMode,
     snapshot

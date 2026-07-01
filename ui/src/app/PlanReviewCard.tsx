@@ -62,6 +62,7 @@ export function PlanReviewCard({
               ["Agent", plan.profile],
               ["Project", plan.workspace],
               ["Session", plan.session],
+              ["Auth scope", authScopeLabel(plan.authScope)],
               ["Agent memory", plan.stateVolume],
               ["Network", plan.networkMode],
               ["Image", plan.image],
@@ -146,4 +147,15 @@ export function PlanReviewCard({
       </CardContent>
     </Card>
   )
+}
+
+function authScopeLabel(value: string): string {
+  switch (value.trim().toLowerCase()) {
+    case "agent":
+      return "Shared agent login"
+    case "project":
+      return "Project session"
+    default:
+      return value.trim() || "Unknown"
+  }
 }

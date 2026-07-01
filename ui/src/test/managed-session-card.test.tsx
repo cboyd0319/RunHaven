@@ -18,6 +18,7 @@ function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSumm
     status: "running",
     statusLabel: "Running",
     authStatus: "api-key-broker",
+    authScope: "project",
     network: "provider",
     startedAt: "2026-06-30T02:00:00Z",
     containerName: "runhaven-codex-project",
@@ -66,6 +67,8 @@ describe("ManagedSessionCard", () => {
     expect(html).toContain("Codex - project");
     expect(html).toContain("secret-project");
     expect(html).toContain("Provider only");
+    expect(html).toContain("Auth scope");
+    expect(html).toContain("Project");
     expect(html).toContain("RunHaven is monitoring this session.");
     expect(html).toContain("Monitor session");
     expect(html).toContain("Run record");

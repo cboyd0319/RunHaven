@@ -24,6 +24,7 @@ pub struct ManagedSessionSummaryData {
     pub status: String,
     pub status_label: String,
     pub auth_status: String,
+    pub auth_scope: String,
     pub network: String,
     pub started_at: String,
     pub container_name: String,
@@ -93,6 +94,7 @@ impl ManagedSessionSummaryData {
             .get(&agent)
             .cloned()
             .unwrap_or_else(|| "unknown".to_string());
+        let auth_scope = string_field(&record, "auth_scope");
         let network = string_field(&record, "network");
         let started_at = string_field(&record, "timestamp");
         let lifecycle = managed_session_lifecycle(&status);
@@ -106,6 +108,7 @@ impl ManagedSessionSummaryData {
             status_label: status_label.clone(),
             status,
             auth_status: auth_status.clone(),
+            auth_scope,
             network: network.clone(),
             started_at: started_at.clone(),
             container_name: string_field(&record, "container_name"),
