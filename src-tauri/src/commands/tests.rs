@@ -1,14 +1,23 @@
 use std::path::PathBuf;
+use std::process::Command;
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 
 use super::*;
 use crate::contracts::{
     KillManagedSessionRequest, KillRunResponse, LogSnapshotRequest,
     ManagedSessionLogSnapshotRequest, RepairManagedSessionRequest, RepairRunResponse,
     StopManagedSessionRequest, StopRunResponse, WriteSessionInputRequest,
+    WriteSessionInputResponse,
 };
 use crate::session_input::SessionInputRegistry;
+use crate::session_output::SessionOutputRegistry;
 use runhaven_core::runtime::active::write_active_run_payload;
+use runhaven_core::runtime::active::{repair_active_run, stop_active_run};
+use runhaven_core::runtime::network::is_runhaven_managed_network;
+use runhaven_core::runtime::state::delete_volume;
 use runhaven_core::support::paths::{CacheRootOverride, override_cache_root_for_tests};
+use runhaven_core::ui_contracts::ManagedSessionSummaryData;
 use serde_json::json;
 
 fn isolated_cache() -> (tempfile::TempDir, CacheRootOverride) {
@@ -27,6 +36,25 @@ fn request(workspace: PathBuf) -> RunPlanRequest {
         read_only_workspace: false,
         cpus: "4".to_string(),
         memory: "4g".to_string(),
+        provider_hosts: Vec::new(),
+        env_names: Vec::new(),
+        image: None,
+        allow_sensitive_workspace: false,
+        allow_root_user: false,
+        user: "agent".to_string(),
+    }
+}
+
+fn shell_request(workspace: PathBuf, session: String) -> RunPlanRequest {
+    RunPlanRequest {
+        agent: "shell".to_string(),
+        workspace_path: workspace.display().to_string(),
+        network_mode: "internal".to_string(),
+        workspace_scope: "current".to_string(),
+        session_name: Some(session),
+        read_only_workspace: true,
+        cpus: "1".to_string(),
+        memory: "512m".to_string(),
         provider_hosts: Vec::new(),
         env_names: Vec::new(),
         image: None,
@@ -229,7 +257,7 @@ fn launch_run_response_uses_reserved_run_id_without_starting() {
 }
 
 #[test]
-fn launch_plan_for_desktop_keeps_container_stdin_open() {
+fn launch_plan_for_desktop_keeps_piped_stdin_open_without_tty() {
     let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
 
@@ -240,7 +268,7 @@ fn launch_plan_for_desktop_keeps_container_stdin_open() {
     .expect("desktop launch plan");
 
     assert!(plan.command.iter().any(|arg| arg == "--interactive"));
-    assert!(plan.command.iter().any(|arg| arg == "--tty"));
+    assert!(!plan.command.iter().any(|arg| arg == "--tty"));
 }
 
 #[test]
@@ -559,6 +587,64 @@ fn managed_session_log_snapshot_resolves_session_id_and_stays_read_only() {
         assert!(
             !encoded.contains(forbidden),
             "managed session log snapshot leaked forbidden value {forbidden:?}"
+        );
+    }
+}
+
+#[test]
+fn managed_session_log_snapshot_falls_back_to_desktop_output_registry() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "managed-session-output-registry",
+        json!({
+            "timestamp": "2026-06-30T03:30:00Z",
+            "run_id": "managed-session-output-registry",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/output",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-output-registry",
+            "state_volume": "runhaven-codex-hidden-home",
+            "session": "output",
+            "token": "should-not-leak"
+        }),
+    )
+    .expect("active run payload");
+    let output_registry = SessionOutputRegistry::default();
+    let _registration = output_registry
+        .register("managed-session-output-registry")
+        .expect("register output");
+    output_registry
+        .append(
+            "managed-session-output-registry",
+            b"desktop output marker\n",
+        )
+        .expect("append output");
+
+    let response =
+        crate::commands::sessions::get_managed_session_log_snapshot_with_output_for_test(
+            ManagedSessionLogSnapshotRequest {
+                session_id: "managed-session-output-registry".to_string(),
+                lines: Some(20),
+                confirm_sensitive_output: true,
+            },
+            &output_registry,
+        )
+        .expect("managed session output snapshot");
+
+    assert_eq!(response.session.id, "managed-session-output-registry");
+    assert_eq!(response.snapshot.run_id, "managed-session-output-registry");
+    assert!(response.snapshot.text.contains("desktop output marker"));
+
+    let encoded = serde_json::to_string(&response).expect("serialize output snapshot");
+    for forbidden in [
+        "/sensitive/workspaces",
+        "runhaven-codex-hidden-home",
+        "should-not-leak",
+    ] {
+        assert!(
+            !encoded.contains(forbidden),
+            "managed session output snapshot leaked forbidden value {forbidden:?}"
         );
     }
 }
@@ -1027,7 +1113,7 @@ fn managed_session_live_smoke_reads_output_and_stops_run() {
     assert!(!encoded_session.contains("write_session_input"));
     assert!(!encoded_session.contains("attach_session"));
 
-    let log = crate::commands::sessions::get_managed_session_log_snapshot(
+    let log = crate::commands::sessions::get_managed_session_log_snapshot_for_test(
         ManagedSessionLogSnapshotRequest {
             session_id: session_id.clone(),
             lines: Some(20),
@@ -1046,4 +1132,183 @@ fn managed_session_live_smoke_reads_output_and_stops_run() {
     .expect("stop managed session");
     assert_eq!(stopped.result.run_id, run_id);
     assert_eq!(stopped.result.status, "stop-requested");
+}
+
+#[test]
+#[ignore = "requires Apple container and a built shell image"]
+fn managed_session_live_smoke_writes_input_and_reads_output() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    std::fs::write(
+        workspace.path().join("input.txt"),
+        "runhaven live input smoke\n",
+    )
+    .expect("workspace fixture");
+    let session_name = format!("gui-input-{}", std::process::id());
+    let plan_request = shell_request(workspace.path().to_path_buf(), session_name);
+    let plan = build_plan_response(plan_request.clone()).expect("live plan");
+    let mut cleanup = LiveTauriRunCleanup {
+        run_id: None,
+        state_volume: Some(plan.state_volume.clone()),
+        network_name: plan.network_name.clone(),
+    };
+    let registry = SessionInputRegistry::default();
+    let output_registry = SessionOutputRegistry::default();
+
+    let launched = launch_run_with_registries(
+        LaunchRunRequest {
+            plan: plan_request,
+            confirm_launch: true,
+            confirmed_warnings: Vec::new(),
+        },
+        registry.clone(),
+        output_registry.clone(),
+    )
+    .expect("launch live shell through Tauri runner");
+    cleanup.run_id = Some(launched.run_id.clone());
+
+    let session = wait_for_live_session(&launched.run_id);
+    let marker = format!("runhaven-live-input-{}", std::process::id());
+    let input = format!("echo {marker}\n");
+    let accepted = wait_for_live_input_acceptance(&session.id, &registry, &input);
+    assert!(accepted.accepted);
+    assert_eq!(accepted.accepted_bytes, input.len());
+    assert_eq!(accepted.session.run_id, launched.run_id);
+
+    wait_for_live_session_output(&session.id, &output_registry, &marker);
+
+    let stopped = crate::commands::run_control::stop_managed_session(StopManagedSessionRequest {
+        session_id: session.id,
+        confirm_stop: true,
+    })
+    .expect("stop live managed session");
+    assert_eq!(stopped.result.run_id, launched.run_id);
+    assert_eq!(stopped.result.status, "stop-requested");
+    wait_for_live_session_removed(&launched.run_id);
+}
+
+struct LiveTauriRunCleanup {
+    run_id: Option<String>,
+    state_volume: Option<String>,
+    network_name: Option<String>,
+}
+
+impl Drop for LiveTauriRunCleanup {
+    fn drop(&mut self) {
+        if let Some(run_id) = self.run_id.as_deref() {
+            let _ = stop_active_run(run_id);
+            sleep(Duration::from_secs(1));
+            let _ = repair_active_run(run_id);
+        }
+        if let Some(state_volume) = self.state_volume.as_deref() {
+            let _ = delete_volume(state_volume);
+        }
+        if let Some(network_name) = self.network_name.as_deref()
+            && is_runhaven_managed_network(network_name)
+        {
+            let _ = Command::new("container")
+                .args(["network", "delete", network_name])
+                .status();
+        }
+    }
+}
+
+fn wait_for_live_session(run_id: &str) -> ManagedSessionSummaryData {
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        let sessions =
+            crate::commands::sessions::get_managed_sessions().expect("read live managed sessions");
+        if let Some(session) = sessions
+            .sessions
+            .into_iter()
+            .find(|session| session.run_id == run_id)
+        {
+            return session;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "live managed session did not appear for run {run_id}"
+        );
+        sleep(Duration::from_millis(250));
+    }
+}
+
+fn wait_for_live_input_acceptance(
+    session_id: &str,
+    registry: &SessionInputRegistry,
+    input: &str,
+) -> WriteSessionInputResponse {
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        match crate::commands::sessions::write_session_input_for_test(
+            WriteSessionInputRequest {
+                session_id: session_id.to_string(),
+                input: input.to_string(),
+                confirm_send: true,
+                client_target: format!("session:{session_id}"),
+            },
+            registry,
+        ) {
+            Ok(response) => return response,
+            Err(error)
+                if (error.contains("managed session not found")
+                    || error.contains("session input transport not found"))
+                    && Instant::now() < deadline =>
+            {
+                sleep(Duration::from_millis(250));
+            }
+            Err(error) => panic!("live session input failed: {error}"),
+        }
+    }
+}
+
+fn wait_for_live_session_output(
+    session_id: &str,
+    output_registry: &SessionOutputRegistry,
+    expected: &str,
+) {
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        let log = crate::commands::sessions::get_managed_session_log_snapshot_with_output_for_test(
+            ManagedSessionLogSnapshotRequest {
+                session_id: session_id.to_string(),
+                lines: Some(40),
+                confirm_sensitive_output: true,
+            },
+            output_registry,
+        )
+        .expect("read live managed session output");
+        let matched = log.snapshot.text.contains(expected)
+            || log
+                .entries
+                .iter()
+                .any(|entry| entry.text.contains(expected));
+        if matched {
+            return;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "live managed session output did not contain {expected}"
+        );
+        sleep(Duration::from_millis(250));
+    }
+}
+
+fn wait_for_live_session_removed(run_id: &str) {
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        let sessions =
+            crate::commands::sessions::get_managed_sessions().expect("read live managed sessions");
+        if !sessions
+            .sessions
+            .iter()
+            .any(|session| session.run_id == run_id)
+        {
+            return;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "live managed session stayed active for run {run_id}"
+        );
+        sleep(Duration::from_millis(250));
+    }
 }

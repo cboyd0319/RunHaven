@@ -4,11 +4,13 @@ mod commands;
 mod contracts;
 mod launch_runner;
 pub mod session_input;
+mod session_output;
 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(session_input::SessionInputRegistry::default())
+        .manage(session_output::SessionOutputRegistry::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_setup_status,
             commands::list_agents,

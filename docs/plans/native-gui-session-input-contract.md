@@ -21,10 +21,17 @@ longer matches the active session. Tauri-launched runs now register a
 run-id-scoped writer while the child process is alive and unregister it when the
 child exits.
 
+Tauri-launched runs also capture child stdout/stderr into a bounded
+process-local `SessionOutputRegistry`. The selected-session output command still
+tries the existing `container logs` path first; it falls back to the desktop
+capture only when a Tauri-owned live session has registered output. Raw output
+remains confirmation-gated.
+
 RunHaven core now also has an `AgentCommandRunner` seam for standard and
 provider launches. The normal CLI path still uses `Command::status`, while the
-Tauri launch path requests `container run --interactive --tty`, retains a
-backend-owned child stdin handle, and registers it with `SessionInputRegistry`.
+Tauri launch path requests `container run --interactive` without `--tty`,
+retains a backend-owned child stdin handle, and registers it with
+`SessionInputRegistry`.
 
 Contract checklist: backend-owned session ID, explicit user intent, bounded input,
 cancellation, stale target, multi-session, auth, and resize remains out of scope.
@@ -174,6 +181,13 @@ Transport evidence:
   keeps standard input open and `--tty` opens a TTY.
 - `apple/container@9bd3c473451a40a1ee28f02104826d224636948d` documents that
   `container run` closes stdin unless `--interactive` is set.
+- Live smoke found `--tty` with piped stdin fails under Tauri-owned launch with
+  `NSPOSIXErrorDomain Code=25`, so the current GUI message composer uses
+  `--interactive` only. A future embedded terminal needs a real PTY design
+  before `--tty` can be reintroduced for that path.
+- The same smoke found `container logs` is not reliable enough for the
+  Tauri-owned interactive child process, so desktop-owned stdout/stderr capture
+  backs selected-session output for that launch path.
 - The same source shows `container start` does not support attaching to already
   running containers, and `container exec` creates a new process. Neither is a
   safe shortcut for sending input to the original agent process.
@@ -233,10 +247,10 @@ Frontend:
 
 Live smoke:
 
-- after a real session input backend exists, a local smoke must prove one
-  internal `shell` session can receive a bounded line of text and show the
-  echoed output through the existing bounded output path;
-- the smoke must also prove stop still works and cleanup still runs.
+- the local smoke proves one internal `shell` session can receive a bounded line
+  of text and show the echoed output through the selected-session output path.
+  Done.
+- the smoke proves stop still works and cleanup still runs. Done.
 
 ## First Implementation Sequence
 
@@ -258,7 +272,7 @@ Live smoke:
    Done.
 9. Add preview and Playwright tests for two selected sessions. Done.
 10. Add a live smoke after the Rust path can write to a real backend-owned
-   session.
+   session. Done.
 
 The first implementation must not add `resize_session`. Resize remains out of
 scope until there is a separate design with bounds, terminal-size semantics,

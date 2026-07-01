@@ -40,7 +40,9 @@ pub(crate) fn log_snapshot_response(
         .and_then(log_snapshot_response_from_payload)
 }
 
-fn log_snapshot_response_from_payload(payload: Value) -> Result<LogSnapshotResponse, String> {
+pub(crate) fn log_snapshot_response_from_payload(
+    payload: Value,
+) -> Result<LogSnapshotResponse, String> {
     let run_id = required_string(&payload, "run_id")?;
     let captured_at = required_string(&payload, "captured_at")?;
     let requested_lines = required_u32(&payload, "requested_lines")?;

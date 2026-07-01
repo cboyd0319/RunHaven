@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-06-30 UTC
+Last updated: 2026-07-01 UTC
 
 ## Current Objective
 
@@ -1665,19 +1665,18 @@ Latest GUI local prototype:
   writing, and provider-prepared command rewrites. Apple container evidence from
   installed `container` 1.0.0 plus public Apple source commit
   `apple/container@9bd3c473451a40a1ee28f02104826d224636948d` confirms the GUI
-  input path must retain the original `container run --interactive --tty`
-  process handle; `container exec` starts a separate process and `container start`
-  cannot attach to already-running containers. Next selected-session
-  input work should move Tauri launch ownership to a backend runner that keeps a
-  child stdin handle and registers it with `SessionInputRegistry`, without
-  exposing a write command or capability first.
+  input path must retain the original `container run --interactive` process
+  handle; `container exec` starts a separate process and `container start`
+  cannot attach to already-running containers. A later embedded terminal needs a
+  real PTY design before the GUI path can use `--tty`.
 - 2026-06-30 Tauri launch stdin ownership: `launch_run` now uses the
-  Tauri-owned runner and requests `container run --interactive --tty`. The
-  runner registers a run-id-scoped stdin writer while the child is alive and
-  unregisters it on exit. No input command, permission, frontend composer,
-  resize, attach, app-server transport, filesystem RPC, MCP, or host-reaching
-  Codex path was added. Next: add the fixed input command under the existing
-  fail-closed request contract.
+  Tauri-owned runner and requests `container run --interactive` without
+  `--tty`. The runner registers a run-id-scoped stdin writer while the child is
+  alive and unregisters it on exit. Live smoke found Apple container rejects
+  `--tty` with piped stdin under Tauri-owned launch
+  (`NSPOSIXErrorDomain Code=25`), so terminal-grade GUI sessions remain a
+  separate PTY-backed design problem. No resize, attach, app-server transport,
+  filesystem RPC, MCP, or host-reaching Codex path was added.
 - 2026-06-30 fixed session input command: `write_session_input` is now exposed
   only under the `run-control` capability. It reuses the fail-closed managed
   session input contract and `SessionInputRegistry`; `main-read` stays
@@ -1689,6 +1688,15 @@ Latest GUI local prototype:
   on target changes, ignores late responses for stale targets, and keeps
   two-session browser-preview drafts isolated. No resize, attach, app-server
   transport, filesystem RPC, MCP, login, or host-reaching Codex path was added.
+- 2026-07-01 GUI-managed input live smoke: The hard live path now passes. The
+  Tauri-owned runner launches an internal shell session with `--interactive`
+  and no `--tty`, registers bounded stdin, captures child stdout/stderr in a
+  process-local `SessionOutputRegistry`, reads selected-session output through
+  that bounded capture when `container logs` is unavailable, then stops and
+  cleans up the owned run. Live evidence on macOS 27.0 with Apple container
+  1.0.0 proved input, output, stop, and cleanup. No resize, attach, app-server
+  transport, filesystem RPC, MCP, generic command execution, login, or
+  host-reaching Codex path was added.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
@@ -1716,13 +1724,13 @@ Continue local GUI work on this branch. Use
 `docs/plans/native-gui-microsandbox-reference.md` before adding embedded
 terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
 boundary, make safe launch the simplest path, and keep developer details behind
-secondary views. Next useful work is the live GUI-managed input smoke: start a
-real internal `shell` session through the GUI/Tauri command path, send one
-bounded line through `write_session_input`, confirm the echoed output through
-the bounded selected-session output path, then stop and clean up the owned run.
-Do not expose resize, attach, app-server transport, filesystem RPC, MCP,
-generic command execution, login, or host-reaching Codex paths in that slice. A
-later desktop-driver pass can add native WebView click automation if it is
-worth the tooling cost.
+secondary views. Next useful hard-first work is multi-session and real-agent
+lifecycle hardening: prove auth-ready and auth-attention states behave correctly
+for GUI-launched Codex/Claude-style sessions, keep per-session input/output
+isolated across multiple live sessions, and make stale/exited session states
+plain in the UI. Do not expose resize, attach, app-server transport,
+filesystem RPC, MCP, generic command execution, login, or host-reaching Codex
+paths in that slice. A later desktop-driver pass can add native WebView click
+automation if it is worth the tooling cost.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.

@@ -9,6 +9,7 @@ use crate::contracts::{
     WriteSessionInputRequest, WriteSessionInputResponse,
 };
 use crate::session_input::SessionInputRegistry;
+use crate::session_output::SessionOutputRegistry;
 
 const RAW_OUTPUT_REDACTION_MESSAGE: &str = "Raw output is not automatically redacted.";
 const MAX_SESSION_INPUT_BYTES: usize = 8 * 1024;
@@ -21,14 +22,57 @@ pub(crate) fn get_managed_sessions() -> Result<ManagedSessionListData, String> {
 #[tauri::command]
 pub(crate) fn get_managed_session_log_snapshot(
     request: ManagedSessionLogSnapshotRequest,
+    output_registry: tauri::State<'_, SessionOutputRegistry>,
+) -> Result<ManagedSessionLogSnapshotResponse, String> {
+    get_managed_session_log_snapshot_with_output(request, Some(output_registry.inner()))
+}
+
+fn get_managed_session_log_snapshot_with_output(
+    request: ManagedSessionLogSnapshotRequest,
+    output_registry: Option<&SessionOutputRegistry>,
 ) -> Result<ManagedSessionLogSnapshotResponse, String> {
     let (session, run_id) = managed_session_for_id(&request.session_id)?;
-    let snapshot = crate::commands::log_snapshot::get_log_snapshot(LogSnapshotRequest {
+    let snapshot_request = LogSnapshotRequest {
+        run_id: run_id.clone(),
+        lines: request.lines,
+        confirm_sensitive_output: request.confirm_sensitive_output,
+    };
+    let lines = crate::commands::log_snapshot::validated_lines(&snapshot_request)?;
+    let container_snapshot = crate::commands::log_snapshot::get_log_snapshot(LogSnapshotRequest {
         run_id,
         lines: request.lines,
         confirm_sensitive_output: request.confirm_sensitive_output,
-    })?;
+    });
+    let snapshot = match container_snapshot {
+        Ok(snapshot) => snapshot,
+        Err(container_error) => {
+            if let Some(output_registry) = output_registry {
+                if let Some(snapshot) = output_registry.snapshot(&session.run_id, lines)? {
+                    snapshot
+                } else {
+                    return Err(container_error);
+                }
+            } else {
+                return Err(container_error);
+            }
+        }
+    };
     Ok(managed_session_log_snapshot_response(session, snapshot))
+}
+
+#[cfg(test)]
+pub(crate) fn get_managed_session_log_snapshot_for_test(
+    request: ManagedSessionLogSnapshotRequest,
+) -> Result<ManagedSessionLogSnapshotResponse, String> {
+    get_managed_session_log_snapshot_with_output(request, None)
+}
+
+#[cfg(test)]
+pub(crate) fn get_managed_session_log_snapshot_with_output_for_test(
+    request: ManagedSessionLogSnapshotRequest,
+    output_registry: &SessionOutputRegistry,
+) -> Result<ManagedSessionLogSnapshotResponse, String> {
+    get_managed_session_log_snapshot_with_output(request, Some(output_registry))
 }
 
 #[cfg(test)]

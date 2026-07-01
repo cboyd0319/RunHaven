@@ -1,19 +1,28 @@
-use std::io::Write;
+use std::io::{Read, Write};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
+use std::thread;
 
 use anyhow::{Context, Result, bail};
 use runhaven_core::runtime::launch::{AgentCommandContext, AgentCommandRunner};
 
 use crate::session_input::SessionInputRegistry;
+use crate::session_output::SessionOutputRegistry;
 
 pub(crate) struct TauriLaunchRunner {
-    registry: SessionInputRegistry,
+    input_registry: SessionInputRegistry,
+    output_registry: SessionOutputRegistry,
 }
 
 impl TauriLaunchRunner {
-    pub(crate) fn new(registry: SessionInputRegistry) -> Self {
-        Self { registry }
+    pub(crate) fn new(
+        input_registry: SessionInputRegistry,
+        output_registry: SessionOutputRegistry,
+    ) -> Self {
+        Self {
+            input_registry,
+            output_registry,
+        }
     }
 
     fn register_stdin(
@@ -22,7 +31,7 @@ impl TauriLaunchRunner {
         stdin: std::process::ChildStdin,
     ) -> Result<InputRegistration<'_>> {
         let stdin = Arc::new(Mutex::new(stdin));
-        self.registry
+        self.input_registry
             .register_writer(run_id, run_id, move |input| {
                 let mut stdin = stdin
                     .lock()
@@ -37,8 +46,30 @@ impl TauriLaunchRunner {
             })
             .map_err(anyhow::Error::msg)?;
         Ok(InputRegistration {
-            registry: &self.registry,
+            registry: &self.input_registry,
             session_id: run_id.to_string(),
+        })
+    }
+
+    fn capture_output<R>(&self, run_id: &str, mut reader: R) -> thread::JoinHandle<Result<()>>
+    where
+        R: Read + Send + 'static,
+    {
+        let run_id = run_id.to_string();
+        let registry = self.output_registry.clone();
+        thread::spawn(move || {
+            let mut buffer = [0_u8; 8192];
+            loop {
+                let read = reader
+                    .read(&mut buffer)
+                    .with_context(|| format!("could not read session output for run {run_id}"))?;
+                if read == 0 {
+                    return Ok(());
+                }
+                registry
+                    .append(&run_id, &buffer[..read])
+                    .map_err(anyhow::Error::msg)?;
+            }
         })
     }
 }
@@ -54,7 +85,11 @@ impl AgentCommandRunner for TauriLaunchRunner {
             bail!("agent command is empty");
         };
         let mut agent_command = Command::new(program);
-        agent_command.args(&command[1..]).stdin(Stdio::piped());
+        agent_command
+            .args(&command[1..])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
         if let Some((name, value)) = env {
             agent_command.env(name, value);
         }
@@ -62,6 +97,14 @@ impl AgentCommandRunner for TauriLaunchRunner {
         let mut child = agent_command
             .spawn()
             .with_context(|| format!("could not launch agent command {program:?}"))?;
+        let output_registration = match self.output_registry.register(context.run_id) {
+            Ok(registration) => registration,
+            Err(error) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(anyhow::Error::msg(error));
+            }
+        };
         let Some(stdin) = child.stdin.take() else {
             let _ = child.kill();
             let _ = child.wait();
@@ -75,13 +118,34 @@ impl AgentCommandRunner for TauriLaunchRunner {
                 return Err(error);
             }
         };
+        let Some(stdout) = child.stdout.take() else {
+            let _ = child.kill();
+            let _ = child.wait();
+            bail!("agent command did not expose a stdout handle");
+        };
+        let Some(stderr) = child.stderr.take() else {
+            let _ = child.kill();
+            let _ = child.wait();
+            bail!("agent command did not expose a stderr handle");
+        };
+        let stdout_handle = self.capture_output(context.run_id, stdout);
+        let stderr_handle = self.capture_output(context.run_id, stderr);
 
         let status = child
             .wait()
             .with_context(|| format!("could not wait for agent command {program:?}"))?;
+        join_output_capture(stdout_handle)?;
+        join_output_capture(stderr_handle)?;
         drop(registration);
+        drop(output_registration);
         Ok(status.code().unwrap_or(1))
     }
+}
+
+fn join_output_capture(handle: thread::JoinHandle<Result<()>>) -> Result<()> {
+    handle
+        .join()
+        .map_err(|_| anyhow::anyhow!("session output reader panicked"))?
 }
 
 struct InputRegistration<'a> {
@@ -109,6 +173,7 @@ mod tests {
     use runhaven_core::runtime::plans::{AgentRunPlan, AuthScope, NetworkMode, WorkspaceScope};
 
     use crate::session_input::SessionInputRegistry;
+    use crate::session_output::SessionOutputRegistry;
 
     #[cfg(unix)]
     fn stdin_wait_command() -> Vec<String> {
@@ -160,7 +225,8 @@ mod tests {
         let runner_registry = registry.clone();
 
         let handle = thread::spawn(move || {
-            let mut runner = super::TauriLaunchRunner::new(runner_registry);
+            let mut runner =
+                super::TauriLaunchRunner::new(runner_registry, SessionOutputRegistry::default());
             runner.run_agent_command(
                 &stdin_wait_command(),
                 None,

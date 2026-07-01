@@ -21,6 +21,7 @@ use crate::contracts::{
 };
 use crate::launch_runner::TauriLaunchRunner;
 use crate::session_input::SessionInputRegistry;
+use crate::session_output::SessionOutputRegistry;
 
 pub(crate) mod diagnostics;
 pub(crate) mod image_status;
@@ -57,14 +58,20 @@ pub(crate) fn plan_run(request: RunPlanRequest) -> Result<RunPlanResponse, Strin
 #[tauri::command]
 pub(crate) fn launch_run(
     request: LaunchRunRequest,
-    registry: State<'_, SessionInputRegistry>,
+    input_registry: State<'_, SessionInputRegistry>,
+    output_registry: State<'_, SessionOutputRegistry>,
 ) -> Result<LaunchRunResponse, String> {
-    launch_run_with_registry(request, registry.inner().clone())
+    launch_run_with_registries(
+        request,
+        input_registry.inner().clone(),
+        output_registry.inner().clone(),
+    )
 }
 
-fn launch_run_with_registry(
+fn launch_run_with_registries(
     request: LaunchRunRequest,
-    registry: SessionInputRegistry,
+    input_registry: SessionInputRegistry,
+    output_registry: SessionOutputRegistry,
 ) -> Result<LaunchRunResponse, String> {
     validate_launch_confirmation(&request)?;
     let setup = collect_setup_status();
@@ -79,7 +86,7 @@ fn launch_run_with_registry(
     thread::Builder::new()
         .name(format!("runhaven-launch-{run_id}"))
         .spawn(move || {
-            let mut runner = TauriLaunchRunner::new(registry);
+            let mut runner = TauriLaunchRunner::new(input_registry, output_registry);
             if let Err(error) = launch_run_plan_with_runner(&plan, &mut runner) {
                 eprintln!("runhaven launch {run_id} failed: {error}");
             }
@@ -197,7 +204,7 @@ fn build_agent_run_plan(
         env: request.env_names.clone(),
         user: defaulted(&request.user, "agent"),
         interactive: true,
-        tty: true,
+        tty: false,
         allow_sensitive_workspace: request.allow_sensitive_workspace,
         allow_root_user: request.allow_root_user,
         provider_hosts,
