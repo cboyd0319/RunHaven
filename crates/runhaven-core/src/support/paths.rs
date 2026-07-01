@@ -26,7 +26,11 @@ pub struct CacheRootOverride {
 #[doc(hidden)]
 impl Drop for CacheRootOverride {
     fn drop(&mut self) {
-        *TEST_CACHE_ROOT.lock().expect("cache root override lock") = self.previous.clone();
+        // Recover a poisoned lock: a test that panicked while holding an
+        // override guard must not cascade panics into unrelated tests.
+        *TEST_CACHE_ROOT
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = self.previous.clone();
     }
 }
 
@@ -35,8 +39,10 @@ impl Drop for CacheRootOverride {
 pub fn override_cache_root_for_tests(path: &Path) -> CacheRootOverride {
     let guard = TEST_CACHE_ROOT_LOCK
         .lock()
-        .expect("cache root override lock");
-    let mut root = TEST_CACHE_ROOT.lock().expect("cache root override lock");
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut root = TEST_CACHE_ROOT
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     let previous = root.clone();
     *root = Some(path.to_path_buf());
     drop(root);
@@ -50,7 +56,7 @@ pub fn runhaven_cache_root() -> PathBuf {
     #[cfg(any(test, feature = "test-support"))]
     if let Some(path) = TEST_CACHE_ROOT
         .lock()
-        .expect("cache root override lock")
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .clone()
     {
         return path;
@@ -281,5 +287,23 @@ mod tests {
             mode(&cache.path().join("tui").join("zork1-save.ifzs")),
             0o600
         );
+    }
+
+    #[test]
+    fn cache_root_override_recovers_from_poisoned_lock() {
+        // A test that panics while holding the override guard poisons
+        // TEST_CACHE_ROOT_LOCK. Recovery must keep the poison from cascading
+        // into every later test that takes an isolated cache.
+        let panicked = std::thread::spawn(|| {
+            let _guard = override_cache_root_for_tests(Path::new("/tmp/runhaven-poison"));
+            panic!("intentional panic while holding cache root override guard");
+        })
+        .join();
+        assert!(panicked.is_err(), "helper thread should have panicked");
+
+        // A fresh override must still acquire the lock and take effect.
+        let recovered = tempfile::tempdir().expect("cache");
+        let _override = override_cache_root_for_tests(recovered.path());
+        assert_eq!(runhaven_cache_root(), recovered.path());
     }
 }

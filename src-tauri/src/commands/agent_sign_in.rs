@@ -20,8 +20,9 @@ use runhaven_core::runtime::login::{build_sandbox_login_plan, supports_sandbox_l
 use runhaven_core::runtime::plans::AgentRunPlan;
 use runhaven_core::runtime::profiles::get_profile;
 use tauri::{AppHandle, State};
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::MessageDialogKind;
 
+use super::dialog::confirm_native;
 use super::validation::{MAX_AGENT_NAME_LEN, validate_text_len};
 use crate::agent_sign_in_runner::spawn_agent_sign_in;
 use crate::agent_sign_in_status::AgentSignInStatusRegistry;
@@ -123,19 +124,14 @@ async fn trusted_sign_in_confirmed(app: AppHandle, agent: &str) -> Result<bool, 
          opens a device sign-in in the sandbox and shows a link and a short code to finish in \
          your browser. RunHaven never sees or stores the token."
     );
-    tauri::async_runtime::spawn_blocking(move || {
-        app.dialog()
-            .message(message)
-            .title("Confirm RunHaven sign-in")
-            .kind(MessageDialogKind::Info)
-            .buttons(MessageDialogButtons::OkCancelCustom(
-                "Start sign-in".to_string(),
-                "Cancel".to_string(),
-            ))
-            .blocking_show()
-    })
+    confirm_native(
+        app,
+        "Confirm RunHaven sign-in",
+        "Start sign-in",
+        MessageDialogKind::Info,
+        message,
+    )
     .await
-    .map_err(|error| format!("could not show sign-in confirmation: {error}"))
 }
 
 #[cfg(test)]

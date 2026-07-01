@@ -1,7 +1,10 @@
 #[cfg(not(test))]
 use tauri::AppHandle;
 #[cfg(not(test))]
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::MessageDialogKind;
+
+#[cfg(not(test))]
+use super::dialog::confirm_native;
 
 #[cfg(test)]
 use runhaven_core::runtime::active::log_snapshot_payload_from_stdout;
@@ -112,19 +115,14 @@ pub(crate) async fn trusted_sensitive_output_approved(
     title: &'static str,
     message: String,
 ) -> Result<bool, String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        app.dialog()
-            .message(message)
-            .title(title)
-            .kind(MessageDialogKind::Warning)
-            .buttons(MessageDialogButtons::OkCancelCustom(
-                "Show output".to_string(),
-                "Cancel".to_string(),
-            ))
-            .blocking_show()
-    })
+    confirm_native(
+        app,
+        title,
+        "Show output",
+        MessageDialogKind::Warning,
+        message,
+    )
     .await
-    .map_err(|error| format!("could not show raw output confirmation: {error}"))
 }
 
 #[cfg(not(test))]

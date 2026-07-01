@@ -1,6 +1,8 @@
 use runhaven_core::ui_contracts::ManagedSessionSummaryData;
 use tauri::AppHandle;
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::MessageDialogKind;
+
+use crate::commands::dialog::confirm_native;
 
 #[derive(Clone, Copy)]
 pub(super) enum RunControlAction {
@@ -74,22 +76,15 @@ pub(super) async fn trusted_run_control_confirmed(
     action: RunControlAction,
     target: RunControlTarget<'_>,
 ) -> Result<bool, String> {
-    let title = action.dialog_title().to_string();
-    let confirm_button = action.dialog_button().to_string();
     let message = trusted_run_control_message(action, target);
-    tauri::async_runtime::spawn_blocking(move || {
-        app.dialog()
-            .message(message)
-            .title(title)
-            .kind(MessageDialogKind::Warning)
-            .buttons(MessageDialogButtons::OkCancelCustom(
-                confirm_button,
-                "Cancel".to_string(),
-            ))
-            .blocking_show()
-    })
+    confirm_native(
+        app,
+        action.dialog_title(),
+        action.dialog_button(),
+        MessageDialogKind::Warning,
+        message,
+    )
     .await
-    .map_err(|error| format!("could not show trusted run-control confirmation: {error}"))
 }
 
 fn trusted_run_control_message(action: RunControlAction, target: RunControlTarget<'_>) -> String {

@@ -19,7 +19,8 @@
 //! capability scoping constrains the WebView.
 
 use runhaven_core::runtime::worktrees::{
-    WorktreeLifecycle, load_worktree_lifecycle, verify_lifecycle, worktree_recovery_payload,
+    WorktreeLifecycle, discard_worktree_for_run, load_worktree_lifecycle, verify_lifecycle,
+    worktree_recovery_payload,
 };
 use runhaven_core::ui_contracts::{ManagedSessionCleanupData, ManagedSessionSummaryData};
 use serde_json::Value;
@@ -58,7 +59,7 @@ pub(crate) use get_managed_session_worktree as get_managed_session_worktree_for_
 /// worktree is finished, RunHaven-owned, and not active/stale/foreign. The
 /// returned lifecycle carries raw host paths for backend use only and is never
 /// serialized to the WebView.
-fn resolve_worktree_lifecycle(
+pub(super) fn resolve_worktree_lifecycle(
     session_id: &str,
 ) -> Result<(ManagedSessionSummaryData, WorktreeLifecycle), String> {
     let (session, run_id) = super::sessions::managed_session_for_id(session_id)?;
@@ -93,12 +94,25 @@ fn reverify_worktree_owned(lifecycle: &WorktreeLifecycle) -> Result<(), String> 
     verify_lifecycle(lifecycle).map_err(worktree_target_error)
 }
 
-fn ensure_no_active_worktree_marker(run_id: &str) -> Result<(), String> {
+pub(super) fn ensure_no_active_worktree_marker(run_id: &str) -> Result<(), String> {
     match super::active_marker::active_run_marker_present(run_id) {
         Ok(true) => Err(ACTIVE_WORKTREE_ERROR.to_string()),
         Ok(false) => Ok(()),
         Err(()) => Err(FAILED_WORKTREE_ERROR.to_string()),
     }
+}
+
+/// The single gated worktree discard, shared by the worktree Discard action and
+/// managed-session cleanup. Immediately before the force-remove it re-checks the
+/// active-run marker and re-proves RunHaven ownership, in case on-disk state
+/// changed while the native confirmation dialog was open, then deletes the
+/// worktree and branch through the tested core function. Every discard path runs
+/// these three gates here, so no caller can force-remove a worktree without
+/// them.
+pub(super) fn discard_owned_worktree(lifecycle: &WorktreeLifecycle) -> Result<(), String> {
+    ensure_no_active_worktree_marker(&lifecycle.run_id)?;
+    reverify_worktree_owned(lifecycle)?;
+    discard_worktree_for_run(&lifecycle.run_id).map_err(worktree_target_error)
 }
 
 /// The recovery payload, with paths and command lines still present. Used only
@@ -174,7 +188,7 @@ fn available_action_keys() -> Vec<String> {
 
 /// After a mutation removes the worktree, drop the session's worktree review /
 /// cleanup availability so the refreshed card no longer offers stale actions.
-fn clear_session_worktree_review(session: &mut ManagedSessionSummaryData) {
+pub(super) fn clear_session_worktree_review(session: &mut ManagedSessionSummaryData) {
     session.cleanup = ManagedSessionCleanupData {
         available: false,
         target: String::new(),

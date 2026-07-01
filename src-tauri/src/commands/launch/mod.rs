@@ -3,8 +3,9 @@ use std::thread;
 use runhaven_core::runtime::launch::{launch_run_plan_with_runner, new_run_id};
 use runhaven_core::runtime::plans::AgentRunPlan;
 use tauri::{AppHandle, State};
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::MessageDialogKind;
 
+use crate::commands::dialog::confirm_native;
 use crate::contracts::{
     LaunchRunRequest, LaunchRunResponse, PlanWarning, RunPlanRequest, RunPlanResponse,
 };
@@ -239,24 +240,12 @@ async fn trusted_launch_confirmed(
     worktree: bool,
 ) -> Result<bool, String> {
     let message = trusted_launch_message(plan, warnings, worktree);
-    let has_warnings = !warnings.is_empty();
-    tauri::async_runtime::spawn_blocking(move || {
-        app.dialog()
-            .message(message)
-            .title("Confirm RunHaven launch")
-            .kind(if has_warnings {
-                MessageDialogKind::Warning
-            } else {
-                MessageDialogKind::Info
-            })
-            .buttons(MessageDialogButtons::OkCancelCustom(
-                "Launch".to_string(),
-                "Cancel".to_string(),
-            ))
-            .blocking_show()
-    })
-    .await
-    .map_err(|error| format!("could not show launch confirmation: {error}"))
+    let kind = if warnings.is_empty() {
+        MessageDialogKind::Info
+    } else {
+        MessageDialogKind::Warning
+    };
+    confirm_native(app, "Confirm RunHaven launch", "Launch", kind, message).await
 }
 
 fn trusted_launch_message(plan: &AgentRunPlan, warnings: &[PlanWarning], worktree: bool) -> String {

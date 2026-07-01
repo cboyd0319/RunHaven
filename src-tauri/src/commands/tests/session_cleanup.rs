@@ -50,7 +50,7 @@ fn managed_session_cleanup_rejects_unknown_unconfirmed_and_ineligible_targets() 
         |_, _| unreachable!("ineligible history must fail before approval"),
     )
     .expect_err("ineligible history rejected");
-    assert!(ineligible.contains("history is not eligible"));
+    assert!(ineligible.contains("not eligible for worktree review"));
 
     write_history_run_record(json!({
         "timestamp": "2026-07-01T06:30:00Z",
@@ -189,7 +189,7 @@ fn managed_session_cleanup_rejects_stale_worktree_before_approval_without_leakin
     )
     .expect_err("stale worktree rejected");
 
-    assert!(rejected.contains("could not verify a safe cleanup target"));
+    assert!(rejected.contains("could not verify a safe worktree target"));
     for forbidden in [
         repo.path().display().to_string(),
         worktree_root.display().to_string(),

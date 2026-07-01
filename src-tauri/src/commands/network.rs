@@ -12,8 +12,9 @@ use runhaven_core::runtime::network::{
     NetworkPruneOutcome, list_managed_networks, prune_managed_networks as core_prune,
 };
 use tauri::AppHandle;
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::MessageDialogKind;
 
+use super::dialog::confirm_native;
 use crate::contracts::{NetworkPrunePreview, NetworkPruneRequest, NetworkPruneResponse};
 
 const PRUNE_CANCELED: &str = "Network cleanup canceled; no networks were removed.";
@@ -72,19 +73,14 @@ async fn trusted_network_prune_confirmed(app: AppHandle, count: usize) -> Result
     let message = format!(
         "RunHaven-managed networks to remove: {count}\n\nRunHaven will delete only its own stale networks after you confirm. Networks still in use by a running session are skipped."
     );
-    tauri::async_runtime::spawn_blocking(move || {
-        app.dialog()
-            .message(message)
-            .title("Confirm RunHaven network cleanup")
-            .kind(MessageDialogKind::Warning)
-            .buttons(MessageDialogButtons::OkCancelCustom(
-                "Remove".to_string(),
-                "Cancel".to_string(),
-            ))
-            .blocking_show()
-    })
+    confirm_native(
+        app,
+        "Confirm RunHaven network cleanup",
+        "Remove",
+        MessageDialogKind::Warning,
+        message,
+    )
     .await
-    .map_err(|error| format!("could not show network cleanup confirmation: {error}"))
 }
 
 #[cfg(test)]

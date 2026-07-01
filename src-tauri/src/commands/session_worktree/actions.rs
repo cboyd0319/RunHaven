@@ -1,13 +1,11 @@
-use runhaven_core::runtime::worktrees::{
-    WorktreeLifecycle, discard_worktree_for_run, runs_worktree_merge,
-};
+use runhaven_core::runtime::worktrees::{WorktreeLifecycle, runs_worktree_merge};
 use runhaven_core::ui_contracts::ManagedSessionSummaryData;
 use tauri::AppHandle;
 
 use super::approval::{WorktreeReviewAction, trusted_worktree_action_confirmed};
 use super::{
-    clear_session_worktree_review, ensure_no_active_worktree_marker, resolve_worktree_lifecycle,
-    reverify_worktree_owned, review_next_steps, worktree_review_payload, worktree_target_error,
+    clear_session_worktree_review, discard_owned_worktree, ensure_no_active_worktree_marker,
+    resolve_worktree_lifecycle, review_next_steps, worktree_review_payload,
 };
 use crate::contracts::{WorktreeActionRequest, WorktreeActionResponse, WorktreeActionResult};
 
@@ -95,11 +93,9 @@ fn execute_worktree_action(
             Vec::new()
         }
         WorktreeReviewAction::Discard => {
-            ensure_no_active_worktree_marker(&lifecycle.run_id)?;
-            // Re-prove ownership just before the force-remove, in case on-disk
-            // state changed while the confirmation dialog was open.
-            reverify_worktree_owned(&lifecycle)?;
-            discard_worktree_for_run(&lifecycle.run_id).map_err(worktree_target_error)?;
+            // The shared gated discard re-checks the active-run marker and
+            // re-proves ownership immediately before the force-remove.
+            discard_owned_worktree(&lifecycle)?;
             Vec::new()
         }
         // Recover reads the tested core payload for the safe, path-free manual

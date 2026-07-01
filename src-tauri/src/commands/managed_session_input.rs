@@ -1,7 +1,8 @@
 use runhaven_core::ui_contracts::{ManagedSessionInputData, ManagedSessionSummaryData};
 use tauri::AppHandle;
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::MessageDialogKind;
 
+use super::dialog::confirm_native;
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{WriteSessionInputRequest, WriteSessionInputResponse};
 use crate::session_input::SessionInputRegistry;
@@ -115,19 +116,14 @@ async fn trusted_session_input_approved(
     run_id: &str,
 ) -> Result<bool, String> {
     let message = trusted_session_input_message(session, run_id);
-    tauri::async_runtime::spawn_blocking(move || {
-        app.dialog()
-            .message(message)
-            .title("Allow session input")
-            .kind(MessageDialogKind::Warning)
-            .buttons(MessageDialogButtons::OkCancelCustom(
-                "Allow".to_string(),
-                "Cancel".to_string(),
-            ))
-            .blocking_show()
-    })
+    confirm_native(
+        app,
+        "Allow session input",
+        "Allow",
+        MessageDialogKind::Warning,
+        message,
+    )
     .await
-    .map_err(|error| format!("could not show session input confirmation: {error}"))
 }
 
 fn trusted_session_input_message(session: &ManagedSessionSummaryData, run_id: &str) -> String {

@@ -11,8 +11,9 @@ use runhaven_core::image::build::{ImageBuildPlan, build_image_plan};
 use runhaven_core::runtime::launch::{new_run_id, require_container_cli};
 use runhaven_core::runtime::profiles::get_profile;
 use tauri::{AppHandle, State};
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::MessageDialogKind;
 
+use super::dialog::confirm_native;
 use super::validation::{MAX_AGENT_NAME_LEN, validate_text_len};
 use crate::contracts::{ImageBuildRequest, ImageBuildStartResponse};
 use crate::image_build_runner::spawn_image_build;
@@ -101,19 +102,14 @@ async fn trusted_image_rebuild_confirmed(
     let message = format!(
         "Agent: {agent}\nImage tag: {tag}\n\nRunHaven will rebuild this agent image from its bundled template after you confirm. Existing containers keep running until you launch a new session."
     );
-    tauri::async_runtime::spawn_blocking(move || {
-        app.dialog()
-            .message(message)
-            .title("Confirm RunHaven image rebuild")
-            .kind(MessageDialogKind::Warning)
-            .buttons(MessageDialogButtons::OkCancelCustom(
-                "Rebuild".to_string(),
-                "Cancel".to_string(),
-            ))
-            .blocking_show()
-    })
+    confirm_native(
+        app,
+        "Confirm RunHaven image rebuild",
+        "Rebuild",
+        MessageDialogKind::Warning,
+        message,
+    )
     .await
-    .map_err(|error| format!("could not show image rebuild confirmation: {error}"))
 }
 
 #[cfg(test)]

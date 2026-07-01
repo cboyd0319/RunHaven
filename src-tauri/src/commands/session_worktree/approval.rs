@@ -1,6 +1,8 @@
 use runhaven_core::ui_contracts::ManagedSessionSummaryData;
 use tauri::AppHandle;
-use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+use tauri_plugin_dialog::MessageDialogKind;
+
+use crate::commands::dialog::confirm_native;
 
 /// The four worktree review lifecycle actions a user can take on a finished
 /// RunHaven-owned worktree run. Merge and discard mutate on-disk git state;
@@ -114,9 +116,6 @@ pub(super) async fn trusted_worktree_action_confirmed(
     run_id: &str,
     branch: &str,
 ) -> Result<bool, String> {
-    let title = action.dialog_title().to_string();
-    let confirm_button = action.dialog_button().to_string();
-    let kind = action.dialog_kind();
     let message = format!(
         "Action: {}\nSession: {}\nRun ID: {}\nAgent: {}\nProject: {}\nBranch: {}\n\nRunHaven will {} after you confirm.",
         action.dialog_label(),
@@ -127,17 +126,12 @@ pub(super) async fn trusted_worktree_action_confirmed(
         branch,
         action.dialog_effect(),
     );
-    tauri::async_runtime::spawn_blocking(move || {
-        app.dialog()
-            .message(message)
-            .title(title)
-            .kind(kind)
-            .buttons(MessageDialogButtons::OkCancelCustom(
-                confirm_button,
-                "Cancel".to_string(),
-            ))
-            .blocking_show()
-    })
+    confirm_native(
+        app,
+        action.dialog_title(),
+        action.dialog_button(),
+        action.dialog_kind(),
+        message,
+    )
     .await
-    .map_err(|error| format!("could not show trusted worktree confirmation: {error}"))
 }
