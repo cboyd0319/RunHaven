@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-import { authScopeLabel } from "./labels"
+import { authScopeLabel, networkLabel } from "./labels"
 import { Metric } from "./Metric"
 
 export function LastLaunchCard({ lastLaunch }: { lastLaunch: LaunchRunResponse }) {
@@ -23,7 +23,7 @@ export function LastLaunchCard({ lastLaunch }: { lastLaunch: LaunchRunResponse }
         <div className="grid gap-3 sm:grid-cols-3">
           <Metric label="Agent" value={lastLaunch.profile} />
           <Metric label="Auth scope" value={authScopeLabel(lastLaunch.authScope)} />
-          <Metric label="Network" value={lastLaunch.networkMode} />
+          <Metric label="Network" value={networkLabel(lastLaunch.networkMode)} />
           <Metric label="Container" value={lastLaunch.snapshot.containerName} />
         </div>
       </CardContent>

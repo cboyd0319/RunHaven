@@ -40,7 +40,7 @@ describe("LastLaunchCard", () => {
     expect(html).toContain("Last launch");
     expect(html).toContain("run-123");
     expect(html).toContain("codex");
-    expect(html).toContain("provider");
+    expect(html).toContain("Provider only");
     expect(html).toContain("runhaven-codex-project");
     // Workspace path and state volume travel in the response but never render.
     expect(html).not.toContain("/Users/");

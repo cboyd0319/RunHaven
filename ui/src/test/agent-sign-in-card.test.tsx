@@ -21,7 +21,7 @@ function agent(patch: Partial<AgentProfile> = {}): AgentProfile {
 describe("AgentSignIn", () => {
   it("offers an in-app sign-in button for device-code agents", () => {
     const html = renderToStaticMarkup(<AgentSignIn agent={agent()} />);
-    expect(html).toContain("Sign in to codex");
+    expect(html).toContain("Sign in to Codex");
     // The GUI only triggers sign-in: there is no field to paste a token, code,
     // or password into.
     expect(html).not.toContain("<input");

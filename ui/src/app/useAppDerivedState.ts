@@ -10,6 +10,8 @@ import {
   type RunPlanResponse,
 } from "@/commands/runhaven"
 
+import { sessionIdForRun } from "./sessionSelection"
+
 type AppDerivedStateInput = {
   dashboard: DashboardStatus | null
   request: RunPlanRequest
@@ -63,6 +65,13 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
     : input.lastLaunch
       ? `run:${input.lastLaunch.runId}`
       : null
+  // The managed-session id (if any) for the most recent launch. Once a launch
+  // becomes a managed session, its live status and controls belong only to that
+  // session view, so the launch screen collapses to a one-line pointer instead
+  // of a second control surface for the same run.
+  const lastLaunchSessionId = input.lastLaunch
+    ? sessionIdForRun(input.managedSessions, input.lastLaunch.runId)
+    : null
 
   return {
     selectedAgent,
@@ -77,5 +86,6 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
     outputSessionId,
     outputRunId,
     controlTargetId,
+    lastLaunchSessionId,
   }
 }

@@ -7,6 +7,15 @@ const apiKeyBrokerEnvByAgent: Record<string, string> = {
   gemini: "GEMINI_API_KEY"
 };
 
+// Pick the agent to preselect on first load. Prefer an agent that can sign in
+// inside the app so the happy path never opens with a terminal-only instruction;
+// fall back to the first agent when none support in-app sign-in.
+export function preferredDefaultAgent(
+  agents: AgentProfile[]
+): AgentProfile | undefined {
+  return agents.find((agent) => agent.supportsInAppSignIn) ?? agents[0];
+}
+
 export function secureNetworkDefault(agent: AgentProfile | undefined): RunPlanRequest["networkMode"] {
   return agent && agent.providerHosts.length > 0 ? "provider" : "internal";
 }

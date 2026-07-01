@@ -4,6 +4,7 @@ import type { AgentProfile } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 
+import { agentLabel } from "./sessionIdentity"
 import { useAgentSignIn } from "./useMaintenance"
 
 // Per-agent sign-in affordance shown next to the read-only auth summary.
@@ -55,10 +56,10 @@ export function AgentSignIn({
     >
       <div className="flex items-center gap-2 text-sm font-medium">
         <LogIn className="size-4" aria-hidden />
-        Sign in to {agent.name}
+        Sign in to {agentLabel(agent.name)}
       </div>
       <p className="text-sm text-muted-foreground">
-        RunHaven opens a sign-in for {agent.name}. You confirm first, then finish
+        RunHaven opens a sign-in for {agentLabel(agent.name)}. You confirm first, then finish
         in your browser. RunHaven never sees or stores your password or token.
       </p>
       <div>

@@ -1,10 +1,4 @@
-import {
-  AppWindow,
-  Box,
-  ShieldCheck,
-  Terminal,
-  type LucideIcon,
-} from "lucide-react"
+import { AppWindow, Terminal, type LucideIcon } from "lucide-react"
 
 import logo from "@/assets/logo.png"
 import { Badge } from "@/components/ui/badge"
@@ -54,9 +48,6 @@ export function RunHavenSidebar({
 }) {
   const navItems: SidebarNavItem[] = [
     { label: "Start", Icon: AppWindow, onClick: onStartSelect },
-    { label: "Agents", Icon: Terminal },
-    { label: "Security", Icon: ShieldCheck },
-    { label: "History", Icon: Box },
   ]
 
   return (

@@ -64,7 +64,7 @@ export function ManagedSessionCard({
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Metric label="Agent" value={displayValue(session.agent)} />
           <Metric label="Project" value={displayValue(session.project)} />
-          <Metric label="Session" value={displayValue(session.session)} />
+          <Metric label="Session name" value={displayValue(session.session)} />
           <Metric label="Status" value={displayValue(session.statusLabel)} />
           <Metric label="Auth" value={authStatusLabel(session.authStatus)} />
           <Metric label="Login state" value={authScopeLabel(session.authScope)} />

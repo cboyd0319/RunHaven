@@ -57,7 +57,7 @@ describe("runhaven command helpers", () => {
 
     const plan = await planRun(request);
 
-    expect(plan.egressSummary).toContain("API key broker enabled");
+    expect(plan.egressSummary).toContain("your API key stays on this Mac");
     expect(plan.access.apiKeyBrokerEnv).toBe("OPENAI_API_KEY");
     expect(plan.access.apiKeyBrokerEnvPresent).toBe(true);
     expect(plan.access.blocking).toBe(false);

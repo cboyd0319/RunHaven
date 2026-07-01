@@ -15,6 +15,7 @@ import type {
   RunStatusResponse,
 } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 
 import { DiagnosticsCard } from "./DiagnosticsCard"
 import { LastLaunchCard } from "./LastLaunchCard"
@@ -96,6 +97,8 @@ type AppMainContentProps = {
   onReviewPlan: () => Promise<void>
   onSignedIn: () => void
   lastLaunch: LaunchRunResponse | null
+  lastLaunchSessionId: string | null
+  onSelectSession: (sessionId: string) => void
   runStatus: RunStatusResponse | null
   runStatusLoading: boolean
   runStatusError: string
@@ -114,6 +117,8 @@ export function AppMainContent(props: AppMainContentProps) {
     setupReady,
     selectedSession,
     lastLaunch,
+    lastLaunchSessionId,
+    onSelectSession,
   } = props
 
   return (
@@ -142,7 +147,16 @@ export function AppMainContent(props: AppMainContentProps) {
           <LaunchView {...props} />
         )}
 
-        {!selectedSession && lastLaunch ? <RunView {...props} lastLaunch={lastLaunch} /> : null}
+        {!selectedSession && lastLaunch ? (
+          lastLaunchSessionId ? (
+            <LaunchedRunNotice
+              sessionId={lastLaunchSessionId}
+              onSelect={onSelectSession}
+            />
+          ) : (
+            <RunView {...props} lastLaunch={lastLaunch} />
+          )
+        ) : null}
 
         <details className="rounded-xl border bg-card p-4 text-card-foreground">
           <summary className="cursor-pointer text-sm font-medium">Diagnostics</summary>
@@ -300,6 +314,38 @@ function LaunchView(props: AppMainContentProps) {
   )
 }
 
+// After a launch becomes a managed session, the live status, controls, and
+// output live only in that session's view. The launch screen shows a single
+// confirmation that points at the sidebar, so one run is never controllable
+// from two places at once.
+function LaunchedRunNotice({
+  sessionId,
+  onSelect,
+}: {
+  sessionId: string
+  onSelect: (sessionId: string) => void
+}) {
+  return (
+    <Alert role="status">
+      <CheckCircle2 />
+      <AlertTitle>Run started - find it in your sidebar</AlertTitle>
+      <AlertDescription className="flex flex-col items-start gap-2">
+        <span>Open the session to watch its status and controls.</span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onSelect(sessionId)}
+        >
+          Open session
+        </Button>
+      </AlertDescription>
+    </Alert>
+  )
+}
+
+// Fallback control surface for a launched run that never registered as a managed
+// session (for example a failed launch), so stop and repair stay reachable.
 function RunView(
   props: AppMainContentProps & { lastLaunch: LaunchRunResponse },
 ) {

@@ -82,8 +82,8 @@ only a verdict, such as whether the folder can be mounted, never the full path.
 These are read-only checks; they do not change your run and show no secrets or
 file paths.
 
-On the Review step you can also turn on `Run in an isolated copy (git
-worktree)`. This is off by default. When it is on, RunHaven runs the agent on a
+On the Project step, under **Advanced options**, you can turn on `Run in an
+isolated copy (git worktree)`. This is off by default. When it is on, RunHaven runs the agent on a
 new branch in a separate copy of your project, so your original files do not
 change until you choose to merge. The review and the confirm dialog both say
 when a worktree will be created. Your folder must be a clean git repository for
@@ -104,7 +104,8 @@ identity for every session so you can tell them apart: the agent, the project,
 the sign-in state, the network, and whether input is attached.
 
 Select a session to see its live status, recent events, and bounded output. The
-output is trimmed and cleaned so it will not flood the window or leak secrets. If
+output is trimmed so it will not flood the window, but raw output can still
+include private data, so the app asks you to confirm before it shows any. If
 a session is ready for input, you can type a message and send it. The app asks
 you to confirm before it sends.
 
@@ -113,16 +114,20 @@ back to the start screen while a run keeps working.
 
 ## If a session stops responding
 
-If a run's sandbox has gone away but its record is still open, the app marks the
-session `Not responding` and offers `Repair session`. Repair clears the stale
-record safely. The app only offers repair when it has confirmed the sandbox is
-really gone, so repair never removes a record for a run that is still alive.
+If a run's sandbox has gone away but its session record is still open, the app
+marks the session `Not responding` and highlights that repair is available.
+Repair clears the stale session record safely. The app confirms the sandbox is
+really gone before it highlights repair, so it never clears a record for a run
+that is still alive.
 
 ## Control a run
 
-For an active session you can Stop it, Hard stop it, or Repair its record. Every
-one of these asks you to confirm and shows the exact target first. Stop asks the
-run to end. Hard stop ends it right away. Repair clears a stale record.
+For an active session you can Stop it, Hard stop it, or Repair its session
+record. These controls are always available for an active session, and each one
+asks you to confirm and shows the exact target first. Stop asks the run to end.
+Hard stop ends it right away. `Repair session record` clears a stale session
+record; the app also highlights repair when it has confirmed the sandbox is
+gone.
 
 ## Review a worktree run
 
@@ -176,7 +181,6 @@ For now, do these tasks with the `runhaven` command line
 - Signing in to Claude (it needs a code pasted back in a terminal). Codex,
   Copilot, and Antigravity now sign in from the app.
 - Resetting or pruning saved state.
-- The `why` checks that explain host, workspace, network, and state.
 
 These will move into the app over time. Until then, the app stays focused on the
 core run-and-watch workflow so the safe path stays simple.

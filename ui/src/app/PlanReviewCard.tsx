@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table"
 
-import { authScopeLabel } from "./labels"
+import { authScopeLabel, networkLabel } from "./labels"
 import { LaunchSteps } from "./LaunchSteps"
 
 type PlanReviewCardProps = {
@@ -62,9 +62,9 @@ export function PlanReviewCard({
             {[
               ["Agent", plan.profile],
               ["Project", plan.workspace],
-              ["Session", plan.session],
+              ["Session name", plan.session],
               ["Login state", authScopeLabel(plan.authScope)],
-              ["Network", plan.networkMode],
+              ["Network", networkLabel(plan.networkMode)],
               ["Image", plan.image],
             ].map(([label, value]) => (
               <TableRow key={label}>
@@ -103,6 +103,11 @@ export function PlanReviewCard({
           </AlertDescription>
         </Alert>
 
+        {plan.providerAllowedHosts.length > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Can reach: {plan.providerAllowedHosts.join(", ")} only.
+          </p>
+        ) : null}
         <p className="text-sm text-muted-foreground">{plan.egressSummary}</p>
 
         {plan.warnings.length > 0 ? (

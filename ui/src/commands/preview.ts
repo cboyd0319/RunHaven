@@ -227,12 +227,12 @@ function previewAccess(request: RunPlanRequest): RunPlanAccess {
 
 function previewEgressSummary(request: RunPlanRequest): string {
   if (request.networkMode === "internet") {
-    return "unrestricted internet egress"
+    return "This run can reach the whole internet."
   }
   if (request.apiKeyBrokerEnv?.trim()) {
-    return "restricted preview egress; API key broker enabled"
+    return "Only reviewed provider hosts are reachable; your API key stays on this Mac."
   }
-  return "restricted preview egress"
+  return "Only reviewed provider hosts are reachable."
 }
 
 export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {

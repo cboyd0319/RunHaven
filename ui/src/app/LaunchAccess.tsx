@@ -37,7 +37,7 @@ export function AgentAccessSummary({
         <div className="font-medium">{authMethodLabel(agent.signIn)}</div>
       </div>
       <div>
-        <div className="text-muted-foreground">Credential broker</div>
+        <div className="text-muted-foreground">API key handling</div>
         <Badge variant={brokerAvailable ? "success" : "secondary"}>
           {brokerCapabilityLabel(agent)}
         </Badge>

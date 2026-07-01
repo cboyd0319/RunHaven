@@ -11,6 +11,7 @@ import {
   launchRun,
   nextLaunchSessionName,
   planRun,
+  preferredDefaultAgent,
   reconcileRunPlanRequest,
   repairManagedSession,
   repairRun,
@@ -120,11 +121,12 @@ export function useAppController() {
           : nextAuthStatus,
       )
       await loadManagedSessions()
-      const agent =
-        nextDashboard.agents.find((item) => item.name === request.agent) ??
-        nextDashboard.agents[0]
+      const initializingDashboard = dashboard === null
+      const agent = initializingDashboard
+        ? preferredDefaultAgent(nextDashboard.agents)
+        : nextDashboard.agents.find((item) => item.name === request.agent) ??
+          nextDashboard.agents[0]
       if (agent) {
-        const initializingDashboard = dashboard === null
         setRequest((current) =>
           reconcileRunPlanRequest(
             initializingDashboard
@@ -286,7 +288,7 @@ export function useAppController() {
           const { result } = await repairManagedSession(sessionId)
           runControlState.setMessage(
             result.markerRemoved
-              ? `Stale marker cleared for ${result.runId}.`
+              ? `Stale session record cleared for ${result.runId}.`
               : `Repair for ${result.runId}: ${result.status}.`,
           )
         } else {
@@ -312,7 +314,7 @@ export function useAppController() {
           const result = await repairRun(runId)
           runControlState.setMessage(
             result.markerRemoved
-              ? `Stale marker cleared for ${result.runId}.`
+              ? `Stale session record cleared for ${result.runId}.`
               : `Repair for ${result.runId}: ${result.status}.`,
           )
         } else {
@@ -381,6 +383,7 @@ export function useAppController() {
     confirmedWarnings,
     launchMessage,
     lastLaunch,
+    lastLaunchSessionId: derived.lastLaunchSessionId,
     managedSessions,
     selectedSessionId,
     sessionInputDraft: sessionInput.draft,

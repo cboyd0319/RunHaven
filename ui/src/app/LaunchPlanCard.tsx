@@ -34,6 +34,7 @@ import {
 } from "./LaunchAccess"
 import { WhyBoundaryCard } from "./WhyBoundaryCard"
 import { networkLabels } from "./labels"
+import { agentLabel } from "./sessionIdentity"
 import { LaunchSteps } from "./LaunchSteps"
 import { networkHelp } from "./types"
 import type { LaunchStep } from "./types"
@@ -115,7 +116,7 @@ export function LaunchPlanCard({
                     <SelectGroup>
                       {agents.map((agent) => (
                         <SelectItem key={agent.name} value={agent.name}>
-                          {agent.name}
+                          {agentLabel(agent.name)}
                         </SelectItem>
                       ))}
                     </SelectGroup>

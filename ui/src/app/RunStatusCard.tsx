@@ -74,7 +74,7 @@ export function RunStatusCard({
         {showStatus && runStatus ? (
           <>
             <div className="grid gap-3 sm:grid-cols-3">
-              <Metric label="Marker status" value={runStatus.run.status} />
+              <Metric label="Session record" value={runStatus.run.status} />
               <Metric label="Container state" value={runStatus.container.state} />
               <Metric label="Image" value={runStatus.container.image ?? "-"} />
               <Metric
@@ -138,8 +138,8 @@ export function RunStatusCard({
                   onClick={() => void onControl("kill")}
                 />
                 <RunControl
-                  label={`Confirm clearing this ${controlTarget}'s stale marker.`}
-                  button="Repair marker"
+                  label={`Confirm clearing this ${controlTarget}'s stale session record.`}
+                  button="Repair session record"
                   checked={controlConfirmations.repair}
                   disabled={controlBusy}
                   onCheckedChange={(checked) =>

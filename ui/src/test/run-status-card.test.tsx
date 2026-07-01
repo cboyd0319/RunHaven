@@ -68,7 +68,7 @@ describe("RunStatusCard", () => {
     expect(available).toContain("Confirm deleting this session");
     expect(available).not.toContain("Stop run");
     expect(available).not.toContain("Hard stop");
-    expect(available).not.toContain("Repair marker");
+    expect(available).not.toContain("Repair session record");
   });
 
   it("leaves destructive controls disabled after confirmations reset", () => {
@@ -79,7 +79,7 @@ describe("RunStatusCard", () => {
 
     expect(beforeAttempt).toContain("Stop run");
     expect(beforeAttempt).toContain("Hard stop");
-    expect(beforeAttempt).toContain("Repair marker");
+    expect(beforeAttempt).toContain("Repair session record");
     expect(beforeAttempt).toContain("Delete worktree");
     expect(disabledControlCount(beforeAttempt)).toBe(0);
 
