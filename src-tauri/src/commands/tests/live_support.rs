@@ -260,10 +260,14 @@ pub(super) fn stop_live_session_if_active(session: &ManagedSessionSummaryData) {
     ) {
         return;
     }
-    let stopped = crate::commands::run_control::stop_managed_session(StopManagedSessionRequest {
-        session_id: session.id.clone(),
-        confirm_stop: true,
-    })
+    let stopped = crate::commands::run_control::stop_managed_session_for_test(
+        StopManagedSessionRequest {
+            session_id: session.id.clone(),
+            confirm_stop: true,
+        },
+        |_, _| Ok(true),
+        crate::commands::run_control::stop_run_checked_for_test,
+    )
     .expect("stop live managed session");
     assert_eq!(stopped.result.run_id, session.run_id);
     assert_eq!(stopped.result.status, "stop-requested");

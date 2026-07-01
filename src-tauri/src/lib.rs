@@ -22,18 +22,18 @@ pub fn run() {
             commands::diagnostics::get_auth_log,
             commands::diagnostics::get_auth_status,
             commands::sessions::get_managed_sessions,
-            commands::sessions::get_managed_session_status,
+            commands::managed_session_status::get_managed_session_status,
             commands::session_diagnostics::get_managed_session_diagnostics,
-            commands::sessions::get_managed_session_log_snapshot,
-            commands::sessions::write_session_input,
+            commands::managed_session_output::get_managed_session_log_snapshot,
+            commands::managed_session_input::write_session_input,
             commands::run_control::stop_run,
             commands::run_control::kill_run,
             commands::run_control::repair_run,
             commands::run_control::stop_managed_session,
             commands::run_control::kill_managed_session,
             commands::run_control::repair_managed_session,
-            commands::plan_run,
-            commands::launch_run,
+            commands::launch::plan_run,
+            commands::launch::launch_run,
         ])
         .run(tauri::generate_context!())
         .expect("error while running RunHaven desktop app");

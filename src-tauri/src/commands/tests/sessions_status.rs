@@ -33,6 +33,7 @@ fn managed_session_status_resolves_session_id_and_sanitizes_container_status() {
         },
         Some(&registry),
         None,
+        false,
     )
     .expect_err("unknown session rejected");
     assert!(missing.contains("managed session not found"));
@@ -74,6 +75,7 @@ fn managed_session_status_resolves_session_id_and_sanitizes_container_status() {
                 "arguments": ["codex", "--secret-flag"]
             }
         })),
+        false,
     )
     .expect("managed session status");
 
@@ -133,6 +135,7 @@ fn managed_session_status_reports_unavailable_without_leaking_backend_errors() {
         },
         None,
         None,
+        false,
     )
     .expect("managed session status fallback");
 
@@ -151,6 +154,44 @@ fn managed_session_status_reports_unavailable_without_leaking_backend_errors() {
     assert!(!encoded.contains("/sensitive/workspaces"));
     assert!(!encoded.contains("runhaven-codex-status-home"));
     assert!(!encoded.contains("container inspect"));
+}
+
+#[test]
+fn managed_session_status_marks_repair_available_for_missing_container() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "managed-session-status-repair",
+        json!({
+            "timestamp": "2026-07-01T02:45:00Z",
+            "run_id": "managed-session-status-repair",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/repair",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-status-repair",
+            "state_volume": "runhaven-codex-status-home",
+            "session": "repair"
+        }),
+    )
+    .expect("active run payload");
+
+    let response = crate::commands::sessions::managed_session_status_response_for_test(
+        ManagedSessionStatusRequest {
+            session_id: "managed-session-status-repair".to_string(),
+        },
+        None,
+        None,
+        true,
+    )
+    .expect("managed session status repair");
+
+    assert!(response.container.is_none());
+    let recovery = response.recovery.as_ref().expect("recovery guidance");
+    assert_eq!(recovery.status, "warning");
+    assert_eq!(recovery.title, "Repair stale session marker");
+    assert!(recovery.detail.contains("container no longer exists"));
+    assert!(recovery.remedy.contains("repair the marker"));
+    assert!(recovery.repair_available);
 }
 
 #[test]

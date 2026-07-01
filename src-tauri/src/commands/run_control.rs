@@ -1,5 +1,7 @@
 use runhaven_core::runtime::active::{kill_active_run, repair_active_run, stop_active_run};
+use runhaven_core::ui_contracts::ManagedSessionSummaryData;
 use serde_json::Value;
+use tauri::AppHandle;
 
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{
@@ -8,36 +10,73 @@ use crate::contracts::{
     StopManagedSessionRequest, StopManagedSessionResponse, StopRunRequest, StopRunResponse,
 };
 
+mod approval;
+use approval::{RunControlAction, RunControlTarget, trusted_run_control_confirmed};
+
 #[tauri::command]
-pub(crate) fn stop_run(request: StopRunRequest) -> Result<StopRunResponse, String> {
-    validate_text_len("run id", &request.run_id, MAX_RUN_ID_LEN)?;
-    if !request.confirm_stop {
-        return Err("Confirm the stop before stopping this run.".to_string());
+pub(crate) async fn stop_run(
+    app: AppHandle,
+    request: StopRunRequest,
+) -> Result<StopRunResponse, String> {
+    validate_direct_run_control_request(
+        RunControlAction::Stop,
+        &request.run_id,
+        request.confirm_stop,
+    )?;
+    if !trusted_run_control_confirmed(
+        app,
+        RunControlAction::Stop,
+        RunControlTarget::Run {
+            run_id: &request.run_id,
+        },
+    )
+    .await?
+    {
+        return Err(RunControlAction::Stop.canceled_error().to_string());
     }
-    let payload = stop_active_run(&request.run_id).map_err(|error| error.to_string())?;
-    stop_run_response(&payload)
+    stop_run_checked(&request.run_id)
 }
 
 #[tauri::command]
-pub(crate) fn stop_managed_session(
+pub(crate) async fn stop_managed_session(
+    app: AppHandle,
     request: StopManagedSessionRequest,
 ) -> Result<StopManagedSessionResponse, String> {
-    stop_managed_session_with(request, |run_id| {
-        stop_run(StopRunRequest {
-            run_id: run_id.to_string(),
-            confirm_stop: true,
-        })
-    })
+    let (session, run_id) = validate_managed_session_run_control_request(
+        RunControlAction::Stop,
+        &request.session_id,
+        request.confirm_stop,
+    )?;
+    if !trusted_run_control_confirmed(
+        app,
+        RunControlAction::Stop,
+        RunControlTarget::ManagedSession {
+            session: &session,
+            run_id: &run_id,
+        },
+    )
+    .await?
+    {
+        return Err(RunControlAction::Stop.canceled_error().to_string());
+    }
+    let result = stop_run_checked(&run_id)?;
+    Ok(StopManagedSessionResponse { session, result })
 }
 
-fn stop_managed_session_with(
+#[cfg(test)]
+fn stop_managed_session_with_approval(
     request: StopManagedSessionRequest,
+    approve: impl FnOnce(&ManagedSessionSummaryData, &str) -> Result<bool, String>,
     stop: impl FnOnce(&str) -> Result<StopRunResponse, String>,
 ) -> Result<StopManagedSessionResponse, String> {
-    if !request.confirm_stop {
-        return Err("Confirm the stop before stopping this run.".to_string());
+    let (session, run_id) = validate_managed_session_run_control_request(
+        RunControlAction::Stop,
+        &request.session_id,
+        request.confirm_stop,
+    )?;
+    if !approve(&session, &run_id)? {
+        return Err(RunControlAction::Stop.canceled_error().to_string());
     }
-    let (session, run_id) = crate::commands::sessions::managed_session_for_id(&request.session_id)?;
     let result = stop(&run_id)?;
     Ok(StopManagedSessionResponse { session, result })
 }
@@ -45,9 +84,10 @@ fn stop_managed_session_with(
 #[cfg(test)]
 pub(crate) fn stop_managed_session_for_test(
     request: StopManagedSessionRequest,
+    approve: impl FnOnce(&ManagedSessionSummaryData, &str) -> Result<bool, String>,
     stop: impl FnOnce(&str) -> Result<StopRunResponse, String>,
 ) -> Result<StopManagedSessionResponse, String> {
-    stop_managed_session_with(request, stop)
+    stop_managed_session_with_approval(request, approve, stop)
 }
 
 fn stop_run_response(payload: &Value) -> Result<StopRunResponse, String> {
@@ -70,35 +110,69 @@ fn stop_run_response(payload: &Value) -> Result<StopRunResponse, String> {
 }
 
 #[tauri::command]
-pub(crate) fn kill_run(request: KillRunRequest) -> Result<KillRunResponse, String> {
-    validate_text_len("run id", &request.run_id, MAX_RUN_ID_LEN)?;
-    if !request.confirm_kill {
-        return Err("Confirm the hard-stop before killing this run.".to_string());
+pub(crate) async fn kill_run(
+    app: AppHandle,
+    request: KillRunRequest,
+) -> Result<KillRunResponse, String> {
+    validate_direct_run_control_request(
+        RunControlAction::Kill,
+        &request.run_id,
+        request.confirm_kill,
+    )?;
+    if !trusted_run_control_confirmed(
+        app,
+        RunControlAction::Kill,
+        RunControlTarget::Run {
+            run_id: &request.run_id,
+        },
+    )
+    .await?
+    {
+        return Err(RunControlAction::Kill.canceled_error().to_string());
     }
-    let payload = kill_active_run(&request.run_id).map_err(|error| error.to_string())?;
-    kill_run_response(&payload)
+    kill_run_checked(&request.run_id)
 }
 
 #[tauri::command]
-pub(crate) fn kill_managed_session(
+pub(crate) async fn kill_managed_session(
+    app: AppHandle,
     request: KillManagedSessionRequest,
 ) -> Result<KillManagedSessionResponse, String> {
-    kill_managed_session_with(request, |run_id| {
-        kill_run(KillRunRequest {
-            run_id: run_id.to_string(),
-            confirm_kill: true,
-        })
-    })
+    let (session, run_id) = validate_managed_session_run_control_request(
+        RunControlAction::Kill,
+        &request.session_id,
+        request.confirm_kill,
+    )?;
+    if !trusted_run_control_confirmed(
+        app,
+        RunControlAction::Kill,
+        RunControlTarget::ManagedSession {
+            session: &session,
+            run_id: &run_id,
+        },
+    )
+    .await?
+    {
+        return Err(RunControlAction::Kill.canceled_error().to_string());
+    }
+    let result = kill_run_checked(&run_id)?;
+    Ok(KillManagedSessionResponse { session, result })
 }
 
-fn kill_managed_session_with(
+#[cfg(test)]
+fn kill_managed_session_with_approval(
     request: KillManagedSessionRequest,
+    approve: impl FnOnce(&ManagedSessionSummaryData, &str) -> Result<bool, String>,
     kill: impl FnOnce(&str) -> Result<KillRunResponse, String>,
 ) -> Result<KillManagedSessionResponse, String> {
-    if !request.confirm_kill {
-        return Err("Confirm the hard-stop before killing this run.".to_string());
+    let (session, run_id) = validate_managed_session_run_control_request(
+        RunControlAction::Kill,
+        &request.session_id,
+        request.confirm_kill,
+    )?;
+    if !approve(&session, &run_id)? {
+        return Err(RunControlAction::Kill.canceled_error().to_string());
     }
-    let (session, run_id) = crate::commands::sessions::managed_session_for_id(&request.session_id)?;
     let result = kill(&run_id)?;
     Ok(KillManagedSessionResponse { session, result })
 }
@@ -106,9 +180,10 @@ fn kill_managed_session_with(
 #[cfg(test)]
 pub(crate) fn kill_managed_session_for_test(
     request: KillManagedSessionRequest,
+    approve: impl FnOnce(&ManagedSessionSummaryData, &str) -> Result<bool, String>,
     kill: impl FnOnce(&str) -> Result<KillRunResponse, String>,
 ) -> Result<KillManagedSessionResponse, String> {
-    kill_managed_session_with(request, kill)
+    kill_managed_session_with_approval(request, approve, kill)
 }
 
 fn kill_run_response(payload: &Value) -> Result<KillRunResponse, String> {
@@ -131,35 +206,69 @@ fn kill_run_response(payload: &Value) -> Result<KillRunResponse, String> {
 }
 
 #[tauri::command]
-pub(crate) fn repair_run(request: RepairRunRequest) -> Result<RepairRunResponse, String> {
-    validate_text_len("run id", &request.run_id, MAX_RUN_ID_LEN)?;
-    if !request.confirm_repair {
-        return Err("Confirm the repair before clearing a stale marker.".to_string());
+pub(crate) async fn repair_run(
+    app: AppHandle,
+    request: RepairRunRequest,
+) -> Result<RepairRunResponse, String> {
+    validate_direct_run_control_request(
+        RunControlAction::Repair,
+        &request.run_id,
+        request.confirm_repair,
+    )?;
+    if !trusted_run_control_confirmed(
+        app,
+        RunControlAction::Repair,
+        RunControlTarget::Run {
+            run_id: &request.run_id,
+        },
+    )
+    .await?
+    {
+        return Err(RunControlAction::Repair.canceled_error().to_string());
     }
-    let payload = repair_active_run(&request.run_id).map_err(|error| error.to_string())?;
-    repair_run_response(&payload)
+    repair_run_checked(&request.run_id)
 }
 
 #[tauri::command]
-pub(crate) fn repair_managed_session(
+pub(crate) async fn repair_managed_session(
+    app: AppHandle,
     request: RepairManagedSessionRequest,
 ) -> Result<RepairManagedSessionResponse, String> {
-    repair_managed_session_with(request, |run_id| {
-        repair_run(RepairRunRequest {
-            run_id: run_id.to_string(),
-            confirm_repair: true,
-        })
-    })
+    let (session, run_id) = validate_managed_session_run_control_request(
+        RunControlAction::Repair,
+        &request.session_id,
+        request.confirm_repair,
+    )?;
+    if !trusted_run_control_confirmed(
+        app,
+        RunControlAction::Repair,
+        RunControlTarget::ManagedSession {
+            session: &session,
+            run_id: &run_id,
+        },
+    )
+    .await?
+    {
+        return Err(RunControlAction::Repair.canceled_error().to_string());
+    }
+    let result = repair_run_checked(&run_id)?;
+    Ok(RepairManagedSessionResponse { session, result })
 }
 
-fn repair_managed_session_with(
+#[cfg(test)]
+fn repair_managed_session_with_approval(
     request: RepairManagedSessionRequest,
+    approve: impl FnOnce(&ManagedSessionSummaryData, &str) -> Result<bool, String>,
     repair: impl FnOnce(&str) -> Result<RepairRunResponse, String>,
 ) -> Result<RepairManagedSessionResponse, String> {
-    if !request.confirm_repair {
-        return Err("Confirm the repair before clearing a stale marker.".to_string());
+    let (session, run_id) = validate_managed_session_run_control_request(
+        RunControlAction::Repair,
+        &request.session_id,
+        request.confirm_repair,
+    )?;
+    if !approve(&session, &run_id)? {
+        return Err(RunControlAction::Repair.canceled_error().to_string());
     }
-    let (session, run_id) = crate::commands::sessions::managed_session_for_id(&request.session_id)?;
     let result = repair(&run_id)?;
     Ok(RepairManagedSessionResponse { session, result })
 }
@@ -167,9 +276,10 @@ fn repair_managed_session_with(
 #[cfg(test)]
 pub(crate) fn repair_managed_session_for_test(
     request: RepairManagedSessionRequest,
+    approve: impl FnOnce(&ManagedSessionSummaryData, &str) -> Result<bool, String>,
     repair: impl FnOnce(&str) -> Result<RepairRunResponse, String>,
 ) -> Result<RepairManagedSessionResponse, String> {
-    repair_managed_session_with(request, repair)
+    repair_managed_session_with_approval(request, approve, repair)
 }
 
 fn repair_run_response(payload: &Value) -> Result<RepairRunResponse, String> {
@@ -184,6 +294,49 @@ fn repair_run_response(payload: &Value) -> Result<RepairRunResponse, String> {
     })
 }
 
+fn validate_direct_run_control_request(
+    action: RunControlAction,
+    run_id: &str,
+    confirmed: bool,
+) -> Result<(), String> {
+    validate_text_len("run id", run_id, MAX_RUN_ID_LEN)?;
+    if !confirmed {
+        return Err(action.confirm_error().to_string());
+    }
+    Ok(())
+}
+
+fn validate_managed_session_run_control_request(
+    action: RunControlAction,
+    session_id: &str,
+    confirmed: bool,
+) -> Result<(ManagedSessionSummaryData, String), String> {
+    if !confirmed {
+        return Err(action.confirm_error().to_string());
+    }
+    crate::commands::sessions::managed_session_for_run_control(session_id)
+}
+
+fn stop_run_checked(run_id: &str) -> Result<StopRunResponse, String> {
+    let payload = stop_active_run(run_id).map_err(|error| error.to_string())?;
+    stop_run_response(&payload)
+}
+
+#[cfg(test)]
+pub(crate) fn stop_run_checked_for_test(run_id: &str) -> Result<StopRunResponse, String> {
+    stop_run_checked(run_id)
+}
+
+fn kill_run_checked(run_id: &str) -> Result<KillRunResponse, String> {
+    let payload = kill_active_run(run_id).map_err(|error| error.to_string())?;
+    kill_run_response(&payload)
+}
+
+fn repair_run_checked(run_id: &str) -> Result<RepairRunResponse, String> {
+    let payload = repair_active_run(run_id).map_err(|error| error.to_string())?;
+    repair_run_response(&payload)
+}
+
 fn required_string(payload: &Value, name: &str) -> Result<String, String> {
     payload
         .get(name)
@@ -193,94 +346,4 @@ fn required_string(payload: &Value, name: &str) -> Result<String, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn stop_run_requires_explicit_confirmation() {
-        let error = stop_run(StopRunRequest {
-            run_id: "a".repeat(32),
-            confirm_stop: false,
-        })
-        .expect_err("stop without confirmation should fail");
-        assert!(error.contains("Confirm the stop"));
-    }
-
-    #[test]
-    fn stop_run_rejects_oversized_run_id() {
-        let error = stop_run(StopRunRequest {
-            run_id: "a".repeat(MAX_RUN_ID_LEN + 1),
-            confirm_stop: true,
-        })
-        .expect_err("oversized run id should fail");
-        assert!(error.contains("run id is too long"));
-    }
-
-    #[test]
-    fn stop_run_response_maps_success_payload() {
-        let payload = serde_json::json!({
-            "run_id": "abc",
-            "container_name": "runhaven-shell-run",
-            "return_code": 0,
-        });
-        let response = stop_run_response(&payload).expect("success payload");
-        assert_eq!(response.run_id, "abc");
-        assert_eq!(response.container_name, "runhaven-shell-run");
-        assert_eq!(response.status, "stop-requested");
-    }
-
-    #[test]
-    fn stop_run_response_reports_nonzero_stop() {
-        let payload = serde_json::json!({
-            "run_id": "abc",
-            "container_name": "runhaven-shell-run",
-            "return_code": 1,
-        });
-        let error = stop_run_response(&payload).expect_err("nonzero stop should fail");
-        assert!(error.contains("container stop exited 1"));
-    }
-
-    #[test]
-    fn kill_run_requires_explicit_confirmation() {
-        let error = kill_run(KillRunRequest {
-            run_id: "a".repeat(32),
-            confirm_kill: false,
-        })
-        .expect_err("kill without confirmation should fail");
-        assert!(error.contains("Confirm the hard-stop"));
-    }
-
-    #[test]
-    fn kill_run_response_maps_success_payload() {
-        let payload = serde_json::json!({
-            "run_id": "abc",
-            "container_name": "runhaven-shell-run",
-            "return_code": 0,
-        });
-        let response = kill_run_response(&payload).expect("success payload");
-        assert_eq!(response.status, "kill-requested");
-    }
-
-    #[test]
-    fn repair_run_requires_explicit_confirmation() {
-        let error = repair_run(RepairRunRequest {
-            run_id: "a".repeat(32),
-            confirm_repair: false,
-        })
-        .expect_err("repair without confirmation should fail");
-        assert!(error.contains("Confirm the repair"));
-    }
-
-    #[test]
-    fn repair_run_response_maps_removed_marker() {
-        let payload = serde_json::json!({
-            "run_id": "abc",
-            "container_name": "runhaven-shell-run",
-            "status": "removed",
-            "marker_removed": true,
-        });
-        let response = repair_run_response(&payload).expect("removed payload");
-        assert_eq!(response.status, "removed");
-        assert!(response.marker_removed);
-    }
-}
+mod tests;

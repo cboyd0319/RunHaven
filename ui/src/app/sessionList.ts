@@ -20,12 +20,19 @@ export function sameManagedSession(
     next !== undefined &&
     current.id === next.id &&
     current.runId === next.runId &&
+    current.agent === next.agent &&
+    current.session === next.session &&
+    current.title === next.title &&
+    current.project === next.project &&
     current.status === next.status &&
     current.statusLabel === next.statusLabel &&
     current.lifecycle === next.lifecycle &&
     current.authStatus === next.authStatus &&
     current.authScope === next.authScope &&
     current.network === next.network &&
+    current.startedAt === next.startedAt &&
+    current.containerName === next.containerName &&
+    current.detailCommand === next.detailCommand &&
     current.input.attached === next.input.attached &&
     current.input.status === next.input.status &&
     current.input.detail === next.input.detail &&

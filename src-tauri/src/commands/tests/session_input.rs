@@ -185,6 +185,90 @@ fn managed_session_input_contract_accepts_only_ready_session() {
 }
 
 #[test]
+fn managed_session_input_requires_backend_approval_grant() {
+    let (_cache, _cache_home) = isolated_cache();
+    let registry = SessionInputRegistry::default();
+    write_active_run_payload(
+        "managed-session-grant-input",
+        json!({
+            "timestamp": "2026-06-30T06:30:00Z",
+            "run_id": "managed-session-grant-input",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/grant",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-grant-input",
+            "state_volume": "runhaven-codex-hidden-home",
+            "session": "grant"
+        }),
+    )
+    .expect("grant active run payload");
+    let writes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let captured_writes = std::sync::Arc::clone(&writes);
+    registry
+        .register_writer(
+            "managed-session-grant-input",
+            "managed-session-grant-input",
+            move |input| {
+                captured_writes
+                    .lock()
+                    .expect("writes lock")
+                    .push(String::from_utf8_lossy(input).to_string());
+                Ok(input.len())
+            },
+        )
+        .expect("register grant writer");
+
+    let request = WriteSessionInputRequest {
+        session_id: "managed-session-grant-input".to_string(),
+        input: "first".to_string(),
+        confirm_send: true,
+        client_target: "session:managed-session-grant-input".to_string(),
+    };
+    let denied = crate::commands::sessions::write_session_input_with_approval_for_test(
+        request.clone(),
+        &registry,
+        |session, run_id| {
+            assert_eq!(session.id, "managed-session-grant-input");
+            assert_eq!(run_id, "managed-session-grant-input");
+            Ok(false)
+        },
+    )
+    .expect_err("approval denial rejected");
+    assert!(denied.contains("not approved"));
+    assert!(writes.lock().expect("writes lock").is_empty());
+
+    let accepted = crate::commands::sessions::write_session_input_with_approval_for_test(
+        request,
+        &registry,
+        |session, run_id| {
+            assert_eq!(session.id, "managed-session-grant-input");
+            assert_eq!(run_id, "managed-session-grant-input");
+            Ok(true)
+        },
+    )
+    .expect("approved input accepted");
+    assert!(accepted.accepted);
+
+    let second = crate::commands::sessions::write_session_input_with_approval_for_test(
+        WriteSessionInputRequest {
+            session_id: "managed-session-grant-input".to_string(),
+            input: "second".to_string(),
+            confirm_send: true,
+            client_target: "session:managed-session-grant-input".to_string(),
+        },
+        &registry,
+        |_, _| panic!("existing backend grant should be reused"),
+    )
+    .expect("existing grant accepted");
+    assert!(second.accepted);
+    assert_eq!(
+        *writes.lock().expect("writes lock"),
+        vec!["first".to_string(), "second".to_string()]
+    );
+}
+
+#[test]
 fn managed_session_input_requires_backend_owned_transport() {
     let (_cache, _cache_home) = isolated_cache();
     write_active_run_payload(

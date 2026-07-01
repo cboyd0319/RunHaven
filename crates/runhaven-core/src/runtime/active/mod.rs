@@ -17,7 +17,7 @@ pub use markers::{
     active_run_terminal_status, find_active_run_record, read_active_run_records,
     remove_active_run_record, write_active_run_payload, write_active_run_record,
 };
-pub use repair::{repair_active_run, runs_repair};
+pub use repair::{active_run_repair_available, repair_active_run, runs_repair};
 
 use crate::runtime::plans::{uses_root_identity, validate_resource_options};
 use crate::support::validators::{

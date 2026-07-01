@@ -1,3 +1,8 @@
+#[cfg(not(test))]
+use tauri::AppHandle;
+#[cfg(not(test))]
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+
 #[cfg(test)]
 use runhaven_core::runtime::active::log_snapshot_payload_from_stdout;
 use runhaven_core::runtime::active::{
@@ -8,15 +13,45 @@ use serde_json::Value;
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{LogSnapshotEntry, LogSnapshotRequest, LogSnapshotResponse};
 
+#[cfg(not(test))]
+const RAW_OUTPUT_CONFIRM_TITLE: &str = "Confirm raw output view";
+const RAW_OUTPUT_CANCELED: &str = "Raw output view canceled.";
+
+struct PreparedLogSnapshot {
+    run_id: String,
+    lines: u32,
+}
+
+#[cfg(not(test))]
+#[tauri::command]
+pub(crate) async fn get_log_snapshot(
+    app: AppHandle,
+    request: LogSnapshotRequest,
+) -> Result<LogSnapshotResponse, String> {
+    let prepared = prepare_log_snapshot(&request)?;
+    if !trusted_sensitive_output_approved(
+        app,
+        RAW_OUTPUT_CONFIRM_TITLE,
+        trusted_run_output_message(&prepared.run_id, prepared.lines),
+    )
+    .await?
+    {
+        return Err(raw_output_canceled_error());
+    }
+    read_prepared_log_snapshot(prepared)
+}
+
+#[cfg(test)]
 #[tauri::command]
 pub(crate) fn get_log_snapshot(request: LogSnapshotRequest) -> Result<LogSnapshotResponse, String> {
-    let lines = validated_lines(&request)?;
-    active_run_log_snapshot_payload(&request.run_id, lines)
-        .map_err(|error| error.to_string())
-        .and_then(log_snapshot_response_from_payload)
+    get_log_snapshot_with_approval_for_test(request, |_, _| Ok(true))
 }
 
 pub(crate) fn validated_lines(request: &LogSnapshotRequest) -> Result<u32, String> {
+    Ok(prepare_log_snapshot(request)?.lines)
+}
+
+fn prepare_log_snapshot(request: &LogSnapshotRequest) -> Result<PreparedLogSnapshot, String> {
     validate_text_len("run id", &request.run_id, MAX_RUN_ID_LEN)?;
     if !request.confirm_sensitive_output {
         return Err(
@@ -25,7 +60,38 @@ pub(crate) fn validated_lines(request: &LogSnapshotRequest) -> Result<u32, Strin
     }
     let lines = request.lines.unwrap_or(DEFAULT_LOG_SNAPSHOT_LINES);
     validate_log_snapshot_lines(lines).map_err(|error| error.to_string())?;
-    Ok(lines)
+    Ok(PreparedLogSnapshot {
+        run_id: request.run_id.clone(),
+        lines,
+    })
+}
+
+fn read_prepared_log_snapshot(
+    prepared: PreparedLogSnapshot,
+) -> Result<LogSnapshotResponse, String> {
+    read_log_snapshot(&prepared.run_id, prepared.lines)
+}
+
+pub(crate) fn read_log_snapshot(run_id: &str, lines: u32) -> Result<LogSnapshotResponse, String> {
+    active_run_log_snapshot_payload(run_id, lines)
+        .map_err(|error| error.to_string())
+        .and_then(log_snapshot_response_from_payload)
+}
+
+pub(crate) fn raw_output_canceled_error() -> String {
+    RAW_OUTPUT_CANCELED.to_string()
+}
+
+#[cfg(test)]
+pub(crate) fn get_log_snapshot_with_approval_for_test(
+    request: LogSnapshotRequest,
+    approve: impl FnOnce(&str, u32) -> Result<bool, String>,
+) -> Result<LogSnapshotResponse, String> {
+    let prepared = prepare_log_snapshot(&request)?;
+    if !approve(&prepared.run_id, prepared.lines)? {
+        return Err(raw_output_canceled_error());
+    }
+    read_prepared_log_snapshot(prepared)
 }
 
 #[cfg(test)]
@@ -38,6 +104,32 @@ pub(crate) fn log_snapshot_response(
     log_snapshot_payload_from_stdout(run_id, requested_lines, stdout, max_bytes)
         .map_err(|error| error.to_string())
         .and_then(log_snapshot_response_from_payload)
+}
+
+#[cfg(not(test))]
+pub(crate) async fn trusted_sensitive_output_approved(
+    app: AppHandle,
+    title: &'static str,
+    message: String,
+) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.dialog()
+            .message(message)
+            .title(title)
+            .kind(MessageDialogKind::Warning)
+            .buttons(MessageDialogButtons::OkCancelCustom(
+                "Show output".to_string(),
+                "Cancel".to_string(),
+            ))
+            .blocking_show()
+    })
+    .await
+    .map_err(|error| format!("could not show raw output confirmation: {error}"))
+}
+
+#[cfg(not(test))]
+fn trusted_run_output_message(run_id: &str, lines: u32) -> String {
+    format!("Run ID: {run_id}\nLines: {lines}\n\nRaw output may include secrets. Show output?")
 }
 
 pub(crate) fn log_snapshot_response_from_payload(

@@ -1,34 +1,30 @@
-use std::collections::HashSet;
-use std::path::PathBuf;
-use std::thread;
-
 use runhaven_core::doctor::collect_checks;
-use runhaven_core::image::doctor::collect_image_status;
 use runhaven_core::provider::auth_profiles::{agent_broker, agent_sign_in};
-use runhaven_core::provider::runtime::validate_runtime_auth_broker_environment;
 use runhaven_core::records::read_run_records;
 use runhaven_core::runtime::active::read_active_run_records;
-use runhaven_core::runtime::launch::{launch_run_plan_with_runner, new_run_id};
-use runhaven_core::runtime::plans::{
-    AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
-    normalize_provider_hosts,
-};
-use runhaven_core::runtime::profiles::{get_profile, profiles};
+use runhaven_core::runtime::profiles::profiles;
 use serde_json::Value;
-use tauri::State;
+
+#[cfg(test)]
+pub(crate) use runhaven_core::runtime::plans::AuthScope;
+#[cfg(test)]
+pub(crate) use runhaven_core::runtime::profiles::get_profile;
 
 use crate::contracts::{
-    AgentProfileSummary, CheckStatus, DashboardStatus, LaunchRunRequest, LaunchRunResponse,
-    RunPlanRequest, RunPlanResponse, RunSummary, SetupStatus, StartedRunSnapshot,
+    AgentProfileSummary, CheckStatus, DashboardStatus, RunSummary, SetupStatus,
 };
-use crate::launch_runner::TauriLaunchRunner;
-use crate::session_input::SessionInputRegistry;
-use crate::session_output::SessionOutputRegistry;
+
+#[cfg(test)]
+pub(crate) use crate::contracts::{LaunchRunRequest, RunPlanRequest};
 
 mod access;
 pub(crate) mod diagnostics;
 pub(crate) mod image_status;
+pub(crate) mod launch;
 pub(crate) mod log_snapshot;
+pub(crate) mod managed_session_input;
+pub(crate) mod managed_session_output;
+pub(crate) mod managed_session_status;
 pub(crate) mod run_control;
 pub(crate) mod run_status;
 pub(crate) mod session_diagnostics;
@@ -36,9 +32,12 @@ pub(crate) mod sessions;
 mod validation;
 mod warnings;
 
-use access::plan_access;
-use validation::{validate_launch_request_bounds, validate_plan_request_bounds};
-use warnings::plan_warnings;
+#[cfg(test)]
+pub(crate) use launch::{
+    build_agent_run_plan, build_launch_response, build_plan_response, image_readiness_error,
+    launch_prepared_with_approval_for_test, launch_run_with_registries,
+    trusted_launch_message_for_test, validate_launch_confirmation,
+};
 
 #[tauri::command]
 pub(crate) fn get_setup_status() -> SetupStatus {
@@ -53,51 +52,6 @@ pub(crate) fn list_agents() -> Vec<AgentProfileSummary> {
 #[tauri::command]
 pub(crate) fn get_dashboard_status() -> DashboardStatus {
     collect_dashboard_status()
-}
-
-#[tauri::command]
-pub(crate) fn plan_run(request: RunPlanRequest) -> Result<RunPlanResponse, String> {
-    build_plan_response(request)
-}
-
-#[tauri::command]
-pub(crate) fn launch_run(
-    request: LaunchRunRequest,
-    input_registry: State<'_, SessionInputRegistry>,
-    output_registry: State<'_, SessionOutputRegistry>,
-) -> Result<LaunchRunResponse, String> {
-    launch_run_with_registries(
-        request,
-        input_registry.inner().clone(),
-        output_registry.inner().clone(),
-    )
-}
-
-fn launch_run_with_registries(
-    request: LaunchRunRequest,
-    input_registry: SessionInputRegistry,
-    output_registry: SessionOutputRegistry,
-) -> Result<LaunchRunResponse, String> {
-    validate_launch_confirmation(&request)?;
-    let setup = collect_setup_status();
-    if !setup.ok {
-        return Err(
-            "RunHaven setup is not ready. Fix setup checks before launching a run.".to_string(),
-        );
-    }
-    validate_bundled_image_ready(&request.plan)?;
-    let run_id = new_run_id();
-    let (plan, response) = prepare_launch(request.plan, run_id.clone())?;
-    thread::Builder::new()
-        .name(format!("runhaven-launch-{run_id}"))
-        .spawn(move || {
-            let mut runner = TauriLaunchRunner::new(input_registry, output_registry);
-            if let Err(error) = launch_run_plan_with_runner(&plan, &mut runner) {
-                eprintln!("runhaven launch {run_id} failed: {error}");
-            }
-        })
-        .map_err(|error| format!("could not start background run: {error}"))?;
-    Ok(response)
 }
 
 fn collect_setup_status() -> SetupStatus {
@@ -160,180 +114,6 @@ fn collect_dashboard_status() -> DashboardStatus {
     }
 }
 
-fn build_plan_response(request: RunPlanRequest) -> Result<RunPlanResponse, String> {
-    validate_plan_request_bounds(&request)?;
-    let active_run_count = active_run_count();
-    let warnings = plan_warnings(&request, active_run_count);
-    let plan = build_agent_run_plan(&request, None)?;
-    let access = plan_access(&plan);
-    Ok(RunPlanResponse {
-        profile: plan.profile_name,
-        workspace: plan.workspace.display().to_string(),
-        workspace_scope: plan.workspace_scope.as_str().to_string(),
-        workspace_scope_note: plan.workspace_scope_note,
-        auth_scope: plan.auth_scope.as_str().to_string(),
-        state_volume: plan.state_volume,
-        session: plan.session,
-        container_name: plan.container_name,
-        network_mode: plan.network_mode.as_str().to_string(),
-        network_name: plan.network_name,
-        egress_summary: plan.egress_summary,
-        image: plan.image,
-        provider_allowed_hosts: plan.provider_allowed_hosts,
-        preflight_count: plan.preflight.len(),
-        access,
-        warnings,
-    })
-}
-
-fn build_agent_run_plan(
-    request: &RunPlanRequest,
-    run_id: Option<String>,
-) -> Result<AgentRunPlan, String> {
-    validate_plan_request_bounds(request)?;
-    let profile = get_profile(&request.agent).map_err(|error| error.to_string())?;
-    let network =
-        NetworkMode::try_from(request.network_mode.as_str()).map_err(|error| error.to_string())?;
-    let workspace_scope = WorkspaceScope::try_from(request.workspace_scope.as_str())
-        .map_err(|error| error.to_string())?;
-    let auth_scope =
-        AuthScope::try_from(request.auth_scope.as_str()).map_err(|error| error.to_string())?;
-    let provider_hosts =
-        normalize_provider_hosts(&request.provider_hosts).map_err(|error| error.to_string())?;
-    build_run_plan(RunOptions {
-        profile,
-        workspace: PathBuf::from(&request.workspace_path),
-        agent_args: Vec::new(),
-        image: non_empty(request.image.clone()),
-        cpus: defaulted(&request.cpus, "4"),
-        memory: defaulted(&request.memory, "4g"),
-        network,
-        workspace_scope,
-        session: non_empty(request.session_name.clone()),
-        auth_scope,
-        read_only_workspace: request.read_only_workspace,
-        ssh: false,
-        env: request.env_names.clone(),
-        user: defaulted(&request.user, "agent"),
-        interactive: true,
-        tty: false,
-        allow_sensitive_workspace: request.allow_sensitive_workspace,
-        allow_root_user: request.allow_root_user,
-        provider_hosts,
-        api_key_broker_env: non_empty(request.api_key_broker_env.clone()),
-        worktree: None,
-        run_id,
-    })
-    .map_err(|error| error.to_string())
-}
-
-fn prepare_launch(
-    request: RunPlanRequest,
-    run_id: String,
-) -> Result<(AgentRunPlan, LaunchRunResponse), String> {
-    let plan = build_agent_run_plan(&request, Some(run_id.clone()))?;
-    validate_runtime_auth_broker_environment(&plan).map_err(|error| error.to_string())?;
-    let response = LaunchRunResponse {
-        run_id: run_id.clone(),
-        status: "started".to_string(),
-        profile: plan.profile_name.clone(),
-        workspace: plan.workspace.display().to_string(),
-        state_volume: plan.state_volume.clone(),
-        auth_scope: plan.auth_scope.as_str().to_string(),
-        session: plan.session.clone(),
-        network_mode: plan.network_mode.as_str().to_string(),
-        snapshot: StartedRunSnapshot {
-            run_id,
-            status: "started".to_string(),
-            profile: plan.profile_name.clone(),
-            workspace: plan.workspace.display().to_string(),
-            state_volume: plan.state_volume.clone(),
-            auth_scope: plan.auth_scope.as_str().to_string(),
-            session: plan.session.clone(),
-            network_mode: plan.network_mode.as_str().to_string(),
-            container_name: plan.container_name.clone(),
-        },
-    };
-    Ok((plan, response))
-}
-
-#[cfg(test)]
-fn build_launch_response(
-    request: RunPlanRequest,
-    run_id: String,
-) -> Result<LaunchRunResponse, String> {
-    prepare_launch(request, run_id).map(|(_, response)| response)
-}
-
-fn validate_launch_confirmation(request: &LaunchRunRequest) -> Result<(), String> {
-    validate_launch_request_bounds(request)?;
-    if !request.confirm_launch {
-        return Err("Confirm the launch before starting a run.".to_string());
-    }
-    let confirmed = request
-        .confirmed_warnings
-        .iter()
-        .map(String::as_str)
-        .collect::<HashSet<_>>();
-    for warning in plan_warnings(&request.plan, active_run_count()) {
-        if !confirmed.contains(warning.code.as_str()) {
-            return Err(format!(
-                "Confirm warning {} before starting a run: {}",
-                warning.code, warning.message
-            ));
-        }
-    }
-    Ok(())
-}
-
-fn validate_bundled_image_ready(request: &RunPlanRequest) -> Result<(), String> {
-    if request
-        .image
-        .as_deref()
-        .is_some_and(|image| !image.trim().is_empty())
-    {
-        return Ok(());
-    }
-    let report = collect_image_status(&request.agent).map_err(|error| error.to_string())?;
-    if let Some(error) = image_readiness_error(
-        request,
-        report.image.ready,
-        &report.image.status,
-        &report.image.agent,
-        &report.image.image,
-        report.image.fix_command.as_deref(),
-    ) {
-        return Err(error);
-    }
-    Ok(())
-}
-
-fn image_readiness_error(
-    request: &RunPlanRequest,
-    ready: bool,
-    status: &str,
-    agent: &str,
-    image: &str,
-    fix_command: Option<&str>,
-) -> Option<String> {
-    if ready
-        || request
-            .image
-            .as_deref()
-            .is_some_and(|image| !image.trim().is_empty())
-    {
-        return None;
-    }
-    let mut message = format!(
-        "Image for {agent} is {status}: {image}. Rebuild the bundled image before launching."
-    );
-    if let Some(command) = fix_command {
-        message.push_str(" Run: ");
-        message.push_str(command);
-    }
-    Some(message)
-}
-
 fn run_summary(record: &Value) -> RunSummary {
     RunSummary {
         run_id: field(record, "run_id"),
@@ -379,21 +159,6 @@ fn defaulted(value: &str, fallback: &str) -> String {
     } else {
         trimmed.to_string()
     }
-}
-
-fn non_empty(value: Option<String>) -> Option<String> {
-    value.and_then(|text| {
-        let trimmed = text.trim();
-        if trimmed.is_empty() {
-            None
-        } else {
-            Some(trimmed.to_string())
-        }
-    })
-}
-
-fn active_run_count() -> usize {
-    read_active_run_records().len()
 }
 
 #[cfg(test)]

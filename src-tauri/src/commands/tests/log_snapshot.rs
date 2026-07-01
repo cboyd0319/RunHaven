@@ -69,6 +69,27 @@ fn log_snapshot_rejects_invalid_run_id_before_container_access() {
 }
 
 #[test]
+fn log_snapshot_native_denial_stops_before_output_read() {
+    let request = LogSnapshotRequest {
+        run_id: "runhaven-log-denied".to_string(),
+        lines: Some(20),
+        confirm_sensitive_output: true,
+    };
+
+    let error = crate::commands::log_snapshot::get_log_snapshot_with_approval_for_test(
+        request,
+        |run_id, lines| {
+            assert_eq!(run_id, "runhaven-log-denied");
+            assert_eq!(lines, 20);
+            Ok(false)
+        },
+    )
+    .expect_err("native denial should stop the read");
+
+    assert_eq!(error, "Raw output view canceled.");
+}
+
+#[test]
 fn log_snapshot_rejects_non_runhaven_container_names() {
     let (_cache, _cache_home) = isolated_cache();
     write_active_run_payload(

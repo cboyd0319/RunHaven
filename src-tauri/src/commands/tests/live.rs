@@ -68,10 +68,14 @@ fn managed_session_live_smoke_reads_output_and_stops_run() {
     assert_eq!(log.snapshot.run_id, run_id);
     assert!(log.snapshot.text.contains(&expected));
 
-    let stopped = crate::commands::run_control::stop_managed_session(StopManagedSessionRequest {
-        session_id,
-        confirm_stop: true,
-    })
+    let stopped = crate::commands::run_control::stop_managed_session_for_test(
+        StopManagedSessionRequest {
+            session_id,
+            confirm_stop: true,
+        },
+        |_, _| Ok(true),
+        crate::commands::run_control::stop_run_checked_for_test,
+    )
     .expect("stop managed session");
     assert_eq!(stopped.result.run_id, run_id);
     assert_eq!(stopped.result.status, "stop-requested");
@@ -119,10 +123,14 @@ fn managed_session_live_smoke_writes_input_and_reads_output() {
 
     wait_for_live_session_output(&session.id, &output_registry, &marker);
 
-    let stopped = crate::commands::run_control::stop_managed_session(StopManagedSessionRequest {
-        session_id: session.id,
-        confirm_stop: true,
-    })
+    let stopped = crate::commands::run_control::stop_managed_session_for_test(
+        StopManagedSessionRequest {
+            session_id: session.id,
+            confirm_stop: true,
+        },
+        |_, _| Ok(true),
+        crate::commands::run_control::stop_run_checked_for_test,
+    )
     .expect("stop live managed session");
     assert_eq!(stopped.result.run_id, launched.run_id);
     assert_eq!(stopped.result.status, "stop-requested");
@@ -220,21 +228,27 @@ fn managed_session_live_smoke_isolates_two_sessions() {
     assert_live_session_output_excludes(&alpha_session.id, &output_registry, &beta_marker);
     assert_live_session_output_excludes(&beta_session.id, &output_registry, &alpha_marker);
 
-    let stopped_alpha =
-        crate::commands::run_control::stop_managed_session(StopManagedSessionRequest {
+    let stopped_alpha = crate::commands::run_control::stop_managed_session_for_test(
+        StopManagedSessionRequest {
             session_id: alpha_session.id,
             confirm_stop: true,
-        })
-        .expect("stop alpha live managed session");
+        },
+        |_, _| Ok(true),
+        crate::commands::run_control::stop_run_checked_for_test,
+    )
+    .expect("stop alpha live managed session");
     assert_eq!(stopped_alpha.result.run_id, alpha.run_id);
     assert_eq!(stopped_alpha.result.status, "stop-requested");
 
-    let stopped_beta =
-        crate::commands::run_control::stop_managed_session(StopManagedSessionRequest {
+    let stopped_beta = crate::commands::run_control::stop_managed_session_for_test(
+        StopManagedSessionRequest {
             session_id: beta_session.id,
             confirm_stop: true,
-        })
-        .expect("stop beta live managed session");
+        },
+        |_, _| Ok(true),
+        crate::commands::run_control::stop_run_checked_for_test,
+    )
+    .expect("stop beta live managed session");
     assert_eq!(stopped_beta.result.run_id, beta.run_id);
     assert_eq!(stopped_beta.result.status, "stop-requested");
 

@@ -338,26 +338,24 @@ export function useAppController() {
     }
     const targetSessionId = selectedSession.id
     const input = sessionInput.draft
-    sessionInput.setSending(true)
-    sessionInput.setError("")
-    sessionInput.setAcceptedMessage("")
+    sessionInput.setSendingFor(targetSessionId, true)
+    sessionInput.setErrorFor(targetSessionId, "")
+    sessionInput.setAcceptedMessageFor(targetSessionId, "")
     try {
       const response = await writeSessionInput(targetSessionId, input)
-      if (selectedSessionIdRef.current !== targetSessionId) {
-        return
+      sessionInput.setDraftFor(targetSessionId, "")
+      sessionInput.setAcceptedMessageFor(
+        targetSessionId,
+        `Sent ${response.acceptedBytes} bytes.`,
+      )
+      if (selectedSessionIdRef.current === targetSessionId) {
+        await selectedSessionStatus.loadStatus()
       }
-      sessionInput.setDraft("")
-      sessionInput.setAcceptedMessage(`Sent ${response.acceptedBytes} bytes.`)
-      await selectedSessionStatus.loadStatus()
       await loadManagedSessions()
     } catch (cause) {
-      if (selectedSessionIdRef.current === targetSessionId) {
-        sessionInput.setError(errorMessage(cause))
-      }
+      sessionInput.setErrorFor(targetSessionId, errorMessage(cause))
     } finally {
-      if (selectedSessionIdRef.current === targetSessionId) {
-        sessionInput.setSending(false)
-      }
+      sessionInput.setSendingFor(targetSessionId, false)
     }
   }
 

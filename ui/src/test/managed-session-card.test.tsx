@@ -140,4 +140,46 @@ describe("ManagedSessionCard", () => {
       })
     ).toBe(false);
   });
+
+  it("detects managed-session display field changes for quiet refresh", () => {
+    const current = { sessions: [session()] };
+
+    expect(
+      sameManagedSessionList(current, {
+        sessions: [
+          session({
+            title: "Codex - renamed",
+            project: "renamed",
+            session: "renamed",
+            startedAt: "2026-06-30T02:00:01Z",
+            containerName: "runhaven-codex-renamed",
+            detailCommand: "runhaven runs show renamed"
+          })
+        ]
+      })
+    ).toBe(false);
+  });
+
+  it("detects managed-session input and next-step changes for quiet refresh", () => {
+    const current = { sessions: [session()] };
+
+    expect(
+      sameManagedSessionList(current, {
+        sessions: [
+          session({
+            input: {
+              attached: false,
+              status: "detached",
+              detail: "Input is not attached for this session."
+            },
+            nextAction: {
+              kind: "auth_attention",
+              label: "Finish auth setup",
+              detail: "Auth is not ready."
+            }
+          })
+        ]
+      })
+    ).toBe(false);
+  });
 });

@@ -326,7 +326,8 @@ check_workspace_shape() {
   fi
   tauri_container_calls="$(
     git grep -n 'Command::new("container")' -- src-tauri/src \
-      ':!src-tauri/src/commands/tests/live.rs' || true
+      ':!src-tauri/src/commands/tests/live.rs' \
+      ':!src-tauri/src/commands/tests/live_support.rs' || true
   )"
   if [ -n "$tauri_container_calls" ]; then
     append_violation "src-tauri must call runtime behavior through runhaven-core, not direct container commands"

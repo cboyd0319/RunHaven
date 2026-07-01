@@ -17,6 +17,7 @@ struct RegisteredSessionInput {
 #[derive(Clone, Default)]
 pub struct SessionInputRegistry {
     writers: Arc<Mutex<HashMap<String, RegisteredSessionInput>>>,
+    approved_inputs: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl SessionInputRegistry {
@@ -49,6 +50,12 @@ impl SessionInputRegistry {
             .lock()
             .map_err(|_| "session input registry is unavailable".to_string())?;
         writers.remove(session_id);
+        drop(writers);
+        let mut approved_inputs = self
+            .approved_inputs
+            .lock()
+            .map_err(|_| "session input registry is unavailable".to_string())?;
+        approved_inputs.remove(session_id);
         Ok(())
     }
 
@@ -92,6 +99,29 @@ impl SessionInputRegistry {
         Ok(writers
             .get(session_id)
             .is_some_and(|registered| registered.run_id == expected_run_id))
+    }
+
+    pub fn approve_input(&self, session_id: &str, expected_run_id: &str) -> Result<(), String> {
+        validate_session_id(session_id)?;
+        validate_run_id(expected_run_id).map_err(|error| error.to_string())?;
+        let mut approved_inputs = self
+            .approved_inputs
+            .lock()
+            .map_err(|_| "session input registry is unavailable".to_string())?;
+        approved_inputs.insert(session_id.to_string(), expected_run_id.to_string());
+        Ok(())
+    }
+
+    pub fn input_approved(&self, session_id: &str, expected_run_id: &str) -> Result<bool, String> {
+        validate_session_id(session_id)?;
+        validate_run_id(expected_run_id).map_err(|error| error.to_string())?;
+        let approved_inputs = self
+            .approved_inputs
+            .lock()
+            .map_err(|_| "session input registry is unavailable".to_string())?;
+        Ok(approved_inputs
+            .get(session_id)
+            .is_some_and(|run_id| run_id == expected_run_id))
     }
 }
 

@@ -147,6 +147,17 @@ Useful GUI design docs:
 - Selected sessions now have on-demand session-scoped diagnostics. The GUI sends
   only the managed session ID; Rust resolves the backend-owned run and returns
   bounded auth broker and provider network records filtered to that run.
+- GUI sensitive actions no longer rely on WebView booleans as the trust
+  boundary. Launch, raw output viewing, stop, hard stop, and repair use
+  Rust-owned native confirmation before the backend starts or mutates anything.
+  Session input uses a backend-held grant bound to the selected session ID plus
+  run ID, and the grant is cleared when the Rust-owned writer unregisters.
+  Frontend confirmation fields remain user-intent preconditions, not security
+  approval.
+- GUI session switching preserves per-session message drafts, sending state,
+  accepted notices, and errors. Quiet managed-session refreshes now compare all
+  rendered identity, display, input, and next-action fields so meaningful state
+  changes are not hidden while no-op refreshes stay stable.
 - Pre-release native design resources are recorded in
   `docs/plans/native-gui-reference-pass.md` for the later macOS design and app
   asset audit. That audit is deferred until CLI and GUI workflows are
@@ -197,6 +208,7 @@ them.
 CLI is reverified and should stay contract-preserving except for bug fixes,
 security fixes, docs corrections, pin updates, or internal GUI support that
 preserves CLI semantics. Continue the CLI+GUI goal on the GUI side from the
-hardest remaining problems first: managed-session recovery/diagnostics,
-CLI/GUI parity checks, real-agent launch smokes beyond shell, and fail-closed
-security boundary checks. Keep the safe path short, stable, and nontechnical.
+hardest remaining problems first: live trusted-approval smokes, real-agent
+launch smokes beyond shell, multi-session GUI control polish, CLI/GUI parity
+checks, and fail-closed security boundary checks. Keep the safe path short,
+stable, and nontechnical.

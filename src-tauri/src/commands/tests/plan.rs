@@ -235,6 +235,57 @@ fn launch_run_response_uses_reserved_run_id_without_starting() {
 }
 
 #[test]
+fn launch_run_requires_trusted_approval_before_spawning() {
+    let (_cache, _cache_home) = isolated_cache();
+    let workspace = tempfile::tempdir().expect("workspace");
+    let run_id = "runhaven-trusted-deny".to_string();
+    let mut plan_request =
+        shell_request(workspace.path().to_path_buf(), "trusted-deny".to_string());
+    plan_request.image = Some("runhaven/test-shell:local".to_string());
+    let launch_plan =
+        build_agent_run_plan(&plan_request, Some(run_id.clone())).expect("launch plan");
+    let response = build_launch_response(plan_request, run_id.clone()).expect("launch response");
+
+    let error = launch_prepared_with_approval_for_test(
+        run_id,
+        launch_plan,
+        response,
+        Vec::new(),
+        SessionInputRegistry::default(),
+        SessionOutputRegistry::default(),
+        |launch_plan, warnings| {
+            assert_eq!(launch_plan.profile_name, "shell");
+            assert!(warnings.is_empty());
+            Ok(false)
+        },
+    )
+    .expect_err("trusted approval denial should stop launch");
+
+    assert!(error.contains("Launch canceled"));
+    assert!(read_active_run_records().is_empty());
+}
+
+#[test]
+fn trusted_launch_prompt_contains_reviewable_launch_facts() {
+    let (_cache, _cache_home) = isolated_cache();
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut plan_request = request(workspace.path().to_path_buf());
+    plan_request.api_key_broker_env = Some("OPENAI_API_KEY".to_string());
+    let plan = build_agent_run_plan(&plan_request, Some("prompt-review-run".to_string()))
+        .expect("launch plan");
+
+    let message = trusted_launch_message_for_test(&plan, &[]);
+
+    assert!(message.contains("Agent: codex"));
+    assert!(message.contains(&format!("Workspace: {}", plan.workspace.display())));
+    assert!(message.contains("Auth: agent"));
+    assert!(message.contains("Image: runhaven/codex"));
+    assert!(message.contains("Network: provider"));
+    assert!(message.contains("Provider hosts: "));
+    assert!(message.contains("API key broker: OPENAI_API_KEY"));
+}
+
+#[test]
 fn launch_run_response_round_trips_project_auth_scope_without_starting() {
     let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");

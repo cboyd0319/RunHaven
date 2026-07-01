@@ -135,6 +135,22 @@ pub fn repair_active_run(run_id: &str) -> Result<Value> {
     repair_one_marker(&record)
 }
 
+/// Return true only when an active RunHaven marker points at a container that
+/// Apple `container inspect` proves is gone.
+pub fn active_run_repair_available(run_id: &str) -> Result<bool> {
+    validate_run_id(run_id)?;
+    let record = find_active_run_record(run_id)?;
+    let container_name = require_string(
+        record.get("container_name"),
+        "active run record is missing container name",
+    )?;
+    validate_runhaven_container_name(container_name)?;
+    let output = Command::new("container")
+        .args(["inspect", container_name])
+        .output()?;
+    Ok(!output.status.success() && is_missing_container_stderr(&output.stderr))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

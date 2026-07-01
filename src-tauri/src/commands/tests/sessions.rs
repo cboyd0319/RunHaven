@@ -235,6 +235,43 @@ fn managed_session_log_snapshot_resolves_session_id_and_stays_read_only() {
 }
 
 #[test]
+fn managed_session_log_snapshot_requires_trusted_raw_output_approval() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_active_run_payload(
+        "managed-session-log-denied",
+        json!({
+            "timestamp": "2026-06-30T03:10:00Z",
+            "run_id": "managed-session-log-denied",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/project",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-managed-session-log-denied",
+            "state_volume": "runhaven-codex-hidden-home",
+            "session": "project"
+        }),
+    )
+    .expect("active run payload");
+
+    let error = crate::commands::sessions::get_managed_session_log_snapshot_with_approval_for_test(
+        ManagedSessionLogSnapshotRequest {
+            session_id: "managed-session-log-denied".to_string(),
+            lines: Some(20),
+            confirm_sensitive_output: true,
+        },
+        None,
+        |session, lines| {
+            assert_eq!(session.id, "managed-session-log-denied");
+            assert_eq!(lines, 20);
+            Ok(false)
+        },
+    )
+    .expect_err("trusted denial should stop managed output read");
+
+    assert_eq!(error, "Raw output view canceled.");
+}
+
+#[test]
 fn managed_session_log_snapshot_falls_back_to_desktop_output_registry() {
     let (_cache, _cache_home) = isolated_cache();
     write_active_run_payload(
