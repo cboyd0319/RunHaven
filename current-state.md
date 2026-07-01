@@ -125,7 +125,28 @@ Useful GUI design docs:
 
 ## Latest State
 
-- The frontend punch list closed (uncommitted; pending lead review): explicit
+- Live-runtime verification ran on a real macOS 27 / Apple container 1.0.0
+  host: all five live Tauri container tests passed against real containers
+  (self-contained smokes on a clean state; the two attach-style tests against a
+  deliberately started marker run), `runs repair --all` was exercised on two
+  genuinely stale markers (removed=2 kept=0 unverified=0), and
+  `scripts/apple_container_smoke.sh --with-provider --with-ssh` passed end to
+  end (doctor pins, internal read-only run lifecycle, live SSH agent-socket
+  forwarding as the non-root agent, provider allowlist egress, cleanup). The
+  stale `--ssh` clap help ("currently disabled") was fixed in the same pass.
+- Subprocess-spawning read commands (`get_managed_sessions`,
+  `get_network_prune_preview`, `get_image_status`) now coalesce behind a
+  keyed single-flight cache with a 2s TTL (`src-tauri/src/read_guard.rs`):
+  at most one in-flight `container` subprocess per read family regardless of
+  WebView call rate; errors are never cached and mutating commands are
+  untouched. This closes the last whole-GUI security-audit finding with code.
+- Wire contracts flattened (F8): LaunchRunResponse lost its duplicated nested
+  snapshot (containerName hoisted), LogSnapshotResponse collapsed to one
+  encoding (the cursor clone that defeated the live-output equality guard is
+  gone, so the no-blink guard now holds), preflight_count deleted, and all
+  eleven confirm flags take `#[serde(default)]` so an omitted flag fails
+  closed with the friendly message instead of a raw serde error.
+- The frontend punch list closed: explicit
   session-status reloads now coalesce onto an in-flight poll and take one
   follow-up fetch, so post-action success messages never show against stale
   status; first-load request defaults apply exactly once via an agent-name ref
