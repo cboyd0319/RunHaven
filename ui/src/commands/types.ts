@@ -164,6 +164,14 @@ export type RepairManagedSessionResponse = {
   result: RepairRunResponse;
 };
 
+export type WriteSessionInputResponse = {
+  session: ManagedSessionSummary;
+  accepted: boolean;
+  acceptedBytes: number;
+  cursor: string;
+  status: string;
+};
+
 export type ManagedSessionSummary = {
   id: string;
   runId: string;

@@ -5,7 +5,8 @@ Last updated: 2026-06-30 UTC
 ## Status
 
 A narrow `write_session_input` Tauri command is exposed under the `run-control`
-capability. No frontend composer calls it yet.
+capability. The frontend composer calls only that command for the selected
+session.
 
 This document is the design gate before RunHaven exposes any GUI session input
 or resize command. The current desktop app can observe sessions, load bounded
@@ -197,7 +198,10 @@ Current coverage:
   one-off callback. Missing transports fail closed, stale run/session mappings
   fail closed, and two sessions cannot share a writer.
 - It exposes only the fixed `write_session_input` command under `run-control`.
-  There is still no frontend input path.
+- The React composer is visible only for selected sessions whose backend-owned
+  next action is `monitor`.
+- Drafts clear when the selected target changes, and late responses are ignored
+  if the selected session changed while the request was in flight.
 
 Rust/Tauri:
 
@@ -220,12 +224,12 @@ Rust/Tauri:
 
 Frontend:
 
-- composer is visible only for a selected session that can accept input;
-- send is disabled for empty input, blocked auth, and in-flight send;
-- changing session clears the draft and pending state;
-- stale responses are ignored;
-- two preview sessions keep drafts and accepted responses isolated;
-- no raw workspace path appears in the selected-session input UI.
+- composer is visible only for a selected session that can accept input. Done.
+- send is disabled for empty input, blocked auth, and in-flight send. Done.
+- changing session clears the draft and pending state. Done.
+- stale responses are ignored. Done.
+- two preview sessions keep drafts and accepted responses isolated. Done.
+- no raw workspace path appears in the selected-session input UI. Done.
 
 Live smoke:
 
@@ -251,9 +255,9 @@ Live smoke:
 7. Grant only `allow-write-session-input` under `run-control`, not `main-read`.
    Done.
 8. Add a minimal selected-session composer that calls only the typed command.
-   Next.
-9. Add preview and Playwright tests for two selected sessions.
-10. Add a live smoke only after the Rust path can write to a real backend-owned
+   Done.
+9. Add preview and Playwright tests for two selected sessions. Done.
+10. Add a live smoke after the Rust path can write to a real backend-owned
    session.
 
 The first implementation must not add `resize_session`. Resize remains out of

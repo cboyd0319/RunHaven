@@ -26,7 +26,8 @@ import type {
   SessionLogEntry,
   SetupStatus,
   StopManagedSessionResponse,
-  StopRunResponse
+  StopRunResponse,
+  WriteSessionInputResponse
 } from "./types";
 
 const mockAgents: AgentProfile[] = [
@@ -56,6 +57,7 @@ const mockAgents: AgentProfile[] = [
 let previewManagedSessions: ManagedSessionSummary[] = [];
 let previewRunSequence = 0;
 let previewSessionLogReads = new Map<string, number>();
+const MAX_SESSION_INPUT_BYTES = 8 * 1024;
 
 export function hasTauriRuntime(): boolean {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -440,6 +442,42 @@ export async function repairManagedSession(
   );
 }
 
+export async function writeSessionInput(
+  sessionId: string,
+  input: string
+): Promise<WriteSessionInputResponse> {
+  const clientTarget = `session:${sessionId}`;
+  return call(
+    "write_session_input",
+    {
+      request: {
+        sessionId,
+        input,
+        confirmSend: true,
+        clientTarget
+      }
+    },
+    () => {
+      validatePreviewSessionInput(input);
+      const session = previewSession(sessionId);
+      if (session.nextAction.kind === "auth_attention") {
+        throw new Error("Session auth is not ready. Finish auth setup before sending input.");
+      }
+      if (session.nextAction.kind !== "monitor") {
+        throw new Error(`Session cannot accept input while action is ${session.nextAction.kind}.`);
+      }
+      const acceptedBytes = sessionInputBytes(input);
+      return {
+        session,
+        accepted: true,
+        acceptedBytes,
+        cursor: `session:${session.id}:input:${acceptedBytes}`,
+        status: "accepted"
+      };
+    }
+  );
+}
+
 function rememberPreviewManagedSession(
   snapshot: LaunchRunResponse["snapshot"]
 ) {
@@ -526,6 +564,31 @@ function updatePreviewSessionStatus(
       )
     };
   });
+}
+
+function validatePreviewSessionInput(input: string) {
+  if (input.length === 0) {
+    throw new Error("session input is required");
+  }
+  if (sessionInputBytes(input) > MAX_SESSION_INPUT_BYTES) {
+    throw new Error(
+      `session input is too long; keep each send at or below ${MAX_SESSION_INPUT_BYTES} bytes`
+    );
+  }
+  if (input.includes("\0")) {
+    throw new Error("session input contains a NUL byte");
+  }
+  if (containsTerminalEscape(input)) {
+    throw new Error("session input contains a terminal escape sequence");
+  }
+}
+
+function sessionInputBytes(input: string): number {
+  return new TextEncoder().encode(input).length;
+}
+
+function containsTerminalEscape(input: string): boolean {
+  return [...input].some((char) => char === "\u001b" || char === "\u009b");
 }
 
 function projectLabel(workspace: string): string {

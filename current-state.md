@@ -1683,6 +1683,12 @@ Latest GUI local prototype:
   session input contract and `SessionInputRegistry`; `main-read` stays
   input-free, and no frontend composer, resize, attach, app-server transport,
   filesystem RPC, MCP, login, or host-reaching Codex path was added.
+- 2026-06-30 selected-session composer: The React GUI now shows a `Message`
+  composer only for selected sessions whose backend-owned next action is
+  `monitor`. It calls only `writeSessionInput`, clears drafts and pending state
+  on target changes, ignores late responses for stale targets, and keeps
+  two-session browser-preview drafts isolated. No resize, attach, app-server
+  transport, filesystem RPC, MCP, login, or host-reaching Codex path was added.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
@@ -1710,11 +1716,13 @@ Continue local GUI work on this branch. Use
 `docs/plans/native-gui-microsandbox-reference.md` before adding embedded
 terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
 boundary, make safe launch the simplest path, and keep developer details behind
-secondary views. Next useful work is to add the minimal selected-session
-composer that calls only `write_session_input`, clears drafts on target changes,
-and ignores stale responses. Do not expose resize, attach, app-server
-transport, filesystem RPC, MCP, generic command execution, login, or
-host-reaching Codex paths in that slice. A later desktop-driver pass can add
-native WebView click automation if it is worth the tooling cost.
+secondary views. Next useful work is the live GUI-managed input smoke: start a
+real internal `shell` session through the GUI/Tauri command path, send one
+bounded line through `write_session_input`, confirm the echoed output through
+the bounded selected-session output path, then stop and clean up the owned run.
+Do not expose resize, attach, app-server transport, filesystem RPC, MCP,
+generic command execution, login, or host-reaching Codex paths in that slice. A
+later desktop-driver pass can add native WebView click automation if it is
+worth the tooling cost.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.

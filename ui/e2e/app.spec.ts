@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 test("renders the dashboard without runtime errors", async ({ page }) => {
   const runtimeErrors: string[] = [];
@@ -44,6 +44,16 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Claude - runhaven-preview" })).toBeVisible();
   await expect(page.getByText("Monitor session")).toBeVisible();
   await expect(page.getByText("Run record")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Message" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
+  await page.getByLabel("Message").fill("draft for selected session");
+  await page.getByRole("button", { name: "Start" }).click();
+  await page.getByText("Claude - runhaven-preview").click();
+  await expect(page.getByLabel("Message")).toHaveValue("");
+  await page.getByLabel("Message").fill("hello session");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByText("Message sent")).toBeVisible();
+  await expect(page.getByText(/Sent \d+ bytes\./)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Run output" })).toBeVisible();
   await expect(page.getByRole("button", { name: "View latest output" })).toBeDisabled();
   await expect(page.getByLabel("Keep output updated")).toBeDisabled();
@@ -95,3 +105,34 @@ test("loads secret-free diagnostics", async ({ page }) => {
   await page.getByRole("tab", { name: "Network" }).click();
   await expect(page.getByText("No provider egress decisions recorded.")).toBeVisible();
 });
+
+test("keeps selected-session message drafts isolated", async ({ page }) => {
+  await page.goto("/");
+
+  await startPreviewRun(page, "/tmp/runhaven-alpha");
+  await page.getByText("Claude - runhaven-alpha").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
+  await page.getByLabel("Message").fill("alpha draft");
+
+  await page.getByRole("button", { name: "Start" }).click();
+  await startPreviewRun(page, "/tmp/runhaven-beta");
+  await page.getByText("Claude - runhaven-beta").click();
+  await expect(page.getByLabel("Message")).toHaveValue("");
+  await page.getByLabel("Message").fill("beta message");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect(page.getByText("Message sent")).toBeVisible();
+
+  await page.getByText("Claude - runhaven-alpha").click();
+  await expect(page.getByLabel("Message")).toHaveValue("");
+  await expect(page.getByText("beta message")).toHaveCount(0);
+});
+
+async function startPreviewRun(page: Page, workspacePath: string) {
+  await expect(page.getByRole("heading", { level: 1, name: "Launch" })).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Project folder path").fill(workspacePath);
+  await page.getByRole("button", { name: "Review access" }).click();
+  await page.getByLabel("I reviewed this plan and want to start this run.").check();
+  await page.getByRole("button", { name: "Launch run" }).click();
+  await expect(page.getByText(/Run started: preview-/)).toBeVisible();
+}

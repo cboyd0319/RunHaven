@@ -16,6 +16,7 @@ import {
   secureNetworkDefault,
   stopManagedSession,
   warningPreview,
+  writeSessionInput,
   type AgentProfile
 } from "../commands/runhaven";
 
@@ -277,6 +278,38 @@ describe("runhaven command helpers", () => {
     const repair = await repairManagedSession(session!.id);
     expect(repair.result.markerRemoved).toBe(true);
     expect(JSON.stringify(repair)).not.toContain("/tmp/runhaven-preview");
+  });
+
+  it("writes preview input through a managed session id", async () => {
+    const request = {
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-input-preview",
+      sessionName: "input"
+    };
+    const started = await launchRun({
+      plan: request,
+      confirmLaunch: true,
+      confirmedWarnings: []
+    });
+    const sessions = await getManagedSessions();
+    const session = sessions.sessions.find((item) => item.runId === started.runId);
+
+    expect(session).toBeDefined();
+    await expect(writeSessionInput("missing-session", "hello")).rejects.toThrow(
+      "managed session not found"
+    );
+    await expect(writeSessionInput(session!.id, "")).rejects.toThrow("session input is required");
+
+    const response = await writeSessionInput(session!.id, "hello agent\n");
+
+    expect(response.accepted).toBe(true);
+    expect(response.acceptedBytes).toBe("hello agent\n".length);
+    expect(response.session.id).toBe(session!.id);
+    expect(response.session.runId).toBe(started.runId);
+    expect(response.status).toBe("accepted");
+    expect(JSON.stringify(response)).not.toContain("/tmp/runhaven-input-preview");
+    expect(JSON.stringify(response)).not.toContain("resize_session");
+    expect(JSON.stringify(response)).not.toContain("attach_session");
   });
 
   it("requires explicit confirmation before launch is available", async () => {

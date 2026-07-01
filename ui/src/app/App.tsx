@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { CheckCircle2, CircleAlert, RefreshCw } from "lucide-react"
 
 import {
@@ -21,6 +21,7 @@ import {
   secureNetworkDefault,
   stopManagedSession,
   stopRun,
+  writeSessionInput,
   type DashboardStatus,
   type ImageStatusResponse,
   type LaunchRunResponse,
@@ -47,6 +48,7 @@ import { PlanReviewCard } from "./PlanReviewCard"
 import { RunHavenSidebar } from "./RunHavenSidebar"
 import { RunOutputCard } from "./RunOutputCard"
 import { RunStatusCard } from "./RunStatusCard"
+import { SessionInputCard } from "./SessionInputCard"
 import { SetupCard } from "./SetupCard"
 import {
   errorMessage,
@@ -81,6 +83,12 @@ export default function App() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null,
   )
+  const selectedSessionIdRef = useRef<string | null>(null)
+  const [sessionInputDraft, setSessionInputDraft] = useState("")
+  const [sessionInputSending, setSessionInputSending] = useState(false)
+  const [sessionInputError, setSessionInputError] = useState("")
+  const [sessionInputAcceptedMessage, setSessionInputAcceptedMessage] =
+    useState("")
   const [runStatus, setRunStatus] = useState<RunStatusResponse | null>(null)
   const [runStatusLoading, setRunStatusLoading] = useState(false)
   const [runStatusError, setRunStatusError] = useState("")
@@ -148,9 +156,17 @@ export default function App() {
       selectedSessionId &&
       !managedSessions.sessions.some((session) => session.id === selectedSessionId)
     ) {
-      setSelectedSessionId(null)
+      selectSession(null)
     }
   }, [managedSessions.sessions, selectedSessionId])
+
+  useEffect(() => {
+    selectedSessionIdRef.current = selectedSessionId
+    setSessionInputDraft("")
+    setSessionInputSending(false)
+    setSessionInputError("")
+    setSessionInputAcceptedMessage("")
+  }, [selectedSessionId])
 
   useEffect(() => {
     setControlConfirmations({ stop: false, kill: false, repair: false })
@@ -214,6 +230,11 @@ export default function App() {
 
   async function loadManagedSessions() {
     setManagedSessions(await getManagedSessions())
+  }
+
+  function selectSession(sessionId: string | null) {
+    selectedSessionIdRef.current = sessionId
+    setSelectedSessionId(sessionId)
   }
 
   function changeAgent(agentName: string) {
@@ -365,6 +386,37 @@ export default function App() {
     }
   }
 
+  async function sendSelectedSessionInput() {
+    if (!selectedSession || sessionInputSending) {
+      return
+    }
+
+    const targetSessionId = selectedSession.id
+    const input = sessionInputDraft
+    setSessionInputSending(true)
+    setSessionInputError("")
+    setSessionInputAcceptedMessage("")
+    try {
+      const response = await writeSessionInput(targetSessionId, input)
+      if (selectedSessionIdRef.current !== targetSessionId) {
+        return
+      }
+      setSessionInputDraft("")
+      setSessionInputAcceptedMessage(
+        `Sent ${response.acceptedBytes} bytes.`,
+      )
+      await loadManagedSessions()
+    } catch (cause) {
+      if (selectedSessionIdRef.current === targetSessionId) {
+        setSessionInputError(errorMessage(cause))
+      }
+    } finally {
+      if (selectedSessionIdRef.current === targetSessionId) {
+        setSessionInputSending(false)
+      }
+    }
+  }
+
   async function loadDiagnostics() {
     setDiagnosticsLoading(true)
     setDiagnosticsError("")
@@ -389,8 +441,8 @@ export default function App() {
         <RunHavenSidebar
           sessions={managedSessions.sessions}
           selectedSessionId={selectedSessionId}
-          onStartSelect={() => setSelectedSessionId(null)}
-          onSessionSelect={setSelectedSessionId}
+          onStartSelect={() => selectSession(null)}
+          onSessionSelect={selectSession}
         />
         <SidebarInset className="h-screen overflow-hidden">
           <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
@@ -451,6 +503,19 @@ export default function App() {
               ) : selectedSession ? (
                 <>
                   <ManagedSessionCard session={selectedSession} />
+                  <SessionInputCard
+                    session={selectedSession}
+                    draft={sessionInputDraft}
+                    sending={sessionInputSending}
+                    error={sessionInputError}
+                    acceptedMessage={sessionInputAcceptedMessage}
+                    onDraftChange={(value) => {
+                      setSessionInputDraft(value)
+                      setSessionInputError("")
+                      setSessionInputAcceptedMessage("")
+                    }}
+                    onSend={() => void sendSelectedSessionInput()}
+                  />
                   <RunStatusCard
                     title="Session controls"
                     controlTarget="session"
