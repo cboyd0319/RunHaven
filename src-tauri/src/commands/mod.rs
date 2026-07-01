@@ -105,7 +105,11 @@ fn agent_summaries() -> Vec<AgentProfileSummary> {
                 .collect(),
             sign_in: agent_sign_in(profile.name).to_string(),
             broker: agent_broker(profile.name).to_string(),
-            supports_in_app_sign_in: supports_sandbox_login(profile.name),
+            // Claude has a core in-sandbox login, but its code paste-back cannot
+            // run in-app, so the GUI keeps it out of the in-app sign-in flow
+            // (matching the explicit refusal in authorize_agent_sign_in).
+            supports_in_app_sign_in: profile.name != "claude"
+                && supports_sandbox_login(profile.name),
         })
         .collect()
 }

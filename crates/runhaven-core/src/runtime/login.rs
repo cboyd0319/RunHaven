@@ -1,27 +1,21 @@
 //! `runhaven login <agent>`: acquire a provider login once so runs reuse it
-//! without re-authenticating. Two shapes, by what each CLI supports:
+//! without re-authenticating. All four supported agents (Claude, Codex, Copilot,
+//! Antigravity) log in *inside* the sandbox, on the agent's shared home volume
+//! (`--auth-scope agent`), in `provider` network mode so the egress allowlist
+//! permits the login and token-refresh hosts. The credential stays in that
+//! isolated volume and later runs reuse it; RunHaven never holds any agent token.
 //!
-//! - Claude: no in-container device login at the pinned version, so an
-//!   in-sandbox login would need a code pasted back. Instead `runhaven login
-//!   claude` runs Anthropic's official `claude setup-token` on the host (where
-//!   the browser and localhost callback work), stores the resulting OAuth token
-//!   `0600` in the RunHaven cache, and later runs inject it into the sandbox env
-//!   at run time only. The token is a usable credential, so this is an explicit,
-//!   warned opt-in: the guest then holds a token, and provider-network egress
-//!   keeps it from leaving the provider's hosts.
-//! - Codex, Copilot, and Antigravity: in-sandbox logins on the agent's shared
-//!   home volume (`--auth-scope agent`), so the credential stays in that
-//!   isolated volume and later runs reuse it; RunHaven never holds the token.
-//!   Codex and Copilot have device-code login subcommands; Antigravity (agy)
-//!   has none, so its login runs the agent, which prompts a Google sign-in on
-//!   first run (the user types /exit afterward).
+//! The login commands differ by what each CLI supports: Codex and Copilot have
+//! device-code login subcommands; Claude runs `claude auth login` (its default
+//! Claude.ai subscription flow), which prints an OAuth URL and reads a pasted
+//! code back in the terminal; Antigravity (agy) has no login subcommand, so its
+//! login runs the agent, which prompts a Google sign-in on first run (the user
+//! types /exit afterward).
 
 use std::io::IsTerminal;
-use std::process::{Command, Stdio};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 
-use crate::doctor::find_on_path;
 use crate::runtime::launch::launch_run_plan;
 use crate::runtime::plans::{
     AgentRunPlan, AuthScope, RunOptions, WorkspaceScope, build_run_plan, default_network_mode,
@@ -29,66 +23,51 @@ use crate::runtime::plans::{
 use crate::runtime::profiles::get_profile;
 use crate::runtime::session_state::shared_state_volume_name;
 use crate::runtime::state::{VolumeDeletion, delete_volume};
-use crate::runtime::token_store::{TokenClear, resolve_token_store};
-use crate::support::paths::login_workspace_dir;
-
-/// Agents whose login RunHaven can store host-side as an OAuth token and inject
-/// into the guest at run time. Maps the agent to the env var its CLI reads.
-fn token_env_var(agent: &str) -> Option<&'static str> {
-    match agent {
-        "claude" => Some("CLAUDE_CODE_OAUTH_TOKEN"),
-        _ => None,
-    }
-}
+use crate::support::paths::{login_workspace_dir, oauth_token_path};
 
 pub fn login(agent: &str) -> Result<i32> {
-    match agent {
-        "claude" => login_claude(),
-        "codex" | "copilot" | "antigravity" => {
-            let args = sandbox_login_command(agent).expect("agent has a sandbox login command");
-            login_in_sandbox(agent, args, sandbox_login_guidance(agent))
-        }
-        other => bail!(
-            "runhaven login does not yet support {other:?}. Run the agent and log in inside the sandbox, or use --api-key-broker-env for an API key."
+    match sandbox_login_command(agent) {
+        Some(args) => login_in_sandbox(agent, args, sandbox_login_guidance(agent)),
+        None => bail!(
+            "runhaven login does not yet support {agent:?}. Run the agent and log in inside the sandbox, or use --api-key-broker-env for an API key."
         ),
     }
 }
 
-/// Whether `runhaven login <agent>` can sign this agent in: Claude via the host
-/// setup-token, and Codex/Copilot/Antigravity via an in-sandbox login.
+/// Whether `runhaven login <agent>` can sign this agent in. All four supported
+/// agents (claude, codex, copilot, antigravity) log in in-sandbox.
 pub fn supports_login(agent: &str) -> bool {
     crate::provider::auth_profiles::agent_sign_in_mode(agent).supports_login()
 }
 
-/// Whether this agent signs in through an in-sandbox device-code login
-/// (Codex/Copilot/Antigravity). These are the only agents the desktop app can
-/// drive fully in-app: the CLI prints a URL and short-lived device code, the
-/// user finishes in a browser, and the tool polls to completion with no secret
-/// pasted back. Claude is deliberately excluded: its host `claude setup-token`
-/// needs a token pasted into stdin, which the GUI does not host (see
-/// docs/DESKTOP_APP.md), so it stays a terminal step.
+/// Whether this agent has an in-sandbox login command. All four supported agents
+/// (claude, codex, copilot, antigravity) do. This is a core capability, not the
+/// desktop app's in-app sign-in: the app additionally excludes claude, whose
+/// login needs a code pasted back into the terminal, which the app's
+/// captured-output runner cannot host (see
+/// src-tauri/src/commands/agent_sign_in.rs).
 pub fn supports_sandbox_login(agent: &str) -> bool {
     sandbox_login_command(agent).is_some()
 }
 
-/// Build the in-sandbox login run plan for a device-code agent without running
-/// it, so a caller (the desktop app) can run the exact same login under its own
-/// output-capturing runner. Fails for agents without an in-sandbox device login
-/// (claude uses the host setup-token instead). The plan is capture-friendly
-/// (`tty` off) because the desktop app reads stdout/stderr through pipes rather
-/// than a terminal.
+/// Build the in-sandbox login run plan for an agent without running it, so a
+/// caller (the desktop app) can run the exact same login under its own
+/// output-capturing runner. The plan is capture-friendly (`tty` off) because the
+/// desktop app reads stdout/stderr through pipes rather than a terminal. Fails
+/// for an agent with no in-sandbox login command.
 pub fn build_sandbox_login_plan(agent: &str) -> Result<AgentRunPlan> {
-    let login_args = sandbox_login_command(agent).ok_or_else(|| {
-        anyhow::anyhow!("{agent} has no in-sandbox device login; nothing was started")
-    })?;
+    let login_args = sandbox_login_command(agent)
+        .ok_or_else(|| anyhow::anyhow!("{agent} has no in-sandbox login; nothing was started"))?;
     build_sandbox_login_run_plan(agent, login_args, false)
 }
 
 /// The command to run inside the sandbox to log in. Codex and Copilot have
-/// device-code login subcommands; Antigravity (agy) has no login subcommand, so
+/// device-code login subcommands; Claude runs `claude auth login` (its default
+/// Claude.ai subscription flow); Antigravity (agy) has no login subcommand, so
 /// it runs the agent, which prompts a Google sign-in on first run.
 fn sandbox_login_command(agent: &str) -> Option<&'static [&'static str]> {
     match agent {
+        "claude" => Some(&["claude", "auth", "login"]),
         "codex" => Some(&["codex", "login", "--device-auth"]),
         "copilot" => Some(&["copilot", "login"]),
         "antigravity" => Some(&["agy"]),
@@ -98,6 +77,9 @@ fn sandbox_login_command(agent: &str) -> Option<&'static [&'static str]> {
 
 fn sandbox_login_guidance(agent: &str) -> &'static str {
     match agent {
+        "claude" => {
+            "Logging in to Claude inside the sandbox. This runs `claude auth login`, the Claude.ai subscription flow: open the URL it prints in your browser, approve, then paste the code it gives you back into this terminal. The login persists in the agent's shared home volume, so later runs reuse it."
+        }
         "codex" => {
             "Logging in to Codex inside the sandbox. Open the URL it prints and sign in; there is no code to paste back. Codex needs device-code login enabled on your OpenAI account; if it refuses, turn it on in ChatGPT under Settings then Security, and re-run. The login persists in the agent's shared home volume, so later runs reuse it."
         }
@@ -112,20 +94,15 @@ fn sandbox_login_guidance(agent: &str) -> &'static str {
 }
 
 pub fn logout(agent: &str) -> Result<i32> {
-    match agent {
-        // Codex, Copilot, and Antigravity keep their login in the shared home
-        // volume, not a host token file; clearing it means removing that volume.
-        "codex" | "copilot" | "antigravity" => logout_shared_volume(agent),
-        _ => logout_host_token(agent),
+    // All agents keep their login in the shared home volume now, so clearing it
+    // means deleting that volume.
+    if agent == "claude" {
+        // Legacy cleanup: an older RunHaven stored a host-side claude OAuth
+        // token. That custody is gone, so best-effort remove any file it left so
+        // a previously stored token does not linger (ignore NotFound).
+        let _ = std::fs::remove_file(oauth_token_path("claude"));
     }
-}
-
-fn logout_host_token(agent: &str) -> Result<i32> {
-    match resolve_token_store().clear(agent)? {
-        TokenClear::Cleared => eprintln!("Cleared the stored {agent} login."),
-        TokenClear::Missing => eprintln!("No stored {agent} login to clear."),
-    }
-    Ok(0)
+    logout_shared_volume(agent)
 }
 
 fn logout_shared_volume(agent: &str) -> Result<i32> {
@@ -148,8 +125,8 @@ fn logout_shared_volume(agent: &str) -> Result<i32> {
 /// Run an agent's own login command once inside the sandbox, on its shared home
 /// volume (`--auth-scope agent`), in `provider` network mode so the egress
 /// allowlist permits the login and token-refresh hosts. Stdio is inherited, so
-/// the device-flow URL (and any code prompt) reaches the terminal directly and
-/// the credential lands in the isolated volume; RunHaven never sees the token.
+/// the login URL (and any code prompt) reaches the terminal directly and the
+/// credential lands in the isolated volume; RunHaven never sees the token.
 fn login_in_sandbox(agent: &str, login_args: &[&'static str], guidance: &str) -> Result<i32> {
     let tty = std::io::stdin().is_terminal() && std::io::stdout().is_terminal();
     eprintln!("{guidance}");
@@ -157,8 +134,8 @@ fn login_in_sandbox(agent: &str, login_args: &[&'static str], guidance: &str) ->
     launch_run_plan(&plan)
 }
 
-/// Shared plan builder for an in-sandbox device-code login. `tty` is on for the
-/// interactive CLI and off for the desktop app's captured-output runner.
+/// Shared plan builder for an in-sandbox login. `tty` is on for the interactive
+/// CLI and off for the desktop app's captured-output runner.
 fn build_sandbox_login_run_plan(
     agent: &str,
     login_args: &[&'static str],
@@ -192,88 +169,16 @@ fn build_sandbox_login_run_plan(
     })
 }
 
-fn login_claude() -> Result<i32> {
-    // setup-token runs on the host, where the browser and localhost callback work.
-    let claude = find_on_path("claude").ok_or_else(|| {
-        anyhow::anyhow!(
-            "runhaven login claude needs Claude Code installed on your host to run `claude setup-token`. Install it (for example `npm install -g @anthropic-ai/claude-code`) or log in inside the sandbox with `runhaven run claude`."
-        )
-    })?;
-    eprintln!(
-        "Running `claude setup-token` on the host. Approve the login in your browser. The token is stored only for RunHaven and is injected into the sandbox at run time, never written to your `~/.claude`."
-    );
-    // Capture stdout (the token); inherit stderr/stdin so the browser flow and
-    // any prompts work normally.
-    let output = Command::new(&claude)
-        .arg("setup-token")
-        .stdin(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .stdout(Stdio::piped())
-        .output()
-        .with_context(|| format!("could not run {claude} setup-token"))?;
-    if !output.status.success() {
-        bail!("claude setup-token did not succeed; nothing was stored");
-    }
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let token = extract_token(&stdout).ok_or_else(|| {
-        anyhow::anyhow!("could not find a token in `claude setup-token` output; nothing was stored")
-    })?;
-    resolve_token_store().store("claude", &token)?;
-    eprintln!(
-        "Stored your Claude login. `runhaven run claude` now injects it into the sandbox env (a usable token; provider-network egress keeps it from leaving Anthropic's hosts). Clear it with `runhaven login claude --clear`."
-    );
-    Ok(0)
-}
-
-/// Take the OAuth token from `claude setup-token` output: the last non-empty
-/// line that looks like an Anthropic OAuth token.
-fn extract_token(stdout: &str) -> Option<String> {
-    stdout
-        .lines()
-        .map(str::trim)
-        .rfind(|line| line.starts_with("sk-ant-") && line.len() > 20)
-        .map(str::to_string)
-}
-
-/// The token to inject for a run, if the agent has a stored login. Returns the
-/// env var name and value. The value is set on the run Command's environment
-/// (never on the argv or in the printed plan) and forwarded into the guest with
-/// a name-only `--env`.
-pub fn run_token_injection(plan: &AgentRunPlan) -> Option<(String, String)> {
-    let env = token_env_var(&plan.profile_name)?;
-    let token = resolve_token_store().read(&plan.profile_name)?;
-    Some((env.to_string(), token))
-}
-
-/// Insert a name-only `--env NAME` for the injected token before the image, so
-/// the guest inherits the value from the run Command's environment.
-pub fn with_token_env(command: &[String], image: &str, env_name: &str) -> Vec<String> {
-    let image_index = command
-        .iter()
-        .position(|arg| arg == image)
-        .expect("image in command");
-    let mut result = command[..image_index].to_vec();
-    result.extend(["--env".to_string(), env_name.to_string()]);
-    result.extend(command[image_index..].to_vec());
-    result
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn extract_token_takes_the_anthropic_oauth_token_line() {
-        // Obvious placeholder, not a real token; only the `sk-ant-` prefix and
-        // length matter to the parser.
-        let placeholder = "sk-ant-NOT-A-REAL-TOKEN-placeholder";
-        let out = format!("Starting login...\n{placeholder}\n");
-        assert_eq!(extract_token(&out).as_deref(), Some(placeholder));
-        assert!(extract_token("no token here\n").is_none());
-    }
-
-    #[test]
-    fn sandbox_login_commands_invoke_the_cli_device_flow() {
+    fn sandbox_login_commands_invoke_each_cli_login() {
+        assert_eq!(
+            sandbox_login_command("claude"),
+            Some(&["claude", "auth", "login"][..])
+        );
         assert_eq!(
             sandbox_login_command("codex"),
             Some(&["codex", "login", "--device-auth"][..])
@@ -283,13 +188,17 @@ mod tests {
             Some(&["copilot", "login"][..])
         );
         assert_eq!(sandbox_login_command("antigravity"), Some(&["agy"][..]));
-        assert_eq!(sandbox_login_command("claude"), None);
+        assert_eq!(sandbox_login_command("gemini"), None);
     }
 
     #[test]
     fn login_and_refresh_hosts_are_in_the_provider_allowlist() {
         use crate::provider::endpoints::bundled_provider_hosts;
         // Without these the in-sandbox login is blocked by provider egress.
+        // Claude's `claude auth login` OAuth exchange hits platform.claude.com
+        // and its client-metadata fetch hits claude.ai.
+        assert!(bundled_provider_hosts("claude").contains(&"platform.claude.com"));
+        assert!(bundled_provider_hosts("claude").contains(&"claude.ai"));
         assert!(bundled_provider_hosts("codex").contains(&"auth.openai.com"));
         assert!(bundled_provider_hosts("copilot").contains(&"github.com"));
         assert!(bundled_provider_hosts("copilot").contains(&"api.github.com"));
@@ -309,27 +218,24 @@ mod tests {
     }
 
     #[test]
-    fn supports_sandbox_login_covers_only_device_code_agents() {
-        // The desktop app can drive these fully in-app: URL plus device code,
-        // no secret pasted back.
-        for agent in ["codex", "copilot", "antigravity"] {
+    fn supports_sandbox_login_covers_the_four_login_agents() {
+        // Every supported agent has an in-sandbox login command at the core level.
+        for agent in ["claude", "codex", "copilot", "antigravity"] {
             assert!(
                 supports_sandbox_login(agent),
-                "{agent} should support in-app device-code sign-in"
+                "{agent} should support in-sandbox login"
             );
         }
-        // Claude needs a token pasted into stdin on the host, so it is not an
-        // in-app sign-in target.
-        for agent in ["claude", "gemini", "shell", "unknown"] {
+        for agent in ["gemini", "shell", "unknown"] {
             assert!(
                 !supports_sandbox_login(agent),
-                "{agent} must not be treated as an in-app device-code sign-in"
+                "{agent} must not be treated as an in-sandbox login target"
             );
         }
     }
 
     #[test]
-    fn build_sandbox_login_plan_uses_the_device_flow_command_and_refuses_claude() {
+    fn build_sandbox_login_plan_uses_the_login_command_and_refuses_unknown_agents() {
         // Keep the login-workspace directory under a temp cache root, not the
         // real user cache.
         let cache = tempfile::tempdir().expect("cache");
@@ -342,8 +248,11 @@ mod tests {
         assert!(plan.api_key_broker_env.is_none());
         // Captured-output runner: no --tty is added to the run command.
         assert!(!plan.command.iter().any(|arg| arg == "--tty"));
-        // Claude has no in-sandbox device login, so plan building fails closed.
-        assert!(build_sandbox_login_plan("claude").is_err());
+        // Claude now has an in-sandbox login command, so a plan builds; the
+        // desktop app, not core, keeps claude out of in-app sign-in (its
+        // paste-back step).
+        assert!(build_sandbox_login_plan("claude").is_ok());
+        // An agent with no login command still fails closed.
         assert!(build_sandbox_login_plan("unknown").is_err());
     }
 
@@ -361,30 +270,5 @@ mod tests {
                 "{agent} should not support runhaven login"
             );
         }
-    }
-
-    #[test]
-    fn with_token_env_inserts_name_only_env_before_image() {
-        let command = vec![
-            "container".to_string(),
-            "run".to_string(),
-            "--name".to_string(),
-            "runhaven-claude-run".to_string(),
-            "runhaven/claude:0.1.0".to_string(),
-            "claude".to_string(),
-        ];
-        let result = with_token_env(&command, "runhaven/claude:0.1.0", "CLAUDE_CODE_OAUTH_TOKEN");
-        let env_index = result
-            .windows(2)
-            .position(|w| w == ["--env", "CLAUDE_CODE_OAUTH_TOKEN"])
-            .expect("env injected");
-        let image_index = result
-            .iter()
-            .position(|arg| arg == "runhaven/claude:0.1.0")
-            .expect("image present");
-        // The name-only env appears before the image, and the value is never on
-        // the command line.
-        assert!(env_index < image_index);
-        assert!(!result.iter().any(|arg| arg.contains("sk-ant-")));
     }
 }

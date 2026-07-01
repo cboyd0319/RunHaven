@@ -155,22 +155,11 @@ pub(crate) fn run_agent_command_lifecycle(
     let started_at = utc_timestamp();
     eprintln!("Run id: {run_id}");
     write_active_run_record(plan, run_id, &started_at)?;
-    let injection = crate::runtime::login::run_token_injection(plan);
-    let command = match &injection {
-        Some((env, _)) => crate::runtime::login::with_token_env(&command, &plan.image, env),
-        None => command,
-    };
-    if injection.is_some() {
-        eprintln!(
-            "Using your stored {} login (injected into the sandbox env).",
-            plan.profile_name
-        );
-    }
+    // No agent token is injected: every agent logs in in-sandbox and its
+    // credential lives in the isolated home volume, never in the run env.
     let status_result = runner.run_agent_command(
         &command,
-        injection
-            .as_ref()
-            .map(|(env, value)| (env.as_str(), value.as_str())),
+        None,
         AgentCommandContext {
             plan,
             run_id,

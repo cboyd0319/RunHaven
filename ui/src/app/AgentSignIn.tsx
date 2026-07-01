@@ -14,10 +14,10 @@ import { useAgentSignIn } from "./useMaintenance"
 // browser. When it succeeds, `onSignedIn` refreshes auth status so the agent
 // shows as signed in. RunHaven never sees or stores the token.
 //
-// Claude signs in from a terminal (its host `claude setup-token` needs a code
-// pasted into stdin, which the app does not host), so for claude this shows a
-// clear terminal instruction instead of a button. Agents with no sign-in at all
-// (like shell) show nothing.
+// Claude signs in from a terminal (its in-sandbox sign-in needs a code pasted
+// back into the terminal, which the app does not host), so for claude this shows
+// a clear terminal instruction instead of a button. Agents with no sign-in at
+// all (like shell) show nothing.
 export function AgentSignIn({
   agent,
   onSignedIn,

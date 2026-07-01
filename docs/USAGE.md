@@ -307,25 +307,20 @@ Google login and Cloud Code hosts for Antigravity, including the model-endpoint
 family pattern `*-cloudcode-pa.googleapis.com` so a Google channel or region
 change does not need a new host).
 
-For Claude, a zero-friction opt-in avoids the copy step entirely:
+Claude signs in the same in-sandbox way:
 
 ```bash
-runhaven login claude          # runs `claude setup-token` on your host, stores the token
-runhaven run claude            # injects the stored token into the sandbox
-runhaven login claude --clear  # remove the stored token
+runhaven login claude          # runs `claude auth login` in the sandbox; open the URL, approve, paste the code back
+runhaven login claude --clear  # delete that agent's shared home volume (logs it out)
 ```
 
-`runhaven login claude` needs Claude Code installed on your host. It is a warned
-opt-in: the guest then holds a usable token (the lower-isolation choice), kept
-out of `~/.claude`, the printed `plan`, and any command line, and confined to
-Anthropic's hosts in `provider` network mode. See
-[`AUTH_BROKER.md`](AUTH_BROKER.md).
-
-By default the stored token lives in a private `0600` file in RunHaven's cache.
-On macOS, set `RUNHAVEN_TOKEN_STORE=keychain` before `login`, `run`, and
-`--clear` to keep it in your login Keychain instead; any other value or unset
-uses the file store, so existing setups are unchanged. See
-[`SECURITY_MODEL.md`](SECURITY_MODEL.md).
+`runhaven login claude` runs Claude's default Claude.ai subscription login
+(`claude auth login`) inside the sandbox: open the URL it prints, approve in your
+browser, then paste the code back into this terminal. The login persists in
+Claude's shared home volume, so later runs reuse it; RunHaven never holds the
+token. `--clear` deletes that volume and also best-effort removes any token an
+older RunHaven stored on your Mac before this change. See
+[`AUTH_BROKER.md`](AUTH_BROKER.md) and [`SECURITY_MODEL.md`](SECURITY_MODEL.md).
 
 Use `--env NAME` only when a headless run deliberately needs one token value
 inside the guest.

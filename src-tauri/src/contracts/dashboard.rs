@@ -29,9 +29,10 @@ pub(crate) struct AgentProfileSummary {
     pub sign_in: String,
     pub broker: String,
     /// True when the desktop app can drive this agent's sign-in fully in-app
-    /// (device-code login). False agents (like claude) sign in from a terminal.
-    /// Derived from core `supports_sandbox_login`, so the GUI never re-decides
-    /// the policy; the mutating command still fails closed regardless.
+    /// (device-code login). Claude has a core in-sandbox login too, but its
+    /// sign-in needs a code pasted back into the terminal, so the GUI keeps it
+    /// out of the in-app flow (it signs in from a terminal). The mutating
+    /// command still fails closed regardless.
     pub supports_in_app_sign_in: bool,
 }
 

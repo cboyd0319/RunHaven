@@ -8,10 +8,12 @@
 //! returns a sign-in id the WebView polls through `get_agent_sign_in_status`.
 //!
 //! The desktop app only ever triggers the sign-in and watches sanitized
-//! progress. RunHaven core owns the resulting credential (unchanged `0600`
-//! path); nothing here reads, stores, or returns a token. Claude is deliberately
-//! not an in-app target: its host `claude setup-token` needs a token pasted into
-//! stdin, so it stays a terminal step (see docs/DESKTOP_APP.md).
+//! progress. RunHaven never holds any agent token: every agent logs in
+//! in-sandbox and its credential lives in that agent's isolated home volume, so
+//! nothing here reads, stores, or returns a token. Claude is deliberately not an
+//! in-app target: its in-sandbox sign-in needs a code pasted back into the
+//! terminal, which the app's captured-output runner cannot host, so it stays a
+//! terminal step run with `runhaven login claude` (see docs/DESKTOP_APP.md).
 
 use runhaven_core::runtime::launch::{new_run_id, require_container_cli};
 use runhaven_core::runtime::login::{build_sandbox_login_plan, supports_sandbox_login};
@@ -62,10 +64,15 @@ fn authorize_agent_sign_in(request: &AgentSignInRequest) -> Result<PreparedSignI
     let profile =
         get_profile(&request.agent).map_err(|_| "Choose a known agent to sign in.".to_string())?;
     let agent = profile.name.to_string();
+    // Claude signs in from a terminal: its in-sandbox sign-in needs a code
+    // pasted back into the terminal, which this captured-output runner cannot
+    // host. This explicit check (not supports_sandbox_login, which is now true
+    // for claude) keeps the GUI fail-closed.
     if agent == "claude" {
         return Err(
-            "Claude sign-in needs a code pasted in a terminal. Run `runhaven login claude` \
-             in your terminal, then come back."
+            "Claude signs in from a terminal. Run `runhaven login claude` in your terminal: \
+             its sign-in needs a code pasted back into the terminal, which the app cannot do. \
+             Then come back."
                 .to_string(),
         );
     }

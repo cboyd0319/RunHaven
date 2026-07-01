@@ -69,7 +69,7 @@ detail.
 
 | Profile | Provider hosts | Interactive auth | Headless broker | Key limit |
 | --- | --- | --- | --- | --- |
-| `claude` | Bundled: `api.anthropic.com`, `claude.ai`, `platform.claude.com` | `runhaven login claude` (host setup-token, injected at run time), or Claude.ai/subscription login in isolated state | API-key broker: `--api-key-broker-env ANTHROPIC_API_KEY`, `x-api-key` via `ANTHROPIC_BASE_URL` | API key brokered host-side; OAuth and subscription logins use isolated state |
+| `claude` | Bundled: `api.anthropic.com`, `claude.ai`, `platform.claude.com` | `runhaven login claude` (`claude auth login` in the sandbox; paste the code back), the login persists in isolated state | API-key broker: `--api-key-broker-env ANTHROPIC_API_KEY`, `x-api-key` via `ANTHROPIC_BASE_URL` | API key brokered host-side; OAuth and subscription logins use isolated state |
 | `codex` | Bundled: `api.openai.com`, `chatgpt.com`, `auth.openai.com` | `runhaven login codex` (`codex login --device-auth`), or ChatGPT sign-in in isolated state | API-key broker: `--api-key-broker-env OPENAI_API_KEY`, Responses API (`/v1/responses`) | Key brokered host-side; device-code login needs the ChatGPT account setting on |
 | `gemini` | Partial: only `generativelanguage.googleapis.com` bundled; `accounts.google.com` and Vertex hosts are candidates | Google account login or API key in isolated state (no `runhaven login`) | API-key broker: `--api-key-broker-env GEMINI_API_KEY`, `x-goog-api-key` via base-URL redirect | Redirect env is undocumented upstream and version-fragile; Vertex and account login are not brokered |
 | `copilot` | Bundled: the `githubcopilot.com` hosts plus `github.com` and `api.github.com` for the device login | `runhaven login copilot` (GitHub device flow) | Design-only (cannot be brokered cleanly) | Token exchange + dynamically-routed API host; the in-container login stores the token in the isolated volume |
@@ -162,7 +162,7 @@ default.
 | Credential mechanism | What it does |
 | --- | --- |
 | `--api-key-broker-env NAME` | Enables the host-side API-key broker for provider-network Codex, Claude, or Gemini runs, keeping the raw key on the host (old name `--codex-api-key-broker-env` still works as an alias). |
-| `runhaven login <agent>` | Signs in once and later runs reuse it: Claude via a host `claude setup-token` (the token is injected at run time), and Codex, Copilot, and Antigravity via an in-sandbox login on the shared home volume. `--clear` removes the login. See [Auth broker](AUTH_BROKER.md). |
+| `runhaven login <agent>` | Signs in once and later runs reuse it: all four agents (Claude, Codex, Copilot, Antigravity) log in in-sandbox on the shared home volume, so RunHaven never holds any agent token. `--clear` removes the login (Claude's `--clear` also best-effort removes any legacy host-stored token). See [Auth broker](AUTH_BROKER.md). |
 | `--auth-scope agent\|project` | `agent` (default) shares one login per agent across all your projects so an OAuth login is done once; `project` isolates the login to this workspace's own volume. |
 | `runhaven auth status` / `runhaven auth explain AGENT` | Explains current broker boundaries without reading or printing secrets. |
 

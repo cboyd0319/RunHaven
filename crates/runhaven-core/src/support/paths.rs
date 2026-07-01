@@ -92,6 +92,10 @@ pub fn state_lock_path(state_volume: &str) -> PathBuf {
         .join(format!("{state_volume}.lock"))
 }
 
+/// Legacy host-side OAuth token path. RunHaven no longer stores any agent token
+/// host-side (all agents log in in-sandbox), so this remains only so
+/// `login <agent> --clear` can best-effort remove a token an older RunHaven
+/// wrote before the in-sandbox unification.
 pub fn oauth_token_path(agent: &str) -> PathBuf {
     runhaven_cache_root()
         .join("auth")

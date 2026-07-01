@@ -30,11 +30,5 @@ toml.workspace = true
 ureq.workspace = true
 uuid.workspace = true
 
-# macOS-only: the opt-in Keychain token store (RUNHAVEN_TOKEN_STORE=keychain).
-# Target-gated so non-macOS builds never pull it. `security-framework` wraps the
-# C Security API safely, so the store needs no `unsafe`.
-[target.'cfg(target_os = "macos")'.dependencies]
-security-framework.workspace = true
-
 [dev-dependencies]
 tempfile.workspace = true

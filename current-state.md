@@ -123,21 +123,23 @@ Useful GUI design docs:
 
 ## Latest State
 
-- Opt-in macOS Keychain token store landed seam-first (live Keychain round-trip
-  is a documented follow-up on macOS). `runhaven-core` now has a `TokenStore`
-  trait (`runtime/token_store.rs`) with store/read/clear. `FileTokenStore` is the
-  default and is byte-for-byte the original behavior (same `0600`
-  `oauth_token_path` via `create_private_file`, same trailing newline, same
-  clear semantics). A macOS-only `KeychainTokenStore` uses `security-framework`
-  generic-password items (pinned `=3.5.1`, already in the workspace lock via
-  rustls so no new transitive crates, compiling under `unsafe_code = forbid`).
-  `resolve_token_store()` defaults to the file store and selects the Keychain
-  only when `RUNHAVEN_TOKEN_STORE=keychain`; any other value or unset keeps the
-  file store, so existing users are unchanged. The `claude` login store, run-time
-  read, and `login claude --clear` all route through the resolved store. The
-  token is never logged or printed and error paths omit its value. Advances the
-  `logs-secret-redaction` Keychain acceptance criterion; the broader centralized
-  sanitizer pass is still open. Docs updated in `USAGE.md` and `SECURITY_MODEL.md`.
+- Agent login is unified in-sandbox, and host-side token custody is deleted. All
+  four sign-in agents (Claude, Codex, Copilot, Antigravity) now log in *inside*
+  the sandbox on the shared home volume via `runhaven login <agent>`, so RunHaven
+  holds no agent token. Claude was the last host-side custody: `runhaven login
+  claude` now runs `claude auth login` (its Claude.ai subscription flow) in the
+  sandbox. Empirical probe on this machine: Claude Code 2.1.197 has `claude auth
+  login`, and running it in the `runhaven/claude:0.1.0` image as the non-root
+  agent user prints the OAuth URL and a paste-back prompt, the same class as the
+  Antigravity flow. The token exchange (`platform.claude.com`) and
+  client-metadata fetch (`claude.ai`) are already bundled provider hosts, so no
+  egress change was needed. Removed: `runtime/token_store.rs`, the run-time env
+  injection in `runtime/launch.rs`, `login_claude`/`extract_token`/token helpers
+  in `runtime/login.rs`, and the userless `RUNHAVEN_TOKEN_STORE=keychain`
+  Keychain seam with its `security-framework` dependency (workspace + core
+  manifests, `pins.toml`). `login claude --clear` now deletes the shared volume
+  and best-effort removes any legacy host token. Docs updated in `USAGE.md`,
+  `SECURITY_MODEL.md`, `CAPABILITIES.md`, `AUTH_BROKER.md`, and `DESKTOP_APP.md`.
 - In-app agent sign-in landed seam-first (live verification is a documented
   follow-up). Codex, Copilot, and Antigravity now sign in from the app. A
   mutating `start_agent_sign_in` command lives behind its own isolated
@@ -146,18 +148,21 @@ Useful GUI design docs:
   non-device-code input, requires a Rust-owned native confirmation, then runs
   the tested core device-code login plan on a background thread through the
   `AgentCommandRunner` seam. Claude is deliberately not an in-app target because
-  its host `claude setup-token` needs a code pasted into stdin; the app shows a
-  clear instruction to run `runhaven login claude` in a terminal instead of
-  hosting a secret paste field. A read-only `get_agent_sign_in_status`
+  its in-sandbox sign-in needs a code pasted back into the terminal, which the
+  app's captured-output runner cannot host; the GUI keeps claude out via an
+  explicit `agent == "claude"` check (core `supports_sandbox_login` is now true
+  for claude) and shows a clear instruction to run `runhaven login claude` in a
+  terminal. A read-only `get_agent_sign_in_status`
   (main-read) returns sanitized progress (starting/needs_browser/succeeded/
   failed) plus a bounded, `redact_run_output`-scrubbed output tail, so the
   sign-in link and short-lived device code show while any leaked token or key is
-  scrubbed. The GUI only triggers sign-in and shows progress; RunHaven core
-  still owns the token at its unchanged 0600 path, and no command returns, logs,
-  or stores it. On success the app refreshes auth status. Core reuse: new
+  scrubbed. The GUI only triggers sign-in and shows progress; the credential
+  lives in the agent's isolated home volume and no command returns, logs, or
+  stores it. On success the app refreshes auth status. Core reuse:
   `supports_sandbox_login` and `build_sandbox_login_plan` in
-  `crates/runhaven-core/src/runtime/login.rs`; a new
-  `AgentProfileSummary.supportsInAppSignIn` (from core) drives the GUI button.
+  `crates/runhaven-core/src/runtime/login.rs`; `AgentProfileSummary`
+  `supportsInAppSignIn` drives the GUI button and excludes claude explicitly
+  (core `supports_sandbox_login` now includes it).
 - The GUI now has parity for git-worktree runs and their review lifecycle (V1
   milestone M4). The launch flow has an opt-in worktree choice (secure default
   off): `RunPlanRequest.worktree` threads into the planner, the plan review and

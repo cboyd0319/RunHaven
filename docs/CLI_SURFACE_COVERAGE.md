@@ -44,10 +44,10 @@ non-allowlisted hosts, proxied IP literals, and direct egress) and the `--ssh`
 fail-closed boundary are verified by the smoke. The surface check covers breadth
 and the worktree and attach/kill/repair lifecycles the smoke does not exercise.
 
-`runhaven login <agent>` requires a real provider OAuth flow or a host
-setup-token, so it cannot run in the self-cleaning breadth check. It is confirmed
-by live per-agent login smokes (claude, codex, copilot, and antigravity were
-live-verified on 2026-06-26).
+`runhaven login <agent>` runs a real in-sandbox provider OAuth flow, so it
+cannot run in the self-cleaning breadth check. It is confirmed by live per-agent
+login smokes (claude, codex, copilot, and antigravity were live-verified on
+2026-06-26).
 
 ## Confirmation gates and safety
 

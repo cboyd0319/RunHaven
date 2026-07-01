@@ -53,10 +53,9 @@ a **Sign in** button.
 
   Run it in your terminal, then come back and refresh.
 
-Either way, RunHaven keeps the login safe on this Mac and injects it into the
-sandbox only at run time. The app never shows or stores your token or key. Other
-agents sign in inside the sandbox on first run, or you can pass an API key by its
-environment variable name.
+Either way, the login happens inside the sandbox and stays there: RunHaven never
+holds any agent token, and the app never shows or stores your token or key. You
+can also pass an API key by its environment variable name for a headless run.
 
 ## Start a run
 

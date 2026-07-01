@@ -1,9 +1,9 @@
 # Auth Broker
 
 Status: host-side API-key broker for Codex, Claude, and Gemini, plus
-`runhaven login` for Claude (host setup-token) and Codex, Copilot, and
-Antigravity (in-sandbox login). No Copilot or Antigravity API-key broker is
-planned.
+`runhaven login` for all four sign-in agents (Claude, Codex, Copilot, and
+Antigravity) via an in-sandbox login. RunHaven never holds any agent token. No
+Copilot or Antigravity API-key broker is planned.
 
 RunHaven exposes two auth inspection commands:
 
@@ -146,18 +146,17 @@ path-restrict those GitHub hosts). Codex needs the account "Allow device code
 login" setting on. Clear a login with `runhaven login <agent> --clear`, which
 deletes that shared home volume.
 
-**Claude (host setup-token, warned opt-in).** Claude Code has no in-container
-device login at the pinned version, so an in-sandbox login would need a code
-pasted back. For a zero-friction alternative, `runhaven login claude` runs
-Anthropic's official `claude setup-token` on your host (this needs Claude Code
-installed on the host), captures the resulting token, and stores it `0600` in
-the RunHaven cache. `runhaven run claude` then injects it into the sandbox env
-at run time. This is an explicit, warned opt-in, not the default: unlike the
-isolated-login default, the guest then holds a usable token. The token is never
-written into your `~/.claude`, never appears in the printed `plan` or on a
-command line (it is passed by name-only `--env` from the RunHaven process
-environment), and in `provider` mode the egress allowlist keeps it from leaving
-Anthropic's hosts. Clear it with `runhaven login claude --clear`.
+**Claude (in-sandbox login).** `runhaven login claude` runs `claude auth login`
+(Claude's default Claude.ai subscription flow) inside the sandbox, the same as
+the other agents. Open the URL it prints, approve in your browser, then paste the
+code it gives you back into the terminal. The login persists in Claude's shared
+home volume, so later runs reuse it, and RunHaven never sees, stores, or injects
+the token. The OAuth token exchange hits `platform.claude.com` and the
+client-metadata fetch hits `claude.ai`, both already in the bundled provider
+allowlist, so no egress change is needed. Clear it with
+`runhaven login claude --clear`, which deletes that shared home volume and
+best-effort removes any token an older RunHaven stored on your Mac before this
+change.
 
 **Antigravity (first-run Google login).** `agy` has no login subcommand, so
 `runhaven login antigravity` starts `agy`, which prompts a Google sign-in on
