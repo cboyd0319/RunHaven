@@ -106,7 +106,10 @@ export function ManagedSessionCard({
 }
 
 export function sessionNeedsAttention(session: ManagedSessionSummary): boolean {
-  return session.nextAction.kind === "auth_attention"
+  return (
+    session.nextAction.kind === "auth_attention" ||
+    session.nextAction.kind === "recover"
+  )
 }
 
 export function sessionAllowsRunControl(session: ManagedSessionSummary): boolean {

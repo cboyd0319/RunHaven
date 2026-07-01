@@ -5,6 +5,7 @@ mod helpers;
 mod launch;
 mod payload;
 mod review;
+mod session_recovery;
 mod sessions;
 
 pub use active_runs::*;

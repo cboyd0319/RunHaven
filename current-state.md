@@ -211,6 +211,19 @@ Useful GUI design docs:
   are covered by read-model tests, session-input readiness fixtures were moved to
   the new trust model, and the managed-session UI-contract tests were split by
   ownership into `session_cleanup.rs` to stay under the structure ceiling.
+- The GUI managed-session list now surfaces orphaned runs for recovery using the
+  authoritative container signal. `get_managed_sessions` reconciles each active
+  (running or starting) marker against Apple `container inspect` (the same check
+  marker repair uses); a marker whose container is proven gone is shown as "Not
+  responding" with a `recover` action via the pure core
+  `ManagedSessionListData::mark_stale_sessions`. This can never contradict repair
+  (identical signal), never false-flags a live session, is fail-safe (a missing
+  `container` CLI or transient error leaves the session untouched), and injects
+  the container check so tests stay hermetic. The pure list read model is
+  unchanged; the container check lives at the Tauri command layer, and input
+  stays fail-closed (only a `monitor` action accepts input). An earlier
+  `host_pid` liveness probe was rejected in review because a launcher-dead but
+  container-alive session would be mislabeled and dead-end against repair.
 
 ## Current Branch Work
 

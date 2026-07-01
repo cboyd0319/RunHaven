@@ -42,4 +42,5 @@ mod diagnostics;
 mod launch;
 mod review;
 mod session_cleanup;
+mod session_recovery;
 mod sessions;

@@ -110,6 +110,26 @@ describe("ManagedSessionCard", () => {
     expect(html).not.toContain("Start session");
   });
 
+  it("flags a stale session for recovery", () => {
+    const stale = session({
+      statusLabel: "Not responding",
+      nextAction: {
+        kind: "recover",
+        label: "Repair session",
+        detail:
+          "This session's container is no longer running. Repair the stale marker to clear it."
+      }
+    });
+
+    expect(sessionNeedsAttention(stale)).toBe(true);
+
+    const html = renderToStaticMarkup(<ManagedSessionCard session={stale} />);
+
+    expect(html).toContain("Repair session");
+    expect(html).toContain("Not responding");
+    expect(html).toContain("Needs attention");
+  });
+
   it("renders explicit auth labels for managed-session statuses", () => {
     const cases: Array<[authStatus: string, label: string]> = [
       ["api-key-broker", "API key broker"],

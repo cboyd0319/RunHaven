@@ -1,6 +1,54 @@
 use super::*;
 
 #[test]
+fn reconcile_stale_sessions_flags_gone_containers_and_fails_safe() {
+    use runhaven_core::ui_contracts::ManagedSessionListData;
+
+    let record = |run_id: &str| {
+        json!({
+            "timestamp": "2026-07-01T05:00:00Z",
+            "run_id": run_id,
+            "profile": "codex",
+            "workspace": format!("/sensitive/workspaces/{run_id}"),
+            "network": "provider",
+            "status": "running",
+            "container_name": format!("runhaven-codex-{run_id}"),
+            "state_volume": "runhaven-codex-hidden-home",
+            "auth_scope": "project",
+            "api_key_broker_env": "OPENAI_API_KEY",
+            "session": run_id
+        })
+    };
+
+    let mut sessions = ManagedSessionListData::from_active_runs_and_auth_status(
+        [record("run-gone"), record("run-alive"), record("run-error")],
+        json!({"profiles": [{"name": "codex", "status": "api-key-broker"}]}),
+    );
+
+    crate::commands::sessions::reconcile_stale_sessions(&mut sessions, &|run_id| match run_id {
+        "run-gone" => Ok(true),
+        "run-error" => Err("container service unavailable".to_string()),
+        _ => Ok(false),
+    });
+
+    let action_kind = |id: &str| {
+        sessions
+            .sessions
+            .iter()
+            .find(|session| session.run_id == id)
+            .expect("session")
+            .next_action
+            .kind
+            .clone()
+    };
+    // Container proven gone -> recover. Container alive -> unchanged. Checker
+    // error (service down / CLI missing) -> fail safe, session left as monitor.
+    assert_eq!(action_kind("run-gone"), "recover");
+    assert_eq!(action_kind("run-alive"), "monitor");
+    assert_eq!(action_kind("run-error"), "monitor");
+}
+
+#[test]
 fn managed_sessions_response_is_read_only_and_secret_free() {
     let (_cache, _cache_home) = isolated_cache();
     write_active_run_payload(

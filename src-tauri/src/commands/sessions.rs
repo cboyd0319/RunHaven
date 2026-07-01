@@ -1,6 +1,8 @@
+use std::collections::BTreeSet;
+
 use runhaven_core::diagnostics::auth_status_payload;
 use runhaven_core::records::read_run_records_tail_bounded;
-use runhaven_core::runtime::active::read_active_run_records;
+use runhaven_core::runtime::active::{active_run_repair_available, read_active_run_records};
 use runhaven_core::ui_contracts::{
     ManagedSessionInputData, ManagedSessionListData, ManagedSessionSummaryData,
 };
@@ -35,14 +37,47 @@ pub(crate) fn get_managed_sessions(
 fn get_managed_sessions_with_input(
     input_registry: Option<&SessionInputRegistry>,
 ) -> Result<ManagedSessionListData, String> {
-    managed_session_list(input_registry)
+    let mut sessions = managed_session_list(input_registry)?;
+    reconcile_stale_sessions(&mut sessions, &container_marker_gone);
+    Ok(sessions)
+}
+
+/// Production reconcile signal: an active RunHaven marker is stale only when the
+/// authoritative Apple `container inspect` proves its container is gone (the same
+/// check marker repair uses). Any other outcome (container present, `container`
+/// CLI missing, transient error) is treated as not-stale so live sessions are
+/// never falsely flagged.
+fn container_marker_gone(run_id: &str) -> Result<bool, String> {
+    active_run_repair_available(run_id).map_err(|error| error.to_string())
+}
+
+/// Downgrade active sessions whose container is proven gone to a recovery state.
+/// The container check is injected so tests stay hermetic (no real `container`
+/// subprocess) and fail-safe: a checker error leaves the session untouched.
+pub(crate) fn reconcile_stale_sessions(
+    sessions: &mut ManagedSessionListData,
+    container_gone: &dyn Fn(&str) -> Result<bool, String>,
+) {
+    // lean: this issues one `container inspect` per active session on each list
+    // poll (~4s) with no per-call timeout; N is small in normal use. If a
+    // degraded container service or large N becomes real, bound it with an
+    // inspect timeout or a cheap pre-filter before adding more machinery.
+    let mut stale = BTreeSet::new();
+    for session in &sessions.sessions {
+        if matches!(session.lifecycle.as_str(), "running" | "starting")
+            && matches!(container_gone(&session.run_id), Ok(true))
+        {
+            stale.insert(session.run_id.clone());
+        }
+    }
+    sessions.mark_stale_sessions(&stale);
 }
 
 #[cfg(test)]
 pub(crate) fn get_managed_sessions_for_test(
     input_registry: Option<&SessionInputRegistry>,
 ) -> Result<ManagedSessionListData, String> {
-    get_managed_sessions_with_input(input_registry)
+    managed_session_list(input_registry)
 }
 
 fn managed_session_list(
