@@ -32,7 +32,10 @@ pub fn log_snapshot_payload_from_stdout(
     stdout: &[u8],
     max_bytes: usize,
 ) -> Result<Value> {
-    let (text, truncated) = bounded_log_text(stdout, max_bytes)?;
+    let (bounded, truncated) = bounded_log_text(stdout, max_bytes)?;
+    // Raw agent stdout/stderr is the one unstructured surface that can echo an
+    // injected token or a printed API key; scrub it before it reaches a viewer.
+    let text = crate::support::redact::redact_run_output(&bounded);
     Ok(json!({
         "run_id": run_id,
         "captured_at": crate::provider::observability::utc_timestamp(),
@@ -121,4 +124,30 @@ fn join_reader(
         .join()
         .map_err(|_| anyhow!("container logs {stream} reader panicked"))?
         .map_err(Into::into)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn snapshot_payload_redacts_secrets_and_control_sequences() {
+        // This is the single choke point for the CLI, GUI container, and GUI
+        // live-capture snapshots, so redaction here covers every viewer surface.
+        let raw = b"warming up\x1b[32mOK\x1b[0m\nkey sk-ant-api03-abcdefghij_KLmnopqrstuvwx\n";
+        let payload =
+            log_snapshot_payload_from_stdout("run-redact", 20, raw, MAX_LOG_SNAPSHOT_BYTES)
+                .expect("payload");
+        let text = payload
+            .get("text")
+            .and_then(Value::as_str)
+            .expect("text field");
+        assert!(!text.contains("sk-ant-api03"), "secret leaked: {text}");
+        assert!(
+            !text.contains('\u{1b}'),
+            "control sequence leaked: {text:?}"
+        );
+        assert!(text.contains("[redacted]"));
+        assert!(text.contains("warming up"));
+    }
 }

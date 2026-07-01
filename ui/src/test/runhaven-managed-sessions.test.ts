@@ -91,8 +91,8 @@ describe("runhaven managed session helpers", () => {
     expect(response.entries[0]?.sessionId).toBe(session!.id);
     expect(response.entries[0]?.runId).toBe(started.runId);
     expect(response.entries[0]?.cursor).toBe(response.snapshot.cursor);
-    expect(response.entries[0]?.redaction.status).toBe("notApplied");
-    expect(response.entries[0]?.redaction.message).toContain("not automatically redacted");
+    expect(response.entries[0]?.redaction.status).toBe("applied");
+    expect(response.entries[0]?.redaction.message).toContain("removed automatically");
     expect(response.snapshot.runId).toBe(started.runId);
     expect(response.snapshot.entries[0]?.text).toContain("Preview log line");
     expect(JSON.stringify(response)).not.toContain("/tmp/runhaven-preview");

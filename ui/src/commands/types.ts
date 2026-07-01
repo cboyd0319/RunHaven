@@ -129,7 +129,7 @@ export type LogSnapshotEntry = {
 };
 
 export type SessionLogRedaction = {
-  status: "notApplied";
+  status: "applied" | "notApplied";
   message: string;
 };
 

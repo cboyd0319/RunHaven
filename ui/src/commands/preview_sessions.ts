@@ -287,8 +287,9 @@ function sessionLogEntries(
     text: entry.text,
     lineCount: entry.lineCount,
     redaction: {
-      status: "notApplied",
-      message: "Raw output is not automatically redacted."
+      status: "applied",
+      message:
+        "Known secrets and control characters were removed automatically. Review before sharing."
     }
   }));
 }

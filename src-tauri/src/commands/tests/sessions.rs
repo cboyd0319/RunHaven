@@ -295,12 +295,12 @@ fn managed_session_log_snapshot_resolves_session_id_and_stays_read_only() {
     assert_eq!(session_entry.timestamp, response.snapshot.captured_at);
     assert_eq!(session_entry.text, "entry one\nentry two\n");
     assert_eq!(session_entry.line_count, 2);
-    assert_eq!(session_entry.redaction.status, "notApplied");
+    assert_eq!(session_entry.redaction.status, "applied");
     assert!(
         session_entry
             .redaction
             .message
-            .contains("not automatically redacted")
+            .contains("removed automatically")
     );
 
     let encoded = serde_json::to_string(&response).expect("serialize response");

@@ -66,8 +66,9 @@ describe("RunOutputCard", () => {
       text: "session entry line\n",
       lineCount: 1,
       redaction: {
-        status: "notApplied",
-        message: "Raw output is not automatically redacted."
+        status: "applied",
+        message:
+          "Known secrets and control characters were removed automatically. Review before sharing."
       }
     };
     const html = renderToStaticMarkup(
@@ -88,7 +89,7 @@ describe("RunOutputCard", () => {
 
     expect(html).toContain("session-cursor");
     expect(html).toContain("session entry line");
-    expect(html).toContain("Raw output is not automatically redacted.");
+    expect(html).toContain("removed automatically");
     expect(html).not.toContain("entry-cursor");
     expect(html).not.toContain("entry line one");
   });

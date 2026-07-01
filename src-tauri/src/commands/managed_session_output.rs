@@ -8,7 +8,8 @@ use crate::contracts::{
 };
 use crate::session_output::SessionOutputRegistry;
 
-const RAW_OUTPUT_REDACTION_MESSAGE: &str = "Raw output is not automatically redacted.";
+const RAW_OUTPUT_REDACTION_MESSAGE: &str =
+    "Known secrets and control characters were removed automatically. Review before sharing.";
 
 struct PreparedManagedSessionLogSnapshot {
     session: ManagedSessionSummaryData,
@@ -168,7 +169,7 @@ fn session_log_entry(
         text: entry.text.clone(),
         line_count: entry.line_count,
         redaction: SessionLogRedaction {
-            status: "notApplied".to_string(),
+            status: "applied".to_string(),
             message: RAW_OUTPUT_REDACTION_MESSAGE.to_string(),
         },
     }

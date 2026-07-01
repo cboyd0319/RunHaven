@@ -242,6 +242,17 @@ Useful GUI design docs:
   guidance, notes), never credential values, tokens, env values, or raw paths
   (proven by a no-leak test). The GUI shows it on demand in the launch Agent step
   (`AgentAuthDetailsCard`), with shared label logic factored into `authDetails.ts`.
+- Raw run output now passes through a shared best-effort redaction step before any
+  viewer sees it. `redact_run_output` (`crates/runhaven-core/src/support/redact.rs`)
+  strips terminal control sequences and redacts well-known secret token shapes
+  (Anthropic, OpenAI, GitHub, Google keys, and Bearer tokens) while preserving
+  ordinary text and line structure. It is applied at the single core snapshot
+  choke point (`log_snapshot_payload_from_stdout`) that all three surfaces funnel
+  through (CLI `runs logs`, GUI container snapshot, GUI live-capture), so the GUI
+  log redaction status is now `applied` with an honest "review before sharing"
+  message. Structured records, markers, egress/auth logs, and diagnostics keep
+  their stronger field-allowlisting and are intentionally not routed through the
+  scrubber. The `runs logs -f` live stream is not redacted and now warns first.
 
 ## Current Branch Work
 

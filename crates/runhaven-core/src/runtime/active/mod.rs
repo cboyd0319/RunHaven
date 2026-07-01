@@ -121,6 +121,11 @@ pub fn runs_logs_follow(run_id: &str, lines: u32) -> Result<i32> {
         "active run record is missing container name",
     )?;
     validate_runhaven_container_name(container_name)?;
+    // Snapshots (`runs logs`, GUI) are redacted; this live stream is not, so warn
+    // before it prints straight to the terminal.
+    eprintln!(
+        "Live logs are not automatically redacted and can contain secrets or workspace content."
+    );
     Ok(Command::new("container")
         .args(["logs", "--follow", "-n", &lines.to_string(), container_name])
         .status()?
