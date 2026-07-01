@@ -65,7 +65,7 @@ Start Apple `container`, then install RunHaven from this checkout:
 
 ```bash
 container system start
-cargo install --path . --locked
+cargo install --path crates/runhaven --locked
 ```
 
 Run the non-mutating setup guide:

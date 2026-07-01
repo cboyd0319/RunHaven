@@ -36,7 +36,16 @@ container system start
 Install the CLI from this checkout:
 
 ```bash
-cargo install --path . --locked
+cargo install --path crates/runhaven --locked
+```
+
+Cargo installs the `runhaven` command into `~/.cargo/bin`. If your terminal
+says `command not found: runhaven`, that folder is not on your PATH yet. Add
+it once, then open a new terminal:
+
+```bash
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
 For development without installing, run the binary through Cargo:
