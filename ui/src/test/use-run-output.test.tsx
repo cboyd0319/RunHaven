@@ -30,16 +30,7 @@ function baseSnapshot(patch: Partial<LogSnapshotResponse> = {}): LogSnapshotResp
   return {
     runId: "run-1",
     capturedAt: "2026-07-01T02:00:00Z",
-    cursor: "cursor-1",
     requestedLines: 200,
-    entries: [
-      {
-        source: "container-stdio",
-        timestamp: "ts-1",
-        text: "line one\n",
-        lineCount: 1,
-      },
-    ],
     text: "line one\n",
     returnedLines: 1,
     truncated: false,
@@ -74,8 +65,6 @@ function sessionResponse(
       events: [],
     },
     snapshot,
-    cursor: snapshot.cursor,
-    entries: [],
   }
 }
 
@@ -144,17 +133,20 @@ describe("useRunOutput", () => {
     await act(async () => {
       await hook.result.current.loadSnapshot()
     })
-    expect(hook.result.current.visibleSnapshot?.cursor).toBe("cursor-1")
+    expect(hook.result.current.visibleSnapshot?.text).toBe("line one\n")
     await hook.unmount()
   })
 
   it("keeps the same snapshot object when a poll returns equal data (C4 guard)", async () => {
     const hook = await mountLive()
     const before = hook.result.current.visibleSnapshot
-    expect(before?.cursor).toBe("cursor-1")
+    expect(before?.text).toBe("line one\n")
 
-    // A poll that returns identical content must not swap the object reference.
-    getSessionSnapshot.mockResolvedValue(sessionResponse(baseSnapshot()))
+    // A poll that returns identical content must not swap the object reference,
+    // even when the capture timestamp moved (volatile bookkeeping).
+    getSessionSnapshot.mockResolvedValue(
+      sessionResponse(baseSnapshot({ capturedAt: "2026-07-01T02:00:03Z" })),
+    )
     await act(async () => {
       await vi.advanceTimersByTimeAsync(3_000)
     })
@@ -162,12 +154,12 @@ describe("useRunOutput", () => {
 
     // A poll with new content does replace it.
     getSessionSnapshot.mockResolvedValue(
-      sessionResponse(baseSnapshot({ cursor: "cursor-2", text: "line two\n" })),
+      sessionResponse(baseSnapshot({ text: "line two\n" })),
     )
     await act(async () => {
       await vi.advanceTimersByTimeAsync(3_000)
     })
-    expect(hook.result.current.visibleSnapshot?.cursor).toBe("cursor-2")
+    expect(hook.result.current.visibleSnapshot?.text).toBe("line two\n")
     expect(hook.result.current.visibleSnapshot).not.toBe(before)
     await teardown(hook)
   })
@@ -194,7 +186,7 @@ describe("useRunOutput", () => {
     await act(async () => {
       await hook.result.current.loadSnapshot()
     })
-    expect(hook.result.current.visibleSnapshot?.cursor).toBe("cursor-1")
+    expect(hook.result.current.visibleSnapshot?.text).toBe("line one\n")
 
     // Switching target must drop the prior snapshot; with live off nothing
     // repopulates it, so the new target starts empty (no stale card frame).
@@ -218,7 +210,7 @@ describe("useRunOutput", () => {
 
     await hook.rerender({ targetId: "session:s2", sessionId: "s2", runId: null })
     await act(async () => {
-      pending.resolve(sessionResponse(baseSnapshot({ cursor: "stale" })))
+      pending.resolve(sessionResponse(baseSnapshot({ text: "stale\n" })))
       await loadPromise
     })
     // The stale s1 response must not surface under s2.

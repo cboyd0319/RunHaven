@@ -21,7 +21,6 @@ function plan(patch: Partial<RunPlanResponse> = {}): RunPlanResponse {
     egressSummary: "Only reviewed provider hosts are reachable.",
     image: "runhaven/codex:0.1.0",
     providerAllowedHosts: ["api.openai.com"],
-    preflightCount: 3,
     access: {
       status: "ready",
       label: "Access looks good",

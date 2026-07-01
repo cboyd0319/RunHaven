@@ -16,17 +16,7 @@ function lastLaunch(patch: Partial<LaunchRunResponse> = {}): LaunchRunResponse {
     authScope: "project",
     session: "project",
     networkMode: "provider",
-    snapshot: {
-      runId: "run-123",
-      status: "started",
-      profile: "codex",
-      workspace: "/Users/secret/project",
-      stateVolume: "runhaven-state-secret",
-      authScope: "project",
-      session: "project",
-      networkMode: "provider",
-      containerName: "runhaven-codex-project"
-    },
+    containerName: "runhaven-codex-project",
     ...patch
   };
 }

@@ -175,7 +175,6 @@ export function previewPlanRun(request: RunPlanRequest): RunPlanResponse {
     egressSummary: previewEgressSummary(request),
     image: request.image || "runhaven/preview:0.1.0",
     providerAllowedHosts: request.providerHosts,
-    preflightCount: 0,
     access: previewAccess(request),
     warnings: warningPreview(request),
     worktree: request.worktree,
@@ -245,7 +244,7 @@ export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {
     throw new Error("Confirm the launch and every warning before starting a run.");
   }
   const runId = `preview-${Date.now()}-${++previewRunSequence}`;
-  const snapshot = {
+  const started: LaunchRunResponse = {
     runId,
     status: "started",
     profile: request.plan.agent,
@@ -256,18 +255,8 @@ export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {
     networkMode: request.plan.networkMode,
     containerName: "preview"
   };
-  rememberPreviewManagedSession(snapshot, request.plan.worktree);
-  return {
-    runId,
-    status: "started",
-    profile: snapshot.profile,
-    workspace: snapshot.workspace,
-    stateVolume: snapshot.stateVolume,
-    authScope: snapshot.authScope,
-    session: snapshot.session,
-    networkMode: snapshot.networkMode,
-    snapshot
-  };
+  rememberPreviewManagedSession(started, request.plan.worktree);
+  return started;
 }
 
 export function previewLaunchStatus(runId: string): LaunchStatusResponse {

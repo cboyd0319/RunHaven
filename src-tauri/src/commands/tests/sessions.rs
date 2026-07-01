@@ -283,24 +283,17 @@ fn managed_session_log_snapshot_resolves_session_id_and_stays_read_only() {
     assert_eq!(response.session.project, "project");
     assert_eq!(response.snapshot.run_id, "managed-session-log");
     assert_eq!(response.snapshot.requested_lines, 20);
-    assert_eq!(response.snapshot.entries.len(), 1);
-    assert_eq!(response.snapshot.entries[0].text, "entry one\nentry two\n");
-    assert_eq!(response.cursor, response.snapshot.cursor);
-    assert_eq!(response.entries.len(), 1);
-    let session_entry = &response.entries[0];
-    assert_eq!(session_entry.session_id, "managed-session-log");
-    assert_eq!(session_entry.run_id, "managed-session-log");
-    assert_eq!(session_entry.source, "container-stdio");
-    assert_eq!(session_entry.cursor, response.snapshot.cursor);
-    assert_eq!(session_entry.timestamp, response.snapshot.captured_at);
-    assert_eq!(session_entry.text, "entry one\nentry two\n");
-    assert_eq!(session_entry.line_count, 2);
-    assert_eq!(session_entry.redaction.status, "applied");
+    assert_eq!(response.snapshot.source, "container-stdio");
+    assert_eq!(response.snapshot.text, "entry one\nentry two\n");
+    assert_eq!(response.snapshot.returned_lines, 2);
+    assert!(!response.snapshot.captured_at.is_empty());
+    // The managed path adds the redaction notice to the shared warnings list.
     assert!(
-        session_entry
-            .redaction
-            .message
-            .contains("removed automatically")
+        response
+            .snapshot
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("removed automatically"))
     );
 
     let encoded = serde_json::to_string(&response).expect("serialize response");

@@ -242,8 +242,7 @@ describe("runhaven command helpers", () => {
 
     expect(started.runId).toMatch(/^preview-/);
     expect(started.status).toBe("started");
-    expect(started.snapshot.runId).toBe(started.runId);
-    expect(started.snapshot.containerName).toBe("preview");
+    expect(started.containerName).toBe("preview");
   });
 });
 

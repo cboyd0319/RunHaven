@@ -14,7 +14,7 @@ use runhaven_core::runtime::active::{
 use serde_json::Value;
 
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
-use crate::contracts::{LogSnapshotEntry, LogSnapshotRequest, LogSnapshotResponse};
+use crate::contracts::{LogSnapshotRequest, LogSnapshotResponse};
 
 #[cfg(not(test))]
 const RAW_OUTPUT_CONFIRM_TITLE: &str = "Confirm raw output view";
@@ -133,31 +133,17 @@ fn trusted_run_output_message(run_id: &str, lines: u32) -> String {
 pub(crate) fn log_snapshot_response_from_payload(
     payload: Value,
 ) -> Result<LogSnapshotResponse, String> {
-    let run_id = required_string(&payload, "run_id")?;
-    let captured_at = required_string(&payload, "captured_at")?;
-    let requested_lines = required_u32(&payload, "requested_lines")?;
-    let text = required_string(&payload, "text")?;
-    let returned_lines = required_usize(&payload, "returned_lines")?;
-    let source = required_string(&payload, "source")?;
-
     Ok(LogSnapshotResponse {
-        run_id,
-        captured_at: captured_at.clone(),
-        cursor: captured_at.clone(),
-        requested_lines,
-        entries: vec![LogSnapshotEntry {
-            source: source.clone(),
-            timestamp: captured_at,
-            text: text.clone(),
-            line_count: returned_lines,
-        }],
-        text,
-        returned_lines,
+        run_id: required_string(&payload, "run_id")?,
+        captured_at: required_string(&payload, "captured_at")?,
+        requested_lines: required_u32(&payload, "requested_lines")?,
+        text: required_string(&payload, "text")?,
+        returned_lines: required_usize(&payload, "returned_lines")?,
+        source: required_string(&payload, "source")?,
         truncated: payload
             .get("truncated")
             .and_then(Value::as_bool)
             .ok_or_else(|| "log snapshot payload is missing truncated".to_string())?,
-        source,
         warnings: payload
             .get("warnings")
             .and_then(Value::as_array)

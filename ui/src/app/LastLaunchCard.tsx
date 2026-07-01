@@ -24,7 +24,7 @@ export function LastLaunchCard({ lastLaunch }: { lastLaunch: LaunchRunResponse }
           <Metric label="Agent" value={lastLaunch.profile} />
           <Metric label="Auth scope" value={authScopeLabel(lastLaunch.authScope)} />
           <Metric label="Network" value={networkLabel(lastLaunch.networkMode)} />
-          <Metric label="Container" value={lastLaunch.snapshot.containerName} />
+          <Metric label="Container" value={lastLaunch.containerName} />
         </div>
       </CardContent>
     </Card>

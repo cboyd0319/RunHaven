@@ -2,26 +2,17 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { RunOutputCard } from "../app/RunOutputCard";
-import type { LogSnapshotResponse, SessionLogEntry } from "../commands/runhaven";
+import type { LogSnapshotResponse } from "../commands/runhaven";
 
 function snapshot(patch: Partial<LogSnapshotResponse> = {}): LogSnapshotResponse {
   return {
     runId: "run-123",
-    capturedAt: "legacy-cursor",
-    cursor: "entry-cursor",
+    capturedAt: "capture-timestamp",
     requestedLines: 200,
-    entries: [
-      {
-        source: "container-stdio",
-        timestamp: "entry-timestamp",
-        text: "entry line one\nentry line two\n",
-        lineCount: 2
-      }
-    ],
-    text: "legacy line one\nlegacy line two\n",
-    returnedLines: 99,
+    text: "entry line one\nentry line two\n",
+    returnedLines: 2,
     truncated: false,
-    source: "legacy-source",
+    source: "container-stdio",
     warnings: ["Raw container output can contain secrets or workspace content."],
     ...patch
   };
@@ -46,38 +37,24 @@ describe("RunOutputCard", () => {
     expect(html).toContain("Source");
     expect(html).toContain("Container output");
     expect(html).toContain("Captured");
-    expect(html).toContain("entry-cursor");
-    expect(html).not.toContain("legacy-cursor");
+    expect(html).toContain("capture-timestamp");
     expect(html).toContain("Returned lines");
-    expect(html).not.toContain("99");
     expect(html).toContain("Raw container output can contain secrets");
     expect(html).toContain("entry line one");
-    expect(html).not.toContain("legacy line one");
     expect(html).not.toContain("/Users/");
   });
 
-  it("prefers session-owned log entries when present", () => {
-    const sessionEntry: SessionLogEntry = {
-      sessionId: "session-123",
-      runId: "run-123",
-      source: "container-stdio",
-      cursor: "session-cursor",
-      timestamp: "session-timestamp",
-      text: "session entry line\n",
-      lineCount: 1,
-      redaction: {
-        status: "applied",
-        message:
-          "Known secrets and control characters were removed automatically. Review before sharing."
-      }
-    };
+  it("renders every warning, including the managed-session redaction notice", () => {
     const html = renderToStaticMarkup(
       <RunOutputCard
         logAcknowledged={true}
         logLoading={false}
         logError=""
         logSnapshot={snapshot({
-          sessionEntries: [sessionEntry]
+          warnings: [
+            "Raw container output can contain secrets or workspace content.",
+            "Known secrets and control characters were removed automatically. Review before sharing."
+          ]
         })}
         liveOutputAvailable={true}
         liveOutputEnabled={false}
@@ -87,11 +64,9 @@ describe("RunOutputCard", () => {
       />
     );
 
-    expect(html).toContain("session-cursor");
-    expect(html).toContain("session entry line");
+    expect(html).toContain("Raw container output can contain secrets");
     expect(html).toContain("removed automatically");
-    expect(html).not.toContain("entry-cursor");
-    expect(html).not.toContain("entry line one");
+    expect(html).toContain("entry line one");
   });
 
   it("gates live output refresh behind raw-output acknowledgement", () => {

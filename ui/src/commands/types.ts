@@ -120,13 +120,12 @@ export type RunStatusResponse = {
   container: RunStatusContainer;
 };
 
+// One bounded, redacted output snapshot. `capturedAt` is the capture timestamp
+// and doubles as the change marker the live poll compares between refreshes.
 export type LogSnapshotResponse = {
   runId: string;
   capturedAt: string;
-  cursor: string;
   requestedLines: number;
-  entries: LogSnapshotEntry[];
-  sessionEntries?: SessionLogEntry[];
   text: string;
   returnedLines: number;
   truncated: boolean;
@@ -134,34 +133,9 @@ export type LogSnapshotResponse = {
   warnings: string[];
 };
 
-export type LogSnapshotEntry = {
-  source: string;
-  timestamp: string;
-  text: string;
-  lineCount: number;
-};
-
-export type SessionLogRedaction = {
-  status: "applied" | "notApplied";
-  message: string;
-};
-
-export type SessionLogEntry = {
-  sessionId: string;
-  runId: string;
-  source: string;
-  cursor: string;
-  timestamp: string;
-  text: string;
-  lineCount: number;
-  redaction: SessionLogRedaction;
-};
-
 export type ManagedSessionLogSnapshotResponse = {
   session: ManagedSessionSummary;
   snapshot: LogSnapshotResponse;
-  cursor: string;
-  entries: SessionLogEntry[];
 };
 
 export type ManagedSessionStatusResponse = {
@@ -353,7 +327,6 @@ export type RunPlanResponse = {
   egressSummary: string;
   image: string;
   providerAllowedHosts: string[];
-  preflightCount: number;
   access: RunPlanAccess;
   warnings: PlanWarning[];
   worktree: boolean;
@@ -366,18 +339,6 @@ export type LaunchRunRequest = {
   confirmedWarnings: string[];
 };
 
-export type StartedRunSnapshot = {
-  runId: string;
-  status: string;
-  profile: string;
-  workspace: string;
-  stateVolume: string;
-  authScope: string;
-  session: string;
-  networkMode: string;
-  containerName: string;
-};
-
 export type LaunchRunResponse = {
   runId: string;
   status: "started";
@@ -387,7 +348,7 @@ export type LaunchRunResponse = {
   authScope: string;
   session: string;
   networkMode: string;
-  snapshot: StartedRunSnapshot;
+  containerName: string;
 };
 
 // Known launch states. The wire field stays a raw string (open backend

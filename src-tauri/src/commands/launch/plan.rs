@@ -13,7 +13,6 @@ use runhaven_core::runtime::worktrees::create_worktree_for_run;
 
 use crate::contracts::{
     LaunchRunRequest, LaunchRunResponse, PlanWarning, RunPlanRequest, RunPlanResponse,
-    StartedRunSnapshot,
 };
 
 use super::super::access::plan_access;
@@ -41,7 +40,6 @@ pub(crate) fn build_plan_response(request: RunPlanRequest) -> Result<RunPlanResp
         egress_summary: plan.egress_summary,
         image: plan.image,
         provider_allowed_hosts: plan.provider_allowed_hosts,
-        preflight_count: plan.preflight.len(),
         access,
         warnings,
         worktree: request.worktree,
@@ -170,7 +168,7 @@ pub(super) fn prepare_launch(
     let plan = build_agent_run_plan(&request, Some(run_id.clone()))?;
     validate_runtime_auth_broker_environment(&plan).map_err(|error| error.to_string())?;
     let response = LaunchRunResponse {
-        run_id: run_id.clone(),
+        run_id,
         status: "started".to_string(),
         profile: plan.profile_name.clone(),
         workspace: plan.workspace.display().to_string(),
@@ -178,17 +176,7 @@ pub(super) fn prepare_launch(
         auth_scope: plan.auth_scope.as_str().to_string(),
         session: plan.session.clone(),
         network_mode: plan.network_mode.as_str().to_string(),
-        snapshot: StartedRunSnapshot {
-            run_id,
-            status: "started".to_string(),
-            profile: plan.profile_name.clone(),
-            workspace: plan.workspace.display().to_string(),
-            state_volume: plan.state_volume.clone(),
-            auth_scope: plan.auth_scope.as_str().to_string(),
-            session: plan.session.clone(),
-            network_mode: plan.network_mode.as_str().to_string(),
-            container_name: plan.container_name.clone(),
-        },
+        container_name: plan.container_name.clone(),
     };
     Ok((plan, response))
 }

@@ -38,23 +38,7 @@ export function RunOutputCard({
   onLoad: () => Promise<void>
   onLiveOutputChange: (checked: boolean) => void
 }) {
-  const sessionEntry = logSnapshot?.sessionEntries?.[0]
-  const primaryEntry = sessionEntry ?? logSnapshot?.entries[0]
-  const snapshotSource = primaryEntry?.source ?? logSnapshot?.source ?? ""
-  const snapshotCaptured =
-    sessionEntry?.cursor ??
-    logSnapshot?.cursor ??
-    primaryEntry?.timestamp ??
-    logSnapshot?.capturedAt ??
-    ""
-  const snapshotLineCount =
-    primaryEntry?.lineCount ?? logSnapshot?.returnedLines ?? 0
-  const snapshotText = primaryEntry?.text ?? logSnapshot?.text ?? ""
-  const warnings = logSnapshot
-    ? sessionEntry?.redaction.message
-      ? [...logSnapshot.warnings, sessionEntry.redaction.message]
-      : logSnapshot.warnings
-    : []
+  const warnings = logSnapshot?.warnings ?? []
 
   return (
     <Card>
@@ -134,15 +118,15 @@ export function RunOutputCard({
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Metric
                 label="Source"
-                value={outputSourceLabel(snapshotSource)}
+                value={outputSourceLabel(logSnapshot.source)}
               />
               <Metric
                 label="Captured"
-                value={displayValue(snapshotCaptured)}
+                value={displayValue(logSnapshot.capturedAt)}
               />
               <Metric
                 label="Returned lines"
-                value={String(snapshotLineCount)}
+                value={String(logSnapshot.returnedLines)}
               />
               <Metric
                 label="Truncated"
@@ -163,7 +147,7 @@ export function RunOutputCard({
               aria-label="Raw output snapshot"
               className="max-h-72 overflow-auto rounded-lg border bg-muted p-3 text-sm whitespace-pre-wrap"
             >
-              {snapshotText}
+              {logSnapshot.text}
             </pre>
           </div>
         ) : null}

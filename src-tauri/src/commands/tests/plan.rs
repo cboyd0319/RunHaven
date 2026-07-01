@@ -228,10 +228,7 @@ fn launch_run_response_uses_reserved_run_id_without_starting() {
     assert_eq!(response.status, "started");
     assert_eq!(response.profile, "codex");
     assert_eq!(response.auth_scope, "agent");
-    assert_eq!(response.snapshot.run_id, "runhaven-test-run");
-    assert_eq!(response.snapshot.status, "started");
-    assert_eq!(response.snapshot.auth_scope, "agent");
-    assert!(!response.snapshot.container_name.is_empty());
+    assert!(!response.container_name.is_empty());
 }
 
 #[test]
@@ -301,7 +298,6 @@ fn launch_run_response_round_trips_project_auth_scope_without_starting() {
         .expect("launch response");
 
     assert_eq!(response.auth_scope, "project");
-    assert_eq!(response.snapshot.auth_scope, "project");
 }
 
 #[test]
@@ -363,6 +359,40 @@ fn build_plan_response_rejects_invalid_auth_scope() {
     let error = build_plan_response(plan_request).expect_err("invalid auth scope");
 
     assert!(error.contains("invalid auth scope"));
+}
+
+#[test]
+fn launch_request_with_omitted_confirm_flag_fails_closed_with_friendly_error() {
+    let workspace = tempfile::tempdir().expect("workspace");
+    // No `confirmLaunch` key at all: the flag must default to false instead of
+    // failing deserialization with a raw serde error.
+    let launch_request: LaunchRunRequest = serde_json::from_value(json!({
+        "plan": {
+            "agent": "codex",
+            "workspacePath": workspace.path().display().to_string(),
+            "networkMode": "provider",
+            "workspaceScope": "current",
+            "sessionName": null,
+            "readOnlyWorkspace": false,
+            "cpus": "4",
+            "memory": "4g",
+            "providerHosts": [],
+            "envNames": [],
+            "apiKeyBrokerEnv": null,
+            "image": null,
+            "allowSensitiveWorkspace": false,
+            "allowRootUser": false,
+            "user": "agent"
+        }
+    }))
+    .expect("deserialize launch request without confirm flag");
+
+    assert!(!launch_request.confirm_launch);
+
+    let error =
+        validate_launch_confirmation(&launch_request).expect_err("unconfirmed launch rejected");
+
+    assert_eq!(error, "Confirm the launch before starting a run.");
 }
 
 #[test]

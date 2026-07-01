@@ -6,26 +6,19 @@ use serde::{Deserialize, Serialize};
 pub(crate) struct LogSnapshotRequest {
     pub run_id: String,
     pub lines: Option<u32>,
+    /// Fail closed: omitted means `false`, yielding the friendly confirm error.
+    #[serde(default)]
     pub confirm_sensitive_output: bool,
 }
 
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct LogSnapshotEntry {
-    pub source: String,
-    pub timestamp: String,
-    pub text: String,
-    pub line_count: usize,
-}
-
+/// One bounded, redacted output snapshot. `captured_at` is the capture
+/// timestamp and doubles as the change marker the UI compares between polls.
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct LogSnapshotResponse {
     pub run_id: String,
     pub captured_at: String,
-    pub cursor: String,
     pub requested_lines: u32,
-    pub entries: Vec<LogSnapshotEntry>,
     pub text: String,
     pub returned_lines: usize,
     pub truncated: bool,
@@ -33,31 +26,13 @@ pub(crate) struct LogSnapshotResponse {
     pub warnings: Vec<String>,
 }
 
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct SessionLogRedaction {
-    pub status: String,
-    pub message: String,
-}
-
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct SessionLogEntry {
-    pub session_id: String,
-    pub run_id: String,
-    pub source: String,
-    pub cursor: String,
-    pub timestamp: String,
-    pub text: String,
-    pub line_count: usize,
-    pub redaction: SessionLogRedaction,
-}
-
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ManagedSessionLogSnapshotRequest {
     pub session_id: String,
     pub lines: Option<u32>,
+    /// Fail closed: omitted means `false`, yielding the friendly confirm error.
+    #[serde(default)]
     pub confirm_sensitive_output: bool,
 }
 
@@ -66,8 +41,6 @@ pub(crate) struct ManagedSessionLogSnapshotRequest {
 pub(crate) struct ManagedSessionLogSnapshotResponse {
     pub session: ManagedSessionSummaryData,
     pub snapshot: LogSnapshotResponse,
-    pub cursor: String,
-    pub entries: Vec<SessionLogEntry>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -75,6 +48,8 @@ pub(crate) struct ManagedSessionLogSnapshotResponse {
 pub(crate) struct WriteSessionInputRequest {
     pub session_id: String,
     pub input: String,
+    /// Fail closed: omitted means `false`, yielding the friendly confirm error.
+    #[serde(default)]
     pub confirm_send: bool,
     pub client_target: String,
 }

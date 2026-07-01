@@ -87,14 +87,13 @@ describe("runhaven managed session helpers", () => {
     });
 
     expect(response.session.id).toBe(session!.id);
-    expect(response.cursor).toBe(response.snapshot.cursor);
-    expect(response.entries[0]?.sessionId).toBe(session!.id);
-    expect(response.entries[0]?.runId).toBe(started.runId);
-    expect(response.entries[0]?.cursor).toBe(response.snapshot.cursor);
-    expect(response.entries[0]?.redaction.status).toBe("applied");
-    expect(response.entries[0]?.redaction.message).toContain("removed automatically");
     expect(response.snapshot.runId).toBe(started.runId);
-    expect(response.snapshot.entries[0]?.text).toContain("Preview log line");
+    expect(response.snapshot.text).toContain("Preview log line");
+    expect(
+      response.snapshot.warnings.some((warning) =>
+        warning.includes("removed automatically")
+      )
+    ).toBe(true);
     expect(JSON.stringify(response)).not.toContain("/tmp/runhaven-preview");
     expect(JSON.stringify(response)).not.toContain("write_session_input");
     expect(JSON.stringify(response)).not.toContain("resize_session");
@@ -200,11 +199,12 @@ describe("runhaven managed session helpers", () => {
       confirmSensitiveOutput: true
     });
 
-    expect(firstFollowUp.cursor).not.toBe(firstRefresh.cursor);
-    expect(firstFollowUp.entries[0]?.sessionId).toBe(firstSession!.id);
-    expect(firstFollowUp.entries[0]?.text).toContain(firstSession!.id);
-    expect(secondRefresh.entries[0]?.sessionId).toBe(secondSession!.id);
-    expect(secondRefresh.entries[0]?.text).toContain(secondSession!.id);
+    expect(firstFollowUp.snapshot.capturedAt).not.toBe(
+      firstRefresh.snapshot.capturedAt
+    );
+    expect(firstFollowUp.snapshot.text).not.toBe(firstRefresh.snapshot.text);
+    expect(firstFollowUp.snapshot.text).toContain(firstSession!.id);
+    expect(secondRefresh.snapshot.text).toContain(secondSession!.id);
     expect(JSON.stringify(firstFollowUp)).not.toContain(secondSession!.id);
     expect(JSON.stringify(secondRefresh)).not.toContain(firstSession!.id);
     expect(JSON.stringify(firstFollowUp)).not.toContain("write_session_input");

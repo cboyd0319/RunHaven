@@ -69,7 +69,6 @@ pub(crate) struct RunPlanResponse {
     pub egress_summary: String,
     pub image: String,
     pub provider_allowed_hosts: Vec<String>,
-    pub preflight_count: usize,
     pub access: RunPlanAccess,
     pub warnings: Vec<PlanWarning>,
     /// Echoes the requested worktree opt-in so the plan review and confirmation
@@ -82,23 +81,13 @@ pub(crate) struct RunPlanResponse {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct LaunchRunRequest {
     pub plan: RunPlanRequest,
+    /// Fail closed: an omitted confirm flag deserializes to `false`, so the
+    /// command returns its friendly "Confirm ..." error instead of a raw
+    /// serde error.
+    #[serde(default)]
     pub confirm_launch: bool,
     #[serde(default)]
     pub confirmed_warnings: Vec<String>,
-}
-
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct StartedRunSnapshot {
-    pub run_id: String,
-    pub status: String,
-    pub profile: String,
-    pub workspace: String,
-    pub state_volume: String,
-    pub auth_scope: String,
-    pub session: String,
-    pub network_mode: String,
-    pub container_name: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -112,7 +101,7 @@ pub(crate) struct LaunchRunResponse {
     pub auth_scope: String,
     pub session: String,
     pub network_mode: String,
-    pub snapshot: StartedRunSnapshot,
+    pub container_name: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]

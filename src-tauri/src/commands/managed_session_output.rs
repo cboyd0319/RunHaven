@@ -3,8 +3,8 @@ use runhaven_core::ui_contracts::ManagedSessionSummaryData;
 use tauri::{AppHandle, State};
 
 use crate::contracts::{
-    LogSnapshotEntry, LogSnapshotRequest, LogSnapshotResponse, ManagedSessionLogSnapshotRequest,
-    ManagedSessionLogSnapshotResponse, SessionLogEntry, SessionLogRedaction,
+    LogSnapshotRequest, LogSnapshotResponse, ManagedSessionLogSnapshotRequest,
+    ManagedSessionLogSnapshotResponse,
 };
 use crate::session_output::SessionOutputRegistry;
 
@@ -137,42 +137,17 @@ pub(crate) fn managed_session_log_snapshot_response_for_test(
     Ok(managed_session_log_snapshot_response(session, snapshot))
 }
 
+/// Wrap the core snapshot for a managed session, adding the redaction notice
+/// as a warning so every viewer of session output sees it alongside the
+/// bounded, redacted text.
 fn managed_session_log_snapshot_response(
     session: ManagedSessionSummaryData,
-    snapshot: LogSnapshotResponse,
+    mut snapshot: LogSnapshotResponse,
 ) -> ManagedSessionLogSnapshotResponse {
-    let entries = snapshot
-        .entries
-        .iter()
-        .map(|entry| session_log_entry(&session, &snapshot, entry))
-        .collect();
-
-    ManagedSessionLogSnapshotResponse {
-        session,
-        cursor: snapshot.cursor.clone(),
-        entries,
-        snapshot,
-    }
-}
-
-fn session_log_entry(
-    session: &ManagedSessionSummaryData,
-    snapshot: &LogSnapshotResponse,
-    entry: &LogSnapshotEntry,
-) -> SessionLogEntry {
-    SessionLogEntry {
-        session_id: session.id.clone(),
-        run_id: session.run_id.clone(),
-        source: entry.source.clone(),
-        cursor: snapshot.cursor.clone(),
-        timestamp: entry.timestamp.clone(),
-        text: entry.text.clone(),
-        line_count: entry.line_count,
-        redaction: SessionLogRedaction {
-            status: "applied".to_string(),
-            message: RAW_OUTPUT_REDACTION_MESSAGE.to_string(),
-        },
-    }
+    snapshot
+        .warnings
+        .push(RAW_OUTPUT_REDACTION_MESSAGE.to_string());
+    ManagedSessionLogSnapshotResponse { session, snapshot }
 }
 
 #[cfg(not(test))]

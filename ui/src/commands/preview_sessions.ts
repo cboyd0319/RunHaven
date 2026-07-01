@@ -10,7 +10,6 @@ import type {
   ManagedSessionStatusResponse,
   ManagedSessionSummary,
   RepairManagedSessionResponse,
-  SessionLogEntry,
   StopManagedSessionResponse,
   WriteSessionInputResponse
 } from "./types";
@@ -29,17 +28,19 @@ export function previewManagedSessionLogSnapshot(
   if (!session) {
     throw new Error("managed session not found");
   }
-  const sessionSnapshot = { ...session };
   const readCount = nextPreviewSessionLogRead(session.id);
   const snapshot = previewLogSnapshot(session.runId, requestedLines, {
-    cursor: `preview:${session.id}:${readCount}`,
+    capturedAt: `preview:${session.id}:${readCount}`,
     text: `Preview log line ${readCount} for ${session.id}\nPreview log line ${readCount} complete\n`
   });
+  // Mirror the desktop backend: the managed path adds the redaction notice to
+  // the shared warnings list.
+  snapshot.warnings.push(
+    "Known secrets and control characters were removed automatically. Review before sharing."
+  );
   return {
-    session: sessionSnapshot,
-    snapshot,
-    cursor: snapshot.cursor,
-    entries: sessionLogEntries(sessionSnapshot, snapshot)
+    session: { ...session },
+    snapshot
   };
 }
 
@@ -251,30 +252,30 @@ export function previewSessionInput(
 }
 
 export function rememberPreviewManagedSession(
-  snapshot: LaunchRunResponse["snapshot"],
+  started: LaunchRunResponse,
   worktree = false
 ) {
   if (worktree) {
-    previewWorktreeSessions.add(snapshot.runId);
+    previewWorktreeSessions.add(started.runId);
   } else {
-    previewWorktreeSessions.delete(snapshot.runId);
+    previewWorktreeSessions.delete(started.runId);
   }
-  const project = projectLabel(snapshot.workspace);
+  const project = projectLabel(started.workspace);
   const session: ManagedSessionSummary = {
-    id: snapshot.runId,
-    runId: snapshot.runId,
-    agent: snapshot.profile,
-    session: snapshot.session,
-    title: `${agentLabel(snapshot.profile)} - ${project}`,
+    id: started.runId,
+    runId: started.runId,
+    agent: started.profile,
+    session: started.session,
+    title: `${agentLabel(started.profile)} - ${project}`,
     project,
     status: "running",
     statusLabel: "Running",
     authStatus: "api-key-broker",
-    authScope: snapshot.authScope,
-    network: snapshot.networkMode,
+    authScope: started.authScope,
+    network: started.networkMode,
     startedAt: "preview",
-    containerName: snapshot.containerName,
-    detailCommand: `runhaven runs show ${snapshot.runId}`,
+    containerName: started.containerName,
+    detailCommand: `runhaven runs show ${started.runId}`,
     lifecycle: "running",
     input: {
       attached: true,
@@ -302,36 +303,16 @@ export function rememberPreviewManagedSession(
       {
         source: "network",
         label: "Network",
-        detail: networkLabel(snapshot.networkMode),
+        detail: networkLabel(started.networkMode),
         timestamp: "preview"
       }
     ]
   };
   previewManagedSessions = [
     session,
-    ...previewManagedSessions.filter((item) => item.runId !== snapshot.runId)
+    ...previewManagedSessions.filter((item) => item.runId !== started.runId)
   ];
-  previewSessionLogReads.delete(snapshot.runId);
-}
-
-function sessionLogEntries(
-  session: ManagedSessionSummary,
-  snapshot: ReturnType<typeof previewLogSnapshot>
-): SessionLogEntry[] {
-  return snapshot.entries.map((entry) => ({
-    sessionId: session.id,
-    runId: session.runId,
-    source: entry.source,
-    cursor: snapshot.cursor,
-    timestamp: entry.timestamp,
-    text: entry.text,
-    lineCount: entry.lineCount,
-    redaction: {
-      status: "applied",
-      message:
-        "Known secrets and control characters were removed automatically. Review before sharing."
-    }
-  }));
+  previewSessionLogReads.delete(started.runId);
 }
 
 function nextPreviewSessionLogRead(sessionId: string): number {

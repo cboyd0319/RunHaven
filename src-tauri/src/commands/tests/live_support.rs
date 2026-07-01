@@ -230,12 +230,7 @@ pub(super) fn wait_for_live_session_output(
             output_registry,
         )
         .expect("read live managed session output");
-        let matched = log.snapshot.text.contains(expected)
-            || log
-                .entries
-                .iter()
-                .any(|entry| entry.text.contains(expected));
-        if matched {
+        if log.snapshot.text.contains(expected) {
             return;
         }
         assert!(
@@ -278,10 +273,6 @@ pub(super) fn wait_for_live_session_output_available(
 
 fn session_output_has_text(log: &ManagedSessionLogSnapshotResponse) -> bool {
     !log.snapshot.text.trim().is_empty()
-        || log
-            .entries
-            .iter()
-            .any(|entry| !entry.text.trim().is_empty())
 }
 
 pub(super) fn assert_live_response_excludes<T: Serialize>(
@@ -313,11 +304,7 @@ pub(super) fn assert_live_session_output_excludes(
     )
     .expect("read live managed session output");
     assert!(
-        !log.snapshot.text.contains(forbidden)
-            && log
-                .entries
-                .iter()
-                .all(|entry| !entry.text.contains(forbidden)),
+        !log.snapshot.text.contains(forbidden),
         "live managed session output leaked marker {forbidden} into {session_id}"
     );
 }

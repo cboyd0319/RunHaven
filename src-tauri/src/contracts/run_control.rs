@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub(crate) struct StopRunRequest {
     pub run_id: String,
+    /// Fail closed: omitted means `false`, yielding the friendly confirm error.
+    #[serde(default)]
     pub confirm_stop: bool,
 }
 
@@ -20,6 +22,8 @@ pub(crate) struct StopRunResponse {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct StopManagedSessionRequest {
     pub session_id: String,
+    /// Fail closed: omitted means `false`, yielding the friendly confirm error.
+    #[serde(default)]
     pub confirm_stop: bool,
 }
 
@@ -34,6 +38,8 @@ pub(crate) struct StopManagedSessionResponse {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct KillRunRequest {
     pub run_id: String,
+    /// Fail closed: omitted means `false`, yielding the friendly confirm error.
+    #[serde(default)]
     pub confirm_kill: bool,
 }
 
@@ -49,6 +55,8 @@ pub(crate) struct KillRunResponse {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct KillManagedSessionRequest {
     pub session_id: String,
+    /// Fail closed: omitted means `false`, yielding the friendly confirm error.
+    #[serde(default)]
     pub confirm_kill: bool,
 }
 
@@ -63,6 +71,8 @@ pub(crate) struct KillManagedSessionResponse {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RepairRunRequest {
     pub run_id: String,
+    /// Fail closed: omitted means `false`, yielding the friendly confirm error.
+    #[serde(default)]
     pub confirm_repair: bool,
 }
 
@@ -79,6 +89,8 @@ pub(crate) struct RepairRunResponse {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct RepairManagedSessionRequest {
     pub session_id: String,
+    /// Fail closed: omitted means `false`, yielding the friendly confirm error.
+    #[serde(default)]
     pub confirm_repair: bool,
 }
 
@@ -93,6 +105,8 @@ pub(crate) struct RepairManagedSessionResponse {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct CleanupManagedSessionRequest {
     pub session_id: String,
+    /// Fail closed: omitted means `false`, yielding the friendly confirm error.
+    #[serde(default)]
     pub confirm_cleanup: bool,
 }
 
