@@ -246,10 +246,14 @@ values are kit-exact.
   --sidebar-accent: rgba(255, 255, 255, 0.11); /* selection pill */
 
   /* Accents (kit-exact, dark variants) */
-  --primary: #0091ff;
+  --primary: #0091ff;                     /* shipped: darkened to oklch(0.55 0.16 250)
+                                             (#0074CA-family); #0091FF is 3.11:1 against
+                                             near-white button text, below the 4.5:1 WCAG
+                                             floor. #0091FF stays for the focus ring. */
   --success: #30d158;                     /* ready: or teal #00d2e0 */
   --warning: #ff9230;
-  --destructive: #ff4245;
+  --destructive: #ff4245;                 /* shipped: kit hue with lightness lifted to
+                                             oklch(0.76 0.16 25) for 4.5:1 on tinted rows */
   --ring: rgba(0, 145, 255, 0.5);         /* 3.5px outside on focus */
 
   /* Radii: pill 8, panel 20; fields use height/4 */
