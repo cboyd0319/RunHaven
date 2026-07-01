@@ -17,7 +17,7 @@ use super::dialog::confirm_native;
 use super::validation::{MAX_AGENT_NAME_LEN, validate_text_len};
 use crate::contracts::{ImageBuildRequest, ImageBuildStartResponse};
 use crate::image_build_runner::spawn_image_build;
-use crate::image_build_status::ImageBuildStatusRegistry;
+use crate::tail_status::ImageBuildStatusRegistry;
 
 const REBUILD_CANCELED: &str = "Image rebuild canceled before it started.";
 

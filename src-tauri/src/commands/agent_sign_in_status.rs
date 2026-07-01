@@ -6,8 +6,8 @@
 
 use tauri::State;
 
-use crate::agent_sign_in_status::AgentSignInStatusRegistry;
 use crate::contracts::{AgentSignInStatusRequest, AgentSignInStatusResponse};
+use crate::tail_status::AgentSignInStatusRegistry;
 
 #[tauri::command]
 pub(crate) fn get_agent_sign_in_status(

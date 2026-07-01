@@ -1,15 +1,15 @@
 mod agent_sign_in_runner;
-mod agent_sign_in_status;
 #[cfg(test)]
 mod capability_guard;
 mod commands;
 mod contracts;
 mod image_build_runner;
-mod image_build_status;
 mod launch_runner;
 mod launch_status;
+mod registry_support;
 pub mod session_input;
 mod session_output;
+mod tail_status;
 
 pub fn run() {
     tauri::Builder::default()
@@ -17,8 +17,8 @@ pub fn run() {
         .manage(session_input::SessionInputRegistry::default())
         .manage(session_output::SessionOutputRegistry::default())
         .manage(launch_status::LaunchStatusRegistry::default())
-        .manage(image_build_status::ImageBuildStatusRegistry::default())
-        .manage(agent_sign_in_status::AgentSignInStatusRegistry::default())
+        .manage(tail_status::ImageBuildStatusRegistry::default())
+        .manage(tail_status::AgentSignInStatusRegistry::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_setup_status,
             commands::list_agents,

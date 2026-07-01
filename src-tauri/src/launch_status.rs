@@ -1,22 +1,16 @@
-use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 
 use runhaven_core::provider::observability::utc_timestamp;
-use runhaven_core::support::validators::validate_run_id;
 
 use crate::contracts::LaunchStatusResponse;
+use crate::registry_support::{BoundedMap, lock_or, strip_control_chars, validate_registry_id};
 
 const MAX_LAUNCH_STATUSES: usize = 50;
+const REGISTRY_UNAVAILABLE: &str = "launch status registry is unavailable";
 
 #[derive(Clone, Default)]
 pub(crate) struct LaunchStatusRegistry {
-    state: Arc<Mutex<LaunchStatusState>>,
-}
-
-#[derive(Default)]
-struct LaunchStatusState {
-    statuses: HashMap<String, LaunchStatusResponse>,
-    order: VecDeque<String>,
+    state: Arc<Mutex<BoundedMap<LaunchStatusResponse>>>,
 }
 
 impl LaunchStatusRegistry {
@@ -75,13 +69,9 @@ impl LaunchStatusRegistry {
     }
 
     pub(crate) fn get(&self, run_id: &str) -> Result<LaunchStatusResponse, String> {
-        validate_launch_run_id(run_id)?;
-        let state = self
-            .state
-            .lock()
-            .map_err(|_| "launch status registry is unavailable".to_string())?;
+        validate_registry_id(run_id)?;
+        let state = lock_or(self.state.lock(), REGISTRY_UNAVAILABLE)?;
         state
-            .statuses
             .get(run_id)
             .cloned()
             .ok_or_else(|| "launch status not found".to_string())
@@ -94,16 +84,10 @@ impl LaunchStatusRegistry {
         label: &str,
         detail: String,
     ) -> Result<(), String> {
-        validate_launch_run_id(run_id)?;
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|_| "launch status registry is unavailable".to_string())?;
-        if !state.statuses.contains_key(run_id) {
-            state.order.push_back(run_id.to_string());
-        }
-        state.statuses.insert(
-            run_id.to_string(),
+        validate_registry_id(run_id)?;
+        let mut state = lock_or(self.state.lock(), REGISTRY_UNAVAILABLE)?;
+        state.insert_tracked(
+            run_id,
             LaunchStatusResponse {
                 run_id: run_id.to_string(),
                 state: state_name.to_string(),
@@ -112,25 +96,8 @@ impl LaunchStatusRegistry {
                 updated_at: utc_timestamp(),
             },
         );
-        prune_statuses(&mut state);
+        state.prune(MAX_LAUNCH_STATUSES);
         Ok(())
-    }
-}
-
-fn validate_launch_run_id(run_id: &str) -> Result<(), String> {
-    validate_run_id(run_id).map_err(|error| error.to_string())
-}
-
-fn strip_control_chars(text: &str) -> String {
-    text.chars().filter(|ch| !ch.is_control()).collect()
-}
-
-fn prune_statuses(state: &mut LaunchStatusState) {
-    while state.statuses.len() > MAX_LAUNCH_STATUSES {
-        let Some(run_id) = state.order.pop_front() else {
-            return;
-        };
-        state.statuses.remove(&run_id);
     }
 }
 

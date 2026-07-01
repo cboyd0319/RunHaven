@@ -53,6 +53,19 @@ pub(crate) async fn launch_run(
     }
     // The worktree branch is created only here, after the user confirms, so no
     // git mutation happens before approval.
+    launch_confirmed(prepared, launch_status, input_registry, output_registry)
+}
+
+/// Start a confirmed launch: finalize the plan (creating the worktree branch for
+/// a worktree run), mark the launch as starting, and spawn the background runner.
+/// Both the production command and the test seam call this so the post-approval
+/// path has one implementation.
+fn launch_confirmed(
+    prepared: PreparedLaunch,
+    launch_status: LaunchStatusRegistry,
+    input_registry: SessionInputRegistry,
+    output_registry: SessionOutputRegistry,
+) -> Result<LaunchRunResponse, String> {
     let run_id = prepared.run_id.clone();
     let response = prepared.response.clone();
     let plan = finalize_launch_plan(prepared)?;
@@ -104,24 +117,12 @@ pub(crate) fn launch_run_with_registries(
     input_registry: SessionInputRegistry,
     output_registry: SessionOutputRegistry,
 ) -> Result<LaunchRunResponse, String> {
-    launch_run_with_registries_and_approval(request, input_registry, output_registry, |_, _| {
-        Ok(true)
-    })
-}
-
-#[cfg(test)]
-pub(crate) fn launch_run_with_registries_and_approval(
-    request: LaunchRunRequest,
-    input_registry: SessionInputRegistry,
-    output_registry: SessionOutputRegistry,
-    approve: impl FnOnce(&AgentRunPlan, &[PlanWarning]) -> Result<bool, String>,
-) -> Result<LaunchRunResponse, String> {
     launch_run_with_registries_status_and_approval(
         request,
         input_registry,
         output_registry,
         LaunchStatusRegistry::default(),
-        approve,
+        |_, _| Ok(true),
     )
 }
 
@@ -137,21 +138,7 @@ pub(crate) fn launch_run_with_registries_status_and_approval(
     if !approve(&prepared.preview_plan, &prepared.warnings)? {
         return Err("Launch canceled before starting the run.".to_string());
     }
-    let run_id = prepared.run_id.clone();
-    let response = prepared.response.clone();
-    let plan = finalize_launch_plan(prepared)?;
-    launch_status.mark_starting(&run_id, &plan.profile_name, &plan.session)?;
-    if let Err(error) = spawn_launch_thread(
-        run_id.clone(),
-        plan,
-        input_registry,
-        output_registry,
-        launch_status.clone(),
-    ) {
-        let _ = launch_status.mark_failed(&run_id);
-        return Err(error);
-    }
-    Ok(response)
+    launch_confirmed(prepared, launch_status, input_registry, output_registry)
 }
 
 #[cfg(test)]

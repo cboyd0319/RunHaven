@@ -1,8 +1,8 @@
 use super::*;
-use crate::agent_sign_in_status::AgentSignInStatusRegistry;
 use crate::commands::agent_sign_in::start_agent_sign_in_for_test;
 use crate::commands::agent_sign_in_status::get_agent_sign_in_status_for_test;
 use crate::contracts::{AgentSignInRequest, AgentSignInStatusRequest};
+use crate::tail_status::AgentSignInStatusRegistry;
 
 fn sign_in_request(agent: &str, confirm: bool) -> AgentSignInRequest {
     AgentSignInRequest {

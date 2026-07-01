@@ -162,13 +162,9 @@ fn workspace_label(workspace: &str) -> String {
     trimmed
         .rsplit(['/', '\\'])
         .find(|part| !part.is_empty())
-        .map(strip_control_chars)
+        .map(crate::registry_support::strip_control_chars)
         .filter(|label| !label.is_empty())
         .unwrap_or_else(|| "-".to_string())
-}
-
-fn strip_control_chars(text: &str) -> String {
-    text.chars().filter(|ch| !ch.is_control()).collect()
 }
 
 fn defaulted(value: &str, fallback: &str) -> String {

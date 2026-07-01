@@ -6,13 +6,14 @@
 //! stderr line by line into the sanitized `ImageBuildStatusRegistry`, and marks
 //! the terminal state when the builder exits.
 
-use std::io::{BufRead, BufReader, Read};
+use std::io::Read;
 use std::process::{Command, Stdio};
 use std::thread;
 
 use runhaven_core::image::build::ImageBuildPlan;
 
-use crate::image_build_status::ImageBuildStatusRegistry;
+use crate::registry_support::capture_lines;
+use crate::tail_status::ImageBuildStatusRegistry;
 
 /// Spawn the build on a background thread. Returns once the thread is started;
 /// progress and the terminal state are recorded through `registry`.
@@ -93,12 +94,8 @@ where
     let build_id = build_id.to_string();
     let registry = registry.clone();
     thread::spawn(move || {
-        let mut lines = BufReader::new(reader).lines();
-        while let Some(Ok(line)) = lines.next() {
-            if let Err(error) = registry.append_output(&build_id, &line) {
-                eprintln!("runhaven image build {build_id} output capture failed: {error}");
-                return;
-            }
+        if let Err(error) = capture_lines(reader, |line| registry.append_output(&build_id, line)) {
+            eprintln!("runhaven image build {build_id} output capture failed: {error}");
         }
     })
 }

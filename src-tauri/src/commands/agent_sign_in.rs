@@ -25,8 +25,8 @@ use tauri_plugin_dialog::MessageDialogKind;
 use super::dialog::confirm_native;
 use super::validation::{MAX_AGENT_NAME_LEN, validate_text_len};
 use crate::agent_sign_in_runner::spawn_agent_sign_in;
-use crate::agent_sign_in_status::AgentSignInStatusRegistry;
 use crate::contracts::{AgentSignInRequest, AgentSignInStartResponse};
+use crate::tail_status::AgentSignInStatusRegistry;
 
 const SIGN_IN_CANCELED: &str = "Sign-in canceled before it started.";
 

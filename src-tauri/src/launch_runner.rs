@@ -101,14 +101,11 @@ impl AgentCommandRunner for TauriLaunchRunner {
         let mut child = agent_command
             .spawn()
             .with_context(|| format!("could not launch agent command {program:?}"))?;
-        let output_registration = match self.output_registry.register(context.run_id) {
-            Ok(registration) => registration,
-            Err(error) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return Err(anyhow::Error::msg(error));
-            }
-        };
+        if let Err(error) = self.output_registry.register(context.run_id) {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(anyhow::Error::msg(error));
+        }
         let Some(stdin) = child.stdin.take() else {
             let _ = child.kill();
             let _ = child.wait();
@@ -144,7 +141,6 @@ impl AgentCommandRunner for TauriLaunchRunner {
         join_output_capture(stdout_handle)?;
         join_output_capture(stderr_handle)?;
         drop(registration);
-        drop(output_registration);
         Ok(status.code().unwrap_or(1))
     }
 }

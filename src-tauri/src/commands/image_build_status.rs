@@ -5,7 +5,7 @@
 use tauri::State;
 
 use crate::contracts::{ImageBuildStatusRequest, ImageBuildStatusResponse};
-use crate::image_build_status::ImageBuildStatusRegistry;
+use crate::tail_status::ImageBuildStatusRegistry;
 
 #[tauri::command]
 pub(crate) fn get_image_build_status(

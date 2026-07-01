@@ -376,7 +376,7 @@ fn managed_session_log_snapshot_falls_back_to_desktop_output_registry() {
     )
     .expect("active run payload");
     let output_registry = SessionOutputRegistry::default();
-    let _registration = output_registry
+    output_registry
         .register("managed-session-output-registry")
         .expect("register output");
     output_registry

@@ -2,7 +2,7 @@ use super::*;
 use crate::commands::image_build::rebuild_agent_image_for_test;
 use crate::commands::image_build_status::get_image_build_status_for_test;
 use crate::contracts::{ImageBuildRequest, ImageBuildStatusRequest};
-use crate::image_build_status::ImageBuildStatusRegistry;
+use crate::tail_status::ImageBuildStatusRegistry;
 
 fn rebuild_request(agent: &str, confirm: bool) -> ImageBuildRequest {
     ImageBuildRequest {

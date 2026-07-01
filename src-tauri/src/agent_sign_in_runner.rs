@@ -11,7 +11,7 @@
 //! The desktop app only triggers the sign-in; the resulting credential is owned
 //! by RunHaven core. Nothing here reads, stores, or forwards a token.
 
-use std::io::{BufRead, BufReader, Read};
+use std::io::Read;
 use std::process::{Command, Stdio};
 use std::thread;
 
@@ -21,7 +21,8 @@ use runhaven_core::runtime::launch::{
 };
 use runhaven_core::runtime::plans::AgentRunPlan;
 
-use crate::agent_sign_in_status::AgentSignInStatusRegistry;
+use crate::registry_support::capture_lines;
+use crate::tail_status::AgentSignInStatusRegistry;
 
 /// Spawn the sign-in on a background thread. Returns once the thread is started;
 /// progress and the terminal state are recorded through `registry`.
@@ -83,12 +84,10 @@ impl AgentSignInRunner {
         let sign_in_id = self.sign_in_id.clone();
         let registry = self.registry.clone();
         thread::spawn(move || {
-            let mut lines = BufReader::new(reader).lines();
-            while let Some(Ok(line)) = lines.next() {
-                if let Err(error) = registry.append_output(&sign_in_id, &line) {
-                    eprintln!("runhaven sign-in {sign_in_id} output capture failed: {error}");
-                    return;
-                }
+            if let Err(error) =
+                capture_lines(reader, |line| registry.append_output(&sign_in_id, line))
+            {
+                eprintln!("runhaven sign-in {sign_in_id} output capture failed: {error}");
             }
         })
     }

@@ -28,6 +28,47 @@ impl RunControlAction {
         }
     }
 
+    /// The status a successful stop/kill records. Repair reads its status from the
+    /// core payload instead, so its arm here is never consulted.
+    pub(super) fn requested_status(self) -> &'static str {
+        match self {
+            Self::Stop => "stop-requested",
+            Self::Kill => "kill-requested",
+            Self::Repair => "removed",
+        }
+    }
+
+    /// Error when a stop/kill core payload has no `return_code`.
+    pub(super) fn missing_return_code_error(self) -> String {
+        match self {
+            Self::Stop => "stop payload is missing return_code",
+            Self::Kill => "kill payload is missing return_code",
+            Self::Repair => "repair payload is missing return_code",
+        }
+        .to_string()
+    }
+
+    /// Error when a stop/kill container command exits non-zero. The core payload
+    /// names the container, so the message stays fixed and path-free.
+    pub(super) fn nonzero_exit_error(
+        self,
+        run_id: &str,
+        container_name: &str,
+        return_code: i64,
+    ) -> String {
+        match self {
+            Self::Stop => format!(
+                "could not stop run {run_id} ({container_name}); container stop exited {return_code}"
+            ),
+            Self::Kill => format!(
+                "could not hard-stop run {run_id} ({container_name}); container kill exited {return_code}"
+            ),
+            Self::Repair => {
+                format!("could not repair run {run_id} ({container_name}); exited {return_code}")
+            }
+        }
+    }
+
     fn dialog_title(self) -> &'static str {
         match self {
             Self::Stop => "Confirm RunHaven stop",

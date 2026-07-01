@@ -1,18 +1,18 @@
-use std::collections::HashMap;
-use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
 use runhaven_core::runtime::active::{
     MAX_LOG_SNAPSHOT_BYTES, log_snapshot_payload_from_stdout, validate_log_snapshot_lines,
 };
-use runhaven_core::support::validators::validate_run_id;
 
 use crate::commands::log_snapshot::log_snapshot_response_from_payload;
 use crate::contracts::LogSnapshotResponse;
+use crate::registry_support::{BoundedMap, lock_or, validate_registry_id};
+
+const REGISTRY_UNAVAILABLE: &str = "session output registry is unavailable";
 
 #[derive(Clone, Default)]
 pub(crate) struct SessionOutputRegistry {
-    state: Arc<Mutex<OutputRegistryState>>,
+    state: Arc<Mutex<BoundedMap<OutputBuffer>>>,
 }
 
 #[derive(Clone, Default)]
@@ -21,52 +21,35 @@ struct OutputBuffer {
     truncated: bool,
 }
 
-#[derive(Default)]
-struct OutputRegistryState {
-    buffers: HashMap<String, OutputBuffer>,
-    order: VecDeque<String>,
-}
-
 const MAX_SESSION_OUTPUT_BUFFERS: usize = 20;
 
 impl SessionOutputRegistry {
-    pub(crate) fn register(&self, run_id: &str) -> Result<OutputRegistration<'_>, String> {
-        validate_run_id(run_id).map_err(|error| error.to_string())?;
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|_| "session output registry is unavailable".to_string())?;
-        if !state.buffers.contains_key(run_id) {
-            state.order.push_back(run_id.to_string());
-        }
-        state.buffers.entry(run_id.to_string()).or_default();
-        prune_output_buffers(&mut state);
-        Ok(OutputRegistration {
-            registry: self,
-            run_id: run_id.to_string(),
-        })
+    /// Pre-create the run's output buffer so a snapshot before any output returns
+    /// an empty (not missing) buffer, and prune the oldest buffers. Output is
+    /// retained after the run exits so late snapshots still work; there is no
+    /// finish/unregister step.
+    pub(crate) fn register(&self, run_id: &str) -> Result<(), String> {
+        validate_registry_id(run_id)?;
+        let mut state = lock_or(self.state.lock(), REGISTRY_UNAVAILABLE)?;
+        state.entry_tracked(run_id);
+        state.prune(MAX_SESSION_OUTPUT_BUFFERS);
+        Ok(())
     }
 
     pub(crate) fn append(&self, run_id: &str, bytes: &[u8]) -> Result<(), String> {
-        validate_run_id(run_id).map_err(|error| error.to_string())?;
+        validate_registry_id(run_id)?;
         if bytes.is_empty() {
             return Ok(());
         }
-        let mut state = self
-            .state
-            .lock()
-            .map_err(|_| "session output registry is unavailable".to_string())?;
-        if !state.buffers.contains_key(run_id) {
-            state.order.push_back(run_id.to_string());
-        }
-        let buffer = state.buffers.entry(run_id.to_string()).or_default();
+        let mut state = lock_or(self.state.lock(), REGISTRY_UNAVAILABLE)?;
+        let buffer = state.entry_tracked(run_id);
         buffer.bytes.extend_from_slice(bytes);
         if buffer.bytes.len() > MAX_LOG_SNAPSHOT_BYTES {
             let excess = buffer.bytes.len() - MAX_LOG_SNAPSHOT_BYTES;
             buffer.bytes.drain(0..excess);
             buffer.truncated = true;
         }
-        prune_output_buffers(&mut state);
+        state.prune(MAX_SESSION_OUTPUT_BUFFERS);
         Ok(())
     }
 
@@ -75,14 +58,11 @@ impl SessionOutputRegistry {
         run_id: &str,
         requested_lines: u32,
     ) -> Result<Option<LogSnapshotResponse>, String> {
-        validate_run_id(run_id).map_err(|error| error.to_string())?;
+        validate_registry_id(run_id)?;
         validate_log_snapshot_lines(requested_lines).map_err(|error| error.to_string())?;
         let buffer = {
-            let state = self
-                .state
-                .lock()
-                .map_err(|_| "session output registry is unavailable".to_string())?;
-            state.buffers.get(run_id).cloned()
+            let state = lock_or(self.state.lock(), REGISTRY_UNAVAILABLE)?;
+            state.get(run_id).cloned()
         };
         let Some(buffer) = buffer else {
             return Ok(None);
@@ -103,40 +83,6 @@ impl SessionOutputRegistry {
         }
         Ok(Some(response))
     }
-
-    fn finish(&self, run_id: &str) -> Result<(), String> {
-        validate_run_id(run_id).map_err(|error| error.to_string())?;
-        let _state = self
-            .state
-            .lock()
-            .map_err(|_| "session output registry is unavailable".to_string())?;
-        Ok(())
-    }
-}
-
-fn prune_output_buffers(state: &mut OutputRegistryState) {
-    while state.buffers.len() > MAX_SESSION_OUTPUT_BUFFERS {
-        let Some(run_id) = state.order.pop_front() else {
-            return;
-        };
-        state.buffers.remove(&run_id);
-    }
-}
-
-pub(crate) struct OutputRegistration<'a> {
-    registry: &'a SessionOutputRegistry,
-    run_id: String,
-}
-
-impl Drop for OutputRegistration<'_> {
-    fn drop(&mut self) {
-        if let Err(error) = self.registry.finish(&self.run_id) {
-            eprintln!(
-                "runhaven session output finish {} failed: {error}",
-                self.run_id
-            );
-        }
-    }
 }
 
 fn tail_lines(text: &str, requested_lines: u32) -> (String, bool) {
@@ -155,7 +101,7 @@ mod tests {
     #[test]
     fn session_output_registry_returns_bounded_tail() {
         let registry = SessionOutputRegistry::default();
-        let _registration = registry.register("output-registry-test").expect("register");
+        registry.register("output-registry-test").expect("register");
 
         registry
             .append("output-registry-test", b"one\ntwo\nthree\n")
@@ -175,7 +121,7 @@ mod tests {
     fn session_output_registry_retains_output_after_child_exit() {
         let registry = SessionOutputRegistry::default();
         {
-            let _registration = registry.register("output-registry-drop").expect("register");
+            registry.register("output-registry-drop").expect("register");
             registry
                 .append("output-registry-drop", b"hello\n")
                 .expect("append");
@@ -202,7 +148,7 @@ mod tests {
         let registry = SessionOutputRegistry::default();
         for idx in 0..=MAX_SESSION_OUTPUT_BUFFERS {
             let run_id = format!("output-prune-{idx}");
-            let _registration = registry.register(&run_id).expect("register");
+            registry.register(&run_id).expect("register");
             registry.append(&run_id, run_id.as_bytes()).expect("append");
         }
 
