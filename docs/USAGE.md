@@ -321,6 +321,12 @@ out of `~/.claude`, the printed `plan`, and any command line, and confined to
 Anthropic's hosts in `provider` network mode. See
 [`AUTH_BROKER.md`](AUTH_BROKER.md).
 
+By default the stored token lives in a private `0600` file in RunHaven's cache.
+On macOS, set `RUNHAVEN_TOKEN_STORE=keychain` before `login`, `run`, and
+`--clear` to keep it in your login Keychain instead; any other value or unset
+uses the file store, so existing setups are unchanged. See
+[`SECURITY_MODEL.md`](SECURITY_MODEL.md).
+
 Use `--env NAME` only when a headless run deliberately needs one token value
 inside the guest.
 

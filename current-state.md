@@ -114,6 +114,21 @@ Useful GUI design docs:
 
 ## Latest State
 
+- Opt-in macOS Keychain token store landed seam-first (live Keychain round-trip
+  is a documented follow-up on macOS). `runhaven-core` now has a `TokenStore`
+  trait (`runtime/token_store.rs`) with store/read/clear. `FileTokenStore` is the
+  default and is byte-for-byte the original behavior (same `0600`
+  `oauth_token_path` via `create_private_file`, same trailing newline, same
+  clear semantics). A macOS-only `KeychainTokenStore` uses `security-framework`
+  generic-password items (pinned `=3.5.1`, already in the workspace lock via
+  rustls so no new transitive crates, compiling under `unsafe_code = forbid`).
+  `resolve_token_store()` defaults to the file store and selects the Keychain
+  only when `RUNHAVEN_TOKEN_STORE=keychain`; any other value or unset keeps the
+  file store, so existing users are unchanged. The `claude` login store, run-time
+  read, and `login claude --clear` all route through the resolved store. The
+  token is never logged or printed and error paths omit its value. Advances the
+  `logs-secret-redaction` Keychain acceptance criterion; the broader centralized
+  sanitizer pass is still open. Docs updated in `USAGE.md` and `SECURITY_MODEL.md`.
 - In-app agent sign-in landed seam-first (live verification is a documented
   follow-up). Codex, Copilot, and Antigravity now sign in from the app. A
   mutating `start_agent_sign_in` command lives behind its own isolated

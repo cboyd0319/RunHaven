@@ -279,6 +279,15 @@ an explicit fallback that places a token in the guest. See
 [`AUTH_BROKER.md`](AUTH_BROKER.md). Use
 [`AUTH_BROKER.md`](AUTH_BROKER.md) for the current boundary and non-goals.
 
+The one credential RunHaven stores host-side is the `claude` OAuth token from
+`runhaven login claude`. By default it is a private `0600` file in RunHaven's
+cache. On macOS you can opt into your login Keychain instead by setting
+`RUNHAVEN_TOKEN_STORE=keychain`; unset, or any other value, keeps the file
+store, so the default is unchanged. Either way the token is never logged,
+printed, put on a command line, or written to `~/.claude`. This only moves
+RunHaven's own stored token; it does not read arbitrary host credential stores
+and does not touch provider-owned credentials.
+
 The selected agent still controls what it reads inside `/workspace` and
 `/home/agent`. If the agent has model credentials inside its project volume and
 internet access, malicious repository content may still try to exfiltrate those

@@ -16,7 +16,7 @@
 //!   has none, so its login runs the agent, which prompts a Google sign-in on
 //!   first run (the user types /exit afterward).
 
-use std::io::{IsTerminal, Read, Write};
+use std::io::IsTerminal;
 use std::process::{Command, Stdio};
 
 use anyhow::{Context, Result, bail};
@@ -29,9 +29,8 @@ use crate::runtime::plans::{
 use crate::runtime::profiles::get_profile;
 use crate::runtime::session_state::shared_state_volume_name;
 use crate::runtime::state::{VolumeDeletion, delete_volume};
-use crate::support::paths::{
-    create_private_file, ensure_private_parent, login_workspace_dir, oauth_token_path,
-};
+use crate::runtime::token_store::{TokenClear, resolve_token_store};
+use crate::support::paths::login_workspace_dir;
 
 /// Agents whose login RunHaven can store host-side as an OAuth token and inject
 /// into the guest at run time. Maps the agent to the env var its CLI reads.
@@ -122,13 +121,9 @@ pub fn logout(agent: &str) -> Result<i32> {
 }
 
 fn logout_host_token(agent: &str) -> Result<i32> {
-    let path = oauth_token_path(agent);
-    if path.exists() {
-        std::fs::remove_file(&path)
-            .with_context(|| format!("could not remove stored login: {}", path.display()))?;
-        eprintln!("Cleared the stored {agent} login.");
-    } else {
-        eprintln!("No stored {agent} login to clear.");
+    match resolve_token_store().clear(agent)? {
+        TokenClear::Cleared => eprintln!("Cleared the stored {agent} login."),
+        TokenClear::Missing => eprintln!("No stored {agent} login to clear."),
     }
     Ok(0)
 }
@@ -223,7 +218,7 @@ fn login_claude() -> Result<i32> {
     let token = extract_token(&stdout).ok_or_else(|| {
         anyhow::anyhow!("could not find a token in `claude setup-token` output; nothing was stored")
     })?;
-    store_token("claude", &token)?;
+    resolve_token_store().store("claude", &token)?;
     eprintln!(
         "Stored your Claude login. `runhaven run claude` now injects it into the sandbox env (a usable token; provider-network egress keeps it from leaving Anthropic's hosts). Clear it with `runhaven login claude --clear`."
     );
@@ -240,31 +235,13 @@ fn extract_token(stdout: &str) -> Option<String> {
         .map(str::to_string)
 }
 
-fn store_token(agent: &str, token: &str) -> Result<()> {
-    let path = oauth_token_path(agent);
-    ensure_private_parent(&path)?;
-    let mut file = create_private_file(&path)
-        .with_context(|| format!("could not write login store: {}", path.display()))?;
-    file.write_all(token.as_bytes())?;
-    file.write_all(b"\n")?;
-    Ok(())
-}
-
-fn read_token(agent: &str) -> Option<String> {
-    let mut file = std::fs::File::open(oauth_token_path(agent)).ok()?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents).ok()?;
-    let token = contents.trim();
-    (!token.is_empty()).then(|| token.to_string())
-}
-
 /// The token to inject for a run, if the agent has a stored login. Returns the
 /// env var name and value. The value is set on the run Command's environment
 /// (never on the argv or in the printed plan) and forwarded into the guest with
 /// a name-only `--env`.
 pub fn run_token_injection(plan: &AgentRunPlan) -> Option<(String, String)> {
     let env = token_env_var(&plan.profile_name)?;
-    let token = read_token(&plan.profile_name)?;
+    let token = resolve_token_store().read(&plan.profile_name)?;
     Some((env.to_string(), token))
 }
 
