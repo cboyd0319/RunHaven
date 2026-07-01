@@ -26,8 +26,6 @@ use crate::provider::auth_broker::{GuestRedirect, broker_profile_for_agent};
 use crate::runtime::session_state::{session_digest, shared_state_volume_name, state_volume_name};
 use crate::support::validators::validate_run_id;
 
-const SSH_FORWARDING_DISABLED_MESSAGE: &str = "SSH forwarding is disabled: Apple container 1.0.0 exposes the forwarded socket to RunHaven's non-root agent user, but ssh-add -l returns permission denied. Do not mount raw SSH keys or run the agent as root; track docs/APPLE_CONTAINER_GAP_ANALYSIS.md.";
-
 pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     if let Some(run_id) = &options.run_id {
         validate_run_id(run_id)?;
@@ -74,9 +72,6 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     validate_resource_options(&options.cpus, &options.memory, &options.user)?;
     if uses_root_identity(&options.user) && !options.allow_root_user {
         bail!("root user or group requires --allow-root-user");
-    }
-    if options.ssh {
-        bail!(SSH_FORWARDING_DISABLED_MESSAGE);
     }
 
     let provider_allowed_hosts = provider_hosts_for_options(&options)?;
@@ -144,6 +139,14 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     }
     if options.tty {
         command.push("--tty".to_string());
+    }
+    if options.ssh {
+        // Forward the host SSH agent socket only (no raw keys, non-root). Apple
+        // `container --ssh` bind-mounts SSH_AUTH_SOCK into the guest with the
+        // host socket's mode bits; the default macOS launchd agent socket is
+        // world-accessible, so the non-root agent user can use it (verified by a
+        // no-secret `ssh-add -l` smoke). See docs/APPLE_CONTAINER_GAP_ANALYSIS.md.
+        command.push("--ssh".to_string());
     }
     for name in DEFAULT_ENV_PASSTHROUGH {
         if env::var_os(name).is_some() {

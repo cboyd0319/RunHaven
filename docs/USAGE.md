@@ -354,9 +354,13 @@ agent needs the full repository mounted at `/workspace`; non-git directories
 fail closed with that scope.
 
 RunHaven does not mount raw SSH keys, browser profiles, cloud credential
-folders, or provider login caches by default. SSH forwarding currently fails
-closed until Apple `container` non-root socket access is verified. Use
-`--env NAME` only for a reviewed variable the agent really needs.
+folders, or provider login caches by default. `--ssh` forwards only your SSH
+agent socket (never raw keys), so the agent can use your existing SSH identities;
+it is an explicit, warned lower-security choice that works with the standard
+macOS SSH agent (start an agent and `ssh-add` your key first). The sandboxed
+agent can then authenticate to any host your keys reach, so use it only when a
+run genuinely needs Git-over-SSH or remote access. Use `--env NAME` only for a
+reviewed variable the agent really needs.
 
 ## Worktree Isolation
 

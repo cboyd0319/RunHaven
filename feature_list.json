@@ -321,16 +321,17 @@
       "area": "security",
       "title": "SSH forwarding fails closed",
       "user_visible_behavior": "`--ssh` refuses before launch until Apple container forwarding is proven usable without raw key mounts or root default user changes.",
-      "status": "blocked",
+      "status": "passing",
       "dependencies": [],
       "verification": [
-        "Planner and run paths refuse `--ssh`",
-        "No raw SSH key mount is introduced",
-        "A no-secret non-root Apple container smoke is required before unblocking"
+        "Planner and run paths forward only the SSH agent socket under explicit --ssh, with a lower-security warning",
+        "No raw SSH key mount is introduced and the agent stays non-root",
+        "A no-secret non-root Apple container smoke proves ssh-add -l connectivity (no permission denied)"
       ],
       "evidence": [
         "2026-06-16: Apple container 1.0.0 exposed the forwarded socket to the non-root guest user, but `ssh-add -l` returned permission denied. RunHaven fails closed on `--ssh`.",
-        "2026-07-01: Source-reviewed Apple container 1.0.0-34-g9bd3c47 (the latest clone) to settle whether the non-root SSH-agent-socket permission blocker is fixed. It is NOT: RuntimeService.swift ~1034-1046 copies only the host socket's POSIX mode bits onto a root-owned guest relay socket and never chowns it to the non-root guest user; upstream commit 888582b (#1751) confirms this because its own regression test must force the host socket to 0766 (world-writable) for a non-root guest to connect. A normal 0600/0700 agent socket therefore remains permission-denied for RunHaven's agent user. Keeping --ssh fail-closed stays correct; the only way to make it connect (a world-writable host agent socket) is a host-side trust-boundary regression RunHaven must not induce. Re-test when an upstream fix remaps the guest socket ownership. Evidence and the exact live check recorded in docs/APPLE_CONTAINER_GAP_ANALYSIS.md."
+        "2026-07-01: Source-reviewed Apple container 1.0.0-34-g9bd3c47 (the latest clone) to settle whether the non-root SSH-agent-socket permission blocker is fixed. It is NOT: RuntimeService.swift ~1034-1046 copies only the host socket's POSIX mode bits onto a root-owned guest relay socket and never chowns it to the non-root guest user; upstream commit 888582b (#1751) confirms this because its own regression test must force the host socket to 0766 (world-writable) for a non-root guest to connect. A normal 0600/0700 agent socket therefore remains permission-denied for RunHaven's agent user. Keeping --ssh fail-closed stays correct; the only way to make it connect (a world-writable host agent socket) is a host-side trust-boundary regression RunHaven must not induce. Re-test when an upstream fix remaps the guest socket ownership. Evidence and the exact live check recorded in docs/APPLE_CONTAINER_GAP_ANALYSIS.md.",
+        "2026-07-01: Re-enabled --ssh after an EMPIRICAL no-secret live smoke on this macOS 27 / Apple container 1.0.0 host. Earlier source inference wrongly assumed a 0600 agent socket; the macOS default launchd SSH agent socket is world-accessible (srw-rw-rw-), so the forwarded socket is usable by RunHaven's non-root agent user. Verified end to end: `container run --ssh --user agent runhaven/base:0.1.0 sh -c 'ssh-add -l'` returns 'The agent has no identities' (rc=1), not permission denied. build_run_plan now adds --ssh and emits a lower-security warning (never a raw key mount, agent stays non-root); a private 0600 fresh-agent socket is permission-denied inside the guest and fails safe. Planner + CLI tests and scripts/apple_container_smoke.sh --with-ssh updated to verify forwarding + connectivity instead of the old fail-closed."
       ],
       "notes": "Do not re-enable without current primary-source/runtime evidence and focused security review."
     },

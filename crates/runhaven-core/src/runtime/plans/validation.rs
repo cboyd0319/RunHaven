@@ -266,6 +266,12 @@ pub fn security_notices(options: &RunOptions) -> Vec<String> {
                 .to_string(),
         );
     }
+    if options.ssh {
+        notices.push(
+            "SSH agent forwarding is enabled; the agent inside the sandbox can use your host SSH identities (see `ssh-add -l`) to authenticate to any host it can reach. Your private keys stay on the host, only the agent socket is forwarded. Remove --ssh to disable."
+                .to_string(),
+        );
+    }
     notices
 }
 

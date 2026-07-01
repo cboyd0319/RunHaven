@@ -387,9 +387,9 @@ fn default_network_mode_is_provider_for_bundled_hosts_else_internet() {
 }
 
 #[test]
-fn ssh_forwarding_fails_closed_until_non_root_runtime_is_verified() {
+fn ssh_forwarding_adds_the_agent_socket_flag_warns_and_mounts_no_keys() {
     let workspace = tempfile::tempdir().expect("workspace");
-    let error = build_run_plan(RunOptions {
+    let plan = build_run_plan(RunOptions {
         profile: get_profile("shell").expect("profile"),
         workspace: workspace.path().to_path_buf(),
         agent_args: Vec::new(),
@@ -413,10 +413,26 @@ fn ssh_forwarding_fails_closed_until_non_root_runtime_is_verified() {
         worktree: None,
         run_id: None,
     })
-    .expect_err("ssh forwarding should be disabled");
-    let message = error.to_string();
+    .expect("ssh forwarding is supported");
 
-    assert!(message.contains("SSH forwarding is disabled"));
-    assert!(message.contains("Apple container 1.0.0"));
-    assert!(message.contains("raw SSH keys"));
+    // Apple `container --ssh` forwards the agent socket, verified no-secret on
+    // macOS 26+/Apple container: a non-root guest connects to the world-readable
+    // launchd agent socket (ssh-add -l returns the no-identities status).
+    assert!(plan.command.contains(&"--ssh".to_string()));
+    // Explicit lower-security choice must warn about the exposure.
+    assert!(
+        plan.security_notices
+            .iter()
+            .any(|notice| notice.contains("SSH agent forwarding")),
+        "expected an SSH forwarding security notice"
+    );
+    // The agent socket is forwarded, never raw keys: no mount or arg references
+    // an SSH key or an .ssh directory, and the guest still runs as non-root.
+    assert!(
+        !plan.command.iter().any(|arg| arg.contains(".ssh")
+            || arg.contains("id_rsa")
+            || arg.contains("id_ed25519"))
+    );
+    assert!(plan.command.contains(&"agent".to_string()));
+    assert!(!plan.command.contains(&"root".to_string()));
 }

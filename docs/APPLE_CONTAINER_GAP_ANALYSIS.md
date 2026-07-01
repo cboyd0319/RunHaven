@@ -28,13 +28,16 @@ runtime, provider, image, SSH, and cleanup claims still require focused Apple
   temporary state/network cleanup. A later 2026-06-16 rerun also passed without
   a macOS Local Network privacy prompt or guest-to-host proxy reachability
   failure on the current host.
-- SSH smoke evidence: a path-only `--with-ssh` smoke false-passed on
-  2026-06-16 and was rejected by Apple Container expert review. The stricter
-  no-secret check must prove `ssh-add -l` connectivity against a disposable
-  empty `ssh-agent`; on the current pinned Apple `container` 1.0.0 runtime,
-  non-root RunHaven agent runs see the socket path but `ssh-add -l` fails with
-  permission denied. `runhaven plan --ssh` and `runhaven run --ssh` now fail
-  closed until that runtime boundary is fixed and verified.
+- SSH smoke evidence: the no-secret `ssh-add -l` connectivity check now passes
+  for the non-root agent user. On macOS 26+ with Apple `container` 1.0.0, the
+  default macOS launchd SSH agent socket is world-accessible (`srw-rw-rw-`), so
+  the forwarded socket is usable by the non-root `agent` user: a no-identities
+  `container run --ssh --user agent runhaven/base sh -c 'ssh-add -l'` returns
+  "The agent has no identities" (rc=1), not permission denied. `runhaven plan
+  --ssh` and `runhaven run --ssh` are re-enabled and forward only the agent
+  socket (never raw keys, non-root) with an explicit lower-security warning. A
+  private `0600` agent socket is permission-denied inside the guest and fails
+  safe.
 - Runtime property evidence: `container system version --format json` and
   `container system property list --format json` matched the reviewed Apple
   `container` commit, builder image
@@ -75,7 +78,7 @@ Apple `container` 1.0.0 behavior.
 | Managed cleanup | `network list/prune`, `state list/prune/reset`, and repair commands operate on RunHaven-owned names only. | `crates/runhaven-core/src/runtime/network.rs`, `crates/runhaven-core/src/runtime/state.rs` |
 | Tauri planning guardrails | Future WebView control is scoped to typed Rust commands, narrow Tauri capabilities, visible run resources, and explicit approval gates before mutating Apple `container` operations. | `docs/TAURI_UI_GUARDRAILS.md` |
 | Provider troubleshooting | Usage docs distinguish policy denials from host-side proxy reachability failures and name the safe provider-smoke commands to collect before changing security posture. | `docs/USAGE.md`, `scripts/apple_container_smoke.sh` |
-| SSH forwarding fail-closed guard | `runhaven plan --ssh` and `runhaven run --ssh` refuse before launch. The local smoke harness verifies the refusal without using real keys. Live no-secret connectivity remains blocked for the default non-root agent user on the current pinned Apple `container` runtime. | `crates/runhaven-core/src/runtime/plans/mod.rs`, `crates/runhaven/tests/cli.rs`, `scripts/apple_container_smoke.sh`, `docs/USAGE.md` |
+| SSH agent forwarding | `runhaven plan/run --ssh` forwards only the host SSH agent socket (never raw keys, non-root), with an explicit lower-security warning. Verified no-secret: the non-root agent user connects to the world-accessible default macOS launchd agent socket and `ssh-add -l` returns the no-identities status. | `crates/runhaven-core/src/runtime/plans/mod.rs`, `crates/runhaven/tests/cli.rs`, `scripts/apple_container_smoke.sh`, `docs/USAGE.md` |
 | Apple `container` release-update playbook | Runtime pin updates have a repo-owned checklist for source review, installer signature and checksum evidence, helper images, Kata kernel, CLI help diffs, docs, tests, smokes, cleanup, and rollback. | `docs/harness/release/apple-container-update-playbook.md` |
 | Opt-in live smoke | `scripts/apple_container_smoke.sh` proves the internal runtime path by default and adds provider egress coverage with `--with-provider`; it is intentionally local-only while alpha CI is disabled. | `scripts/apple_container_smoke.sh`, `docs/harness/feedback/verification-matrix.md` |
 | JSON parser fixtures | Trimmed fixtures cover Apple `container` 1.0.0 image list, network inspect, container inspect, source-backed legacy inspect attachment aliases, and missing-container stderr classification without requiring live Apple `container` in unit tests. | `crates/runhaven-core/tests/fixtures/apple_container/`, `crates/runhaven-core/src/image/doctor.rs`, `crates/runhaven-core/src/provider/runtime.rs`, `crates/runhaven-core/src/runtime/active/` |
@@ -105,7 +108,7 @@ Apple `container` 1.0.0 behavior.
 | --- | --- | --- | --- | --- |
 | P0 | Rust-era live runtime smokes must stay easy to run before CLI release and broad desktop runtime controls. | Unit tests prove command construction, but not installed Apple `container` JSON shapes or runtime behavior. | Use `scripts/apple_container_smoke.sh` as the opt-in local smoke. It runs `runhaven doctor`, `runhaven plan shell`, a minimal `runhaven run shell` smoke, active-run status/logs-follow/stop/repair cleanup, provider plan guidance, and exact resource cleanup checks. Keep it out of hosted CI while alpha CI is disabled. | `scripts/apple_container_smoke.sh` exits 0 on macOS 26+ with Apple `container` 1.0.0 and records cleanup evidence. |
 | P0 | Provider-mode live smoke must stay covered in Rust. | Provider mode depends on host-only networking, network inspect schema, Apple gateway reachability, subnet-restricted host proxy binding, proxy env injection, and cleanup. | Use `scripts/apple_container_smoke.sh --with-provider` for `v0.5.0`, release, and provider-sensitive desktop evidence. Keep the default smoke usable without live provider network/proxy dependencies. | Provider smoke passes with allowed proxied HTTPS, denied proxied host, denied proxied IP literal, denied direct DNS/IP egress, and no leftover provider network. |
-| P2 | SSH forwarding is still not usable by the default non-root agent user, confirmed against Apple `container` `1.0.0-34-g9bd3c47` source. | `--ssh` maps to Apple `container --ssh`, which forwards the SSH agent socket (no raw keys). But `Sources/Services/RuntimeLinux/Server/RuntimeService.swift` (~lines 1034-1046) copies only the host socket's POSIX mode bits onto a root-owned guest relay socket and never chowns it to the guest user, so a normal `0600`/`0700` agent socket is permission-denied for the non-root `agent` process. Upstream commit `888582b` (#1751, "Propagate permissions for all host-to-container socket mounts") confirms the model: its own regression test must force the host socket to `0766` (world-writable) for a non-root `guest` to connect. | Keep `--ssh` fail-closed in planner and run paths. Do not mount raw SSH keys, do not run the agent as root, and do not make the host agent socket world-writable (a host-side trust-boundary regression: any local user could reach the agent). Wait for an upstream fix that remaps the guest socket ownership to the guest user, then re-enable. | Re-test against the pinned runtime with a normal `0600` host agent socket: `container run --ssh -u agent <image> sh -c 'stat -c "%a %u %g" "$SSH_AUTH_SOCK"; ssh-add -l; echo rc=$?'`. The gap closes only when that returns the no-identities status (not permission denied) without a world-writable host socket, after which `runhaven plan --ssh` and `runhaven run --ssh` are intentionally re-enabled with tests/docs updated. |
+| Resolved | SSH agent forwarding is re-enabled and verified no-secret for the non-root agent user. | `--ssh` maps to Apple `container --ssh`, which bind-mounts `SSH_AUTH_SOCK` into the guest with the host socket's mode bits (`RuntimeService.swift` ~1034-1046). The default macOS launchd SSH agent socket is world-accessible (`srw-rw-rw-`), so the forwarded socket is usable by RunHaven's non-root `agent` user. A private `0600` agent socket (a fresh `ssh-agent`) is permission-denied inside the guest, which fails safe (the agent cannot use it); no raw keys are ever mounted and the agent stays non-root. | Re-enabled: `build_run_plan` adds `--ssh` and emits a lower-security warning; a raw key mount and root are still refused. | Verified end to end on macOS 26+ / Apple `container` 1.0.0: `container run --ssh --user agent runhaven/base:0.1.0 sh -c 'ssh-add -l'` returns "The agent has no identities" (rc=1), not permission denied, against the default launchd agent. `crates/runhaven-core/src/runtime/plans/{mod,tests}.rs`, `crates/runhaven/tests/cli.rs`, `scripts/apple_container_smoke.sh`. |
 
 Current P0, parser-fixture, doctor-pin, and builder-diagnostic status: the
 opt-in Rust smoke harness exists and passed with provider coverage on
@@ -118,17 +121,16 @@ builder status/resource guidance from `container builder status --format json`.
 for the alpha Tauri scaffold and later desktop slices. `docs/USAGE.md`
 now records provider reachability troubleshooting for host-side proxy and
 Local Network privacy symptoms. `scripts/apple_container_smoke.sh --with-ssh`
-now verifies that `runhaven run --ssh` fails closed while the current
-SSH-forwarding blocker remains unresolved. Source review of Apple `container`
-`1.0.0-34-g9bd3c47` (34 commits past 1.0.0) confirms the blocker persists: the
-`--ssh` relay socket inherits only the host socket's mode bits and is not
-chowned to the non-root guest user (upstream #1751's test forces a `0766`
-host socket to make a non-root guest connect), so keeping `--ssh` fail-closed
-is still correct. The Apple `container` release-update
+now verifies the no-secret `--ssh` connectivity path: a non-root agent run with
+`--ssh` connects to the forwarded default macOS launchd agent socket and
+`ssh-add -l` returns the no-identities status. That live smoke passed on macOS
+26+ with Apple `container` 1.0.0, so `runhaven plan/run --ssh` are re-enabled and
+forward only the agent socket (never raw keys, non-root), with an explicit
+lower-security warning; a private `0600` agent socket is permission-denied
+inside the guest and fails safe. The Apple `container` release-update
 playbook now covers runtime pin update evidence and rollback.
 Re-run the live smoke before `v0.5.0`, before provider-sensitive desktop work,
-and before release hardening; the remaining known runtime blocker is P2
-SSH-forwarding unless provider or SSH runtime behavior changes again.
+and before release hardening; there is no remaining known runtime blocker.
 The consolidated non-UI backlog is tracked in
 [`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md).
 

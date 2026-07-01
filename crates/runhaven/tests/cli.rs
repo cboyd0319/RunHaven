@@ -60,7 +60,7 @@ fn run_help_explains_agent_argument_separator() {
 }
 
 #[test]
-fn plan_ssh_fails_closed_until_runtime_boundary_is_verified() {
+fn plan_ssh_forwards_the_agent_socket_and_warns() {
     let workspace = tempfile::tempdir().expect("temp workspace");
     let output = Command::new(env!("CARGO_BIN_EXE_runhaven"))
         .args(["plan", "shell", "--workspace"])
@@ -70,14 +70,21 @@ fn plan_ssh_fails_closed_until_runtime_boundary_is_verified() {
         .expect("run runhaven");
 
     assert!(
-        !output.status.success(),
-        "stdout: {}",
-        String::from_utf8_lossy(&output.stdout)
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
     );
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("SSH forwarding is disabled"));
-    assert!(stderr.contains("Apple container 1.0.0"));
-    assert!(stderr.contains("raw SSH keys"));
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    // The plan forwards the SSH agent socket and warns about the exposure.
+    assert!(combined.contains("--ssh"), "plan should forward --ssh");
+    assert!(
+        combined.contains("SSH agent forwarding"),
+        "plan should warn about SSH agent forwarding"
+    );
 }
 
 #[test]

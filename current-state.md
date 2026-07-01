@@ -41,14 +41,16 @@ only when the task touches that surface.
   browser profiles, or arbitrary host environment variables by default.
 - Provider egress stays default-deny in provider mode. Agent provider hosts are
   allowlisted; arbitrary data-egress hosts stay closed.
-- `--ssh` remains fail-closed until reopened by a no-secret runtime proof.
-  Source review of Apple `container` `1.0.0-34-g9bd3c47` confirmed the non-root
-  agent-socket permission blocker persists (the relay socket inherits only the
-  host mode bits and is not chowned to the guest user; upstream #1751's test
-  forces a `0766` host socket for a non-root guest to connect). Do not re-enable
-  or make the host agent socket world-writable; see
-  `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`. Re-check when an upstream fix remaps the
-  guest socket ownership.
+- `--ssh` forwards the host SSH agent socket only (never raw keys, non-root),
+  and is re-enabled after a no-secret live smoke proved it works. On macOS 26+
+  with Apple `container` 1.0.0, the default launchd SSH agent socket is
+  world-accessible (`srw-rw-rw-`), so the forwarded socket is usable by the
+  non-root `agent` user: `runhaven run --ssh` -> `ssh-add -l` returns the
+  no-identities status (verified end to end), not permission denied. It is an
+  explicit, warned lower-security choice (the sandboxed agent can use the host's
+  SSH identities). A private `0600` agent socket (a fresh `ssh-agent`) is
+  permission-denied inside the guest, which fails safe (the agent simply cannot
+  use it). See `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`.
 - User-facing writing is product behavior. UI text, menus, prompts, warnings,
   docs, and setup instructions should be short, concrete, and nontechnical.
 

@@ -201,26 +201,11 @@ sleep 30
   printf 'internal run %s stopped after status %s\n' "$INTERNAL_RUN_ID" "$run_status"
 }
 
-expect_ssh_disabled_error() {
-  local stderr_path="$1"
-
-  grep -F "SSH forwarding is disabled" "$stderr_path" >/dev/null || {
-    print_file "$stderr_path"
-    fail "SSH command did not explain the disabled forwarding boundary"
-  }
-  grep -F "Apple container 1.0.0" "$stderr_path" >/dev/null || {
-    print_file "$stderr_path"
-    fail "SSH command did not name the pinned Apple container blocker"
-  }
-}
-
 plan_ssh_smoke() {
   local stdout_path="$TMP_ROOT/ssh-plan.stdout.txt"
   local stderr_path="$TMP_ROOT/ssh-plan.stderr.txt"
-  local status=0
 
-  step "check SSH forwarding plan fails closed"
-  set +e
+  step "check SSH forwarding plan forwards the agent socket and warns"
   "$RUNHAVEN_BIN" plan shell \
     --workspace "$WORKSPACE" \
     --session "$SSH_SESSION" \
@@ -230,22 +215,32 @@ plan_ssh_smoke() {
     --no-interactive \
     --tty never \
     -- /bin/bash -lc true >"$stdout_path" 2>"$stderr_path"
-  status=$?
-  set -e
 
-  [ "$status" -ne 0 ] || {
+  grep -F -- "--ssh" "$stdout_path" >/dev/null || {
     print_file "$stdout_path"
-    fail "SSH plan unexpectedly succeeded"
+    fail "SSH plan did not forward the agent socket (--ssh)"
   }
-  expect_ssh_disabled_error "$stderr_path"
+  grep -F "SSH agent forwarding" "$stderr_path" >/dev/null || {
+    print_file "$stderr_path"
+    fail "SSH plan did not warn about agent forwarding"
+  }
 }
 
 run_ssh_smoke() {
   local stdout_path="$TMP_ROOT/ssh-run.stdout.txt"
   local stderr_path="$TMP_ROOT/ssh-run.stderr.txt"
-  local status=0
 
-  step "check SSH forwarding run fails closed"
+  # No-secret proof: the non-root agent must reach the forwarded agent socket.
+  # Uses the caller's existing SSH_AUTH_SOCK (macOS launchd provides a
+  # world-accessible srw-rw-rw- socket). A private 0600 socket from a fresh
+  # ssh-agent is permission-denied inside the guest and fails safe, so do not
+  # start one here.
+  if [ -z "${SSH_AUTH_SOCK:-}" ]; then
+    step "SSH_AUTH_SOCK not set; skipping SSH connectivity smoke (macOS launchd normally provides it)"
+    return 0
+  fi
+
+  step "check SSH forwarding run: non-root agent connects to the forwarded agent (no-secret)"
   set +e
   "$RUNHAVEN_BIN" run shell \
     --workspace "$WORKSPACE" \
@@ -255,15 +250,19 @@ run_ssh_smoke() {
     --ssh \
     --no-interactive \
     --tty never \
-    -- /bin/bash -lc true >"$stdout_path" 2>"$stderr_path"
-  status=$?
+    -- /bin/bash -lc 'ssh-add -l 2>&1; echo "ssh_add_rc=$?"' >"$stdout_path" 2>"$stderr_path"
   set -e
 
-  [ "$status" -ne 0 ] || {
+  if grep -qiE "permission denied|error connecting|could not open a connection" "$stdout_path" "$stderr_path"; then
     print_file "$stdout_path"
-    fail "SSH run unexpectedly succeeded"
+    print_file "$stderr_path"
+    fail "SSH forwarding run could not reach the forwarded agent socket (is SSH_AUTH_SOCK world-accessible? macOS launchd default is srw-rw-rw-)"
+  fi
+  grep -qiE "no identities|SHA256:|[0-9]{3,} " "$stdout_path" || {
+    print_file "$stdout_path"
+    print_file "$stderr_path"
+    fail "SSH forwarding run did not confirm agent connectivity via ssh-add -l"
   }
-  expect_ssh_disabled_error "$stderr_path"
 }
 
 plan_provider_smoke() {
@@ -331,7 +330,7 @@ if [ "$RUN_SSH" -eq 1 ]; then
   run_ssh_smoke
 else
   step "skip SSH run refusal check"
-  echo "Use --with-ssh to also verify that runhaven run --ssh fails closed before launch."
+  echo "Use --with-ssh to also verify that runhaven --ssh forwards the agent socket and a non-root agent can reach it (no-secret ssh-add -l)."
 fi
 plan_provider_smoke
 if [ "$RUN_PROVIDER" -eq 1 ]; then
