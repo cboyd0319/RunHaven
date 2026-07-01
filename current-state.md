@@ -1657,17 +1657,20 @@ Latest GUI local prototype:
   handles. Reuse repo-vendored utility code only when it fits this RunHaven
   launch ownership model; do not import Codex app-server, exec-server, MCP,
   login, filesystem, or host-reaching surfaces as GUI shortcuts.
-- 2026-06-30 standard launch runner seam: Added a `runhaven-core`
-  `AgentCommandRunner` seam for standard non-provider launches. The normal CLI
-  path still uses `Command::status`, but the lifecycle can now accept a
-  backend-owned runner while preserving active-run marker creation, marker
-  cleanup, and run-record writing. Apple container evidence from installed
-  `container` 1.0.0 plus `apple/container@9bd3c473451a40a1ee28f02104826d224636948d`
-  confirms the GUI input path must retain the original `container run
-  --interactive` process handle; `container exec` starts a separate process and
-  `container start` cannot attach to already-running containers. Provider-mode
-  launches still need the same runner seam before selected-session input can be
-  exposed.
+- 2026-06-30 standard and provider launch runner seam: Added a
+  `runhaven-core` `AgentCommandRunner` seam for standard non-provider launches
+  and provider-network launches. The normal CLI path still uses
+  `Command::status`, but both launch modes can now accept a backend-owned runner
+  while preserving active-run marker creation, marker cleanup, run-record
+  writing, and provider-prepared command rewrites. Apple container evidence from
+  installed `container` 1.0.0 plus public Apple source commit
+  `apple/container@9bd3c473451a40a1ee28f02104826d224636948d` confirms the GUI
+  input path must retain the original `container run --interactive --tty`
+  process handle; `container exec` starts a separate process and `container start`
+  cannot attach to already-running containers. Next selected-session
+  input work should move Tauri launch ownership to a backend runner that keeps a
+  child stdin handle and registers it with `SessionInputRegistry`, without
+  exposing a write command or capability first.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external

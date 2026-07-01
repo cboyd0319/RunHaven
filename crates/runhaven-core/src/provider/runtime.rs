@@ -13,15 +13,14 @@ use crate::provider::auth_broker::{
 };
 use crate::provider::egress::{EgressPolicy, ProxyDecision, ThreadedAllowlistProxy};
 use crate::provider::observability::{
-    print_provider_blocked_host_review, utc_timestamp, write_auth_broker_log,
-    write_provider_policy_log,
+    print_provider_blocked_host_review, write_auth_broker_log, write_provider_policy_log,
 };
 use crate::records::{RunRecordInput, write_run_record};
-use crate::runtime::active::{
-    active_run_terminal_status, remove_active_run_record, write_active_run_record,
+use crate::runtime::launch::{
+    AgentCommandExecution, AgentCommandRunner, StatusAgentCommandRunner,
+    run_agent_command_lifecycle,
 };
 use crate::runtime::plans::AgentRunPlan;
-use crate::support::git::{capture_git_snapshot, summarize_git_change};
 
 #[derive(Clone, Debug)]
 pub struct InternalNetworkInfo {
@@ -30,6 +29,14 @@ pub struct InternalNetworkInfo {
 }
 
 pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
+    let mut runner = StatusAgentCommandRunner;
+    run_provider_agent_with_runner(plan, &mut runner)
+}
+
+pub(crate) fn run_provider_agent_with_runner(
+    plan: &AgentRunPlan,
+    runner: &mut impl AgentCommandRunner,
+) -> Result<i32> {
     let network_name = plan
         .network_name
         .as_ref()
@@ -55,7 +62,6 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
     let mut finished_at = None;
     let mut terminal_status = None;
     let mut git = None;
-    let mut active_recorded = false;
 
     let result = (|| -> Result<i32> {
         for command in &plan.preflight {
@@ -106,47 +112,24 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
             with_provider_proxy_environment(plan, &proxy_url, &[])
         };
 
-        let before = capture_git_snapshot(&plan.workspace);
-        let started = utc_timestamp();
-        eprintln!("Run id: {run_id}");
-        write_active_run_record(plan, &run_id, &started)?;
-        active_recorded = true;
-        let token_injection = crate::runtime::login::run_token_injection(plan);
-        let command = match &token_injection {
-            Some((env, _)) => crate::runtime::login::with_token_env(&command, &plan.image, env),
-            None => command,
-        };
-        let mut agent_command = Command::new(&command[0]);
-        agent_command.args(&command[1..]);
-        if let Some((env, value)) = &token_injection {
-            eprintln!(
-                "Using your stored {} login (injected into the sandbox env).",
-                plan.profile_name
-            );
-            agent_command.env(env, value);
-        }
-        let status = agent_command.status();
-        terminal_status = active_run_terminal_status(&run_id);
-        let finished = utc_timestamp();
-        git = Some(summarize_git_change(
-            before,
-            capture_git_snapshot(&plan.workspace),
-        ));
+        let execution = run_provider_agent_command_with_runner(plan, &run_id, command, runner)?;
+        let AgentCommandExecution {
+            started_at: started,
+            finished_at: finished,
+            return_code: code,
+            terminal_status: status,
+            git: git_change,
+            command_error,
+        } = execution;
+        terminal_status = status;
         started_at = Some(started);
         finished_at = Some(finished);
-        match status {
-            Ok(status) => {
-                let code = status.code().unwrap_or(1);
-                return_code = Some(code);
-                Ok(code)
-            }
-            Err(error) => {
-                return_code = Some(1);
-                Err(anyhow::anyhow!(
-                    "could not launch provider agent command {:?}: {error}",
-                    command[0]
-                ))
-            }
+        git = Some(git_change);
+        return_code = Some(code);
+        if let Some(error) = command_error {
+            Err(error)
+        } else {
+            Ok(code)
         }
     })();
 
@@ -206,14 +189,20 @@ pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
     } else {
         decision_log_result
     };
-    if active_recorded {
-        let _ = remove_active_run_record(&run_id);
-    }
     match (result, record_result) {
         (Ok(code), Ok(())) => Ok(code),
         (Ok(_), Err(error)) => Err(error),
         (Err(error), _) => Err(error),
     }
+}
+
+fn run_provider_agent_command_with_runner(
+    plan: &AgentRunPlan,
+    run_id: &str,
+    command: Vec<String>,
+    runner: &mut impl AgentCommandRunner,
+) -> Result<AgentCommandExecution> {
+    run_agent_command_lifecycle(plan, run_id, command, runner)
 }
 
 type DecisionKey = (String, u16, String, String, String);

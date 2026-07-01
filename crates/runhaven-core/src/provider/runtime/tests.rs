@@ -1,4 +1,6 @@
 use super::*;
+use crate::runtime::launch::{AgentCommandContext, AgentCommandRunner};
+use crate::support::paths::override_cache_root_for_tests;
 use std::io::{Read, Write};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::thread;
@@ -240,4 +242,60 @@ fn provider_decision_deltas_only_emit_new_counts() {
     let deltas = provider_decision_deltas(&next, &mut seen);
     assert_eq!(deltas.len(), 1);
     assert_eq!(deltas[0].count, 3);
+}
+
+struct RecordingProviderRunner {
+    expected_run_id: String,
+    command: Option<Vec<String>>,
+    saw_active_marker: bool,
+}
+
+impl AgentCommandRunner for RecordingProviderRunner {
+    fn run_agent_command(
+        &mut self,
+        command: &[String],
+        env: Option<(&str, &str)>,
+        context: AgentCommandContext<'_>,
+    ) -> Result<i32> {
+        assert_eq!(context.run_id, self.expected_run_id);
+        assert_eq!(
+            context.plan.run_id.as_deref(),
+            Some(self.expected_run_id.as_str())
+        );
+        assert!(env.is_none());
+        self.command = Some(command.to_vec());
+        self.saw_active_marker =
+            crate::runtime::active::find_active_run_record(context.run_id).is_ok();
+        Ok(0)
+    }
+}
+
+#[test]
+fn provider_agent_command_can_use_backend_owned_runner() {
+    let cache = tempfile::tempdir().expect("cache");
+    let _cache_home = override_cache_root_for_tests(cache.path());
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut plan = broker_plan("codex", "codex");
+    plan.workspace = workspace.path().to_path_buf();
+    plan.run_id = Some("provider-runner-seam".to_string());
+    let command = with_provider_proxy_environment(&plan, "http://192.0.2.1:8080", &["192.0.2.1"]);
+    assert_ne!(command, plan.command);
+    let mut runner = RecordingProviderRunner {
+        expected_run_id: "provider-runner-seam".to_string(),
+        command: None,
+        saw_active_marker: false,
+    };
+
+    let execution = run_provider_agent_command_with_runner(
+        &plan,
+        "provider-runner-seam",
+        command.clone(),
+        &mut runner,
+    )
+    .expect("provider command runner");
+
+    assert_eq!(execution.return_code, 0);
+    assert_eq!(runner.command.as_deref(), Some(command.as_slice()));
+    assert!(runner.saw_active_marker);
+    assert!(crate::runtime::active::find_active_run_record("provider-runner-seam").is_err());
 }

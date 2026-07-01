@@ -12,7 +12,7 @@ use crate::runtime::active::{
     active_run_terminal_status, remove_active_run_record, write_active_run_record,
 };
 use crate::runtime::plans::{AgentRunPlan, NetworkMode};
-use crate::support::git::{capture_git_snapshot, summarize_git_change};
+use crate::support::git::{GitChange, capture_git_snapshot, summarize_git_change};
 
 pub struct AgentCommandContext<'a> {
     pub plan: &'a AgentRunPlan,
@@ -29,7 +29,16 @@ pub trait AgentCommandRunner {
     ) -> Result<i32>;
 }
 
-struct StatusAgentCommandRunner;
+pub(crate) struct AgentCommandExecution {
+    pub(crate) started_at: String,
+    pub(crate) finished_at: String,
+    pub(crate) return_code: i32,
+    pub(crate) terminal_status: Option<String>,
+    pub(crate) git: GitChange,
+    pub(crate) command_error: Option<anyhow::Error>,
+}
+
+pub(crate) struct StatusAgentCommandRunner;
 
 impl AgentCommandRunner for StatusAgentCommandRunner {
     fn run_agent_command(
@@ -55,17 +64,25 @@ pub fn new_run_id() -> String {
 }
 
 pub fn launch_run_plan(plan: &AgentRunPlan) -> Result<i32> {
+    let mut runner = StatusAgentCommandRunner;
+    launch_run_plan_with_runner(plan, &mut runner)
+}
+
+pub fn launch_run_plan_with_runner(
+    plan: &AgentRunPlan,
+    runner: &mut impl AgentCommandRunner,
+) -> Result<i32> {
     provider_runtime::validate_runtime_auth_broker_environment(plan)?;
     require_container_cli()?;
     ensure_agent_image_built(plan)?;
     let _state_lock = acquire_state_lock(&plan.state_volume)?;
     if plan.network_mode == NetworkMode::Provider {
-        return provider_runtime::run_provider_agent(plan);
+        return provider_runtime::run_provider_agent_with_runner(plan, runner);
     }
     for command in &plan.preflight {
         provider_runtime::run_preflight(command)?;
     }
-    run_standard_agent(plan)
+    run_standard_agent_with_runner(plan, runner)
 }
 
 /// Fail early with an actionable message when the agent image is not built,
@@ -101,44 +118,15 @@ pub fn run_standard_agent_with_runner(
     runner: &mut impl AgentCommandRunner,
 ) -> Result<i32> {
     let run_id = plan.run_id.clone().unwrap_or_else(new_run_id);
-    let git_before = capture_git_snapshot(&plan.workspace);
-    let started_at = utc_timestamp();
-    eprintln!("Run id: {run_id}");
-    write_active_run_record(plan, &run_id, &started_at)?;
-    let injection = crate::runtime::login::run_token_injection(plan);
-    let command = match &injection {
-        Some((env, _)) => crate::runtime::login::with_token_env(&plan.command, &plan.image, env),
-        None => plan.command.clone(),
-    };
-    if injection.is_some() {
-        eprintln!(
-            "Using your stored {} login (injected into the sandbox env).",
-            plan.profile_name
-        );
-    }
-    let status_result = runner.run_agent_command(
-        &command,
-        injection
-            .as_ref()
-            .map(|(env, value)| (env.as_str(), value.as_str())),
-        AgentCommandContext {
-            plan,
-            run_id: &run_id,
-            started_at: &started_at,
-        },
-    );
-    let terminal_status = active_run_terminal_status(&run_id);
-    let _ = remove_active_run_record(&run_id);
-    let finished_at = utc_timestamp();
-    let mut command_error = None;
-    let return_code = match status_result {
-        Ok(code) => code,
-        Err(error) => {
-            command_error = Some(error);
-            1
-        }
-    };
-    let git = summarize_git_change(git_before, capture_git_snapshot(&plan.workspace));
+    let execution = run_agent_command_lifecycle(plan, &run_id, plan.command.clone(), runner)?;
+    let AgentCommandExecution {
+        started_at,
+        finished_at,
+        return_code,
+        terminal_status,
+        git,
+        command_error,
+    } = execution;
     write_run_record(RunRecordInput {
         plan,
         run_id: &run_id,
@@ -155,6 +143,60 @@ pub fn run_standard_agent_with_runner(
         return Err(error);
     }
     Ok(return_code)
+}
+
+pub(crate) fn run_agent_command_lifecycle(
+    plan: &AgentRunPlan,
+    run_id: &str,
+    command: Vec<String>,
+    runner: &mut impl AgentCommandRunner,
+) -> Result<AgentCommandExecution> {
+    let git_before = capture_git_snapshot(&plan.workspace);
+    let started_at = utc_timestamp();
+    eprintln!("Run id: {run_id}");
+    write_active_run_record(plan, run_id, &started_at)?;
+    let injection = crate::runtime::login::run_token_injection(plan);
+    let command = match &injection {
+        Some((env, _)) => crate::runtime::login::with_token_env(&command, &plan.image, env),
+        None => command,
+    };
+    if injection.is_some() {
+        eprintln!(
+            "Using your stored {} login (injected into the sandbox env).",
+            plan.profile_name
+        );
+    }
+    let status_result = runner.run_agent_command(
+        &command,
+        injection
+            .as_ref()
+            .map(|(env, value)| (env.as_str(), value.as_str())),
+        AgentCommandContext {
+            plan,
+            run_id,
+            started_at: &started_at,
+        },
+    );
+    let terminal_status = active_run_terminal_status(run_id);
+    let _ = remove_active_run_record(run_id);
+    let finished_at = utc_timestamp();
+    let mut command_error = None;
+    let return_code = match status_result {
+        Ok(code) => code,
+        Err(error) => {
+            command_error = Some(error);
+            1
+        }
+    };
+    let git = summarize_git_change(git_before, capture_git_snapshot(&plan.workspace));
+    Ok(AgentCommandExecution {
+        started_at,
+        finished_at,
+        return_code,
+        terminal_status,
+        git,
+        command_error,
+    })
 }
 
 pub fn require_container_cli() -> Result<()> {
@@ -179,6 +221,11 @@ mod tests {
         saw_active_marker: bool,
     }
 
+    struct FailingRunner {
+        expected_run_id: String,
+        saw_active_marker: bool,
+    }
+
     impl AgentCommandRunner for RecordingRunner {
         fn run_agent_command(
             &mut self,
@@ -196,6 +243,21 @@ mod tests {
             self.saw_active_marker =
                 crate::runtime::active::find_active_run_record(context.run_id).is_ok();
             Ok(0)
+        }
+    }
+
+    impl AgentCommandRunner for FailingRunner {
+        fn run_agent_command(
+            &mut self,
+            _command: &[String],
+            env: Option<(&str, &str)>,
+            context: AgentCommandContext<'_>,
+        ) -> Result<i32> {
+            assert_eq!(context.run_id, self.expected_run_id);
+            assert!(env.is_none());
+            self.saw_active_marker =
+                crate::runtime::active::find_active_run_record(context.run_id).is_ok();
+            Err(anyhow::anyhow!("backend runner failed"))
         }
     }
 
@@ -255,5 +317,37 @@ mod tests {
         assert_eq!(runner.command.as_deref(), Some(plan.command.as_slice()));
         assert!(runner.saw_active_marker);
         assert!(crate::runtime::active::find_active_run_record("runner-seam").is_err());
+    }
+
+    #[test]
+    fn standard_launch_records_and_cleans_up_failed_backend_runner() {
+        let cache = tempfile::tempdir().expect("cache");
+        let _cache_home = override_cache_root_for_tests(cache.path());
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut plan = test_plan(workspace.path());
+        plan.run_id = Some("runner-error-seam".to_string());
+        let mut runner = FailingRunner {
+            expected_run_id: "runner-error-seam".to_string(),
+            saw_active_marker: false,
+        };
+
+        let error = run_standard_agent_with_runner(&plan, &mut runner).expect_err("runner failure");
+
+        assert!(error.to_string().contains("backend runner failed"));
+        assert!(runner.saw_active_marker);
+        assert!(crate::runtime::active::find_active_run_record("runner-error-seam").is_err());
+        let record = crate::records::find_run_record("runner-error-seam").expect("run record");
+        assert_eq!(
+            record
+                .pointer("/return_code")
+                .and_then(serde_json::Value::as_i64),
+            Some(1)
+        );
+        assert_eq!(
+            record
+                .pointer("/status")
+                .and_then(serde_json::Value::as_str),
+            Some("failed")
+        );
     }
 }

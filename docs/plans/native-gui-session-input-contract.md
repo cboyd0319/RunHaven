@@ -18,10 +18,10 @@ writes when no backend transport is registered or when the registered run no
 longer matches the active session. No production launch path registers a writer
 yet.
 
-RunHaven core now also has an `AgentCommandRunner` seam for standard
-non-provider launches. The normal CLI path still uses `Command::status`, while
-a future GUI runner can retain a backend-owned child stdin handle and register
-it with `SessionInputRegistry`.
+RunHaven core now also has an `AgentCommandRunner` seam for standard and
+provider launches. The normal CLI path still uses `Command::status`, while a
+future GUI runner can retain a backend-owned child stdin handle and register it
+with `SessionInputRegistry`.
 
 Contract checklist: backend-owned session ID, explicit user intent, bounded input,
 cancellation, stale target, multi-session, auth, and resize remains out of scope.
@@ -237,9 +237,8 @@ Live smoke:
 1. Add Rust contract tests around a test-only write seam. Done.
 2. Add request and response structs without granting a capability. Done.
 3. Add a backend-owned input registry without granting a capability. Done.
-4. Add a core launch runner seam before changing GUI launch ownership. In
-   progress for standard non-provider launches; provider launches need the same
-   treatment before agent input is exposed.
+4. Add a core launch runner seam before changing GUI launch ownership. Done for
+   standard and provider launches.
 5. Decide the real launch transport from RunHaven's GUI needs first. Reuse a
    repo-vendored utility such as `codex-utils-pty` only if it fits the retained
    process-handle model. Do not import Codex app-server, exec-server, MCP,
