@@ -15,7 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { DiagnosticsCard } from "./DiagnosticsCard"
 import { LastLaunchCard } from "./LastLaunchCard"
 import { LaunchPlanCard } from "./LaunchPlanCard"
-import { ManagedSessionCard } from "./ManagedSessionCard"
+import { ManagedSessionCard, sessionAllowsRunControl } from "./ManagedSessionCard"
 import { PlanReviewCard } from "./PlanReviewCard"
 import { RunOutputCard } from "./RunOutputCard"
 import { RunStatusCard } from "./RunStatusCard"
@@ -146,20 +146,22 @@ function SessionView(
         onDraftChange={props.onSessionInputDraftChange}
         onSend={props.onSendSelectedSessionInput}
       />
-      <RunStatusCard
-        title="Session controls"
-        controlTarget="session"
-        showStatus={false}
-        runStatus={null}
-        runStatusLoading={false}
-        runStatusError=""
-        controlBusy={props.controlBusy}
-        controlError={props.controlError}
-        controlMessage={props.controlMessage}
-        controlConfirmations={props.controlConfirmations}
-        onConfirmationChange={props.onControlConfirmationChange}
-        onControl={props.onControl}
-      />
+      {sessionAllowsRunControl(props.selectedSession) ? (
+        <RunStatusCard
+          title="Session controls"
+          controlTarget="session"
+          showStatus={false}
+          runStatus={null}
+          runStatusLoading={false}
+          runStatusError=""
+          controlBusy={props.controlBusy}
+          controlError={props.controlError}
+          controlMessage={props.controlMessage}
+          controlConfirmations={props.controlConfirmations}
+          onConfirmationChange={props.onControlConfirmationChange}
+          onControl={props.onControl}
+        />
+      ) : null}
       <OutputView runOutput={props.runOutput} />
     </>
   )

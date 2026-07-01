@@ -86,7 +86,7 @@ export function RunHavenSidebar({
         </SidebarGroup>
         {sessions.length > 0 ? (
           <SidebarGroup>
-            <SidebarGroupLabel>Active sessions</SidebarGroupLabel>
+            <SidebarGroupLabel>Sessions</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {sessions.map((session) => (

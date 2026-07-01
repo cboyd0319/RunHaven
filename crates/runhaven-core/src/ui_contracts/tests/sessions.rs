@@ -67,6 +67,92 @@ fn managed_session_list_contract_merges_active_runs_with_auth_status() {
 }
 
 #[test]
+fn managed_session_list_includes_recent_finished_records_without_overriding_active_runs() {
+    let data = ManagedSessionListData::from_active_and_recent_runs(
+        [serde_json::json!({
+            "timestamp": "2026-06-30T02:00:00Z",
+            "run_id": "run-still-active",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/active",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-active-run",
+            "state_volume": "runhaven-codex-active-home",
+            "auth_scope": "project",
+            "session": "active"
+        })],
+        [
+            serde_json::json!({
+                "timestamp": "2026-06-30T04:00:00Z",
+                "started_at": "2026-06-30T02:00:00Z",
+                "finished_at": "2026-06-30T04:00:00Z",
+                "run_id": "run-still-active",
+                "profile": "codex",
+                "workspace": "/sensitive/workspaces/active",
+                "network": "provider",
+                "status": "failed",
+                "auth_scope": "project",
+                "state_volume": "runhaven-codex-record-home",
+                "session": "active"
+            }),
+            serde_json::json!({
+                "timestamp": "2026-06-30T03:00:00Z",
+                "started_at": "2026-06-30T01:00:00Z",
+                "finished_at": "2026-06-30T03:00:00Z",
+                "run_id": "run-finished",
+                "profile": "claude",
+                "workspace": "/sensitive/workspaces/finished",
+                "network": "provider",
+                "status": "succeeded",
+                "auth_scope": "agent",
+                "state_volume": "runhaven-claude-record-home",
+                "session": "finished"
+            }),
+        ],
+        serde_json::json!({
+            "profiles": [
+                {"name": "codex", "status": "api-key-broker"},
+                {"name": "claude", "status": "unknown"}
+            ]
+        }),
+    );
+
+    assert_eq!(data.sessions.len(), 2);
+    let active = data
+        .sessions
+        .iter()
+        .find(|session| session.run_id == "run-still-active")
+        .expect("active session");
+    assert_eq!(active.status, "running");
+    assert_eq!(active.container_name, "runhaven-codex-active-run");
+    assert_eq!(active.next_action.kind, "monitor");
+
+    let finished = data
+        .sessions
+        .iter()
+        .find(|session| session.run_id == "run-finished")
+        .expect("finished session");
+    assert_eq!(finished.status, "succeeded");
+    assert_eq!(finished.lifecycle, "finished");
+    assert_eq!(finished.started_at, "2026-06-30T01:00:00Z");
+    assert_eq!(finished.container_name, "-");
+    assert!(!finished.input.attached);
+    assert_eq!(finished.next_action.kind, "none");
+
+    let encoded = serde_json::to_string(&data).expect("serialize managed sessions");
+    for forbidden in [
+        "/sensitive/workspaces",
+        "runhaven-codex-record-home",
+        "runhaven-claude-record-home",
+    ] {
+        assert!(
+            !encoded.contains(forbidden),
+            "managed session payload leaked forbidden value {forbidden:?}"
+        );
+    }
+}
+
+#[test]
 fn managed_session_component_payload_round_trips_json() {
     let data = ManagedSessionListData::from_active_runs_and_auth_status(
         [serde_json::json!({

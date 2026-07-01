@@ -151,7 +151,10 @@ them.
 
 Auth scope is now carried through active markers, run records, shared UI
 contracts, Tauri plan/launch/status/session responses, and the GUI session and
-plan cards. Continue the CLI+GUI goal from the hardest problems first: live
-container session ownership, real-agent auth/session behavior, multi-session
-isolation, typed status reporting, and fail-closed security boundaries. Keep
-the safe path short, stable, and nontechnical.
+plan cards. Managed sessions now merge active markers with a bounded tail of
+recent run records so just-finished GUI sessions remain visible; active markers
+still win for control/input, and desktop output keeps a bounded recent buffer
+after process exit. Continue the CLI+GUI goal from the hardest problems first:
+real-agent auth/session behavior, multi-session isolation under real Apple
+container runs, typed status reporting, and fail-closed security boundaries.
+Keep the safe path short, stable, and nontechnical.

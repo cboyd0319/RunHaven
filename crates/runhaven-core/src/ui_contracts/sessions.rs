@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
@@ -65,11 +65,32 @@ impl ManagedSessionListData {
         records: impl IntoIterator<Item = serde_json::Value>,
         auth_status: serde_json::Value,
     ) -> Self {
+        Self::from_active_and_recent_runs(records, std::iter::empty(), auth_status)
+    }
+
+    pub fn from_active_and_recent_runs(
+        active_records: impl IntoIterator<Item = serde_json::Value>,
+        recent_records: impl IntoIterator<Item = serde_json::Value>,
+        auth_status: serde_json::Value,
+    ) -> Self {
         let auth_by_agent = auth_profiles_by_name(&auth_status);
-        let mut sessions = records
-            .into_iter()
-            .map(|record| ManagedSessionSummaryData::from_active_run_record(record, &auth_by_agent))
-            .collect::<Vec<_>>();
+        let mut active_run_ids = BTreeSet::new();
+        let mut sessions = Vec::new();
+        for record in active_records {
+            let session = ManagedSessionSummaryData::from_active_run_record(record, &auth_by_agent);
+            active_run_ids.insert(session.run_id.clone());
+            sessions.push(session);
+        }
+        for record in recent_records {
+            let run_id = string_field(&record, "run_id");
+            if run_id.is_empty() || active_run_ids.contains(&run_id) {
+                continue;
+            }
+            sessions.push(ManagedSessionSummaryData::from_run_record(
+                record,
+                &auth_by_agent,
+            ));
+        }
         sessions.sort_by(|left, right| {
             right
                 .started_at
@@ -97,6 +118,48 @@ impl ManagedSessionSummaryData {
         let auth_scope = string_field(&record, "auth_scope");
         let network = string_field(&record, "network");
         let started_at = string_field(&record, "timestamp");
+        let lifecycle = managed_session_lifecycle(&status);
+        Self {
+            id: run_id.clone(),
+            run_id: run_id.clone(),
+            agent: agent.clone(),
+            session: string_field(&record, "session"),
+            title: format!("{} - {}", display_agent_name(&agent), project),
+            project,
+            status_label: status_label.clone(),
+            status,
+            auth_status: auth_status.clone(),
+            auth_scope,
+            network: network.clone(),
+            started_at: started_at.clone(),
+            container_name: string_field(&record, "container_name"),
+            detail_command: format!("runhaven runs show {run_id}"),
+            input: ManagedSessionInputData::detached(),
+            next_action: managed_session_next_action(&agent, &auth_status, &lifecycle),
+            events: managed_session_events(&status_label, &auth_status, &network, &started_at),
+            lifecycle,
+        }
+    }
+
+    fn from_run_record(
+        record: serde_json::Value,
+        auth_by_agent: &BTreeMap<String, String>,
+    ) -> Self {
+        let run_id = string_field(&record, "run_id");
+        let agent = string_field(&record, "profile");
+        let project = project_label(&string_field(&record, "workspace"));
+        let status = string_field(&record, "status");
+        let status_label = status_label(&status);
+        let auth_status = auth_by_agent
+            .get(&agent)
+            .cloned()
+            .unwrap_or_else(|| "unknown".to_string());
+        let auth_scope = string_field(&record, "auth_scope");
+        let network = string_field(&record, "network");
+        let started_at = first_non_empty(
+            string_field(&record, "started_at"),
+            string_field(&record, "timestamp"),
+        );
         let lifecycle = managed_session_lifecycle(&status);
         Self {
             id: run_id.clone(),
@@ -156,7 +219,9 @@ fn managed_session_next_action(
     auth_status: &str,
     lifecycle: &str,
 ) -> ManagedSessionNextActionData {
-    if managed_session_auth_needs_attention(agent, auth_status) {
+    if matches!(lifecycle, "running" | "starting")
+        && managed_session_auth_needs_attention(agent, auth_status)
+    {
         return ManagedSessionNextActionData {
             kind: "auth_attention".to_string(),
             label: "Finish auth setup".to_string(),
@@ -185,6 +250,14 @@ fn managed_session_next_action(
             label: "Review session".to_string(),
             detail: "RunHaven does not recognize this session state.".to_string(),
         },
+    }
+}
+
+fn first_non_empty(primary: String, fallback: String) -> String {
+    if primary.trim().is_empty() {
+        fallback
+    } else {
+        primary
     }
 }
 

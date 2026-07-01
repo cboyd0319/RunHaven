@@ -107,6 +107,11 @@ export function sessionNeedsAttention(session: ManagedSessionSummary): boolean {
   return session.nextAction.kind === "auth_attention"
 }
 
+export function sessionAllowsRunControl(session: ManagedSessionSummary): boolean {
+  const lifecycle = session.lifecycle.trim().toLowerCase()
+  return lifecycle === "running" || lifecycle === "starting"
+}
+
 function sessionBadgeVariant(
   session: ManagedSessionSummary,
 ): "destructive" | "secondary" | "success" | "warning" {

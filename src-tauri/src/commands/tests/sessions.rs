@@ -98,6 +98,59 @@ fn managed_sessions_report_input_transport_attachment() {
 }
 
 #[test]
+fn managed_sessions_include_recent_finished_records() {
+    let (_cache, _cache_home) = isolated_cache();
+    runhaven_core::support::paths::ensure_private_parent(
+        &runhaven_core::support::paths::runs_log_path(),
+    )
+    .expect("runs log parent");
+    let mut file =
+        std::fs::File::create(runhaven_core::support::paths::runs_log_path()).expect("runs log");
+    use std::io::Write;
+    writeln!(
+        file,
+        "{}",
+        json!({
+            "timestamp": "2026-06-30T09:00:00Z",
+            "started_at": "2026-06-30T08:00:00Z",
+            "finished_at": "2026-06-30T09:00:00Z",
+            "run_id": "managed-session-finished-record",
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/finished",
+            "network": "provider",
+            "status": "succeeded",
+            "auth_scope": "project",
+            "state_volume": "runhaven-codex-finished-home",
+            "session": "finished",
+            "token": "should-not-leak"
+        })
+    )
+    .expect("write run record");
+
+    let response = crate::commands::sessions::get_managed_sessions_for_test(None)
+        .expect("managed sessions response");
+
+    assert_eq!(response.sessions.len(), 1);
+    let session = &response.sessions[0];
+    assert_eq!(session.id, "managed-session-finished-record");
+    assert_eq!(session.lifecycle, "finished");
+    assert_eq!(session.next_action.kind, "none");
+    assert!(!session.input.attached);
+
+    let encoded = serde_json::to_string(&response).expect("serialize managed sessions");
+    for forbidden in [
+        "/sensitive/workspaces",
+        "runhaven-codex-finished-home",
+        "should-not-leak",
+    ] {
+        assert!(
+            !encoded.contains(forbidden),
+            "managed session history leaked forbidden value {forbidden:?}"
+        );
+    }
+}
+
+#[test]
 fn managed_session_log_snapshot_resolves_session_id_and_stays_read_only() {
     let (_cache, _cache_home) = isolated_cache();
     write_active_run_payload(

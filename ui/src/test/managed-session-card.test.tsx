@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ManagedSessionCard,
+  sessionAllowsRunControl,
   sessionNeedsAttention
 } from "../app/ManagedSessionCard";
 import type { ManagedSessionSummary } from "../commands/runhaven";
@@ -103,5 +104,12 @@ describe("ManagedSessionCard", () => {
     expect(html).toContain("Finish auth setup");
     expect(html).toContain("Auth is not ready for Codex.");
     expect(html).not.toContain("Start session");
+  });
+
+  it("allows run controls only while a session is active", () => {
+    expect(sessionAllowsRunControl(session({ lifecycle: "running" }))).toBe(true);
+    expect(sessionAllowsRunControl(session({ lifecycle: "starting" }))).toBe(true);
+    expect(sessionAllowsRunControl(session({ lifecycle: "finished" }))).toBe(false);
+    expect(sessionAllowsRunControl(session({ lifecycle: "failed" }))).toBe(false);
   });
 });

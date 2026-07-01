@@ -1,4 +1,5 @@
 use runhaven_core::diagnostics::auth_status_payload;
+use runhaven_core::records::read_run_records_tail_bounded;
 use runhaven_core::runtime::active::read_active_run_records;
 use runhaven_core::ui_contracts::{
     ManagedSessionInputData, ManagedSessionListData, ManagedSessionSummaryData,
@@ -15,6 +16,8 @@ use crate::session_output::SessionOutputRegistry;
 
 const RAW_OUTPUT_REDACTION_MESSAGE: &str = "Raw output is not automatically redacted.";
 const MAX_SESSION_INPUT_BYTES: usize = 8 * 1024;
+const MANAGED_SESSION_HISTORY_LIMIT: usize = 20;
+const MANAGED_SESSION_HISTORY_TAIL_BYTES: u64 = 256 * 1024;
 
 #[tauri::command]
 pub(crate) fn get_managed_sessions(
@@ -152,8 +155,14 @@ fn managed_session_list(
     input_registry: Option<&SessionInputRegistry>,
 ) -> Result<ManagedSessionListData, String> {
     let active_runs = read_active_run_records();
-    let mut sessions = ManagedSessionListData::from_active_runs_and_auth_status(
+    let recent_runs = read_run_records_tail_bounded(
+        MANAGED_SESSION_HISTORY_LIMIT,
+        MANAGED_SESSION_HISTORY_TAIL_BYTES,
+    )
+    .map_err(|error| error.to_string())?;
+    let mut sessions = ManagedSessionListData::from_active_and_recent_runs(
         active_runs,
+        recent_runs,
         auth_status_payload(),
     );
     if let Some(input_registry) = input_registry {
