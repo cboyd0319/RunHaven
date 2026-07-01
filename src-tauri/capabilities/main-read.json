@@ -8,6 +8,8 @@
     "allow-list-agents",
     "allow-get-dashboard-status",
     "allow-get-image-status",
+    "allow-get-image-build-status",
+    "allow-get-network-prune-preview",
     "allow-get-run-status",
     "allow-plan-run",
     "allow-get-egress-log",

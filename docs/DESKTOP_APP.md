@@ -141,14 +141,34 @@ The app can show read-only diagnostics for a session: recent sign-in broker
 decisions and network decisions for that run. These show only safe summary
 details, never full paths, secrets, or request bodies.
 
+## Maintenance
+
+The Maintenance panel handles two safe upkeep tasks. Each one asks you to
+confirm in a native dialog before anything changes.
+
+- Rebuild an agent image. Use this when an agent image is missing or out of
+  date. RunHaven rebuilds it from the bundled template in the background and
+  shows live progress: building, then succeeded or failed, with a short,
+  secret-safe tail of the build output. Sessions that are already running keep
+  working until you launch a new one. The confirm dialog names the exact agent
+  and image tag.
+- Clean up stale networks. RunHaven first shows how many of its own leftover
+  networks it can remove, then removes only those after you confirm. A network
+  still used by a running session is skipped, not forced. The app shows only
+  counts, never network names.
+
+Resetting or pruning saved state stays in the command line on purpose. That
+task can erase an agent's saved sign-in across sessions, and previewing it needs
+saved-state names that the app never receives, so it fails closed rather than
+guess.
+
 ## What still needs the terminal
 
 For now, do these tasks with the `runhaven` command line
 ([docs/USAGE.md](USAGE.md)):
 
 - Full sign-in for every agent.
-- Maintenance such as resetting or pruning saved state, pruning networks, and
-  building or rebuilding agent images.
+- Resetting or pruning saved state.
 - The `why` checks that explain host, workspace, network, and state.
 
 These will move into the app over time. Until then, the app stays focused on the

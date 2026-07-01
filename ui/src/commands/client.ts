@@ -7,6 +7,10 @@ import {
   previewAuthStatus,
   previewDashboardStatus,
   previewImageStatus,
+  previewImageBuildStart,
+  previewImageBuildStatus,
+  previewNetworkPrunePreview,
+  previewNetworkPrune,
   previewLaunchStatus,
   previewLaunchRun,
   previewLogSnapshot,
@@ -65,6 +69,12 @@ import type {
   WorktreeReviewResponse,
   WriteSessionInputResponse
 } from "./types";
+import type {
+  ImageBuildStartResponse,
+  ImageBuildStatusResponse,
+  NetworkPrunePreview,
+  NetworkPruneResponse
+} from "./maintenance_types";
 
 export function hasTauriRuntime(): boolean {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -91,6 +101,30 @@ export async function getDashboardStatus(): Promise<DashboardStatus> {
 
 export async function getImageStatus(agent: string): Promise<ImageStatusResponse> {
   return call("get_image_status", { request: { agent } }, () => previewImageStatus(agent));
+}
+
+export async function rebuildAgentImage(agent: string): Promise<ImageBuildStartResponse> {
+  return call(
+    "rebuild_agent_image",
+    { request: { agent, confirm: true } },
+    () => previewImageBuildStart(agent)
+  );
+}
+
+export async function getImageBuildStatus(buildId: string): Promise<ImageBuildStatusResponse> {
+  return call(
+    "get_image_build_status",
+    { request: { buildId } },
+    () => previewImageBuildStatus(buildId)
+  );
+}
+
+export async function getNetworkPrunePreview(): Promise<NetworkPrunePreview> {
+  return call("get_network_prune_preview", {}, previewNetworkPrunePreview);
+}
+
+export async function pruneManagedNetworks(): Promise<NetworkPruneResponse> {
+  return call("prune_managed_networks", { request: { confirm: true } }, previewNetworkPrune);
 }
 
 export async function getRunStatus(runId: string): Promise<RunStatusResponse> {

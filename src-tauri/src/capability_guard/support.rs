@@ -43,6 +43,8 @@ pub(super) const MAIN_READ_FORBIDDEN_PERMISSIONS: &[&str] = &[
     "allow-merge-managed-session-worktree",
     "allow-recover-managed-session-worktree",
     "allow-discard-managed-session-worktree",
+    "allow-rebuild-agent-image",
+    "allow-prune-managed-networks",
 ];
 pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-get-log-snapshot", "get_log_snapshot"),
@@ -74,6 +76,8 @@ pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
         "allow-discard-managed-session-worktree",
         "discard_managed_session_worktree",
     ),
+    ("allow-rebuild-agent-image", "rebuild_agent_image"),
+    ("allow-prune-managed-networks", "prune_managed_networks"),
 ];
 
 pub(super) fn manifest_dir() -> PathBuf {

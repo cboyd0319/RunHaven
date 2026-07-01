@@ -18,6 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 import { DiagnosticsCard } from "./DiagnosticsCard"
 import { LastLaunchCard } from "./LastLaunchCard"
+import { MaintenanceCard } from "./MaintenanceCard"
 import { LaunchStatusCard } from "./LaunchStatusCard"
 import { LaunchPlanCard } from "./LaunchPlanCard"
 import {
@@ -152,6 +153,15 @@ export function AppMainContent(props: AppMainContentProps) {
             />
           </div>
         </details>
+
+        {setupReady ? (
+          <details className="rounded-xl border bg-card p-4 text-card-foreground">
+            <summary className="cursor-pointer text-sm font-medium">Maintenance</summary>
+            <div className="mt-4">
+              <MaintenanceCard agents={(dashboard?.agents ?? []).map((agent) => agent.name)} />
+            </div>
+          </details>
+        ) : null}
       </section>
     </main>
   )

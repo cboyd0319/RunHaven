@@ -93,6 +93,16 @@ Session views should update panels in place without full-page blink/remounts,
 without clearing user input drafts, and without falling back to the launch
 wizard unless the user changes context or the selected session disappears.
 
+In-app maintenance (V1 milestone M5, safe subset) is shipped: the Maintenance
+panel rebuilds an agent image (background build with sanitized, bounded,
+secret-redacted live status) and cleans up RunHaven-managed stale networks
+(count preview, confirm, count-only outcome). Both mutations are run-control
+commands behind a Rust-owned native confirmation and fail closed. State prune
+stays CLI-only on purpose: it can erase agent login/state across sessions and
+its preview needs saved-state names the WebView never receives. Live image
+build and network delete on a real Apple container host are a documented
+follow-up. End-user guide: `docs/DESKTOP_APP.md`.
+
 Useful GUI design docs:
 
 - `docs/plans/native-gui-reference-pass.md`

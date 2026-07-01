@@ -17,6 +17,8 @@
     "allow-keep-managed-session-worktree",
     "allow-merge-managed-session-worktree",
     "allow-recover-managed-session-worktree",
-    "allow-discard-managed-session-worktree"
+    "allow-discard-managed-session-worktree",
+    "allow-rebuild-agent-image",
+    "allow-prune-managed-networks"
   ]
 }

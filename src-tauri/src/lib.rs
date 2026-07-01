@@ -2,6 +2,8 @@
 mod capability_guard;
 mod commands;
 mod contracts;
+mod image_build_runner;
+mod image_build_status;
 mod launch_runner;
 mod launch_status;
 pub mod session_input;
@@ -13,11 +15,14 @@ pub fn run() {
         .manage(session_input::SessionInputRegistry::default())
         .manage(session_output::SessionOutputRegistry::default())
         .manage(launch_status::LaunchStatusRegistry::default())
+        .manage(image_build_status::ImageBuildStatusRegistry::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_setup_status,
             commands::list_agents,
             commands::get_dashboard_status,
             commands::image_status::get_image_status,
+            commands::image_build_status::get_image_build_status,
+            commands::network::get_network_prune_preview,
             commands::run_status::get_run_status,
             commands::log_snapshot::get_log_snapshot,
             commands::diagnostics::get_egress_log,
@@ -46,6 +51,8 @@ pub fn run() {
             commands::session_worktree::actions::merge_managed_session_worktree,
             commands::session_worktree::actions::recover_managed_session_worktree,
             commands::session_worktree::actions::discard_managed_session_worktree,
+            commands::image_build::rebuild_agent_image,
+            commands::network::prune_managed_networks,
             commands::launch::plan_run,
             commands::launch::launch_run,
         ])

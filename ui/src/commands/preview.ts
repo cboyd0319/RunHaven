@@ -19,6 +19,12 @@ import type {
   StateExplanationResponse,
   WorkspaceExplanationResponse
 } from "./types";
+import type {
+  ImageBuildStartResponse,
+  ImageBuildStatusResponse,
+  NetworkPrunePreview,
+  NetworkPruneResponse
+} from "./maintenance_types";
 
 export { previewLogSnapshot } from "./preview_output";
 export {
@@ -370,4 +376,36 @@ export function previewAuthStatus(): AuthStatusResponse {
       { name: "shell", status: "n/a" }
     ]
   };
+}
+
+export function previewImageBuildStart(agent: string): ImageBuildStartResponse {
+  return {
+    buildId: `preview-build-${agent}`,
+    agent,
+    tag: `runhaven/${agent}:preview`,
+    state: "building",
+    label: "Building",
+    detail: "Preview mode: no image is rebuilt without the desktop app."
+  };
+}
+
+export function previewImageBuildStatus(buildId: string): ImageBuildStatusResponse {
+  return {
+    buildId,
+    agent: "preview",
+    tag: "runhaven/preview:preview",
+    state: "succeeded",
+    label: "Succeeded",
+    detail: "Preview mode: rebuild status is simulated.",
+    outputTail: "Preview build output.",
+    updatedAt: "1970-01-01T00:00:00Z"
+  };
+}
+
+export function previewNetworkPrunePreview(): NetworkPrunePreview {
+  return { count: 0 };
+}
+
+export function previewNetworkPrune(): NetworkPruneResponse {
+  return { removed: 0, failed: 0 };
 }

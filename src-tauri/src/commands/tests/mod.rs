@@ -21,11 +21,13 @@ use std::process::Command;
 
 mod auth;
 mod image;
+mod image_build;
 mod launch_status;
 mod live;
 mod live_agent;
 mod live_support;
 mod log_snapshot;
+mod network;
 mod plan;
 mod run_control;
 mod run_status;
