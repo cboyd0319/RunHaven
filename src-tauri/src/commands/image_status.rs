@@ -7,13 +7,21 @@ use super::validation::{MAX_AGENT_NAME_LEN, validate_text_len};
 use crate::contracts::{
     BuilderStatus, ImageStatusRequest, ImageStatusResponse, ProfileImageStatus,
 };
+use crate::read_guard::ReadGuards;
 
 #[tauri::command]
-pub(crate) fn get_image_status(request: ImageStatusRequest) -> Result<ImageStatusResponse, String> {
+pub(crate) fn get_image_status(
+    request: ImageStatusRequest,
+    read_guards: tauri::State<'_, ReadGuards>,
+) -> Result<ImageStatusResponse, String> {
     validate_text_len("agent", &request.agent, MAX_AGENT_NAME_LEN)?;
-    collect_image_status(&request.agent)
-        .map(image_status_response)
-        .map_err(|error| error.to_string())
+    // Single-flight plus a 2s TTL cache (see `read_guard`), keyed per agent,
+    // so concurrent WebView polls cannot fork extra `container` subprocesses.
+    read_guards.image_status.run(&request.agent, || {
+        collect_image_status(&request.agent)
+            .map(image_status_response)
+            .map_err(|error| error.to_string())
+    })
 }
 
 fn image_status_response(report: ImageStatusReport) -> ImageStatusResponse {

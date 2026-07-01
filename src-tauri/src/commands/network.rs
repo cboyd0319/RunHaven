@@ -16,13 +16,21 @@ use tauri_plugin_dialog::MessageDialogKind;
 
 use super::dialog::confirm_native;
 use crate::contracts::{NetworkPrunePreview, NetworkPruneRequest, NetworkPruneResponse};
+use crate::read_guard::ReadGuards;
 
 const PRUNE_CANCELED: &str = "Network cleanup canceled; no networks were removed.";
 
 #[tauri::command]
-pub(crate) fn get_network_prune_preview() -> Result<NetworkPrunePreview, String> {
-    let count = managed_network_count()?;
-    Ok(NetworkPrunePreview { count })
+pub(crate) fn get_network_prune_preview(
+    read_guards: tauri::State<'_, ReadGuards>,
+) -> Result<NetworkPrunePreview, String> {
+    // Single-flight plus a 2s TTL cache (see `read_guard`) so concurrent
+    // WebView calls cannot fork extra `container network` subprocesses. The
+    // mutating prune below is never throttled or cached and re-counts fresh
+    // before its confirmation dialog.
+    read_guards.network_prune_preview.run("preview", || {
+        managed_network_count().map(|count| NetworkPrunePreview { count })
+    })
 }
 
 #[tauri::command]

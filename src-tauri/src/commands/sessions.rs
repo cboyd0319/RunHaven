@@ -8,6 +8,7 @@ use runhaven_core::ui_contracts::{
 };
 
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
+use crate::read_guard::ReadGuards;
 use crate::session_input::SessionInputRegistry;
 
 #[cfg(test)]
@@ -30,8 +31,17 @@ const MANAGED_SESSION_HISTORY_TAIL_BYTES: u64 = 256 * 1024;
 #[tauri::command]
 pub(crate) fn get_managed_sessions(
     input_registry: tauri::State<'_, SessionInputRegistry>,
+    read_guards: tauri::State<'_, ReadGuards>,
 ) -> Result<ManagedSessionListData, String> {
-    get_managed_sessions_with_input(Some(input_registry.inner()))
+    // Single-flight plus a 2s TTL cache (see `read_guard`): the whole
+    // collection step, including the per-session `container inspect` reconcile
+    // below, is one guarded probe, so concurrent WebView polls cannot fork
+    // extra `container` subprocesses. After a mutating command (stop, kill,
+    // repair, cleanup, launch) the next poll may serve a list up to 2s stale,
+    // which is at worst one extra poll cycle.
+    read_guards.managed_sessions.run("sessions", || {
+        get_managed_sessions_with_input(Some(input_registry.inner()))
+    })
 }
 
 fn get_managed_sessions_with_input(
@@ -59,7 +69,8 @@ pub(crate) fn reconcile_stale_sessions(
     container_gone: &dyn Fn(&str) -> Result<bool, String>,
 ) {
     // lean: this issues one `container inspect` per active session on each list
-    // poll (~4s) with no per-call timeout; N is small in normal use. If a
+    // poll (~4s) with no per-call timeout; N is small in normal use, and the
+    // command-level read guard coalesces concurrent polls into one pass. If a
     // degraded container service or large N becomes real, bound it with an
     // inspect timeout or a cheap pre-filter before adding more machinery.
     let mut stale = BTreeSet::new();

@@ -6,8 +6,9 @@ mod contracts;
 mod image_build_runner;
 mod launch_runner;
 mod launch_status;
+mod read_guard;
 mod registry_support;
-pub mod session_input;
+pub(crate) mod session_input;
 mod session_output;
 mod tail_status;
 
@@ -19,6 +20,7 @@ pub fn run() {
         .manage(launch_status::LaunchStatusRegistry::default())
         .manage(tail_status::ImageBuildStatusRegistry::default())
         .manage(tail_status::AgentSignInStatusRegistry::default())
+        .manage(read_guard::ReadGuards::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_dashboard_status,
             commands::image_status::get_image_status,
