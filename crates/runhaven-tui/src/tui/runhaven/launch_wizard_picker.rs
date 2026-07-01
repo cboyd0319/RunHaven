@@ -236,7 +236,7 @@ struct WorkspaceHeader {
 
 impl WorkspaceHeader {
     fn selected(&self) -> Option<&WorkspaceDecisionVm> {
-        selected_workspace(&self.workspaces, &self.selected_workspace_idx)
+        selected_workspace(self.workspaces.as_ref(), &self.selected_workspace_idx)
     }
 
     fn lines(&self) -> Vec<Line<'static>> {
@@ -291,7 +291,7 @@ struct WorkspacePreview {
 
 impl WorkspacePreview {
     fn selected(&self) -> Option<&WorkspaceDecisionVm> {
-        selected_workspace(&self.workspaces, &self.selected_workspace_idx)
+        selected_workspace(self.workspaces.as_ref(), &self.selected_workspace_idx)
     }
 
     fn lines(&self) -> Vec<Line<'static>> {
@@ -343,7 +343,7 @@ struct SafetyHeader {
 
 impl SafetyHeader {
     fn selected(&self) -> Option<&AgentDecisionVm> {
-        selected_decision(&self.decisions, &self.selected_idx)
+        selected_decision(self.decisions.as_ref(), &self.selected_idx)
     }
 
     fn lines(&self) -> Vec<Line<'static>> {

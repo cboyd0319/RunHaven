@@ -1,11 +1,11 @@
-use std::path::Path;
+#[cfg(test)]
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 
+#[cfg(test)]
 use super::service::AgentLaunchPreview;
-use super::service::LaunchPreviewError;
 #[cfg(test)]
 use super::service::LaunchPreviewPayload;
 use super::service::PreparedLaunch;
@@ -13,29 +13,18 @@ use super::service::WorkspaceLaunchPreview;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyModifiers;
-use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
-use ratatui::widgets::Paragraph;
-use ratatui::widgets::Wrap;
-use runhaven_core::ui_contracts::AgentCatalogItemData;
 use runhaven_core::ui_contracts::LaunchPlanData;
 
-use crate::key_hint;
 use crate::keymap::RuntimeKeymap;
-use crate::render::renderable::Renderable;
 use crate::style::boundary_style;
-use crate::style::danger_style;
 use crate::style::muted_but_readable_style;
-use crate::style::safe_style;
 use crate::style::selected_row_style;
-use crate::style::warning_style;
 use crate::tui::app_event::AppEvent;
 use crate::tui::app_event_sender::AppEventSender;
 use crate::tui::bottom_pane::BottomPaneView;
-use crate::tui::bottom_pane::CancellationEvent;
 use crate::tui::bottom_pane::ListSelectionView;
 use crate::tui::bottom_pane::TextArea;
 use crate::tui::bottom_pane::ViewCompletion;
@@ -55,25 +44,6 @@ pub(crate) struct LaunchWizardView {
     completion: Option<ViewCompletion>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct WorkspaceDecisionVm {
-    label: String,
-    description: String,
-    workspace: PathBuf,
-    decisions: Arc<Vec<AgentDecisionVm>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct AgentDecisionVm {
-    agent: AgentCatalogItemData,
-    plan: Result<PreparedLaunch, LaunchPreviewError>,
-    status_label: String,
-    auth_scope_label: String,
-    auth_label: String,
-    network_label: String,
-    boundary_label: String,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LaunchWizardScreen {
     ChooseWorkspace,
@@ -86,10 +56,26 @@ const CONFIRM_PHRASE: &str = "launch";
 const LAUNCH_PREPARED_NOTICE: &str = "Launch prepared. Starting in the terminal.";
 pub(crate) const LAUNCH_WIZARD_VIEW_ID: &str = "runhaven.launch_wizard";
 
+#[path = "launch_wizard_bottom_pane.rs"]
+mod bottom_pane_adapter;
 #[path = "launch_wizard_picker.rs"]
 mod picker;
 #[path = "launch_wizard_render.rs"]
 mod rendering;
+#[path = "launch_wizard_state.rs"]
+mod state;
+
+use state::AgentDecisionVm;
+use state::WorkspaceDecisionVm;
+use state::confirm_footer_line;
+use state::confirmation_matches;
+use state::label_value;
+use state::paragraph;
+use state::review_footer_line;
+use state::selected_decision;
+use state::selected_workspace;
+use state::workspace_title;
+use state::worktree_label;
 
 impl LaunchWizardView {
     #[cfg(test)]
@@ -114,7 +100,7 @@ impl LaunchWizardView {
                 .collect::<Vec<_>>(),
         );
         let selected_workspace_idx = Arc::new(AtomicUsize::new(0));
-        let decisions = selected_workspace(&workspaces, &selected_workspace_idx)
+        let decisions = selected_workspace(workspaces.as_ref(), &selected_workspace_idx)
             .map(|workspace| Arc::clone(&workspace.decisions))
             .unwrap_or_default();
         let selected_idx = Arc::new(AtomicUsize::new(0));
@@ -201,9 +187,12 @@ impl LaunchWizardView {
         self.selected_workspace_idx
             .store(selected, Ordering::Relaxed);
         self.selected_idx.store(0, Ordering::Relaxed);
-        self.decisions = selected_workspace(&self.workspace_choices, &self.selected_workspace_idx)
-            .map(|workspace| Arc::clone(&workspace.decisions))
-            .unwrap_or_default();
+        self.decisions = selected_workspace(
+            self.workspace_choices.as_ref(),
+            &self.selected_workspace_idx,
+        )
+        .map(|workspace| Arc::clone(&workspace.decisions))
+        .unwrap_or_default();
         let params = picker::agent_selection_params(
             picker::selected_workspace_display(
                 &self.workspace_choices,
@@ -311,7 +300,7 @@ impl LaunchWizardView {
     }
 
     fn selected_launch(&self) -> Option<&PreparedLaunch> {
-        selected_decision(&self.decisions, &self.selected_idx)
+        selected_decision(self.decisions.as_ref(), &self.selected_idx)
             .and_then(|decision| decision.plan.as_ref().ok())
     }
 
@@ -326,7 +315,7 @@ impl LaunchWizardView {
     }
 
     pub(crate) fn selected_agent_name(&self) -> Option<&str> {
-        selected_decision(&self.decisions, &self.selected_idx)
+        selected_decision(self.decisions.as_ref(), &self.selected_idx)
             .map(|decision| decision.agent.name.as_str())
     }
 
@@ -336,9 +325,12 @@ impl LaunchWizardView {
     }
 
     #[cfg(test)]
-    pub(crate) fn selected_workspace_path(&self) -> Option<&Path> {
-        selected_workspace(&self.workspace_choices, &self.selected_workspace_idx)
-            .map(|workspace| workspace.workspace.as_path())
+    pub(crate) fn selected_workspace_path(&self) -> Option<&std::path::Path> {
+        selected_workspace(
+            self.workspace_choices.as_ref(),
+            &self.selected_workspace_idx,
+        )
+        .map(|workspace| workspace.workspace.as_path())
     }
 
     pub(crate) fn is_reviewing(&self) -> bool {
@@ -381,7 +373,7 @@ impl LaunchWizardView {
             Span::styled(self.step_label(), boundary_style()),
         ]);
 
-        if let Some(decision) = selected_decision(&self.decisions, &self.selected_idx) {
+        if let Some(decision) = selected_decision(self.decisions.as_ref(), &self.selected_idx) {
             line.push_span(" · ");
             line.push_span(Span::styled(
                 decision.agent.name.clone(),
@@ -428,273 +420,6 @@ impl LaunchWizardView {
             LaunchWizardScreen::ConfirmLaunch => "Confirm launch",
         }
     }
-}
-
-impl BottomPaneView for LaunchWizardView {
-    fn handle_key_event(&mut self, key_event: KeyEvent) {
-        if self.completion.is_some() {
-            return;
-        }
-        match self.screen {
-            LaunchWizardScreen::ChooseWorkspace => self.handle_workspace_key(key_event),
-            LaunchWizardScreen::ChooseAgent => self.handle_picker_key(key_event),
-            LaunchWizardScreen::ReviewPlan => self.handle_review_key(key_event),
-            LaunchWizardScreen::ConfirmLaunch => self.handle_confirm_key(key_event),
-        }
-    }
-
-    fn is_complete(&self) -> bool {
-        self.completion.is_some()
-    }
-
-    fn completion(&self) -> Option<ViewCompletion> {
-        self.completion
-    }
-
-    fn selected_index(&self) -> Option<usize> {
-        Some(self.selected_idx.load(Ordering::Relaxed))
-    }
-
-    fn view_id(&self) -> Option<&'static str> {
-        Some(LAUNCH_WIZARD_VIEW_ID)
-    }
-
-    fn terminal_title(&self) -> Option<String> {
-        Some(LaunchWizardView::terminal_title(self))
-    }
-
-    fn footer_status_line(&self) -> Option<Line<'static>> {
-        Some(LaunchWizardView::footer_status_line(self))
-    }
-
-    fn accepts_text_input(&self) -> bool {
-        self.confirm_accepts_text_input()
-    }
-
-    fn footer_help_items(&self) -> Option<Vec<(String, String)>> {
-        let mut items = if self.confirm_accepts_text_input() {
-            vec![
-                ("esc".to_string(), "back".to_string()),
-                ("enter".to_string(), "confirm".to_string()),
-            ]
-        } else if self.screen == LaunchWizardScreen::ChooseWorkspace {
-            vec![
-                ("up/down".to_string(), "choose".to_string()),
-                ("enter".to_string(), "select".to_string()),
-                ("q".to_string(), "quit".to_string()),
-            ]
-        } else if self.is_reviewing() || self.is_confirming() {
-            vec![
-                ("b".to_string(), "back".to_string()),
-                ("esc".to_string(), "back".to_string()),
-                ("enter".to_string(), "confirm".to_string()),
-                ("q".to_string(), "quit".to_string()),
-            ]
-        } else {
-            vec![
-                ("up/down".to_string(), "choose".to_string()),
-                ("enter".to_string(), "review".to_string()),
-                ("q".to_string(), "quit".to_string()),
-            ]
-        };
-        items.push(("?".to_string(), "hide help".to_string()));
-        Some(items)
-    }
-
-    fn on_ctrl_c(&mut self) -> CancellationEvent {
-        self.completion = Some(ViewCompletion::Cancelled);
-        CancellationEvent::Handled
-    }
-
-    fn prefer_esc_to_handle_key_event(&self) -> bool {
-        true
-    }
-
-    fn handle_paste(&mut self, pasted: String) -> bool {
-        if !self.confirm_accepts_text_input() || pasted.is_empty() {
-            return false;
-        }
-        LaunchWizardView::handle_paste(self, &pasted);
-        true
-    }
-}
-
-impl Renderable for LaunchWizardView {
-    fn render(&self, area: Rect, buf: &mut Buffer) {
-        rendering::render(self, area, buf);
-    }
-
-    fn desired_height(&self, width: u16) -> u16 {
-        rendering::desired_height(self, width)
-    }
-
-    fn cursor_pos(&self, area: Rect) -> Option<(u16, u16)> {
-        self.confirm_cursor_position(area)
-    }
-}
-
-impl From<AgentLaunchPreview> for AgentDecisionVm {
-    fn from(preview: AgentLaunchPreview) -> Self {
-        let status_label = match &preview.plan {
-            Ok(launch) if launch.data.confirm_required => "review".to_string(),
-            Ok(_) => "ready".to_string(),
-            Err(_) => "blocked".to_string(),
-        };
-        let auth_scope_label = preview
-            .plan
-            .as_ref()
-            .map(|launch| launch.data.auth_scope.clone())
-            .unwrap_or_else(|_| "unknown".to_string());
-        let auth_label = match preview.agent.sign_in.as_str() {
-            "n/a" => "no sign-in".to_string(),
-            sign_in => format!("{sign_in}, {auth_scope_label} state"),
-        };
-        let network_label = preview.plan.as_ref().map_or_else(
-            |_| network_mode_label(&preview.agent.default_network).to_string(),
-            |launch| network_label(&launch.data),
-        );
-
-        Self {
-            agent: preview.agent,
-            plan: preview.plan,
-            status_label,
-            auth_scope_label,
-            auth_label,
-            network_label,
-            boundary_label: "/workspace only".to_string(),
-        }
-    }
-}
-
-impl From<WorkspaceLaunchPreview> for WorkspaceDecisionVm {
-    fn from(choice: WorkspaceLaunchPreview) -> Self {
-        Self {
-            label: choice.label,
-            description: choice.description,
-            workspace: choice.payload.workspace,
-            decisions: Arc::new(
-                choice
-                    .payload
-                    .previews
-                    .into_iter()
-                    .map(AgentDecisionVm::from)
-                    .collect(),
-            ),
-        }
-    }
-}
-
-impl AgentDecisionVm {
-    fn network_style(&self) -> Style {
-        if self.network_label.contains("internet") {
-            warning_style()
-        } else {
-            safe_style()
-        }
-    }
-
-    fn status_style(&self) -> Style {
-        match self.status_label.as_str() {
-            "ready" => safe_style(),
-            "review" => warning_style(),
-            _ => danger_style(),
-        }
-    }
-
-    fn first_step_network_label(&self) -> &'static str {
-        match self.network_label.as_str() {
-            "provider allowlist" => "Provider only",
-            "local only" => "Local only",
-            "internet unrestricted" => "Unrestricted internet",
-            _ => "Custom network",
-        }
-    }
-}
-
-fn selected_decision<'a>(
-    decisions: &'a [AgentDecisionVm],
-    selected_idx: &AtomicUsize,
-) -> Option<&'a AgentDecisionVm> {
-    let selected = selected_idx.load(Ordering::Relaxed);
-    decisions.get(selected).or_else(|| decisions.first())
-}
-
-fn selected_workspace<'a>(
-    workspaces: &'a [WorkspaceDecisionVm],
-    selected_workspace_idx: &AtomicUsize,
-) -> Option<&'a WorkspaceDecisionVm> {
-    let selected = selected_workspace_idx.load(Ordering::Relaxed);
-    workspaces.get(selected).or_else(|| workspaces.first())
-}
-
-fn label_value(label: &'static str, value: impl Into<String>, value_style: Style) -> Line<'static> {
-    Line::from(vec![
-        Span::styled(format!("{label:<12}"), muted_but_readable_style()),
-        Span::styled(value.into(), value_style),
-    ])
-}
-
-fn paragraph(lines: Vec<Line<'static>>) -> Paragraph<'static> {
-    Paragraph::new(lines).wrap(Wrap { trim: true })
-}
-
-fn review_footer_line() -> Line<'static> {
-    Line::from(vec![
-        key_hint::plain(KeyCode::Char('b')).into(),
-        Span::raw(" or "),
-        key_hint::plain(KeyCode::Esc).into(),
-        Span::raw(" goes back. "),
-        key_hint::plain(KeyCode::Enter).into(),
-        Span::raw(" opens confirmation. q quits."),
-    ])
-}
-
-fn confirm_footer_line(text_field_active: bool) -> Line<'static> {
-    let mut line = Line::from(vec![
-        key_hint::plain(KeyCode::Esc).into(),
-        Span::raw(" goes back. "),
-        key_hint::plain(KeyCode::Enter).into(),
-        Span::raw(" confirms."),
-    ]);
-    if !text_field_active {
-        line.push_span(" ");
-        line.push_span(key_hint::plain(KeyCode::Char('q')));
-        line.push_span(" quits.");
-    }
-    line
-}
-
-fn confirmation_matches(value: &str) -> bool {
-    value.trim().eq_ignore_ascii_case(CONFIRM_PHRASE)
-}
-
-fn network_label(plan: &LaunchPlanData) -> String {
-    network_mode_label(&plan.network.mode).to_string()
-}
-
-fn network_mode_label(mode: &str) -> &'static str {
-    match mode {
-        "provider" => "provider allowlist",
-        "internal" => "local only",
-        "internet" => "internet unrestricted",
-        _ => "custom network",
-    }
-}
-
-fn worktree_label(plan: &LaunchPlanData) -> String {
-    plan.worktree
-        .as_ref()
-        .map(|worktree| format!("on, branch {}", worktree.branch))
-        .unwrap_or_else(|| "off".to_string())
-}
-
-fn workspace_title(workspace: &Path) -> String {
-    workspace
-        .file_name()
-        .and_then(|name| name.to_str())
-        .filter(|name| !name.trim().is_empty())
-        .unwrap_or("workspace")
-        .to_string()
 }
 
 #[cfg(test)]

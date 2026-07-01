@@ -1,657 +1,83 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { CheckCircle2, CircleAlert, RefreshCw } from "lucide-react"
-
-import {
-  chooseProjectFolder,
-  defaultRunPlanRequest,
-  getAuthLog,
-  getAuthStatus,
-  getDashboardStatus,
-  getEgressLog,
-  getImageStatus,
-  getManagedSessions,
-  getRunStatus,
-  isLaunchReady,
-  killManagedSession,
-  killRun,
-  launchRun,
-  nextLaunchSessionName,
-  planRun,
-  repairManagedSession,
-  repairRun,
-  secureNetworkDefault,
-  stopManagedSession,
-  stopRun,
-  withLaunchSessionName,
-  writeSessionInput,
-  type DashboardStatus,
-  type ImageStatusResponse,
-  type LaunchRunResponse,
-  type ManagedSessionList,
-  type RunPlanRequest,
-  type RunPlanResponse,
-  type RunStatusResponse,
-} from "@/commands/runhaven"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
-import { DiagnosticsCard } from "./DiagnosticsCard"
-import { LastLaunchCard } from "./LastLaunchCard"
-import { LaunchPlanCard } from "./LaunchPlanCard"
-import { ManagedSessionCard } from "./ManagedSessionCard"
-import { PlanReviewCard } from "./PlanReviewCard"
+import { AppHeader } from "./AppHeader"
+import { AppMainContent } from "./AppMainContent"
 import { RunHavenSidebar } from "./RunHavenSidebar"
-import { RunOutputCard } from "./RunOutputCard"
-import { RunStatusCard } from "./RunStatusCard"
-import { SessionInputCard } from "./SessionInputCard"
-import { SetupCard } from "./SetupCard"
-import {
-  errorMessage,
-  type DiagnosticsState,
-  type LaunchStep,
-  type RunControlAction,
-} from "./types"
-import { useRunOutput } from "./useRunOutput"
+import { useAppController } from "./useAppController"
 
 export default function App() {
-  const [dashboard, setDashboard] = useState<DashboardStatus | null>(null)
-  const [request, setRequest] = useState<RunPlanRequest>(() =>
-    defaultRunPlanRequest(undefined),
-  )
-  const [launchStep, setLaunchStep] = useState<LaunchStep>("agent")
-  const [plan, setPlan] = useState<RunPlanResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [planning, setPlanning] = useState(false)
-  const [launching, setLaunching] = useState(false)
-  const [imageLoading, setImageLoading] = useState(false)
-  const [imageStatus, setImageStatus] = useState<ImageStatusResponse | null>(
-    null,
-  )
-  const [imageError, setImageError] = useState("")
-  const [launchConfirmation, setLaunchConfirmation] = useState(false)
-  const [confirmedWarnings, setConfirmedWarnings] = useState<string[]>([])
-  const [launchMessage, setLaunchMessage] = useState("")
-  const [lastLaunch, setLastLaunch] = useState<LaunchRunResponse | null>(null)
-  const [managedSessions, setManagedSessions] = useState<ManagedSessionList>({
-    sessions: [],
-  })
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
-    null,
-  )
-  const selectedSessionIdRef = useRef<string | null>(null)
-  const [sessionInputDraft, setSessionInputDraft] = useState("")
-  const [sessionInputSending, setSessionInputSending] = useState(false)
-  const [sessionInputError, setSessionInputError] = useState("")
-  const [sessionInputAcceptedMessage, setSessionInputAcceptedMessage] =
-    useState("")
-  const [runStatus, setRunStatus] = useState<RunStatusResponse | null>(null)
-  const [runStatusLoading, setRunStatusLoading] = useState(false)
-  const [runStatusError, setRunStatusError] = useState("")
-  const [controlBusy, setControlBusy] = useState(false)
-  const [controlError, setControlError] = useState("")
-  const [controlMessage, setControlMessage] = useState("")
-  const [controlConfirmations, setControlConfirmations] = useState<
-    Record<RunControlAction, boolean>
-  >({ stop: false, kill: false, repair: false })
-  const [diagnostics, setDiagnostics] = useState<DiagnosticsState | null>(null)
-  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false)
-  const [diagnosticsError, setDiagnosticsError] = useState("")
-  const [error, setError] = useState("")
-
-  const selectedAgent = useMemo(
-    () => dashboard?.agents.find((agent) => agent.name === request.agent),
-    [dashboard?.agents, request.agent],
-  )
-  const setupKnown = dashboard !== null
-  const setupReady = setupKnown && dashboard.setup.ok
-  const launchImageReady = request.image ? true : imageStatus?.image.ready === true
-  const launchReady =
-    setupReady &&
-    isLaunchReady(
-      plan,
-      launchConfirmation,
-      new Set(confirmedWarnings),
-      launchImageReady,
-    )
-  const selectedSession = useMemo(
-    () =>
-      managedSessions.sessions.find(
-        (session) => session.id === selectedSessionId,
-      ) ?? null,
-    [managedSessions.sessions, selectedSessionId],
-  )
-  const pageTitle = selectedSession ? "Session" : "Launch"
-  const pageDescription = selectedSession
-    ? "Review status and access for the selected agent session."
-    : "Choose an agent and project. Review access before launch."
-  const outputSessionId = selectedSession?.id ?? null
-  const outputRunId = selectedSession ? null : lastLaunch?.runId ?? null
-  const outputTargetId = outputSessionId
-    ? `session:${outputSessionId}`
-    : outputRunId
-      ? `run:${outputRunId}`
-      : null
-  const runOutput = useRunOutput({
-    targetId: outputTargetId,
-    sessionId: outputSessionId,
-    runId: outputRunId,
-  })
-  const controlTargetId = selectedSession
-    ? `session:${selectedSession.id}`
-    : lastLaunch
-      ? `run:${lastLaunch.runId}`
-      : null
-
-  useEffect(() => {
-    void refresh()
-  }, [])
-
-  useEffect(() => {
-    if (
-      selectedSessionId &&
-      !managedSessions.sessions.some((session) => session.id === selectedSessionId)
-    ) {
-      selectSession(null)
-    }
-  }, [managedSessions.sessions, selectedSessionId])
-
-  useEffect(() => {
-    selectedSessionIdRef.current = selectedSessionId
-    setSessionInputDraft("")
-    setSessionInputSending(false)
-    setSessionInputError("")
-    setSessionInputAcceptedMessage("")
-  }, [selectedSessionId])
-
-  useEffect(() => {
-    setControlConfirmations({ stop: false, kill: false, repair: false })
-    setControlError("")
-    setControlMessage("")
-  }, [controlTargetId])
-
-  async function refresh() {
-    setLoading(true)
-    setError("")
-    try {
-      const nextDashboard = await getDashboardStatus()
-      setDashboard(nextDashboard)
-      await loadManagedSessions()
-      const agent =
-        nextDashboard.agents.find((item) => item.name === request.agent) ??
-        nextDashboard.agents[0]
-      if (agent) {
-        setRequest((current) => ({
-          ...defaultRunPlanRequest(agent),
-          workspacePath: current.workspacePath,
-          sessionName: current.sessionName,
-        }))
-        await loadImageStatus(agent.name)
-      }
-      if (lastLaunch) {
-        await loadRunStatus(lastLaunch.runId)
-      }
-    } catch (cause) {
-      setError(errorMessage(cause))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function loadImageStatus(agentName: string) {
-    setImageLoading(true)
-    setImageError("")
-    try {
-      setImageStatus(await getImageStatus(agentName))
-    } catch (cause) {
-      setImageStatus(null)
-      setImageError(errorMessage(cause))
-    } finally {
-      setImageLoading(false)
-    }
-  }
-
-  async function loadRunStatus(runId: string) {
-    setRunStatusLoading(true)
-    setRunStatusError("")
-    try {
-      setRunStatus(await getRunStatus(runId))
-    } catch (cause) {
-      setRunStatus(null)
-      setRunStatusError(errorMessage(cause))
-    } finally {
-      setRunStatusLoading(false)
-    }
-  }
-
-  async function loadManagedSessions() {
-    setManagedSessions(await getManagedSessions())
-  }
-
-  function selectSession(sessionId: string | null) {
-    selectedSessionIdRef.current = sessionId
-    setSelectedSessionId(sessionId)
-  }
-
-  function changeAgent(agentName: string) {
-    const agent = dashboard?.agents.find((item) => item.name === agentName)
-    setRequest((current) => ({
-      ...current,
-      agent: agentName,
-      networkMode: secureNetworkDefault(agent),
-    }))
-    invalidatePlan()
-    void loadImageStatus(agentName)
-  }
-
-  function updateNetworkMode(networkMode: RunPlanRequest["networkMode"]) {
-    setRequest((current) => ({ ...current, networkMode }))
-    invalidatePlan()
-  }
-
-  function invalidatePlan() {
-    setPlan(null)
-    resetLaunchConfirmation()
-  }
-
-  function resetLaunchConfirmation() {
-    setLaunchConfirmation(false)
-    setConfirmedWarnings([])
-    setLaunchMessage("")
-  }
-
-  function updateRequest(patch: Partial<RunPlanRequest>) {
-    setRequest((current) => ({ ...current, ...patch }))
-    invalidatePlan()
-  }
-
-  async function pickFolder() {
-    const selected = await chooseProjectFolder()
-    if (selected) {
-      updateRequest({ workspacePath: selected })
-    }
-  }
-
-  async function reviewPlan() {
-    setPlanning(true)
-    setError("")
-    setPlan(null)
-    resetLaunchConfirmation()
-    try {
-      const planRequest = withLaunchSessionName(request)
-      if (planRequest !== request) {
-        setRequest(planRequest)
-      }
-      const nextPlan = await planRun(planRequest)
-      setPlan(nextPlan)
-      setLaunchStep("review")
-    } catch (cause) {
-      setError(errorMessage(cause))
-    } finally {
-      setPlanning(false)
-    }
-  }
-
-  function setWarningConfirmation(code: string, checked: boolean) {
-    setConfirmedWarnings((current) => {
-      const next = new Set(current)
-      if (checked) {
-        next.add(code)
-      } else {
-        next.delete(code)
-      }
-      return Array.from(next)
-    })
-  }
-
-  async function startRun() {
-    if (!plan) {
-      return
-    }
-    setLaunching(true)
-    setError("")
-    setLaunchMessage("")
-    try {
-      const launchRequest = request.sessionName
-        ? request
-        : { ...request, sessionName: plan.session || nextLaunchSessionName() }
-      const started = await launchRun({
-        plan: launchRequest,
-        confirmLaunch: launchConfirmation,
-        confirmedWarnings,
-      })
-      setLastLaunch(started)
-      await loadRunStatus(started.runId)
-      setLaunchMessage(`Run started: ${started.runId}`)
-      await loadManagedSessions()
-      setPlan(null)
-      setLaunchConfirmation(false)
-      setConfirmedWarnings([])
-      setLaunchStep("agent")
-      setRequest((current) => ({
-        ...current,
-        sessionName: nextLaunchSessionName(),
-      }))
-    } catch (cause) {
-      setError(errorMessage(cause))
-    } finally {
-      setLaunching(false)
-    }
-  }
-
-  async function runControl(action: RunControlAction) {
-    if (!selectedSession && !lastLaunch) {
-      return
-    }
-    setControlBusy(true)
-    setControlError("")
-    setControlMessage("")
-    try {
-      if (selectedSession) {
-        const sessionId = selectedSession.id
-        if (action === "stop") {
-          const { result } = await stopManagedSession(sessionId)
-          setControlMessage(`Stop requested for ${result.runId}.`)
-        } else if (action === "kill") {
-          const { result } = await killManagedSession(sessionId)
-          setControlMessage(`Hard stop requested for ${result.runId}.`)
-        } else {
-          const { result } = await repairManagedSession(sessionId)
-          setControlMessage(
-            result.markerRemoved
-              ? `Stale marker cleared for ${result.runId}.`
-              : `Repair for ${result.runId}: ${result.status}.`,
-          )
-        }
-        await loadManagedSessions()
-      } else {
-        const runId = lastLaunch?.runId
-        if (!runId) {
-          return
-        }
-        if (action === "stop") {
-          const result = await stopRun(runId)
-          setControlMessage(`Stop requested for ${result.runId}.`)
-        } else if (action === "kill") {
-          const result = await killRun(runId)
-          setControlMessage(`Hard stop requested for ${result.runId}.`)
-        } else {
-          const result = await repairRun(runId)
-          setControlMessage(
-            result.markerRemoved
-              ? `Stale marker cleared for ${result.runId}.`
-              : `Repair for ${result.runId}: ${result.status}.`,
-          )
-        }
-        await loadRunStatus(runId)
-        await loadManagedSessions()
-      }
-    } catch (cause) {
-      setControlError(errorMessage(cause))
-    } finally {
-      setControlBusy(false)
-    }
-  }
-
-  async function sendSelectedSessionInput() {
-    if (!selectedSession || sessionInputSending) {
-      return
-    }
-
-    const targetSessionId = selectedSession.id
-    const input = sessionInputDraft
-    setSessionInputSending(true)
-    setSessionInputError("")
-    setSessionInputAcceptedMessage("")
-    try {
-      const response = await writeSessionInput(targetSessionId, input)
-      if (selectedSessionIdRef.current !== targetSessionId) {
-        return
-      }
-      setSessionInputDraft("")
-      setSessionInputAcceptedMessage(
-        `Sent ${response.acceptedBytes} bytes.`,
-      )
-      await loadManagedSessions()
-    } catch (cause) {
-      if (selectedSessionIdRef.current === targetSessionId) {
-        setSessionInputError(errorMessage(cause))
-      }
-    } finally {
-      if (selectedSessionIdRef.current === targetSessionId) {
-        setSessionInputSending(false)
-      }
-    }
-  }
-
-  async function loadDiagnostics() {
-    setDiagnosticsLoading(true)
-    setDiagnosticsError("")
-    try {
-      const [authStatus, authLog, egressLog] = await Promise.all([
-        getAuthStatus(),
-        getAuthLog(),
-        getEgressLog(),
-      ])
-      setDiagnostics({ authStatus, authLog, egressLog })
-    } catch (cause) {
-      setDiagnostics(null)
-      setDiagnosticsError(errorMessage(cause))
-    } finally {
-      setDiagnosticsLoading(false)
-    }
-  }
+  const app = useAppController()
 
   return (
     <TooltipProvider>
       <SidebarProvider>
         <RunHavenSidebar
-          sessions={managedSessions.sessions}
-          selectedSessionId={selectedSessionId}
-          onStartSelect={() => selectSession(null)}
-          onSessionSelect={selectSession}
+          sessions={app.managedSessions.sessions}
+          selectedSessionId={app.selectedSessionId}
+          onStartSelect={() => app.selectSession(null)}
+          onSessionSelect={app.selectSession}
         />
         <SidebarInset className="h-screen overflow-hidden">
-          <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
-            <SidebarTrigger variant="outline" />
-            <div className="min-w-0">
-              <h1 className="text-base font-medium">{pageTitle}</h1>
-              <p className="text-sm text-muted-foreground">{pageDescription}</p>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <Badge
-                variant={
-                  !setupKnown || loading
-                    ? "outline"
-                    : setupReady
-                      ? "success"
-                      : "destructive"
-                }
-              >
-                {!setupKnown || loading
-                  ? "Checking"
-                  : setupReady
-                    ? "Ready"
-                    : "Blocked"}
-              </Badge>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                onClick={() => void refresh()}
-                aria-label="Refresh status"
-              >
-                <RefreshCw />
-              </Button>
-            </div>
-          </header>
-
-          <main className="min-h-0 flex-1 overflow-y-auto p-4">
-            <section className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-4">
-              {error ? (
-                <Alert variant="destructive">
-                  <CircleAlert />
-                  <AlertTitle>Action failed</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              ) : null}
-              {launchMessage ? (
-                <Alert>
-                  <CheckCircle2 />
-                  <AlertTitle>{launchMessage}</AlertTitle>
-                  <AlertDescription>
-                    RunHaven is tracking the run below.
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-
-              {!setupReady ? (
-                <SetupCard loading={loading} dashboard={dashboard} />
-              ) : selectedSession ? (
-                <>
-                  <ManagedSessionCard session={selectedSession} />
-                  <SessionInputCard
-                    session={selectedSession}
-                    draft={sessionInputDraft}
-                    sending={sessionInputSending}
-                    error={sessionInputError}
-                    acceptedMessage={sessionInputAcceptedMessage}
-                    onDraftChange={(value) => {
-                      setSessionInputDraft(value)
-                      setSessionInputError("")
-                      setSessionInputAcceptedMessage("")
-                    }}
-                    onSend={() => void sendSelectedSessionInput()}
-                  />
-                  <RunStatusCard
-                    title="Session controls"
-                    controlTarget="session"
-                    showStatus={false}
-                    runStatus={null}
-                    runStatusLoading={false}
-                    runStatusError=""
-                    controlBusy={controlBusy}
-                    controlError={controlError}
-                    controlMessage={controlMessage}
-                    controlConfirmations={controlConfirmations}
-                    onConfirmationChange={(action, checked) =>
-                      setControlConfirmations((current) => ({
-                        ...current,
-                        [action]: checked,
-                      }))
-                    }
-                    onControl={runControl}
-                  />
-                  <RunOutputCard
-                    logAcknowledged={runOutput.acknowledged}
-                    logLoading={runOutput.loading}
-                    logError={runOutput.error}
-                    logSnapshot={runOutput.visibleSnapshot}
-                    liveOutputAvailable={runOutput.liveAvailable}
-                    liveOutputEnabled={runOutput.liveEnabled}
-                    liveOutputRefreshing={runOutput.liveRefreshing}
-                    onAcknowledgedChange={runOutput.setAcknowledged}
-                    onLoad={runOutput.loadSnapshot}
-                    onLiveOutputChange={runOutput.setLiveEnabled}
-                  />
-                </>
-              ) : (
-                <>
-                  {launchStep === "review" && plan ? (
-                    <PlanReviewCard
-                      plan={plan}
-                      launchConfirmation={launchConfirmation}
-                      confirmedWarnings={confirmedWarnings}
-                      launchReady={launchReady}
-                      launching={launching}
-                      setupOk={setupReady}
-                      launchImageReady={launchImageReady}
-                      onLaunchConfirmationChange={setLaunchConfirmation}
-                      onConfirmWarning={setWarningConfirmation}
-                      onBack={() => setLaunchStep("project")}
-                      onStart={startRun}
-                    />
-                  ) : (
-                    <LaunchPlanCard
-                      step={launchStep === "review" ? "project" : launchStep}
-                      agents={dashboard?.agents ?? []}
-                      request={request}
-                      selectedAgent={selectedAgent}
-                      imageLoading={imageLoading}
-                      imageStatus={imageStatus}
-                      imageError={imageError}
-                      planning={planning}
-                      onAgentChange={changeAgent}
-                      onPickFolder={pickFolder}
-                      onRequestChange={updateRequest}
-                      onNetworkChange={updateNetworkMode}
-                      onBack={() => setLaunchStep("agent")}
-                      onContinue={() => setLaunchStep("project")}
-                      onReviewPlan={reviewPlan}
-                    />
-                  )}
-                </>
-              )}
-
-              {!selectedSession && lastLaunch ? (
-                <LastLaunchCard lastLaunch={lastLaunch} />
-              ) : null}
-
-              {!selectedSession && lastLaunch ? (
-                <RunStatusCard
-                  runStatus={runStatus}
-                  runStatusLoading={runStatusLoading}
-                  runStatusError={runStatusError}
-                  controlBusy={controlBusy}
-                  controlError={controlError}
-                  controlMessage={controlMessage}
-                  controlConfirmations={controlConfirmations}
-                  onConfirmationChange={(action, checked) =>
-                    setControlConfirmations((current) => ({
-                      ...current,
-                      [action]: checked,
-                    }))
-                  }
-                  onControl={runControl}
-                />
-              ) : null}
-
-              {!selectedSession && lastLaunch ? (
-                <RunOutputCard
-                  logAcknowledged={runOutput.acknowledged}
-                  logLoading={runOutput.loading}
-                  logError={runOutput.error}
-                  logSnapshot={runOutput.visibleSnapshot}
-                  liveOutputAvailable={runOutput.liveAvailable}
-                  liveOutputEnabled={runOutput.liveEnabled}
-                  liveOutputRefreshing={runOutput.liveRefreshing}
-                  onAcknowledgedChange={runOutput.setAcknowledged}
-                  onLoad={runOutput.loadSnapshot}
-                  onLiveOutputChange={runOutput.setLiveEnabled}
-                />
-              ) : null}
-
-              <details className="rounded-xl border bg-card p-4 text-card-foreground">
-                <summary className="cursor-pointer text-sm font-medium">
-                  Diagnostics
-                </summary>
-                <div className="mt-4">
-                  <DiagnosticsCard
-                    diagnostics={diagnostics}
-                    loading={diagnosticsLoading}
-                    error={diagnosticsError}
-                    onLoad={loadDiagnostics}
-                  />
-                </div>
-              </details>
-            </section>
-          </main>
+          <AppHeader
+            title={app.pageTitle}
+            description={app.pageDescription}
+            setupKnown={app.setupKnown}
+            setupReady={app.setupReady}
+            loading={app.loading}
+            onRefresh={() => void app.refresh()}
+          />
+          <AppMainContent
+            error={app.error}
+            launchMessage={app.launchMessage}
+            loading={app.loading}
+            dashboard={app.dashboard}
+            setupReady={app.setupReady}
+            selectedSession={app.selectedSession}
+            sessionInputDraft={app.sessionInputDraft}
+            sessionInputSending={app.sessionInputSending}
+            sessionInputError={app.sessionInputError}
+            sessionInputAcceptedMessage={app.sessionInputAcceptedMessage}
+            onSessionInputDraftChange={app.changeSessionInputDraft}
+            onSendSelectedSessionInput={app.sendSelectedSessionInput}
+            runOutput={app.runOutput}
+            controlBusy={app.controlBusy}
+            controlError={app.controlError}
+            controlMessage={app.controlMessage}
+            controlConfirmations={app.controlConfirmations}
+            onControlConfirmationChange={app.setControlConfirmation}
+            onControl={app.runControl}
+            launchStep={app.launchStep}
+            plan={app.plan}
+            launchConfirmation={app.launchConfirmation}
+            confirmedWarnings={app.confirmedWarnings}
+            launchReady={app.launchReady}
+            launching={app.launching}
+            launchImageReady={app.launchImageReady}
+            onLaunchConfirmationChange={app.setLaunchConfirmation}
+            onConfirmWarning={app.setWarningConfirmation}
+            onLaunchStepChange={app.setLaunchStep}
+            onStart={app.startRun}
+            request={app.request}
+            selectedAgent={app.selectedAgent}
+            imageLoading={app.imageLoading}
+            imageStatus={app.imageStatus}
+            imageError={app.imageError}
+            planning={app.planning}
+            onAgentChange={app.changeAgent}
+            onPickFolder={app.pickFolder}
+            onRequestChange={app.updateRequest}
+            onNetworkChange={app.updateNetworkMode}
+            onReviewPlan={app.reviewPlan}
+            lastLaunch={app.lastLaunch}
+            runStatus={app.runStatus}
+            runStatusLoading={app.runStatusLoading}
+            runStatusError={app.runStatusError}
+            diagnostics={app.diagnostics}
+            diagnosticsLoading={app.diagnosticsLoading}
+            diagnosticsError={app.diagnosticsError}
+            onLoadDiagnostics={app.loadDiagnostics}
+          />
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>

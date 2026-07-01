@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 
 mod headers;
 mod profiles;
+mod upstream;
 
 pub use headers::broker_request_headers;
 pub use profiles::{
@@ -30,14 +31,7 @@ pub const CODEX_BROKER_PLACEHOLDER_VALUE: &str = "runhaven-broker-placeholder";
 pub const CODEX_BROKER_UPSTREAM_HOST: &str = "api.openai.com";
 pub const CODEX_BROKER_REQUEST_TIMEOUT_SECONDS: u64 = 120;
 pub const MAX_CODEX_BROKER_REQUEST_BYTES: usize = 64 * 1024 * 1024;
-
-#[derive(Clone, Debug)]
-pub struct BrokerUpstreamResponse {
-    pub status: u16,
-    pub reason: String,
-    pub headers: Vec<(String, String)>,
-    pub body: Vec<u8>,
-}
+pub use upstream::{BrokerUpstream, BrokerUpstreamResponse, HttpsUpstream};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct BrokerDecision {
@@ -47,91 +41,6 @@ pub struct BrokerDecision {
     pub reason: String,
     pub upstream_status: Option<u16>,
     pub count: usize,
-}
-
-pub trait BrokerUpstream: Send + Sync + 'static {
-    fn send(
-        &self,
-        method: &str,
-        path: &str,
-        headers: &[(String, String)],
-        body: &[u8],
-    ) -> Result<BrokerUpstreamResponse>;
-}
-
-#[derive(Clone)]
-pub struct HttpsUpstream {
-    host: String,
-    agent: ureq::Agent,
-}
-
-impl Default for HttpsUpstream {
-    fn default() -> Self {
-        Self::for_host(CODEX_BROKER_UPSTREAM_HOST)
-    }
-}
-
-impl HttpsUpstream {
-    /// HTTPS upstream pinned to a provider host. The sender is host-agnostic
-    /// (`https://{host}{path}`); only the broker profile decides the host.
-    fn for_host(host: &str) -> Self {
-        Self {
-            host: host.to_string(),
-            agent: broker_upstream_agent(),
-        }
-    }
-}
-
-impl BrokerUpstream for HttpsUpstream {
-    fn send(
-        &self,
-        _method: &str,
-        path: &str,
-        headers: &[(String, String)],
-        body: &[u8],
-    ) -> Result<BrokerUpstreamResponse> {
-        let url = format!("https://{}{}", self.host, path);
-        let mut request = self.agent.post(&url);
-        for (name, value) in headers {
-            request = request.header(name.as_str(), value.as_str());
-        }
-        let mut response = request
-            .send(body)
-            .context("broker upstream request failed")?;
-        let status = response.status().as_u16();
-        let reason = response
-            .status()
-            .canonical_reason()
-            .unwrap_or("")
-            .to_string();
-        let headers = response
-            .headers()
-            .iter()
-            .filter(|(name, _)| !headers::response_header_is_hop_by_hop(name.as_str()))
-            .filter_map(|(name, value)| {
-                value
-                    .to_str()
-                    .ok()
-                    .map(|value| (name.to_string(), value.to_string()))
-            })
-            .collect();
-        let body = response.body_mut().read_to_vec()?;
-        Ok(BrokerUpstreamResponse {
-            status,
-            reason,
-            headers,
-            body,
-        })
-    }
-}
-
-fn broker_upstream_agent() -> ureq::Agent {
-    ureq::Agent::config_builder()
-        .timeout_global(Some(Duration::from_secs(
-            CODEX_BROKER_REQUEST_TIMEOUT_SECONDS,
-        )))
-        .build()
-        .into()
 }
 
 #[derive(Clone)]
@@ -507,28 +416,4 @@ pub fn parse_content_length(value: Option<&str>) -> Result<Option<usize>> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sanitize_broker_request_path_strips_query_and_fragment() {
-        assert_eq!(
-            sanitize_broker_request_path("/v1/responses?token=secret#frag"),
-            "/v1/responses"
-        );
-        assert_eq!(
-            sanitize_broker_request_path("/v1/responses#fragment"),
-            "/v1/responses"
-        );
-        assert_eq!(sanitize_broker_request_path("?token=secret"), "-");
-    }
-
-    #[test]
-    fn openai_upstream_uses_global_request_timeout() {
-        let upstream = HttpsUpstream::default();
-        assert_eq!(
-            upstream.agent.config().timeouts().global,
-            Some(Duration::from_secs(CODEX_BROKER_REQUEST_TIMEOUT_SECONDS))
-        );
-    }
-}
+mod tests;

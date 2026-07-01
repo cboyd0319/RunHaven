@@ -1,5 +1,3 @@
-use std::error::Error;
-use std::fmt;
 use std::io;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -16,9 +14,17 @@ use super::protocol::ClientRequest;
 use super::protocol::RequestId;
 use super::protocol::ServerNotification;
 use super::protocol::ServerRequest;
-use super::protocol::UnsupportedFamily;
 use super::service::RunHavenServiceError;
 use super::service::RunHavenTuiService;
+
+#[path = "app_server_client_error.rs"]
+mod app_server_client_error;
+#[path = "app_server_client_events.rs"]
+mod app_server_client_events;
+
+pub(crate) use app_server_client_error::TypedRequestError;
+use app_server_client_error::service_error_to_typed;
+use app_server_client_events::{EventForwarder, PendingServerRequests};
 
 pub(crate) const DEFAULT_RUNHAVEN_APP_SERVER_CHANNEL_CAPACITY: usize = 32;
 
@@ -40,64 +46,6 @@ enum ClientCommand {
         request_id: RequestId,
         response_tx: oneshot::Sender<io::Result<()>>,
     },
-}
-
-#[derive(Debug)]
-pub(crate) enum TypedRequestError {
-    Transport {
-        method: String,
-        message: String,
-    },
-    Unsupported {
-        method: String,
-        family: UnsupportedFamily,
-    },
-    Validation {
-        method: String,
-        message: String,
-    },
-    Backend {
-        method: String,
-        message: String,
-    },
-    Deserialize {
-        method: String,
-        source: serde_json::Error,
-    },
-}
-
-impl fmt::Display for TypedRequestError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Transport { method, message } => {
-                write!(f, "{method} transport error: {message}")
-            }
-            Self::Unsupported { method, .. } => {
-                write!(f, "{method} is not supported by the RunHaven TUI backend")
-            }
-            Self::Validation { method, message } => {
-                write!(f, "{method} validation error: {message}")
-            }
-            Self::Backend { method, message } => {
-                write!(f, "{method} backend error: {message}")
-            }
-            Self::Deserialize { method, source } => {
-                write!(f, "{method} response decode error: {source}")
-            }
-        }
-    }
-}
-
-impl Error for TypedRequestError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        match self {
-            Self::Deserialize { source, .. } => Some(source),
-            Self::Transport { .. }
-            | Self::Unsupported { .. }
-            | Self::Validation { .. }
-            | Self::Backend { .. } => None,
-        }
-    }
 }
 
 #[derive(Clone)]
@@ -128,18 +76,6 @@ pub(crate) struct PendingTypedRequest<T> {
 pub(crate) struct CancelledRequest {
     pub(crate) request_id: RequestId,
     pub(crate) method: String,
-}
-
-#[derive(Clone)]
-struct EventForwarder {
-    event_tx: mpsc::Sender<AppServerEvent>,
-    skipped_events: Arc<tokio::sync::Mutex<usize>>,
-    pending_server_requests: PendingServerRequests,
-}
-
-#[derive(Clone, Default)]
-struct PendingServerRequests {
-    pending: Arc<tokio::sync::Mutex<std::collections::HashSet<RequestId>>>,
 }
 
 impl AppServerClient {
@@ -448,133 +384,11 @@ where
     }
 }
 
-impl EventForwarder {
-    async fn forward(&self, event: AppServerEvent) -> io::Result<()> {
-        let server_request_id = match &event {
-            AppServerEvent::ServerRequest(ServerRequest::Confirm { request_id, .. }) => {
-                Some(*request_id)
-            }
-            AppServerEvent::Lagged { .. }
-            | AppServerEvent::ServerNotification(_)
-            | AppServerEvent::Disconnected { .. } => None,
-        };
-        if let Some(request_id) = server_request_id {
-            self.pending_server_requests.register(request_id).await;
-        }
-
-        let mut skipped_events = self.skipped_events.lock().await;
-
-        if *skipped_events > 0 {
-            if event.requires_delivery() {
-                if let Err(error) = self
-                    .event_tx
-                    .send(AppServerEvent::Lagged {
-                        skipped: *skipped_events,
-                    })
-                    .await
-                    .map_err(closed_event_channel)
-                {
-                    self.remove_registered_request(server_request_id).await;
-                    return Err(error);
-                }
-                *skipped_events = 0;
-            } else {
-                match self.event_tx.try_send(AppServerEvent::Lagged {
-                    skipped: *skipped_events,
-                }) {
-                    Ok(()) => *skipped_events = 0,
-                    Err(mpsc::error::TrySendError::Full(_)) => {
-                        *skipped_events = skipped_events.saturating_add(1);
-                        return Ok(());
-                    }
-                    Err(mpsc::error::TrySendError::Closed(_)) => {
-                        return Err(closed_event_channel(()));
-                    }
-                }
-            }
-        }
-
-        if event.requires_delivery() {
-            if let Err(error) = self
-                .event_tx
-                .send(event)
-                .await
-                .map_err(closed_event_channel)
-            {
-                self.remove_registered_request(server_request_id).await;
-                return Err(error);
-            }
-            return Ok(());
-        }
-
-        match self.event_tx.try_send(event) {
-            Ok(()) => Ok(()),
-            Err(mpsc::error::TrySendError::Full(_)) => {
-                *skipped_events = skipped_events.saturating_add(1);
-                self.remove_registered_request(server_request_id).await;
-                Ok(())
-            }
-            Err(mpsc::error::TrySendError::Closed(_)) => {
-                self.remove_registered_request(server_request_id).await;
-                Err(closed_event_channel(()))
-            }
-        }
-    }
-
-    async fn remove_registered_request(&self, request_id: Option<RequestId>) {
-        if let Some(request_id) = request_id {
-            self.pending_server_requests.remove(request_id).await;
-        }
-    }
-}
-
-impl PendingServerRequests {
-    async fn register(&self, request_id: RequestId) {
-        self.pending.lock().await.insert(request_id);
-    }
-
-    async fn remove(&self, request_id: RequestId) {
-        self.pending.lock().await.remove(&request_id);
-    }
-
-    async fn complete(&self, request_id: RequestId) -> io::Result<()> {
-        if self.pending.lock().await.remove(&request_id) {
-            Ok(())
-        } else {
-            Err(io::Error::new(
-                io::ErrorKind::NotFound,
-                format!("server request {request_id} is not pending"),
-            ))
-        }
-    }
-}
-
-fn closed_event_channel<T>(_: T) -> io::Error {
-    io::Error::new(
-        io::ErrorKind::BrokenPipe,
-        "RunHaven TUI backend event channel is closed",
-    )
-}
-
 fn closed_worker_channel<T>(_: T) -> io::Error {
     io::Error::new(
         io::ErrorKind::BrokenPipe,
         "RunHaven TUI backend worker channel is closed",
     )
-}
-
-fn service_error_to_typed(method: String, error: RunHavenServiceError) -> TypedRequestError {
-    match error {
-        RunHavenServiceError::Unsupported { family, .. } => {
-            TypedRequestError::Unsupported { method, family }
-        }
-        RunHavenServiceError::Validation { message, .. } => {
-            TypedRequestError::Validation { method, message }
-        }
-        RunHavenServiceError::Backend { message, .. } => {
-            TypedRequestError::Backend { method, message }
-        }
-    }
 }
 
 #[cfg(test)]

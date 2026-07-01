@@ -86,6 +86,7 @@ npm --prefix ui test
 npm --prefix ui run test:e2e
 npm --prefix ui run build
 scripts/check-docs-local-paths.sh
+scripts/check-repo-structure.sh
 git diff --check
 ```
 
@@ -114,13 +115,9 @@ Tauri launch/run-control behavior.
   Ship the doc change in the same slice as the behavior.
 - Never commit machine-local absolute paths or local external-source references
   in docs, startup state, repo-local skills, examples, or generated docs
-  artifacts. This includes personal home-directory paths, download folders,
-  sibling checkouts, local workspace roots, and symbolic local placeholders for
-  those paths. Use repo-relative paths or public URLs. For upstream source,
-  cite a public repository plus pinned commit, for example
-  `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui`. If a
-  local external document is needed as a source, import or summarize it into
-  `docs/` first, then cite the repo copy.
+  artifacts. Use repo-relative paths or public URLs; cite upstream source as a
+  public repo plus pinned commit. If a local external document is needed, import
+  or summarize it into `docs/` first, then cite the repo copy.
 - User-facing writing is part of the product boundary. Write UI text, menus,
   prompts, warnings, README/usage docs, and setup instructions for
   non-technical users at roughly an 8th grade reading level. Prefer short
@@ -136,16 +133,12 @@ Tauri launch/run-control behavior.
   where no Codex equivalent exists. Document each exception in the TUI plan or
   architecture docs.
 - TUI direction: avoid non-RunHaven Codex product features. Use Codex TUI
-  architecture as the source-first terminal checkpoint, but finish only the
-  terminal surfaces that harden the shared RunHaven workflow: clean workspace
-  and agent selection, network/auth visibility, plan review, typed launch
-  confirmation, foreground launch handoff, post-run recovery, active-run
-  status/control, bounded logs, diagnostics/doctor guidance, and history or
-  run-record review when backed by existing core data. Leave Cubby/pet,
-  terminal-image, Zork, native Codex App, native ChatWidget, and unrelated
-  Codex product features dormant, fail-closed, parked, or documented unless
-  they harden the RunHaven boundary. After this branch is merged, shift product
-  focus to a native-feeling macOS GUI as the easy path for nontechnical users.
+  architecture as the source-first terminal checkpoint, but finish only surfaces
+  that harden shared RunHaven launch, session, security, and verification
+  workflows. Leave Cubby/pet, terminal-image, Zork, native Codex App, native
+  ChatWidget, and unrelated Codex product features dormant, fail-closed, parked,
+  or documented unless they harden the RunHaven boundary. After this branch is
+  merged, shift product focus to a native-feeling macOS GUI.
 - Boring over clever: choose the obvious construct, because clever is what
   someone has to decode at 3am. Between two standard-library options of similar
   size, take the one correct on edge cases; lazy means writing less code, not
@@ -158,9 +151,9 @@ Tauri launch/run-control behavior.
   supported less-secure paths explicit and warned.
 - Match local style and helper APIs.
 - Keep files, modules, crates, Tauri commands, and frontend components cohesive.
-  If a touched file is already difficult to review or would become so, split it
-  along existing boundaries in the same slice instead of creating large-file
-  debt.
+  `scripts/check-repo-structure.sh` is a hard gate: all file types have static
+  limits, and splittable repo-owned files at 90% of a ceiling must be split by
+  ownership now, not trimmed or deferred.
 - Keep the Rust workspace organized by ownership boundary. `crates/runhaven`
   owns binary entrypoints only. `crates/runhaven-core` owns runtime, provider,
   records, image, doctor, diagnostics, support, harness, and shared UI

@@ -1,20 +1,13 @@
-use std::collections::BTreeMap;
-use std::process::Command;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
-use serde_json::{Value, json};
+use serde_json::json;
 
 use crate::provider::auth_broker::{
     ApiKeyBrokerProxy, GuestRedirect, ProviderBrokerProfile, broker_profile_for_agent,
 };
-use crate::provider::egress::{EgressPolicy, ProxyDecision, ThreadedAllowlistProxy};
-use crate::provider::observability::{
-    print_provider_blocked_host_review, write_auth_broker_log, write_provider_policy_log,
-};
+use crate::provider::egress::{EgressPolicy, ThreadedAllowlistProxy};
+use crate::provider::observability::{print_provider_blocked_host_review, write_auth_broker_log};
 use crate::records::{RunRecordInput, write_run_record};
 use crate::runtime::launch::{
     AgentCommandExecution, AgentCommandRunner, StatusAgentCommandRunner,
@@ -22,11 +15,15 @@ use crate::runtime::launch::{
 };
 use crate::runtime::plans::AgentRunPlan;
 
-#[derive(Clone, Debug)]
-pub struct InternalNetworkInfo {
-    pub ipv4_gateway: String,
-    pub ipv4_subnet: String,
-}
+mod decision_log;
+mod network;
+
+use decision_log::{ProviderDecisionLogStream, start_provider_decision_log_stream};
+use network::command_starts_with;
+pub use network::{
+    InternalNetworkInfo, cleanup_provider_network, delete_container_network,
+    ensure_internal_network, inspect_internal_network, inspect_network_mode, run_preflight,
+};
 
 pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
     let mut runner = StatusAgentCommandRunner;
@@ -205,79 +202,6 @@ fn run_provider_agent_command_with_runner(
     run_agent_command_lifecycle(plan, run_id, command, runner)
 }
 
-type DecisionKey = (String, u16, String, String, String);
-type DecisionCounts = BTreeMap<DecisionKey, usize>;
-
-struct ProviderDecisionLogStream {
-    shutdown: Arc<AtomicBool>,
-    handle: thread::JoinHandle<Result<()>>,
-}
-
-impl ProviderDecisionLogStream {
-    fn stop(self) -> Result<()> {
-        self.shutdown.store(true, Ordering::Relaxed);
-        self.handle
-            .join()
-            .map_err(|_| anyhow::anyhow!("provider decision log stream panicked"))?
-    }
-}
-
-fn start_provider_decision_log_stream(
-    plan: &AgentRunPlan,
-    run_id: &str,
-    proxy: ThreadedAllowlistProxy,
-) -> ProviderDecisionLogStream {
-    let plan = plan.clone();
-    let run_id = run_id.to_string();
-    let shutdown = Arc::new(AtomicBool::new(false));
-    let thread_shutdown = Arc::clone(&shutdown);
-    let handle = thread::spawn(move || {
-        let mut seen = DecisionCounts::new();
-        while !thread_shutdown.load(Ordering::Relaxed) {
-            flush_provider_decision_deltas(&plan, &run_id, &proxy, &mut seen)?;
-            thread::sleep(Duration::from_millis(250));
-        }
-        flush_provider_decision_deltas(&plan, &run_id, &proxy, &mut seen)
-    });
-    ProviderDecisionLogStream { shutdown, handle }
-}
-
-fn flush_provider_decision_deltas(
-    plan: &AgentRunPlan,
-    run_id: &str,
-    proxy: &ThreadedAllowlistProxy,
-    seen: &mut DecisionCounts,
-) -> Result<()> {
-    let deltas = provider_decision_deltas(&proxy.policy_decisions(), seen);
-    write_provider_policy_log(plan, &deltas, run_id)
-}
-
-fn provider_decision_deltas(
-    decisions: &[ProxyDecision],
-    seen: &mut DecisionCounts,
-) -> Vec<ProxyDecision> {
-    decisions
-        .iter()
-        .filter_map(|decision| {
-            let key = (
-                decision.host.clone(),
-                decision.port,
-                decision.decision.clone(),
-                decision.reason.clone(),
-                decision.matched_rule.clone(),
-            );
-            let previous = seen.get(&key).copied().unwrap_or_default();
-            if decision.count <= previous {
-                return None;
-            }
-            seen.insert(key, decision.count);
-            let mut delta = decision.clone();
-            delta.count -= previous;
-            Some(delta)
-        })
-        .collect()
-}
-
 pub fn require_api_key_broker_secret(
     plan: &AgentRunPlan,
 ) -> Result<Option<(ProviderBrokerProfile, String)>> {
@@ -401,18 +325,6 @@ pub fn with_api_key_broker_config(
     }
 }
 
-pub fn cleanup_provider_network(plan: &AgentRunPlan) -> Result<Value> {
-    let Some(name) = &plan.network_name else {
-        return Ok(json!({"provider_network": "not-created", "provider_network_name": null}));
-    };
-    let code = delete_container_network(name)?;
-    Ok(json!({
-        "provider_network": if code == 0 { "deleted" } else { "delete-failed" },
-        "provider_network_name": name,
-        "delete_return_code": code,
-    }))
-}
-
 pub fn create_provider_proxy(
     policy: EgressPolicy,
     network_info: &InternalNetworkInfo,
@@ -463,106 +375,6 @@ pub fn create_api_key_broker(
                 })
         }
     }
-}
-
-pub fn inspect_internal_network(name: &str) -> Result<InternalNetworkInfo> {
-    let output = Command::new("container")
-        .args(["network", "inspect", name])
-        .output()?;
-    if !output.status.success() {
-        bail!("container network inspect failed: {name}");
-    }
-    parse_internal_network_info(name, &output.stdout)
-}
-
-fn parse_internal_network_info(name: &str, stdout: &[u8]) -> Result<InternalNetworkInfo> {
-    let payload: Value = serde_json::from_slice(stdout)
-        .with_context(|| format!("could not inspect provider network {name:?}"))?;
-    let item = payload
-        .as_array()
-        .and_then(|items| items.first())
-        .ok_or_else(|| anyhow::anyhow!("could not inspect provider network {name:?}"))?;
-    if item.pointer("/configuration/mode").and_then(Value::as_str) != Some("hostOnly") {
-        bail!("provider network {name:?} is not host-only");
-    }
-    let gateway = item
-        .pointer("/status/ipv4Gateway")
-        .and_then(Value::as_str)
-        .ok_or_else(|| {
-            anyhow::anyhow!("provider network {name:?} is missing IPv4 gateway or subnet")
-        })?;
-    let subnet = item
-        .pointer("/status/ipv4Subnet")
-        .and_then(Value::as_str)
-        .ok_or_else(|| {
-            anyhow::anyhow!("provider network {name:?} is missing IPv4 gateway or subnet")
-        })?;
-    Ok(InternalNetworkInfo {
-        ipv4_gateway: gateway.to_string(),
-        ipv4_subnet: subnet.to_string(),
-    })
-}
-
-pub fn delete_container_network(name: &str) -> Result<i32> {
-    Ok(Command::new("container")
-        .args(["network", "delete", name])
-        .status()?
-        .code()
-        .unwrap_or(1))
-}
-
-pub fn ensure_internal_network(name: &str) -> Result<()> {
-    let existing = Command::new("container")
-        .args(["network", "inspect", name])
-        .output()?;
-    if existing.status.success() {
-        let mode = inspect_network_mode(&String::from_utf8_lossy(&existing.stdout));
-        if mode.as_deref() == Some("hostOnly") {
-            return Ok(());
-        }
-        bail!(
-            "existing container network {name:?} is {}, not host-only",
-            mode.unwrap_or_else(|| "unknown".to_string())
-        );
-    }
-    let status = Command::new("container")
-        .args(["network", "create", "--internal", name])
-        .status()?;
-    if !status.success() {
-        bail!("container network create failed: {name}");
-    }
-    Ok(())
-}
-
-pub fn inspect_network_mode(output: &str) -> Option<String> {
-    let payload = serde_json::from_str::<Value>(output).ok()?;
-    payload
-        .as_array()?
-        .first()?
-        .pointer("/configuration/mode")?
-        .as_str()
-        .map(str::to_string)
-}
-
-pub fn run_preflight(command: &[String]) -> Result<()> {
-    if command_starts_with(command, &["container", "network", "create", "--internal"])
-        && let Some(name) = command.last()
-    {
-        return ensure_internal_network(name);
-    }
-    let status = Command::new(&command[0]).args(&command[1..]).status()?;
-    if !status.success() {
-        bail!("preflight command failed: {status}");
-    }
-    Ok(())
-}
-
-fn command_starts_with(command: &[String], prefix: &[&str]) -> bool {
-    command.len() >= prefix.len()
-        && command
-            .iter()
-            .zip(prefix.iter())
-            .all(|(left, right)| left == right)
 }
 
 #[cfg(test)]

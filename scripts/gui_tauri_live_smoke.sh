@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Local live smoke for the GUI/Tauri managed-session command path.
 # Builds the desktop shell and runs the ignored live Tauri command test that
-# launches one shell session, writes input, reads output, and stops it.
+# launches two shell sessions, writes isolated input, reads isolated output,
+# and stops both sessions.
 set -euo pipefail
 
 usage() {
@@ -14,13 +15,13 @@ Checks:
   - runhaven doctor
   - bundled shell image readiness
   - no-bundle Tauri debug build, unless --skip-tauri-build is set
-  - one live Tauri-owned shell run on the internal network
-  - selected-session Tauri command path for bounded input, bounded output, and
-    confirmed stop
+  - two live Tauri-owned shell runs on the internal network
+  - selected-session Tauri command path for isolated bounded input, isolated
+    bounded output, and confirmed stop
 
 This does not automate WebView clicks. It proves the desktop build plus the
 same typed Tauri commands the React shell calls for selected-session input,
-output, and run control.
+output, run control, and multi-session isolation.
 EOF
 }
 
@@ -108,9 +109,9 @@ grep -F "Builder status" "$image_doctor_log" >/dev/null 2>&1 || {
 }
 rm -f "$image_doctor_log"
 
-step "exercise live Tauri launch input path"
+step "exercise live Tauri multi-session input path"
 cargo test -p runhaven-tauri --locked \
-  managed_session_live_smoke_writes_input_and_reads_output \
+  managed_session_live_smoke_isolates_two_sessions \
   -- --ignored --show-output
 
 echo "GUI Tauri live smoke checks passed."

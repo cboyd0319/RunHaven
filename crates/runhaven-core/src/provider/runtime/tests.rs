@@ -1,4 +1,7 @@
+use super::decision_log::{DecisionCounts, provider_decision_deltas};
+use super::network::parse_internal_network_info;
 use super::*;
+use crate::provider::egress::ProxyDecision;
 use crate::runtime::launch::{AgentCommandContext, AgentCommandRunner};
 use crate::support::paths::override_cache_root_for_tests;
 use std::io::{Read, Write};

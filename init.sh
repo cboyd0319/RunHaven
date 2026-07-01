@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run the local macOS verification harness for RunHaven.
 # Checks Rust formatting, TUI package tests, workspace tests, clippy, pin policy,
-# harness state, frontend, Tauri packaging, diff hygiene, and build output.
+# repo structure, frontend, Tauri packaging, diff hygiene, and build output.
 set -euo pipefail
 
 echo "== Harness verification for RunHaven =="
@@ -43,6 +43,9 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 
 echo "== cargo run --locked --bin runhaven-check-pins =="
 cargo run --locked --bin runhaven-check-pins
+
+echo "== scripts/check-repo-structure.sh =="
+scripts/check-repo-structure.sh
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "python3 was not found on PATH."

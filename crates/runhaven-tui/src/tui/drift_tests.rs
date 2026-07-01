@@ -406,7 +406,8 @@ fn runhaven_adapters_do_not_import_codex_core_runtime_surfaces() {
 fn active_run_log_snapshot_route_stays_in_runhaven_facade() {
     let active_snapshot_marker = ["active_run_", "log_snapshot_payload"].concat();
     let method_marker = ["runhaven/run/", "logSnapshot"].concat();
-    let service_source = include_str!("runhaven/service.rs");
+    let service_requests_source = include_str!("runhaven/service_requests.rs");
+    let service_runs_source = include_str!("runhaven/service_runs.rs");
     let protocol_source = include_str!("runhaven/protocol.rs");
     let session_source = include_str!("runhaven/app_server_session.rs");
     let app_shell_source = include_str!("app_shell.rs");
@@ -426,18 +427,18 @@ fn active_run_log_snapshot_route_stays_in_runhaven_facade() {
 
     assert_eq!(
         owners,
-        ["runhaven/service.rs"],
+        ["runhaven/service_runs.rs"],
         "only the RunHaven TUI service facade may call the active-run log snapshot runtime API"
     );
     assert!(
         protocol_source.contains(&method_marker)
             && session_source.contains("run_log_snapshot")
-            && service_source.contains("self.active_run_log_snapshot_data(")
-            && service_source.contains(
+            && service_requests_source.contains("self.active_run_log_snapshot_data(")
+            && service_runs_source.contains(
                 "self.validate_sensitive_log_confirmation(confirm_sensitive_output, method)?;"
             )
-            && service_source.contains("self.validate_log_snapshot_lines(lines, method)?;")
-            && service_source
+            && service_runs_source.contains("self.validate_log_snapshot_lines(lines, method)?;")
+            && service_runs_source
                 .contains("self.active_run_log_snapshot_payload(run_id, lines, method)"),
         "log snapshots must stay a typed RunHaven method with sensitive-output confirmation and validation before backend lookup"
     );
@@ -456,7 +457,8 @@ fn active_run_log_snapshot_route_stays_in_runhaven_facade() {
 #[test]
 fn visible_run_log_ui_stays_confirmation_gated_in_runhaven_mvp() {
     let mvp_source = include_str!("runhaven/mvp.rs");
-    let mvp_render_source = include_str!("runhaven/mvp_render.rs");
+    let mvp_input_source = include_str!("runhaven/mvp_input.rs");
+    let mvp_render_source = include_str!("runhaven/mvp_render_runs.rs");
     let app_shell_source = include_str!("app_shell.rs");
     let log_text_marker = ["snapshot", ".text.lines().take"].concat();
     let owners = tui_rust_sources()
@@ -475,14 +477,14 @@ fn visible_run_log_ui_stays_confirmation_gated_in_runhaven_mvp() {
 
     assert_eq!(
         owners,
-        ["runhaven/mvp_render.rs"],
+        ["runhaven/mvp_render_runs.rs"],
         "raw log text rendering must stay in the RunHaven MVP render view"
     );
     assert!(
         mvp_source.contains("LOG_CONFIRM_PHRASE")
-            && mvp_source.contains("typed.trim() != LOG_CONFIRM_PHRASE")
-            && mvp_source.contains("active_run_log_snapshot_data(")
-            && mvp_source.contains("\"runhaven/run/logSnapshot\"")
+            && mvp_input_source.contains("typed.trim() != LOG_CONFIRM_PHRASE")
+            && mvp_input_source.contains("active_run_log_snapshot_data(")
+            && mvp_input_source.contains("\"runhaven/run/logSnapshot\"")
             && mvp_render_source.contains("Raw container output can contain secrets")
             && mvp_render_source.contains(&log_text_marker),
         "visible log UI must require typed confirmation before loading raw output"
@@ -650,10 +652,12 @@ fn foreground_runtime_launch_call_stays_in_ui_thread_handoff_owner() {
 
 #[test]
 fn run_control_stays_in_runhaven_service_with_typed_confirmation() {
-    let service_source = include_str!("runhaven/service.rs");
+    let service_runs_source = include_str!("runhaven/service_runs.rs");
     let protocol_source = include_str!("runhaven/protocol.rs");
     let session_source = include_str!("runhaven/app_server_session.rs");
     let mvp_source = include_str!("runhaven/mvp.rs");
+    let mvp_input_source = include_str!("runhaven/mvp_input.rs");
+    let mvp_bottom_source = include_str!("runhaven/mvp_bottom_pane.rs");
     let app_shell_source = include_str!("app_shell.rs");
 
     for marker in [
@@ -677,16 +681,17 @@ fn run_control_stays_in_runhaven_service_with_typed_confirmation() {
 
         assert_eq!(
             owners,
-            ["runhaven/service.rs"],
+            ["runhaven/service_runs.rs"],
             "direct core run-control call {marker:?} must stay in the RunHaven TUI service"
         );
     }
 
     assert!(
-        service_source.contains("validate_run_control_confirmation")
-            && service_source.contains("Confirm stop before stopping this run.")
-            && service_source.contains("Confirm hard stop before killing this run.")
-            && service_source.contains("Confirm repair before changing this active-run marker."),
+        service_runs_source.contains("validate_run_control_confirmation")
+            && service_runs_source.contains("Confirm stop before stopping this run.")
+            && service_runs_source.contains("Confirm hard stop before killing this run.")
+            && service_runs_source
+                .contains("Confirm repair before changing this active-run marker."),
         "run-control service calls must validate explicit confirmation before backend lookup"
     );
     assert!(
@@ -700,8 +705,8 @@ fn run_control_stays_in_runhaven_service_with_typed_confirmation() {
     );
     assert!(
         mvp_source.contains("RunControlState::Confirm")
-            && mvp_source.contains("typed.trim() != screen.action.phrase()")
-            && mvp_source.contains("Paste is ignored here."),
+            && mvp_input_source.contains("typed.trim() != screen.action.phrase()")
+            && mvp_bottom_source.contains("Paste is ignored here."),
         "TUI run-control screens must keep separate typed confirmation and reject paste"
     );
     for marker in [
@@ -721,10 +726,11 @@ fn run_control_stays_in_runhaven_service_with_typed_confirmation() {
 
 #[test]
 fn run_diff_stays_in_runhaven_service_with_typed_confirmation() {
-    let service_source = include_str!("runhaven/service.rs");
+    let service_runs_source = include_str!("runhaven/service_runs.rs");
     let protocol_source = include_str!("runhaven/protocol.rs");
     let session_source = include_str!("runhaven/app_server_session.rs");
-    let mvp_source = include_str!("runhaven/mvp.rs");
+    let mvp_input_source = include_str!("runhaven/mvp_input.rs");
+    let mvp_bottom_source = include_str!("runhaven/mvp_bottom_pane.rs");
     let app_shell_source = include_str!("app_shell.rs");
 
     let owners = tui_rust_sources()
@@ -743,12 +749,12 @@ fn run_diff_stays_in_runhaven_service_with_typed_confirmation() {
 
     assert_eq!(
         owners,
-        ["runhaven/service.rs"],
+        ["runhaven/service_runs.rs"],
         "direct core run-diff calls must stay in the RunHaven TUI service"
     );
     assert!(
-        service_source.contains("validate_sensitive_diff_confirmation")
-            && service_source
+        service_runs_source.contains("validate_sensitive_diff_confirmation")
+            && service_runs_source
                 .contains("Confirm diff viewing before loading workspace file contents."),
         "run-diff service calls must validate explicit confirmation before backend lookup"
     );
@@ -759,9 +765,9 @@ fn run_diff_stays_in_runhaven_service_with_typed_confirmation() {
         "app-server facade must expose only the reviewed RunHaven run-diff method"
     );
     assert!(
-        mvp_source.contains("RunDiffState::Confirm")
-            && mvp_source.contains("typed.trim() != DIFF_CONFIRM_PHRASE")
-            && mvp_source.contains("Paste is ignored here."),
+        mvp_input_source.contains("RunDiffState::Confirm")
+            && mvp_input_source.contains("typed.trim() != DIFF_CONFIRM_PHRASE")
+            && mvp_bottom_source.contains("Paste is ignored here."),
         "TUI run-diff screen must keep separate typed confirmation and reject paste"
     );
     for marker in ["run_diff_text", "RunHavenRunDiff", "runhaven/run/diff"] {
