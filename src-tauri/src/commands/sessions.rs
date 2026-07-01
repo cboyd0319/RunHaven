@@ -6,14 +6,11 @@ use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{
     LogSnapshotEntry, LogSnapshotRequest, LogSnapshotResponse, ManagedSessionLogSnapshotRequest,
     ManagedSessionLogSnapshotResponse, SessionLogEntry, SessionLogRedaction,
+    WriteSessionInputRequest, WriteSessionInputResponse,
 };
-#[cfg(test)]
-use crate::contracts::{WriteSessionInputRequest, WriteSessionInputResponse};
-#[cfg(test)]
 use crate::session_input::SessionInputRegistry;
 
 const RAW_OUTPUT_REDACTION_MESSAGE: &str = "Raw output is not automatically redacted.";
-#[cfg(test)]
 const MAX_SESSION_INPUT_BYTES: usize = 8 * 1024;
 
 #[tauri::command]
@@ -111,8 +108,15 @@ pub(crate) fn managed_session_for_id(
     Ok((session, run_id))
 }
 
-#[cfg(test)]
-pub(crate) fn write_session_input_for_test(
+#[tauri::command]
+pub(crate) fn write_session_input(
+    request: WriteSessionInputRequest,
+    registry: tauri::State<'_, SessionInputRegistry>,
+) -> Result<WriteSessionInputResponse, String> {
+    write_session_input_with_registry(request, registry.inner())
+}
+
+fn write_session_input_with_registry(
     request: WriteSessionInputRequest,
     registry: &SessionInputRegistry,
 ) -> Result<WriteSessionInputResponse, String> {
@@ -147,6 +151,13 @@ pub(crate) fn write_session_input_for_test(
 }
 
 #[cfg(test)]
+pub(crate) fn write_session_input_for_test(
+    request: WriteSessionInputRequest,
+    registry: &SessionInputRegistry,
+) -> Result<WriteSessionInputResponse, String> {
+    write_session_input_with_registry(request, registry)
+}
+
 fn validate_session_input_request(request: &WriteSessionInputRequest) -> Result<(), String> {
     if !request.confirm_send {
         return Err("Confirm the send before sending input.".to_string());
@@ -176,7 +187,6 @@ fn validate_session_input_request(request: &WriteSessionInputRequest) -> Result<
     Ok(())
 }
 
-#[cfg(test)]
 fn contains_terminal_escape(input: &str) -> bool {
     input.chars().any(|ch| matches!(ch, '\u{1b}' | '\u{9b}'))
 }

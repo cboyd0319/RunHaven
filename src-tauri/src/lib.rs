@@ -21,6 +21,7 @@ pub fn run() {
             commands::diagnostics::get_auth_status,
             commands::sessions::get_managed_sessions,
             commands::sessions::get_managed_session_log_snapshot,
+            commands::sessions::write_session_input,
             commands::run_control::stop_run,
             commands::run_control::kill_run,
             commands::run_control::repair_run,

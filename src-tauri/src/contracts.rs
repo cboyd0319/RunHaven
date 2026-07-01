@@ -215,7 +215,6 @@ pub(crate) struct ManagedSessionLogSnapshotResponse {
     pub entries: Vec<SessionLogEntry>,
 }
 
-#[cfg(test)]
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct WriteSessionInputRequest {
@@ -225,7 +224,6 @@ pub(crate) struct WriteSessionInputRequest {
     pub client_target: String,
 }
 
-#[cfg(test)]
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct WriteSessionInputResponse {

@@ -4,13 +4,14 @@ Last updated: 2026-06-30 UTC
 
 ## Status
 
-No input command is exposed in this slice.
+A narrow `write_session_input` Tauri command is exposed under the `run-control`
+capability. No frontend composer calls it yet.
 
 This document is the design gate before RunHaven exposes any GUI session input
 or resize command. The current desktop app can observe sessions, load bounded
 raw output after acknowledgement, keep selected-session output updated through
-bounded polling, and request fixed run-control actions. It still cannot write
-bytes to an agent session from the WebView.
+bounded polling, request fixed run-control actions, and write bounded text to a
+backend-owned session only through the fixed input command.
 
 The backend now has a Tauri-managed `SessionInputRegistry` for future input.
 The registry can accept a Rust-owned writer for an existing session and rejects
@@ -77,9 +78,9 @@ Sensitive:
 - `resize_session` is not part of the first input slice. resize remains out of
   scope until the input contract is proven and a separate resize design exists.
 
-## Future Request Shape
+## Command Shape
 
-The first write-capable command should be narrow and typed:
+The write-capable command is narrow and typed:
 
 ```text
 write_session_input(request) -> WriteSessionInputResponse
@@ -179,12 +180,12 @@ Transport evidence:
   and register a backend-owned writer. If a later TTY session needs a PTY,
   evaluate the smallest fitting existing utility before writing custom code.
 
-## Required Tests Before Exposing A Command
+## Required Tests Before Frontend Composer
 
-Current preflight coverage:
+Current coverage:
 
 - `WriteSessionInputRequest`, `WriteSessionInputResponse`, and
-  `write_session_input_for_test` exist only for Rust tests.
+  `write_session_input` are narrow typed Tauri contracts.
 - The test seam resolves the backend-owned session ID before a write can be
   accepted.
 - It rejects unknown sessions, oversized session IDs, missing confirmation,
@@ -195,8 +196,8 @@ Current preflight coverage:
 - The test seam now routes accepted input through `SessionInputRegistry`, not a
   one-off callback. Missing transports fail closed, stale run/session mappings
   fail closed, and two sessions cannot share a writer.
-- It still exposes no Tauri command, no capability grant, and no frontend input
-  path.
+- It exposes only the fixed `write_session_input` command under `run-control`.
+  There is still no frontend input path.
 
 Rust/Tauri:
 
@@ -246,9 +247,11 @@ Live smoke:
    input. Reuse a repo-vendored utility such as `codex-utils-pty` only if a
    later terminal-quality issue proves the standard process handle is not
    enough.
-6. Add the fixed Tauri command only after the fail-closed tests exist. Next.
+6. Add the fixed Tauri command only after the fail-closed tests exist. Done.
 7. Grant only `allow-write-session-input` under `run-control`, not `main-read`.
+   Done.
 8. Add a minimal selected-session composer that calls only the typed command.
+   Next.
 9. Add preview and Playwright tests for two selected sessions.
 10. Add a live smoke only after the Rust path can write to a real backend-owned
    session.

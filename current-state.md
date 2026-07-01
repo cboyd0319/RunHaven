@@ -1550,9 +1550,9 @@ Latest GUI local prototype:
   mounts, network policy, approvals, logs, and diagnostics should open as
   the active view, a review sheet, or a temporary inspector. A future embedded
   Codex session should occupy the main pane after launch, with Rust/Tauri
-  owning the reviewed launch plan. Output is the only live session surface
-  exposed today; input stays design-only and resize stays out of scope until
-  separate guard tests promote them.
+  owning the reviewed launch plan. Output is exposed through bounded snapshots.
+  Input is now limited to a fixed backend-owned command with no frontend
+  composer yet; resize stays out of scope until separate guard tests promote it.
 - 2026-06-30 implementation follow-up: Removed the React desktop right rail.
   Setup status now lives in the toolbar, setup blockers take over the main
   pane before launch, diagnostics stay collapsed in the main flow, and the
@@ -1678,6 +1678,11 @@ Latest GUI local prototype:
   resize, attach, app-server transport, filesystem RPC, MCP, or host-reaching
   Codex path was added. Next: add the fixed input command under the existing
   fail-closed request contract.
+- 2026-06-30 fixed session input command: `write_session_input` is now exposed
+  only under the `run-control` capability. It reuses the fail-closed managed
+  session input contract and `SessionInputRegistry`; `main-read` stays
+  input-free, and no frontend composer, resize, attach, app-server transport,
+  filesystem RPC, MCP, login, or host-reaching Codex path was added.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
@@ -1705,14 +1710,11 @@ Continue local GUI work on this branch. Use
 `docs/plans/native-gui-microsandbox-reference.md` before adding embedded
 terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
 boundary, make safe launch the simplest path, and keep developer details behind
-secondary views. Next useful work is to identify and implement the real
-backend-owned write transport for a live GUI-managed session without exposing
-the command yet. Current active-run records and bounded output snapshots do
-not preserve a stdin handle by themselves, so this must start from the runtime
-ownership model, not from a frontend composer. Do not expose an input command,
-resize command, attach bridge, app-server transport, filesystem RPC, MCP,
-generic command execution, login, or host-reaching Codex path in that slice. A
-later desktop-driver pass can add native WebView click automation if it is
-worth the tooling cost.
+secondary views. Next useful work is to add the minimal selected-session
+composer that calls only `write_session_input`, clears drafts on target changes,
+and ignores stale responses. Do not expose resize, attach, app-server
+transport, filesystem RPC, MCP, generic command execution, login, or
+host-reaching Codex paths in that slice. A later desktop-driver pass can add
+native WebView click automation if it is worth the tooling cost.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.
