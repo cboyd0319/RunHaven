@@ -38,8 +38,11 @@ fn test_plan(network: NetworkMode) -> AgentRunPlan {
 }
 
 mod active_runs;
+mod agent_catalog;
 mod diagnostics;
+mod helpers;
 mod launch;
+mod payload;
 mod review;
 mod session_cleanup;
 mod session_recovery;
