@@ -12,7 +12,7 @@ export function sameManagedSessionList(
   )
 }
 
-function sameManagedSession(
+export function sameManagedSession(
   current: ManagedSessionSummary,
   next: ManagedSessionSummary | undefined,
 ): boolean {

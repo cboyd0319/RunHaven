@@ -6,6 +6,7 @@ import type {
   DashboardStatus,
   ImageStatusResponse,
   LaunchRunResponse,
+  ManagedSessionStatusResponse,
   ManagedSessionSummary,
   RunPlanRequest,
   RunPlanResponse,
@@ -17,6 +18,7 @@ import { DiagnosticsCard } from "./DiagnosticsCard"
 import { LastLaunchCard } from "./LastLaunchCard"
 import { LaunchPlanCard } from "./LaunchPlanCard"
 import { ManagedSessionCard, sessionAllowsRunControl } from "./ManagedSessionCard"
+import { ManagedSessionStatusCard } from "./ManagedSessionStatusCard"
 import { PlanReviewCard } from "./PlanReviewCard"
 import { RunOutputCard } from "./RunOutputCard"
 import { RunStatusCard } from "./RunStatusCard"
@@ -33,6 +35,9 @@ type AppMainContentProps = {
   authStatus: AuthStatusResponse | null
   setupReady: boolean
   selectedSession: ManagedSessionSummary | null
+  selectedSessionStatus: ManagedSessionStatusResponse | null
+  selectedSessionStatusLoading: boolean
+  selectedSessionStatusError: string
   sessionInputDraft: string
   sessionInputSending: boolean
   sessionInputError: string
@@ -143,6 +148,11 @@ function SessionView(
   return (
     <>
       <ManagedSessionCard session={props.selectedSession} />
+      <ManagedSessionStatusCard
+        status={props.selectedSessionStatus}
+        loading={props.selectedSessionStatusLoading}
+        error={props.selectedSessionStatusError}
+      />
       <SessionInputCard
         session={props.selectedSession}
         draft={props.sessionInputDraft}

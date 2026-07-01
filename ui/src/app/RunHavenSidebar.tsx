@@ -92,6 +92,7 @@ export function RunHavenSidebar({
                 {sessions.map((session) => (
                   <SidebarMenuItem key={session.id}>
                     <SidebarMenuButton
+                      className="pr-20"
                       tooltip={session.title}
                       type="button"
                       isActive={selectedSessionId === session.id}
@@ -100,7 +101,9 @@ export function RunHavenSidebar({
                       <Terminal />
                       <span>{session.title}</span>
                     </SidebarMenuButton>
-                    <SidebarMenuBadge>{session.statusLabel}</SidebarMenuBadge>
+                    <SidebarMenuBadge className="max-w-16 truncate">
+                      {session.statusLabel}
+                    </SidebarMenuBadge>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>

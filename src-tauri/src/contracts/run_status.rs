@@ -1,3 +1,4 @@
+use runhaven_core::ui_contracts::ManagedSessionSummaryData;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize)]
@@ -53,4 +54,18 @@ pub(crate) struct RunStatusContainer {
 pub(crate) struct RunStatusResponse {
     pub run: RunStatusRun,
     pub container: RunStatusContainer,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ManagedSessionStatusRequest {
+    pub session_id: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ManagedSessionStatusResponse {
+    pub session: ManagedSessionSummaryData,
+    pub container: Option<RunStatusContainer>,
+    pub status_unavailable: Option<String>,
 }

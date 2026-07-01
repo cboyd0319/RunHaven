@@ -112,6 +112,11 @@ Useful GUI design docs:
 - Desktop/Tauri managed-session work has live evidence for launch, bounded
   output, input, stop, cleanup, distinct GUI session identity, and per-session
   state naming.
+- Selected GUI sessions now have a read-only typed runtime status path:
+  `get_managed_session_status` resolves the backend-owned session ID in Rust
+  and returns sanitized container status for the runtime card without exposing
+  raw workspace paths, state volumes, mounts, environment values, or launch
+  arguments.
 - The GUI quietly refreshes active/recent managed sessions after launch or
   selection and suppresses no-op session-list updates to avoid visible page
   blink while status changes.
@@ -143,7 +148,9 @@ fail-closed boundaries before visual polish.
 
 For this CLI+GUI completion goal, local downloads, installs, tool runs, and
 external research are authorized when they directly reduce risk or accelerate
-the work.
+the work. Multiple subagents are authorized for real bounded implementation,
+review, and test work when their scopes are independent; the lead agent remains
+responsible for architecture, integration, and final verification.
 
 Smallest relevant checks for this slice:
 
@@ -162,6 +169,6 @@ them.
 CLI is reverified and should stay contract-preserving except for bug fixes,
 security fixes, docs corrections, pin updates, or internal GUI support that
 preserves CLI semantics. Continue the CLI+GUI goal on the GUI side from the
-hardest problems first: real-agent auth/session behavior, typed status
-reporting, and fail-closed security boundaries. Keep the safe path short,
-stable, and nontechnical.
+hardest problems first: real-agent auth/session behavior, recovery/diagnostics
+for managed sessions, CLI/GUI parity checks, and fail-closed security
+boundaries. Keep the safe path short, stable, and nontechnical.

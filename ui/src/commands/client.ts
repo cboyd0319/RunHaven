@@ -11,6 +11,7 @@ import {
   previewManagedKill,
   previewManagedRepair,
   previewManagedSessionLogSnapshot,
+  previewManagedSessionStatus,
   previewManagedSessionsList,
   previewManagedStop,
   previewPlanRun,
@@ -31,6 +32,7 @@ import type {
   LogSnapshotResponse,
   ManagedSessionList,
   ManagedSessionLogSnapshotResponse,
+  ManagedSessionStatusResponse,
   RunPlanRequest,
   RunPlanResponse,
   KillRunResponse,
@@ -118,6 +120,16 @@ export async function getManagedSessionLogSnapshot(
 
 export async function getManagedSessions(): Promise<ManagedSessionList> {
   return call("get_managed_sessions", {}, previewManagedSessionsList);
+}
+
+export async function getManagedSessionStatus(
+  sessionId: string
+): Promise<ManagedSessionStatusResponse> {
+  return call(
+    "get_managed_session_status",
+    { request: { sessionId } },
+    () => previewManagedSessionStatus(sessionId)
+  );
 }
 
 export async function planRun(request: RunPlanRequest): Promise<RunPlanResponse> {

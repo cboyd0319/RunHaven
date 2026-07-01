@@ -35,6 +35,9 @@ export default function App() {
             authStatus={app.authStatus}
             setupReady={app.setupReady}
             selectedSession={app.selectedSession}
+            selectedSessionStatus={app.selectedSessionStatus}
+            selectedSessionStatusLoading={app.selectedSessionStatusLoading}
+            selectedSessionStatusError={app.selectedSessionStatusError}
             sessionInputDraft={app.sessionInputDraft}
             sessionInputSending={app.sessionInputSending}
             sessionInputError={app.sessionInputError}

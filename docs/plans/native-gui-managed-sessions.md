@@ -1,6 +1,6 @@
 # Native GUI Managed Sessions
 
-Last updated: 2026-06-30 UTC
+Last updated: 2026-07-01 UTC
 
 ## Goal
 
@@ -31,10 +31,10 @@ Untrusted:
 Rules:
 
 - The frontend can observe sessions through typed read-only commands.
-- The current frontend cannot send session input.
-- A future frontend input bridge can send input only to an existing
-  backend-owned session ID after the design gate in
-  `docs/plans/native-gui-session-input-contract.md` is satisfied.
+- The frontend can send bounded text input only through the fixed
+  `write_session_input` command to an existing backend-owned selected session
+  ID after the design gate in `docs/plans/native-gui-session-input-contract.md`
+  is satisfied.
 - Backend input transport is RunHaven-owned. Repo-vendored utility code can be
   reused only when it fits this contract; Codex app-server, exec-server, MCP,
   login, and filesystem transports are not GUI input shortcuts.
@@ -83,7 +83,9 @@ Current session commands:
 
 ```text
 get_managed_sessions() -> ManagedSessionListData
+get_managed_session_status(request) -> ManagedSessionStatusResponse
 get_managed_session_log_snapshot(request) -> ManagedSessionLogSnapshotResponse
+write_session_input(request) -> WriteSessionInputResponse
 stop_managed_session(request) -> StopManagedSessionResponse
 kill_managed_session(request) -> KillManagedSessionResponse
 repair_managed_session(request) -> RepairManagedSessionResponse
@@ -93,15 +95,24 @@ Capabilities:
 
 ```text
 main-read: allow-get-managed-sessions
+main-read: allow-get-managed-session-status
 run-control: allow-get-managed-session-log-snapshot
+run-control: allow-write-session-input
 run-control: allow-stop-managed-session
 run-control: allow-kill-managed-session
 run-control: allow-repair-managed-session
 ```
 
-The status command is read-only and stays under `main-read`. Raw output and
-run-control commands stay outside `main-read` because bounded container stdio
-can contain secrets and stop/kill/repair mutate runtime state.
+The managed session list and selected-session status commands are read-only and
+stay under `main-read`. Raw output, input, and run-control commands stay outside
+`main-read` because bounded container stdio can contain secrets and input,
+stop, kill, and repair mutate runtime state.
+
+`get_managed_session_status` accepts only a managed session ID. Rust resolves
+that session to the active RunHaven run, checks whether input is attached in the
+backend registry, and returns the managed session summary plus sanitized
+container status. The response omits raw workspace paths, state volume names,
+mounts, environment values, raw command arguments, and backend error text.
 
 The managed run-control commands accept only a backend-owned session ID plus
 the explicit confirmation flag for that action. Rust resolves the session ID to
@@ -112,8 +123,8 @@ network setting on this path.
 
 ## Future Embedded Session Surface
 
-Input remains design-only. No `write_session_input`, `resize_session`, or
-session attach command is exposed by the current desktop app.
+Input is limited to `write_session_input`. No `resize_session` or session attach
+command is exposed by the current desktop app.
 
 Read-only session commands may expand first:
 
@@ -122,9 +133,9 @@ start_session(reviewed_plan_id)
 get_session(session_id)
 ```
 
-Before any input-capable command is exposed, use
+Before expanding any input-capable command, use
 `docs/plans/native-gui-session-input-contract.md` as the required contract.
-Guard requirements include:
+Current guard requirements include:
 
 - Unknown session IDs fail closed.
 - Session IDs must refer to backend-owned RunHaven sessions.
@@ -165,6 +176,12 @@ Current GUI behavior:
   network posture, and start time.
 - The summary renders backend-owned lifecycle, next-action, and event markers
   instead of inferring those states in the WebView.
+- The selected-session runtime card refreshes through
+  `get_managed_session_status`, suppresses no-op updates, and shows sanitized
+  container state, image, CPU, memory, and network summary when available.
+- Runtime status failures are bounded and generic. They do not expose raw
+  backend errors, raw launch arguments, host paths, state volumes, mounts, or
+  environment values.
 - Auth states that need attention use a backend-owned next action such as
   `auth_attention`.
 - The summary does not expose raw workspace paths, state volume names, raw
@@ -198,9 +215,13 @@ Current GUI behavior:
 - Selected-session controls do not add terminal input, resize, attach,
   filesystem RPC, generic command execution, app-server transport, MCP
   execution, login, or host-reaching Codex paths.
-- A Tauri-managed `SessionInputRegistry` now exists as backend state for a
-  future writer. It is not exposed as a command. It rejects missing transports,
-  stale run/session mappings, and cross-session writer reuse in Rust tests.
+- A Tauri-managed `SessionInputRegistry` backs `write_session_input`. It
+  rejects missing transports, stale run/session mappings, and cross-session
+  writer reuse in Rust tests.
+- The selected-session Message composer is visible only when the backend-owned
+  next action is `monitor`. It sends only the selected managed session ID,
+  explicit confirmation, stale-target ID, and bounded input bytes through
+  `write_session_input`.
 
 ## Verification
 
@@ -214,6 +235,12 @@ Current slice:
 - Tauri command test proves the endpoint does not expose write-session or
   attach affordances
 - capability guard proves the command is under an `allow-*` scope only
+- Tauri command tests prove `get_managed_session_status` resolves the session
+  ID in Rust, returns only sanitized container status, marks input attachment
+  from the backend registry, and maps status lookup failure to a bounded generic
+  message
+- frontend selected-session status tests prove the runtime card renders typed
+  status and unavailable states without raw paths or bridge command names
 - frontend helper test proves the browser fallback keeps the same shape
 - frontend selected-session card test proves the rendered summary stays
   read-only, renders the typed next action and event markers, and does not
@@ -255,9 +282,10 @@ Current slice:
   the selected-session bounded-output plus confirmed-stop command path works
   against one live Apple `container` run. This is an opt-in local smoke, not a
   WebView click automation harness.
-- capability guard proves no session-input, resize, attach, app-server
-  transport, filesystem RPC, MCP, generic command execution, login, or
-  host-reaching bridge is exposed before the input contract is implemented
+- capability guard proves no resize, attach, app-server transport, filesystem
+  RPC, MCP, generic command execution, login, or host-reaching bridge is
+  exposed while `write_session_input` stays in the narrow `run-control`
+  capability
 - Tauri contract tests prove the test-only session input seam rejects unknown
   sessions, oversized session IDs, missing confirmation, empty input, input
   above 8 KiB, NUL bytes, terminal escape sequences, stale frontend targets,

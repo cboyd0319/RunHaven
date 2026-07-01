@@ -153,6 +153,12 @@ export type ManagedSessionLogSnapshotResponse = {
   entries: SessionLogEntry[];
 };
 
+export type ManagedSessionStatusResponse = {
+  session: ManagedSessionSummary;
+  container: RunStatusContainer | null;
+  statusUnavailable: string | null;
+};
+
 export type StopManagedSessionResponse = {
   session: ManagedSessionSummary;
   result: StopRunResponse;

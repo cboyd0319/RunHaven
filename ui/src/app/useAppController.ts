@@ -38,6 +38,9 @@ import { loadSessionsUntilRunPresent } from "./sessionSelection"
 import { useDiagnosticsState } from "./useDiagnosticsState"
 import { useAppDerivedState } from "./useAppDerivedState"
 import { useManagedSessionsState } from "./useManagedSessionsState"
+import { useManagedSessionStatus } from "./useManagedSessionStatus"
+import { useRunControlState } from "./useRunControlState"
+import { useSessionInputState } from "./useSessionInputState"
 
 export function useAppController() {
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null)
@@ -64,19 +67,9 @@ export function useAppController() {
     selectSession,
     loadManagedSessions,
   } = useManagedSessionsState(lastLaunch?.runId ?? null)
-  const [sessionInputDraft, setSessionInputDraft] = useState("")
-  const [sessionInputSending, setSessionInputSending] = useState(false)
-  const [sessionInputError, setSessionInputError] = useState("")
-  const [sessionInputAcceptedMessage, setSessionInputAcceptedMessage] = useState("")
   const [runStatus, setRunStatus] = useState<RunStatusResponse | null>(null)
   const [runStatusLoading, setRunStatusLoading] = useState(false)
   const [runStatusError, setRunStatusError] = useState("")
-  const [controlBusy, setControlBusy] = useState(false)
-  const [controlError, setControlError] = useState("")
-  const [controlMessage, setControlMessage] = useState("")
-  const [controlConfirmations, setControlConfirmations] = useState<
-    Record<RunControlAction, boolean>
-  >({ stop: false, kill: false, repair: false })
   const diagnostics = useDiagnosticsState()
   const [error, setError] = useState("")
 
@@ -91,23 +84,15 @@ export function useAppController() {
     selectedSessionId,
     lastLaunch,
   })
+  const selectedSessionStatus = useManagedSessionStatus(selectedSessionId)
+  const selectedSession =
+    selectedSessionStatus.data?.session ?? derived.selectedSession
+  const sessionInput = useSessionInputState(selectedSessionId)
+  const runControlState = useRunControlState(derived.controlTargetId)
 
   useEffect(() => {
     void refresh()
   }, [])
-
-  useEffect(() => {
-    setSessionInputDraft("")
-    setSessionInputSending(false)
-    setSessionInputError("")
-    setSessionInputAcceptedMessage("")
-  }, [selectedSessionId])
-
-  useEffect(() => {
-    setControlConfirmations({ stop: false, kill: false, repair: false })
-    setControlError("")
-    setControlMessage("")
-  }, [derived.controlTargetId])
 
   async function refresh() {
     setLoading(true)
@@ -291,29 +276,30 @@ export function useAppController() {
   }
 
   async function runControl(action: RunControlAction) {
-    if (!derived.selectedSession && !lastLaunch) {
+    if (!selectedSession && !lastLaunch) {
       return
     }
-    setControlBusy(true)
-    setControlError("")
-    setControlMessage("")
+    runControlState.setBusy(true)
+    runControlState.setError("")
+    runControlState.setMessage("")
     try {
-      if (derived.selectedSession) {
-        const sessionId = derived.selectedSession.id
+      if (selectedSession) {
+        const sessionId = selectedSession.id
         if (action === "stop") {
           const { result } = await stopManagedSession(sessionId)
-          setControlMessage(`Stop requested for ${result.runId}.`)
+          runControlState.setMessage(`Stop requested for ${result.runId}.`)
         } else if (action === "kill") {
           const { result } = await killManagedSession(sessionId)
-          setControlMessage(`Hard stop requested for ${result.runId}.`)
+          runControlState.setMessage(`Hard stop requested for ${result.runId}.`)
         } else {
           const { result } = await repairManagedSession(sessionId)
-          setControlMessage(
+          runControlState.setMessage(
             result.markerRemoved
               ? `Stale marker cleared for ${result.runId}.`
               : `Repair for ${result.runId}: ${result.status}.`,
           )
         }
+        await selectedSessionStatus.loadStatus()
         await loadManagedSessions()
       } else {
         const runId = lastLaunch?.runId
@@ -322,13 +308,13 @@ export function useAppController() {
         }
         if (action === "stop") {
           const result = await stopRun(runId)
-          setControlMessage(`Stop requested for ${result.runId}.`)
+          runControlState.setMessage(`Stop requested for ${result.runId}.`)
         } else if (action === "kill") {
           const result = await killRun(runId)
-          setControlMessage(`Hard stop requested for ${result.runId}.`)
+          runControlState.setMessage(`Hard stop requested for ${result.runId}.`)
         } else {
           const result = await repairRun(runId)
-          setControlMessage(
+          runControlState.setMessage(
             result.markerRemoved
               ? `Stale marker cleared for ${result.runId}.`
               : `Repair for ${result.runId}: ${result.status}.`,
@@ -338,51 +324,43 @@ export function useAppController() {
         await loadManagedSessions()
       }
     } catch (cause) {
-      setControlError(errorMessage(cause))
+      runControlState.setError(errorMessage(cause))
     } finally {
-      setControlBusy(false)
+      runControlState.setBusy(false)
     }
   }
 
   async function sendSelectedSessionInput() {
-    if (!derived.selectedSession || sessionInputSending) {
+    if (!selectedSession || sessionInput.sending) {
       return
     }
-    const targetSessionId = derived.selectedSession.id
-    const input = sessionInputDraft
-    setSessionInputSending(true)
-    setSessionInputError("")
-    setSessionInputAcceptedMessage("")
+    const targetSessionId = selectedSession.id
+    const input = sessionInput.draft
+    sessionInput.setSending(true)
+    sessionInput.setError("")
+    sessionInput.setAcceptedMessage("")
     try {
       const response = await writeSessionInput(targetSessionId, input)
       if (selectedSessionIdRef.current !== targetSessionId) {
         return
       }
-      setSessionInputDraft("")
-      setSessionInputAcceptedMessage(`Sent ${response.acceptedBytes} bytes.`)
+      sessionInput.setDraft("")
+      sessionInput.setAcceptedMessage(`Sent ${response.acceptedBytes} bytes.`)
+      await selectedSessionStatus.loadStatus()
       await loadManagedSessions()
     } catch (cause) {
       if (selectedSessionIdRef.current === targetSessionId) {
-        setSessionInputError(errorMessage(cause))
+        sessionInput.setError(errorMessage(cause))
       }
     } finally {
       if (selectedSessionIdRef.current === targetSessionId) {
-        setSessionInputSending(false)
+        sessionInput.setSending(false)
       }
     }
   }
 
   function changeSessionInputDraft(value: string) {
-    setSessionInputDraft(value)
-    setSessionInputError("")
-    setSessionInputAcceptedMessage("")
-  }
-
-  function setControlConfirmation(action: RunControlAction, checked: boolean) {
-    setControlConfirmations((current) => ({
-      ...current,
-      [action]: checked,
-    }))
+    sessionInput.changeDraft(value)
   }
 
   return {
@@ -403,17 +381,17 @@ export function useAppController() {
     lastLaunch,
     managedSessions,
     selectedSessionId,
-    sessionInputDraft,
-    sessionInputSending,
-    sessionInputError,
-    sessionInputAcceptedMessage,
+    sessionInputDraft: sessionInput.draft,
+    sessionInputSending: sessionInput.sending,
+    sessionInputError: sessionInput.error,
+    sessionInputAcceptedMessage: sessionInput.acceptedMessage,
     runStatus,
     runStatusLoading,
     runStatusError,
-    controlBusy,
-    controlError,
-    controlMessage,
-    controlConfirmations,
+    controlBusy: runControlState.busy,
+    controlError: runControlState.error,
+    controlMessage: runControlState.message,
+    controlConfirmations: runControlState.confirmations,
     diagnostics: diagnostics.data,
     diagnosticsLoading: diagnostics.loading,
     diagnosticsError: diagnostics.error,
@@ -423,7 +401,10 @@ export function useAppController() {
     setupReady: derived.setupReady,
     launchImageReady: derived.launchImageReady,
     launchReady: derived.launchReady,
-    selectedSession: derived.selectedSession,
+    selectedSession,
+    selectedSessionStatus: selectedSessionStatus.data,
+    selectedSessionStatusLoading: selectedSessionStatus.loading,
+    selectedSessionStatusError: selectedSessionStatus.error,
     pageTitle: derived.pageTitle,
     pageDescription: derived.pageDescription,
     runOutput: derived.runOutput,
@@ -442,6 +423,6 @@ export function useAppController() {
     setLaunchConfirmation,
     setLaunchStep,
     changeSessionInputDraft,
-    setControlConfirmation,
+    setControlConfirmation: runControlState.setConfirmation,
   }
 }

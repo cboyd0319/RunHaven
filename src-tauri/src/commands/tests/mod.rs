@@ -1,8 +1,8 @@
 use super::*;
 use crate::contracts::{
     KillManagedSessionRequest, KillRunResponse, LogSnapshotRequest,
-    ManagedSessionLogSnapshotRequest, RepairManagedSessionRequest, RepairRunResponse,
-    StopManagedSessionRequest, StopRunResponse, WriteSessionInputRequest,
+    ManagedSessionLogSnapshotRequest, ManagedSessionStatusRequest, RepairManagedSessionRequest,
+    RepairRunResponse, StopManagedSessionRequest, StopRunResponse, WriteSessionInputRequest,
     WriteSessionInputResponse,
 };
 use crate::session_input::SessionInputRegistry;
@@ -20,6 +20,7 @@ mod run_control;
 mod run_status;
 mod session_input;
 mod sessions;
+mod sessions_status;
 
 fn isolated_cache() -> (tempfile::TempDir, CacheRootOverride) {
     let cache = tempfile::tempdir().expect("cache");

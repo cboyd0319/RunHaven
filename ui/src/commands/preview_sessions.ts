@@ -4,6 +4,7 @@ import type {
   LaunchRunResponse,
   ManagedSessionList,
   ManagedSessionLogSnapshotResponse,
+  ManagedSessionStatusResponse,
   ManagedSessionSummary,
   RepairManagedSessionResponse,
   SessionLogEntry,
@@ -44,6 +45,41 @@ export function previewManagedSessionsList(): ManagedSessionList {
       nextAction: { ...session.nextAction },
       events: session.events.map((event) => ({ ...event }))
     }))
+  };
+}
+
+export function previewManagedSessionStatus(
+  sessionId: string
+): ManagedSessionStatusResponse {
+  const session = previewSession(sessionId);
+  const active = ["running", "starting", "stop-requested", "kill-requested"].includes(
+    session.lifecycle.trim().toLowerCase()
+  );
+  return {
+    session,
+    container: active
+      ? {
+          state: session.lifecycle,
+          image: "runhaven/preview:0.1.0",
+          startedAt: session.startedAt === "preview" ? null : session.startedAt,
+          resources: {
+            cpus: "4",
+            memoryBytes: 4 * 1024 ** 3
+          },
+          networks: [
+            {
+              network: session.network === "provider" ? "runhaven-provider-preview" : null,
+              hostname: session.containerName,
+              ipv4Address: null,
+              ipv4Gateway: null,
+              ipv6Address: null
+            }
+          ]
+        }
+      : null,
+    statusUnavailable: active
+      ? null
+      : "Container status is unavailable. The run may have stopped or may need repair."
   };
 }
 

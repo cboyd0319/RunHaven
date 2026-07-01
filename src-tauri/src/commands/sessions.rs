@@ -1,5 +1,6 @@
 use runhaven_core::diagnostics::auth_status_payload;
 use runhaven_core::records::read_run_records_tail_bounded;
+use runhaven_core::runtime::active::active_run_status_payload;
 use runhaven_core::runtime::active::read_active_run_records;
 use runhaven_core::ui_contracts::{
     ManagedSessionInputData, ManagedSessionListData, ManagedSessionSummaryData,
@@ -8,8 +9,8 @@ use runhaven_core::ui_contracts::{
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{
     LogSnapshotEntry, LogSnapshotRequest, LogSnapshotResponse, ManagedSessionLogSnapshotRequest,
-    ManagedSessionLogSnapshotResponse, SessionLogEntry, SessionLogRedaction,
-    WriteSessionInputRequest, WriteSessionInputResponse,
+    ManagedSessionLogSnapshotResponse, ManagedSessionStatusRequest, ManagedSessionStatusResponse,
+    SessionLogEntry, SessionLogRedaction, WriteSessionInputRequest, WriteSessionInputResponse,
 };
 use crate::session_input::SessionInputRegistry;
 use crate::session_output::SessionOutputRegistry;
@@ -37,6 +38,67 @@ pub(crate) fn get_managed_sessions_for_test(
     input_registry: Option<&SessionInputRegistry>,
 ) -> Result<ManagedSessionListData, String> {
     get_managed_sessions_with_input(input_registry)
+}
+
+#[tauri::command]
+pub(crate) fn get_managed_session_status(
+    request: ManagedSessionStatusRequest,
+    input_registry: tauri::State<'_, SessionInputRegistry>,
+) -> Result<ManagedSessionStatusResponse, String> {
+    get_managed_session_status_with_input(request, Some(input_registry.inner()))
+}
+
+fn get_managed_session_status_with_input(
+    request: ManagedSessionStatusRequest,
+    input_registry: Option<&SessionInputRegistry>,
+) -> Result<ManagedSessionStatusResponse, String> {
+    let (session, _) = managed_session_for_id_with_input(&request.session_id, input_registry)?;
+    let container = match active_run_status_payload(&session.run_id)
+        .map_err(|error| error.to_string())
+        .and_then(crate::commands::run_status::run_status_response)
+    {
+        Ok(response) => Some(response.container),
+        Err(_) => None,
+    };
+    let status_unavailable = if container.is_some() {
+        None
+    } else {
+        Some(
+            "Container status is unavailable. The run may have stopped or may need repair."
+                .to_string(),
+        )
+    };
+    Ok(ManagedSessionStatusResponse {
+        session,
+        container,
+        status_unavailable,
+    })
+}
+
+#[cfg(test)]
+pub(crate) fn managed_session_status_response_for_test(
+    request: ManagedSessionStatusRequest,
+    input_registry: Option<&SessionInputRegistry>,
+    status_payload: Option<serde_json::Value>,
+) -> Result<ManagedSessionStatusResponse, String> {
+    let (session, _) = managed_session_for_id_with_input(&request.session_id, input_registry)?;
+    let container = status_payload
+        .map(crate::commands::run_status::run_status_response)
+        .transpose()?
+        .map(|response| response.container);
+    let status_unavailable = if container.is_some() {
+        None
+    } else {
+        Some(
+            "Container status is unavailable. The run may have stopped or may need repair."
+                .to_string(),
+        )
+    };
+    Ok(ManagedSessionStatusResponse {
+        session,
+        container,
+        status_unavailable,
+    })
 }
 
 #[tauri::command]
@@ -186,11 +248,18 @@ fn mark_session_input_transports(
 pub(crate) fn managed_session_for_id(
     session_id: &str,
 ) -> Result<(ManagedSessionSummaryData, String), String> {
+    managed_session_for_id_with_input(session_id, None)
+}
+
+fn managed_session_for_id_with_input(
+    session_id: &str,
+    input_registry: Option<&SessionInputRegistry>,
+) -> Result<(ManagedSessionSummaryData, String), String> {
     validate_text_len("session id", session_id, MAX_RUN_ID_LEN)?;
     if session_id.is_empty() {
         return Err("managed session id is required".to_string());
     }
-    let session = managed_session_list(None)?
+    let session = managed_session_list(input_registry)?
         .sessions
         .into_iter()
         .find(|session| session.id == session_id)

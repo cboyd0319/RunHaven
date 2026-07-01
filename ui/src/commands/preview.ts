@@ -18,6 +18,7 @@ export {
   previewManagedKill,
   previewManagedRepair,
   previewManagedSessionLogSnapshot,
+  previewManagedSessionStatus,
   previewManagedSessionsList,
   previewManagedStop,
   previewSessionInput
