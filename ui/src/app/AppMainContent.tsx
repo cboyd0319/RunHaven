@@ -2,6 +2,7 @@ import { CheckCircle2, CircleAlert } from "lucide-react"
 
 import type {
   AgentProfile,
+  AuthStatusResponse,
   DashboardStatus,
   ImageStatusResponse,
   LaunchRunResponse,
@@ -29,6 +30,7 @@ type AppMainContentProps = {
   launchMessage: string
   loading: boolean
   dashboard: DashboardStatus | null
+  authStatus: AuthStatusResponse | null
   setupReady: boolean
   selectedSession: ManagedSessionSummary | null
   sessionInputDraft: string
@@ -196,6 +198,7 @@ function LaunchView(props: AppMainContentProps) {
       agents={props.dashboard?.agents ?? []}
       request={props.request}
       selectedAgent={props.selectedAgent}
+      authStatus={props.authStatus}
       imageLoading={props.imageLoading}
       imageStatus={props.imageStatus}
       imageError={props.imageError}

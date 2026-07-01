@@ -32,6 +32,7 @@ export default function App() {
             launchMessage={app.launchMessage}
             loading={app.loading}
             dashboard={app.dashboard}
+            authStatus={app.authStatus}
             setupReady={app.setupReady}
             selectedSession={app.selectedSession}
             sessionInputDraft={app.sessionInputDraft}

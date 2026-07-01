@@ -226,6 +226,11 @@ export function previewAuthStatus(): AuthStatusResponse {
   return {
     status: "preview",
     runtime: "preview",
-    profiles: [{ name: "codex", status: "api-key-prototype" }]
+    profiles: [
+      { name: "claude", status: "api-key-broker" },
+      { name: "codex", status: "api-key-broker" },
+      { name: "gemini", status: "api-key-broker" },
+      { name: "shell", status: "n/a" }
+    ]
   };
 }

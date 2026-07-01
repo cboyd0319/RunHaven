@@ -2,6 +2,7 @@ import {
   apiKeyBrokerEnvPlaceholder,
   supportsApiKeyBroker,
   type AgentProfile,
+  type AuthStatusResponse,
   type ImageStatusResponse,
   type RunPlanRequest,
 } from "@/commands/runhaven"
@@ -41,6 +42,7 @@ type LaunchPlanCardProps = {
   agents: AgentProfile[]
   request: RunPlanRequest
   selectedAgent: AgentProfile | undefined
+  authStatus: AuthStatusResponse | null
   imageLoading: boolean
   imageStatus: ImageStatusResponse | null
   imageError: string
@@ -59,6 +61,7 @@ export function LaunchPlanCard({
   agents,
   request,
   selectedAgent,
+  authStatus,
   imageLoading,
   imageStatus,
   imageError,
@@ -130,7 +133,7 @@ export function LaunchPlanCard({
                 imageStatus={imageStatus}
                 imageError={imageError}
               />
-              <AgentAccessSummary agent={selectedAgent} />
+              <AgentAccessSummary agent={selectedAgent} authStatus={authStatus} />
             </>
           ) : null}
 
@@ -277,14 +280,17 @@ export function LaunchPlanCard({
 
 function AgentAccessSummary({
   agent,
+  authStatus,
 }: {
   agent: AgentProfile | undefined
+  authStatus: AuthStatusResponse | null
 }) {
   if (!agent) {
     return null
   }
+  const profileStatus = authProfileStatus(agent, authStatus)
   return (
-    <div className="grid gap-3 rounded-lg border p-3 text-sm sm:grid-cols-2">
+    <div className="grid gap-3 rounded-lg border p-3 text-sm sm:grid-cols-3">
       <div>
         <div className="text-muted-foreground">Sign-in method</div>
         <div className="font-medium">{authMethodLabel(agent.signIn)}</div>
@@ -293,6 +299,12 @@ function AgentAccessSummary({
         <div className="text-muted-foreground">Credential broker</div>
         <Badge variant={agent.broker === "yes" ? "success" : "secondary"}>
           {brokerLabel(agent.broker)}
+        </Badge>
+      </div>
+      <div>
+        <div className="text-muted-foreground">Auth status</div>
+        <Badge variant={authStatusBadgeVariant(profileStatus)}>
+          {authStatusLabel(profileStatus)}
         </Badge>
       </div>
     </div>
@@ -353,4 +365,47 @@ function brokerLabel(value: string): string {
     return "Not needed"
   }
   return "Not available"
+}
+
+function authProfileStatus(
+  agent: AgentProfile,
+  authStatus: AuthStatusResponse | null,
+): string {
+  return authStatus?.profiles.find((profile) => profile.name === agent.name)?.status ?? "-"
+}
+
+function authStatusLabel(status: string): string {
+  switch (status.trim().toLowerCase()) {
+    case "api-key-broker":
+    case "brokered":
+      return "API key broker"
+    case "ready":
+    case "available":
+      return "Ready"
+    case "n/a":
+      return "Not needed"
+    case "-":
+      return "Unknown"
+    case "design-only":
+      return "Not ready"
+    default:
+      return status
+  }
+}
+
+function authStatusBadgeVariant(
+  status: string,
+): "destructive" | "secondary" | "success" | "warning" {
+  switch (status.trim().toLowerCase()) {
+    case "api-key-broker":
+    case "brokered":
+    case "ready":
+    case "available":
+    case "n/a":
+      return "success"
+    case "design-only":
+      return "warning"
+    default:
+      return "secondary"
+  }
 }

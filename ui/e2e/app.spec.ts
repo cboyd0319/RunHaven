@@ -14,6 +14,7 @@ test("renders the dashboard without runtime errors", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Launch" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
   await expect(page.getByText("Sign-in method")).toBeVisible();
+  await expect(page.getByText("Auth status")).toBeVisible();
   await expect(page.getByText("Ready", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Setup ready" })).toHaveCount(0);
   expect(runtimeErrors).toEqual([]);
@@ -95,7 +96,7 @@ test("loads secret-free diagnostics", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Trust checks" })).toBeVisible();
   await page.getByRole("button", { name: "Load diagnostics" }).click();
   await expect(page.getByRole("heading", { name: "Auth broker status" })).toBeVisible();
-  await expect(page.getByText("codex: api-key-prototype")).toBeVisible();
+  await expect(page.getByText("codex: api-key-broker")).toBeVisible();
   await page.getByRole("tab", { name: "Network" }).click();
   await expect(page.getByText("No provider egress decisions recorded.")).toBeVisible();
 });

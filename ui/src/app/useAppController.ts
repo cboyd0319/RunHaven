@@ -4,6 +4,7 @@ import {
   chooseProjectFolder,
   defaultRunPlanRequest,
   getDashboardStatus,
+  getAuthStatus,
   getImageStatus,
   getManagedSessions,
   getRunStatus,
@@ -21,6 +22,7 @@ import {
   withLaunchSessionName,
   writeSessionInput,
   type DashboardStatus,
+  type AuthStatusResponse,
   type ImageStatusResponse,
   type LaunchRunResponse,
   type ManagedSessionList,
@@ -41,6 +43,7 @@ import { useSelectedSessionId } from "./useSelectedSessionId"
 
 export function useAppController() {
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null)
+  const [authStatus, setAuthStatus] = useState<AuthStatusResponse | null>(null)
   const [request, setRequest] = useState<RunPlanRequest>(() =>
     defaultRunPlanRequest(undefined),
   )
@@ -111,7 +114,9 @@ export function useAppController() {
     setError("")
     try {
       const nextDashboard = await getDashboardStatus()
+      const nextAuthStatus = await getAuthStatus()
       setDashboard(nextDashboard)
+      setAuthStatus(nextAuthStatus)
       await loadManagedSessions()
       const agent =
         nextDashboard.agents.find((item) => item.name === request.agent) ??
@@ -388,6 +393,7 @@ export function useAppController() {
 
   return {
     dashboard,
+    authStatus,
     request,
     launchStep,
     plan,

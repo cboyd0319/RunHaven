@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   apiKeyBrokerEnvPlaceholder,
   defaultRunPlanRequest,
+  getAuthStatus,
   getDashboardStatus,
   getImageStatus,
   getLogSnapshot,
@@ -147,6 +148,18 @@ describe("runhaven command helpers", () => {
     expect(dashboard.agents.find((agent) => agent.name === "codex")?.signIn).toBe("runhaven login");
     expect(dashboard.agents.find((agent) => agent.name === "shell")?.broker).toBe("n/a");
     expect(dashboard.warnings[0]).toContain("Desktop runtime commands are unavailable");
+  });
+
+  it("returns brokered auth status preview data", async () => {
+    const authStatus = await getAuthStatus();
+
+    expect(authStatus.profiles).toEqual(
+      expect.arrayContaining([
+        { name: "claude", status: "api-key-broker" },
+        { name: "codex", status: "api-key-broker" },
+        { name: "gemini", status: "api-key-broker" }
+      ])
+    );
   });
 
   it("returns a read-only launch plan preview outside the Tauri runtime", async () => {
