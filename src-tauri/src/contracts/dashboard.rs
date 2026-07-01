@@ -26,6 +26,8 @@ pub(crate) struct AgentProfileSummary {
     pub image: String,
     pub default_command: Vec<String>,
     pub provider_hosts: Vec<String>,
+    pub sign_in: String,
+    pub broker: String,
 }
 
 #[derive(Clone, Debug, Serialize)]

@@ -13,6 +13,7 @@ test("renders the dashboard without runtime errors", async ({ page }) => {
 
   await expect(page.getByRole("heading", { level: 1, name: "Launch" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
+  await expect(page.getByText("Sign-in method")).toBeVisible();
   await expect(page.getByText("Ready", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Setup ready" })).toHaveCount(0);
   expect(runtimeErrors).toEqual([]);

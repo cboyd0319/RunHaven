@@ -5,6 +5,18 @@ fn lists_agent_profiles_without_secrets() {
     let agents = agent_summaries();
     assert!(agents.iter().any(|agent| agent.name == "codex"));
     assert!(agents.iter().all(|agent| !agent.image.is_empty()));
+    let codex = agents
+        .iter()
+        .find(|agent| agent.name == "codex")
+        .expect("codex profile");
+    assert_eq!(codex.sign_in, "runhaven login");
+    assert_eq!(codex.broker, "yes");
+    let shell = agents
+        .iter()
+        .find(|agent| agent.name == "shell")
+        .expect("shell profile");
+    assert_eq!(shell.sign_in, "n/a");
+    assert_eq!(shell.broker, "n/a");
 }
 
 #[test]

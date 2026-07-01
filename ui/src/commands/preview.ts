@@ -29,21 +29,27 @@ const mockAgents: AgentProfile[] = [
     description: "Claude Code with isolated project state.",
     image: "runhaven/claude:0.1.0",
     defaultCommand: ["claude"],
-    providerHosts: ["api.anthropic.com"]
+    providerHosts: ["api.anthropic.com"],
+    signIn: "runhaven login",
+    broker: "yes"
   },
   {
     name: "codex",
     description: "Codex CLI with isolated project state.",
     image: "runhaven/codex:0.1.0",
     defaultCommand: ["codex"],
-    providerHosts: ["api.openai.com", "chatgpt.com"]
+    providerHosts: ["api.openai.com", "chatgpt.com"],
+    signIn: "runhaven login",
+    broker: "yes"
   },
   {
     name: "shell",
     description: "Generic shell profile for custom agent images.",
     image: "runhaven/base:0.1.0",
     defaultCommand: ["/bin/bash"],
-    providerHosts: []
+    providerHosts: [],
+    signIn: "n/a",
+    broker: "n/a"
   }
 ];
 

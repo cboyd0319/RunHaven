@@ -126,6 +126,7 @@ export function LaunchPlanCard({
                 imageStatus={imageStatus}
                 imageError={imageError}
               />
+              <AgentAccessSummary agent={selectedAgent} />
             </>
           ) : null}
 
@@ -249,6 +250,30 @@ export function LaunchPlanCard({
   )
 }
 
+function AgentAccessSummary({
+  agent,
+}: {
+  agent: AgentProfile | undefined
+}) {
+  if (!agent) {
+    return null
+  }
+  return (
+    <div className="grid gap-3 rounded-lg border p-3 text-sm sm:grid-cols-2">
+      <div>
+        <div className="text-muted-foreground">Sign-in method</div>
+        <div className="font-medium">{authMethodLabel(agent.signIn)}</div>
+      </div>
+      <div>
+        <div className="text-muted-foreground">Credential broker</div>
+        <Badge variant={agent.broker === "yes" ? "success" : "secondary"}>
+          {brokerLabel(agent.broker)}
+        </Badge>
+      </div>
+    </div>
+  )
+}
+
 function ImageReadiness({
   imageLoading,
   imageStatus,
@@ -286,4 +311,21 @@ function ImageReadiness({
       </AlertDescription>
     </Alert>
   )
+}
+
+function authMethodLabel(value: string): string {
+  if (value === "n/a") {
+    return "Not needed"
+  }
+  return value
+}
+
+function brokerLabel(value: string): string {
+  if (value === "yes") {
+    return "Available"
+  }
+  if (value === "n/a") {
+    return "Not needed"
+  }
+  return "Not available"
 }

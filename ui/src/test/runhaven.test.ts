@@ -26,7 +26,9 @@ const providerAgent: AgentProfile = {
   description: "Codex",
   image: "runhaven/codex:0.1.0",
   defaultCommand: ["codex"],
-  providerHosts: ["api.openai.com"]
+  providerHosts: ["api.openai.com"],
+  signIn: "runhaven login",
+  broker: "yes"
 };
 
 const localAgent: AgentProfile = {
@@ -34,7 +36,9 @@ const localAgent: AgentProfile = {
   description: "Shell",
   image: "runhaven/base:0.1.0",
   defaultCommand: ["/bin/bash"],
-  providerHosts: []
+  providerHosts: [],
+  signIn: "n/a",
+  broker: "n/a"
 };
 
 describe("runhaven command helpers", () => {
@@ -109,6 +113,8 @@ describe("runhaven command helpers", () => {
     const dashboard = await getDashboardStatus();
 
     expect(dashboard.agents.map((agent) => agent.name)).toContain("codex");
+    expect(dashboard.agents.find((agent) => agent.name === "codex")?.signIn).toBe("runhaven login");
+    expect(dashboard.agents.find((agent) => agent.name === "shell")?.broker).toBe("n/a");
     expect(dashboard.warnings[0]).toContain("Desktop runtime commands are unavailable");
   });
 

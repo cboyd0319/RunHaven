@@ -18,6 +18,8 @@ export type AgentProfile = {
   image: string;
   defaultCommand: string[];
   providerHosts: string[];
+  signIn: string;
+  broker: string;
 };
 
 export type RunSummary = {

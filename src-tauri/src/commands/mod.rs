@@ -4,6 +4,7 @@ use std::thread;
 
 use runhaven_core::doctor::collect_checks;
 use runhaven_core::image::doctor::collect_image_status;
+use runhaven_core::provider::auth_profiles::{agent_broker, agent_sign_in};
 use runhaven_core::records::read_run_records;
 use runhaven_core::runtime::active::read_active_run_records;
 use runhaven_core::runtime::launch::{launch_run_plan_with_runner, new_run_id};
@@ -131,6 +132,8 @@ fn agent_summaries() -> Vec<AgentProfileSummary> {
                 .iter()
                 .map(|host| (*host).to_string())
                 .collect(),
+            sign_in: agent_sign_in(profile.name).to_string(),
+            broker: agent_broker(profile.name).to_string(),
         })
         .collect()
 }
