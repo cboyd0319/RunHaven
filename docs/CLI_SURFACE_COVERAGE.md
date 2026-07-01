@@ -10,10 +10,10 @@ scripts/apple_container_smoke.sh --with-provider --with-ssh  # depth: provider e
 ```
 
 Last full run on macOS 27.0 (build 26A5368g), Apple `container` 1.0.0 (commit
-ee848e3): `cli_surface_check.sh` 2026-06-30 (39/39 surfaces passed; the
-session-volume reset path now runs with `--auth-scope project` so it is exercised
-under the `--auth-scope agent` default introduced for shared logins).
-`apple_container_smoke.sh --with-provider --with-ssh`: 2026-06-25 passed.
+ee848e3): `cli_surface_check.sh` 2026-07-01 (39/39 surfaces passed; the
+session-volume reset path runs with `--auth-scope project` so it is exercised
+under the `--auth-scope agent` default used for shared logins).
+`apple_container_smoke.sh --with-provider --with-ssh`: 2026-07-01 passed.
 
 ## Coverage
 

@@ -104,7 +104,11 @@ Useful GUI design docs:
 
 ## Latest State
 
-- CLI-complete v0.5.0 scope remains closed.
+- CLI-complete v0.5.0 scope remains closed and was reverified on 2026-07-01:
+  CLI surface breadth 39/39, CLI/core tests, CLI/core clippy, non-TTY CLI help
+  routing, pin policy, structure guard, docs local-path guard, JSON validation,
+  diff hygiene, and the full Apple container smoke with provider egress plus
+  SSH fail-closed all passed.
 - Desktop/Tauri managed-session work has live evidence for launch, bounded
   output, input, stop, cleanup, distinct GUI session identity, and per-session
   state naming.
@@ -155,14 +159,9 @@ them.
 
 ## Next Step
 
-Auth scope is now carried through active markers, run records, shared UI
-contracts, Tauri plan/launch/status/session responses, and the GUI session and
-plan cards. Managed sessions now merge active markers with a bounded tail of
-recent run records so just-finished GUI sessions remain visible; active markers
-still win for control/input, and desktop output keeps a bounded recent buffer
-after process exit. Live Apple `container` shell smokes now prove GUI-managed
-single-session input/output/stop and two-session input/output isolation against
-the built `runhaven/base:0.1.0` shell image, with no active RunHaven runs left
-after cleanup. Continue the CLI+GUI goal from the hardest problems first:
-real-agent auth/session behavior, typed status reporting, and fail-closed
-security boundaries. Keep the safe path short, stable, and nontechnical.
+CLI is reverified and should stay contract-preserving except for bug fixes,
+security fixes, docs corrections, pin updates, or internal GUI support that
+preserves CLI semantics. Continue the CLI+GUI goal on the GUI side from the
+hardest problems first: real-agent auth/session behavior, typed status
+reporting, and fail-closed security boundaries. Keep the safe path short,
+stable, and nontechnical.
