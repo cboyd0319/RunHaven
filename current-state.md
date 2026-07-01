@@ -42,6 +42,13 @@ only when the task touches that surface.
 - Provider egress stays default-deny in provider mode. Agent provider hosts are
   allowlisted; arbitrary data-egress hosts stay closed.
 - `--ssh` remains fail-closed until reopened by a no-secret runtime proof.
+  Source review of Apple `container` `1.0.0-34-g9bd3c47` confirmed the non-root
+  agent-socket permission blocker persists (the relay socket inherits only the
+  host mode bits and is not chowned to the guest user; upstream #1751's test
+  forces a `0766` host socket for a non-root guest to connect). Do not re-enable
+  or make the host agent socket world-writable; see
+  `docs/APPLE_CONTAINER_GAP_ANALYSIS.md`. Re-check when an upstream fix remaps the
+  guest socket ownership.
 - User-facing writing is product behavior. UI text, menus, prompts, warnings,
   docs, and setup instructions should be short, concrete, and nontechnical.
 
