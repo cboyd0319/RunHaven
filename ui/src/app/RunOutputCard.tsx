@@ -19,15 +19,23 @@ export function RunOutputCard({
   logLoading,
   logError,
   logSnapshot,
+  liveOutputAvailable,
+  liveOutputEnabled,
+  liveOutputRefreshing,
   onAcknowledgedChange,
   onLoad,
+  onLiveOutputChange,
 }: {
   logAcknowledged: boolean
   logLoading: boolean
   logError: string
   logSnapshot: LogSnapshotResponse | null
+  liveOutputAvailable: boolean
+  liveOutputEnabled: boolean
+  liveOutputRefreshing?: boolean
   onAcknowledgedChange: (checked: boolean) => void
   onLoad: () => Promise<void>
+  onLiveOutputChange: (checked: boolean) => void
 }) {
   const sessionEntry = logSnapshot?.sessionEntries?.[0]
   const primaryEntry = sessionEntry ?? logSnapshot?.entries[0]
@@ -61,10 +69,35 @@ export function RunOutputCard({
         <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
           <Checkbox
             checked={logAcknowledged}
-            onCheckedChange={(checked) => onAcknowledgedChange(checked === true)}
+            onCheckedChange={(checked) => {
+              const acknowledged = checked === true
+              onAcknowledgedChange(acknowledged)
+              if (!acknowledged) {
+                onLiveOutputChange(false)
+              }
+            }}
           />
           <span>Show raw container output for this run.</span>
         </label>
+        {liveOutputAvailable ? (
+          <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+            <Checkbox
+              checked={liveOutputEnabled}
+              disabled={!logAcknowledged}
+              onCheckedChange={(checked) => onLiveOutputChange(checked === true)}
+            />
+            <span className="flex min-w-0 flex-col gap-1">
+              <span>Keep output updated</span>
+              <span className="text-muted-foreground">
+                {liveOutputEnabled
+                  ? liveOutputRefreshing
+                    ? "Checking for new output."
+                    : "Updating output every few seconds."
+                  : "Refreshes every few seconds while this view is open."}
+              </span>
+            </span>
+          </label>
+        ) : null}
         <Button
           type="button"
           variant="outline"

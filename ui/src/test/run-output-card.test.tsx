@@ -35,8 +35,11 @@ describe("RunOutputCard", () => {
         logLoading={false}
         logError=""
         logSnapshot={snapshot()}
+        liveOutputAvailable={false}
+        liveOutputEnabled={false}
         onAcknowledgedChange={() => undefined}
         onLoad={async () => undefined}
+        onLiveOutputChange={() => undefined}
       />
     );
 
@@ -75,8 +78,11 @@ describe("RunOutputCard", () => {
         logSnapshot={snapshot({
           sessionEntries: [sessionEntry]
         })}
+        liveOutputAvailable={true}
+        liveOutputEnabled={false}
         onAcknowledgedChange={() => undefined}
         onLoad={async () => undefined}
+        onLiveOutputChange={() => undefined}
       />
     );
 
@@ -85,5 +91,41 @@ describe("RunOutputCard", () => {
     expect(html).toContain("Raw output is not automatically redacted.");
     expect(html).not.toContain("entry-cursor");
     expect(html).not.toContain("entry line one");
+  });
+
+  it("gates live output refresh behind raw-output acknowledgement", () => {
+    const unacknowledged = renderToStaticMarkup(
+      <RunOutputCard
+        logAcknowledged={false}
+        logLoading={false}
+        logError=""
+        logSnapshot={null}
+        liveOutputAvailable={true}
+        liveOutputEnabled={false}
+        onAcknowledgedChange={() => undefined}
+        onLoad={async () => undefined}
+        onLiveOutputChange={() => undefined}
+      />
+    );
+
+    expect(unacknowledged).toContain("Keep output updated");
+    expect(unacknowledged).toContain('disabled=""');
+
+    const acknowledged = renderToStaticMarkup(
+      <RunOutputCard
+        logAcknowledged={true}
+        logLoading={false}
+        logError=""
+        logSnapshot={snapshot()}
+        liveOutputAvailable={true}
+        liveOutputEnabled={true}
+        onAcknowledgedChange={() => undefined}
+        onLoad={async () => undefined}
+        onLiveOutputChange={() => undefined}
+      />
+    );
+
+    expect(acknowledged).toContain("Updating output every few seconds.");
+    expect(acknowledged).not.toContain('disabled=""');
   });
 });

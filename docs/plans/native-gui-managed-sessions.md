@@ -171,6 +171,11 @@ Current GUI behavior:
   with source, cursor, timestamp, bounded text, line count, and explicit
   `redaction.status: notApplied`. The card prefers those session entries over
   run-level fallback fields.
+- Selected sessions can opt into live output after raw-output confirmation.
+  The live path is bounded polling over `get_managed_session_log_snapshot`, not
+  Tauri events, `container logs --follow`, terminal attach, input, or resize.
+  The React app keeps one in-flight log request, stops polling when the target
+  changes or acknowledgement is cleared, and ignores stale responses.
 - `LogSnapshotResponse` includes a cursor and typed snapshot entries while
   keeping the previous top-level text fields for compatibility. This is not a
   streaming terminal or session-attach contract.
@@ -218,6 +223,12 @@ Current slice:
 - capability guard proves raw-output permissions stay outside `main-read`
 - frontend helper test proves browser preview output loads through a managed
   session ID and rejects unknown sessions
+- frontend helper test proves browser preview live-output refreshes produce
+  per-session cursors and do not mix selected-session output
+- frontend output-card test proves live output is disabled until raw-output
+  acknowledgement and reports when automatic updates are on
+- Playwright preview smoke proves selected-session live output is
+  acknowledgement-gated and receives a refreshed bounded output snapshot
 - Tauri command test proves selected-session stop, hard stop, and repair
   resolve the managed session ID in Rust, reject unknown sessions, require
   confirmation before mutation, and keep forbidden paths and command names out

@@ -54,6 +54,8 @@ const mockAgents: AgentProfile[] = [
 ];
 
 let previewManagedSessions: ManagedSessionSummary[] = [];
+let previewRunSequence = 0;
+let previewSessionLogReads = new Map<string, number>();
 
 export function hasTauriRuntime(): boolean {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
@@ -212,7 +214,11 @@ export async function getManagedSessionLogSnapshot(
         throw new Error("managed session not found");
       }
       const sessionSnapshot = { ...session };
-      const snapshot = previewLogSnapshot(session.runId, requestedLines);
+      const readCount = nextPreviewSessionLogRead(session.id);
+      const snapshot = previewLogSnapshot(session.runId, requestedLines, {
+        cursor: `preview:${session.id}:${readCount}`,
+        text: `Preview log line ${readCount} for ${session.id}\nPreview log line ${readCount} complete\n`
+      });
 
       return {
         session: sessionSnapshot,
@@ -243,20 +249,32 @@ function sessionLogEntries(
   }));
 }
 
-function previewLogSnapshot(runId: string, requestedLines: number): LogSnapshotResponse {
-  const text = "Preview log line one\nPreview log line two\n";
+function nextPreviewSessionLogRead(sessionId: string): number {
+  const nextRead = (previewSessionLogReads.get(sessionId) ?? 0) + 1;
+  previewSessionLogReads.set(sessionId, nextRead);
+  return nextRead;
+}
+
+function previewLogSnapshot(
+  runId: string,
+  requestedLines: number,
+  patch: Partial<Pick<LogSnapshotResponse, "cursor" | "capturedAt" | "text">> = {}
+): LogSnapshotResponse {
+  const text = patch.text ?? "Preview log line one\nPreview log line two\n";
+  const capturedAt = patch.capturedAt ?? patch.cursor ?? "preview";
+  const cursor = patch.cursor ?? capturedAt;
 
   return {
     runId,
-    capturedAt: "preview",
-    cursor: "preview",
+    capturedAt,
+    cursor,
     requestedLines,
     entries: [
       {
         source: "container-stdio",
-        timestamp: "preview",
+        timestamp: capturedAt,
         text,
-        lineCount: 2
+        lineCount: text.split("\n").filter(Boolean).length
       }
     ],
     text,
@@ -305,7 +323,7 @@ export async function launchRun(request: LaunchRunRequest): Promise<LaunchRunRes
     if (!isLaunchReady(plan, request.confirmLaunch, new Set(request.confirmedWarnings))) {
       throw new Error("Confirm the launch and every warning before starting a run.");
     }
-    const runId = `preview-${Date.now()}`;
+    const runId = `preview-${Date.now()}-${++previewRunSequence}`;
     const snapshot = {
       runId,
       status: "started",
@@ -472,6 +490,7 @@ function rememberPreviewManagedSession(
     session,
     ...previewManagedSessions.filter((item) => item.runId !== snapshot.runId)
   ];
+  previewSessionLogReads.delete(snapshot.runId);
 }
 
 function previewSession(sessionId: string): ManagedSessionSummary {

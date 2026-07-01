@@ -1607,6 +1607,14 @@ Latest GUI local prototype:
   for selected sessions while retaining the run-level snapshot as fallback.
   This keeps session ownership and redaction posture typed before any live
   stream, terminal input, or resize work.
+- 2026-06-30 selected-session live output: The selected-session output card
+  can now keep output updated after raw-output acknowledgement. This is bounded
+  polling over `get_managed_session_log_snapshot`, not Tauri event streaming,
+  `container logs --follow`, terminal attach, input, or resize. React keeps one
+  in-flight log request, disables live updates when acknowledgement or target
+  changes, and ignores stale responses for older session targets. Browser
+  preview output uses per-session cursors so multi-session UI tests can catch
+  accidental stream sharing.
 - 2026-06-30 selected-session run control: The selected-session pane now has
   confirmed stop, hard stop, and stale-marker repair controls. React sends only
   the managed session ID to `stop_managed_session`, `kill_managed_session`, or
@@ -1648,10 +1656,10 @@ Continue local GUI work on this branch. Use
 `docs/plans/native-gui-microsandbox-reference.md` before adding embedded
 terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
 boundary, make safe launch the simplest path, and keep developer details behind
-secondary views. Next useful work is a bounded live-output transport design
-that reuses the session-owned log entry contract, with ownership, gating,
-backpressure, and multi-session tests before any bounded session input or
-resize commands. A later desktop-driver pass can add native WebView click
-automation if it is worth the tooling cost.
+secondary views. Next useful work is a design-first bounded session input
+contract, including auth behavior, cancellation, per-session ownership,
+explicit user intent, and stale-target tests before any input or resize command
+is exposed. A later desktop-driver pass can add native WebView click automation
+if it is worth the tooling cost.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.

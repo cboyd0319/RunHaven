@@ -46,9 +46,13 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByText("Run record")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Run output" })).toBeVisible();
   await expect(page.getByRole("button", { name: "View latest output" })).toBeDisabled();
+  await expect(page.getByLabel("Keep output updated")).toBeDisabled();
   await page.getByLabel("Show raw container output for this run.").check();
   await page.getByRole("button", { name: "View latest output" }).click();
   await expect(page.getByText("Preview log line")).toBeVisible();
+  await page.getByLabel("Keep output updated").check();
+  await expect(page.getByText("Updating output every few seconds.")).toBeVisible();
+  await expect(page.getByText("Preview log line 2")).toBeVisible();
   await expect(page.getByText("/tmp/runhaven-preview")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Session controls" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Stop run" })).toBeDisabled();

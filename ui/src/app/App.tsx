@@ -9,8 +9,6 @@ import {
   getDashboardStatus,
   getEgressLog,
   getImageStatus,
-  getLogSnapshot,
-  getManagedSessionLogSnapshot,
   getManagedSessions,
   getRunStatus,
   isLaunchReady,
@@ -26,7 +24,6 @@ import {
   type DashboardStatus,
   type ImageStatusResponse,
   type LaunchRunResponse,
-  type LogSnapshotResponse,
   type ManagedSessionList,
   type RunPlanRequest,
   type RunPlanResponse,
@@ -57,6 +54,7 @@ import {
   type LaunchStep,
   type RunControlAction,
 } from "./types"
+import { useRunOutput } from "./useRunOutput"
 
 export default function App() {
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null)
@@ -86,13 +84,6 @@ export default function App() {
   const [runStatus, setRunStatus] = useState<RunStatusResponse | null>(null)
   const [runStatusLoading, setRunStatusLoading] = useState(false)
   const [runStatusError, setRunStatusError] = useState("")
-  const [logSnapshot, setLogSnapshot] = useState<LogSnapshotResponse | null>(
-    null,
-  )
-  const [logTargetId, setLogTargetId] = useState<string | null>(null)
-  const [logAcknowledged, setLogAcknowledged] = useState(false)
-  const [logLoading, setLogLoading] = useState(false)
-  const [logError, setLogError] = useState("")
   const [controlBusy, setControlBusy] = useState(false)
   const [controlError, setControlError] = useState("")
   const [controlMessage, setControlMessage] = useState("")
@@ -137,8 +128,11 @@ export default function App() {
     : outputRunId
       ? `run:${outputRunId}`
       : null
-  const visibleLogSnapshot =
-    logTargetId === outputTargetId ? logSnapshot : null
+  const runOutput = useRunOutput({
+    targetId: outputTargetId,
+    sessionId: outputSessionId,
+    runId: outputRunId,
+  })
   const controlTargetId = selectedSession
     ? `session:${selectedSession.id}`
     : lastLaunch
@@ -157,13 +151,6 @@ export default function App() {
       setSelectedSessionId(null)
     }
   }, [managedSessions.sessions, selectedSessionId])
-
-  useEffect(() => {
-    setLogAcknowledged(false)
-    setLogSnapshot(null)
-    setLogTargetId(null)
-    setLogError("")
-  }, [outputTargetId])
 
   useEffect(() => {
     setControlConfirmations({ stop: false, kill: false, repair: false })
@@ -310,10 +297,6 @@ export default function App() {
         confirmedWarnings,
       })
       setLastLaunch(started)
-      setLogSnapshot(null)
-      setLogTargetId(null)
-      setLogAcknowledged(false)
-      setLogError("")
       await loadRunStatus(started.runId)
       setLaunchMessage(`Run started: ${started.runId}`)
       await loadManagedSessions()
@@ -325,38 +308,6 @@ export default function App() {
       setError(errorMessage(cause))
     } finally {
       setLaunching(false)
-    }
-  }
-
-  async function loadLogSnapshot() {
-    if (!outputTargetId) {
-      return
-    }
-    setLogLoading(true)
-    setLogError("")
-    try {
-      if (outputSessionId) {
-        const response = await getManagedSessionLogSnapshot(outputSessionId, {
-          confirmSensitiveOutput: logAcknowledged,
-        })
-        setLogSnapshot({
-          ...response.snapshot,
-          sessionEntries: response.entries,
-        })
-      } else if (outputRunId) {
-        setLogSnapshot(
-          await getLogSnapshot(outputRunId, {
-            confirmSensitiveOutput: logAcknowledged,
-          }),
-        )
-      }
-      setLogTargetId(outputTargetId)
-    } catch (cause) {
-      setLogSnapshot(null)
-      setLogTargetId(null)
-      setLogError(errorMessage(cause))
-    } finally {
-      setLogLoading(false)
     }
   }
 
@@ -520,12 +471,16 @@ export default function App() {
                     onControl={runControl}
                   />
                   <RunOutputCard
-                    logAcknowledged={logAcknowledged}
-                    logLoading={logLoading}
-                    logError={logError}
-                    logSnapshot={visibleLogSnapshot}
-                    onAcknowledgedChange={setLogAcknowledged}
-                    onLoad={loadLogSnapshot}
+                    logAcknowledged={runOutput.acknowledged}
+                    logLoading={runOutput.loading}
+                    logError={runOutput.error}
+                    logSnapshot={runOutput.visibleSnapshot}
+                    liveOutputAvailable={runOutput.liveAvailable}
+                    liveOutputEnabled={runOutput.liveEnabled}
+                    liveOutputRefreshing={runOutput.liveRefreshing}
+                    onAcknowledgedChange={runOutput.setAcknowledged}
+                    onLoad={runOutput.loadSnapshot}
+                    onLiveOutputChange={runOutput.setLiveEnabled}
                   />
                 </>
               ) : (
@@ -591,12 +546,16 @@ export default function App() {
 
               {!selectedSession && lastLaunch ? (
                 <RunOutputCard
-                  logAcknowledged={logAcknowledged}
-                  logLoading={logLoading}
-                  logError={logError}
-                  logSnapshot={visibleLogSnapshot}
-                  onAcknowledgedChange={setLogAcknowledged}
-                  onLoad={loadLogSnapshot}
+                  logAcknowledged={runOutput.acknowledged}
+                  logLoading={runOutput.loading}
+                  logError={runOutput.error}
+                  logSnapshot={runOutput.visibleSnapshot}
+                  liveOutputAvailable={runOutput.liveAvailable}
+                  liveOutputEnabled={runOutput.liveEnabled}
+                  liveOutputRefreshing={runOutput.liveRefreshing}
+                  onAcknowledgedChange={runOutput.setAcknowledged}
+                  onLoad={runOutput.loadSnapshot}
+                  onLiveOutputChange={runOutput.setLiveEnabled}
                 />
               ) : null}
 

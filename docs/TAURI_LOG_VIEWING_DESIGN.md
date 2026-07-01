@@ -58,7 +58,7 @@ Sensitive data:
 
 ## Accepted Design
 
-Add a bounded snapshot command before any live stream:
+Add a bounded snapshot command before any event or terminal stream:
 
 | Command | Capability | Request | Response |
 | --- | --- | --- | --- |
@@ -75,6 +75,10 @@ Implementation status:
 - Managed-session responses add session-owned log entries with `session_id`,
   `run_id`, `source`, `cursor`, `timestamp`, bounded `text`, `line_count`, and
   `redaction.status: notApplied`.
+- The React selected-session view can opt into live updates after the same
+  sensitive-output acknowledgement. Live updates are bounded polling calls to
+  `get_managed_session_log_snapshot`; the app keeps one in-flight log request,
+  stops on session changes, and ignores stale responses for older targets.
 - Raw output remains hidden until the user acknowledges sensitive output.
 - The Rust path validates the active marker and RunHaven-owned container name,
   calls only `container logs -n`, drains stdout/stderr with bounded memory, and
@@ -92,10 +96,14 @@ Default behavior:
 - The Rust command truncates oversized output and returns `truncated: true`.
 - The UI renders the snapshot in a fixed-height scroll region with wrapping
   controlled by the existing app styles.
+- Selected-session live output is off by default, disabled until raw output is
+  acknowledged, and refreshes every few seconds only while the selected session
+  view is open.
 
 Out of scope for the first implementation:
 
 - Live streaming through Tauri events or channels.
+- `container logs --follow`.
 - Boot logs via `container logs --boot`.
 - Attach/terminal behavior.
 - Save, export, upload, or persistent search history for raw logs.

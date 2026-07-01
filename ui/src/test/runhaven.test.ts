@@ -200,6 +200,54 @@ describe("runhaven command helpers", () => {
     expect(JSON.stringify(response)).not.toContain("resize_session");
   });
 
+  it("keeps managed session output refreshes isolated by session", async () => {
+    const firstStarted = await launchRun({
+      plan: {
+        ...defaultRunPlanRequest(providerAgent),
+        workspacePath: "/tmp/runhaven-alpha",
+        sessionName: "alpha"
+      },
+      confirmLaunch: true,
+      confirmedWarnings: []
+    });
+    const secondStarted = await launchRun({
+      plan: {
+        ...defaultRunPlanRequest(providerAgent),
+        workspacePath: "/tmp/runhaven-beta",
+        sessionName: "beta"
+      },
+      confirmLaunch: true,
+      confirmedWarnings: []
+    });
+    const sessions = await getManagedSessions();
+    const firstSession = sessions.sessions.find((item) => item.runId === firstStarted.runId);
+    const secondSession = sessions.sessions.find((item) => item.runId === secondStarted.runId);
+
+    expect(firstSession).toBeDefined();
+    expect(secondSession).toBeDefined();
+    expect(firstSession!.id).not.toBe(secondSession!.id);
+
+    const firstRefresh = await getManagedSessionLogSnapshot(firstSession!.id, {
+      confirmSensitiveOutput: true
+    });
+    const secondRefresh = await getManagedSessionLogSnapshot(secondSession!.id, {
+      confirmSensitiveOutput: true
+    });
+    const firstFollowUp = await getManagedSessionLogSnapshot(firstSession!.id, {
+      confirmSensitiveOutput: true
+    });
+
+    expect(firstFollowUp.cursor).not.toBe(firstRefresh.cursor);
+    expect(firstFollowUp.entries[0]?.sessionId).toBe(firstSession!.id);
+    expect(firstFollowUp.entries[0]?.text).toContain(firstSession!.id);
+    expect(secondRefresh.entries[0]?.sessionId).toBe(secondSession!.id);
+    expect(secondRefresh.entries[0]?.text).toContain(secondSession!.id);
+    expect(JSON.stringify(firstFollowUp)).not.toContain(secondSession!.id);
+    expect(JSON.stringify(secondRefresh)).not.toContain(firstSession!.id);
+    expect(JSON.stringify(firstFollowUp)).not.toContain("write_session_input");
+    expect(JSON.stringify(firstFollowUp)).not.toContain("resize_session");
+  });
+
   it("controls preview runs through a managed session id", async () => {
     const request = {
       ...defaultRunPlanRequest(providerAgent),
