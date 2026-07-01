@@ -30,10 +30,10 @@ fn managed_sessions_response_is_read_only_and_secret_free() {
     assert_eq!(session.agent, "codex");
     assert_eq!(session.project, "project");
     assert_eq!(session.status, "running");
-    assert_eq!(session.auth_status, "api-key-broker");
+    assert_eq!(session.auth_status, "login-state");
     assert_eq!(session.auth_scope, "project");
     assert_eq!(session.lifecycle, "running");
-    assert_eq!(session.next_action.kind, "monitor");
+    assert_eq!(session.next_action.kind, "auth_attention");
     assert_eq!(
         session
             .events
@@ -72,6 +72,7 @@ fn managed_sessions_report_input_transport_attachment() {
             "status": "running",
             "container_name": "runhaven-codex-managed-session-input-attached",
             "state_volume": "runhaven-codex-secret-home",
+            "api_key_broker_env": "OPENAI_API_KEY",
             "session": "project"
         }),
     )

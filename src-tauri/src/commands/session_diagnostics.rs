@@ -1,6 +1,4 @@
-use runhaven_core::diagnostics::{
-    auth_status_payload, read_auth_broker_log, read_egress_policy_log,
-};
+use runhaven_core::diagnostics::{read_auth_broker_log, read_egress_policy_log};
 use runhaven_core::ui_contracts::ManagedSessionSummaryData;
 use serde_json::Value;
 
@@ -47,14 +45,17 @@ pub(crate) fn get_managed_session_diagnostics_for_test(
 }
 
 fn session_auth_status(session: &ManagedSessionSummaryData) -> AuthProfileStatus {
-    super::diagnostics::auth_status_response(&auth_status_payload())
-        .profiles
-        .into_iter()
-        .find(|profile| profile.name == session.agent)
-        .unwrap_or(AuthProfileStatus {
-            name: session.agent.clone(),
-            status: "unknown".to_string(),
-        })
+    AuthProfileStatus {
+        name: session.agent.clone(),
+        status: session.auth_status.clone(),
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn session_auth_status_for_test(
+    session: &ManagedSessionSummaryData,
+) -> AuthProfileStatus {
+    session_auth_status(session)
 }
 
 fn record_belongs_to_run(record: &Value, run_id: &str) -> bool {

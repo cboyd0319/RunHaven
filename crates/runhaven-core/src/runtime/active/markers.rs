@@ -28,6 +28,9 @@ pub fn write_active_run_record(plan: &AgentRunPlan, run_id: &str, started_at: &s
     if let Some(worktree) = &plan.worktree {
         payload["worktree"] = worktree_record(worktree);
     }
+    if let Some(broker_env) = &plan.api_key_broker_env {
+        payload["api_key_broker_env"] = json!(broker_env);
+    }
     write_active_run_payload(run_id, payload)
 }
 
@@ -169,10 +172,63 @@ mod tests {
     use crate::support::paths::override_cache_root_for_tests;
     use std::os::unix::fs::PermissionsExt;
 
+    use crate::runtime::plans::{AgentRunPlan, AuthScope, NetworkMode, WorkspaceScope};
+    use std::path::PathBuf;
+
     fn isolated_cache() -> (tempfile::TempDir, crate::support::paths::CacheRootOverride) {
         let cache = tempfile::tempdir().expect("cache");
         let cache_home = override_cache_root_for_tests(cache.path());
         (cache, cache_home)
+    }
+
+    fn broker_plan(api_key_broker_env: Option<&str>) -> AgentRunPlan {
+        AgentRunPlan {
+            command: vec!["container".to_string(), "run".to_string()],
+            preflight: Vec::new(),
+            workspace: PathBuf::from("/tmp/broker-workspace"),
+            state_volume: "runhaven-codex-broker-home".to_string(),
+            session: "broker".to_string(),
+            container_name: "runhaven-codex-broker-run".to_string(),
+            profile_name: "codex".to_string(),
+            workspace_scope: WorkspaceScope::Current,
+            workspace_scope_note: None,
+            auth_scope: AuthScope::Agent,
+            worktree: None,
+            run_id: Some("run-broker".to_string()),
+            network_name: None,
+            network_mode: NetworkMode::Provider,
+            egress_summary: "provider egress".to_string(),
+            image: "image".to_string(),
+            provider_allowed_hosts: Vec::new(),
+            api_key_broker_env: api_key_broker_env.map(str::to_string),
+            security_notices: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn active_run_record_persists_api_key_broker_env_for_read_model() {
+        let (_cache, _cache_home) = isolated_cache();
+
+        write_active_run_record(
+            &broker_plan(Some("OPENAI_API_KEY")),
+            "run-broker",
+            "2026-07-01T00:00:00Z",
+        )
+        .expect("write brokered run");
+        let brokered = find_active_run_record("run-broker").expect("brokered record");
+        assert_eq!(
+            brokered.get("api_key_broker_env").and_then(Value::as_str),
+            Some("OPENAI_API_KEY"),
+            "brokered run must persist broker proof for the managed-session read model"
+        );
+
+        write_active_run_record(&broker_plan(None), "run-broker", "2026-07-01T00:00:00Z")
+            .expect("write non-brokered run");
+        let plain = find_active_run_record("run-broker").expect("non-brokered record");
+        assert!(
+            plain.get("api_key_broker_env").is_none(),
+            "runs without a broker env must not fabricate broker proof"
+        );
     }
 
     #[test]

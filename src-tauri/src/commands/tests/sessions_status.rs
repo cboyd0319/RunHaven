@@ -1,4 +1,8 @@
 use super::*;
+use runhaven_core::ui_contracts::{
+    ManagedSessionCleanupData, ManagedSessionEventData, ManagedSessionInputData,
+    ManagedSessionNextActionData, ManagedSessionSummaryData,
+};
 
 #[test]
 fn managed_session_status_resolves_session_id_and_sanitizes_container_status() {
@@ -15,6 +19,7 @@ fn managed_session_status_resolves_session_id_and_sanitizes_container_status() {
             "container_name": "runhaven-codex-status",
             "state_volume": "runhaven-codex-status-home",
             "auth_scope": "project",
+            "api_key_broker_env": "OPENAI_API_KEY",
             "session": "status",
             "token": "should-not-leak"
         }),
@@ -96,6 +101,7 @@ fn managed_session_status_resolves_session_id_and_sanitizes_container_status() {
         "/sensitive/workspaces",
         "runhaven-codex-status-home",
         "should-not-leak",
+        "OPENAI_API_KEY",
         "fake-secret",
         "/Users/example",
         "secret-flag",
@@ -266,6 +272,7 @@ fn managed_session_diagnostics_are_scoped_to_selected_session() {
             "status": "running",
             "container_name": "runhaven-codex-diagnostics",
             "state_volume": "runhaven-codex-diagnostics-home",
+            "auth_scope": "project",
             "session": "diagnostics"
         }),
     )
@@ -367,6 +374,8 @@ fn managed_session_diagnostics_are_scoped_to_selected_session() {
 
     assert_eq!(response.session.id, "managed-session-diagnostics");
     assert_eq!(response.auth_status.name, "codex");
+    assert_eq!(response.auth_status.status, "login-state");
+    assert_eq!(response.auth_status.status, response.session.auth_status);
     assert_eq!(response.auth_log_entries.len(), 1);
     assert_eq!(response.auth_log_entries[0].path, "/v1/responses");
     assert_eq!(response.egress_log_entries.len(), 1);
@@ -388,5 +397,52 @@ fn managed_session_diagnostics_are_scoped_to_selected_session() {
             !encoded.contains(forbidden),
             "managed session diagnostics leaked forbidden value {forbidden:?}"
         );
+    }
+}
+
+#[test]
+fn managed_session_diagnostics_preserve_session_auth_truth() {
+    let session = managed_session_summary_with_auth_status("login-state");
+
+    let auth_status = crate::commands::session_diagnostics::session_auth_status_for_test(&session);
+
+    assert_eq!(auth_status.name, "codex");
+    assert_eq!(auth_status.status, "login-state");
+}
+
+fn managed_session_summary_with_auth_status(auth_status: &str) -> ManagedSessionSummaryData {
+    ManagedSessionSummaryData {
+        id: "session-auth-truth".to_string(),
+        run_id: "session-auth-truth".to_string(),
+        agent: "codex".to_string(),
+        session: "login".to_string(),
+        title: "Codex - project".to_string(),
+        project: "project".to_string(),
+        status: "running".to_string(),
+        status_label: "Running".to_string(),
+        auth_status: auth_status.to_string(),
+        auth_scope: "agent".to_string(),
+        network: "provider".to_string(),
+        started_at: "2026-07-01T03:30:00Z".to_string(),
+        container_name: "runhaven-codex-session-auth-truth".to_string(),
+        detail_command: "runhaven runs show session-auth-truth".to_string(),
+        lifecycle: "running".to_string(),
+        input: ManagedSessionInputData {
+            attached: false,
+            status: "detached".to_string(),
+            detail: "Session input is not attached in this RunHaven window.".to_string(),
+        },
+        cleanup: ManagedSessionCleanupData {
+            available: false,
+            target: String::new(),
+            label: String::new(),
+            detail: String::new(),
+        },
+        next_action: ManagedSessionNextActionData {
+            kind: "auth_attention".to_string(),
+            label: "Finish auth setup".to_string(),
+            detail: "Auth is not ready for Codex.".to_string(),
+        },
+        events: Vec::<ManagedSessionEventData>::new(),
     }
 }

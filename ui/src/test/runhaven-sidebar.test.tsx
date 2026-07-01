@@ -173,4 +173,59 @@ describe("RunHavenSidebar", () => {
     expect(html).not.toContain("TOKEN=value")
     expect(html).not.toContain("runhaven-codex-hidden-home")
   })
+
+  it("shows compact auth labels without leaking unsafe auth values", () => {
+    const html = renderToStaticMarkup(
+      <TooltipProvider>
+        <SidebarProvider>
+          <RunHavenSidebar
+            sessions={[
+              session("login", {
+                session: "saved",
+                title: "Claude - saved",
+                project: "/Users/c/private/saved",
+                authStatus: "login-state",
+                detailCommand:
+                  "runhaven runs show /Users/c/private/saved --env TOKEN=value",
+              }),
+              session("signin", {
+                agent: "codex",
+                session: "signin",
+                title: "Codex - signin",
+                project: "signin",
+                authStatus: "needs-sign-in",
+                statusLabel: "Needs auth",
+              }),
+              session("local", {
+                agent: "shell",
+                session: "local",
+                title: "Shell - local",
+                project: "local",
+                authStatus: "no-auth-needed",
+                network: "internal",
+              }),
+              session("unsafe", {
+                agent: "gemini",
+                session: "unsafe",
+                title: "Gemini - unsafe",
+                project: "unsafe",
+                authStatus: "/Users/c/private/TOKEN=value",
+              }),
+            ]}
+            selectedSessionId="login"
+            onStartSelect={() => undefined}
+            onSessionSelect={() => undefined}
+          />
+        </SidebarProvider>
+      </TooltipProvider>,
+    )
+
+    expect(html).toContain("Login state")
+    expect(html).toContain("Needs sign-in")
+    expect(html).toContain("No auth needed")
+    expect(html).toContain("Unknown")
+    expect(html).toContain("Project saved")
+    expect(html).not.toContain("/Users/c/private")
+    expect(html).not.toContain("TOKEN=value")
+  })
 })

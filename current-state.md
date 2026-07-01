@@ -200,6 +200,17 @@ Useful GUI design docs:
   shared UI contracts, runtime/provider helpers, CLI plan output, React GUI
   helpers, usage docs, release docs, and prior TUI checkpoint files. Current
   active work should not continue TUI splits.
+- Managed-session auth status is now truthful from run-owned proof instead of
+  static agent capability. The Rust read model distinguishes API key broker,
+  sign-in-needed, no-auth-needed, and unknown, and never lets a live session
+  claim broker auth just because its agent supports it. The active-run record
+  writer persists the broker env-var name (never a secret value), so live
+  brokered sessions prove API key broker instead of conservatively showing
+  sign-in-needed; finished brokered sessions prove it through the history
+  auth-broker channel. Both proof channels plus the shell no-auth-needed path
+  are covered by read-model tests, session-input readiness fixtures were moved to
+  the new trust model, and the managed-session UI-contract tests were split by
+  ownership into `session_cleanup.rs` to stay under the structure ceiling.
 
 ## Current Branch Work
 
@@ -227,7 +238,13 @@ git diff --check
 ```
 
 Add Rust, Tauri, frontend, or live smoke checks when touched files require
-them.
+them. Per-crate `cargo test -p runhaven-core` and `-p runhaven-tauri` plus
+`cargo build --workspace` are clean. `cargo test --workspace` has pre-existing,
+out-of-scope failures that stay on the backlog and are not RunHaven CLI/GUI
+regressions: the backlogged TUI test fixtures need `ActiveRunSummaryData`'s
+`auth_scope`, and the vendored `codex-exec-server` integration tests do not
+compile (unresolved `codex_test_binary_support`). Do not spend the CLI/GUI push
+fixing TUI.
 
 ## Next Step
 

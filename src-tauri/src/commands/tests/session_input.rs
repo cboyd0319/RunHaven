@@ -108,7 +108,8 @@ fn managed_session_input_contract_accepts_only_ready_session() {
             "container_name": "runhaven-codex-ready-input",
             "state_volume": "runhaven-codex-hidden-home",
             "session": "ready",
-            "token": "should-not-leak"
+            "token": "should-not-leak",
+            "api_key_broker_env": "OPENAI_API_KEY"
         }),
     )
     .expect("ready active run payload");
@@ -199,7 +200,8 @@ fn managed_session_input_requires_backend_approval_grant() {
             "status": "running",
             "container_name": "runhaven-codex-grant-input",
             "state_volume": "runhaven-codex-hidden-home",
-            "session": "grant"
+            "session": "grant",
+            "api_key_broker_env": "OPENAI_API_KEY"
         }),
     )
     .expect("grant active run payload");
@@ -282,7 +284,8 @@ fn managed_session_input_requires_backend_owned_transport() {
             "status": "running",
             "container_name": "runhaven-codex-transport-a",
             "state_volume": "runhaven-codex-hidden-home-a",
-            "session": "a"
+            "session": "a",
+            "api_key_broker_env": "OPENAI_API_KEY"
         }),
     )
     .expect("active run payload a");
@@ -297,7 +300,8 @@ fn managed_session_input_requires_backend_owned_transport() {
             "status": "running",
             "container_name": "runhaven-codex-transport-b",
             "state_volume": "runhaven-codex-hidden-home-b",
-            "session": "b"
+            "session": "b",
+            "api_key_broker_env": "OPENAI_API_KEY"
         }),
     )
     .expect("active run payload b");

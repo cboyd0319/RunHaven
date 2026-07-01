@@ -1,70 +1,29 @@
 use super::*;
-use std::io::Write;
-use std::path::Path;
-use std::process::Command;
 
-use crate::runtime::worktrees::{
-    create_worktree_for_run, discard_worktree_for_run, worktree_record,
-};
-use crate::support::paths::{open_private_append, override_cache_root_for_tests, runs_log_path};
-
-fn git(repo: &Path, args: &[&str]) {
-    let status = Command::new("git")
-        .arg("-C")
-        .arg(repo)
-        .args(args)
-        .status()
-        .expect("git available");
-    assert!(status.success(), "git {args:?} failed");
-}
-
-fn init_clean_repo(repo: &Path) {
-    git(repo, &["init", "-q"]);
-    git(repo, &["config", "user.email", "test@example.com"]);
-    git(repo, &["config", "user.name", "test"]);
-    std::fs::write(repo.join("seed.txt"), "base").expect("write seed");
-    git(repo, &["add", "seed.txt"]);
-    git(repo, &["commit", "-qm", "seed"]);
-}
-
-fn append_run_record(record: &serde_json::Value) {
-    let mut file = open_private_append(&runs_log_path()).expect("runs log");
-    writeln!(
-        file,
-        "{}",
-        serde_json::to_string(record).expect("serialize run record")
-    )
-    .expect("write run record");
+fn run_record(timestamp: &str, run_id: &str, profile: &str, session: &str) -> serde_json::Value {
+    serde_json::json!({
+        "timestamp": timestamp,
+        "run_id": run_id,
+        "profile": profile,
+        "workspace": format!("/sensitive/workspaces/{session}"),
+        "network": "provider",
+        "status": "running",
+        "container_name": format!("runhaven-{profile}-{session}-run"),
+        "state_volume": format!("runhaven-{profile}-{session}-home"),
+        "auth_scope": "project",
+        "session": session
+    })
 }
 
 #[test]
-fn managed_session_list_contract_merges_active_runs_with_auth_status() {
+fn managed_session_list_contract_uses_run_auth_without_leaking_static_payload() {
+    let mut newer = run_record("2026-06-30T02:00:00Z", "run-newer", "claude", "backend");
+    newer["auth_scope"] = serde_json::json!("agent");
+
     let data = ManagedSessionListData::from_active_runs_and_auth_status(
         [
-            serde_json::json!({
-                "timestamp": "2026-06-30T01:00:00Z",
-                "run_id": "run-older",
-                "profile": "codex",
-                "workspace": "/sensitive/workspaces/docs",
-                "network": "provider",
-                "status": "running",
-                "container_name": "runhaven-codex-docs-run",
-                "state_volume": "runhaven-codex-docs-home",
-                "auth_scope": "project",
-                "session": "docs"
-            }),
-            serde_json::json!({
-                "timestamp": "2026-06-30T02:00:00Z",
-                "run_id": "run-newer",
-                "profile": "claude",
-                "workspace": "/sensitive/workspaces/backend",
-                "network": "provider",
-                "status": "running",
-                "container_name": "runhaven-claude-backend-run",
-                "state_volume": "runhaven-claude-backend-home",
-                "auth_scope": "agent",
-                "session": "backend"
-            }),
+            run_record("2026-06-30T01:00:00Z", "run-older", "codex", "docs"),
+            newer,
         ],
         serde_json::json!({
             "status": "api-key-broker",
@@ -85,8 +44,9 @@ fn managed_session_list_contract_merges_active_runs_with_auth_status() {
     assert_eq!(first.project, "backend");
     assert_eq!(first.status, "running");
     assert_eq!(first.status_label, "Running");
-    assert_eq!(first.auth_status, "api-key-broker");
+    assert_eq!(first.auth_status, "login-state");
     assert_eq!(first.auth_scope, "agent");
+    assert_eq!(first.next_action.kind, "auth_attention");
     assert_eq!(first.detail_command, "runhaven runs show run-newer");
 
     let encoded = serde_json::to_string(&data).expect("serialize managed sessions");
@@ -106,18 +66,12 @@ fn managed_session_list_contract_merges_active_runs_with_auth_status() {
 #[test]
 fn managed_session_list_includes_recent_finished_records_without_overriding_active_runs() {
     let data = ManagedSessionListData::from_active_and_recent_runs(
-        [serde_json::json!({
-            "timestamp": "2026-06-30T02:00:00Z",
-            "run_id": "run-still-active",
-            "profile": "codex",
-            "workspace": "/sensitive/workspaces/active",
-            "network": "provider",
-            "status": "running",
-            "container_name": "runhaven-codex-active-run",
-            "state_volume": "runhaven-codex-active-home",
-            "auth_scope": "project",
-            "session": "active"
-        })],
+        [run_record(
+            "2026-06-30T02:00:00Z",
+            "run-still-active",
+            "codex",
+            "active",
+        )],
         [
             serde_json::json!({
                 "timestamp": "2026-06-30T04:00:00Z",
@@ -162,7 +116,8 @@ fn managed_session_list_includes_recent_finished_records_without_overriding_acti
         .expect("active session");
     assert_eq!(active.status, "running");
     assert_eq!(active.container_name, "runhaven-codex-active-run");
-    assert_eq!(active.next_action.kind, "monitor");
+    assert_eq!(active.auth_status, "login-state");
+    assert_eq!(active.next_action.kind, "auth_attention");
 
     let finished = data
         .sessions
@@ -190,105 +145,125 @@ fn managed_session_list_includes_recent_finished_records_without_overriding_acti
 }
 
 #[test]
-fn managed_session_cleanup_fails_closed_after_recorded_worktree_is_discarded() {
-    let cache = tempfile::tempdir().expect("cache");
-    let _cache_home = override_cache_root_for_tests(cache.path());
-    let repo = tempfile::tempdir().expect("repo");
-    init_clean_repo(repo.path());
+fn managed_session_auth_uses_run_owned_broker_proof_before_static_profile_status() {
+    let mut brokered = run_record("2026-07-01T01:00:00Z", "run-brokered", "codex", "brokered");
+    brokered["api_key_broker_env"] = serde_json::json!("OPENAI_API_KEY");
 
-    let run_id = "cleanup-availability-run";
-    let worktree =
-        create_worktree_for_run(repo.path(), WorkspaceScope::Current, true, "codex", run_id)
-            .expect("create worktree");
-    let worktree_root = worktree.worktree_root.clone();
-    let record = serde_json::json!({
-        "timestamp": "2026-07-01T01:00:00Z",
-        "started_at": "2026-07-01T00:00:00Z",
-        "finished_at": "2026-07-01T01:00:00Z",
-        "run_id": run_id,
-        "profile": "codex",
-        "workspace": repo.path().join("project").display().to_string(),
-        "network": "provider",
-        "status": "succeeded",
-        "auth_scope": "project",
-        "state_volume": "runhaven-codex-cleanup-home",
-        "session": "cleanup",
-        "worktree": worktree_record(&worktree)
-    });
-    append_run_record(&record);
-
-    let before = ManagedSessionListData::from_active_and_recent_runs(
-        [],
-        [record.clone()],
-        serde_json::json!({"profiles": [{"name": "codex", "status": "api-key-broker"}]}),
+    let data = ManagedSessionListData::from_active_runs_and_auth_status(
+        [
+            run_record("2026-07-01T02:00:00Z", "run-login-state", "codex", "login"),
+            brokered,
+        ],
+        serde_json::json!({
+            "profiles": [{"name": "codex", "status": "api-key-broker"}],
+            "token": "should-not-leak"
+        }),
     );
 
-    let session = before
+    let login_state = data
         .sessions
-        .first()
-        .expect("managed session before cleanup");
-    assert_eq!(session.lifecycle, "finished");
-    assert!(session.cleanup.available);
-    assert_eq!(session.cleanup.target, "worktree");
+        .iter()
+        .find(|session| session.run_id == "run-login-state")
+        .expect("login-state session");
+    assert_eq!(login_state.auth_status, "login-state");
+    assert_eq!(login_state.next_action.kind, "auth_attention");
 
-    let active_stopped = ManagedSessionListData::from_active_and_recent_runs(
-        [record.clone()],
-        [],
-        serde_json::json!({"profiles": [{"name": "codex", "status": "api-key-broker"}]}),
-    );
-    let session = active_stopped
+    let brokered = data
         .sessions
-        .first()
-        .expect("active managed session");
-    assert_eq!(session.lifecycle, "finished");
-    assert!(!session.cleanup.available);
+        .iter()
+        .find(|session| session.run_id == "run-brokered")
+        .expect("brokered session");
+    assert_eq!(brokered.auth_status, "api-key-broker");
+    assert_eq!(brokered.next_action.kind, "monitor");
 
-    discard_worktree_for_run(run_id).expect("discard worktree");
-    assert!(
-        !worktree_root.exists(),
-        "worktree directory should be gone after cleanup"
-    );
-
-    let after = ManagedSessionListData::from_active_and_recent_runs(
-        [],
-        [record],
-        serde_json::json!({"profiles": [{"name": "codex", "status": "api-key-broker"}]}),
-    );
-
-    let session = after
-        .sessions
-        .first()
-        .expect("managed session after cleanup");
-    assert_eq!(session.lifecycle, "finished");
-    assert!(!session.cleanup.available);
-    assert_eq!(session.cleanup.target, "");
-
-    let encoded = serde_json::to_string(&after).expect("serialize managed session");
+    let encoded = serde_json::to_string(&data).expect("serialize managed sessions");
     for forbidden in [
-        worktree_root.display().to_string(),
-        repo.path().display().to_string(),
-        "runhaven-codex-cleanup-home".to_string(),
+        "OPENAI_API_KEY",
+        "/sensitive/workspaces",
+        "runhaven-codex-login-home",
+        "runhaven-codex-brokered-home",
+        "should-not-leak",
     ] {
         assert!(
-            !encoded.contains(&forbidden),
-            "managed session cleanup contract leaked forbidden value {forbidden:?}"
+            !encoded.contains(forbidden),
+            "managed session payload leaked forbidden value {forbidden:?}"
         );
     }
 }
 
 #[test]
+fn managed_session_auth_marks_shell_no_auth_needed() {
+    let mut record = run_record("2026-07-01T03:00:00Z", "run-shell", "shell", "shell");
+    record["network"] = serde_json::json!("internet");
+
+    let data = ManagedSessionListData::from_active_runs_and_auth_status(
+        [record],
+        serde_json::json!({"profiles": [{"name": "shell", "status": "n/a"}]}),
+    );
+
+    let session = data.sessions.first().expect("shell session");
+    assert_eq!(session.auth_status, "no-auth-needed");
+    assert_eq!(session.next_action.kind, "monitor");
+    assert_eq!(session.events[1].detail, "No auth needed");
+}
+
+#[test]
+fn managed_session_finished_run_proves_broker_from_history_auth_broker_channel() {
+    // Finished runs drop out of the active-run store, so their broker proof
+    // arrives through the history record's `auth_broker.broker` field instead of
+    // `api_key_broker_env`. This locks that second channel against refactors of
+    // `summarize_auth_broker` silently downgrading finished brokered sessions.
+    let finished_record = |run_id: &str, session: &str| {
+        serde_json::json!({
+            "timestamp": "2026-07-01T04:00:00Z",
+            "started_at": "2026-07-01T02:00:00Z",
+            "finished_at": "2026-07-01T04:00:00Z",
+            "run_id": run_id,
+            "profile": "codex",
+            "workspace": format!("/sensitive/workspaces/{session}"),
+            "network": "provider",
+            "status": "succeeded",
+            "auth_scope": "project",
+            "state_volume": format!("runhaven-codex-{session}-home"),
+            "session": session
+        })
+    };
+
+    let mut brokered = finished_record("run-history-brokered", "brokered");
+    brokered["auth_broker"] = serde_json::json!({"broker": "codex-api-key", "entries": 0});
+    let mut sign_in = finished_record("run-history-sign-in", "signin");
+    sign_in["auth_broker"] = serde_json::json!({"broker": null, "entries": 0});
+
+    let data = ManagedSessionListData::from_active_and_recent_runs(
+        [],
+        [brokered, sign_in],
+        serde_json::json!({"profiles": [{"name": "codex", "status": "api-key-broker"}]}),
+    );
+
+    let brokered = data
+        .sessions
+        .iter()
+        .find(|session| session.run_id == "run-history-brokered")
+        .expect("brokered finished session");
+    assert_eq!(brokered.auth_status, "api-key-broker");
+
+    let sign_in = data
+        .sessions
+        .iter()
+        .find(|session| session.run_id == "run-history-sign-in")
+        .expect("sign-in finished session");
+    assert_eq!(sign_in.auth_status, "login-state");
+}
+
+#[test]
 fn managed_session_component_payload_round_trips_json() {
     let data = ManagedSessionListData::from_active_runs_and_auth_status(
-        [serde_json::json!({
-            "timestamp": "2026-06-30T02:00:00Z",
-            "run_id": "run-123",
-            "profile": "codex",
-            "workspace": "/sensitive/workspaces/project",
-            "network": "provider",
-            "status": "running",
-            "container_name": "runhaven-codex-project-run",
-            "session": "project"
-        })],
+        [run_record(
+            "2026-06-30T02:00:00Z",
+            "run-123",
+            "codex",
+            "project",
+        )],
         serde_json::json!({
             "profiles": [{"name": "codex", "status": "api-key-broker"}]
         }),
@@ -311,32 +286,13 @@ fn managed_session_component_payload_round_trips_json() {
 
 #[test]
 fn managed_session_contract_derives_lifecycle_action_and_events() {
+    let mut auth = run_record("2026-06-30T03:00:00Z", "run-auth", "claude", "auth");
+    auth["token"] = serde_json::json!("should-not-leak");
+    let mut ready = run_record("2026-06-30T02:00:00Z", "run-ready", "codex", "ready");
+    ready["api_key_broker_env"] = serde_json::json!("OPENAI_API_KEY");
+
     let data = ManagedSessionListData::from_active_runs_and_auth_status(
-        [
-            serde_json::json!({
-                "timestamp": "2026-06-30T03:00:00Z",
-                "run_id": "run-auth",
-                "profile": "claude",
-                "workspace": "/sensitive/workspaces/auth",
-                "network": "provider",
-                "status": "running",
-                "container_name": "runhaven-claude-auth-run",
-                "state_volume": "runhaven-claude-auth-home",
-                "session": "auth",
-                "token": "should-not-leak"
-            }),
-            serde_json::json!({
-                "timestamp": "2026-06-30T02:00:00Z",
-                "run_id": "run-ready",
-                "profile": "codex",
-                "workspace": "/sensitive/workspaces/ready",
-                "network": "provider",
-                "status": "running",
-                "container_name": "runhaven-codex-ready-run",
-                "state_volume": "runhaven-codex-ready-home",
-                "session": "ready"
-            }),
-        ],
+        [auth, ready],
         serde_json::json!({
             "profiles": [
                 {"name": "codex", "status": "api-key-broker"},
@@ -372,6 +328,7 @@ fn managed_session_contract_derives_lifecycle_action_and_events() {
     for forbidden in [
         "/sensitive/workspaces",
         "should-not-leak",
+        "OPENAI_API_KEY",
         "state_volume",
         "runhaven-claude-auth-home",
         "runhaven-codex-ready-home",

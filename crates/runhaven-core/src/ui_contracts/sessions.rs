@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
+use crate::provider::auth_profiles::agent_sign_in_mode;
 use crate::runtime::worktrees::{load_worktree_lifecycle, verify_lifecycle};
 
 use super::helpers::{
@@ -134,11 +135,8 @@ impl ManagedSessionSummaryData {
         let project = project_label(&string_field(&record, "workspace"));
         let status = string_field(&record, "status");
         let status_label = status_label(&status);
-        let auth_status = auth_by_agent
-            .get(&agent)
-            .cloned()
-            .unwrap_or_else(|| "unknown".to_string());
         let auth_scope = string_field(&record, "auth_scope");
+        let auth_status = managed_session_auth_status(&record, &agent, &auth_scope, auth_by_agent);
         let network = string_field(&record, "network");
         let started_at = string_field(&record, "timestamp");
         let lifecycle = managed_session_lifecycle(&status);
@@ -175,11 +173,8 @@ impl ManagedSessionSummaryData {
         let project = project_label(&string_field(&record, "workspace"));
         let status = string_field(&record, "status");
         let status_label = status_label(&status);
-        let auth_status = auth_by_agent
-            .get(&agent)
-            .cloned()
-            .unwrap_or_else(|| "unknown".to_string());
         let auth_scope = string_field(&record, "auth_scope");
+        let auth_status = managed_session_auth_status(&record, &agent, &auth_scope, auth_by_agent);
         let network = string_field(&record, "network");
         let started_at = first_non_empty(
             string_field(&record, "started_at"),
@@ -323,6 +318,54 @@ fn first_non_empty(primary: String, fallback: String) -> String {
     }
 }
 
+fn managed_session_auth_status(
+    record: &serde_json::Value,
+    agent: &str,
+    auth_scope: &str,
+    auth_by_agent: &BTreeMap<String, String>,
+) -> String {
+    if agent.trim().eq_ignore_ascii_case("shell") {
+        return "no-auth-needed".to_string();
+    }
+    if managed_session_has_run_owned_broker(record) {
+        return "api-key-broker".to_string();
+    }
+    if managed_session_uses_login_state(agent, auth_scope) {
+        return "login-state".to_string();
+    }
+
+    let static_status = auth_by_agent
+        .get(agent)
+        .map(String::as_str)
+        .unwrap_or("unknown");
+    match static_status.trim().to_lowercase().as_str() {
+        "api-key-broker" | "brokered" | "ready" | "available" | "n/a" => "unknown".to_string(),
+        "" | "-" => "unknown".to_string(),
+        _ => static_status.to_string(),
+    }
+}
+
+fn managed_session_has_run_owned_broker(record: &serde_json::Value) -> bool {
+    present_value(&string_field(record, "api_key_broker_env"))
+        || record
+            .pointer("/auth_broker/broker")
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(present_value)
+}
+
+fn managed_session_uses_login_state(agent: &str, auth_scope: &str) -> bool {
+    agent_sign_in_mode(agent).supports_login()
+        && matches!(
+            auth_scope.trim().to_lowercase().as_str(),
+            "agent" | "project"
+        )
+}
+
+fn present_value(value: &str) -> bool {
+    let trimmed = value.trim();
+    !trimmed.is_empty() && trimmed != "-"
+}
+
 fn managed_session_auth_needs_attention(agent: &str, auth_status: &str) -> bool {
     if agent.trim().eq_ignore_ascii_case("shell") {
         return false;
@@ -330,7 +373,7 @@ fn managed_session_auth_needs_attention(agent: &str, auth_status: &str) -> bool 
 
     !matches!(
         auth_status.trim().to_lowercase().as_str(),
-        "api-key-broker" | "brokered" | "ready" | "available" | "n/a"
+        "api-key-broker" | "brokered" | "ready" | "available" | "n/a" | "no-auth-needed"
     )
 }
 
@@ -375,6 +418,8 @@ fn network_label(network: &str) -> String {
 fn auth_status_label(status: &str) -> String {
     match status.trim().to_lowercase().as_str() {
         "api-key-broker" => "API key broker".to_string(),
+        "login-state" => "Sign in needed".to_string(),
+        "no-auth-needed" => "No auth needed".to_string(),
         "n/a" => "N/A".to_string(),
         "" | "-" => "Unknown".to_string(),
         _ => display_words(status),

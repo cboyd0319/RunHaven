@@ -44,10 +44,28 @@ export function authScopeLabel(scope: string): string {
 }
 
 export function authLabel(status: string): string {
-  if (status.trim().toLowerCase() === "api-key-broker") {
-    return "API key broker"
+  const cleaned = status.trim()
+  switch (cleaned.toLowerCase()) {
+    case "api-key-broker":
+    case "brokered":
+      return "API key broker"
+    case "login-state":
+      return "Login state"
+    case "needs-sign-in":
+      return "Needs sign-in"
+    case "no-auth-needed":
+    case "n/a":
+      return "No auth needed"
+    case "ready":
+    case "available":
+      return "Ready"
+    case "":
+    case "-":
+    case "unknown":
+      return "Unknown"
+    default:
+      return safeAuthStatusLabel(cleaned)
   }
-  return titleCase(status)
 }
 
 export function projectLabel(project: string): string {
@@ -81,4 +99,12 @@ function identityValue(value: string): string {
 
   const parts = cleaned.split(/[\\/]+/).filter(Boolean)
   return parts[parts.length - 1] ?? cleaned
+}
+
+function safeAuthStatusLabel(status: string): string {
+  if (!/^[a-z0-9][a-z0-9 _-]{0,39}$/i.test(status)) {
+    return "Unknown"
+  }
+
+  return titleCase(status.replaceAll("_", " "))
 }

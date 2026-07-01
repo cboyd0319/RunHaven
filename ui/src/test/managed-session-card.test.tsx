@@ -8,6 +8,7 @@ import {
   sessionNeedsAttention
 } from "../app/ManagedSessionCard";
 import { sameManagedSessionList } from "../app/sessionList";
+import { authLabel } from "../app/sessionIdentity";
 import type { ManagedSessionSummary } from "../commands/runhaven";
 
 function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSummary {
@@ -107,6 +108,27 @@ describe("ManagedSessionCard", () => {
     expect(html).toContain("Auth is not ready for Codex.");
     expect(html).toContain("Needs attention");
     expect(html).not.toContain("Start session");
+  });
+
+  it("renders explicit auth labels for managed-session statuses", () => {
+    const cases: Array<[authStatus: string, label: string]> = [
+      ["api-key-broker", "API key broker"],
+      ["login-state", "Login state"],
+      ["needs-sign-in", "Needs sign-in"],
+      ["no-auth-needed", "No auth needed"],
+      ["unknown", "Unknown"]
+    ];
+
+    for (const [authStatus, label] of cases) {
+      const html = renderToStaticMarkup(
+        <ManagedSessionCard session={session({ authStatus, events: [] })} />
+      );
+
+      expect(authLabel(authStatus)).toBe(label);
+      expect(html).toContain(
+        `class="mt-1 break-all font-medium">${label}</div>`
+      );
+    }
   });
 
   it("allows run controls only while a session is active", () => {

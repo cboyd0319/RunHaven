@@ -41,4 +41,5 @@ mod active_runs;
 mod diagnostics;
 mod launch;
 mod review;
+mod session_cleanup;
 mod sessions;
