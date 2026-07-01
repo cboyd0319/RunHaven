@@ -22,7 +22,7 @@ pub use validation::{
     validate_workspace,
 };
 
-use crate::runtime::session_state::{shared_state_volume_name, state_volume_name};
+use crate::runtime::session_state::{session_digest, shared_state_volume_name, state_volume_name};
 use crate::support::validators::validate_run_id;
 
 const SSH_FORWARDING_DISABLED_MESSAGE: &str = "SSH forwarding is disabled: Apple container 1.0.0 exposes the forwarded socket to RunHaven's non-root agent user, but ssh-add -l returns permission denied. Do not mount raw SSH keys or run the agent as root; track docs/APPLE_CONTAINER_GAP_ANALYSIS.md.";
@@ -81,10 +81,17 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
             options.session.as_deref(),
         )?,
     };
-    let container_name = safe_resource_name(&format!(
-        "runhaven-{}-{project_id}-run",
-        options.profile.name
-    ));
+    let container_name = match options.session.as_deref() {
+        Some(_) => safe_resource_name(&format!(
+            "runhaven-{}-{project_id}-s-{}-run",
+            options.profile.name,
+            session_digest(&session)
+        )),
+        None => safe_resource_name(&format!(
+            "runhaven-{}-{project_id}-run",
+            options.profile.name
+        )),
+    };
     let default_network_name = safe_resource_name(&format!("runhaven-{project_id}-internal"));
     let image = options
         .image
@@ -410,6 +417,45 @@ mod tests {
         assert_eq!(volume_for(AuthScope::Agent), "runhaven-shell-shared-home");
         // Project scope: a per-workspace volume, never the shared one.
         assert_ne!(volume_for(AuthScope::Project), "runhaven-shell-shared-home");
+    }
+
+    #[test]
+    fn session_names_get_distinct_container_names() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let plan_for = |session: &str| {
+            build_run_plan(RunOptions {
+                profile: get_profile("shell").expect("profile"),
+                workspace: workspace.path().to_path_buf(),
+                agent_args: Vec::new(),
+                image: None,
+                cpus: "4".to_string(),
+                memory: "4g".to_string(),
+                network: NetworkMode::Internal,
+                workspace_scope: WorkspaceScope::Current,
+                session: Some(session.to_string()),
+                auth_scope: AuthScope::Project,
+                read_only_workspace: false,
+                ssh: false,
+                env: Vec::new(),
+                user: "agent".to_string(),
+                interactive: false,
+                tty: false,
+                allow_sensitive_workspace: false,
+                allow_root_user: false,
+                provider_hosts: Vec::new(),
+                api_key_broker_env: None,
+                worktree: None,
+                run_id: None,
+            })
+            .expect("plan")
+        };
+
+        let alpha = plan_for("alpha");
+        let beta = plan_for("beta");
+
+        assert_ne!(alpha.container_name, beta.container_name);
+        assert!(alpha.container_name.starts_with("runhaven-shell-"));
+        assert!(alpha.container_name.ends_with("-run"));
     }
 
     #[test]

@@ -16,6 +16,7 @@ import {
   secureNetworkDefault,
   stopManagedSession,
   warningPreview,
+  withLaunchSessionName,
   writeSessionInput,
   type AgentProfile
 } from "../commands/runhaven";
@@ -74,6 +75,27 @@ describe("runhaven command helpers", () => {
       "active-runs",
       "resource-memory"
     ]);
+  });
+
+  it("adds a fresh GUI session name when the launch request has none", () => {
+    const first = withLaunchSessionName({
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview"
+    });
+    const second = withLaunchSessionName({
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview"
+    });
+    const named = withLaunchSessionName({
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview",
+      sessionName: "custom-session"
+    });
+
+    expect(first.sessionName).toMatch(/^gui-[a-z0-9]+-[a-z0-9]+$/);
+    expect(second.sessionName).toMatch(/^gui-[a-z0-9]+-[a-z0-9]+$/);
+    expect(first.sessionName).not.toBe(second.sessionName);
+    expect(named.sessionName).toBe("custom-session");
   });
 
   it("returns setup preview data outside the Tauri runtime", async () => {

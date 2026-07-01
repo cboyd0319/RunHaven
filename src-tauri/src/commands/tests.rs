@@ -272,6 +272,27 @@ fn launch_plan_for_desktop_keeps_piped_stdin_open_without_tty() {
 }
 
 #[test]
+fn launch_plan_for_desktop_uses_session_scoped_state() {
+    let (_cache, _cache_home) = isolated_cache();
+    let workspace = tempfile::tempdir().expect("workspace");
+    let alpha = build_agent_run_plan(
+        &shell_request(workspace.path().to_path_buf(), "alpha".to_string()),
+        Some("desktop-alpha-plan".to_string()),
+    )
+    .expect("alpha launch plan");
+    let beta = build_agent_run_plan(
+        &shell_request(workspace.path().to_path_buf(), "beta".to_string()),
+        Some("desktop-beta-plan".to_string()),
+    )
+    .expect("beta launch plan");
+
+    assert_eq!(alpha.auth_scope, AuthScope::Project);
+    assert_eq!(beta.auth_scope, AuthScope::Project);
+    assert_ne!(alpha.state_volume, beta.state_volume);
+    assert_ne!(alpha.container_name, beta.container_name);
+}
+
+#[test]
 fn launch_run_blocks_missing_bundled_image() {
     let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");

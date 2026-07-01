@@ -1697,6 +1697,14 @@ Latest GUI local prototype:
   1.0.0 proved input, output, stop, and cleanup. No resize, attach, app-server
   transport, filesystem RPC, MCP, generic command execution, login, or
   host-reaching Codex path was added.
+- 2026-07-01 GUI session identity: GUI launch requests now get a generated
+  session name when the user did not supply one. Desktop plans use
+  project/session-scoped state instead of one shared per-agent state volume,
+  and session-named core plans include the session digest in the container
+  name. This makes same-agent GUI launches use distinct state volumes and
+  distinct container names by default, without adding resize, attach,
+  app-server transport, filesystem RPC, MCP, generic command execution, login,
+  or host-reaching Codex paths.
 - 2026-06-30 harness/privacy follow-up: Repo docs, startup state, repo-local
   skills, examples, and generated docs metadata must not cite machine-local
   paths, sibling checkouts, download folders, or symbolic local-external
@@ -1724,13 +1732,13 @@ Continue local GUI work on this branch. Use
 `docs/plans/native-gui-microsandbox-reference.md` before adding embedded
 terminal or session-write controls. Keep the typed RunHaven Tauri/Rust
 boundary, make safe launch the simplest path, and keep developer details behind
-secondary views. Next useful hard-first work is multi-session and real-agent
-lifecycle hardening: prove auth-ready and auth-attention states behave correctly
-for GUI-launched Codex/Claude-style sessions, keep per-session input/output
-isolated across multiple live sessions, and make stale/exited session states
-plain in the UI. Do not expose resize, attach, app-server transport,
-filesystem RPC, MCP, generic command execution, login, or host-reaching Codex
-paths in that slice. A later desktop-driver pass can add native WebView click
-automation if it is worth the tooling cost.
+secondary views. Next useful hard-first work is two-live-session and real-agent
+lifecycle hardening: prove concurrent GUI-launched sessions keep input/output
+isolated end to end, prove auth-ready and auth-attention states behave
+correctly for GUI-launched Codex/Claude-style sessions, and make stale/exited
+session states plain in the UI. Do not expose resize, attach, app-server
+transport, filesystem RPC, MCP, generic command execution, login, or
+host-reaching Codex paths in that slice. A later desktop-driver pass can add
+native WebView click automation if it is worth the tooling cost.
 Do not push, cut a release, tag, version bump, notarize, add an updater, or do
 public distribution work unless the maintainer explicitly asks for it.

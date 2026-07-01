@@ -1,5 +1,7 @@
 import type { AgentProfile, PlanWarning, RunPlanRequest, RunPlanResponse } from "./types";
 
+let launchSessionSequence = 0;
+
 export function secureNetworkDefault(agent: AgentProfile | undefined): RunPlanRequest["networkMode"] {
   return agent && agent.providerHosts.length > 0 ? "provider" : "internal";
 }
@@ -21,6 +23,21 @@ export function defaultRunPlanRequest(agent: AgentProfile | undefined): RunPlanR
     allowRootUser: false,
     user: "agent"
   };
+}
+
+export function withLaunchSessionName(request: RunPlanRequest): RunPlanRequest {
+  if (request.sessionName?.trim()) {
+    return request;
+  }
+  return {
+    ...request,
+    sessionName: nextLaunchSessionName()
+  };
+}
+
+export function nextLaunchSessionName(): string {
+  launchSessionSequence += 1;
+  return `gui-${Date.now().toString(36)}-${launchSessionSequence.toString(36)}`;
 }
 
 export type WarningPreviewContext = {

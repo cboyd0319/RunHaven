@@ -61,6 +61,7 @@ export function PlanReviewCard({
             {[
               ["Agent", plan.profile],
               ["Project", plan.workspace],
+              ["Session", plan.session],
               ["Agent memory", plan.stateVolume],
               ["Network", plan.networkMode],
               ["Image", plan.image],

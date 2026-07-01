@@ -15,12 +15,14 @@ import {
   killManagedSession,
   killRun,
   launchRun,
+  nextLaunchSessionName,
   planRun,
   repairManagedSession,
   repairRun,
   secureNetworkDefault,
   stopManagedSession,
   stopRun,
+  withLaunchSessionName,
   writeSessionInput,
   type DashboardStatus,
   type ImageStatusResponse,
@@ -282,7 +284,11 @@ export default function App() {
     setPlan(null)
     resetLaunchConfirmation()
     try {
-      const nextPlan = await planRun(request)
+      const planRequest = withLaunchSessionName(request)
+      if (planRequest !== request) {
+        setRequest(planRequest)
+      }
+      const nextPlan = await planRun(planRequest)
       setPlan(nextPlan)
       setLaunchStep("review")
     } catch (cause) {
@@ -312,8 +318,11 @@ export default function App() {
     setError("")
     setLaunchMessage("")
     try {
+      const launchRequest = request.sessionName
+        ? request
+        : { ...request, sessionName: plan.session || nextLaunchSessionName() }
       const started = await launchRun({
-        plan: request,
+        plan: launchRequest,
         confirmLaunch: launchConfirmation,
         confirmedWarnings,
       })
@@ -325,6 +334,10 @@ export default function App() {
       setLaunchConfirmation(false)
       setConfirmedWarnings([])
       setLaunchStep("agent")
+      setRequest((current) => ({
+        ...current,
+        sessionName: nextLaunchSessionName(),
+      }))
     } catch (cause) {
       setError(errorMessage(cause))
     } finally {

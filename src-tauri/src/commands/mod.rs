@@ -198,7 +198,7 @@ fn build_agent_run_plan(
         network,
         workspace_scope,
         session: non_empty(request.session_name.clone()),
-        auth_scope: AuthScope::Agent,
+        auth_scope: AuthScope::Project,
         read_only_workspace: request.read_only_workspace,
         ssh: false,
         env: request.env_names.clone(),
