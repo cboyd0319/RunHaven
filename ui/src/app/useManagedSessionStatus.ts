@@ -11,53 +11,77 @@ import { sameManagedSession } from "./sessionList"
 
 const MANAGED_SESSION_STATUS_POLL_MS = 4_000
 
+type StoredStatus = {
+  sessionId: string
+  data: ManagedSessionStatusResponse
+}
+
 export function useManagedSessionStatus(sessionId: string | null) {
-  const [data, setData] = useState<ManagedSessionStatusResponse | null>(null)
+  // Pairing the fetched status with the id it belongs to lets the render derive
+  // null the instant `sessionId` changes, before the reset effect runs after
+  // paint. Without this, one frame renders the previous session's card.
+  const [stored, setStored] = useState<StoredStatus | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const dataRef = useRef<ManagedSessionStatusResponse | null>(null)
+  const storedRef = useRef<StoredStatus | null>(null)
   const requestSeq = useRef(0)
   const inFlight = useRef(false)
 
-  const loadStatus = useCallback(async () => {
-    if (!sessionId || inFlight.current) {
-      return
-    }
-    const requestId = requestSeq.current + 1
-    requestSeq.current = requestId
-    inFlight.current = true
-    setLoading(dataRef.current === null)
-    setError("")
-    try {
-      const nextStatus = await getManagedSessionStatus(sessionId)
-      if (requestSeq.current !== requestId) {
+  const data = stored?.sessionId === sessionId ? stored.data : null
+
+  const loadStatus = useCallback(
+    async ({ background = false }: { background?: boolean } = {}) => {
+      if (!sessionId || inFlight.current) {
         return
       }
-      dataRef.current = nextStatus
-      setData((current) =>
-        current && sameManagedSessionStatus(current, nextStatus)
-          ? current
-          : nextStatus,
-      )
-    } catch (cause) {
-      if (requestSeq.current === requestId) {
-        setError(errorMessage(cause))
-        dataRef.current = null
-        setData(null)
+      const requestId = requestSeq.current + 1
+      requestSeq.current = requestId
+      inFlight.current = true
+      setLoading(storedRef.current?.sessionId !== sessionId)
+      try {
+        const nextStatus = await getManagedSessionStatus(sessionId)
+        if (requestSeq.current !== requestId) {
+          return
+        }
+        const nextStored: StoredStatus = { sessionId, data: nextStatus }
+        storedRef.current = nextStored
+        setError("")
+        setStored((current) =>
+          current &&
+          current.sessionId === sessionId &&
+          sameManagedSessionStatus(current.data, nextStatus)
+            ? current
+            : nextStored,
+        )
+      } catch (cause) {
+        if (requestSeq.current === requestId) {
+          setError(errorMessage(cause))
+          // A single failed background poll must not blank the last-good card.
+          // An explicit (user-initiated) reload may clear to surface the error.
+          if (!background) {
+            if (storedRef.current?.sessionId === sessionId) {
+              storedRef.current = null
+            }
+            setStored((current) =>
+              current?.sessionId === sessionId ? null : current,
+            )
+          }
+        }
+      } finally {
+        if (requestSeq.current === requestId) {
+          setLoading(false)
+          inFlight.current = false
+        }
       }
-    } finally {
-      if (requestSeq.current === requestId) {
-        setLoading(false)
-        inFlight.current = false
-      }
-    }
-  }, [sessionId])
+    },
+    [sessionId],
+  )
 
   useEffect(() => {
     requestSeq.current += 1
     inFlight.current = false
-    dataRef.current = null
-    setData(null)
+    storedRef.current = null
+    setStored(null)
     setError("")
     setLoading(Boolean(sessionId))
     if (!sessionId) {
@@ -66,7 +90,10 @@ export function useManagedSessionStatus(sessionId: string | null) {
     }
 
     void loadStatus()
-    const interval = window.setInterval(() => void loadStatus(), MANAGED_SESSION_STATUS_POLL_MS)
+    const interval = window.setInterval(
+      () => void loadStatus({ background: true }),
+      MANAGED_SESSION_STATUS_POLL_MS,
+    )
     return () => window.clearInterval(interval)
   }, [loadStatus, sessionId])
 

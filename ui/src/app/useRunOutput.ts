@@ -3,7 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import {
   getLogSnapshot,
   getManagedSessionLogSnapshot,
+  type LogSnapshotEntry,
   type LogSnapshotResponse,
+  type SessionLogEntry,
 } from "@/commands/runhaven"
 
 import { errorMessage } from "./types"
@@ -62,10 +64,15 @@ export function useRunOutput({
           if (targetRef.current !== expectedTargetId) {
             return
           }
-          setSnapshot({
+          const nextSnapshot: LogSnapshotResponse = {
             ...response.snapshot,
             sessionEntries: response.entries,
-          })
+          }
+          setSnapshot((current) =>
+            current && sameLogSnapshot(current, nextSnapshot)
+              ? current
+              : nextSnapshot,
+          )
         } else if (expectedRunId) {
           const response = await getLogSnapshot(expectedRunId, {
             confirmSensitiveOutput: acknowledged,
@@ -73,7 +80,9 @@ export function useRunOutput({
           if (targetRef.current !== expectedTargetId) {
             return
           }
-          setSnapshot(response)
+          setSnapshot((current) =>
+            current && sameLogSnapshot(current, response) ? current : response,
+          )
         }
         if (targetRef.current === expectedTargetId) {
           setSnapshotTargetId(expectedTargetId)
@@ -174,4 +183,75 @@ export function useRunOutput({
     setLiveEnabled,
     loadSnapshot,
   }
+}
+
+// Guards the 3s live-output poll so an unchanged snapshot does not re-render the
+// whole app. Compares the fields the output card renders; ignores volatile
+// bookkeeping (capturedAt, requestedLines, runId, source) that does not change
+// what the user sees.
+export function sameLogSnapshot(
+  current: LogSnapshotResponse,
+  next: LogSnapshotResponse,
+): boolean {
+  return (
+    current.cursor === next.cursor &&
+    current.text === next.text &&
+    current.returnedLines === next.returnedLines &&
+    current.truncated === next.truncated &&
+    sameStringList(current.warnings, next.warnings) &&
+    sameLogEntries(current.entries, next.entries) &&
+    sameSessionEntries(current.sessionEntries, next.sessionEntries)
+  )
+}
+
+function sameStringList(current: string[], next: string[]): boolean {
+  return (
+    current.length === next.length &&
+    current.every((value, index) => value === next[index])
+  )
+}
+
+function sameLogEntries(
+  current: LogSnapshotEntry[],
+  next: LogSnapshotEntry[],
+): boolean {
+  return (
+    current.length === next.length &&
+    current.every((entry, index) => {
+      const nextEntry = next[index]
+      return (
+        nextEntry !== undefined &&
+        entry.source === nextEntry.source &&
+        entry.timestamp === nextEntry.timestamp &&
+        entry.text === nextEntry.text &&
+        entry.lineCount === nextEntry.lineCount
+      )
+    })
+  )
+}
+
+function sameSessionEntries(
+  current: SessionLogEntry[] | undefined,
+  next: SessionLogEntry[] | undefined,
+): boolean {
+  const currentEntries = current ?? []
+  const nextEntries = next ?? []
+  return (
+    currentEntries.length === nextEntries.length &&
+    currentEntries.every((entry, index) => {
+      const nextEntry = nextEntries[index]
+      return (
+        nextEntry !== undefined &&
+        entry.sessionId === nextEntry.sessionId &&
+        entry.runId === nextEntry.runId &&
+        entry.source === nextEntry.source &&
+        entry.cursor === nextEntry.cursor &&
+        entry.timestamp === nextEntry.timestamp &&
+        entry.text === nextEntry.text &&
+        entry.lineCount === nextEntry.lineCount &&
+        entry.redaction.status === nextEntry.redaction.status &&
+        entry.redaction.message === nextEntry.redaction.message
+      )
+    })
+  )
 }

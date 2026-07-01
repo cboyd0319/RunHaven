@@ -42,6 +42,7 @@ import { useManagedSessionsState } from "./useManagedSessionsState"
 import { useManagedSessionDiagnostics } from "./useManagedSessionDiagnostics"
 import { useManagedSessionStatus } from "./useManagedSessionStatus"
 import { useLaunchStatus } from "./useLaunchStatus"
+import { useRunOutput } from "./useRunOutput"
 import { useRunControlState } from "./useRunControlState"
 import { useSessionInputState } from "./useSessionInputState"
 import { useStatusLoaders } from "./useStatusLoaders"
@@ -92,6 +93,11 @@ export function useAppController() {
   )
   const sessionInput = useSessionInputState(selectedSessionId)
   const runControlState = useRunControlState(derived.controlTargetId)
+  const runOutput = useRunOutput({
+    targetId: derived.outputTargetId,
+    sessionId: derived.outputSessionId,
+    runId: derived.outputRunId,
+  })
 
   useEffect(() => {
     void refresh()
@@ -409,7 +415,7 @@ export function useAppController() {
     launchStatusError: launchStatus.error,
     pageTitle: derived.pageTitle,
     pageDescription: derived.pageDescription,
-    runOutput: derived.runOutput,
+    runOutput,
     refresh,
     selectSession,
     changeAgent,

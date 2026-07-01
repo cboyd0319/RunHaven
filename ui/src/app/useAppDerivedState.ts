@@ -10,8 +10,6 @@ import {
   type RunPlanResponse,
 } from "@/commands/runhaven"
 
-import { useRunOutput } from "./useRunOutput"
-
 type AppDerivedStateInput = {
   dashboard: DashboardStatus | null
   request: RunPlanRequest
@@ -60,11 +58,6 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
     : outputRunId
       ? `run:${outputRunId}`
       : null
-  const runOutput = useRunOutput({
-    targetId: outputTargetId,
-    sessionId: outputSessionId,
-    runId: outputRunId,
-  })
   const controlTargetId = selectedSession
     ? `session:${selectedSession.id}`
     : input.lastLaunch
@@ -80,7 +73,9 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
     selectedSession,
     pageTitle,
     pageDescription,
-    runOutput,
+    outputTargetId,
+    outputSessionId,
+    outputRunId,
     controlTargetId,
   }
 }

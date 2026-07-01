@@ -19,17 +19,26 @@ export function useStatusLoaders() {
   const [runStatusError, setRunStatusError] = useState("")
   const imageStatusRequestSeq = useRef(0)
   const runStatusRequestSeq = useRef(0)
+  // Track the target each card last has good data for, so a transient failure
+  // keeps the last-good card and only a genuine target change clears it.
+  const imageStatusTarget = useRef<string | null>(null)
+  const runStatusTarget = useRef<string | null>(null)
 
   async function loadImageStatus(agentName: string) {
     const requestId = imageStatusRequestSeq.current + 1
     imageStatusRequestSeq.current = requestId
+    const sameTarget = imageStatusTarget.current === agentName
     setImageLoading(true)
-    setImageError("")
+    if (!sameTarget) {
+      setImageError("")
+    }
     try {
       const nextImageStatus = await getImageStatus(agentName)
       if (imageStatusRequestSeq.current !== requestId) {
         return
       }
+      imageStatusTarget.current = agentName
+      setImageError("")
       setImageStatus((current) =>
         current && sameImageStatus(current, nextImageStatus)
           ? current
@@ -37,8 +46,12 @@ export function useStatusLoaders() {
       )
     } catch (cause) {
       if (imageStatusRequestSeq.current === requestId) {
-        setImageStatus(null)
         setImageError(errorMessage(cause))
+        // Keep last-good status for the same agent; drop only when the target
+        // changed so a different agent never shows stale image data.
+        if (!sameTarget) {
+          setImageStatus(null)
+        }
       }
     } finally {
       if (imageStatusRequestSeq.current === requestId) {
@@ -50,20 +63,27 @@ export function useStatusLoaders() {
   async function loadRunStatus(runId: string) {
     const requestId = runStatusRequestSeq.current + 1
     runStatusRequestSeq.current = requestId
+    const sameTarget = runStatusTarget.current === runId
     setRunStatusLoading(true)
-    setRunStatusError("")
+    if (!sameTarget) {
+      setRunStatusError("")
+    }
     try {
       const nextRunStatus = await getRunStatus(runId)
       if (runStatusRequestSeq.current !== requestId) {
         return
       }
+      runStatusTarget.current = runId
+      setRunStatusError("")
       setRunStatus((current) =>
         current && sameRunStatus(current, nextRunStatus) ? current : nextRunStatus,
       )
     } catch (cause) {
       if (runStatusRequestSeq.current === requestId) {
-        setRunStatus(null)
         setRunStatusError(errorMessage(cause))
+        if (!sameTarget) {
+          setRunStatus(null)
+        }
       }
     } finally {
       if (runStatusRequestSeq.current === requestId) {

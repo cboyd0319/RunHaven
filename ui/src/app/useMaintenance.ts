@@ -32,27 +32,67 @@ function isTerminal(state: string): boolean {
   return state === "succeeded" || state === "failed"
 }
 
+function sameImageBuildStatus(
+  current: ImageBuildStatusResponse,
+  next: ImageBuildStatusResponse,
+): boolean {
+  return (
+    current.buildId === next.buildId &&
+    current.agent === next.agent &&
+    current.tag === next.tag &&
+    current.state === next.state &&
+    current.label === next.label &&
+    current.detail === next.detail &&
+    current.outputTail === next.outputTail &&
+    current.updatedAt === next.updatedAt
+  )
+}
+
+function sameAgentSignInStatus(
+  current: AgentSignInStatusResponse,
+  next: AgentSignInStatusResponse,
+): boolean {
+  return (
+    current.signInId === next.signInId &&
+    current.agent === next.agent &&
+    current.state === next.state &&
+    current.label === next.label &&
+    current.detail === next.detail &&
+    current.outputTail === next.outputTail &&
+    current.updatedAt === next.updatedAt
+  )
+}
+
 export function useImageRebuild() {
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [status, setStatus] = useState<ImageBuildStatusResponse | null>(null)
-  const buildIdRef = useRef<string>("")
+  const terminalRef = useRef(false)
+
+  // Key the poll on the build id, not the whole status object, so a routine
+  // progress update does not tear down and re-arm the interval every tick.
+  const buildId = status?.buildId ?? ""
 
   useEffect(() => {
-    if (!status || isTerminal(status.state)) {
-      return
-    }
-    const buildId = buildIdRef.current
-    if (!buildId) {
+    if (!buildId || terminalRef.current) {
       return
     }
     let active = true
     const timer = setInterval(() => {
       void getImageBuildStatus(buildId)
         .then((next) => {
-          if (active) {
-            setStatus(next)
+          if (!active) {
+            return
+          }
+          setError("")
+          setStatus((current) =>
+            current && sameImageBuildStatus(current, next) ? current : next,
+          )
+          if (isTerminal(next.state)) {
+            terminalRef.current = true
+            active = false
+            clearInterval(timer)
           }
         })
         .catch((cause) => {
@@ -65,7 +105,7 @@ export function useImageRebuild() {
       active = false
       clearInterval(timer)
     }
-  }, [status])
+  }, [buildId])
 
   async function rebuild(agent: string) {
     if (busy || !confirm || !agent) {
@@ -74,9 +114,10 @@ export function useImageRebuild() {
     setBusy(true)
     setError("")
     setStatus(null)
+    terminalRef.current = false
     try {
       const started = await rebuildAgentImage(agent)
-      buildIdRef.current = started.buildId
+      terminalRef.current = isTerminal(started.state)
       setStatus({
         buildId: started.buildId,
         agent: started.agent,
@@ -107,30 +148,47 @@ export function useAgentSignIn(onSignedIn?: () => void) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [status, setStatus] = useState<AgentSignInStatusResponse | null>(null)
-  const signInIdRef = useRef<string>("")
   const signedInRef = useRef(false)
+  const terminalRef = useRef(false)
+  // Hold the callback in a ref so an inline lambda from the parent does not
+  // re-arm the interval on every parent re-render (which can starve the poll).
+  const onSignedInRef = useRef(onSignedIn)
 
   useEffect(() => {
-    if (!status) {
-      return
+    onSignedInRef.current = onSignedIn
+  }, [onSignedIn])
+
+  function finishIfSucceeded(state: string): void {
+    if (state === "succeeded" && !signedInRef.current) {
+      signedInRef.current = true
+      onSignedInRef.current?.()
     }
-    if (isTerminal(status.state)) {
-      if (status.state === "succeeded" && !signedInRef.current) {
-        signedInRef.current = true
-        onSignedIn?.()
-      }
-      return
-    }
-    const signInId = signInIdRef.current
-    if (!signInId) {
+  }
+
+  // Key the poll on the sign-in id, not the whole status object, so progress
+  // updates do not tear down and re-arm the interval every tick.
+  const signInId = status?.signInId ?? ""
+
+  useEffect(() => {
+    if (!signInId || terminalRef.current) {
       return
     }
     let active = true
     const timer = setInterval(() => {
       void getAgentSignInStatus(signInId)
         .then((next) => {
-          if (active) {
-            setStatus(next)
+          if (!active) {
+            return
+          }
+          setError("")
+          setStatus((current) =>
+            current && sameAgentSignInStatus(current, next) ? current : next,
+          )
+          if (isTerminal(next.state)) {
+            terminalRef.current = true
+            active = false
+            clearInterval(timer)
+            finishIfSucceeded(next.state)
           }
         })
         .catch((cause) => {
@@ -143,7 +201,10 @@ export function useAgentSignIn(onSignedIn?: () => void) {
       active = false
       clearInterval(timer)
     }
-  }, [status, onSignedIn])
+    // finishIfSucceeded reads only refs, so it is intentionally left out of the
+    // deps to keep the interval keyed solely on the sign-in id.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signInId])
 
   async function signIn(agent: string) {
     if (busy || !agent) {
@@ -153,9 +214,10 @@ export function useAgentSignIn(onSignedIn?: () => void) {
     setError("")
     setStatus(null)
     signedInRef.current = false
+    terminalRef.current = false
     try {
       const started = await startAgentSignIn(agent)
-      signInIdRef.current = started.signInId
+      terminalRef.current = isTerminal(started.state)
       setStatus({
         signInId: started.signInId,
         agent: started.agent,
@@ -165,6 +227,7 @@ export function useAgentSignIn(onSignedIn?: () => void) {
         outputTail: "",
         updatedAt: "",
       })
+      finishIfSucceeded(started.state)
     } catch (cause) {
       setError(errorMessage(cause))
     } finally {
