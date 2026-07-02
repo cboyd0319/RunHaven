@@ -24,6 +24,7 @@ mod active_marker;
 pub(crate) mod agent_sign_in;
 pub(crate) mod agent_sign_in_status;
 pub(crate) mod attention_badge;
+pub(crate) mod claude_oauth;
 pub(crate) mod diagnostics;
 pub(crate) mod diagnostics_why;
 pub(crate) mod dialog;

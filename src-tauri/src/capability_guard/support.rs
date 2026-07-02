@@ -59,6 +59,9 @@ pub(super) const MAIN_READ_FORBIDDEN_PERMISSIONS: &[&str] = &[
     "allow-write-terminal-input",
     "allow-resize-terminal",
     "allow-close-terminal-session",
+    "allow-start-claude-oauth-signin",
+    "allow-get-claude-oauth-status",
+    "allow-clear-claude-oauth",
 ];
 pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-get-log-snapshot", "get_log_snapshot"),
@@ -107,6 +110,19 @@ pub(super) const TERMINAL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-write-terminal-input", "write_terminal_input"),
     ("allow-resize-terminal", "resize_terminal"),
     ("allow-close-terminal-session", "close_terminal_session"),
+];
+
+/// The exact grant for the Claude Keychain sign-in capability (design C,
+/// Section 4). The host token custody surface is credential-sensitive, so it
+/// lives in its own main-window-only capability, isolated from run control and
+/// agent sign-in, and never widens main-read or the read-only monitor windows.
+pub(super) const CLAUDE_OAUTH_PERMISSIONS: &[(&str, &str)] = &[
+    (
+        "allow-start-claude-oauth-signin",
+        "start_claude_oauth_signin",
+    ),
+    ("allow-get-claude-oauth-status", "get_claude_oauth_status"),
+    ("allow-clear-claude-oauth", "clear_claude_oauth"),
 ];
 
 pub(super) const ATTENTION_BADGE_PERMISSION: &str = "allow-set-attention-badge";

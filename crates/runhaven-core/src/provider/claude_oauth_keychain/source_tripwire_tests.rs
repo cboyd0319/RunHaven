@@ -81,6 +81,31 @@ fn keychain_module_never_persists_or_logs_the_token() {
 }
 
 #[test]
+fn presence_query_reads_attributes_and_never_the_secret_data() {
+    // The presence path (`fn present`) must query attributes only. Loading the
+    // secret data is the one thing that invokes LocalAuthentication and returns
+    // the token, so the whole module must never request it. This proves, at the
+    // source level, that checking presence cannot prompt and cannot read the
+    // token (design Section 4: "checking presence must NOT trigger the prompt").
+    let source = production(include_str!("../claude_oauth_keychain.rs"));
+    assert!(
+        source.contains("fn present"),
+        "the scan must cover the presence path"
+    );
+    assert!(
+        source.contains("load_attributes(true)"),
+        "the presence query must request attributes so `search()` returns a result"
+    );
+    // Assembled at runtime so this test's own source cannot satisfy the search.
+    let data_return = format!("{}{}", "load_", "data");
+    assert!(
+        !source.contains(&data_return),
+        "no query in this module may request the secret data (kSecReturnData); \
+         that is what prompts and reads the token"
+    );
+}
+
+#[test]
 fn tripwire_fires_on_a_file_or_log_sink() {
     let forbidden = forbidden_sinks();
     let with_file = "fn capture() { let mut f = fs::File::create(p)?; f.write_all(token)?; }";

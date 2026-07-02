@@ -29,6 +29,7 @@
         "launch-run",
         "run-control",
         "agent-sign-in",
+        "claude-oauth",
         "menu-events",
         "menu-state",
         "attention-badge",

@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "claude-oauth",
+  "description": "Host Claude Keychain sign-in surface: start sign-in, read sanitized status, and remove RunHaven's own saved Claude token. Main window only, isolated from run control and agent sign-in. Every mutation is gated by a native confirmation and no secret crosses to the WebView.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-start-claude-oauth-signin",
+    "allow-get-claude-oauth-status",
+    "allow-clear-claude-oauth"
+  ]
+}

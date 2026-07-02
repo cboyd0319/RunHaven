@@ -1,6 +1,7 @@
 mod agent_sign_in_runner;
 #[cfg(test)]
 mod capability_guard;
+mod claude_oauth_signin;
 mod commands;
 mod contracts;
 mod image_build_runner;
@@ -80,6 +81,7 @@ pub fn run() {
         .manage(launch_status::LaunchStatusRegistry::default())
         .manage(tail_status::ImageBuildStatusRegistry::default())
         .manage(tail_status::AgentSignInStatusRegistry::default())
+        .manage(claude_oauth_signin::ClaudeOAuthSignInRegistry::default())
         .manage(read_guard::ReadGuards::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_dashboard_status,
@@ -117,6 +119,9 @@ pub fn run() {
             commands::image_build::rebuild_agent_image,
             commands::agent_sign_in::start_agent_sign_in,
             commands::agent_sign_in_status::get_agent_sign_in_status,
+            commands::claude_oauth::start_claude_oauth_signin,
+            commands::claude_oauth::get_claude_oauth_status,
+            commands::claude_oauth::clear_claude_oauth,
             commands::network::prune_managed_networks,
             commands::launch::plan_run,
             commands::launch::launch_run,

@@ -334,6 +334,9 @@ fn session_monitor_capability_grants_exactly_the_monitor_reads() {
             "allow-write-terminal-input",
             "allow-resize-terminal",
             "allow-close-terminal-session",
+            "allow-start-claude-oauth-signin",
+            "allow-get-claude-oauth-status",
+            "allow-clear-claude-oauth",
         ])
     {
         assert!(

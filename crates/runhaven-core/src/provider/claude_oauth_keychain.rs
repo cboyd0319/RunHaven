@@ -36,6 +36,7 @@ use std::process::{Command, Stdio};
 
 use anyhow::{Context, Result, anyhow, bail};
 use security_framework::access_control::{ProtectionMode, SecAccessControl};
+use security_framework::item::{ItemClass, ItemSearchOptions, Limit};
 use security_framework::passwords::{
     AccessControlOptions, PasswordOptions, delete_generic_password_options, generic_password,
     set_generic_password_options,
@@ -156,6 +157,38 @@ fn get(backend: KeychainBackend) -> Result<Option<Zeroizing<Vec<u8>>>> {
     }
 }
 
+/// Check whether RunHaven's item exists WITHOUT reading its secret. Queries only
+/// the item's attributes (`load_attributes`, i.e. `kSecReturnAttributes`) and
+/// NEVER its secret data (no `kSecReturnData`). Decrypting the
+/// secret is what invokes LocalAuthentication, so an attributes-only query
+/// reports presence with NO Touch ID / device-password prompt. The same exact
+/// `(service, account)` filter as every other query (claim 2). `Ok(false)` means
+/// no item; errors carry only the operation.
+fn present(backend: KeychainBackend) -> Result<bool> {
+    let mut options = ItemSearchOptions::new();
+    options
+        .class(ItemClass::generic_password())
+        .service(SERVICE)
+        .account(ACCOUNT)
+        // Attributes only. The secret data is never requested (no
+        // `kSecReturnData`): loading it is the one thing that triggers the
+        // user-presence prompt and returns the token, and a presence check must
+        // do neither. At least one return type is required or `search()` would
+        // report a spurious empty result, so attributes stand in.
+        .load_attributes(true)
+        .limit(Limit::Max(1));
+    if backend == KeychainBackend::DataProtection {
+        options.ignore_legacy_keychains();
+    }
+    match options.search() {
+        Ok(results) => Ok(!results.is_empty()),
+        Err(err) if err.code() == ERR_SEC_ITEM_NOT_FOUND => Ok(false),
+        Err(err) => {
+            Err(anyhow::Error::new(err)).context("could not check the Claude token in the Keychain")
+        }
+    }
+}
+
 /// Delete the item for `(service, account)`. Removes only RunHaven's own item.
 fn remove(backend: KeychainBackend) -> Result<KeychainClear> {
     match delete_generic_password_options(base_options(backend)) {
@@ -184,6 +217,15 @@ pub fn store_token(token: &[u8]) -> Result<()> {
 /// slice; exposed now so the custody surface is complete and testable.
 pub fn read_token() -> Result<Option<Zeroizing<Vec<u8>>>> {
     get(select_backend())
+}
+
+/// Report whether RunHaven has a stored Claude OAuth token, WITHOUT reading it.
+/// This never triggers the user-presence prompt and never touches the token, so
+/// the desktop app's sanitized status can be derived from presence alone. Status
+/// polling MUST use this, never [`read_token`], which decrypts the secret and
+/// prompts.
+pub fn token_present() -> Result<bool> {
+    present(select_backend())
 }
 
 /// Delete RunHaven's stored Claude OAuth token. Deletes only RunHaven's item.

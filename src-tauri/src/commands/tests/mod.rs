@@ -21,6 +21,7 @@ use std::process::Command;
 
 mod agent_sign_in;
 mod auth;
+mod claude_oauth;
 mod image;
 mod image_build;
 mod launch_status;

@@ -9,6 +9,7 @@
 //! See `docs/harness/boundaries/component-inventory.md` and
 //! `docs/harness/boundaries/security-boundary-map.md`.
 
+mod claude_oauth_scope;
 mod command_scopes;
 mod support;
 mod terminal_scope;

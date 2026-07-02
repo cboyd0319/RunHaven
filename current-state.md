@@ -356,9 +356,9 @@ behavior, multi-session isolation, typed status, run control, recovery, and
 fail-closed boundaries before visual polish.
 
 Claude OAuth Keychain broker (`docs/design/native-gui-claude-oauth-broker.md`
-holds the full spec and per-slice status). Slices 1 and 3 landed; Slices 4-5
-(Tauri command, capability, GUI, rotation) and Gate 1/Gate 2 remain, and the GUI
-default has not flipped. Slice 1: macOS-gated `provider/claude_oauth_keychain.rs`
+holds the full spec and per-slice status). Slices 1, 3, and 4 landed; Slice 5
+(GUI, rotation) and Gate 1/Gate 2 remain, and the GUI default has not flipped.
+Slice 1: macOS-gated `provider/claude_oauth_keychain.rs`
 custody (user-presence `SecAccessControl`, `Zeroizing` capture, no disk/log
 copy); deps `security-framework =3.5.1` and `zeroize =1.9.0` in `pins.toml`.
 Slice 3 (broker proxy, no GUI yet): `ClaudeAuthSource` replaced the bare
@@ -370,7 +370,16 @@ OAuth (F1, test-proven). `CLAUDE_OAUTH_BROKER` reuses `BearerAuth` +
 The Keychain secret seam (`provider/runtime/broker_secret.rs`, no-leak tripwire)
 reads the token once per launch into the broker's in-memory secret and fails
 closed. F5: guest-forwarded `anthropic-beta` makes Bearer-only correct today.
-Open live smokes and Gate 1/Gate 2 per the design doc precede the GUI flip.
+Slice 4 (three Tauri commands + isolated `claude-oauth` capability, no GUI):
+`start_claude_oauth_signin` (native-confirm gated, host capture on a background
+thread), `get_claude_oauth_status` (sanitized `not_signed_in|signing|signed_in|
+failed` enum from Keychain PRESENCE via a new attributes-only `token_present`
+that never reads the token or prompts, never `read_token`), and
+`clear_claude_oauth` (native-confirm gated, deletes only RunHaven's item). No
+response carries a token/prefix/path (no-leak serialization test); capability is
+main-only, isolated from run-control and agent-sign-in, and guard-pinned out of
+main-read/session-monitor. Open live smokes and Gate 1/Gate 2 per the design doc
+precede the GUI flip; security review of Slice 4 is still pending.
 
 For this CLI+GUI completion goal, local downloads, installs, tool runs, and
 external research are authorized when they directly reduce risk or accelerate
