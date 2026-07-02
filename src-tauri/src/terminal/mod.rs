@@ -24,6 +24,16 @@
 //! cap fails closed with a fixed error (a later frontend slice reuses/focuses an
 //! open terminal instead). Sessions are never persisted or restored across
 //! relaunch.
+//!
+//! Quit-time limitation (gate C, low): on main-window destroy [`close_all`] kills
+//! every terminal child, but the Claude sign-in terminal (path A) additionally
+//! creates a provider internal network and proxy whose teardown runs on the
+//! login's detached runner thread after the child is reaped. Quitting mid-login
+//! can win the race and leave an orphaned `runhaven-*` internal network (no
+//! secret, no live process). It is cleaned by Maintenance "Clean up stale
+//! networks" / `runhaven network prune`. Follow-up: track the login runner
+//! thread so `close_all` can drain its network teardown; deferred as a
+//! recoverable, low-frequency case, not new quit-latency machinery.
 
 mod pty;
 

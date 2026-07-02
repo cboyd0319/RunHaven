@@ -67,7 +67,9 @@ button.
   what you type and what it prints, including the code, are shown on screen and
   are not filtered or saved. While the sign-in terminal is open it holds
   Claude's saved state, so you cannot start a Claude run until you close it.
-  Finish signing in, then close the terminal.
+  Finish signing in, then close the terminal. If you quit RunHaven in the middle
+  of signing in, it may leave one unused sandbox network behind; the Maintenance
+  panel's "Clean up stale networks" removes it safely.
 - Prefer your own terminal? The Claude card still offers the exact command as a
   fallback:
 
