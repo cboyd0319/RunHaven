@@ -28,6 +28,12 @@ Canonical logo: `docs/assets/logo.png`.
   https://developer.apple.com/sf-symbols/
 - Icon Composer:
   https://developer.apple.com/icon-composer/
+- Privacy:
+  https://developer.apple.com/design/human-interface-guidelines/privacy
+- Offering Help:
+  https://developer.apple.com/design/human-interface-guidelines/offering-help
+- TipKit (native framework; used as a tips pattern source only):
+  https://developer.apple.com/documentation/TipKit
 
 ## Local design tools and assets (maintainer)
 
