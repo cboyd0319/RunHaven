@@ -109,7 +109,7 @@ line_limit_for() {
     docs/assets/**/*.json|docs/assets/*.json)
       echo "$ASSET_JSON_LINES"
       ;;
-    docs/plans/**/*.md|docs/plans/*.md)
+    docs/plans/**/*.md|docs/plans/*.md|docs/design/**/*.md|docs/design/*.md)
       echo "$PLAN_DOC_LINES"
       ;;
     docs/harness/**/*.md|docs/harness/**/*.json|docs/harness/**/*.yaml|docs/harness/**/*.yml|docs/harness/**/*.tsv)

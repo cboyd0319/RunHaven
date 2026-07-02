@@ -95,7 +95,7 @@ function SidebarProvider({
   // toggled the sidebar. RunHaven removed it: it fired inside the composer
   // textarea (colliding with Bold) and was undocumented. Opt-Cmd-S (View menu)
   // and the sidebar trigger button are the documented toggle. See
-  // docs/plans/native-gui-navigation-spec.md section 6.
+  // docs/design/native-gui-navigation-spec.md section 6.
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.

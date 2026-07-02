@@ -2,7 +2,7 @@ import type { ManagedSessionSummary } from "@/commands/runhaven"
 
 // The one navigation truth for the main window. Exactly one destination is
 // selected at all times: Home, a session, or a System view. See
-// docs/plans/native-gui-navigation-spec.md sections 2 and 4.
+// docs/design/native-gui-navigation-spec.md sections 2 and 4.
 export type NavDestination =
   | { kind: "home" }
   | { kind: "session"; id: string }

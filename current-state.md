@@ -120,7 +120,7 @@ Useful GUI design docs:
 - `docs/plans/native-gui-managed-sessions.md`
 - `docs/plans/native-gui-session-input-contract.md`
 - `docs/plans/native-gui-microsandbox-reference.md`
-- `docs/plans/native-gui-design-resources.md` (Apple HIG + macOS design
+- `docs/design/native-gui-design-resources.md` (Apple HIG + macOS design
   references for the deferred comprehensive visual redesign)
 
 ## Latest State
@@ -192,7 +192,7 @@ Useful GUI design docs:
   only"); dead sidebar nav removed; Codex is the default agent (in-app
   sign-in); docs/DESKTOP_APP.md realigned with the real UI; e2e specs updated
   to the new flow (4/4 pass). The deferred comprehensive Apple-HIG visual
-  redesign has its references in `docs/plans/native-gui-design-resources.md`.
+  redesign has its references in `docs/design/native-gui-design-resources.md`.
 - Agent login is unified in-sandbox, and host-side token custody is deleted. All
   four sign-in agents (Claude, Codex, Copilot, Antigravity) now log in *inside*
   the sandbox on the shared home volume via `runhaven login <agent>`, so RunHaven
@@ -374,7 +374,7 @@ tracker's B3 section). Menu, relaunch-restore, badge, and Settings behavior
 share one still-pending `tauri dev` smoke.
 
 Terminal slice 1 (Rust host-PTY backend,
-`docs/plans/native-gui-terminal-design.md`) is complete: `pty-process` 0.5.3 owned by `runhaven-core`, whose `runtime::terminal` (`open_gui_attach_pty` -> `GuiPtySession`) now owns the host-PTY `container exec` spawn, PTY I/O, and child kill/reap (F1 deadlock test in core), so no `Command::new("container")` sits in `src-tauri` and the structure guard passes; core `gui_attach_plan` still reuses `runs_attach` validation (non-root `agent`, always `--tty`); `src-tauri` keeps the fail-closed `TerminalSessionRegistry` (cap 2), four commands
+`docs/design/native-gui-terminal-design.md`) is complete: `pty-process` 0.5.3 owned by `runhaven-core`, whose `runtime::terminal` (`open_gui_attach_pty` -> `GuiPtySession`) now owns the host-PTY `container exec` spawn, PTY I/O, and child kill/reap (F1 deadlock test in core), so no `Command::new("container")` sits in `src-tauri` and the structure guard passes; core `gui_attach_plan` still reuses `runs_attach` validation (non-root `agent`, always `--tty`); `src-tauri` keeps the fail-closed `TerminalSessionRegistry` (cap 2), four commands
 and a `TerminalMessage` Channel type; a main-only `terminal` capability with
 `capability_guard` pins, a no-persist tripwire over the reader, teardown that kills live PTYs. Frontend xterm and the `tauri dev` PTY/SIGWINCH smoke follow.
 

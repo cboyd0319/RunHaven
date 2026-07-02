@@ -2,7 +2,7 @@
 
 Last updated: 2026-07-01 UTC
 
-Correction tracker mapping `docs/plans/native-gui-navigation-spec.md` (the
+Correction tracker mapping `docs/design/native-gui-navigation-spec.md` (the
 target) against the app as it exists today. Read-only analysis; no behavior
 changes here. Line references are to the files as of branch
 `docs/native-gui-wireframe` (commit `2a525fa`) and will drift.

@@ -102,7 +102,7 @@
 
 /*
  * Dark ladder from the macOS UI Kit, hue-shifted to the RunHaven navy
- * (docs/plans/native-gui-macos-kit-notes.md section 6): kit-neutral surfaces
+ * (docs/design/native-gui-macos-kit-notes.md section 6): kit-neutral surfaces
  * keep their kit lightness/alpha on the navy hue; label, fill, and separator
  * tokens adopt the kit white-alpha relationships (labels 96/55%, fills 8/11%,
  * separators 8%); accents are kit dark system colors, contrast-tuned to keep

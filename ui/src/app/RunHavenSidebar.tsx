@@ -38,7 +38,7 @@ import {
   type SessionAttentionKind,
 } from "./sessionAttention"
 
-// Sidebar taxonomy per docs/plans/native-gui-navigation-spec.md section 2:
+// Sidebar taxonomy per docs/design/native-gui-navigation-spec.md section 2:
 // a fixed Home row first, dynamic Active and Finished session groups (hidden
 // when empty), and a fixed System group last. The sidebar is navigation only.
 export function RunHavenSidebar({

@@ -3,7 +3,7 @@ import type { ManagedSessionSummary } from "@/commands/runhaven"
 import { sessionAllowsWorktreeReview } from "./worktreeReview"
 
 // The one needs-you signal per session row. Priority order comes from
-// docs/plans/native-gui-navigation-spec.md section 4: Failed (red) beats
+// docs/design/native-gui-navigation-spec.md section 4: Failed (red) beats
 // Needs sign-in, then Not responding, then Ready to review (all amber). The
 // highest state wins; the badge is a symbol in a dot and the label names the
 // state in text, so the signal is never color-only and never a count.

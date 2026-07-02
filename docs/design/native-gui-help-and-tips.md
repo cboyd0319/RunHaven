@@ -7,10 +7,10 @@ in-app help, and first-encounter tips. Scope is what to say and when to show it,
 implemented in React and CSS inside the Tauri WKWebView. This doc is design
 only; it proposes no component code.
 
-It extends `docs/plans/native-gui-hig-foundation.md` (the visual and interaction
+It extends `docs/design/native-gui-hig-foundation.md` (the visual and interaction
 bar) and applies the privacy discipline already set in
-`docs/plans/native-gui-claude-oauth-broker.md` and
-`docs/plans/native-gui-terminal-design.md`.
+`docs/design/native-gui-claude-oauth-broker.md` and
+`docs/design/native-gui-terminal-design.md`.
 
 ## Framing: this is a WKWebView, not AppKit
 
@@ -89,7 +89,7 @@ RunHaven moments [J]:
   grade reading level, active voice, one idea per sentence.
 - The terminal-open dialog states the reason and the facts together: you are
   opening a live shell inside this sandbox, and what you type goes straight to
-  it. That copy already exists in `docs/plans/native-gui-terminal-design.md`.
+  it. That copy already exists in `docs/design/native-gui-terminal-design.md`.
 
 ### 1.3 Be transparent about what is collected, stored, and sent [S]
 
@@ -294,7 +294,7 @@ shadcn style. No new dependency. Design shape, not code:
 ## 4. Concrete application: the Claude auth A versus C choice
 
 Sources: HIG Privacy and Offering Help (above), plus the approved claim set in
-`docs/plans/native-gui-claude-oauth-broker.md`.
+`docs/design/native-gui-claude-oauth-broker.md`.
 
 The broker doc fixes the decision: path C (host Keychain token broker) is the
 default; path A (in-sandbox login) is an explicit opt-in. This section shows how
