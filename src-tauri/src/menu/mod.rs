@@ -4,8 +4,9 @@
 //! only emits its own id string to the main window WebView over the
 //! [`MENU_COMMAND_EVENT`] event. The frontend listener
 //! (`ui/src/app/useMenuEvents.ts`) translates ids into the same UI affordances
-//! a click would use: open the launch sheet, select a sidebar row, or focus an
-//! existing confirm control. Mutations keep flowing through the existing
+//! a click would use: open the launch sheet, open the settings dialog, select
+//! a sidebar row, or focus an existing confirm control. Mutations keep
+//! flowing through the existing
 //! invoke commands and their Rust-owned native dialogs; in particular the
 //! Stop and Hard Stop items never call `stop_managed_session` or
 //! `kill_managed_session` themselves, they only surface the existing stop
@@ -15,7 +16,7 @@
 //! session no-op gracefully in the frontend when nothing applies, instead of
 //! running a chatty enabled-state sync protocol between the WebView and Rust.
 //! The only statically disabled items are placeholders for surfaces that do
-//! not exist yet (Settings until B3, the session filter, and Help content).
+//! not exist yet (the session filter and Help content).
 //!
 //! Standard system items (About, Services, Hide, Quit, Undo/Redo, clipboard,
 //! Close Window, Minimize, Zoom, Full Screen) use [`PredefinedMenuItem`] so

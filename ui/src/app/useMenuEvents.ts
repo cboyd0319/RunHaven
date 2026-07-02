@@ -8,10 +8,11 @@ import { sessionAttention, type SessionAttentionKind } from "./sessionAttention"
 
 // Translates native menu bar activations (src-tauri/src/menu.rs) into the
 // same UI actions a click would take. The menu never becomes a new mutation
-// path: New Run opens the existing launch sheet, navigation ids move the
-// existing selection, and session actions only focus the existing confirm
-// control, so the confirm step plus the Rust-owned native dialog still gate
-// every mutation. Menus are static, so ids that do not apply right now
+// path: New Run opens the existing launch sheet, Settings opens the existing
+// settings dialog, navigation ids move the existing selection, and session
+// actions only focus the existing confirm control, so the confirm step plus
+// the Rust-owned native dialog still gate every mutation. Menus are static,
+// so ids that do not apply right now
 // (no sessions, no selection, control not on screen) no-op here; unknown ids
 // are ignored.
 export type MenuActions = {
@@ -19,6 +20,7 @@ export type MenuActions = {
   managedSessions: { sessions: ManagedSessionSummary[] }
   setupReady: boolean
   launchFlow: { setOpen: (open: boolean) => void }
+  settings: { setOpen: (open: boolean) => void }
   navigate: (destination: NavDestination) => void
   selectSession: (sessionId: string) => void
   refresh: () => Promise<void>
@@ -93,6 +95,9 @@ export function handleMenuCommand(id: string, app: MenuActions): void {
       } else {
         app.navigate(HOME_NAV)
       }
+      return
+    case "settings":
+      app.settings.setOpen(true)
       return
     case "go-home":
       app.navigate(HOME_NAV)

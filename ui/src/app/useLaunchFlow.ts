@@ -22,6 +22,9 @@ import { errorMessage, type LaunchStep } from "./types"
 
 export type LaunchFlowDeps = {
   dashboard: DashboardStatus | null
+  // The user's saved default agent (Settings), or null for the built-in pick.
+  // Applied only if that agent still exists in the live dashboard.
+  defaultAgent: string | null
   loadImageStatus: (agentName: string) => Promise<void>
   loadRunStatus: (runId: string) => Promise<void>
   loadManagedSessions: () => Promise<ManagedSessionList>
@@ -83,9 +86,10 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
   async function applyDashboard(dashboard: DashboardStatus) {
     const initializing = agentNameRef.current === null
     const agent = initializing
-      ? preferredDefaultAgent(dashboard.agents)
-      : dashboard.agents.find((item) => item.name === agentNameRef.current) ??
-        dashboard.agents[0]
+      ? (dashboard.agents.find((item) => item.name === deps.defaultAgent) ??
+        preferredDefaultAgent(dashboard.agents))
+      : (dashboard.agents.find((item) => item.name === agentNameRef.current) ??
+        dashboard.agents[0])
     if (!agent) {
       return
     }

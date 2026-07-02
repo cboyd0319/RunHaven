@@ -137,6 +137,7 @@ It never switches views on its own for any other reason.
 The app icon in your Dock shows the same signal as one number: how many
 sessions need you right now, and nothing else. The number goes down as you
 take care of each session, and the badge disappears when nothing needs you.
+You can turn the number off in Settings (Cmd-,).
 
 ## Menu bar and keyboard shortcuts
 
@@ -169,10 +170,26 @@ a session action while you are on Home) simply do nothing.
 | Cmd-, W M Q | Settings, Close, Minimize, Quit |
 
 A few items are visible but grayed out because their screens are not built
-yet: **Settings...** (Cmd-,), **Filter Sessions** (Cmd-F), and the Help
-entries. They will turn on when those parts of the app ship. The Session
-menu's worktree actions (Merge, Keep, Recover, Discard) live in the finished
-session's review for now, and Open Recent arrives with a recent-projects list.
+yet: **Filter Sessions** (Cmd-F) and the Help entries. They will turn on when
+those parts of the app ship. The Session menu's worktree actions (Merge, Keep,
+Recover, Discard) live in the finished session's review for now, and Open
+Recent arrives with a recent-projects list.
+
+## Settings
+
+Open Settings from the **RunHaven** menu (**Settings...**, or Cmd-,). It opens
+over the main window and holds only small convenience choices:
+
+- **Show a number on the app icon.** The Dock number counts sessions that
+  need you. Turn it off to clear the number.
+- **Start new runs with.** The agent picked first when you start a new run.
+  Leave it on "Choose for me" to let RunHaven pick, and you can still change
+  the agent for each run either way.
+
+RunHaven uses a dark look for now; more appearance choices may come later.
+Safety never lives in Settings: no security default can be changed there and
+no confirmation step can be turned off. Your choices are saved on this Mac
+only, and nothing sensitive is stored with them.
 
 ## The app remembers your place
 
@@ -180,8 +197,8 @@ When you reopen the app, it comes back the way you left it: the window keeps
 its size and position, the sidebar stays shown or hidden, and you land on the
 screen you were using. If you were viewing a session, the app first checks
 that the session still exists; if it is gone, you land on Home instead. Only
-the place is remembered, never anything sensitive: no drafts, no output, no
-paths, and no sign-in data are saved this way.
+the place and your Settings choices are remembered, never anything sensitive:
+no drafts, no output, no paths, and no sign-in data are saved this way.
 
 ## Watch your sessions
 

@@ -81,6 +81,7 @@ function actions(patch: Partial<MenuActions> = {}): MenuActions {
     managedSessions: { sessions: [active, activeOlder, failed] },
     setupReady: true,
     launchFlow: { setOpen: vi.fn() },
+    settings: { setOpen: vi.fn() },
     navigate: vi.fn(),
     selectSession: vi.fn(),
     refresh: vi.fn().mockResolvedValue(undefined),
@@ -107,6 +108,14 @@ describe("handleMenuCommand", () => {
     handleMenuCommand("new-run", app)
     expect(app.launchFlow.setOpen).not.toHaveBeenCalled()
     expect(app.navigate).toHaveBeenCalledWith({ kind: "home" })
+  })
+
+  it("opens the settings dialog for settings", () => {
+    const app = actions()
+    handleMenuCommand("settings", app)
+    expect(app.settings.setOpen).toHaveBeenCalledWith(true)
+    expect(app.launchFlow.setOpen).not.toHaveBeenCalled()
+    expect(app.navigate).not.toHaveBeenCalled()
   })
 
   it("maps navigation ids onto destinations", () => {
@@ -221,12 +230,13 @@ describe("handleMenuCommand", () => {
 
   it("ignores unknown and placeholder ids", () => {
     const app = actions()
-    for (const id of ["settings", "filter-sessions", "help", "not-a-real-id"]) {
+    for (const id of ["filter-sessions", "help", "not-a-real-id"]) {
       handleMenuCommand(id, app)
     }
     expect(app.navigate).not.toHaveBeenCalled()
     expect(app.selectSession).not.toHaveBeenCalled()
     expect(app.launchFlow.setOpen).not.toHaveBeenCalled()
+    expect(app.settings.setOpen).not.toHaveBeenCalled()
     expect(app.refresh).not.toHaveBeenCalled()
   })
 })
@@ -284,6 +294,7 @@ describe("menu contract tripwires", () => {
       readFileSync(join(rustMenuDir, "mod.rs"), "utf8")
     const handledIds = [
       "new-run",
+      "settings",
       "go-home",
       "go-agents",
       "go-diagnostics",

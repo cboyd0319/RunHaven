@@ -75,9 +75,10 @@ const fn placeholder(
 const APP_MENU: &[Entry] = &[
     Entry::Predefined(Predef::About),
     Entry::Separator,
-    // Settings ships with the settings window slice (B3); until then the item
-    // is visible but disabled, per "disable rather than hide".
-    placeholder("settings", "Settings...", Some("Cmd+,")),
+    // Settings opens as a dialog in the main window (B3 shipped lean: too few
+    // settings today to justify a separate settings window; the gap tracker's
+    // B3 section records the deviation from spec 3.9).
+    command("settings", "Settings...", Some("Cmd+,")),
     Entry::Separator,
     Entry::Predefined(Predef::Services),
     Entry::Separator,
@@ -320,6 +321,27 @@ mod tests {
                 "help",
                 "help-agent-reach",
                 "help-report-problem",
+            ]
+        );
+    }
+
+    #[test]
+    fn only_unbuilt_surfaces_are_disabled() {
+        // "No dead navigation" (spec section 10): an enabled item must do
+        // something user-visible, so an item may be disabled only while its
+        // surface does not exist. Settings is live (in-window dialog, B3).
+        let disabled: Vec<&str> = all_specs()
+            .iter()
+            .filter(|spec| !spec.enabled)
+            .map(|spec| spec.id)
+            .collect();
+        assert_eq!(
+            disabled,
+            [
+                "filter-sessions",
+                "help",
+                "help-agent-reach",
+                "help-report-problem"
             ]
         );
     }

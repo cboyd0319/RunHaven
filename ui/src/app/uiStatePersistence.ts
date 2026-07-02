@@ -5,21 +5,24 @@ import type { NavDestination } from "./navigation"
 // - the last navigation destination kind
 // - for a session destination, the backend-generated opaque session id
 // - the sidebar open/collapsed state
+// - the Settings choices: the Dock badge on/off boolean and the default
+//   agent's name (an opaque agent identifier from the Rust dashboard)
 // Nothing else may be persisted here: never composer drafts, run output,
 // tokens, project paths, or commands. Session ids are opaque UUIDs minted in
 // Rust (runhaven-core new_run_id), so this store never holds a secret. The
-// stored value also has no authority: a restored session id is re-verified
+// stored values also have no authority: a restored session id is re-verified
 // against the live backend session list before the app navigates to it
-// (useNavigation), so a tampered value can at most select a session that
-// already exists.
+// (useNavigation), and a restored default agent is re-verified against the
+// live agent list before it picks anything (useLaunchFlow), so a tampered
+// value can at most select something that already exists.
 const LAST_DESTINATION_KEY = "runhaven.lastDestination"
 
 const SYSTEM_KINDS = ["home", "agents", "diagnostics", "maintenance"] as const
 
-// Opaque-token shape for a persisted session id: letters, digits, dash, and
-// underscore only, bounded length. Anything path- or secret-shaped is
-// rejected outright.
-const OPAQUE_SESSION_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
+// Opaque-token shape for a persisted session id or agent name: letters,
+// digits, dash, and underscore only, bounded length. Anything path- or
+// secret-shaped is rejected outright.
+const OPAQUE_TOKEN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
 
 export function persistLastDestination(destination: NavDestination): void {
   const sanitized =
@@ -54,13 +57,74 @@ export function loadLastDestination(): NavDestination | null {
     }
     if (kind === "session") {
       const id = (parsed as { id?: unknown }).id
-      if (typeof id === "string" && OPAQUE_SESSION_ID.test(id)) {
+      if (typeof id === "string" && OPAQUE_TOKEN.test(id)) {
         return { kind: "session", id }
       }
     }
     return null
   } catch {
     return null
+  }
+}
+
+const SETTINGS_KEY = "runhaven.settings"
+
+// The whole Settings surface (spec 3.9, shipped lean as an in-window dialog;
+// see docs/plans/native-gui-navigation-gap.md B3). Only convenience choices
+// live here, never security defaults or confirmation suppression.
+export type AppSettings = {
+  // Show the needs-you count on the app's Dock icon.
+  dockBadge: boolean
+  // Agent preselected for new runs; null lets RunHaven choose.
+  defaultAgent: string | null
+}
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  dockBadge: true,
+  defaultAgent: null,
+}
+
+export function persistSettings(settings: AppSettings): void {
+  const sanitized: AppSettings = {
+    dockBadge: settings.dockBadge !== false,
+    defaultAgent:
+      typeof settings.defaultAgent === "string" &&
+      OPAQUE_TOKEN.test(settings.defaultAgent)
+        ? settings.defaultAgent
+        : null,
+  }
+  try {
+    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(sanitized))
+  } catch {
+    // Persistence is a convenience; a blocked store never breaks Settings.
+  }
+}
+
+// The persisted settings, with every missing, malformed, or non-token field
+// reading as its safe default, so a bad store can only mean default behavior.
+export function loadSettings(): AppSettings {
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY)
+    if (!raw) {
+      return DEFAULT_SETTINGS
+    }
+    const parsed: unknown = JSON.parse(raw)
+    if (typeof parsed !== "object" || parsed === null) {
+      return DEFAULT_SETTINGS
+    }
+    const { dockBadge, defaultAgent } = parsed as {
+      dockBadge?: unknown
+      defaultAgent?: unknown
+    }
+    return {
+      dockBadge: dockBadge !== false,
+      defaultAgent:
+        typeof defaultAgent === "string" && OPAQUE_TOKEN.test(defaultAgent)
+          ? defaultAgent
+          : null,
+    }
+  } catch {
+    return DEFAULT_SETTINGS
   }
 }
 

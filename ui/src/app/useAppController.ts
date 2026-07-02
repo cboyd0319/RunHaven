@@ -18,6 +18,7 @@ import {
 import { useAppDerivedState } from "./useAppDerivedState"
 import { useLaunchFlow } from "./useLaunchFlow"
 import { useManagedSessionsState } from "./useManagedSessionsState"
+import { useSettings } from "./useSettings"
 import { useManagedSessionDiagnostics } from "./useManagedSessionDiagnostics"
 import { useManagedSessionStatus } from "./useManagedSessionStatus"
 import { useLaunchStatus } from "./useLaunchStatus"
@@ -43,8 +44,10 @@ export function useAppController() {
   const statusLoaders = useStatusLoaders()
   const diagnostics = useDiagnosticsState()
   const [error, setError] = useState("")
+  const settingsState = useSettings()
   const launchFlow = useLaunchFlow({
     dashboard,
+    defaultAgent: settingsState.defaultAgent,
     loadImageStatus: statusLoaders.loadImageStatus,
     loadRunStatus: statusLoaders.loadRunStatus,
     loadManagedSessions,
@@ -52,6 +55,19 @@ export function useAppController() {
     onLaunched: setLastLaunch,
     onError: setError,
   })
+
+  // Choosing a default agent in Settings is agent intent right now, not only
+  // for the next app start: point the launch draft at it too, through the same
+  // path a click in the sheet's own picker would take.
+  const settings = {
+    ...settingsState,
+    setDefaultAgent(defaultAgent: string | null) {
+      settingsState.setDefaultAgent(defaultAgent)
+      if (defaultAgent) {
+        launchFlow.changeAgent(defaultAgent)
+      }
+    },
+  }
 
   const derived = useAppDerivedState({
     dashboard,
@@ -131,6 +147,7 @@ export function useAppController() {
     dashboard,
     authStatus,
     launchFlow,
+    settings,
     loading,
     imageLoading: statusLoaders.imageLoading,
     imageStatus: statusLoaders.imageStatus,

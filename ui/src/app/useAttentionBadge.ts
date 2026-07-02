@@ -20,8 +20,15 @@ export function attentionBadgeCount(
     .length
 }
 
-export function useAttentionBadge(sessions: ManagedSessionSummary[]) {
-  const count = Math.min(attentionBadgeCount(sessions), MAX_ATTENTION_BADGE_COUNT)
+// `enabled` is the Settings toggle: turning the badge off reports 0 once,
+// which clears the Dock number, and stays quiet until it is turned back on.
+export function useAttentionBadge(
+  sessions: ManagedSessionSummary[],
+  enabled: boolean,
+) {
+  const count = enabled
+    ? Math.min(attentionBadgeCount(sessions), MAX_ATTENTION_BADGE_COUNT)
+    : 0
   const lastSent = useRef<number | null>(null)
   useEffect(() => {
     if (lastSent.current === count) {

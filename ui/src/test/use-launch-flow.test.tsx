@@ -6,7 +6,9 @@ import type {
   LaunchRunResponse,
   ManagedSessionList,
 } from "../commands/runhaven"
+import { dashboard } from "./main-view-props"
 import { act, renderHook } from "./render-hook"
+import { localAgent, providerAgent } from "./runhaven-fixtures"
 
 // The preview command fallbacks (no Tauri runtime in tests) back the flow, so
 // planRun and launchRun behave like the real intent-capture pipeline.
@@ -23,6 +25,7 @@ function deps(patch: Partial<LaunchFlowDeps> = {}): LaunchFlowDeps & {
     selected,
     errors,
     dashboard: null,
+    defaultAgent: null,
     loadImageStatus: async () => {},
     loadRunStatus: async () => {},
     loadManagedSessions: async (): Promise<ManagedSessionList> => ({
@@ -158,6 +161,31 @@ describe("useLaunchFlow", () => {
     expect(result.current.request.sessionName).not.toBe(sessionNameBefore)
     // The draft itself survives for the next run.
     expect(result.current.request.workspacePath).toBe("/tmp/launch-project")
+  })
+
+  it("initializes with the saved default agent when it still exists", async () => {
+    const withAgents = {
+      ...dashboard(true),
+      agents: [providerAgent, localAgent],
+    }
+    const { result } = await renderFlow(deps({ defaultAgent: "shell" }))
+    await act(async () => {
+      await result.current.applyDashboard(withAgents)
+    })
+    expect(result.current.request.agent).toBe("shell")
+  })
+
+  it("falls back to the built-in pick when the saved default agent is gone", async () => {
+    const withAgents = {
+      ...dashboard(true),
+      agents: [providerAgent, localAgent],
+    }
+    const { result } = await renderFlow(deps({ defaultAgent: "removed-agent" }))
+    await act(async () => {
+      await result.current.applyDashboard(withAgents)
+    })
+    // preferredDefaultAgent: the first agent that supports in-app sign-in.
+    expect(result.current.request.agent).toBe("codex")
   })
 
   it("keeps the sheet open and shows the error when the launch is rejected", async () => {

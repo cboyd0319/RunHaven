@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppHeader } from "./AppHeader"
 import { AppMainContent } from "./AppMainContent"
 import { RunHavenSidebar } from "./RunHavenSidebar"
+import { SettingsDialog } from "./SettingsDialog"
 import { sidebarDefaultOpen } from "./uiStatePersistence"
 import { useAppController } from "./useAppController"
 import { useAttentionBadge } from "./useAttentionBadge"
@@ -12,7 +13,7 @@ import { useMenuEvents } from "./useMenuEvents"
 export default function App() {
   const app = useAppController()
   useMenuEvents(app)
-  useAttentionBadge(app.managedSessions.sessions)
+  useAttentionBadge(app.managedSessions.sessions, app.settings.dockBadge)
 
   return (
     <TooltipProvider>
@@ -87,6 +88,10 @@ export default function App() {
             onLoadDiagnostics={app.loadDiagnostics}
           />
         </SidebarInset>
+        <SettingsDialog
+          settings={app.settings}
+          agents={app.dashboard?.agents ?? []}
+        />
       </SidebarProvider>
     </TooltipProvider>
   )

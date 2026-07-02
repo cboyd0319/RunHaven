@@ -73,25 +73,34 @@ describe("attentionBadgeCount", () => {
   })
 })
 
+type BadgeProps = { sessions: ManagedSessionSummary[]; enabled: boolean }
+
+async function renderBadge(sessions: ManagedSessionSummary[], enabled = true) {
+  return renderHook(
+    (props: BadgeProps) => useAttentionBadge(props.sessions, props.enabled),
+    { sessions, enabled },
+  )
+}
+
 describe("useAttentionBadge", () => {
   beforeEach(() => {
     setBadge.mockClear()
   })
 
   it("reports the needs-you count and clears it back to zero", async () => {
-    const hook = await renderHook(useAttentionBadge, [failed("broken")])
+    const hook = await renderBadge([failed("broken")])
     expect(setBadge).toHaveBeenLastCalledWith(1)
 
-    await hook.rerender([session("recovered")])
+    await hook.rerender({ sessions: [session("recovered")], enabled: true })
     expect(setBadge).toHaveBeenLastCalledWith(0)
   })
 
   it("does not resend an unchanged count on a poll", async () => {
-    const hook = await renderHook(useAttentionBadge, [failed("broken")])
+    const hook = await renderBadge([failed("broken")])
     const calls = setBadge.mock.calls.length
 
     // Same count from a fresh list identity, as a background poll produces.
-    await hook.rerender([failed("broken")])
+    await hook.rerender({ sessions: [failed("broken")], enabled: true })
     expect(setBadge.mock.calls.length).toBe(calls)
   })
 
@@ -99,7 +108,27 @@ describe("useAttentionBadge", () => {
     const many = Array.from({ length: 120 }, (_, index) =>
       failed(`broken-${index}`),
     )
-    await renderHook(useAttentionBadge, many)
+    await renderBadge(many)
     expect(setBadge).toHaveBeenLastCalledWith(99)
+  })
+
+  it("clears the badge while the Settings toggle is off, then restores", async () => {
+    const hook = await renderBadge([failed("broken")], false)
+    // Disabled reports 0 (which clears the Dock number) and nothing else,
+    // even while sessions need attention.
+    expect(setBadge).toHaveBeenLastCalledWith(0)
+    const calls = setBadge.mock.calls.length
+
+    await hook.rerender({
+      sessions: [failed("broken"), failed("also-broken")],
+      enabled: false,
+    })
+    expect(setBadge.mock.calls.length).toBe(calls)
+
+    await hook.rerender({
+      sessions: [failed("broken"), failed("also-broken")],
+      enabled: true,
+    })
+    expect(setBadge).toHaveBeenLastCalledWith(2)
   })
 })

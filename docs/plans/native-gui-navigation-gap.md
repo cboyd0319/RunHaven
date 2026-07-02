@@ -37,7 +37,7 @@ means the current code implements a shape the spec explicitly rejects.
 | 3.6 | Diagnostics destination with doctor detail | partial | Accordion on the Start screen only (`AppMainContent.tsx:164-176`) with a manual "Load diagnostics" button; doctor detail lives only in `SetupCard` | Destination view, auto-load, absorb doctor detail (A5). |
 | 3.7 | Inline device-code sign-in; Claude terminal instruction; no tokens shown | conforms | `AgentSignIn.tsx` (device flow lines 52-98; Claude terminal note lines 36-47); no Copy button yet (minor) | Add Copy button (A4, S). |
 | 3.8 | Maintenance destination: network cleanup only, CLI-only note, empty state | partial | Accordion on every setup-ready view (`AppMainContent.tsx:178-185`); cleanup with count preview conforms (`MaintenanceCard.tsx:117-193`); rebuild wrongly lives here; no empty state, no CLI-only note in view | Destination view; rebuild moves to Agents (A4/A5). |
-| 3.9 | Settings window (Cmd-,), one General pane | missing | No settings of any kind exist today: no store, no window, no `localStorage` use (verified by search) | B3. Honest note: there is almost nothing to put in it yet. |
+| 3.9 | Settings window (Cmd-,), one General pane | partial | RunHaven > Settings... (Cmd-,) opens a Settings **dialog in the main window** (`SettingsDialog.tsx`) with the two settings that exist: Dock badge on/off and default agent | Shipped lean (B3): the separate window is a deliberate deferral until settings outgrow one small pane. |
 | 4 | Removal fallback: adjacent row, else other group, else Home | contradicts | `useSelectedSessionId.ts:9-17` resets selection to `null`, which renders the wizard | Adjacent-row logic on the new nav model (A1). |
 | 4 | Relaunch restores selection after backend re-verification | missing | No persistence anywhere | B2. |
 | 4 | No-blink: selection/scroll/drafts survive polls | conforms | Equality guards `sessionList.ts`, `appStatusEquality.ts`; poll loop `useManagedSessionsState.ts:26-49` | Keep; sheet must join the contract (A3). |
@@ -249,18 +249,27 @@ is the tripwire.
 - Tests: new Rust unit tests for the sanitized store; `command-surface-guard`
   and `main-read`-style capability updates.
 
-### B3. Settings window - M
+### B3. Settings - M (shipped lean as an in-window dialog)
 
-- Honest baseline: **no settings exist today** - no store, no preferences, no
-  persisted toggles anywhere in `ui/src` or `src-tauri`. First pane is small:
-  default agent, Dock badge on/off (notification toggles wait for
-  notifications). Never security defaults or confirmation suppression.
-- Needs: a Rust-side settings store (likely in `crates/runhaven-core` next to
-  existing state handling), `get_settings`/`set_settings` commands, a
-  `settings` window (created at runtime by a Rust command off the Cmd-,
-  menu item, minimize/zoom dimmed), and a **new capability file** scoped
-  `"windows": ["settings"]` granting only the settings commands. Depends on
-  B1 for the menu entry.
+- Honest baseline at implementation (2026-07-01): the app had exactly two
+  real preferences to offer - the Dock badge on/off (B5's promised toggle)
+  and the default agent for new runs (previously a fixed heuristic,
+  `preferredDefaultAgent`). Notification toggles wait for notifications
+  (spec 9, future); appearance is dark-only (stated as prose, not a dead
+  control). Never security defaults or confirmation suppression.
+- Lean deviation from spec 3.9, recorded here: two settings do not justify a
+  separate WebView window and its whole surface (a runtime window-creation
+  command, a new `"windows": ["settings"]` capability, `get_settings`/
+  `set_settings` commands, and a Rust-side store). Shipped instead:
+  RunHaven > Settings... (Cmd-,) opens a Settings dialog in the main window
+  (`ui/src/app/SettingsDialog.tsx`, state in `useSettings.ts`), routed over
+  the existing `menu://command` event; no new IPC surface, no capability
+  change, no new mutation path. Choices persist through the sanitized
+  `uiStatePersistence.ts` allowed set (a boolean plus an opaque agent name,
+  re-verified against the live agent list before it picks anything).
+- The separate settings window (minimize/zoom dimmed) returns only when
+  settings outgrow one small pane (spec 3.9's own "minimize the number of
+  settings" bar) or a setting needs Rust-owned storage or authority.
 
 ### B4. Per-session auxiliary windows - L, security review required
 
@@ -315,7 +324,8 @@ Dependency-ordered slices; parallel tracks marked. Each slice ships its
 6. **B1** menu bar + accelerators (after A2 so destinations exist to target;
    parallel with A6). **B2** persistence (after A1's nav union; parallel with
    B1). **B5** Dock badge (after A1; anytime, S).
-7. **B3** Settings window (after B1).
+7. **B3** Settings (after B1). Shipped lean as an in-window dialog; see B3
+   for the recorded deviation.
 8. **B4** aux session windows last, gated on security review; touches
    `command-surface-guard.test.ts`, new capability, `docs/SECURITY_MODEL.md`.
 
