@@ -102,6 +102,14 @@ because provider mode would have an empty allowlist there. Internet mode prints 
 security notice and is never blocked; choose it explicitly with `--network
 internet` when a run needs package installs or other hosts.
 
+In `provider` mode RunHaven also turns off the agent's own non-essential traffic
+where the agent supports it, so it does not even attempt to reach hosts the
+allowlist would block. Claude Code, for example, is run with
+`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, which disables its telemetry,
+error reporting, and auto-update checks. This keeps the egress log to the real
+API calls and stops the agent from phoning home; the allowlist is still the
+hard boundary if the agent tries anyway.
+
 Unsupported, invalid, or nonfunctional paths still fail closed. Examples include
 failed setup checks, invalid input, missing confirmations, and unsupported
 platform state. This is not a policy block around a supported choice; it is a

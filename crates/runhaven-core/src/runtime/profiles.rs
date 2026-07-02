@@ -44,7 +44,15 @@ pub fn get_profile(name: &str) -> Result<AgentProfile> {
             description: "Claude Code with state isolated under /home/agent/.claude.",
             image: "runhaven/claude:0.1.0",
             command: &["claude"],
-            home_env: &[("CLAUDE_CONFIG_DIR", "/home/agent/.claude")],
+            // Disable Claude Code's non-essential traffic (DataDog telemetry,
+            // error reporting, auto-update checks) so the sandboxed agent never
+            // attempts non-provider egress. Provider-only egress blocks those
+            // hosts anyway; turning them off keeps the egress log clean and the
+            // agent from phoning home. Verified env var in the claude binary.
+            home_env: &[
+                ("CLAUDE_CONFIG_DIR", "/home/agent/.claude"),
+                ("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1"),
+            ],
             image_context: Some("claude"),
             provider_hosts: bundled_provider_hosts("claude"),
         },
