@@ -389,6 +389,20 @@ continue hardest-first through live session ownership, real-agent auth/session
 behavior, multi-session isolation, typed status, run control, recovery, and
 fail-closed boundaries before visual polish.
 
+Claude OAuth Keychain broker (`docs/design/native-gui-claude-oauth-broker.md`)
+Slice 1 landed: `crates/runhaven-core/src/provider/claude_oauth_keychain.rs`
+(macOS-gated) stores/reads/clears a single RunHaven-owned Keychain item
+(service `RunHaven Claude OAuth`, account `claude`) behind a user-presence
+`SecAccessControl`, and captures the host `claude setup-token` into `Zeroizing`
+buffers with no disk/log copy. This reintroduces host custody for Claude only
+(reversing zero-custody), in the OS vault only. Deps: `security-framework`
+pinned `=3.5.1` (matches the codex-network-proxy exact pin; 3.7.0 would fork the
+graph) and `zeroize =1.9.0`, both in `pins.toml`. The proxy profile,
+`ClaudeAuthSource` selector, Tauri command, GUI, and rotation are later slices.
+Open maintainer live smokes: F3 dev/signed ACL behavior, F4 setup-token pipe
+capture, and the real biometric prompt. Gate 1 (adversarial + security review
+of Slices 1-3) precedes any GUI default flip.
+
 For this CLI+GUI completion goal, local downloads, installs, tool runs, and
 external research are authorized when they directly reduce risk or accelerate
 the work. Multiple subagents are authorized for real bounded implementation,

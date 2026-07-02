@@ -100,6 +100,14 @@ runhaven-cli = { path = "crates/runhaven-cli", version = "=0.5.0" }
 runhaven-core = { path = "crates/runhaven-core", version = "=0.5.0" }
 runhaven-tui = { path = "crates/runhaven-tui", version = "=0.5.0" }
 schemars = "=0.8.22"
+# macOS Keychain custody for the Claude OAuth broker (crates/runhaven-core,
+# target-gated to macOS). `OSX_10_15` unlocks the data-protection keychain
+# (`kSecUseDataProtectionKeychain`) plus `SecAccessControl` user-presence.
+# Pinned to =3.5.1 to match the exact pin the vendored `codex-network-proxy`
+# already carries: security-framework 3.x is one semver line, so a =3.7.0 pin
+# here would force a second, conflicting copy the resolver rejects. 3.5.1
+# already exposes the full access-control/data-protection API this module uses.
+security-framework = { version = "=3.5.1", features = ["OSX_10_15"] }
 serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = { version = "=1.0.150", features = ["preserve_order"] }
 serial_test = "=3.5.0"
@@ -130,6 +138,11 @@ url = "=2.5.8"
 urlencoding = "=2.1.3"
 uuid = { version = "=1.23.3", features = ["v4"] }
 vt100 = "=0.16.2"
+# Best-effort overwrite-on-drop for transient secret buffers (setup-token
+# capture, extracted token). All-platform: later slices hold a secret in the
+# broker's cross-platform state. Encapsulates its own unsafe (composes with
+# `unsafe_code = forbid`).
+zeroize = "=1.9.0"
 
 [workspace.lints.rust]
 warnings = { level = "deny", priority = -1 }

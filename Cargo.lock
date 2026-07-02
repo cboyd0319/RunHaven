@@ -8780,6 +8780,7 @@ dependencies = [
  "ipnet",
  "pty-process",
  "regex",
+ "security-framework",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -8788,6 +8789,7 @@ dependencies = [
  "toml 1.1.2+spec-1.1.0",
  "ureq",
  "uuid",
+ "zeroize",
 ]
 
 [[package]]

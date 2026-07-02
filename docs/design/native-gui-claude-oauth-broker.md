@@ -1,6 +1,10 @@
 # Native GUI Claude OAuth-Token Broker (Design C)
 
-Status: design only. No code. Adversarial review gate before any implementation.
+Status: Slice 1 (custody surface) implemented in
+`crates/runhaven-core/src/provider/claude_oauth_keychain.rs` (macOS-gated);
+Slices 2-5 and the Gate 1/Gate 2 reviews remain. A custody-surface adversarial
+gate runs before commit. Slices 2+ (proxy profile, `ClaudeAuthSource` selector,
+Tauri command, GUI, rotation) are still design only.
 
 This design adds a second Claude auth path to the desktop app: a macOS Keychain
 OAuth-token broker (path C, the new default), alongside the existing in-sandbox
@@ -413,7 +417,30 @@ GUI default flips to path C.
 
 - Gate 0 (before any code): adversarial review of this doc. Confirm the claim set
   and the custody reversal are acceptable. Blocking.
-- Slice 1: `security-framework` re-add (verified pin, macOS-gated) plus the
+- Slice 1 status: IMPLEMENTED. `crates/runhaven-core/src/provider/claude_oauth_keychain.rs`
+  holds store/read/clear plus the host `claude setup-token` capture (the task
+  folded Section 2's capture into Slice 1). `security-framework` is pinned
+  `=3.5.1` (NOT the latest 3.7.0: the vendored `codex-network-proxy` pins
+  `security-framework = "=3.5.1"` exactly, and 3.x is one semver line, so a
+  3.7.0 pin forces a conflicting second copy the resolver rejects; 3.5.1 already
+  exposes the full access-control API). `zeroize = "=1.9.0"`. Both are in
+  `pins.toml` and the lockfile. The backend is chosen by build profile
+  (`select_backend`): release uses the data-protection keychain, an unsigned dev
+  build the legacy file keychain; the user-presence `SecAccessControl` binds in
+  both. Hermetic tests cover the exact service+account query (claim 2), the
+  user-presence-only flag, `parse_token` good/blank/garbage with a buffer-free
+  failure message, and a no-persist source tripwire; a `#[ignore]` live
+  round-trip on a test service passed against the real Keychain with no prompt.
+  MAINTAINER LIVE SMOKES still open: F3 (dev-build vs signed-release ACL and
+  data-protection behavior, and whether user presence binds on the legacy
+  keychain), F4 (`claude setup-token` prints the token to a pipe like a TTY on
+  macOS 26+ with the pinned CLI), and the real biometric prompt on a
+  user-presence read. The custom prompt text (`kSecUseOperationPrompt`) is NOT
+  set: the high-level `security-framework` `PasswordOptions` API does not expose
+  that key, so the system default presence prompt is used; setting custom copy
+  would need a direct `core-foundation`/`-sys` dictionary path (a new dep this
+  slice avoids). The user-presence gate itself does not depend on it.
+- Slice 1 (original plan): `security-framework` re-add (verified pin, macOS-gated) plus the
   `zeroize` pin (verified, all-platform), both in `pins.toml` and locked. Keychain
   store module with the Section 1 item naming, accessibility class, and the
   user-presence `SecAccessControl`
