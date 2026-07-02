@@ -125,6 +125,15 @@ Useful GUI design docs:
 
 ## Latest State
 
+- Provider-network teardown no longer leaks the run container or its network on
+  a mid-flow killed login/attach client. `cleanup_provider_network`
+  (`provider/runtime/network.rs`) force-removes the run container
+  (`container rm --force`, verified on Apple container 1.0.0) before deleting the
+  network; idempotent, so a clean `--rm` run still records `cleanup=deleted` and
+  a real referring-container failure is surfaced, not swallowed. Single choke
+  point for both failed-login and terminal-close paths; hermetic red/green tests
+  in `provider/runtime/tests/network.rs`. `docs/DESKTOP_APP.md` caveat tightened.
+  Lead's live re-smoke (fail a login, confirm no orphan) is the remaining step.
 - Live-runtime verification ran on a real macOS 27 / Apple container 1.0.0
   host: all five live Tauri container tests passed against real containers
   (self-contained smokes on a clean state; the two attach-style tests against a

@@ -120,7 +120,7 @@ fn repair_one_marker(record: &Value) -> Result<Value> {
     }))
 }
 
-fn is_missing_container_stderr(stderr: &[u8]) -> bool {
+pub(crate) fn is_missing_container_stderr(stderr: &[u8]) -> bool {
     let stderr = String::from_utf8_lossy(stderr).to_ascii_lowercase();
     stderr.contains("container not found:")
         || (stderr.contains("container with id ") && stderr.contains(" not found"))

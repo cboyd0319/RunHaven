@@ -1,5 +1,6 @@
+mod network;
+
 use super::decision_log::{DecisionCounts, provider_decision_deltas};
-use super::network::parse_internal_network_info;
 use super::*;
 use crate::provider::egress::ProxyDecision;
 use crate::runtime::launch::{AgentCommandContext, AgentCommandRunner};
@@ -8,43 +9,6 @@ use std::io::{Read, Write};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, TcpStream};
 use std::thread;
 use std::time::Duration;
-
-const NETWORK_INSPECT_HOSTONLY: &[u8] = include_bytes!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/tests/fixtures/apple_container/network-inspect-hostonly.json"
-));
-
-#[test]
-fn parses_current_apple_network_inspect_shape() {
-    let info =
-        parse_internal_network_info("runhaven-volume-prep-internal", NETWORK_INSPECT_HOSTONLY)
-            .expect("network inspect");
-
-    assert_eq!(info.ipv4_gateway, "192.168.130.1");
-    assert_eq!(info.ipv4_subnet, "192.168.130.0/24");
-}
-
-#[test]
-fn rejects_non_host_only_network_inspect_shape() {
-    let error = parse_internal_network_info(
-        "runhaven-default",
-        br#"[{"configuration":{"mode":"nat"},"status":{"ipv4Gateway":"192.168.64.1","ipv4Subnet":"192.168.64.0/24"}}]"#,
-    )
-    .expect_err("nat network");
-
-    assert!(error.to_string().contains("not host-only"));
-}
-
-#[test]
-fn rejects_network_inspect_missing_ipv4_fields() {
-    let error = parse_internal_network_info(
-        "runhaven-missing-ipv4",
-        br#"[{"configuration":{"mode":"hostOnly"},"status":{}}]"#,
-    )
-    .expect_err("missing ipv4");
-
-    assert!(error.to_string().contains("missing IPv4 gateway or subnet"));
-}
 
 fn connect_address(proxy_addr: SocketAddr) -> SocketAddr {
     if proxy_addr.ip().is_unspecified() {

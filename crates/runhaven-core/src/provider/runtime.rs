@@ -21,8 +21,8 @@ mod network;
 use decision_log::{ProviderDecisionLogStream, start_provider_decision_log_stream};
 use network::command_starts_with;
 pub use network::{
-    InternalNetworkInfo, cleanup_provider_network, delete_container_network,
-    ensure_internal_network, inspect_internal_network, inspect_network_mode, run_preflight,
+    InternalNetworkInfo, cleanup_provider_network, ensure_internal_network,
+    inspect_internal_network, inspect_network_mode, run_preflight,
 };
 
 pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {

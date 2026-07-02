@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 mod inspect;
 mod logs;
 mod markers;
-mod repair;
+pub(crate) mod repair;
 
 pub use logs::{
     DEFAULT_LOG_SNAPSHOT_LINES, MAX_LOG_SNAPSHOT_BYTES, MAX_LOG_SNAPSHOT_LINES,
