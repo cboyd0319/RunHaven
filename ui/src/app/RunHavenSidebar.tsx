@@ -15,6 +15,7 @@ import logo from "@/assets/logo.png"
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -94,7 +95,13 @@ export function RunHavenSidebar({
           navigation={navigation}
           onNavigate={onNavigate}
         />
-        <SidebarGroup>
+      </SidebarContent>
+      {/* System destinations are fixed navigation, not session data, so they
+          live in the footer and stay visible no matter how long the Active and
+          Finished lists grow (the scrollable content above). Design nav spec
+          section 2 keeps them last. */}
+      <SidebarFooter>
+        <SidebarGroup className="py-0">
           <SidebarGroupLabel className="tracking-[0.2em] uppercase">
             System
           </SidebarGroupLabel>
@@ -121,7 +128,7 @@ export function RunHavenSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-      </SidebarContent>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )
