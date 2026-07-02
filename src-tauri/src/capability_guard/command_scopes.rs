@@ -329,6 +329,10 @@ fn session_monitor_capability_grants_exactly_the_monitor_reads() {
             "allow-write-session-input",
             "allow-get-managed-session-log-snapshot",
             "allow-get-log-snapshot",
+            "allow-open-terminal-session",
+            "allow-write-terminal-input",
+            "allow-resize-terminal",
+            "allow-close-terminal-session",
         ])
     {
         assert!(

@@ -27,6 +27,7 @@ ureq = "3.3.0"
 url = "2.5.8"
 uuid = "1.23.3"
 insta = "1.48.0"
+pty-process = "0.5.3"
 tempfile = "3.27.0"
 vt100 = "0.16.2"
 

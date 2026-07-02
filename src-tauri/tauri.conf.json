@@ -33,7 +33,8 @@
         "menu-state",
         "attention-badge",
         "session-window-open",
-        "session-monitor"
+        "session-monitor",
+        "terminal"
       ]
     }
   },

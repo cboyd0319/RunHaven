@@ -111,6 +111,76 @@ pub fn runs_attach(
     Ok(process.status()?.code().unwrap_or(1))
 }
 
+/// Fixed non-root identity for a desktop terminal attach. The GUI never exposes
+/// `--allow-root-user`, so an in-app terminal is always the sandbox `agent`
+/// user (terminal design section 6). Matches the CLI `runs attach --user`
+/// default.
+pub const GUI_ATTACH_USER: &str = "agent";
+
+/// Fixed working directory for a desktop terminal attach, matching the CLI
+/// `runs attach --workdir` default: the mounted workspace is where an
+/// interactive shell is useful.
+pub const GUI_ATTACH_WORKDIR: &str = "/workspace";
+
+/// A validated `container exec` invocation for an in-app terminal, resolved from
+/// the active-run read model. Returned instead of being spawned so the desktop
+/// host-PTY path (`src-tauri`) reuses `runs_attach`'s exact validation
+/// (container name, non-root user, workdir, command) without duplicating any of
+/// it in the Tauri crate.
+#[derive(Debug, Clone)]
+pub struct GuiAttachPlan {
+    /// The active run id, which is also the terminal session key.
+    pub run_id: String,
+    /// The RunHaven-owned container the terminal attaches to.
+    pub container_name: String,
+    /// The argument vector passed to `container` (always begins with `exec`).
+    pub args: Vec<String>,
+}
+
+/// Resolve and validate the interactive attach for `run_id` exactly as
+/// [`runs_attach`] does, but always allocate a TTY (the GUI host-PTY path is
+/// always a terminal), never accept `--allow-root-user`, and return the argv
+/// instead of spawning. The container name is read from the active-run record,
+/// never supplied by the caller, so an untrusted WebView cannot steer the
+/// target. Shares `runs_attach`'s validators so there is one validated attach
+/// boundary, not two.
+pub fn gui_attach_plan(run_id: &str) -> Result<GuiAttachPlan> {
+    validate_run_id(run_id)?;
+    let record = find_active_run_record(run_id)?;
+    let container_name = require_string(
+        record.get("container_name"),
+        "active run record is missing container name",
+    )?;
+    validate_runhaven_container_name(container_name)?;
+    validate_resource_options("1", "1g", GUI_ATTACH_USER)?;
+    // The GUI never exposes --allow-root-user: a terminal is always non-root.
+    if uses_root_identity(GUI_ATTACH_USER) {
+        bail!("desktop terminal sessions must run as the non-root agent user");
+    }
+    validate_attach_workdir(GUI_ATTACH_WORKDIR)?;
+    let command: Vec<String> = DEFAULT_ATTACH_COMMAND
+        .iter()
+        .map(|arg| (*arg).to_string())
+        .collect();
+    validate_attach_command(&command)?;
+    let mut args = vec![
+        "exec".to_string(),
+        "--interactive".to_string(),
+        "--tty".to_string(),
+        "--user".to_string(),
+        GUI_ATTACH_USER.to_string(),
+        "--workdir".to_string(),
+        GUI_ATTACH_WORKDIR.to_string(),
+        container_name.to_string(),
+    ];
+    args.extend(command);
+    Ok(GuiAttachPlan {
+        run_id: run_id.to_string(),
+        container_name: container_name.to_string(),
+        args,
+    })
+}
+
 pub fn runs_logs_follow(run_id: &str, lines: u32) -> Result<i32> {
     if lines < 1 {
         bail!("--lines must be 1 or greater");

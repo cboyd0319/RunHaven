@@ -13,6 +13,7 @@ pub(crate) mod session_input;
 mod session_output;
 pub(crate) mod session_windows;
 mod tail_status;
+pub(crate) mod terminal;
 
 use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;
@@ -63,9 +64,17 @@ pub fn run() {
                         let _ = monitor.close();
                     }
                 }
+                // Terminal sessions are live PTY children; kill them all so no
+                // `container exec` process outlives the app (terminal design
+                // section 9). They are never persisted or restored.
+                window
+                    .app_handle()
+                    .state::<terminal::TerminalSessionRegistry>()
+                    .close_all();
             }
         })
         .manage(session_input::SessionInputRegistry::default())
+        .manage(terminal::TerminalSessionRegistry::default())
         .manage(session_windows::SessionWindowRegistry::default())
         .manage(session_output::SessionOutputRegistry::default())
         .manage(launch_status::LaunchStatusRegistry::default())
@@ -115,6 +124,10 @@ pub fn run() {
             commands::menu_sync::sync_menu_state,
             commands::session_window::open_session_window,
             commands::session_window::get_session_window_target,
+            terminal::open_terminal_session,
+            terminal::write_terminal_input,
+            terminal::resize_terminal,
+            terminal::close_terminal_session,
         ])
         .run(tauri::generate_context!())
         .expect("error while running RunHaven desktop app");

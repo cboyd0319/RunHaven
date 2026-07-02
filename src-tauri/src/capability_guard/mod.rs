@@ -11,6 +11,7 @@
 
 mod command_scopes;
 mod support;
+mod terminal_scope;
 
 use std::fs;
 

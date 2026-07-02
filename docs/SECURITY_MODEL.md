@@ -222,6 +222,45 @@ construction, not by convention:
 - Monitor windows are never restored across relaunch, and closing the main
   window closes them too, so no watching window outlives its controls.
 
+## Terminal Sessions
+
+The desktop app can open a live terminal inside one running sandbox. This is the
+most powerful interactive surface it has, so it is fenced carefully. (This
+section describes the Rust backend boundary; the in-app terminal view is a
+later, separate change.)
+
+- RunHaven never trusts a name from the WebView. When you open a terminal,
+  RunHaven looks up the run in its own active-run records and builds the
+  `container exec` command in Rust, reusing the exact same checks as the CLI
+  `runs attach`: the container must be RunHaven-owned, and the shell always runs
+  as the non-root `agent` user. There is no way for the GUI to run the terminal
+  as root; `--allow-root-user` is never offered here.
+- Consent happens once, before anything starts. A raw keystroke stream cannot be
+  confirmed message by message, so RunHaven shows a native confirmation dialog
+  that names the run and its container and states, in plain words, that what you
+  type goes straight to the sandbox and what it prints is shown but not filtered
+  and not saved. If you cancel, no terminal and no `container exec` process is
+  ever started.
+- The live stream is shown, not stored. This is the one place RunHaven does not
+  redact, and it says so up front. The reader relays each chunk from the sandbox
+  straight to the terminal view and nowhere else: it does not append to the
+  captured-output history, write run records, or write any log or file. A
+  build-time source test (`terminal` in `src-tauri`) fails if that code ever
+  gains a path to disk or to the output history. This "does not filter, read,
+  store, or log" statement is scoped strictly to the live terminal stream, not
+  to the whole app: saved output snapshots, run records, and auth/egress history
+  are still redacted and kept locally as before.
+- The terminal adds interactivity, not reach. It attaches into the run's
+  existing sandbox, so it inherits that run's read-only root filesystem, dropped
+  capabilities, and provider-only network. No new mounts, no host environment,
+  no `container machine`.
+- Only the main window can open a terminal. The `terminal` capability is granted
+  to the main window alone; the read-only monitor windows never receive it, and
+  the `capability_guard` tests fail closed if that ever changes. At most two
+  terminals can be open at once; opening past that fails with a clear message.
+- Terminals are never restored across relaunch, and closing the main window
+  kills every live terminal child, so no sandbox shell outlives the app.
+
 ## What This Does Not Solve Yet
 
 Internet mode is unrestricted egress within the host's network policy. It is the

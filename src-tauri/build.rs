@@ -50,6 +50,10 @@ fn main() {
             "sync_menu_state",
             "open_session_window",
             "get_session_window_target",
+            "open_terminal_session",
+            "write_terminal_input",
+            "resize_terminal",
+            "close_terminal_session",
         ]),
     ))
     .expect("failed to build Tauri application manifest");

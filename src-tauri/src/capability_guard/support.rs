@@ -54,6 +54,10 @@ pub(super) const MAIN_READ_FORBIDDEN_PERMISSIONS: &[&str] = &[
     "allow-start-agent-sign-in",
     "allow-set-attention-badge",
     "allow-sync-menu-state",
+    "allow-open-terminal-session",
+    "allow-write-terminal-input",
+    "allow-resize-terminal",
+    "allow-close-terminal-session",
 ];
 pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-get-log-snapshot", "get_log_snapshot"),
@@ -87,6 +91,17 @@ pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
     ),
     ("allow-rebuild-agent-image", "rebuild_agent_image"),
     ("allow-prune-managed-networks", "prune_managed_networks"),
+];
+
+/// The exact grant for the terminal capability (terminal design section 7). A
+/// live PTY into a sandbox is the app's most sensitive interactive surface, so
+/// it lives in its own main-window-only capability and never widens main-read
+/// or the read-only monitor windows.
+pub(super) const TERMINAL_PERMISSIONS: &[(&str, &str)] = &[
+    ("allow-open-terminal-session", "open_terminal_session"),
+    ("allow-write-terminal-input", "write_terminal_input"),
+    ("allow-resize-terminal", "resize_terminal"),
+    ("allow-close-terminal-session", "close_terminal_session"),
 ];
 
 pub(super) const ATTENTION_BADGE_PERMISSION: &str = "allow-set-attention-badge";

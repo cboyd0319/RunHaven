@@ -26,7 +26,7 @@ pub(crate) mod agent_sign_in_status;
 pub(crate) mod attention_badge;
 pub(crate) mod diagnostics;
 pub(crate) mod diagnostics_why;
-mod dialog;
+pub(crate) mod dialog;
 pub(crate) mod image_build;
 pub(crate) mod image_build_status;
 pub(crate) mod image_status;

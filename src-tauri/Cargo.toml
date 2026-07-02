@@ -19,6 +19,7 @@ tauri-build.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+pty-process.workspace = true
 runhaven-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true

@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "terminal",
+  "description": "Live host-PTY terminal into one validated, non-root RunHaven run. Main window only; read-only monitor windows never receive it.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-open-terminal-session",
+    "allow-write-terminal-input",
+    "allow-resize-terminal",
+    "allow-close-terminal-session"
+  ]
+}
