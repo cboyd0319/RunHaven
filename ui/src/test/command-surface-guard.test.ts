@@ -70,7 +70,8 @@ const EXPECTED_INVOKED_COMMANDS = [
   "get_why_network",
   "get_why_state",
   "get_why_host",
-  "get_why_workspace"
+  "get_why_workspace",
+  "set_attention_badge"
 ];
 
 type SourceEntry = {

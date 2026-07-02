@@ -14,10 +14,10 @@
       {
         "label": "main",
         "title": "RunHaven",
-        "width": 1180,
-        "height": 780,
-        "minWidth": 920,
-        "minHeight": 620,
+        "width": 1080,
+        "height": 720,
+        "minWidth": 720,
+        "minHeight": 560,
         "resizable": true
       }
     ],
@@ -29,7 +29,8 @@
         "launch-run",
         "run-control",
         "agent-sign-in",
-        "menu-events"
+        "menu-events",
+        "attention-badge"
       ]
     }
   },

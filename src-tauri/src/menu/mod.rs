@@ -30,12 +30,12 @@ use tauri::{AppHandle, Emitter, Runtime};
 
 use spec::{Entry, MENU_BAR, Predef, command_ids};
 
+// Menu events target only the main window (crate::MAIN_WINDOW_LABEL); future
+// auxiliary windows must opt in deliberately instead of inheriting dispatch.
+use crate::MAIN_WINDOW_LABEL;
+
 /// The single Rust-to-WebView menu channel. Payload is the menu item id.
 pub const MENU_COMMAND_EVENT: &str = "menu://command";
-
-/// Menu events target only the main window; future auxiliary windows must
-/// opt in deliberately instead of inheriting menu dispatch.
-const MAIN_WINDOW_LABEL: &str = "main";
 
 /// Build the full menu bar. Passed to `tauri::Builder::menu`.
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {

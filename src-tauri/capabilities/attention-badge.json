@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "attention-badge",
+  "description": "Lets the main window report the needs-you session count for the Dock badge. One validated count in, nothing out; the app icon badge is the only effect.",
+  "windows": ["main"],
+  "permissions": ["allow-set-attention-badge"]
+}

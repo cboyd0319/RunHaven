@@ -1,13 +1,17 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 
 import { useNavigation } from "../app/useNavigation"
+import { persistLastDestination } from "../app/uiStatePersistence"
 import type {
   ManagedSessionList,
   ManagedSessionSummary,
 } from "../commands/runhaven"
 
+import { installLocalStorageStub } from "./local-storage"
 import { act, renderHook } from "./render-hook"
+
+installLocalStorageStub()
 
 function session(
   id: string,
@@ -49,6 +53,10 @@ function list(...sessions: ManagedSessionSummary[]): ManagedSessionList {
 }
 
 describe("useNavigation", () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
   it("starts on Home and navigates to destinations and sessions", async () => {
     const hook = await renderHook(useNavigation, list(session("alpha")))
     expect(hook.result.current.navigation).toEqual({ kind: "home" })
@@ -130,5 +138,66 @@ describe("useNavigation", () => {
     await hook.rerender(list())
     expect(hook.result.current.navigation).toEqual({ kind: "home" })
     expect(hook.result.current.selectedSessionIdRef.current).toBeNull()
+  })
+
+  it("restores a persisted system destination immediately", async () => {
+    persistLastDestination({ kind: "maintenance" })
+    const hook = await renderHook(useNavigation, list())
+    expect(hook.result.current.navigation).toEqual({ kind: "maintenance" })
+  })
+
+  it("restores a persisted session only after the backend confirms it", async () => {
+    persistLastDestination({ kind: "session", id: "alpha" })
+    const hook = await renderHook(useNavigation, list(session("alpha")))
+    // Sessions are external truth: no navigation before reconciliation.
+    expect(hook.result.current.navigation).toEqual({ kind: "home" })
+
+    await act(async () => {
+      hook.result.current.restoreNavigation([session("alpha")])
+    })
+    expect(hook.result.current.navigation).toEqual({
+      kind: "session",
+      id: "alpha",
+    })
+    expect(hook.result.current.selectedSessionIdRef.current).toBe("alpha")
+  })
+
+  it("stays on Home when the persisted session no longer exists", async () => {
+    persistLastDestination({ kind: "session", id: "gone" })
+    const hook = await renderHook(useNavigation, list(session("other")))
+
+    await act(async () => {
+      hook.result.current.restoreNavigation([session("other")])
+    })
+    expect(hook.result.current.navigation).toEqual({ kind: "home" })
+    // The dead id is not retried on the next relaunch.
+    const remounted = await renderHook(useNavigation, list(session("other")))
+    await act(async () => {
+      remounted.result.current.restoreNavigation([session("other")])
+    })
+    expect(remounted.result.current.navigation).toEqual({ kind: "home" })
+  })
+
+  it("lets manual navigation win over a pending session restore", async () => {
+    persistLastDestination({ kind: "session", id: "alpha" })
+    const hook = await renderHook(useNavigation, list(session("alpha")))
+
+    await act(async () => {
+      hook.result.current.navigate({ kind: "agents" })
+    })
+    await act(async () => {
+      hook.result.current.restoreNavigation([session("alpha")])
+    })
+    expect(hook.result.current.navigation).toEqual({ kind: "agents" })
+  })
+
+  it("persists the last destination as the user navigates", async () => {
+    const hook = await renderHook(useNavigation, list(session("alpha")))
+    await act(async () => {
+      hook.result.current.selectSession("alpha")
+    })
+    expect(
+      JSON.parse(window.localStorage.getItem("runhaven.lastDestination") ?? ""),
+    ).toEqual({ kind: "session", id: "alpha" })
   })
 })

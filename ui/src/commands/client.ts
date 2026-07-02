@@ -404,6 +404,12 @@ export async function getWhyWorkspace(
   );
 }
 
+export async function setAttentionBadge(count: number): Promise<void> {
+  // Dock badge only: the count of sessions needing you. The browser preview
+  // has no Dock, so the fallback is a no-op.
+  return call("set_attention_badge", { request: { count } }, () => undefined);
+}
+
 export async function chooseProjectFolder(): Promise<string | null> {
   if (!hasTauriRuntime()) {
     return null;

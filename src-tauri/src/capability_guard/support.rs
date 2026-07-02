@@ -51,6 +51,7 @@ pub(super) const MAIN_READ_FORBIDDEN_PERMISSIONS: &[&str] = &[
     "allow-rebuild-agent-image",
     "allow-prune-managed-networks",
     "allow-start-agent-sign-in",
+    "allow-set-attention-badge",
 ];
 pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-get-log-snapshot", "get_log_snapshot"),
@@ -85,6 +86,8 @@ pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-rebuild-agent-image", "rebuild_agent_image"),
     ("allow-prune-managed-networks", "prune_managed_networks"),
 ];
+
+pub(super) const ATTENTION_BADGE_PERMISSION: &str = "allow-set-attention-badge";
 
 pub(super) fn manifest_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))

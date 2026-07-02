@@ -6,7 +6,7 @@ use std::fs;
 use std::path::Path;
 
 use super::support::{
-    MAIN_READ_FORBIDDEN_PERMISSIONS, RUN_CONTROL_PERMISSIONS,
+    ATTENTION_BADGE_PERMISSION, MAIN_READ_FORBIDDEN_PERMISSIONS, RUN_CONTROL_PERMISSIONS,
     assert_generated_permission_allows_only, assert_lacks_forbidden_host_markers,
     assert_same_permission_set, capability_permissions, manifest_dir, normalize, read_text,
 };
@@ -92,6 +92,36 @@ fn menu_events_capability_stays_listen_only() {
             .iter()
             .any(|permission| permission.contains("emit")),
         "menu-events must never grant event emission to the WebView"
+    );
+}
+
+#[test]
+fn attention_badge_capability_stays_narrow() {
+    // The Dock badge command is benign UI state, but it is still a mutation
+    // the WebView can trigger, so it lives in its own one-permission
+    // capability instead of widening main-read (read-only) or run-control
+    // (session-sensitive).
+    let permissions = capability_permissions("attention-badge.json");
+    assert_same_permission_set(
+        "attention-badge",
+        &permissions,
+        &[ATTENTION_BADGE_PERMISSION],
+    );
+    assert_generated_permission_allows_only("set_attention_badge");
+
+    let main_read = capability_permissions("main-read.json");
+    assert!(
+        !main_read
+            .iter()
+            .any(|permission| permission == ATTENTION_BADGE_PERMISSION),
+        "main-read must stay read-only and cannot grant the Dock badge command"
+    );
+    let run_control = capability_permissions("run-control.json");
+    assert!(
+        !run_control
+            .iter()
+            .any(|permission| permission == ATTENTION_BADGE_PERMISSION),
+        "run-control must not own the isolated Dock badge command"
     );
 }
 

@@ -13,13 +13,34 @@ pub(crate) mod session_input;
 mod session_output;
 mod tail_status;
 
+use tauri_plugin_window_state::StateFlags;
+
+/// The one main window. Every capability and window lookup targets this
+/// label; future auxiliary windows must opt in deliberately.
+pub(crate) const MAIN_WINDOW_LABEL: &str = "main";
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        // Frame persistence only: size, position, and maximized state restore
+        // on relaunch. Fullscreen and visibility are excluded on purpose so
+        // entering full screen stays a per-launch choice through the standard
+        // controls (navigation spec section 7). The plugin exposes commands,
+        // but no capability grants them, so the WebView cannot save, restore,
+        // or read window state.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
+                .build(),
+        )
         // The menu bar is dispatch-only: items emit ids to the main window
         // WebView and never call runtime commands. See src/menu.rs.
         .menu(menu::build)
         .on_menu_event(menu::on_menu_event)
+        .setup(|app| {
+            commands::attention_badge::clear_badge_on_start(app.handle());
+            Ok(())
+        })
         .manage(session_input::SessionInputRegistry::default())
         .manage(session_output::SessionOutputRegistry::default())
         .manage(launch_status::LaunchStatusRegistry::default())
@@ -65,6 +86,7 @@ pub fn run() {
             commands::network::prune_managed_networks,
             commands::launch::plan_run,
             commands::launch::launch_run,
+            commands::attention_badge::set_attention_badge,
         ])
         .run(tauri::generate_context!())
         .expect("error while running RunHaven desktop app");

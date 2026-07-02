@@ -1,4 +1,5 @@
 mod agent_sign_in;
+mod attention;
 mod dashboard;
 mod diagnostics;
 mod diagnostics_why;
@@ -11,6 +12,7 @@ mod run_status;
 mod worktree;
 
 pub(crate) use agent_sign_in::*;
+pub(crate) use attention::*;
 pub(crate) use dashboard::*;
 pub(crate) use diagnostics::*;
 pub(crate) use diagnostics_why::*;

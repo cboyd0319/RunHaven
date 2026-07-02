@@ -134,6 +134,10 @@ sign-in, Not responding, or Ready to review. If the session you are viewing is
 removed, the app moves you to the nearest session, or Home when none are left.
 It never switches views on its own for any other reason.
 
+The app icon in your Dock shows the same signal as one number: how many
+sessions need you right now, and nothing else. The number goes down as you
+take care of each session, and the badge disappears when nothing needs you.
+
 ## Menu bar and keyboard shortcuts
 
 The app has a normal Mac menu bar: RunHaven, File, Edit, View, Session, Agent,
@@ -169,6 +173,15 @@ yet: **Settings...** (Cmd-,), **Filter Sessions** (Cmd-F), and the Help
 entries. They will turn on when those parts of the app ship. The Session
 menu's worktree actions (Merge, Keep, Recover, Discard) live in the finished
 session's review for now, and Open Recent arrives with a recent-projects list.
+
+## The app remembers your place
+
+When you reopen the app, it comes back the way you left it: the window keeps
+its size and position, the sidebar stays shown or hidden, and you land on the
+screen you were using. If you were viewing a session, the app first checks
+that the session still exists; if it is gone, you land on Home instead. Only
+the place is remembered, never anything sensitive: no drafts, no output, no
+paths, and no sign-in data are saved this way.
 
 ## Watch your sessions
 

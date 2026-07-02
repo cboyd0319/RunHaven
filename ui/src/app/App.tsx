@@ -4,16 +4,19 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppHeader } from "./AppHeader"
 import { AppMainContent } from "./AppMainContent"
 import { RunHavenSidebar } from "./RunHavenSidebar"
+import { sidebarDefaultOpen } from "./uiStatePersistence"
 import { useAppController } from "./useAppController"
+import { useAttentionBadge } from "./useAttentionBadge"
 import { useMenuEvents } from "./useMenuEvents"
 
 export default function App() {
   const app = useAppController()
   useMenuEvents(app)
+  useAttentionBadge(app.managedSessions.sessions)
 
   return (
     <TooltipProvider>
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={sidebarDefaultOpen()}>
         <RunHavenSidebar
           sessions={app.managedSessions.sessions}
           navigation={app.navigation}

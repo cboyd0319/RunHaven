@@ -23,6 +23,7 @@ mod access;
 mod active_marker;
 pub(crate) mod agent_sign_in;
 pub(crate) mod agent_sign_in_status;
+pub(crate) mod attention_badge;
 pub(crate) mod diagnostics;
 pub(crate) mod diagnostics_why;
 mod dialog;

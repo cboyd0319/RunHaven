@@ -347,55 +347,44 @@ Useful GUI design docs:
 
 Branch: `docs/native-gui-wireframe`.
 
-Navigation correction Wave A slice 1 (A1 of
-`docs/plans/native-gui-navigation-gap.md`) is implemented: the sidebar now
-follows the spec taxonomy (fixed Home row, Active/Finished lifecycle groups
-newest-first with hidden empty groups, fixed System group with Agents,
-Diagnostics, Maintenance destinations), session rows carry one prioritized
-symbol-in-dot attention badge (`sessionAttention.ts`: Failed > Needs sign-in >
-Not responding > Ready to review, always paired with status text), and the
-selection model is a navigation union (`navigation.ts`, `useNavigation.ts`)
-with the spec's removal fallback (adjacent row, else other group, else Home)
-replacing the old reset-to-wizard behavior. The bottom Diagnostics/Maintenance
-accordions are deleted; Agents/Diagnostics/Maintenance render as full views
-(`ui/src/app/views/`), image rebuild moved from Maintenance to Agents, and
-`AppMainContent.tsx` is now a thin router under the split gate.
+Navigation correction Wave A (slices A1-A6 of
+`docs/plans/native-gui-navigation-gap.md`) is complete; per-slice detail lives
+in the gap tracker and the `desktop-first-class-v1` evidence entries. In
+short: spec sidebar taxonomy with prioritized symbol-in-dot attention badges
+(`sessionAttention.ts`), the navigation union with the spec removal fallback
+(`navigation.ts`, `useNavigation.ts`), per-destination views under
+`ui/src/app/views/` behind a thin `AppMainContent.tsx` router, the launch
+wizard extracted into the modal New Run sheet (`LaunchSheet.tsx`,
+`useLaunchFlow.ts`; the Rust-owned native confirmation stays the mutation
+boundary), Home as the spec 3.1 destination replacing the `SetupCard`
+takeover, Agents with image readiness and the Claude copy button, Diagnostics
+with auto-loaded doctor detail, and the session view reordered behind
+`SessionAttentionBanner.tsx` with runtime detail demoted to Show details.
 
-Slice 2 (A2 plus A3) is implemented: the launch wizard moved out of Home into
-a modal New Run sheet (`LaunchSheet.tsx`, shadcn/Radix Dialog; the Rust-owned
-native confirmation stays the mutation boundary above it), opened by the one
-prominent `New run` button on Home. Cancel/Escape closes with no side effects:
-the request draft survives for the session, while the step, reviewed plan, and
-confirmed warnings reset on close. Launch state lives in the new
-`useLaunchFlow.ts` hook (plan/launch errors render inside the sheet), which
-shrank `useAppController.ts` and the `views/props.ts` bag. Home is now the
-spec 3.1 destination: setup health line or the single blocker with fix and
-Check again (the old full-screen `SetupCard` takeover is gone; sessions and
-System views stay reachable while blocked, and `New run` disables with a
-reason), agent readiness strip linking to Agents, Needs-you and recent
-finished lists, first-run note, and the run-started notice or failed-launch
-fallback. The worktree toggle moved out of Advanced options to the Project
-step top level. On an accepted launch the sheet closes and the app selects the
-new session.
-
-Slice 3 (A4 plus A5 plus A6) is implemented, completing Wave A. Agents: each
-row now shows per-agent image readiness (read-only `get_image_status` on
-entry, same `ImageReadiness` rendering as the sheet), the Claude terminal
-sign-in gained a clipboard Copy button with a copied confirmation
-(`AgentSignIn.tsx`), and the view has an outline Check again action (rebuild
-stays outline; no prominent action on Agents). Diagnostics: new
-`views/DiagnosticsView.tsx` loads trust data on entry (read-only surface, no
-manual Load button), adds full doctor detail (every setup check with result
-and remedy), and one Check again re-reads setup plus trust checks; the
-secret-free assertions are kept. Session view: reordered per spec 3.3 with a
-new `SessionAttentionBanner.tsx` first (same priority helper as the sidebar
-badges; sign-in offers Open Agents inline, repair/review name the surface
-directly below so each mutation keeps one confirmation surface), Session
-controls near the top instead of the window bottom, then worktree review,
-overview, output, composer; runtime status and per-session diagnostics are
-demoted behind a Show details disclosure. Home no longer repeats a needs-you
-run in the recent finished list. Remaining spec gaps are Wave B (menu bar,
-persistence, settings, aux windows, Dock badge) per the gap tracker.
+Wave B is underway. B1 (commit `cb9d5a9`) added the native macOS menu bar and
+keyboard map: declarative menu tables in `src-tauri/src/menu/` emit item ids
+to the main window over a listen-only `menu-events` capability, and
+`useMenuEvents.ts` maps ids onto existing UI affordances so the menu adds no
+new mutation path. B2 and B5 are implemented in this working tree: window
+frame (size, position, maximized; not fullscreen) persists via the official
+`tauri-plugin-window-state` 2.4.1 (exact-pinned; no capability granted, so
+the WebView cannot touch window state), the last navigation destination
+persists in WebView localStorage sanitized to kind plus opaque session id
+(`uiStatePersistence.ts`) and is re-verified against the backend session list
+on relaunch before the app navigates (else Home, per spec section 4), the
+shadcn sidebar open/collapsed cookie is now read back at mount, the window
+default/min sizes were reconciled to the spec (1080x720, min 720x560), and
+the Dock badge shows the needs-you session count through a new narrow
+`set_attention_badge` command (own `attention-badge` capability, count
+validated and 0 clears; cleared on app start; frontend computes the count
+from `sessionAttention` and dedupes sends). This slice also fixed a latent
+fresh-clone build break: `src-tauri/build.rs` now lists every
+capability-granted command (16 were missing), since tauri-build generates the
+gitignored `permissions/autogenerated/` files only for listed commands;
+verified by wiping that directory and rebuilding clean. Live relaunch restore
+and Dock badge behavior still need a `tauri dev` smoke. Remaining spec gaps
+are B3 (settings window) and B4 (per-session aux windows, security review
+required) per the gap tracker.
 
 Active slice: bring CLI plus native-feeling desktop GUI to 100 percent ready
 for real external user testing. Start by keeping TUI work out of scope, then

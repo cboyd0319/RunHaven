@@ -24,6 +24,7 @@ serde.workspace = true
 serde_json.workspace = true
 tauri.workspace = true
 tauri-plugin-dialog.workspace = true
+tauri-plugin-window-state.workspace = true
 
 [dev-dependencies]
 runhaven-core = { workspace = true, features = ["test-support"] }

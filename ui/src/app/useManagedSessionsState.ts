@@ -22,6 +22,7 @@ export function useManagedSessionsState(lastLaunchRunId: string | null) {
     selectedSessionIdRef,
     navigate,
     selectSession,
+    restoreNavigation,
   } = useNavigation(managedSessions)
 
   useEffect(() => {
@@ -64,6 +65,9 @@ export function useManagedSessionsState(lastLaunchRunId: string | null) {
     setManagedSessions((current) =>
       sameManagedSessionList(current, nextSessions) ? current : nextSessions,
     )
+    // Backend truth is in: reconcile the relaunch-restored selection against
+    // it (no-op after the first successful load or any manual navigation).
+    restoreNavigation(nextSessions.sessions)
     return nextSessions
   }
 
