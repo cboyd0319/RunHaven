@@ -1,10 +1,11 @@
 //! Behavior tests for the terminal session boundary. The real host-PTY spawn is
 //! injected, so these cover id validation, unknown/inactive rejection, the
 //! concurrent cap, confirm-cancel, register/remove/write/resize/close, reader
-//! spawn failure, channel-death teardown, poisoned-registry teardown, and the
-//! validated attach argv. The no-persist/no-log source tripwire lives in
-//! `terminal::source_tripwire_tests`; the live PTY behavior itself is the
-//! slice-4 `tauri dev` smoke.
+//! spawn failure, poisoned-registry teardown, and the validated attach argv.
+//! The child kill/reap deadlock-safety (F1) is tested in
+//! `runhaven_core::runtime::terminal`, where the child lifecycle now lives. The
+//! no-persist/no-log source tripwire lives in `terminal::source_tripwire_tests`;
+//! the live PTY behavior itself is the slice-4 `tauri dev` smoke.
 
 use std::sync::{Arc, Mutex};
 
@@ -281,43 +282,6 @@ fn reader_spawn_failure_removes_the_entry_and_shuts_down_the_child() {
     assert!(
         registry.remove("run-reader-fail").is_none(),
         "a failed reader spawn must leave no registry entry"
-    );
-}
-
-#[test]
-fn channel_death_kills_the_child_without_deadlocking_a_concurrent_close() {
-    // F1: the reader's channel-death path must kill a still-live child (so a
-    // dead Channel tears the session down instead of orphaning `/bin/bash`), and
-    // an explicit close racing it must never block on a lock held across
-    // `wait()`. A real long-lived child stands in for the guest shell: `wait()`
-    // on it blocks forever unless something kills it, so completion proves the
-    // kill happened and the reap paths are lock-safe.
-    let stand_in = std::process::Command::new("/bin/sleep")
-        .arg("30")
-        .spawn()
-        .expect("spawn a stand-in child");
-    let child = Arc::new(Mutex::new(Some(stand_in)));
-
-    let reaper_child = Arc::clone(&child);
-    let closer_child = Arc::clone(&child);
-    let (done_tx, done_rx) = std::sync::mpsc::channel();
-    let coordinator = std::thread::spawn(move || {
-        // The reader's channel-death backstop and a concurrent explicit close.
-        let reaper = std::thread::spawn(move || super::pty::kill_and_reap_child(&reaper_child));
-        let closer = std::thread::spawn(move || super::pty::kill_child(&closer_child));
-        reaper.join().expect("reaper joins");
-        closer.join().expect("closer joins");
-        let _ = done_tx.send(());
-    });
-
-    done_rx
-        .recv_timeout(std::time::Duration::from_secs(10))
-        .expect("channel-death teardown and a concurrent close must not deadlock");
-    coordinator.join().expect("coordinator joins");
-
-    assert!(
-        child.lock().expect("child slot").is_none(),
-        "the child must be reaped exactly once and left removed"
     );
 }
 

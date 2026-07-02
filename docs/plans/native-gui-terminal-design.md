@@ -88,9 +88,16 @@ crates.io + docs.rs]
 Proposed pins (exact-pinned, transitive locked):
 
 - `pins.toml` `[rust]`: `pty-process = "0.5.3"`.
-- `src-tauri/Cargo.toml` (and the workspace dependency table): `pty-process =
-  "0.5.3"`. Only `src-tauri` uses it; `runhaven-core` stays PTY-free so the
-  desktop PTY boundary lives in the Tauri crate.
+- `crates/runhaven-core/Cargo.toml` (and the workspace dependency table):
+  `pty-process = "0.5.3"`. `runhaven-core` owns the dependency because the repo
+  structure guard requires every `container` subprocess to live in core, not in
+  the Tauri crate. This supersedes the earlier plan that put the dependency and
+  the PTY spawn in `src-tauri` and kept core "PTY-free": the structure-boundary
+  rule (`scripts/check-repo-structure.sh` fails on `Command::new("container")`
+  under `src-tauri/src`) takes precedence. The host-PTY allocation, the
+  `container exec` spawn, and the child lifecycle now live in
+  `runhaven-core::runtime::terminal` (`open_gui_attach_pty` -> `GuiPtySession`);
+  the Tauri crate keeps only the `Channel` reader thread and the registry.
 - `Cargo.lock` records `rustix` and its tree; `runhaven-check-pins` gate applies.
 
 ## 2. Frontend terminal
@@ -223,8 +230,8 @@ the Mac) and are protective features. The "does not filter, read, store, or log"
 statement is scoped strictly to the live terminal stream, never to the app.
 
 On-screen copy (one crisp line, refine against final UI): "This is a live
-terminal inside the sandbox. RunHaven does not filter, read, store, or log it —
-it just shows what the sandbox prints. So anything here, including passwords or
+terminal inside the sandbox. RunHaven does not filter, read, store, or log it.
+It just shows what the sandbox prints. So anything here, including passwords or
 codes, is visible on this screen." Shown prominently before/at terminal open;
 the attach confirmation dialog states the same no-filter/no-store facts.
 
@@ -302,11 +309,14 @@ windows (`session-*`) MUST NOT receive it — they are read-only by design. [J]
 Dependency-ordered. Each slice ships its docs in the same pass.
 
 1. Rust host-PTY seam + registry + commands + capability. [L] Add `pty-process`
-   pin; `TerminalSessionRegistry`; the four commands; `terminal.json`;
+   pin; the core `open_gui_attach_pty` -> `GuiPtySession` spawn in
+   `runhaven-core::runtime::terminal` (host PTY, `container exec` spawn, child
+   kill/reap); `TerminalSessionRegistry`; the four commands; `terminal.json`;
    `capability_guard` pins (`TERMINAL_PERMISSIONS`, main-only, monitor/main-read
    exclusion). Changes: `tauri.conf.json` capability list, capability_guard
-   tests, `pins.toml`, `src-tauri/Cargo.toml`. Adversarial review gate A: new
-   interactive trust boundary before any frontend wiring.
+   tests, `pins.toml`, `crates/runhaven-core/Cargo.toml` (owns `pty-process`).
+   Adversarial review gate A: new interactive trust boundary before any frontend
+   wiring.
 2. Frontend xterm + Channel bridge + fit/resize + the on-screen disclosure line
    and the attach confirmation copy. [M] Prominent disclosure rendered
    before/at terminal open (this is its own review checklist item).

@@ -1,126 +1,70 @@
-//! The host-PTY spawn and output reader for a terminal session (terminal design
+//! The Tauri-side output reader for a terminal session (terminal design
 //! sections 1, 3, 5).
 //!
-//! Why a host PTY: Apple `container exec -i -t` puts the client's own stdin into
-//! raw mode and reads `TIOCGWINSZ` from its controlling terminal before creating
-//! the guest process. A GUI child with piped/null stdio has no controlling
-//! terminal, so that step throws `ENOTTY` and no guest process is created. We
-//! therefore allocate a host PTY, spawn `container exec` through it (giving the
-//! child a controlling terminal), read/write the master, and set the master
-//! winsize on resize (which the kernel turns into `SIGWINCH` for the guest).
+//! The host-PTY allocation, the `container exec` spawn, and the child lifecycle
+//! live in `runhaven-core` (`runtime::terminal::GuiPtySession`) so all container
+//! subprocess behavior is centralized there, as the repo structure guard
+//! requires. This module keeps only the Tauri-layer glue: it wraps the core
+//! session in a [`TerminalHandle`] for the registry and runs the reader thread
+//! that forwards master output to the Tauri [`Channel`].
 //!
 //! No-persist invariant: [`stream_pty_output`] forwards each chunk to the Tauri
 //! [`Channel`] and returns to reading. It never writes the output registry, run
 //! records, a log, or any file. The `terminal::source_tripwire_tests` source
 //! tripwire enforces this.
 
-use std::io::{Read, Write};
-use std::process::Child;
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::Arc;
 use std::thread;
 
-use pty_process::Size;
-use pty_process::blocking::{Command, Pty};
 use runhaven_core::runtime::active::GuiAttachPlan;
+use runhaven_core::runtime::terminal::{GuiPtySession, open_gui_attach_pty};
 use tauri::ipc::Channel;
 
 use super::{
     ReaderStart, SpawnedTerminal, TerminalHandle, TerminalMessage, TerminalSessionRegistry,
 };
 
-/// Initial PTY size before the frontend's first resize, so the guest shell has a
-/// sane geometry immediately. Overwritten by `resize_terminal`.
-const INITIAL_ROWS: u16 = 24;
-const INITIAL_COLS: u16 = 80;
-
 /// Bounded read window for the master, matching the existing runners' 8 KB
 /// chunks so a busy stream cannot grow an unbounded buffer in the reader.
 const READ_CHUNK_BYTES: usize = 8 * 1024;
 
-/// A live host-PTY terminal: the master (`pty`) drives input/resize and the
-/// `container exec` child is held so it can be killed on close. Both are shared
-/// with the reader thread through `Arc`.
+/// A live terminal handle. Input, resize, and shutdown delegate to the core PTY
+/// session; the registry holds this while the reader thread holds a clone of the
+/// same session (both act on one shared master and child slot).
 struct PtyTerminal {
-    pty: Arc<Pty>,
-    child: Arc<Mutex<Option<Child>>>,
+    session: GuiPtySession,
 }
 
 impl TerminalHandle for PtyTerminal {
     fn write_input(&self, data: &[u8]) -> Result<usize, String> {
-        // `&Pty` implements `Write`, so a shared reference writes the master
-        // without a mutable handle; the reader thread reads it concurrently,
-        // which is sound because each is a separate syscall on the same fd.
-        let mut writer: &Pty = &self.pty;
-        writer
-            .write_all(data)
-            .map_err(|error| format!("could not send input to the terminal: {error}"))?;
-        writer
-            .flush()
-            .map_err(|error| format!("could not send input to the terminal: {error}"))?;
-        Ok(data.len())
+        self.session.write_input(data)
     }
 
     fn resize(&self, cols: u16, rows: u16) -> Result<(), String> {
-        // `Size::new(row, col)`: rows first. `resize` takes `&self`.
-        self.pty
-            .resize(Size::new(rows, cols))
-            .map_err(|error| format!("could not resize the terminal: {error}"))
+        self.session.resize(cols, rows)
     }
 
     fn shutdown(&self) {
-        kill_child(&self.child);
+        self.session.shutdown();
     }
 }
 
-/// Take the `Child` out of the shared slot under the lock, then drop the guard
-/// before returning. No caller ever holds the child mutex across a blocking
-/// `wait()`/`kill()`, so an explicit close ([`kill_child`]) can never deadlock
-/// against the reader's teardown ([`reap_child`]/[`kill_and_reap_child`]).
-/// A poisoned lock is recovered rather than skipped so a child is never
-/// orphaned. `take()` also makes ownership single-shot: whichever path wins the
-/// race gets the `Child`; the loser gets `None`.
-fn take_child(child: &Arc<Mutex<Option<Child>>>) -> Option<Child> {
-    child.lock().unwrap_or_else(PoisonError::into_inner).take()
-}
-
-/// Explicit-close teardown: kill the child and reap it so no zombie is left.
-/// Used by [`PtyTerminal::shutdown`] (close command, `close_all`, and the
-/// reader's channel-death backstop).
-pub(super) fn kill_child(child: &Arc<Mutex<Option<Child>>>) {
-    if let Some(mut child) = take_child(child) {
-        let _ = child.kill();
-        let _ = child.wait();
-    }
-}
-
-/// Allocate a host PTY, spawn the validated `container exec` through it so the
-/// child gets a controlling terminal, and return the control handle plus a
-/// one-shot that starts the output reader. `plan.args` is already validated by
-/// [`gui_attach_plan`](runhaven_core::runtime::active::gui_attach_plan); this
-/// function adds no arguments and passes an exact argument list (never a shell
-/// string) to `container`.
+/// Allocate the host PTY and spawn the validated `container exec` in core, then
+/// return the control handle plus a one-shot that starts the output reader.
+/// `plan` is already validated by
+/// [`gui_attach_plan`](runhaven_core::runtime::active::gui_attach_plan); core
+/// adds no arguments and passes an exact argument list to `container`.
 pub(super) fn spawn_pty_terminal(
     plan: &GuiAttachPlan,
     channel: Channel<TerminalMessage>,
 ) -> Result<SpawnedTerminal, String> {
-    let (pty, pts) = pty_process::blocking::open()
-        .map_err(|error| format!("could not open a terminal: {error}"))?;
-    pty.resize(Size::new(INITIAL_ROWS, INITIAL_COLS))
-        .map_err(|error| format!("could not size the terminal: {error}"))?;
-    let child = Command::new("container")
-        .args(&plan.args)
-        .spawn(pts)
-        .map_err(|error| format!("could not start the terminal: {error}"))?;
+    let session = open_gui_attach_pty(plan).map_err(|error| error.to_string())?;
 
-    let pty = Arc::new(pty);
-    let child = Arc::new(Mutex::new(Some(child)));
     let handle: Arc<dyn TerminalHandle> = Arc::new(PtyTerminal {
-        pty: Arc::clone(&pty),
-        child: Arc::clone(&child),
+        session: session.clone(),
     });
 
-    let reader_pty = Arc::clone(&pty);
-    let reader_child = Arc::clone(&child);
+    let reader_session = session;
     // Returns `Err` when the reader thread cannot be spawned. A failed spawn
     // means no output/EOF path would ever run, so the caller must not leave the
     // session registered and cap-consuming; `register_and_stream` removes the
@@ -131,7 +75,7 @@ pub(super) fn spawn_pty_terminal(
         thread::Builder::new()
             .name(thread_name)
             .spawn(move || {
-                stream_pty_output(reader_pty, reader_child, channel, registry, session_id);
+                stream_pty_output(reader_session, channel, registry, session_id);
             })
             .map(|_| ())
             .map_err(|error| format!("could not start the terminal: {error}"))
@@ -153,22 +97,20 @@ pub(super) fn spawn_pty_terminal(
 /// the WebView is gone (the view unmounted/navigated without calling
 /// `close_terminal_session`, or the window is being destroyed). The child is
 /// still live in that case, so a bare `wait()` would block this reader thread
-/// forever; instead the child is killed. This is the backstop for the frontend
-/// contract (terminal design section 9): the view is expected to call
-/// `close_terminal_session` on unmount/navigation, and this kill guarantees no
-/// orphaned `container exec` child even when it does not.
+/// forever; instead the child is killed through the core session. This is the
+/// backstop for the frontend contract (terminal design section 9): the view is
+/// expected to call `close_terminal_session` on unmount/navigation, and this
+/// kill guarantees no orphaned `container exec` child even when it does not.
 fn stream_pty_output(
-    pty: Arc<Pty>,
-    child: Arc<Mutex<Option<Child>>>,
+    session: GuiPtySession,
     channel: Channel<TerminalMessage>,
     registry: TerminalSessionRegistry,
     session_id: String,
 ) {
-    let mut reader: &Pty = &pty;
     let mut buffer = [0_u8; READ_CHUNK_BYTES];
     let mut channel_alive = true;
     loop {
-        match reader.read(&mut buffer) {
+        match session.read(&mut buffer) {
             Ok(0) => break,
             Ok(read) => {
                 let message = TerminalMessage::Output {
@@ -189,41 +131,10 @@ fn stream_pty_output(
     // On a clean EOF/EIO the child has already exited, so just reap it. On
     // channel death the child is still running, so kill it first.
     let code = if channel_alive {
-        reap_child(&child)
+        session.reap_after_eof()
     } else {
-        kill_and_reap_child(&child)
+        session.kill_and_reap()
     };
     let _ = channel.send(TerminalMessage::Exit { code });
     let _ = registry.remove(&session_id);
-}
-
-/// Reap an already-exited child for its exit code. Returns `1` if another path
-/// (an explicit close) already took and waited on the child. Never holds the
-/// child mutex across `wait()` (see [`take_child`]).
-fn reap_child(child: &Arc<Mutex<Option<Child>>>) -> i32 {
-    match take_child(child) {
-        Some(mut child) => child
-            .wait()
-            .ok()
-            .and_then(|status| status.code())
-            .unwrap_or(1),
-        None => 1,
-    }
-}
-
-/// Kill a still-live child (channel-death backstop) and reap it. Returns `1` if
-/// another path already took the child. Never holds the child mutex across
-/// `kill()`/`wait()` (see [`take_child`]).
-pub(super) fn kill_and_reap_child(child: &Arc<Mutex<Option<Child>>>) -> i32 {
-    match take_child(child) {
-        Some(mut child) => {
-            let _ = child.kill();
-            child
-                .wait()
-                .ok()
-                .and_then(|status| status.code())
-                .unwrap_or(1)
-        }
-        None => 1,
-    }
 }

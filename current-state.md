@@ -374,11 +374,9 @@ tracker's B3 section). Menu, relaunch-restore, badge, and Settings behavior
 share one still-pending `tauri dev` smoke.
 
 Terminal slice 1 (Rust host-PTY backend,
-`docs/plans/native-gui-terminal-design.md`) is complete: `pty-process` 0.5.3
-pin; core `gui_attach_plan` reusing `runs_attach` validation (non-root `agent`,
-always `--tty`); a fail-closed `TerminalSessionRegistry` (cap 2), four commands
+`docs/plans/native-gui-terminal-design.md`) is complete: `pty-process` 0.5.3 owned by `runhaven-core`, whose `runtime::terminal` (`open_gui_attach_pty` -> `GuiPtySession`) now owns the host-PTY `container exec` spawn, PTY I/O, and child kill/reap (F1 deadlock test in core), so no `Command::new("container")` sits in `src-tauri` and the structure guard passes; core `gui_attach_plan` still reuses `runs_attach` validation (non-root `agent`, always `--tty`); `src-tauri` keeps the fail-closed `TerminalSessionRegistry` (cap 2), four commands
 and a `TerminalMessage` Channel type; a main-only `terminal` capability with
-`capability_guard` pins, a no-persist tripwire, teardown that kills live PTYs. Frontend xterm and the `tauri dev` PTY/SIGWINCH smoke follow.
+`capability_guard` pins, a no-persist tripwire over the reader, teardown that kills live PTYs. Frontend xterm and the `tauri dev` PTY/SIGWINCH smoke follow.
 
 B4 (per-session auxiliary windows) is implemented in this working tree as
 strictly read-only monitor windows; it awaits its adversarial security

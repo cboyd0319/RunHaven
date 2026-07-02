@@ -8778,6 +8778,7 @@ dependencies = [
  "anyhow",
  "idna",
  "ipnet",
+ "pty-process",
  "regex",
  "serde",
  "serde_json",
@@ -8794,7 +8795,6 @@ name = "runhaven-tauri"
 version = "0.5.0"
 dependencies = [
  "anyhow",
- "pty-process",
  "runhaven-core",
  "serde",
  "serde_json",
