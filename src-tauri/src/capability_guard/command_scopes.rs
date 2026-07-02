@@ -330,6 +330,7 @@ fn session_monitor_capability_grants_exactly_the_monitor_reads() {
             "allow-get-managed-session-log-snapshot",
             "allow-get-log-snapshot",
             "allow-open-terminal-session",
+            "allow-open-claude-sign-in-terminal",
             "allow-write-terminal-input",
             "allow-resize-terminal",
             "allow-close-terminal-session",

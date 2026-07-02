@@ -70,6 +70,7 @@ vi.mock("@/commands/runhaven", async (importActual) => ({
   ...(await importActual<typeof import("../commands/runhaven")>()),
   hasTauriRuntime: vi.fn(() => true),
   openTerminalSession: vi.fn(() => Promise.resolve()),
+  openClaudeSignInTerminal: vi.fn(() => Promise.resolve()),
   writeTerminalInput: vi.fn(() => Promise.resolve()),
   resizeTerminal: vi.fn(() => Promise.resolve()),
   closeTerminalSession: vi.fn(() => Promise.resolve()),
@@ -83,6 +84,7 @@ const DISCLOSURE =
 
 const hasTauriRuntime = vi.mocked(runhaven.hasTauriRuntime)
 const openTerminalSession = vi.mocked(runhaven.openTerminalSession)
+const openClaudeSignInTerminal = vi.mocked(runhaven.openClaudeSignInTerminal)
 const closeTerminalSession = vi.mocked(runhaven.closeTerminalSession)
 const writeTerminalInput = vi.mocked(runhaven.writeTerminalInput)
 
@@ -91,6 +93,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   hasTauriRuntime.mockReturnValue(true)
   openTerminalSession.mockResolvedValue(undefined)
+  openClaudeSignInTerminal.mockResolvedValue(undefined)
   closeTerminalSession.mockResolvedValue(undefined)
   writeTerminalInput.mockResolvedValue(undefined)
 })
@@ -131,6 +134,46 @@ async function mountActiveTerminal(): Promise<{
     },
   }
 }
+
+describe("TerminalPanel Claude login mode", () => {
+  it("shows the desktop-only placeholder and never signs in during preview", () => {
+    hasTauriRuntime.mockReturnValue(false)
+    const html = renderToStaticMarkup(
+      <TerminalPanel login={{ sessionId: "loginabc" }} />,
+    )
+    expect(html).toContain(DISCLOSURE)
+    expect(html).toContain("The sign-in terminal needs the desktop app")
+    expect(html).not.toContain("Open sign-in terminal")
+    expect(openClaudeSignInTerminal).not.toHaveBeenCalled()
+  })
+
+  it("opens the Claude login command (not attach) under the desktop runtime", async () => {
+    const container = document.createElement("div")
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    await act(async () => {
+      root.render(
+        createElement(TerminalPanel, { login: { sessionId: "loginabc" } }),
+      )
+    })
+    const openButton = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Open sign-in terminal"),
+    )
+    expect(openButton).toBeDefined()
+    await act(async () => {
+      openButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    await act(async () => {})
+    expect(openClaudeSignInTerminal).toHaveBeenCalledTimes(1)
+    expect(openClaudeSignInTerminal.mock.calls[0][0]).toBe("loginabc")
+    // The login path must not fall through to the attach command.
+    expect(openTerminalSession).not.toHaveBeenCalled()
+    await act(async () => {
+      root.unmount()
+    })
+    container.remove()
+  })
+})
 
 describe("TerminalPanel disclosure", () => {
   it("always renders the exact no-filter/no-store disclosure in preview mode", () => {

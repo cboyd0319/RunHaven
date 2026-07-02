@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { CheckCircle2, CircleAlert, Copy, LogIn } from "lucide-react"
 
 import type { AgentProfile } from "@/commands/runhaven"
@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 
 import { agentLabel } from "./sessionIdentity"
+import { TerminalPanel } from "./TerminalPanel"
 import { useAgentSignIn } from "./useMaintenance"
 
 // Per-agent sign-in affordance shown next to the read-only auth summary.
@@ -17,9 +18,9 @@ import { useAgentSignIn } from "./useMaintenance"
 // shows as signed in. RunHaven never sees or stores the token.
 //
 // Claude signs in from a terminal (its in-sandbox sign-in needs a code pasted
-// back into the terminal, which the app does not host), so for claude this shows
-// a clear terminal instruction instead of a button. Agents with no sign-in at
-// all (like shell) show nothing.
+// back), so for claude this opens an in-app sign-in terminal (path A) where the
+// pasted code round-trips, with running it in your own terminal kept as a
+// fallback. Agents with no sign-in at all (like shell) show nothing.
 export function AgentSignIn({
   agent,
   onSignedIn,
@@ -34,21 +35,7 @@ export function AgentSignIn({
 
   if (!agent.supportsInAppSignIn) {
     if (agent.name === "claude") {
-      return (
-        <Alert>
-          <LogIn />
-          <AlertTitle>Sign in to Claude from a terminal</AlertTitle>
-          <AlertDescription className="flex flex-col items-start gap-2">
-            <span>
-              Claude sign-in needs a code pasted in a terminal, so it does not
-              run in the app. Open your terminal and run{" "}
-              <code className="font-mono">{CLAUDE_LOGIN_COMMAND}</code>, then
-              come back and refresh.
-            </span>
-            <CopyCommandButton command={CLAUDE_LOGIN_COMMAND} />
-          </AlertDescription>
-        </Alert>
-      )
+      return <ClaudeSignIn />
     }
     return null
   }
@@ -104,6 +91,39 @@ export function AgentSignIn({
 }
 
 const CLAUDE_LOGIN_COMMAND = "runhaven login claude"
+
+// Claude in-app sign-in (terminal path A): an in-app terminal running the
+// in-sandbox `claude auth login`, where the printed link and the pasted-back
+// code round-trip in the app. Running it in your own terminal stays as a
+// fallback. The terminal only invokes under the desktop runtime; the browser
+// preview shows the panel's own placeholder and never signs in.
+function ClaudeSignIn() {
+  // A stable per-mount login id: the registry key and run label. The target is
+  // fixed to Claude in Rust, so this id never steers what runs.
+  const loginId = useRef(
+    (globalThis.crypto?.randomUUID?.() ?? `claude-login-${Date.now()}`).replaceAll(
+      "-",
+      "",
+    ),
+  ).current
+  return (
+    <div className="flex flex-col gap-3">
+      <TerminalPanel login={{ sessionId: loginId }} />
+      <Alert>
+        <LogIn />
+        <AlertTitle>Prefer your own terminal?</AlertTitle>
+        <AlertDescription className="flex flex-col items-start gap-2">
+          <span>
+            You can also sign in from your own terminal. Run{" "}
+            <code className="font-mono">{CLAUDE_LOGIN_COMMAND}</code>, then come
+            back and refresh.
+          </span>
+          <CopyCommandButton command={CLAUDE_LOGIN_COMMAND} />
+        </AlertDescription>
+      </Alert>
+    </div>
+  )
+}
 
 // Copies the terminal sign-in command with the browser clipboard API. The
 // button label doubles as the copied confirmation; if the WebView refuses

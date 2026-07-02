@@ -46,10 +46,11 @@ describe("AgentsView", () => {
     // Per-agent auth status uses the shared label vocabulary.
     expect(markup).toContain("API key broker")
     expect(markup).toContain("Needs sign-in")
-    // In-app sign-in for device-code agents; terminal instruction for Claude
-    // with a copy affordance for the exact command.
+    // In-app sign-in for device-code agents; the in-app Claude sign-in terminal
+    // (path A), with running it in your own terminal kept as a copy fallback.
     expect(markup).toContain("Sign in to Codex")
-    expect(markup).toContain("Sign in to Claude from a terminal")
+    expect(markup).toContain("Claude sign-in terminal")
+    expect(markup).toContain("Prefer your own terminal?")
     expect(markup).toContain("runhaven login claude")
     expect(markup).toContain("Copy command")
     expect(markup).toContain("Auth details")

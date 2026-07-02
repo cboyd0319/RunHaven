@@ -5,10 +5,12 @@ import "@xterm/xterm/css/xterm.css"
 import {
   closeTerminalSession,
   hasTauriRuntime,
+  openClaudeSignInTerminal,
   openTerminalSession,
   resizeTerminal,
   writeTerminalInput,
   type ManagedSessionSummary,
+  type TerminalMessage,
 } from "@/commands/runhaven"
 
 import { errorMessage } from "./types"
@@ -36,6 +38,50 @@ const SCROLLBACK_LINES = 1000
 
 type TerminalPhase = "idle" | "opening" | "live" | "ended" | "error"
 
+// The two panel modes share every mechanic (host PTY over a Channel, xterm,
+// close-on-unmount) and differ only in the open command, the fixed session key,
+// and the surrounding copy. `attach` types live inside a running session's
+// sandbox; `login` runs the in-app Claude sign-in terminal (path A).
+type TerminalConfig = {
+  sessionId: string
+  open: (
+    sessionId: string,
+    onMessage: (message: TerminalMessage) => void,
+  ) => Promise<void>
+  title: string
+  description: string
+  openLabel: string
+  previewText: string
+  connectedText: string
+}
+
+function attachConfig(session: ManagedSessionSummary): TerminalConfig {
+  return {
+    sessionId: session.id,
+    open: openTerminalSession,
+    title: "Terminal",
+    description: "Type live inside this session's sandbox.",
+    openLabel: "Open terminal",
+    previewText:
+      "Terminal needs the desktop app. Open RunHaven on your Mac to type live with this session.",
+    connectedText: "Connected. What you type goes straight to the sandbox.",
+  }
+}
+
+function loginConfig(sessionId: string): TerminalConfig {
+  return {
+    sessionId,
+    open: openClaudeSignInTerminal,
+    title: "Claude sign-in terminal",
+    description:
+      "Sign in to Claude here. RunHaven runs claude auth login in a sandbox, prints a link to open in your browser, and reads the code you paste back.",
+    openLabel: "Open sign-in terminal",
+    previewText:
+      "The sign-in terminal needs the desktop app. Open RunHaven on your Mac to sign in to Claude here.",
+    connectedText: "Connected. Open the printed link, approve, then paste the code here.",
+  }
+}
+
 function TerminalDisclosure() {
   return (
     <Alert variant="warning">
@@ -46,12 +92,18 @@ function TerminalDisclosure() {
   )
 }
 
-export function TerminalPanel({
-  session,
-}: {
-  session: ManagedSessionSummary
-}) {
-  const sessionId = session.id
+export type TerminalPanelProps =
+  | { session: ManagedSessionSummary; login?: undefined }
+  | { login: { sessionId: string }; session?: undefined }
+
+export function TerminalPanel(props: TerminalPanelProps) {
+  const config = props.session
+    ? attachConfig(props.session)
+    : loginConfig(props.login.sessionId)
+  const { sessionId } = config
+  // A stable module-function reference per mode, so the streaming effect can
+  // depend on it without re-running mid-session.
+  const open = props.session ? openTerminalSession : openClaudeSignInTerminal
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [active, setActive] = useState(false)
   const [phase, setPhase] = useState<TerminalPhase>("idle")
@@ -115,7 +167,7 @@ export function TerminalPanel({
         observer.observe(container)
       }
       try {
-        await openTerminalSession(sessionId, (message) => {
+        await open(sessionId, (message) => {
           if (disposed || !term) {
             return
           }
@@ -153,7 +205,7 @@ export function TerminalPanel({
       void closeTerminalSession(sessionId)
       term?.dispose()
     }
-  }, [active, sessionId])
+  }, [active, sessionId, open])
 
   function openTerminal() {
     setErrorText("")
@@ -171,23 +223,18 @@ export function TerminalPanel({
     <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
-          Terminal
+          {config.title}
         </CardTitle>
-        <CardDescription>
-          Type live inside this session's sandbox.
-        </CardDescription>
+        <CardDescription>{config.description}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <TerminalDisclosure />
         {!hasTauriRuntime() ? (
-          <p className="text-sm text-muted-foreground">
-            Terminal needs the desktop app. Open RunHaven on your Mac to type
-            live with this session.
-          </p>
+          <p className="text-sm text-muted-foreground">{config.previewText}</p>
         ) : !active ? (
           <div>
             <Button type="button" variant="outline" onClick={openTerminal}>
-              Open terminal
+              {config.openLabel}
             </Button>
           </div>
         ) : (
@@ -210,7 +257,7 @@ export function TerminalPanel({
                 Close terminal
               </Button>
               <span className="text-sm text-muted-foreground" aria-live="polite">
-                {terminalStatusText(phase)}
+                {terminalStatusText(phase, config.connectedText)}
               </span>
             </div>
           </div>
@@ -220,12 +267,12 @@ export function TerminalPanel({
   )
 }
 
-function terminalStatusText(phase: TerminalPhase): string {
+function terminalStatusText(phase: TerminalPhase, connectedText: string): string {
   switch (phase) {
     case "opening":
       return "Confirm the terminal in the dialog to start."
     case "live":
-      return "Connected. What you type goes straight to the sandbox."
+      return connectedText
     case "ended":
       return "This session ended."
     default:

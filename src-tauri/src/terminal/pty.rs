@@ -17,7 +17,7 @@ use std::sync::Arc;
 use std::thread;
 
 use runhaven_core::runtime::active::GuiAttachPlan;
-use runhaven_core::runtime::terminal::{GuiPtySession, open_gui_attach_pty};
+use runhaven_core::runtime::terminal::{GuiPtySession, open_gui_attach_pty, open_gui_login_pty};
 use tauri::ipc::Channel;
 
 use super::{
@@ -59,7 +59,31 @@ pub(super) fn spawn_pty_terminal(
     channel: Channel<TerminalMessage>,
 ) -> Result<SpawnedTerminal, String> {
     let session = open_gui_attach_pty(plan).map_err(|error| error.to_string())?;
+    Ok(spawned_from_session(session, channel))
+}
 
+/// Open a host-PTY-wrapped Claude **login** terminal in core and wire the same
+/// reader/handle glue as an attach. Core runs the real provider login (proxy-
+/// enforced egress) with the child's stdio on a host PTY so `claude auth login`
+/// can read the pasted code; the target is fixed to Claude in core, never taken
+/// from the WebView. On failure the core error is collapsed to a fixed message
+/// (it can name host paths) so the WebView keeps its terminal fallback text.
+pub(super) fn spawn_login_terminal(
+    login_id: &str,
+    channel: Channel<TerminalMessage>,
+) -> Result<SpawnedTerminal, String> {
+    let session = open_gui_login_pty("claude", login_id)
+        .map_err(|_| "RunHaven could not open the Claude sign-in terminal.".to_string())?;
+    Ok(spawned_from_session(session, channel))
+}
+
+/// Build the registry control handle and the output-reader one-shot for a live
+/// [`GuiPtySession`], shared by the attach and login open paths so both stream,
+/// reap, and tear down identically.
+fn spawned_from_session(
+    session: GuiPtySession,
+    channel: Channel<TerminalMessage>,
+) -> SpawnedTerminal {
     let handle: Arc<dyn TerminalHandle> = Arc::new(PtyTerminal {
         session: session.clone(),
     });
@@ -81,10 +105,10 @@ pub(super) fn spawn_pty_terminal(
             .map_err(|error| format!("could not start the terminal: {error}"))
     });
 
-    Ok(SpawnedTerminal {
+    SpawnedTerminal {
         handle,
         start_reader: Some(start_reader),
-    })
+    }
 }
 
 /// Read the PTY master in bounded chunks and relay each chunk to the frontend

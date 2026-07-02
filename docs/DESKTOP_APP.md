@@ -57,15 +57,27 @@ button.
   confirm the box the app pops up, then open the link it shows and enter the
   short code in your browser. The app waits and updates when you are done. It
   shows the link and code, never your token or key.
-- Claude signs in from a terminal, because its sign-in needs a code pasted back
-  in. The app shows this and the exact command to run:
+- Claude now signs in right in the app too, from a sign-in terminal. Its sign-in
+  needs a code pasted back, which a plain button cannot do, so the Claude card
+  opens a small terminal instead. Click **Open sign-in terminal**, confirm the
+  box the app pops up, and the app runs `claude auth login` inside a sandbox. It
+  prints a link: open it in your browser, approve, then paste the code it gives
+  you back into that terminal. When you are done, come back and refresh. The
+  same standing warning as any in-app terminal applies (see "Open a terminal"):
+  what you type and what it prints, including the code, are shown on screen and
+  are not filtered or saved. While the sign-in terminal is open it holds
+  Claude's saved state, so you cannot start a Claude run until you close it.
+  Finish signing in, then close the terminal.
+- Prefer your own terminal? The Claude card still offers the exact command as a
+  fallback:
 
   ```bash
   runhaven login claude
   ```
 
-  A **Copy command** button copies it for you and confirms with "Copied". Run
-  it in your terminal, then come back and refresh.
+  A **Copy command** button copies it and confirms with "Copied". Run it in your
+  terminal, then come back and refresh. If the sign-in terminal cannot open (the
+  container tool is not ready), the app keeps this fallback text.
 
 Either way, the login happens inside the sandbox and stays there: RunHaven never
 holds any agent token, and the app never shows or stores your token or key. You
@@ -314,6 +326,12 @@ and keep locally for history.
 Close the terminal with **Close terminal**, or just leave the session or reload
 the app; either way the app shuts down the shell in the sandbox.
 
+The Claude sign-in terminal on the Agents view is the same kind of in-app
+terminal. It runs `claude auth login` in a fresh sandbox so the sign-in link and
+the code you paste back stay in the app. It keeps the same non-root sandbox, the
+same provider-only network, and the same standing warning above; the code you
+paste is visible on screen and is not saved.
+
 ## Review a worktree run
 
 When a run that used its own worktree has finished, the app shows a review for
@@ -385,8 +403,6 @@ guess.
 For now, do these tasks with the `runhaven` command line
 ([docs/USAGE.md](USAGE.md)):
 
-- Signing in to Claude (it needs a code pasted back in a terminal). Codex,
-  Copilot, and Antigravity now sign in from the app.
 - Resetting or pruning saved state.
 
 These will move into the app over time. Until then, the app stays focused on the

@@ -15,6 +15,10 @@ use serde_json::json;
 
 use super::*;
 
+// The Claude sign-in terminal (login path) tests live in their own file so this
+// attach-focused module stays under its size ceiling; they reuse the fakes here.
+mod login;
+
 #[derive(Default)]
 struct FakeCalls {
     writes: Vec<Vec<u8>>,

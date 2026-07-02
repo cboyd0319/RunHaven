@@ -25,6 +25,27 @@ export async function openTerminalSession(
   return call("open_terminal_session", { onEvent, sessionId }, () => undefined);
 }
 
+// Open a live Claude sign-in terminal (terminal path A). Rust runs the in-sandbox
+// `claude auth login` through a host PTY behind its own native no-filter/no-store
+// confirm, so the printed OAuth link and the pasted-back code round-trip in-app.
+// The target is fixed to Claude in Rust; sessionId is only the registry key, so
+// the WebView cannot steer what runs. Streaming, input, resize, and close reuse
+// the same commands as an attach. The browser preview returns without invoking.
+export async function openClaudeSignInTerminal(
+  sessionId: string,
+  onMessage: (message: TerminalMessage) => void
+): Promise<void> {
+  if (!hasTauriRuntime()) {
+    return;
+  }
+  const onEvent = new Channel<TerminalMessage>(onMessage);
+  return call(
+    "open_claude_sign_in_terminal",
+    { onEvent, sessionId },
+    () => undefined
+  );
+}
+
 export async function writeTerminalInput(
   sessionId: string,
   data: number[]

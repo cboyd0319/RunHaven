@@ -75,6 +75,22 @@ fn sandbox_login_command(agent: &str) -> Option<&'static [&'static str]> {
     }
 }
 
+/// Build the in-sandbox login run plan for the desktop **terminal** login path:
+/// a TTY-on plan (the host-PTY terminal is a real terminal, so paste-back works)
+/// with a caller-supplied run id. Unlike [`build_sandbox_login_plan`] (TTY off,
+/// for the captured-output device-code runner), this is the interactive
+/// paste-back path the app hosts in an xterm terminal, so Claude's
+/// `claude auth login` code can be pasted back in-app. It is still run through
+/// the normal provider launch path (proxy-enforced egress); only the stdio is a
+/// host PTY. Fails for an agent with no in-sandbox login command.
+pub fn build_sandbox_login_terminal_plan(agent: &str, run_id: &str) -> Result<AgentRunPlan> {
+    let login_args = sandbox_login_command(agent)
+        .ok_or_else(|| anyhow::anyhow!("{agent} has no in-sandbox login; nothing was started"))?;
+    let mut plan = build_sandbox_login_run_plan(agent, login_args, true)?;
+    plan.run_id = Some(run_id.to_string());
+    Ok(plan)
+}
+
 fn sandbox_login_guidance(agent: &str) -> &'static str {
     match agent {
         "claude" => {
@@ -254,6 +270,40 @@ mod tests {
         assert!(build_sandbox_login_plan("claude").is_ok());
         // An agent with no login command still fails closed.
         assert!(build_sandbox_login_plan("unknown").is_err());
+    }
+
+    #[test]
+    fn build_sandbox_login_terminal_plan_is_tty_non_root_claude_login() {
+        let cache = tempfile::tempdir().expect("cache");
+        let _cache_home = crate::support::paths::override_cache_root_for_tests(cache.path());
+        let plan = build_sandbox_login_terminal_plan("claude", "login-seam")
+            .expect("claude terminal login plan");
+        // Runs `claude auth login` inside the sandbox, interactively, so the
+        // printed OAuth code can be pasted back in the host-PTY terminal.
+        assert!(plan.command.iter().any(|arg| arg == "claude"));
+        assert!(
+            plan.command
+                .windows(2)
+                .any(|pair| pair == ["auth", "login"])
+        );
+        // A real terminal: the interactive-plus-TTY flags the captured-output
+        // plan omits are present here.
+        assert!(plan.command.iter().any(|arg| arg == "--interactive"));
+        assert!(plan.command.iter().any(|arg| arg == "--tty"));
+        // Always the non-root agent user; never root.
+        let user = plan
+            .command
+            .windows(2)
+            .find(|pair| pair[0] == "--user")
+            .map(|pair| pair[1].as_str());
+        assert_eq!(user, Some("agent"));
+        assert!(!plan.command.iter().any(|arg| arg == "root"));
+        // No token or API-key broker is ever injected.
+        assert!(plan.api_key_broker_env.is_none());
+        // The caller's login id becomes the run id (the terminal session key).
+        assert_eq!(plan.run_id.as_deref(), Some("login-seam"));
+        // An agent with no in-sandbox login still fails closed.
+        assert!(build_sandbox_login_terminal_plan("unknown", "x").is_err());
     }
 
     #[test]

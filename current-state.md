@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-01 UTC
+Last updated: 2026-07-02 UTC
 
 ## Current Direction
 
@@ -218,11 +218,13 @@ Useful GUI design docs:
   non-device-code input, requires a Rust-owned native confirmation, then runs
   the tested core device-code login plan on a background thread through the
   `AgentCommandRunner` seam. Claude is deliberately not an in-app target because
-  its in-sandbox sign-in needs a code pasted back into the terminal, which the
-  app's captured-output runner cannot host; the GUI keeps claude out via an
-  explicit `agent == "claude"` check (core `supports_sandbox_login` is now true
-  for claude) and shows a clear instruction to run `runhaven login claude` in a
-  terminal. A read-only `get_agent_sign_in_status`
+  its in-sandbox sign-in needs a code pasted back into the terminal, which this
+  captured-output runner cannot host; the GUI keeps claude out of this device-code
+  path via an explicit `agent == "claude"` check (core `supports_sandbox_login`
+  is now true for claude). Claude sign-in instead runs in the in-app sign-in
+  terminal (Terminal slice 3, separate `open_claude_sign_in_terminal` command),
+  with `runhaven login claude` kept as a copy-command fallback. A read-only
+  `get_agent_sign_in_status`
   (main-read) returns sanitized progress (starting/needs_browser/succeeded/
   failed) plus a bounded, `redact_run_output`-scrubbed output tail, so the
   sign-in link and short-lived device code show while any leaked token or key is
@@ -278,70 +280,13 @@ Useful GUI design docs:
   shared UI contracts, runtime/provider helpers, CLI plan output, React GUI
   helpers, usage docs, release docs, and prior TUI checkpoint files. Current
   active work should not continue TUI splits.
-- Managed-session auth status is now truthful from run-owned proof instead of
-  static agent capability. The Rust read model distinguishes API key broker,
-  sign-in-needed, no-auth-needed, and unknown, and never lets a live session
-  claim broker auth just because its agent supports it. The active-run record
-  writer persists the broker env-var name (never a secret value), so live
-  brokered sessions prove API key broker instead of conservatively showing
-  sign-in-needed; finished brokered sessions prove it through the history
-  auth-broker channel. Both proof channels plus the shell no-auth-needed path
-  are covered by read-model tests, session-input readiness fixtures were moved to
-  the new trust model, and the managed-session UI-contract tests were split by
-  ownership into `session_cleanup.rs` to stay under the structure ceiling.
-- The GUI managed-session list now surfaces orphaned runs for recovery using the
-  authoritative container signal. `get_managed_sessions` reconciles each active
-  (running or starting) marker against Apple `container inspect` (the same check
-  marker repair uses); a marker whose container is proven gone is shown as "Not
-  responding" with a `recover` action via the pure core
-  `ManagedSessionListData::mark_stale_sessions`. This can never contradict repair
-  (identical signal), never false-flags a live session, is fail-safe (a missing
-  `container` CLI or transient error leaves the session untouched), and injects
-  the container check so tests stay hermetic. The pure list read model is
-  unchanged; the container check lives at the Tauri command layer, and input
-  stays fail-closed (only a `monitor` action accepts input). An earlier
-  `host_pid` liveness probe was rejected in review because a launcher-dead but
-  container-alive session would be mislabeled and dead-end against repair.
-- The desktop app now has an end-user guide, `docs/DESKTOP_APP.md`: what the app
-  does, how to open it, sign-in (still started from `runhaven login`), the
-  three-step run flow with plan and access review, watching multi-session status,
-  bounded output and input, orphaned-session recovery, run control, worktree
-  cleanup, diagnostics, and which tasks still need the CLI. README links it and
-  the desktop status now reads "Early preview". The CLI `login` help text was
-  corrected from "(currently: claude)" to list all supported agents (claude,
-  codex, copilot, antigravity), matching `docs/USAGE.md`.
-- The desktop app now shows read-only per-agent auth details (`auth explain`
-  parity). One shared core builder (`auth_explain_payload`) feeds both the CLI
-  `auth explain --json` and a new `get_auth_explain` Tauri command under the
-  read-only `main-read` capability. The command validates the agent and
-  `get_profile` enforces the known-agent allowlist; the typed
-  `AuthExplainResponse` maps only static, secret-free fields (status, supported
-  auth, what the host keeps, what the guest receives, provider hosts, safe-path
-  guidance, notes), never credential values, tokens, env values, or raw paths
-  (proven by a no-leak test). The GUI shows it on demand in the launch Agent step
-  (`AgentAuthDetailsCard`), with shared label logic factored into `authDetails.ts`.
-- The desktop app now explains the network, host, workspace, and state security
-  boundaries read-only (`why` parity). Four shared core builders in
-  `crates/runhaven-core/src/diagnostics/why.rs` feed both the CLI `why ... --json`
-  paths (new flag; human text unchanged) and four `get_why_*` Tauri commands under
-  the read-only `main-read` capability. Each command length-validates its
-  WebView input before calling core. `why workspace` is path-hardened: the core
-  payload keeps raw paths for CLI parity, but `WorkspaceExplanationResponse` maps
-  only the path-free decision, verdict, next action, and boundary (no-leak test
-  seeds fake absolute host paths and asserts none serialize). The GUI surfaces
-  all four on demand in the launch Project step (`WhyBoundaryCard`), with pure
-  label logic in `whyExplain.ts`; `capability_guard` stays green.
-- Raw run output now passes through a shared best-effort redaction step before any
-  viewer sees it. `redact_run_output` (`crates/runhaven-core/src/support/redact.rs`)
-  strips terminal control sequences and redacts well-known secret token shapes
-  (Anthropic, OpenAI, GitHub, Google keys, and Bearer tokens) while preserving
-  ordinary text and line structure. It is applied at the single core snapshot
-  choke point (`log_snapshot_payload_from_stdout`) that all three surfaces funnel
-  through (CLI `runs logs`, GUI container snapshot, GUI live-capture), so the GUI
-  log redaction status is now `applied` with an honest "review before sharing"
-  message. Structured records, markers, egress/auth logs, and diagnostics keep
-  their stronger field-allowlisting and are intentionally not routed through the
-  scrubber. The `runs logs -f` live stream is not redacted and now warns first.
+- Earlier managed-session and diagnostics milestones are complete (detail in
+  `feature_list.json` evidence, `docs/DESKTOP_APP.md`, and
+  `docs/SECURITY_MODEL.md`): truthful managed-session auth status from run-owned
+  proof; orphaned-run recovery via container-inspect reconcile; the end-user
+  guide; read-only auth-explain and why-boundary parity in the GUI; and shared
+  run-output redaction at the single snapshot choke point (`runs logs -f` live
+  stream warns and is not redacted).
 
 ## Current Branch Work
 
@@ -377,6 +322,37 @@ Terminal slice 1 (Rust host-PTY backend,
 `docs/design/native-gui-terminal-design.md`) is complete: `pty-process` 0.5.3 owned by `runhaven-core`, whose `runtime::terminal` (`open_gui_attach_pty` -> `GuiPtySession`) now owns the host-PTY `container exec` spawn, PTY I/O, and child kill/reap (F1 deadlock test in core), so no `Command::new("container")` sits in `src-tauri` and the structure guard passes; core `gui_attach_plan` still reuses `runs_attach` validation (non-root `agent`, always `--tty`); `src-tauri` keeps the fail-closed `TerminalSessionRegistry` (cap 2), four commands
 and a `TerminalMessage` Channel type; a main-only `terminal` capability with
 `capability_guard` pins, a no-persist tripwire over the reader, teardown that kills live PTYs. Frontend xterm and the `tauri dev` PTY/SIGWINCH smoke follow.
+
+Terminal slice 2 (xterm frontend, Channel bridge, standing disclosure,
+close-on-unmount) is committed: `TerminalPanel` renders the xterm terminal over
+the `TerminalMessage` Channel with the always-on no-filter/no-store disclosure
+and kills the backend child on unmount/pagehide.
+
+Terminal slice 3 (Claude in-app sign-in via the terminal, path A) is complete in
+this working tree, pending the credential-adjacent adversarial review (gate B)
+before commit. New core `runtime::terminal::open_gui_login_pty("claude", id)`
+opens a host-PTY Claude login: it reuses `login::build_sandbox_login_terminal_plan`
+(TTY-on `claude auth login`) and runs the real provider launch path
+(`launch_run_plan_with_runner`) on a background thread with a PTY-handoff
+`AgentCommandRunner`, so the allowlist proxy and provider-only egress stay
+enforced for the whole login (a bare `container run` of the login plan has no
+egress and would fail); only the child's stdio is a host PTY so the pasted OAuth
+code round-trips. `GuiPtySession` gained a one-shot exit latch (`wait_for_exit`)
+the runner blocks on. A new Rust-owned, native-confirmed `src-tauri` command
+`open_claude_sign_in_terminal` (fixed to Claude; the WebView supplies only the
+session id) reuses the existing `TerminalSessionRegistry` (cap 2 shared with
+attach) and the write/resize/close commands, added to the main-only `terminal`
+capability (`allow-open-claude-sign-in-terminal`, `capability_guard` pins updated,
+`build.rs` command list updated). The captured-output device-code refusal in
+`commands/agent_sign_in.rs` is unchanged (Claude still refused there); only the
+separate terminal path allows Claude. Frontend: the Agents Claude card opens the
+in-app sign-in terminal (`TerminalPanel` login mode -> `openClaudeSignInTerminal`)
+with the Copy-command fallback preserved; fail-closed if the terminal cannot open.
+Docs shipped in-slice: `docs/DESKTOP_APP.md`, `docs/SECURITY_MODEL.md` (Claude
+sign-in terminal). Verified: fmt, clippy -D warnings, cargo test -p runhaven-core
+(154), -p runhaven-tauri (211), build, check-pins, npm check, npm test (337),
+repo-structure, docs-local-paths, git diff --check. The live `claude auth login`
+round-trip is the lead's `tauri dev` smoke. Not committed.
 
 B4 (per-session auxiliary windows) is implemented in this working tree as
 strictly read-only monitor windows; it awaits its adversarial security

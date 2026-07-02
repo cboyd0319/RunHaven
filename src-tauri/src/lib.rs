@@ -125,6 +125,7 @@ pub fn run() {
             commands::session_window::open_session_window,
             commands::session_window::get_session_window_target,
             terminal::open_terminal_session,
+            terminal::open_claude_sign_in_terminal,
             terminal::write_terminal_input,
             terminal::resize_terminal,
             terminal::close_terminal_session,

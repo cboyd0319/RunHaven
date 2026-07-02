@@ -285,6 +285,56 @@ pub(crate) async fn open_terminal_session(
     register_and_stream(&registry, &session_id, spawned)
 }
 
+/// Open a live Claude **sign-in** terminal (terminal design section 8).
+///
+/// This is the terminal path A for Claude sign-in: the captured-output
+/// device-code runner (`commands::agent_sign_in`) still refuses Claude because
+/// its `claude auth login` needs a code pasted back, which pipes cannot host.
+/// This separate, Rust-owned, native-confirmed command opens a host-PTY terminal
+/// running that login inside a fresh sandbox, so the pasted code round-trips
+/// in-app. The target is fixed to Claude in Rust and core; `session_id` is only
+/// the registry key / run label, so a WebView value cannot steer what runs. The
+/// shared terminal cap and the same write/resize/close commands apply. On a
+/// launch failure nothing is registered and the caller reports it (fail closed),
+/// so the UI keeps its "run it in your terminal" fallback.
+#[tauri::command]
+pub(crate) async fn open_claude_sign_in_terminal(
+    app: AppHandle,
+    on_event: Channel<TerminalMessage>,
+    registry: State<'_, TerminalSessionRegistry>,
+    session_id: String,
+) -> Result<(), String> {
+    let registry = registry.inner().clone();
+    // Validate the id and enforce the shared cap before any dialog or child.
+    registry.precheck(&session_id)?;
+    if !confirm_claude_sign_in_open(app).await? {
+        return Err(TERMINAL_CANCELED.to_string());
+    }
+    let spawned = pty::spawn_login_terminal(&session_id, on_event)?;
+    register_and_stream(&registry, &session_id, spawned)
+}
+
+/// The one native confirmation for the Claude sign-in terminal, stating what it
+/// runs and the same no-filter/no-store facts as an attach, plus that the pasted
+/// code is visible on screen and the login is kept only inside the sandbox.
+async fn confirm_claude_sign_in_open(app: AppHandle) -> Result<bool, String> {
+    let message = "You are opening a Claude sign-in terminal in a fresh sandbox.\n\n\
+         RunHaven runs `claude auth login` there. It prints a link: open it in your \
+         browser, approve, then paste the code back here. What you type goes straight \
+         to the sandbox. What it prints is shown here but not filtered and not saved, \
+         so the code you paste is visible on this screen. Your login is saved only \
+         inside the sandbox; RunHaven never sees or stores the token."
+        .to_string();
+    confirm_native(
+        app,
+        "Open Claude sign-in terminal",
+        "Open terminal",
+        MessageDialogKind::Warning,
+        message,
+    )
+    .await
+}
+
 /// Write keystrokes/paste bytes to a live terminal's PTY master.
 ///
 /// This is a synchronous, blocking write on the PTY master. If a guest stops
@@ -369,6 +419,26 @@ pub(crate) fn open_terminal_session_for_test(
         return Err(TERMINAL_CANCELED.to_string());
     }
     let spawned = spawn(&plan)?;
+    register_and_stream(registry, session_id, spawned)
+}
+
+/// Test seam mirroring [`open_claude_sign_in_terminal`] with the dialog and the
+/// real host-PTY login spawn injected, so id validation, the shared cap,
+/// confirm-cancel, and register/remove are unit-testable without a live
+/// container. The target is fixed to Claude (no resolve step), matching the
+/// command. The real login round-trip is the slice `tauri dev` smoke.
+#[cfg(test)]
+pub(crate) fn open_claude_sign_in_terminal_for_test(
+    registry: &TerminalSessionRegistry,
+    session_id: &str,
+    approve: impl FnOnce() -> Result<bool, String>,
+    spawn: impl FnOnce() -> Result<SpawnedTerminal, String>,
+) -> Result<(), String> {
+    registry.precheck(session_id)?;
+    if !approve()? {
+        return Err(TERMINAL_CANCELED.to_string());
+    }
+    let spawned = spawn()?;
     register_and_stream(registry, session_id, spawned)
 }
 

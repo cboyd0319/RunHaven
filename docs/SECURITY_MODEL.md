@@ -51,7 +51,11 @@ uses a dedicated internal network.
 
 `runhaven` also serializes access to each project/profile/session home volume.
 This avoids concurrent attachment of the same named volume and keeps the
-failure mode understandable for non-technical users. Named sessions selected
+failure mode understandable for non-technical users. The in-app Claude sign-in
+terminal runs `claude auth login` through the same serialized path, so while it
+is open it holds the shared Claude home volume: a Claude run or a second Claude
+sign-in fails closed with the "already in use" message until the sign-in
+terminal is closed. It self-clears on close, on navigating away, or on quit. Named sessions selected
 with `--session NAME` reuse only the isolated `/home/agent` volume; they do not
 widen workspace mounts or host credential access. `state reset` and
 session-filtered `state prune` delete RunHaven-managed home volumes only.
@@ -224,10 +228,9 @@ construction, not by convention:
 
 ## Terminal Sessions
 
-The desktop app can open a live terminal inside one running sandbox. This is the
-most powerful interactive surface it has, so it is fenced carefully. (This
-section describes the Rust backend boundary; the in-app terminal view is a
-later, separate change.)
+The desktop app can open a live terminal inside a sandbox, in two shapes: an
+attach into one running sandbox, and a Claude sign-in terminal. This is the most
+powerful interactive surface it has, so it is fenced carefully.
 
 - RunHaven never trusts a name from the WebView. When you open a terminal,
   RunHaven looks up the run in its own active-run records and builds the
@@ -260,6 +263,36 @@ later, separate change.)
   terminals can be open at once; opening past that fails with a clear message.
 - Terminals are never restored across relaunch, and closing the main window
   kills every live terminal child, so no sandbox shell outlives the app.
+
+The Claude sign-in terminal shares that whole boundary and adds a few facts of
+its own:
+
+- It is Rust-owned and native-confirmed. The Agents view button opens a terminal
+  whose target is fixed to Claude in Rust and core; the WebView supplies only a
+  session id (a registry key and run label), never what runs. A native dialog
+  names that it opens a Claude sign-in terminal and states the same
+  no-filter/no-store facts, plus that the code you paste is visible on screen.
+  Nothing starts until you confirm.
+- It runs the same in-sandbox login as `runhaven login claude`, not a raw host
+  command. Because a sign-in has no already-running container, it starts a fresh
+  one through the normal provider launch path, so provider-only egress stays
+  enforced by the live allowlist proxy the whole time (a bare `container run`
+  would have no route to the sign-in hosts). It keeps the non-root `agent` user,
+  read-only root filesystem, dropped capabilities, and the existing
+  `platform.claude.com` / `claude.ai` provider hosts. No new egress, no new
+  mounts, no host environment. Only the child's stdio is a host PTY so the pasted
+  code can round-trip.
+- The captured-output device-code sign-in still refuses Claude. That runner
+  feeds the login `/dev/null` stdin and cannot host a paste-back, so it stays
+  refused; the terminal path is a separate, narrower command and does not weaken
+  it. The login byte stream follows the same shown-not-stored rule as any
+  terminal; the run metadata it writes (a run record, like the CLI login) is not
+  the stream.
+- It shares the terminal capability and the two-terminal cap, main window only,
+  and fails closed: if the login terminal cannot open (the container tool is
+  missing, the image is not built, the PTY or proxy setup fails), nothing is
+  registered and the app keeps its "run `runhaven login claude` in your terminal"
+  fallback.
 
 ## What This Does Not Solve Yet
 

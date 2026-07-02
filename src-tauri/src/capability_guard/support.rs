@@ -55,6 +55,7 @@ pub(super) const MAIN_READ_FORBIDDEN_PERMISSIONS: &[&str] = &[
     "allow-set-attention-badge",
     "allow-sync-menu-state",
     "allow-open-terminal-session",
+    "allow-open-claude-sign-in-terminal",
     "allow-write-terminal-input",
     "allow-resize-terminal",
     "allow-close-terminal-session",
@@ -99,6 +100,10 @@ pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
 /// or the read-only monitor windows.
 pub(super) const TERMINAL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-open-terminal-session", "open_terminal_session"),
+    (
+        "allow-open-claude-sign-in-terminal",
+        "open_claude_sign_in_terminal",
+    ),
     ("allow-write-terminal-input", "write_terminal_input"),
     ("allow-resize-terminal", "resize_terminal"),
     ("allow-close-terminal-session", "close_terminal_session"),
