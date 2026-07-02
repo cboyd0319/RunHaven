@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import {
   DEFAULT_SETTINGS,
@@ -135,6 +135,33 @@ describe("settings persistence", () => {
         JSON.parse(window.localStorage.getItem(SETTINGS_KEY) ?? "").defaultAgent,
       ).toBeNull()
     }
+  })
+})
+
+describe("monitor-window write guard", () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  afterEach(() => {
+    window.history.replaceState(null, "", "/")
+  })
+
+  it("never persists a destination from a monitor window", () => {
+    window.history.replaceState(null, "", "/?monitor=1")
+    persistLastDestination({ kind: "session", id: "abc123" })
+    expect(window.localStorage.getItem(KEY)).toBeNull()
+  })
+
+  it("never persists settings from a monitor window", () => {
+    window.history.replaceState(null, "", "/?monitor=1")
+    persistSettings({ dockBadge: false, defaultAgent: "codex" })
+    expect(window.localStorage.getItem(SETTINGS_KEY)).toBeNull()
+  })
+
+  it("keeps persisting normally in the main window", () => {
+    persistLastDestination({ kind: "session", id: "abc123" })
+    expect(loadLastDestination()).toEqual({ kind: "session", id: "abc123" })
   })
 })
 

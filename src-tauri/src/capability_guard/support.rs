@@ -35,6 +35,7 @@ pub(super) const FORBIDDEN_HOST_MARKERS: &[&str] = &[
 pub(super) const MAIN_READ_FORBIDDEN_PERMISSIONS: &[&str] = &[
     "allow-get-log-snapshot",
     "allow-get-managed-session-log-snapshot",
+    "allow-open-session-window",
     "allow-launch-run",
     "allow-write-session-input",
     "allow-stop-run",
@@ -88,6 +89,64 @@ pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
 ];
 
 pub(super) const ATTENTION_BADGE_PERMISSION: &str = "allow-set-attention-badge";
+
+/// The exact read-only grant for per-session monitor windows. Widening this
+/// set is a trust-boundary change: monitor windows must never gain output
+/// snapshots, input, run control, launch, sign-in, events, or window control.
+pub(super) const SESSION_MONITOR_PERMISSIONS: &[(&str, &str)] = &[
+    (
+        "allow-get-session-window-target",
+        "get_session_window_target",
+    ),
+    (
+        "allow-get-managed-session-status",
+        "get_managed_session_status",
+    ),
+    (
+        "allow-get-managed-session-diagnostics",
+        "get_managed_session_diagnostics",
+    ),
+];
+
+pub(super) fn capability_windows(file_name: &str) -> Vec<String> {
+    let path = manifest_dir().join("capabilities").join(file_name);
+    let raw = read_text(&path);
+    let value: serde_json::Value =
+        serde_json::from_str(&raw).unwrap_or_else(|_| panic!("parse {}", path.display()));
+    value["windows"]
+        .as_array()
+        .unwrap_or_else(|| panic!("capability {} has no windows array", path.display()))
+        .iter()
+        .map(|window| {
+            window.as_str().unwrap_or_else(|| {
+                panic!(
+                    "capability {} uses a non-string windows entry `{window}`",
+                    path.display()
+                )
+            })
+        })
+        .map(str::to_owned)
+        .collect()
+}
+
+/// The `identifier` of every capability file under `capabilities/`.
+pub(super) fn capability_file_identifiers() -> Vec<String> {
+    let dir = manifest_dir().join("capabilities");
+    let mut identifiers = Vec::new();
+    for entry in fs::read_dir(&dir).expect("read capabilities directory") {
+        let path = entry.expect("capabilities directory entry").path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+        let value: serde_json::Value = serde_json::from_str(&read_text(&path))
+            .unwrap_or_else(|_| panic!("parse {}", path.display()));
+        let identifier = value["identifier"]
+            .as_str()
+            .unwrap_or_else(|| panic!("capability {} has no string identifier", path.display()));
+        identifiers.push(identifier.to_owned());
+    }
+    identifiers
+}
 
 pub(super) fn manifest_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))

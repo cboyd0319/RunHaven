@@ -64,6 +64,23 @@ fn managed_session_list_contract_uses_run_auth_without_leaking_static_payload() 
 }
 
 #[test]
+fn session_title_renders_without_bidi_override_characters() {
+    // The title becomes a native monitor window title, so a workspace
+    // basename carrying a bidi override (U+202E) must never survive into it.
+    let mut record = run_record("2026-06-30T02:00:00Z", "run-bidi", "codex", "backend");
+    record["workspace"] = serde_json::json!("/sensitive/workspaces/pro\u{202E}txt.gpj");
+
+    let data = ManagedSessionListData::from_active_runs_and_auth_status(
+        [record],
+        serde_json::json!({"profiles": []}),
+    );
+
+    let session = &data.sessions[0];
+    assert_eq!(session.title, "Codex - protxt.gpj");
+    assert!(!session.title.contains('\u{202E}'));
+}
+
+#[test]
 fn managed_session_list_includes_recent_finished_records_without_overriding_active_runs() {
     let data = ManagedSessionListData::from_active_and_recent_runs(
         [run_record(

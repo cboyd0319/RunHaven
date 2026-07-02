@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import {
   getDashboardStatus,
   getAuthStatus,
+  openSessionWindow,
   type DashboardStatus,
   type AuthStatusResponse,
   type LaunchRunResponse,
@@ -143,6 +144,15 @@ export function useAppController() {
     sessionInput.changeDraft(value)
   }
 
+  // Open (or focus) the read-only monitor window for a session. Rust
+  // validates the id, caps open monitors, and owns the window label; a
+  // rejection (for example the window cap) surfaces in the main error alert.
+  function openSessionInNewWindow(sessionId: string) {
+    void openSessionWindow(sessionId).catch((cause: unknown) =>
+      setError(errorMessage(cause)),
+    )
+  }
+
   return {
     dashboard,
     authStatus,
@@ -197,6 +207,7 @@ export function useAppController() {
     refresh,
     navigate,
     selectSession,
+    openSessionInNewWindow,
     runControl: sessionActions.runControl,
     refreshAfterWorktree: sessionActions.refreshAfterWorktree,
     sendSelectedSessionInput: sessionActions.sendSelectedSessionInput,

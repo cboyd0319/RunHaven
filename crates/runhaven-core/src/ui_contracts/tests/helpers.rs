@@ -147,3 +147,28 @@ fn strip_terminal_controls_variants_differ_on_whitespace_controls() {
     // The line-preserving form keeps tab and newline for multi-line layout.
     assert_eq!(strip_terminal_controls_preserving_lines(input), "ab\tc\nde");
 }
+
+#[test]
+fn strip_terminal_controls_drops_invisible_format_characters() {
+    // Bidi controls, zero-width characters, soft hyphen, word joiner, and
+    // BOM are category Cf, not Cc, so `char::is_control` alone keeps them.
+    // Both sanitizer forms must drop them so a bidi override can never
+    // reorder a native window title or an in-app label.
+    let input = "pro\u{202E}ject\u{200B}\u{200D}\u{FEFF} ok\u{00AD}\u{2066}!\u{2069}\u{2060}";
+
+    assert_eq!(strip_terminal_controls(input), "project ok!");
+    assert_eq!(
+        strip_terminal_controls_preserving_lines(input),
+        "project ok!"
+    );
+}
+
+#[test]
+fn project_label_strips_bidi_overrides_from_the_basename() {
+    // A hostile repo basename like "pro\u{202E}txt.gpj" would otherwise
+    // render reversed ("projpg.txt") in the native monitor window title.
+    assert_eq!(
+        project_label("/Users/c/repos/pro\u{202E}txt.gpj"),
+        "protxt.gpj"
+    );
+}

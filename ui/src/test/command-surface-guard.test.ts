@@ -71,7 +71,9 @@ const EXPECTED_INVOKED_COMMANDS = [
   "get_why_state",
   "get_why_host",
   "get_why_workspace",
-  "set_attention_badge"
+  "set_attention_badge",
+  "open_session_window",
+  "get_session_window_target"
 ];
 
 type SourceEntry = {

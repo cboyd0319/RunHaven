@@ -1,4 +1,5 @@
 import type { NavDestination } from "./navigation"
+import { OPAQUE_TOKEN, isSessionMonitorWindow } from "./windowMode"
 
 // UI state persisted in the WebView (localStorage plus the shadcn sidebar
 // cookie). The allowed set, in full:
@@ -15,16 +16,20 @@ import type { NavDestination } from "./navigation"
 // (useNavigation), and a restored default agent is re-verified against the
 // live agent list before it picks anything (useLaunchFlow), so a tampered
 // value can at most select something that already exists.
+//
+// Only the main window writes here. Per-session monitor windows share the
+// WebView storage (same origin), so every persist function no-ops in a
+// monitor window; the monitor app also never mounts the components that
+// persist. Two layers, one rule: a monitor can never move the main window's
+// remembered place or settings.
 const LAST_DESTINATION_KEY = "runhaven.lastDestination"
 
 const SYSTEM_KINDS = ["home", "agents", "diagnostics", "maintenance"] as const
 
-// Opaque-token shape for a persisted session id or agent name: letters,
-// digits, dash, and underscore only, bounded length. Anything path- or
-// secret-shaped is rejected outright.
-const OPAQUE_TOKEN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/
-
 export function persistLastDestination(destination: NavDestination): void {
+  if (isSessionMonitorWindow()) {
+    return
+  }
   const sanitized =
     destination.kind === "session"
       ? { kind: destination.kind, id: destination.id }
@@ -85,6 +90,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
 }
 
 export function persistSettings(settings: AppSettings): void {
+  if (isSessionMonitorWindow()) {
+    return
+  }
   const sanitized: AppSettings = {
     dockBadge: settings.dockBadge !== false,
     defaultAgent:

@@ -15,9 +15,52 @@ mod support;
 use std::fs;
 
 use support::{
-    VETTED_PLUGIN_PERMISSIONS, assert_lacks_forbidden_host_markers, generated_permission_files,
-    invoke_handler_commands, manifest_dir, read_text,
+    VETTED_PLUGIN_PERMISSIONS, assert_lacks_forbidden_host_markers, capability_file_identifiers,
+    generated_permission_files, invoke_handler_commands, manifest_dir, read_text,
 };
+
+/// Pin `tauri.conf.json` to the capability files. Every entry under
+/// `app.security.capabilities` must be an identifier string naming a file
+/// under `capabilities/`, and the sets must match exactly. An inline
+/// capability object here would bypass every per-file scope guard above, so
+/// it fails this test regardless of what it grants.
+#[test]
+fn tauri_conf_capabilities_are_exactly_the_capability_file_identifiers() {
+    let path = manifest_dir().join("tauri.conf.json");
+    let conf: serde_json::Value =
+        serde_json::from_str(&read_text(&path)).expect("parse tauri.conf.json");
+    let listed = conf
+        .pointer("/app/security/capabilities")
+        .and_then(serde_json::Value::as_array)
+        .expect("tauri.conf.json must pin app.security.capabilities as an explicit array");
+    let mut listed_identifiers: Vec<String> = listed
+        .iter()
+        .map(|entry| {
+            entry
+                .as_str()
+                .unwrap_or_else(|| {
+                    panic!(
+                        "tauri.conf.json declares an inline capability `{entry}`; inline \
+                         capabilities bypass the per-file scope guards, so every capability \
+                         must be a file under capabilities/ referenced by its identifier"
+                    )
+                })
+                .to_owned()
+        })
+        .collect();
+    let mut file_identifiers = capability_file_identifiers();
+    listed_identifiers.sort();
+    file_identifiers.sort();
+    assert_eq!(
+        listed_identifiers, file_identifiers,
+        "app.security.capabilities must reference exactly the capability files under \
+         capabilities/; review any change as a trust-boundary change"
+    );
+    assert!(
+        !file_identifiers.is_empty(),
+        "no capability identifiers found under capabilities/"
+    );
+}
 
 #[test]
 fn capabilities_grant_only_vetted_scopes() {

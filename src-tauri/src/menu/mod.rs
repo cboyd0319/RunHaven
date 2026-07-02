@@ -18,6 +18,14 @@
 //! The only statically disabled items are placeholders for surfaces that do
 //! not exist yet (the session filter and Help content).
 //!
+//! Focus rule: session-scoped items ([`spec::session_scoped_ids`], the
+//! Session menu) act on the main window's selected session, so they dispatch
+//! only while no monitor window is focused. A user watching session A in a
+//! monitor window must not trigger a shortcut that silently targets the main
+//! window's selection (possibly session B); the event is dropped instead.
+//! Global items (navigation, session selection, refresh, New Run, agent
+//! surfaces) are unambiguous and dispatch from any window.
+//!
 //! Standard system items (About, Services, Hide, Quit, Undo/Redo, clipboard,
 //! Close Window, Minimize, Zoom, Full Screen) use [`PredefinedMenuItem`] so
 //! the native behavior and reserved shortcuts stay the system's own.
@@ -27,13 +35,14 @@
 mod spec;
 
 use tauri::menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 
-use spec::{Entry, MENU_BAR, Predef, command_ids};
+use spec::{Entry, MENU_BAR, Predef, command_ids, session_scoped_ids};
 
 // Menu events target only the main window (crate::MAIN_WINDOW_LABEL); future
 // auxiliary windows must opt in deliberately instead of inheriting dispatch.
 use crate::MAIN_WINDOW_LABEL;
+use crate::session_windows::SESSION_WINDOW_LABEL_PREFIX;
 
 /// The single Rust-to-WebView menu channel. Payload is the menu item id.
 pub const MENU_COMMAND_EVENT: &str = "menu://command";
@@ -69,8 +78,24 @@ pub fn on_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
     if !command_ids().contains(&id) {
         return;
     }
+    // Focus rule (module docs): session-scoped shortcuts pressed while a
+    // monitor window is focused would act on the main window's hidden
+    // selection, not the session the user is watching, so they drop here.
+    if session_scoped_ids().contains(&id) && monitor_window_is_focused(app) {
+        return;
+    }
     // Emission fails only when the main window is gone; nothing to do then.
     let _ = app.emit_to(MAIN_WINDOW_LABEL, MENU_COMMAND_EVENT, id);
+}
+
+/// True when a per-session monitor window (`session-*`) is the focused
+/// window. An unreadable focus state counts as not focused, which preserves
+/// dispatch to the main window; the actions behind session-scoped ids stay
+/// confirm-gated there either way.
+fn monitor_window_is_focused<R: Runtime>(app: &AppHandle<R>) -> bool {
+    app.webview_windows().into_iter().any(|(label, window)| {
+        label.starts_with(SESSION_WINDOW_LABEL_PREFIX) && window.is_focused().unwrap_or(false)
+    })
 }
 
 fn append_entry<R: Runtime>(

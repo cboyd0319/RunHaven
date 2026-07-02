@@ -193,6 +193,35 @@ after a single click. The grant is cleared as soon as the session's input
 transport is unregistered (for example when the run ends), so a later run that
 happens to reuse a session name never inherits an old approval.
 
+## Session Monitor Windows
+
+The desktop app can open a small extra window that watches one managed
+session (`Open in New Window`). These monitor windows are read-only by
+construction, not by convention:
+
+- Every mutating desktop command (stop, kill, repair, cleanup, worktree
+  actions, launch, image rebuild, sign-in, network prune, input send, Dock
+  badge) is granted only to the main window. A build-time test gate
+  (`capability_guard` in `src-tauri`) fails if any capability ever widens
+  past the main window or if a monitor window gains anything beyond its
+  fixed read set.
+- A monitor window's whole grant is three read commands: which session it
+  shows, that session's status, and that session's secret-free diagnostics.
+  Rust also checks, on every call, that a monitor window reads only the
+  session it was opened for; requests from unknown window labels are denied.
+- Raw output is not viewable from a monitor window. The output confirmation
+  dialog is app-owned today rather than parented to the asking window, and
+  even redacted output can carry sensitive text, so output viewing stays
+  with the main window (fail closed).
+- Only the main window can open monitor windows, through one validated Rust
+  command: the session must exist in RunHaven's own records, at most six
+  monitor windows can be open at once, and the window's label is minted by
+  Rust from a counter, never from user input. Monitor windows cannot open
+  further windows, listen to menu events, or write the app's remembered
+  place and settings.
+- Monitor windows are never restored across relaunch, and closing the main
+  window closes them too, so no watching window outlives its controls.
+
 ## What This Does Not Solve Yet
 
 Internet mode is unrestricted egress within the host's network policy. It is the

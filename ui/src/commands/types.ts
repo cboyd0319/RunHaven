@@ -160,6 +160,19 @@ export type ManagedSessionRecovery = {
   repairAvailable: boolean;
 };
 
+export type OpenSessionWindowResponse = {
+  // The Rust-minted monitor window label (session-<n>, never user data).
+  windowLabel: string;
+  // True when an already-open monitor was focused instead of created.
+  focusedExisting: boolean;
+};
+
+export type SessionWindowTargetResponse = {
+  // The session this monitor window was opened for, resolved by Rust from
+  // the calling window's label. Empty only in the browser preview.
+  sessionId: string;
+};
+
 export type StopManagedSessionResponse = {
   session: ManagedSessionSummary;
   result: StopRunResponse;

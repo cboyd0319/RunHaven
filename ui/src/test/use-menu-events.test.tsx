@@ -85,6 +85,7 @@ function actions(patch: Partial<MenuActions> = {}): MenuActions {
     navigate: vi.fn(),
     selectSession: vi.fn(),
     refresh: vi.fn().mockResolvedValue(undefined),
+    openSessionInNewWindow: vi.fn(),
     ...patch,
   }
 }
@@ -186,6 +187,25 @@ describe("handleMenuCommand", () => {
     const calm = actions({ managedSessions: { sessions: [active] } })
     handleMenuCommand("jump-needs-you", calm)
     expect(calm.selectSession).not.toHaveBeenCalled()
+  })
+
+  it("opens the monitor window only for the selected session", () => {
+    const selected = actions({ navigation: { kind: "session", id: "a1" } })
+    handleMenuCommand("open-session-window", selected)
+    expect(selected.openSessionInNewWindow).toHaveBeenCalledWith("a1")
+    // Read-only window creation only: nothing else moves.
+    expect(selected.navigate).not.toHaveBeenCalled()
+    expect(selected.selectSession).not.toHaveBeenCalled()
+
+    // Without a selected session there is nothing to open; never guess one.
+    for (const nav of [
+      { kind: "home" } as const,
+      { kind: "agents" } as const,
+    ]) {
+      const app = actions({ navigation: nav })
+      handleMenuCommand("open-session-window", app)
+      expect(app.openSessionInNewWindow).not.toHaveBeenCalled()
+    }
   })
 
   it("refreshes on check-again", () => {
@@ -307,6 +327,7 @@ describe("menu contract tripwires", () => {
       "jump-needs-you",
       "toggle-sidebar",
       "check-again",
+      "open-session-window",
       ...Array.from({ length: 9 }, (_, i) => `select-session-${i + 1}`),
       ...Object.keys(MENU_FOCUS_SELECTORS),
     ]

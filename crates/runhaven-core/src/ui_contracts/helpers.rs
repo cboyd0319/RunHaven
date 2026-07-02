@@ -97,12 +97,46 @@ pub(super) fn count_field(record: &serde_json::Value) -> u64 {
         .unwrap_or(1)
 }
 
-pub(super) fn strip_terminal_controls(text: &str) -> String {
-    text.chars().filter(|ch| !ch.is_control()).collect()
+/// True for the invisible Unicode format characters (general category Cf)
+/// that can reorder, hide, or spoof neighboring display text: the bidi
+/// controls (U+200E/U+200F, U+202A-U+202E, U+2066-U+2069), the zero-width
+/// characters (U+200B-U+200D, U+2060), the soft hyphen (U+00AD), and the BOM
+/// (U+FEFF). `char::is_control` covers only category Cc, so these survive it
+/// and could otherwise reach native window titles (a repo basename with a
+/// bidi override would render a misleading monitor title) and in-app labels.
+/// The standard library has no general-category test, so the set is pinned
+/// explicitly here.
+fn is_invisible_format_char(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{00AD}'
+            | '\u{200B}'..='\u{200F}'
+            | '\u{202A}'..='\u{202E}'
+            | '\u{2060}'
+            | '\u{2066}'..='\u{2069}'
+            | '\u{FEFF}'
+    )
 }
 
+/// Drop every control character (Cc) and invisible format character
+/// ([`is_invisible_format_char`]) from single-line display text. This is the
+/// shared sanitizer for titles and labels that reach the WebView and native
+/// surfaces such as monitor window titles.
+pub(super) fn strip_terminal_controls(text: &str) -> String {
+    text.chars()
+        .filter(|ch| !ch.is_control() && !is_invisible_format_char(*ch))
+        .collect()
+}
+
+/// [`strip_terminal_controls`] for multi-line display text: keeps `\n` and
+/// `\t` for layout, drops every other control and invisible format character.
+/// Dropping zero-width joiners can split joined emoji in displayed output;
+/// that cosmetic cost is accepted so bidi overrides cannot reorder what the
+/// user reads.
 pub(super) fn strip_terminal_controls_preserving_lines(text: &str) -> String {
     text.chars()
-        .filter(|ch| *ch == '\n' || *ch == '\t' || !ch.is_control())
+        .filter(|ch| {
+            *ch == '\n' || *ch == '\t' || (!ch.is_control() && !is_invisible_format_char(*ch))
+        })
         .collect()
 }

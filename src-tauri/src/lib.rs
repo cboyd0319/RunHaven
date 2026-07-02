@@ -11,12 +11,18 @@ mod read_guard;
 mod registry_support;
 pub(crate) mod session_input;
 mod session_output;
+pub(crate) mod session_windows;
 mod tail_status;
 
+use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;
 
-/// The one main window. Every capability and window lookup targets this
-/// label; future auxiliary windows must opt in deliberately.
+use session_windows::SESSION_WINDOW_LABEL_PREFIX;
+
+/// The main window: the one control surface. Every mutating capability and
+/// menu dispatch targets this label. The only other windows are the read-only
+/// per-session monitors (`session-*`, see `session_windows.rs`), which carry
+/// their own narrow read capability and never gain controls.
 pub(crate) const MAIN_WINDOW_LABEL: &str = "main";
 
 pub fn run() {
@@ -27,10 +33,13 @@ pub fn run() {
         // entering full screen stays a per-launch choice through the standard
         // controls (navigation spec section 7). The plugin exposes commands,
         // but no capability grants them, so the WebView cannot save, restore,
-        // or read window state.
+        // or read window state. Per-session monitor windows are filtered out
+        // entirely: they are never persisted or restored across relaunch, not
+        // even their geometry.
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
+                .with_filter(|label| !label.starts_with(SESSION_WINDOW_LABEL_PREFIX))
                 .build(),
         )
         // The menu bar is dispatch-only: items emit ids to the main window
@@ -41,7 +50,23 @@ pub fn run() {
             commands::attention_badge::clear_badge_on_start(app.handle());
             Ok(())
         })
+        // Monitor windows exist to watch sessions while the main window is
+        // the control surface. When the main window goes away, close them
+        // too, so closing the main window keeps meaning "quit" (Tauri exits
+        // when the last window closes) and no orphan monitors outlive their
+        // controls.
+        .on_window_event(|window, event| {
+            if window.label() == MAIN_WINDOW_LABEL && matches!(event, tauri::WindowEvent::Destroyed)
+            {
+                for (label, monitor) in window.app_handle().webview_windows() {
+                    if label.starts_with(SESSION_WINDOW_LABEL_PREFIX) {
+                        let _ = monitor.close();
+                    }
+                }
+            }
+        })
         .manage(session_input::SessionInputRegistry::default())
+        .manage(session_windows::SessionWindowRegistry::default())
         .manage(session_output::SessionOutputRegistry::default())
         .manage(launch_status::LaunchStatusRegistry::default())
         .manage(tail_status::ImageBuildStatusRegistry::default())
@@ -87,6 +112,8 @@ pub fn run() {
             commands::launch::plan_run,
             commands::launch::launch_run,
             commands::attention_badge::set_attention_badge,
+            commands::session_window::open_session_window,
+            commands::session_window::get_session_window_target,
         ])
         .run(tauri::generate_context!())
         .expect("error while running RunHaven desktop app");

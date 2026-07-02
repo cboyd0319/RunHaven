@@ -47,7 +47,7 @@ means the current code implements a shape the spec explicitly rejects.
 | 6 | Keyboard map | missing | No accelerators or app shortcuts; only form-level Return/Escape | B1 (menu accelerators) + A3 (sheet Escape). |
 | 7 | Frame/sidebar/selection persistence, re-verified | missing | `src-tauri/tauri.conf.json:13-22` static window; nothing persists | B2. |
 | 7 | Window defaults 1080x720 min 720x560 | contradicts | Config is 1180x780 min 920x620 | Judgment call: pick one and amend the other doc (B2). |
-| 7 | Per-session auxiliary windows | missing | Single `main` window; all 5 capabilities scoped `"windows": ["main"]` | B4 (security review required). |
+| 7 | Per-session auxiliary windows | partial | `Open in New Window` (Session menu) opens a read-only monitor window (`session-<n>` labels, `session-monitor` capability); every mutating capability stays `"windows": ["main"]` | Shipped lean (B4): monitors are read-only; output viewing, row double-click, and the More-menu entry are recorded deferrals in the B4 section. |
 | 7 | Full screen via standard controls, no custom frames | conforms | Standard titled window; no custom frame code | Keep. |
 | 8 | Filter field ("Filter sessions") | missing | No search anywhere | A2 (Home toolbar) or its own small slice; Cmd-F in B1. |
 | 9 | Notifications (future, opt-in) | conforms (N/A) | None implemented; spec marks them future | No action this pass. |
@@ -271,23 +271,58 @@ is the tripwire.
   settings outgrow one small pane (spec 3.9's own "minimize the number of
   settings" bar) or a setting needs Rust-owned storage or authority.
 
-### B4. Per-session auxiliary windows - L, security review required
+### B4. Per-session auxiliary windows - L, security review required (shipped as read-only monitors)
 
-- `Open in New Window` (Session menu / More menu / row double-click) calls a
-  new Rust command `open_session_window` that creates a
-  `WebviewWindow` labeled `session-<id>` loading a session-only route (no
-  sidebar). Frontend never gets window-creation permissions itself.
-- Capability implications are the hard part: all five capability files are
-  scoped `"windows": ["main"]` today (`src-tauri/capabilities/`). Aux windows
-  need a new capability with a `session-*` label pattern granting the minimum
-  session surface (session status/diagnostics/output reads, input write,
-  run-control, worktree) - and that multiplies the IPC surface across N
-  WebViews. This slice requires a `security-engineering` pass and
-  `adversarial-review` before build per repo routing rules, plus a
-  `docs/SECURITY_MODEL.md` touch. Also audit the per-window assumptions in
-  `read_guard.rs` and the `session_input`/`session_output` registries.
-- End-state behavior: on record removal the window shows the end state once,
-  closes on dismiss; main window remains truth (no second selection model).
+Shipped 2026-07-01 as strictly read-only monitor windows; this section records
+the as-built boundary and every deviation from the sketch above it replaced.
+
+- `Open in New Window` (Session menu, enabled; acts on the selected session)
+  routes menu -> frontend -> `open_session_window`. The Rust command
+  validates the id shape (registry-id rules) and existence against the
+  backend read model, mints the window label itself (`session-<n>` from a
+  counter, never user data), caps concurrent monitors at 6, and focuses an
+  already-open monitor instead of duplicating it. The frontend never gets
+  window-creation permissions.
+- Capability decision, narrower than the original sketch on purpose: the
+  early sketch listed "input write, run-control, worktree" for aux windows;
+  that would have multiplied the mutation surface across N WebViews. Instead
+  the `session-monitor` capability (windows `["session-*"]`; glob semantics
+  verified in the pinned tauri 2.11.3 / tauri-utils 2.9.3 sources:
+  `acl/resolved.rs` parses `windows` as `glob::Pattern`, `ipc/authority.rs`
+  matches labels) grants exactly three reads: `get_session_window_target`,
+  `get_managed_session_status`, `get_managed_session_diagnostics`. Rust
+  additionally pins the two session-keyed reads to the window's own
+  registered session (`session_windows::authorize_session_read`); unknown
+  labels are denied. Every mutating capability stays `"windows": ["main"]`,
+  now pinned by a `capability_guard` test over all capability files.
+- Output viewing stays main-window-only (fail closed). The snapshot's
+  Rust-owned confirmation dialog is app-level today, not parented to the
+  asking window, and redacted output can still carry sensitive text.
+  Verified return path if monitoring output becomes a real need:
+  `tauri-plugin-dialog` 2.7.1 `MessageDialogBuilder::parent` flows into
+  `rfd::set_parent`, so the dialog can be parented to the invoking
+  `WebviewWindow`; that change plus adding the snapshot permission to
+  `session-monitor` is the reviewed upgrade, not a default.
+- Monitor identity flows Rust -> WebView, not through URLs: monitors load a
+  constant `index.html?monitor=1` and ask `get_session_window_target`
+  (answered from the calling window's label). The `?session=` parameter is a
+  browser-preview/test affordance only, token-validated.
+- Per-window state audit (the read_guard/session_input/session_output check
+  the sketch demanded): `get_managed_session_status` gained a session-keyed
+  `ReadGuard` (single-flight, 2s TTL) so main plus up to six monitors
+  polling one session coalesce into one `container` probe; monitors never
+  touch the input/output registries (no permission). WebView persistence
+  (`uiStatePersistence.ts`) no-ops in monitor windows so a monitor can never
+  move the main window's remembered place or settings.
+- End-state behavior: on record removal the monitor shows the gone notice
+  and keeps the last view; "closes on dismiss" is read as the person closing
+  the window (Cmd-W / close button), never auto-close and never a
+  WebView-held `core:window` close permission (which would be label-global).
+  Main window remains truth (no second selection model). Monitors are not
+  persisted or restored across relaunch (window-state plugin filters
+  `session-*` labels), and closing the main window closes them too.
+- Deferred, recorded: row double-click and the More-menu entry point (menu
+  item only this slice), and output viewing per above.
 
 ### B5. Dock badge - S
 
@@ -328,12 +363,14 @@ Dependency-ordered slices; parallel tracks marked. Each slice ships its
    for the recorded deviation.
 8. **B4** aux session windows last, gated on security review; touches
    `command-surface-guard.test.ts`, new capability, `docs/SECURITY_MODEL.md`.
+   Shipped as read-only monitors; see the B4 section for the as-built
+   boundary and recorded deferrals.
 
 Structure-gate watchlist: `ui/src/app/AppMainContent.tsx` (420) splits in A2;
-`ui/src/commands/client.ts` (413) crosses 450 when B-wave commands land -
-split by domain (sessions/launch/system) in the first B slice that adds a
-command; `ui/e2e/app.spec.ts` (226) grows across A slices - split by flow
-before it nears 450.
+`ui/src/commands/client.ts` landed at 441 after B4's two commands, still
+under the 450 trigger - the next command addition must do the domain split
+(sessions/launch/system) first; `ui/e2e/app.spec.ts` (226) grows across A
+slices - split by flow before it nears 450.
 
 ## 5. Invariants Audit (Today's App vs Spec Section 10)
 

@@ -30,7 +30,9 @@
         "run-control",
         "agent-sign-in",
         "menu-events",
-        "attention-badge"
+        "attention-badge",
+        "session-window-open",
+        "session-monitor"
       ]
     }
   },

@@ -5,17 +5,35 @@ use crate::contracts::{
     ManagedSessionRecovery, ManagedSessionStatusRequest, ManagedSessionStatusResponse,
     RunStatusContainer,
 };
+use crate::read_guard::ReadGuards;
 use crate::session_input::SessionInputRegistry;
+use crate::session_windows::{SessionWindowRegistry, authorize_session_read};
 
 const MANAGED_SESSION_STATUS_UNAVAILABLE_MESSAGE: &str =
     "Container status is unavailable. The run may have stopped.";
 
 #[tauri::command]
 pub(crate) fn get_managed_session_status(
+    window: tauri::Window,
     request: ManagedSessionStatusRequest,
     input_registry: tauri::State<'_, SessionInputRegistry>,
+    read_guards: tauri::State<'_, ReadGuards>,
+    window_registry: tauri::State<'_, SessionWindowRegistry>,
 ) -> Result<ManagedSessionStatusResponse, String> {
-    get_managed_session_status_with_input(request, Some(input_registry.inner()))
+    // Per-window scope first: the main window reads any session, a monitor
+    // window only the one it was opened for, anything else is denied.
+    authorize_session_read(&window_registry, window.label(), &request.session_id)?;
+    // Single-flight plus a 2s TTL cache keyed by session id: the main window
+    // and up to six monitor windows can poll status concurrently, and each
+    // probe shells out to Apple `container`, so same-session polls coalesce
+    // into one subprocess (same local-DoS posture as `get_managed_sessions`).
+    // Locking is per key, so one session's hung probe never blocks another
+    // session's status read.
+    read_guards
+        .managed_session_status
+        .run(&request.session_id, || {
+            get_managed_session_status_with_input(request.clone(), Some(input_registry.inner()))
+        })
 }
 
 fn get_managed_session_status_with_input(

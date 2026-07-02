@@ -151,7 +151,10 @@ Menu items never skip a safety step. A menu action does exactly what the same
 click in the window would do. **Stop** and **Hard Stop** take you to that
 session's stop control; you still check the confirm box and answer the native
 dialog before anything stops. Items that do not apply right now (for example,
-a session action while you are on Home) simply do nothing.
+a session action while you are on Home) simply do nothing. Session shortcuts
+work when the main window is active; while a session watch window is in
+front they do nothing, so a shortcut never acts on a session you are not
+looking at. Everything else in the menus works from any window.
 
 | Shortcut | What it does |
 | --- | --- |
@@ -173,7 +176,9 @@ A few items are visible but grayed out because their screens are not built
 yet: **Filter Sessions** (Cmd-F) and the Help entries. They will turn on when
 those parts of the app ship. The Session menu's worktree actions (Merge, Keep,
 Recover, Discard) live in the finished session's review for now, and Open
-Recent arrives with a recent-projects list.
+Recent arrives with a recent-projects list. **Open in New Window** opens a
+watching window for the selected session; see "Watch a session in its own
+window" below.
 
 ## Settings
 
@@ -225,6 +230,25 @@ stays focused on what needs you.
 
 The list updates itself in place. It does not blink, clear your draft, or jump
 back to the start screen while a run keeps working.
+
+## Watch a session in its own window
+
+Select a session and choose **Session > Open in New Window**. That session
+opens in a small extra window so you can watch two runs side by side, or tile
+one next to another app with macOS Split View. If the session already has a
+window, the app brings that window to the front instead of opening another.
+You can have up to six of these windows at once.
+
+These windows only watch. Each one shows the session's overview, recent
+events, and read-only details behind **Show details**, and it says so plainly:
+controls live in the main window. To stop a run, repair it, send a message,
+or view output, use the main window. This is a safety choice, not a missing
+feature: a watching window cannot change anything.
+
+Close a session window with Cmd-W or its close button. If the session's
+record is removed while you watch, the window tells you the session is gone
+and keeps the last view until you close it. Session windows do not come back
+when you restart the app, and closing the main window closes them too.
 
 ## If a session stops responding
 

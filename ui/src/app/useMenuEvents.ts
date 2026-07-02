@@ -24,6 +24,10 @@ export type MenuActions = {
   navigate: (destination: NavDestination) => void
   selectSession: (sessionId: string) => void
   refresh: () => Promise<void>
+  // Opens the read-only monitor window for a session through the validated
+  // open_session_window command. The one menu id that invokes a command:
+  // window creation mutates nothing, so it carries no confirm step.
+  openSessionInNewWindow: (sessionId: string) => void
 }
 
 // Session-menu ids focus the matching on-screen control instead of acting.
@@ -156,6 +160,13 @@ export function handleMenuCommand(id: string, app: MenuActions): void {
       app.selectSession(needsYou[(current + 1) % needsYou.length].session.id)
       return
     }
+    case "open-session-window":
+      // Acts on the selected session only; a monitor window is read-only,
+      // so this needs a real selection, never a guess.
+      if (app.navigation.kind === "session") {
+        app.openSessionInNewWindow(app.navigation.id)
+      }
+      return
     case "toggle-sidebar":
       document
         .querySelector<HTMLElement>(SIDEBAR_TRIGGER_SELECTOR)

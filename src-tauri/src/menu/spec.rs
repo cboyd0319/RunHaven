@@ -155,9 +155,12 @@ const VIEW_MENU: &[Entry] = &[
 
 // Acts on the selected session; every item no-ops in the frontend when no
 // session is selected or its control is not on screen. Worktree review
-// actions (Merge, Keep, Recover, Discard) and Open in New Window stay off the
-// menu until their slices land; the review card in the session view is the
-// affordance for worktree actions today.
+// actions (Merge, Keep, Recover, Discard) stay off the menu until their slice
+// lands; the review card in the session view is the affordance for worktree
+// actions today. Open in New Window opens a read-only monitor window through
+// the validated `open_session_window` command (benign, no mutation, so no
+// confirm step); it is the one menu id whose frontend handler invokes a
+// command instead of focusing a control.
 const SESSION_MENU: &[Entry] = &[
     command("send-message", "Send Message...", None),
     command("show-output", "Show Latest Output", Some("Shift+Cmd+O")),
@@ -167,6 +170,8 @@ const SESSION_MENU: &[Entry] = &[
     Entry::Separator,
     command("repair-session", "Repair Session Record...", None),
     command("cleanup-session", "Clean Up Session...", None),
+    Entry::Separator,
+    command("open-session-window", "Open in New Window", None),
 ];
 
 // All three land on the Agents view, where sign-in, rebuild, and auth details
@@ -204,21 +209,35 @@ pub(super) const MENU_BAR: &[(&str, &[Entry])] = &[
     ("Help", HELP_MENU),
 ];
 
-/// Every custom command id in the menu bar, in declaration order.
-pub(super) fn command_ids() -> Vec<&'static str> {
-    fn walk(entries: &'static [Entry], ids: &mut Vec<&'static str>) {
-        for entry in entries {
-            match entry {
-                Entry::Command(spec) => ids.push(spec.id),
-                Entry::Submenu { entries, .. } => walk(entries, ids),
-                Entry::Separator | Entry::Predefined(_) => {}
-            }
+fn collect_command_ids(entries: &'static [Entry], ids: &mut Vec<&'static str>) {
+    for entry in entries {
+        match entry {
+            Entry::Command(spec) => ids.push(spec.id),
+            Entry::Submenu { entries, .. } => collect_command_ids(entries, ids),
+            Entry::Separator | Entry::Predefined(_) => {}
         }
     }
+}
+
+/// Every custom command id in the menu bar, in declaration order.
+pub(super) fn command_ids() -> Vec<&'static str> {
     let mut ids = Vec::new();
     for (_, entries) in MENU_BAR {
-        walk(entries, &mut ids);
+        collect_command_ids(entries, &mut ids);
     }
+    ids
+}
+
+/// Ids that act on the main window's selected session: exactly the custom
+/// commands of the Session menu, derived from the same table the builder
+/// walks so this list cannot drift from the built menu. The dispatcher in
+/// `mod.rs` drops these when a monitor window is focused, because the
+/// selection they act on is not the session that window shows. Every other
+/// id is global (navigation, selection, refresh, New Run, agent surfaces)
+/// and unambiguous from any window.
+pub(super) fn session_scoped_ids() -> Vec<&'static str> {
+    let mut ids = Vec::new();
+    collect_command_ids(SESSION_MENU, &mut ids);
     ids
 }
 
@@ -315,6 +334,7 @@ mod tests {
                 "hard-stop-session",
                 "repair-session",
                 "cleanup-session",
+                "open-session-window",
                 "agent-sign-in",
                 "agent-rebuild-image",
                 "agent-auth-details",
@@ -323,6 +343,34 @@ mod tests {
                 "help-report-problem",
             ]
         );
+    }
+
+    #[test]
+    fn session_scoped_ids_are_exactly_the_session_menu_commands() {
+        // These ids act on the main window's selected session and are
+        // dropped while a monitor window is focused; every id not listed
+        // here keeps working from any window. Changing this set changes
+        // which shortcuts a monitor window swallows.
+        let scoped = session_scoped_ids();
+        assert_eq!(
+            scoped,
+            [
+                "send-message",
+                "show-output",
+                "stop-session",
+                "hard-stop-session",
+                "repair-session",
+                "cleanup-session",
+                "open-session-window",
+            ]
+        );
+        let all = command_ids();
+        for id in &scoped {
+            assert!(
+                all.contains(id),
+                "session-scoped id `{id}` must be a menu id"
+            );
+        }
     }
 
     #[test]

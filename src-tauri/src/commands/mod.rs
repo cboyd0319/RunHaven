@@ -41,6 +41,7 @@ pub(crate) mod run_control;
 pub(crate) mod run_status;
 pub(crate) mod session_cleanup;
 pub(crate) mod session_diagnostics;
+pub(crate) mod session_window;
 pub(crate) mod session_worktree;
 pub(crate) mod sessions;
 mod validation;

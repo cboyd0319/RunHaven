@@ -34,6 +34,7 @@ mod run_control;
 mod run_status;
 mod session_cleanup;
 mod session_input;
+mod session_window;
 mod session_worktree;
 mod sessions;
 mod sessions_diagnostics;

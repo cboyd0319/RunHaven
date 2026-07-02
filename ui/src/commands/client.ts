@@ -53,6 +53,8 @@ import type {
   ManagedSessionDiagnosticsResponse,
   ManagedSessionLogSnapshotResponse,
   ManagedSessionStatusResponse,
+  OpenSessionWindowResponse,
+  SessionWindowTargetResponse,
   RunPlanRequest,
   RunPlanResponse,
   KillRunResponse,
@@ -204,6 +206,26 @@ export async function getManagedSessionDiagnostics(
     { request: { sessionId } },
     () => previewManagedSessionDiagnostics(sessionId)
   );
+}
+
+// Open (or focus) the read-only monitor window for a session. Benign window
+// creation, fully validated in Rust; the browser preview has no windows, so
+// the fallback reports nothing opened.
+export async function openSessionWindow(
+  sessionId: string
+): Promise<OpenSessionWindowResponse> {
+  return call(
+    "open_session_window",
+    { request: { sessionId } },
+    () => ({ windowLabel: "", focusedExisting: false })
+  );
+}
+
+// Which session this monitor window shows, answered by Rust from the calling
+// window's label (the WebView sends nothing). Monitor windows only; in the
+// browser preview the caller falls back to the ?session= URL parameter.
+export async function getSessionWindowTarget(): Promise<SessionWindowTargetResponse> {
+  return call("get_session_window_target", {}, () => ({ sessionId: "" }));
 }
 
 export async function planRun(request: RunPlanRequest): Promise<RunPlanResponse> {
