@@ -77,6 +77,25 @@ fn launch_permission_stays_out_of_read_only_capability() {
 }
 
 #[test]
+fn menu_events_capability_stays_listen_only() {
+    // The menu bar is Rust-to-WebView dispatch only. The main window may
+    // listen for menu ids but never gains emit, so the WebView cannot forge
+    // events toward Rust or other windows.
+    let permissions = capability_permissions("menu-events.json");
+    assert_same_permission_set(
+        "menu-events",
+        &permissions,
+        &["core:event:allow-listen", "core:event:allow-unlisten"],
+    );
+    assert!(
+        !permissions
+            .iter()
+            .any(|permission| permission.contains("emit")),
+        "menu-events must never grant event emission to the WebView"
+    );
+}
+
+#[test]
 fn session_input_bridge_stays_narrow() {
     let manifest_dir = manifest_dir();
     let main_read = manifest_dir.join("capabilities").join("main-read.json");

@@ -34,7 +34,9 @@ The app opens on **Home**. Home answers two questions: is this Mac ready, and
 what needs you right now? It shows a one-line health note when setup is good,
 your agents and their sign-in states with a link to the Agents view, a
 "Needs you" list of sessions waiting on you, your recent finished runs, and
-the **New run** button.
+the **New run** button. Each run shows in one list only: a failed run or a run
+waiting for review sits in "Needs you", never again under recent finished
+runs.
 
 When the app opens, it checks that your Mac is ready: the right macOS version,
 Apple `container` installed and running, and the agent images built. If a check
@@ -45,7 +47,9 @@ why, but your running sessions and the sidebar views all stay reachable.
 ## Sign in to an agent
 
 Signing in stores your agent login once so your runs can reuse it. Open
-**Agents** in the sidebar to see every agent's sign-in state, or pick an agent
+**Agents** in the sidebar to see every agent in one place: its sign-in state,
+whether its image is ready, its read-only auth details, and the image rebuild
+task. A **Check again** button refreshes the view. You can also pick an agent
 in the first step of a run. Both places show, for most agents, a **Sign in**
 button.
 
@@ -60,7 +64,8 @@ button.
   runhaven login claude
   ```
 
-  Run it in your terminal, then come back and refresh.
+  A **Copy command** button copies it for you and confirms with "Copied". Run
+  it in your terminal, then come back and refresh.
 
 Either way, the login happens inside the sandbox and stays there: RunHaven never
 holds any agent token, and the app never shows or stores your token or key. You
@@ -129,17 +134,64 @@ sign-in, Not responding, or Ready to review. If the session you are viewing is
 removed, the app moves you to the nearest session, or Home when none are left.
 It never switches views on its own for any other reason.
 
+## Menu bar and keyboard shortcuts
+
+The app has a normal Mac menu bar: RunHaven, File, Edit, View, Session, Agent,
+Window, and Help. Standard items like About, Quit, Undo, Copy, Paste, Close,
+Minimize, Zoom, and Full Screen behave the way they do in every Mac app.
+Quitting the app does not stop your runs; they keep working in the sandbox and
+show up again when you reopen the app.
+
+Menu items never skip a safety step. A menu action does exactly what the same
+click in the window would do. **Stop** and **Hard Stop** take you to that
+session's stop control; you still check the confirm box and answer the native
+dialog before anything stops. Items that do not apply right now (for example,
+a session action while you are on Home) simply do nothing.
+
+| Shortcut | What it does |
+| --- | --- |
+| Cmd-N | New Run: opens the run window |
+| Cmd-0 | Go to Home |
+| Cmd-1 to Cmd-9 | Select session 1 to 9, top to bottom in the sidebar |
+| Shift-Cmd-] / [ | Next / previous session |
+| Cmd-J | Jump to the next session that needs you |
+| Cmd-. | Go to the selected session's Stop control |
+| Opt-Cmd-. | Go to the selected session's Hard stop control |
+| Shift-Cmd-O | Go to the output confirm box for the selected session |
+| Cmd-R | Check again: refresh the app's status |
+| Opt-Cmd-1 / 2 / 3 | Go to Agents / Diagnostics / Maintenance |
+| Opt-Cmd-S | Show or hide the sidebar |
+| Ctrl-Cmd-F | Enter or leave full screen |
+| Cmd-, W M Q | Settings, Close, Minimize, Quit |
+
+A few items are visible but grayed out because their screens are not built
+yet: **Settings...** (Cmd-,), **Filter Sessions** (Cmd-F), and the Help
+entries. They will turn on when those parts of the app ship. The Session
+menu's worktree actions (Merge, Keep, Recover, Discard) live in the finished
+session's review for now, and Open Recent arrives with a recent-projects list.
+
 ## Watch your sessions
 
 Each run becomes a managed session in the sidebar. The sidebar shows a short
 identity for every session so you can tell them apart: the agent, the project,
 the status, the sign-in state, the network, and whether input is attached.
 
-Select a session to see its live status, recent events, and bounded output. The
-output is trimmed so it will not flood the window, but raw output can still
-include private data, so the app asks you to confirm before it shows any. If
-a session is ready for input, you can type a message and send it. The app asks
-you to confirm before it sends.
+Select a session to see it top to bottom in one reading order. If the session
+needs you, a banner leads the view and names the one fix: a failed run points
+at its output, a session that needs sign-in offers **Open Agents**, a session
+that stopped responding points at its repair control, and a finished worktree
+run points at its review. The session controls sit near the top, never at the
+bottom of the window. Below them come the session overview with its recent
+events, the output, and the message box.
+
+The output is trimmed so it will not flood the window, but raw output can
+still include private data, so the app asks you to confirm before it shows
+any. If a session is ready for input, you can type a message and send it. The
+app asks you to confirm before it sends.
+
+Deeper runtime detail (container state, resources, networks) and the
+session's own diagnostics sit behind a **Show details** button, so the view
+stays focused on what needs you.
 
 The list updates itself in place. It does not blink, clear your draft, or jump
 back to the start screen while a run keeps working.
@@ -180,11 +232,15 @@ secrets.
 
 ## Check diagnostics
 
-The app can show read-only diagnostics for a session: recent sign-in broker
-decisions and network decisions for that run. These show only safe summary
-details, never full paths, secrets, or request bodies. App-wide diagnostics
-live in the Diagnostics view in the sidebar; the session view shows only that
-session's diagnostics so there is one surface at a time.
+The **Diagnostics** view in the sidebar is read-only trust evidence for the
+whole app. It loads by itself when you open it and shows every setup check
+with its result and fix, plus the trust checks: sign-in broker decisions and
+provider network decisions. A **Check again** button re-reads everything. It
+never changes anything, and it shows only safe summary details, never full
+paths, secrets, or request bodies.
+
+A session's own diagnostics live in that session's view behind **Show
+details**, so there is one surface at a time.
 
 ## Maintenance
 

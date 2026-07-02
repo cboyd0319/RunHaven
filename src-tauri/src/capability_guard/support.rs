@@ -3,10 +3,15 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-/// Plugin permissions intentionally granted to the frontend. Adding an entry
-/// here is a deliberate trust-boundary decision and must be reviewed against the
-/// security model.
-pub(super) const VETTED_PLUGIN_PERMISSIONS: &[&str] = &["dialog:allow-open"];
+/// Plugin and core permissions intentionally granted to the frontend. Adding
+/// an entry here is a deliberate trust-boundary decision and must be reviewed
+/// against the security model. The two event permissions let the main window
+/// receive menu ids from Rust (listen/unlisten only, never emit).
+pub(super) const VETTED_PLUGIN_PERMISSIONS: &[&str] = &[
+    "dialog:allow-open",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+];
 pub(super) const FORBIDDEN_HOST_MARKERS: &[&str] = &[
     "app_server",
     "filesystem_rpc",

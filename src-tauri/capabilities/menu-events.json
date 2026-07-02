@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "menu-events",
+  "description": "Lets the main window listen for menu item ids emitted by the Rust menu bar. Listen and unlisten only: no emit, so the WebView cannot forge events toward Rust or other windows.",
+  "windows": ["main"],
+  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+}

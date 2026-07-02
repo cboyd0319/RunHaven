@@ -6,6 +6,7 @@ mod contracts;
 mod image_build_runner;
 mod launch_runner;
 mod launch_status;
+mod menu;
 mod read_guard;
 mod registry_support;
 pub(crate) mod session_input;
@@ -15,6 +16,10 @@ mod tail_status;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        // The menu bar is dispatch-only: items emit ids to the main window
+        // WebView and never call runtime commands. See src/menu.rs.
+        .menu(menu::build)
+        .on_menu_event(menu::on_menu_event)
         .manage(session_input::SessionInputRegistry::default())
         .manage(session_output::SessionOutputRegistry::default())
         .manage(launch_status::LaunchStatusRegistry::default())

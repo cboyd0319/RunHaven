@@ -5,9 +5,11 @@ import { AppHeader } from "./AppHeader"
 import { AppMainContent } from "./AppMainContent"
 import { RunHavenSidebar } from "./RunHavenSidebar"
 import { useAppController } from "./useAppController"
+import { useMenuEvents } from "./useMenuEvents"
 
 export default function App() {
   const app = useAppController()
+  useMenuEvents(app)
 
   return (
     <TooltipProvider>

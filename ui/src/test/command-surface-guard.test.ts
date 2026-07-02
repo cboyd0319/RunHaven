@@ -24,7 +24,14 @@ const FORBIDDEN_HOST_MARKERS = [
   "clear_auth",
   "delete_auth"
 ];
-const EXPECTED_TAURI_MODULES = ["@tauri-apps/api/core", "@tauri-apps/plugin-dialog"];
+const EXPECTED_TAURI_MODULES = [
+  "@tauri-apps/api/core",
+  "@tauri-apps/api/event",
+  "@tauri-apps/plugin-dialog"
+];
+// The reviewed Tauri touchpoints: typed invoke plus the folder picker in
+// client.ts, and the listen-only menu event subscription in menu_events.ts.
+const EXPECTED_TAURI_FILES = ["commands/client.ts", "commands/menu_events.ts"];
 const EXPECTED_INVOKED_COMMANDS = [
   "get_dashboard_status",
   "get_image_status",
@@ -140,7 +147,7 @@ describe("frontend command surface guard", () => {
       .filter((entry) => invokeCallCount(entry.source) > 0)
       .map((entry) => entry.path);
 
-    expect(tauriFiles).toEqual(["commands/client.ts"]);
+    expect(tauriFiles).toEqual(EXPECTED_TAURI_FILES);
     expect([...new Set(tauriModules)].sort()).toEqual([...EXPECTED_TAURI_MODULES].sort());
     expect(invokeFiles).toEqual(["commands/client.ts"]);
     expect(invokeCallCount(source)).toBe(1);

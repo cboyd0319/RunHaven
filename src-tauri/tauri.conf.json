@@ -28,7 +28,8 @@
         "folder-pick",
         "launch-run",
         "run-control",
-        "agent-sign-in"
+        "agent-sign-in",
+        "menu-events"
       ]
     }
   },
