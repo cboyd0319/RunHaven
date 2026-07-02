@@ -1,8 +1,13 @@
+// @vitest-environment happy-dom
+import { createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { AgentSignIn } from "../app/AgentSignIn";
 import type { AgentProfile } from "../commands/runhaven";
+
+import { act } from "./render-hook";
 
 function agent(patch: Partial<AgentProfile> = {}): AgentProfile {
   return {
@@ -36,6 +41,7 @@ describe("AgentSignIn", () => {
     );
     expect(html).toContain("runhaven login claude");
     expect(html).toContain("terminal");
+    expect(html).toContain("Copy command");
     expect(html).not.toContain("Sign in to claude");
   });
 
@@ -51,5 +57,42 @@ describe("AgentSignIn", () => {
   it("renders nothing without a selected agent", () => {
     const html = renderToStaticMarkup(<AgentSignIn agent={undefined} />);
     expect(html).toBe("");
+  });
+
+  it("copies the exact terminal command and confirms with the button label", async () => {
+    const written: string[] = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          written.push(text);
+        }
+      }
+    });
+
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        createElement(AgentSignIn, {
+          agent: agent({ name: "claude", supportsInAppSignIn: false })
+        })
+      );
+    });
+
+    const copyButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Copy command")
+    );
+    expect(copyButton).toBeDefined();
+    await act(async () => {
+      copyButton?.click();
+    });
+
+    expect(written).toEqual(["runhaven login claude"]);
+    expect(copyButton?.textContent).toContain("Copied");
+
+    await act(async () => {
+      root.unmount();
+    });
   });
 });

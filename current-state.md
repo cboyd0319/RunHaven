@@ -376,7 +376,26 @@ reason), agent readiness strip linking to Agents, Needs-you and recent
 finished lists, first-run note, and the run-started notice or failed-launch
 fallback. The worktree toggle moved out of Advanced options to the Project
 step top level. On an accepted launch the sheet closes and the app selects the
-new session. Remaining Wave A items: A4-A6 per the gap tracker.
+new session.
+
+Slice 3 (A4 plus A5 plus A6) is implemented, completing Wave A. Agents: each
+row now shows per-agent image readiness (read-only `get_image_status` on
+entry, same `ImageReadiness` rendering as the sheet), the Claude terminal
+sign-in gained a clipboard Copy button with a copied confirmation
+(`AgentSignIn.tsx`), and the view has an outline Check again action (rebuild
+stays outline; no prominent action on Agents). Diagnostics: new
+`views/DiagnosticsView.tsx` loads trust data on entry (read-only surface, no
+manual Load button), adds full doctor detail (every setup check with result
+and remedy), and one Check again re-reads setup plus trust checks; the
+secret-free assertions are kept. Session view: reordered per spec 3.3 with a
+new `SessionAttentionBanner.tsx` first (same priority helper as the sidebar
+badges; sign-in offers Open Agents inline, repair/review name the surface
+directly below so each mutation keeps one confirmation surface), Session
+controls near the top instead of the window bottom, then worktree review,
+overview, output, composer; runtime status and per-session diagnostics are
+demoted behind a Show details disclosure. Home no longer repeats a needs-you
+run in the recent finished list. Remaining spec gaps are Wave B (menu bar,
+persistence, settings, aux windows, Dock badge) per the gap tracker.
 
 Active slice: bring CLI plus native-feeling desktop GUI to 100 percent ready
 for real external user testing. Start by keeping TUI work out of scope, then

@@ -1,7 +1,12 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { CheckCircle2, CircleAlert, Hammer } from "lucide-react"
 
-import type { AgentProfile, AuthStatusResponse } from "@/commands/runhaven"
+import {
+  getImageStatus,
+  type AgentProfile,
+  type AuthStatusResponse,
+  type ImageStatusResponse,
+} from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,7 +23,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { AgentAuthDetailsCard } from "../AgentAuthDetailsCard"
 import { AgentSignIn } from "../AgentSignIn"
 import { authStatusLabel } from "../labels"
+import { ImageReadiness } from "../LaunchAccess"
 import { agentLabel } from "../sessionIdentity"
+import { errorMessage } from "../types"
 import { useImageRebuild } from "../useMaintenance"
 
 // The Agents destination: one row per agent with its sign-in state, the
@@ -28,11 +35,15 @@ import { useImageRebuild } from "../useMaintenance"
 export function AgentsView({
   agents,
   authStatus,
+  refreshing,
   onSignedIn,
+  onRefresh,
 }: {
   agents: AgentProfile[]
   authStatus: AuthStatusResponse | null
+  refreshing: boolean
   onSignedIn: () => void
+  onRefresh: () => void
 }) {
   if (agents.length === 0) {
     return (
@@ -51,6 +62,19 @@ export function AgentsView({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Toolbar approximation until the native menu bar lands: Check again
+          refreshes agent readiness. No prominent action lives on Agents. */}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={refreshing}
+          onClick={onRefresh}
+        >
+          {refreshing ? "Checking..." : "Check again"}
+        </Button>
+      </div>
       {agents.map((agent) => (
         <AgentRow
           key={agent.name}
@@ -77,6 +101,7 @@ function AgentRow({
   status: string
   onSignedIn: () => void
 }) {
+  const image = useAgentImageStatus(agent.name)
   return (
     <Card>
       <CardHeader>
@@ -89,11 +114,53 @@ function AgentRow({
         </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
+        <ImageReadiness
+          imageLoading={image.loading}
+          imageStatus={image.status}
+          imageError={image.error}
+        />
         <AgentSignIn agent={agent} onSignedIn={onSignedIn} />
         <AgentAuthDetailsCard agentName={agent.name} />
       </CardContent>
     </Card>
   )
+}
+
+// Read-only image readiness for one agent row, loaded once when the row
+// mounts. It reuses the launch flow's ImageReadiness rendering so the Agents
+// view and the New Run sheet describe image state with the same words.
+function useAgentImageStatus(agentName: string) {
+  const [loading, setLoading] = useState(true)
+  const [status, setStatus] = useState<ImageStatusResponse | null>(null)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setStatus(null)
+    setError("")
+    getImageStatus(agentName)
+      .then((next) => {
+        if (!cancelled) {
+          setStatus(next)
+        }
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled) {
+          setError(errorMessage(cause))
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [agentName])
+
+  return { loading, status, error }
 }
 
 // Rebuilds an agent image through the run-control command, which requires a

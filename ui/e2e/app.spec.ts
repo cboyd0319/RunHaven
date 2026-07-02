@@ -75,6 +75,11 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(
     page.getByRole("main").getByText("Diagnostics", { exact: true }),
   ).toHaveCount(0);
+  // Runtime status and per-session diagnostics sit behind the Details
+  // disclosure instead of stacking as permanent panes.
+  await expect(page.getByRole("heading", { name: "Runtime status" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Show details" }).click();
+  await expect(page.getByRole("heading", { name: "Runtime status" })).toBeVisible();
   await page.getByRole("button", { name: "Load session diagnostics" }).click();
   await expect(page.getByText("Auth state: api-key-broker")).toBeVisible();
   await expect(page.getByText("api.openai.com")).toBeVisible();
@@ -123,16 +128,21 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
 });
 
-test("loads secret-free diagnostics", async ({ page }) => {
+test("loads secret-free diagnostics on entry", async ({ page }) => {
   await page.goto("/");
 
   await page.getByRole("button", { name: "Diagnostics" }).click();
+  // The destination is read-only, so it loads by itself: full doctor detail
+  // plus the trust checks, with no manual load button.
+  await expect(page.getByRole("heading", { name: "Setup checks" })).toBeVisible();
+  await expect(page.getByText("Preview mode")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Trust checks" })).toBeVisible();
-  await page.getByRole("button", { name: "Load diagnostics" }).click();
+  await expect(page.getByRole("button", { name: "Load diagnostics" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Auth broker status" })).toBeVisible();
   await expect(page.getByText("codex: api-key-broker")).toBeVisible();
   await page.getByRole("tab", { name: "Network" }).click();
   await expect(page.getByText("No provider egress decisions recorded.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check again" })).toBeVisible();
 });
 
 test("keeps selected-session message drafts isolated", async ({ page }) => {
@@ -176,8 +186,13 @@ test("runs the maintenance preview flows behind confirm gates", async ({ page })
   await page.goto("/");
 
   // Image rebuild lives in the Agents destination and stays gated until the
-  // user confirms.
+  // user confirms. Each agent row shows its image state, and the Claude row
+  // offers a copy button for the terminal sign-in command.
   await page.getByRole("button", { name: "Agents", exact: true }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Agent ready" }).first(),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy command" })).toBeVisible();
   const rebuildButton = page.getByRole("button", { name: "Rebuild image" });
   await expect(rebuildButton).toBeDisabled();
   await page.getByLabel("Confirm agent image rebuild").check();

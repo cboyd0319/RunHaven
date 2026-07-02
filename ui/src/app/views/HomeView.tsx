@@ -36,7 +36,11 @@ export function HomeView(props: MainViewProps) {
   const needsYou = props.sessions.filter(
     (session) => sessionAttention(session) !== null,
   )
-  const recentFinished = groupSessions(props.sessions).finished.slice(0, 5)
+  // A session in the Needs you list (failed, ready to review) never repeats in
+  // the finished list below, so each run has exactly one Home row.
+  const recentFinished = groupSessions(props.sessions)
+    .finished.filter((session) => sessionAttention(session) === null)
+    .slice(0, 5)
   const firstRun = props.sessions.length === 0 && !props.lastLaunch
 
   return (

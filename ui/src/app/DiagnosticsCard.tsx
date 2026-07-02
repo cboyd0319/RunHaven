@@ -1,7 +1,6 @@
 import { CircleAlert, Network } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -28,19 +27,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import type { DiagnosticsState } from "./types"
 
+// Read-only trust evidence. The Diagnostics view loads this data when it
+// opens and refreshes it from its Check again action, so the card itself has
+// no load button anymore.
 export function DiagnosticsCard({
   diagnostics,
   loading,
   error,
-  onLoad,
 }: {
   diagnostics: DiagnosticsState | null
   loading: boolean
   error: string
-  onLoad: () => Promise<void>
 }) {
   return (
-    <Card>
+    <Card aria-live="polite">
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
           Trust checks
@@ -50,9 +50,11 @@ export function DiagnosticsCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <Button type="button" variant="outline" onClick={() => void onLoad()}>
-          {loading ? "Loading diagnostics..." : "Load diagnostics"}
-        </Button>
+        {loading && !diagnostics ? (
+          <p className="text-sm text-muted-foreground">
+            Loading diagnostics...
+          </p>
+        ) : null}
         {error ? (
           <Alert variant="destructive">
             <CircleAlert />

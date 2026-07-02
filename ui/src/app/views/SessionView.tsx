@@ -1,10 +1,14 @@
+import { useState } from "react"
+
 import type { ManagedSessionSummary } from "@/commands/runhaven"
+import { Button } from "@/components/ui/button"
 
 import {
   ManagedSessionCard,
   sessionAllowsCleanup,
   sessionAllowsRunControl,
 } from "../ManagedSessionCard"
+import { SessionAttentionBanner } from "../SessionAttentionBanner"
 import { ManagedSessionDiagnosticsCard } from "../ManagedSessionDiagnosticsCard"
 import { ManagedSessionStatusCard } from "../ManagedSessionStatusCard"
 import { RunOutputCard } from "../RunOutputCard"
@@ -30,34 +34,16 @@ export function SessionView(
     cleanupAvailable ||
     Boolean(props.controlMessage || props.controlError)
 
+  // Reading order per the navigation spec: the attention banner leads with
+  // the one fix, run controls sit at the top as the toolbar approximation
+  // until the native menu bar lands (never at the window bottom), a finished
+  // worktree leads with its review, then the status header, output, and
+  // composer. Runtime and diagnostics detail is demoted behind Details.
   return (
     <div className="flex flex-col gap-4">
-      <ManagedSessionCard session={props.selectedSession} />
-      {worktreeReviewEligible ? (
-        <SessionWorktreeReview
-          session={props.selectedSession}
-          onResolved={props.onWorktreeResolved}
-        />
-      ) : null}
-      <ManagedSessionStatusCard
-        status={props.selectedSessionStatus}
-        loading={props.selectedSessionStatusLoading}
-        error={props.selectedSessionStatusError}
-      />
-      <ManagedSessionDiagnosticsCard
-        diagnostics={props.selectedSessionDiagnostics}
-        loading={props.selectedSessionDiagnosticsLoading}
-        error={props.selectedSessionDiagnosticsError}
-        onLoad={props.onLoadSelectedSessionDiagnostics}
-      />
-      <SessionInputCard
+      <SessionAttentionBanner
         session={props.selectedSession}
-        draft={props.sessionInputDraft}
-        sending={props.sessionInputSending}
-        error={props.sessionInputError}
-        acceptedMessage={props.sessionInputAcceptedMessage}
-        onDraftChange={props.onSessionInputDraftChange}
-        onSend={props.onSendSelectedSessionInput}
+        onNavigate={props.onNavigate}
       />
       {showRunControlCard ? (
         <RunStatusCard
@@ -77,8 +63,61 @@ export function SessionView(
           onControl={props.onControl}
         />
       ) : null}
+      {worktreeReviewEligible ? (
+        <SessionWorktreeReview
+          session={props.selectedSession}
+          onResolved={props.onWorktreeResolved}
+        />
+      ) : null}
+      <ManagedSessionCard session={props.selectedSession} />
       <OutputView runOutput={props.runOutput} />
+      <SessionInputCard
+        session={props.selectedSession}
+        draft={props.sessionInputDraft}
+        sending={props.sessionInputSending}
+        error={props.sessionInputError}
+        acceptedMessage={props.sessionInputAcceptedMessage}
+        onDraftChange={props.onSessionInputDraftChange}
+        onSend={props.onSendSelectedSessionInput}
+      />
+      <SessionDetails {...props} />
     </div>
+  )
+}
+
+// Runtime status and per-session diagnostics as a temporary disclosure, not
+// permanent panes: the cards render only while Details is open. The toggle is
+// plain show/hide state; it never loads or mutates anything by itself.
+function SessionDetails(props: MainViewProps) {
+  const [open, setOpen] = useState(false)
+  return (
+    <section className="flex flex-col gap-4">
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          aria-expanded={open}
+          onClick={() => setOpen((current) => !current)}
+        >
+          {open ? "Hide details" : "Show details"}
+        </Button>
+      </div>
+      {open ? (
+        <>
+          <ManagedSessionStatusCard
+            status={props.selectedSessionStatus}
+            loading={props.selectedSessionStatusLoading}
+            error={props.selectedSessionStatusError}
+          />
+          <ManagedSessionDiagnosticsCard
+            diagnostics={props.selectedSessionDiagnostics}
+            loading={props.selectedSessionDiagnosticsLoading}
+            error={props.selectedSessionDiagnosticsError}
+            onLoad={props.onLoadSelectedSessionDiagnostics}
+          />
+        </>
+      ) : null}
+    </section>
   )
 }
 

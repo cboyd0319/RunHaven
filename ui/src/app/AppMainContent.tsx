@@ -2,11 +2,11 @@ import { CheckCircle2, CircleAlert } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-import { DiagnosticsCard } from "./DiagnosticsCard"
 import type { NavDestination } from "./navigation"
 import { useFocusOnChange } from "./useFocusOnChange"
 import { sessionAllowsWorktreeReview } from "./worktreeReview"
 import { AgentsView } from "./views/AgentsView"
+import { DiagnosticsView } from "./views/DiagnosticsView"
 import { HomeView } from "./views/HomeView"
 import { MaintenanceView } from "./views/MaintenanceView"
 import type { MainViewProps } from "./views/props"
@@ -66,16 +66,21 @@ function MainView(props: AppMainContentProps) {
         <AgentsView
           agents={props.dashboard?.agents ?? []}
           authStatus={props.authStatus}
+          refreshing={props.loading}
           onSignedIn={props.onSignedIn}
+          onRefresh={props.onRefresh}
         />
       )
     case "diagnostics":
       return (
-        <DiagnosticsCard
+        <DiagnosticsView
+          dashboard={props.dashboard}
+          refreshing={props.loading}
           diagnostics={props.diagnostics}
-          loading={props.diagnosticsLoading}
-          error={props.diagnosticsError}
-          onLoad={props.onLoadDiagnostics}
+          diagnosticsLoading={props.diagnosticsLoading}
+          diagnosticsError={props.diagnosticsError}
+          onLoadDiagnostics={props.onLoadDiagnostics}
+          onRefresh={props.onRefresh}
         />
       )
     case "maintenance":

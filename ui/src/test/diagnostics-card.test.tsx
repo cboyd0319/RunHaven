@@ -49,27 +49,35 @@ function diagnostics(patch: Partial<DiagnosticsState> = {}): DiagnosticsState {
   };
 }
 
-const handlers = { onLoad: async () => {} };
-
 describe("DiagnosticsCard", () => {
-  it("prompts to load diagnostics before any data arrives", () => {
+  it("renders quietly before any data arrives; the view owns loading", () => {
     const html = renderToStaticMarkup(
-      <DiagnosticsCard diagnostics={null} loading={false} error="" {...handlers} />
+      <DiagnosticsCard diagnostics={null} loading={false} error="" />
     );
 
     expect(html).toContain("Trust checks");
-    expect(html).toContain("Load diagnostics");
+    // The load button is gone: the Diagnostics view loads on entry.
+    expect(html).not.toContain("Load diagnostics");
     expect(html).not.toContain("Loading diagnostics...");
     expect(html).not.toContain("Runtime:");
     expect(html).not.toContain("Diagnostics unavailable");
   });
 
-  it("shows a loading label on the load button", () => {
+  it("shows a loading line while the first load runs", () => {
     const html = renderToStaticMarkup(
-      <DiagnosticsCard diagnostics={null} loading={true} error="" {...handlers} />
+      <DiagnosticsCard diagnostics={null} loading={true} error="" />
     );
 
     expect(html).toContain("Loading diagnostics...");
+  });
+
+  it("keeps loaded data visible during a quiet refresh", () => {
+    const html = renderToStaticMarkup(
+      <DiagnosticsCard diagnostics={diagnostics()} loading={true} error="" />
+    );
+
+    expect(html).toContain("Auth broker status");
+    expect(html).not.toContain("Loading diagnostics...");
   });
 
   it("surfaces a bounded error without any data", () => {
@@ -78,7 +86,6 @@ describe("DiagnosticsCard", () => {
         diagnostics={null}
         loading={false}
         error="Diagnostics command failed."
-        {...handlers}
       />
     );
 
@@ -92,7 +99,6 @@ describe("DiagnosticsCard", () => {
         diagnostics={diagnostics()}
         loading={false}
         error=""
-        {...handlers}
       />
     );
 
@@ -116,7 +122,6 @@ describe("DiagnosticsCard", () => {
         diagnostics={diagnostics({ authLog: { entries: [] } })}
         loading={false}
         error=""
-        {...handlers}
       />
     );
 

@@ -17,8 +17,14 @@ const claudeAgent: AgentProfile = {
   supportsInAppSignIn: false,
 }
 
+const handlers = {
+  refreshing: false,
+  onSignedIn: () => undefined,
+  onRefresh: () => undefined,
+}
+
 describe("AgentsView", () => {
-  it("shows one row per agent with sign-in state and auth details", () => {
+  it("shows one row per agent with sign-in state, image state, and auth details", () => {
     const markup = renderToStaticMarkup(
       <AgentsView
         agents={[providerAgent, claudeAgent, localAgent]}
@@ -30,7 +36,7 @@ describe("AgentsView", () => {
             { name: "claude", status: "needs-sign-in" },
           ],
         }}
-        onSignedIn={() => undefined}
+        {...handlers}
       />,
     )
 
@@ -40,11 +46,17 @@ describe("AgentsView", () => {
     // Per-agent auth status uses the shared label vocabulary.
     expect(markup).toContain("API key broker")
     expect(markup).toContain("Needs sign-in")
-    // In-app sign-in for device-code agents; terminal instruction for Claude.
+    // In-app sign-in for device-code agents; terminal instruction for Claude
+    // with a copy affordance for the exact command.
     expect(markup).toContain("Sign in to Codex")
     expect(markup).toContain("Sign in to Claude from a terminal")
     expect(markup).toContain("runhaven login claude")
+    expect(markup).toContain("Copy command")
     expect(markup).toContain("Auth details")
+    // Per-row image state loads on entry; static markup shows the initial
+    // loading line. Check again is the view's only refresh action.
+    expect(markup).toContain("Checking image...")
+    expect(markup).toContain("Check again")
   })
 
   it("hosts the confirm-gated image rebuild with agent choices", () => {
@@ -52,7 +64,7 @@ describe("AgentsView", () => {
       <AgentsView
         agents={[providerAgent, claudeAgent]}
         authStatus={null}
-        onSignedIn={() => undefined}
+        {...handlers}
       />,
     )
 
@@ -65,7 +77,7 @@ describe("AgentsView", () => {
 
   it("renders a real empty state instead of dead navigation", () => {
     const markup = renderToStaticMarkup(
-      <AgentsView agents={[]} authStatus={null} onSignedIn={() => undefined} />,
+      <AgentsView agents={[]} authStatus={null} {...handlers} />,
     )
     expect(markup).toContain("No agents found yet")
   })
