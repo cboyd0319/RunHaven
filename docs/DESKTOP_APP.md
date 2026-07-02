@@ -36,9 +36,10 @@ fails, the app shows a short, plain fix. Follow it, then reopen or refresh.
 
 ## Sign in to an agent
 
-Signing in stores your agent login once so your runs can reuse it. Pick an agent
-in the first step of a run; the app shows its sign-in state and, for most agents,
-a **Sign in** button.
+Signing in stores your agent login once so your runs can reuse it. Open
+**Agents** in the sidebar to see every agent's sign-in state, or pick an agent
+in the first step of a run. Both places show, for most agents, a **Sign in**
+button.
 
 - Codex, Copilot, and Antigravity sign in right in the app. Click **Sign in**,
   confirm the box the app pops up, then open the link it shows and enter the
@@ -98,11 +99,28 @@ The app says `Run accepted` when it hands the run to the sandbox. The run then
 shows up in your sessions as it comes up. Once it does, the acceptance notice
 clears and a one-line notice points you at the new session in the sidebar.
 
+## Find your way around
+
+The sidebar is how you move around the app. **Home** is always first and holds
+the start-a-run steps. Below it, your sessions appear in two groups: **Active**
+for runs that are starting, running, or stopping, and **Finished** for runs
+that ended and may need review or cleanup. Empty groups hide. At the bottom,
+the **System** group holds three fixed places: **Agents** (sign in and rebuild
+agent images), **Diagnostics** (read-only trust checks), and **Maintenance**
+(clean up leftovers).
+
+Newer sessions sit higher in each group, and rows never jump around when a
+run's status changes. If a session needs you, its row shows a small badge with
+a symbol in a dot plus a status line that names the state: Failed, Needs
+sign-in, Not responding, or Ready to review. If the session you are viewing is
+removed, the app moves you to the nearest session, or Home when none are left.
+It never switches views on its own for any other reason.
+
 ## Watch your sessions
 
 Each run becomes a managed session in the sidebar. The sidebar shows a short
 identity for every session so you can tell them apart: the agent, the project,
-the sign-in state, the network, and whether input is attached.
+the status, the sign-in state, the network, and whether input is attached.
 
 Select a session to see its live status, recent events, and bounded output. The
 output is trimmed so it will not flood the window, but raw output can still
@@ -152,25 +170,24 @@ secrets.
 The app can show read-only diagnostics for a session: recent sign-in broker
 decisions and network decisions for that run. These show only safe summary
 details, never full paths, secrets, or request bodies. App-wide diagnostics
-live in a Diagnostics panel on the launch screen; while a session is open, the
-session view shows only that session's diagnostics so there is one surface at
-a time.
+live in the Diagnostics view in the sidebar; the session view shows only that
+session's diagnostics so there is one surface at a time.
 
 ## Maintenance
 
-The Maintenance panel handles two safe upkeep tasks. Each one asks you to
-confirm in a native dialog before anything changes.
+Two safe upkeep tasks live in the sidebar. Each one asks you to confirm in a
+native dialog before anything changes.
 
-- Rebuild an agent image. Use this when an agent image is missing or out of
-  date. RunHaven rebuilds it from the bundled template in the background and
-  shows live progress: building, then succeeded or failed, with a short,
-  secret-safe tail of the build output. Sessions that are already running keep
-  working until you launch a new one. The confirm dialog names the exact agent
-  and image tag.
-- Clean up stale networks. RunHaven first shows how many of its own leftover
-  networks it can remove, then removes only those after you confirm. A network
-  still used by a running session is skipped, not forced. The app shows only
-  counts, never network names.
+- Rebuild an agent image, in the **Agents** view. Use this when an agent image
+  is missing or out of date. RunHaven rebuilds it from the bundled template in
+  the background and shows live progress: building, then succeeded or failed,
+  with a short, secret-safe tail of the build output. Sessions that are
+  already running keep working until you launch a new one. The confirm dialog
+  names the exact agent and image tag.
+- Clean up stale networks, in the **Maintenance** view. RunHaven first shows
+  how many of its own leftover networks it can remove, then removes only those
+  after you confirm. A network still used by a running session is skipped, not
+  forced. The app shows only counts, never network names.
 
 Resetting or pruning saved state stays in the command line on purpose. That
 task can erase an agent's saved sign-in across sessions, and previewing it needs

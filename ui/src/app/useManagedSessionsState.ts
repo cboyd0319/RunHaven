@@ -6,7 +6,7 @@ import {
 } from "@/commands/runhaven"
 
 import { sameManagedSessionList } from "./sessionList"
-import { useSelectedSessionId } from "./useSelectedSessionId"
+import { useNavigation } from "./useNavigation"
 
 const MANAGED_SESSION_POLL_MS = 4_000
 
@@ -16,8 +16,13 @@ export function useManagedSessionsState(lastLaunchRunId: string | null) {
   })
   const managedSessionsRef = useRef(managedSessions)
   const requestSeq = useRef(0)
-  const { selectedSessionId, selectedSessionIdRef, selectSession } =
-    useSelectedSessionId(managedSessions)
+  const {
+    navigation,
+    selectedSessionId,
+    selectedSessionIdRef,
+    navigate,
+    selectSession,
+  } = useNavigation(managedSessions)
 
   useEffect(() => {
     managedSessionsRef.current = managedSessions
@@ -64,8 +69,10 @@ export function useManagedSessionsState(lastLaunchRunId: string | null) {
 
   return {
     managedSessions,
+    navigation,
     selectedSessionId,
     selectedSessionIdRef,
+    navigate,
     selectSession,
     loadManagedSessions,
   }

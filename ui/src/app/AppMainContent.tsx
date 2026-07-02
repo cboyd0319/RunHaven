@@ -1,420 +1,131 @@
 import { CheckCircle2, CircleAlert } from "lucide-react"
 
-import type {
-  AgentProfile,
-  AuthStatusResponse,
-  DashboardStatus,
-  ImageStatusResponse,
-  LaunchRunResponse,
-  LaunchStatusResponse,
-  ManagedSessionStatusResponse,
-  ManagedSessionDiagnosticsResponse,
-  ManagedSessionSummary,
-  RunPlanRequest,
-  RunPlanResponse,
-  RunStatusResponse,
-} from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 
 import { DiagnosticsCard } from "./DiagnosticsCard"
-import { LastLaunchCard } from "./LastLaunchCard"
-import { MaintenanceCard } from "./MaintenanceCard"
-import { LaunchStatusCard } from "./LaunchStatusCard"
-import { LaunchPlanCard } from "./LaunchPlanCard"
-import {
-  ManagedSessionCard,
-  sessionAllowsCleanup,
-  sessionAllowsRunControl,
-} from "./ManagedSessionCard"
-import { ManagedSessionDiagnosticsCard } from "./ManagedSessionDiagnosticsCard"
-import { ManagedSessionStatusCard } from "./ManagedSessionStatusCard"
-import { PlanReviewCard } from "./PlanReviewCard"
-import { RunOutputCard } from "./RunOutputCard"
-import { RunStatusCard } from "./RunStatusCard"
-import { SessionInputCard } from "./SessionInputCard"
+import type { NavDestination } from "./navigation"
 import { SetupCard } from "./SetupCard"
-import type { DiagnosticsState, LaunchStep, RunControlAction } from "./types"
+import type { LaunchStep } from "./types"
 import { useFocusOnChange } from "./useFocusOnChange"
-import type { useRunOutput } from "./useRunOutput"
-import { useWorktreeReview } from "./useWorktreeReview"
 import { sessionAllowsWorktreeReview } from "./worktreeReview"
-import { WorktreeReviewCard } from "./WorktreeReviewCard"
+import { AgentsView } from "./views/AgentsView"
+import { HomeView } from "./views/HomeView"
+import { MaintenanceView } from "./views/MaintenanceView"
+import type { MainViewProps } from "./views/props"
+import { SessionView } from "./views/SessionView"
 
-type AppMainContentProps = {
-  error: string
-  launchMessage: string
-  loading: boolean
-  dashboard: DashboardStatus | null
-  authStatus: AuthStatusResponse | null
-  setupReady: boolean
-  selectedSession: ManagedSessionSummary | null
-  selectedSessionStatus: ManagedSessionStatusResponse | null
-  selectedSessionStatusLoading: boolean
-  selectedSessionStatusError: string
-  selectedSessionDiagnostics: ManagedSessionDiagnosticsResponse | null
-  selectedSessionDiagnosticsLoading: boolean
-  selectedSessionDiagnosticsError: string
-  onLoadSelectedSessionDiagnostics: () => Promise<void>
-  launchStatus: LaunchStatusResponse | null
-  launchStatusLoading: boolean
-  launchStatusError: string
-  sessionInputDraft: string
-  sessionInputSending: boolean
-  sessionInputError: string
-  sessionInputAcceptedMessage: string
-  onSessionInputDraftChange: (value: string) => void
-  onSendSelectedSessionInput: () => Promise<void>
-  runOutput: ReturnType<typeof useRunOutput>
-  controlBusy: boolean
-  controlError: string
-  controlMessage: string
-  controlConfirmations: Record<RunControlAction, boolean>
-  onControlConfirmationChange: (action: RunControlAction, checked: boolean) => void
-  onControl: (action: RunControlAction) => Promise<void>
-  onWorktreeResolved: () => Promise<void>
-  launchStep: LaunchStep
-  plan: RunPlanResponse | null
-  launchConfirmation: boolean
-  confirmedWarnings: string[]
-  launchReady: boolean
-  launching: boolean
-  launchImageReady: boolean
-  onLaunchConfirmationChange: (checked: boolean) => void
-  onConfirmWarning: (code: string, checked: boolean) => void
-  onLaunchStepChange: (step: LaunchStep) => void
-  onStart: () => Promise<void>
-  request: RunPlanRequest
-  selectedAgent: AgentProfile | undefined
-  imageLoading: boolean
-  imageStatus: ImageStatusResponse | null
-  imageError: string
-  planning: boolean
-  onAgentChange: (agentName: string) => void
-  onPickFolder: () => Promise<void>
-  onRequestChange: (patch: Partial<RunPlanRequest>) => void
-  onNetworkChange: (networkMode: RunPlanRequest["networkMode"]) => void
-  onReviewPlan: () => Promise<void>
-  onSignedIn: () => void
-  lastLaunch: LaunchRunResponse | null
-  lastLaunchSessionId: string | null
-  onSelectSession: (sessionId: string) => void
-  runStatus: RunStatusResponse | null
-  runStatusLoading: boolean
-  runStatusError: string
-  diagnostics: DiagnosticsState | null
-  diagnosticsLoading: boolean
-  diagnosticsError: string
-  onLoadDiagnostics: () => Promise<void>
-}
+type AppMainContentProps = MainViewProps & { navigation: NavDestination }
 
+// Routes the selected sidebar destination to its full view. Every destination
+// always renders something real (no dead navigation), and the focus region key
+// covers destination changes, launch steps, session switches, and worktree
+// resolution so keyboard and AT users land on the new view instead of <body>.
 export function AppMainContent(props: AppMainContentProps) {
-  const {
-    error,
-    launchMessage,
-    loading,
-    dashboard,
-    setupReady,
-    selectedSession,
-    lastLaunch,
-    lastLaunchSessionId,
-    onSelectSession,
-  } = props
+  const { navigation, error, launchMessage } = props
+  const worktreeReviewEligible = props.selectedSession
+    ? sessionAllowsWorktreeReview(props.selectedSession)
+    : false
+  const focusRef = useFocusOnChange<HTMLDivElement>(
+    mainViewFocusKey(navigation, props.launchStep, worktreeReviewEligible),
+  )
 
   return (
     <main className="min-h-0 flex-1 overflow-y-auto p-4">
       <section className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-4">
-        {error ? (
-          <Alert variant="destructive">
-            <CircleAlert />
-            <AlertTitle>Action failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-        {launchMessage ? (
-          <Alert>
-            <CheckCircle2 />
-            <AlertTitle>{launchMessage}</AlertTitle>
-            <AlertDescription>You can follow it below.</AlertDescription>
-          </Alert>
-        ) : null}
-
-        {!setupReady ? (
-          <SetupCard loading={loading} dashboard={dashboard} />
-        ) : selectedSession ? (
-          <SessionView {...props} selectedSession={selectedSession} />
-        ) : (
-          <LaunchView {...props} />
-        )}
-
-        {!selectedSession && lastLaunch ? (
-          lastLaunchSessionId ? (
-            <LaunchedRunNotice
-              sessionId={lastLaunchSessionId}
-              onSelect={onSelectSession}
-            />
-          ) : (
-            <RunView {...props} lastLaunch={lastLaunch} />
-          )
-        ) : null}
-
-        {/* The session view has its own "Session diagnostics" card, so the
-            global accordion shows only on the Start screen to avoid two
-            diagnostics surfaces at once. */}
-        {!selectedSession ? (
-          <details className="rounded-xl border bg-card p-4 text-card-foreground">
-            <summary className="cursor-pointer text-sm font-medium">Diagnostics</summary>
-            <div className="mt-4">
-              <DiagnosticsCard
-                diagnostics={props.diagnostics}
-                loading={props.diagnosticsLoading}
-                error={props.diagnosticsError}
-                onLoad={props.onLoadDiagnostics}
-              />
-            </div>
-          </details>
-        ) : null}
-
-        {setupReady ? (
-          <details className="rounded-xl border bg-card p-4 text-card-foreground">
-            <summary className="cursor-pointer text-sm font-medium">Maintenance</summary>
-            <div className="mt-4">
-              <MaintenanceCard agents={(dashboard?.agents ?? []).map((agent) => agent.name)} />
-            </div>
-          </details>
-        ) : null}
+        <div
+          ref={focusRef}
+          tabIndex={-1}
+          aria-label={mainViewLabel(navigation)}
+          className="flex flex-col gap-4 outline-none"
+        >
+          {error ? (
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>Action failed</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          {launchMessage ? (
+            <Alert>
+              <CheckCircle2 />
+              <AlertTitle>{launchMessage}</AlertTitle>
+              <AlertDescription>You can follow it below.</AlertDescription>
+            </Alert>
+          ) : null}
+          <MainView {...props} />
+        </div>
       </section>
     </main>
   )
 }
 
-function SessionView(
-  props: AppMainContentProps & { selectedSession: ManagedSessionSummary },
-) {
-  const runControlsAvailable = sessionAllowsRunControl(props.selectedSession)
-  const worktreeReviewEligible = sessionAllowsWorktreeReview(props.selectedSession)
-  // The worktree review card owns discard, so hide the standalone delete control
-  // when it is showing to avoid two ways to remove the same copy.
-  const cleanupAvailable =
-    sessionAllowsCleanup(props.selectedSession) && !worktreeReviewEligible
-  const showRunControlCard =
-    runControlsAvailable ||
-    cleanupAvailable ||
-    Boolean(props.controlMessage || props.controlError)
-
-  // Land focus on this view when a session is opened (launch success or sidebar
-  // select) and again when the worktree review resolves and its card unmounts,
-  // so keyboard and AT users are not dropped onto <body>.
-  const focusRef = useFocusOnChange<HTMLDivElement>(
-    `${props.selectedSession.id}:${worktreeReviewEligible}`,
-    { focusOnMount: true },
-  )
-
-  return (
-    <div
-      ref={focusRef}
-      tabIndex={-1}
-      aria-label="Session details"
-      className="flex flex-col gap-4 outline-none"
-    >
-      <ManagedSessionCard session={props.selectedSession} />
-      {worktreeReviewEligible ? (
-        <SessionWorktreeReview
-          session={props.selectedSession}
-          onResolved={props.onWorktreeResolved}
+function MainView(props: AppMainContentProps) {
+  switch (props.navigation.kind) {
+    case "agents":
+      return (
+        <AgentsView
+          agents={props.dashboard?.agents ?? []}
+          authStatus={props.authStatus}
+          onSignedIn={props.onSignedIn}
         />
-      ) : null}
-      <ManagedSessionStatusCard
-        status={props.selectedSessionStatus}
-        loading={props.selectedSessionStatusLoading}
-        error={props.selectedSessionStatusError}
-      />
-      <ManagedSessionDiagnosticsCard
-        diagnostics={props.selectedSessionDiagnostics}
-        loading={props.selectedSessionDiagnosticsLoading}
-        error={props.selectedSessionDiagnosticsError}
-        onLoad={props.onLoadSelectedSessionDiagnostics}
-      />
-      <SessionInputCard
-        session={props.selectedSession}
-        draft={props.sessionInputDraft}
-        sending={props.sessionInputSending}
-        error={props.sessionInputError}
-        acceptedMessage={props.sessionInputAcceptedMessage}
-        onDraftChange={props.onSessionInputDraftChange}
-        onSend={props.onSendSelectedSessionInput}
-      />
-      {showRunControlCard ? (
-        <RunStatusCard
-          title="Session controls"
-          controlTarget="session"
-          showStatus={false}
-          controlsAvailable={runControlsAvailable}
-          cleanupAvailable={cleanupAvailable}
-          runStatus={null}
-          runStatusLoading={false}
-          runStatusError=""
-          controlBusy={props.controlBusy}
-          controlError={props.controlError}
-          controlMessage={props.controlMessage}
-          controlConfirmations={props.controlConfirmations}
-          onConfirmationChange={props.onControlConfirmationChange}
-          onControl={props.onControl}
+      )
+    case "diagnostics":
+      return (
+        <DiagnosticsCard
+          diagnostics={props.diagnostics}
+          loading={props.diagnosticsLoading}
+          error={props.diagnosticsError}
+          onLoad={props.onLoadDiagnostics}
         />
-      ) : null}
-      <OutputView runOutput={props.runOutput} />
-    </div>
-  )
+      )
+    case "maintenance":
+      return <MaintenanceView />
+    case "session":
+      if (!props.setupReady) {
+        return <SetupCard loading={props.loading} dashboard={props.dashboard} />
+      }
+      // A removed record renavigates via the selection fallback; render nothing
+      // for the one frame in between instead of flashing another view.
+      return props.selectedSession ? (
+        <SessionView {...props} selectedSession={props.selectedSession} />
+      ) : null
+    case "home":
+      if (!props.setupReady) {
+        return <SetupCard loading={props.loading} dashboard={props.dashboard} />
+      }
+      return <HomeView {...props} />
+  }
 }
 
-function LaunchView(props: AppMainContentProps) {
-  // Focus the launch view when the step changes (Back/Continue/Review), but not
-  // on first paint since the launch view can be the initial screen.
-  const focusRef = useFocusOnChange<HTMLDivElement>(props.launchStep)
-  const content =
-    props.launchStep === "review" && props.plan ? (
-      <PlanReviewCard
-        plan={props.plan}
-        launchConfirmation={props.launchConfirmation}
-        confirmedWarnings={props.confirmedWarnings}
-        launchReady={props.launchReady}
-        launching={props.launching}
-        setupOk={props.setupReady}
-        launchImageReady={props.launchImageReady}
-        onLaunchConfirmationChange={props.onLaunchConfirmationChange}
-        onConfirmWarning={props.onConfirmWarning}
-        onBack={() => props.onLaunchStepChange("project")}
-        onStart={props.onStart}
-      />
-    ) : (
-      <LaunchPlanCard
-        step={props.launchStep === "review" ? "project" : props.launchStep}
-        agents={props.dashboard?.agents ?? []}
-        request={props.request}
-        selectedAgent={props.selectedAgent}
-        authStatus={props.authStatus}
-        imageLoading={props.imageLoading}
-        imageStatus={props.imageStatus}
-        imageError={props.imageError}
-        planning={props.planning}
-        onAgentChange={props.onAgentChange}
-        onPickFolder={props.onPickFolder}
-        onRequestChange={props.onRequestChange}
-        onNetworkChange={props.onNetworkChange}
-        onBack={() => props.onLaunchStepChange("agent")}
-        onContinue={() => props.onLaunchStepChange("project")}
-        onReviewPlan={props.onReviewPlan}
-        onSignedIn={props.onSignedIn}
-      />
-    )
-  return (
-    <div
-      ref={focusRef}
-      tabIndex={-1}
-      aria-label="Launch a run"
-      className="flex flex-col gap-4 outline-none"
-    >
-      {content}
-    </div>
-  )
+// One focus key for the whole content pane: destination changes, launch step
+// changes, session switches, and worktree-review resolution all move focus;
+// background polls change none of these inputs, so quiet refresh stays quiet.
+function mainViewFocusKey(
+  navigation: NavDestination,
+  launchStep: LaunchStep,
+  worktreeReviewEligible: boolean,
+): string {
+  switch (navigation.kind) {
+    case "home":
+      return `home:${launchStep}`
+    case "session":
+      return `session:${navigation.id}:${worktreeReviewEligible}`
+    default:
+      return navigation.kind
+  }
 }
 
-// After a launch becomes a managed session, the live status, controls, and
-// output live only in that session's view. The launch screen shows a single
-// confirmation that points at the sidebar, so one run is never controllable
-// from two places at once.
-function LaunchedRunNotice({
-  sessionId,
-  onSelect,
-}: {
-  sessionId: string
-  onSelect: (sessionId: string) => void
-}) {
-  return (
-    <Alert role="status">
-      <CheckCircle2 />
-      <AlertTitle>Run started - find it in your sidebar</AlertTitle>
-      <AlertDescription className="flex flex-col items-start gap-2">
-        <span>Open the session to watch its status and controls.</span>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => onSelect(sessionId)}
-        >
-          Open session
-        </Button>
-      </AlertDescription>
-    </Alert>
-  )
-}
-
-// Fallback control surface for a launched run that never registered as a managed
-// session (for example a failed launch), so stop and repair stay reachable.
-function RunView(
-  props: AppMainContentProps & { lastLaunch: LaunchRunResponse },
-) {
-  return (
-    <>
-      <LastLaunchCard lastLaunch={props.lastLaunch} />
-      <LaunchStatusCard
-        status={props.launchStatus}
-        loading={props.launchStatusLoading}
-        error={props.launchStatusError}
-      />
-      <RunStatusCard
-        runStatus={props.runStatus}
-        runStatusLoading={props.runStatusLoading}
-        runStatusError={props.runStatusError}
-        controlBusy={props.controlBusy}
-        controlError={props.controlError}
-        controlMessage={props.controlMessage}
-        controlConfirmations={props.controlConfirmations}
-        onConfirmationChange={props.onControlConfirmationChange}
-        onControl={props.onControl}
-      />
-      <OutputView runOutput={props.runOutput} />
-    </>
-  )
-}
-
-function SessionWorktreeReview({
-  session,
-  onResolved,
-}: {
-  session: ManagedSessionSummary
-  onResolved: () => Promise<void>
-}) {
-  const review = useWorktreeReview(session.id, onResolved)
-  return (
-    <WorktreeReviewCard
-      review={review.review}
-      loading={review.loading}
-      loadError={review.loadError}
-      confirmations={review.confirmations}
-      busy={review.busy}
-      message={review.message}
-      nextSteps={review.nextSteps}
-      actionError={review.actionError}
-      onConfirmationChange={review.setConfirmation}
-      onAction={review.runAction}
-    />
-  )
-}
-
-function OutputView({ runOutput }: { runOutput: ReturnType<typeof useRunOutput> }) {
-  return (
-    <RunOutputCard
-      logAcknowledged={runOutput.acknowledged}
-      logLoading={runOutput.loading}
-      logError={runOutput.error}
-      logSnapshot={runOutput.visibleSnapshot}
-      liveOutputAvailable={runOutput.liveAvailable}
-      liveOutputEnabled={runOutput.liveEnabled}
-      liveOutputRefreshing={runOutput.liveRefreshing}
-      onAcknowledgedChange={runOutput.setAcknowledged}
-      onLoad={runOutput.loadSnapshot}
-      onLiveOutputChange={runOutput.setLiveEnabled}
-    />
-  )
+function mainViewLabel(navigation: NavDestination): string {
+  switch (navigation.kind) {
+    case "home":
+      return "Launch a run"
+    case "session":
+      return "Session details"
+    case "agents":
+      return "Agents"
+    case "diagnostics":
+      return "Diagnostics"
+    case "maintenance":
+      return "Maintenance"
+  }
 }

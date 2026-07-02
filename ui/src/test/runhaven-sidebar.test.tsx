@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
 import { RunHavenSidebar } from "../app/RunHavenSidebar"
+import type { NavDestination } from "../app/navigation"
 import { SidebarProvider } from "../components/ui/sidebar"
 import { TooltipProvider } from "../components/ui/tooltip"
 import type { ManagedSessionSummary } from "../commands/runhaven"
@@ -41,116 +42,187 @@ function session(
   }
 }
 
+function renderSidebar(
+  sessions: ManagedSessionSummary[],
+  navigation: NavDestination,
+): string {
+  return renderToStaticMarkup(
+    <TooltipProvider>
+      <SidebarProvider>
+        <RunHavenSidebar
+          sessions={sessions}
+          navigation={navigation}
+          onNavigate={() => undefined}
+        />
+      </SidebarProvider>
+    </TooltipProvider>,
+  )
+}
+
 describe("RunHavenSidebar", () => {
-  it("groups sessions by agent with compact counts", () => {
-    const html = renderToStaticMarkup(
-      <TooltipProvider>
-        <SidebarProvider>
-          <RunHavenSidebar
-            sessions={[
-              session("gamma", {
-                agent: "codex",
-                session: "gamma",
-                title: "Codex - gamma",
-                project: "sandbox",
-                authStatus: "ready",
-                authScope: "project",
-                network: "internet",
-                input: {
-                  attached: false,
-                  status: "detached",
-                  detail: "Input is not attached for this session.",
-                },
-                statusLabel: "Needs auth",
-              }),
-              session("alpha"),
-              session("beta", {
-                agent: "claude",
-                session: "beta",
-                title: "Claude - beta",
-                project: "beta",
-                authStatus: "ready",
-                authScope: "project",
-                network: "internal",
-                input: {
-                  attached: false,
-                  status: "detached",
-                  detail: "Input is not attached for this session.",
-                },
-                statusLabel: "Waiting",
-              }),
-            ]}
-            selectedSessionId="gamma"
-            onStartSelect={() => undefined}
-            onSessionSelect={() => undefined}
-          />
-        </SidebarProvider>
-      </TooltipProvider>,
+  it("shows Home first, lifecycle groups newest-first, then System", () => {
+    const html = renderSidebar(
+      [
+        session("older", {
+          title: "Claude - older",
+          startedAt: "2026-07-01T01:00:00Z",
+        }),
+        session("newer", {
+          agent: "codex",
+          title: "Codex - newer",
+          startedAt: "2026-07-01T03:00:00Z",
+        }),
+        session("done", {
+          title: "Claude - done",
+          lifecycle: "finished",
+          statusLabel: "Finished",
+          startedAt: "2026-07-01T02:00:00Z",
+        }),
+      ],
+      { kind: "home" },
     )
 
-    expect(html).toContain("Sessions (3)")
-    expect(html).toContain("Claude")
-    expect(html).toContain("Codex")
-    expect(html).toContain(">2<")
-    expect(html).toContain(">1<")
+    // Lifecycle taxonomy replaces the old per-agent grouping.
+    expect(html).not.toContain("Sessions (")
+    expect(html).not.toContain('aria-label="Claude sessions"')
+    expect(html).toContain('aria-label="Active sessions"')
+    expect(html).toContain('aria-label="Finished sessions"')
 
-    const claudeIndex = html.indexOf('aria-label="Claude sessions"')
-    const codexIndex = html.indexOf('aria-label="Codex sessions"')
-    expect(claudeIndex).toBeGreaterThanOrEqual(0)
-    expect(codexIndex).toBeGreaterThan(claudeIndex)
+    const home = html.indexOf(">Home<")
+    const active = html.indexOf(">Active<")
+    const newer = html.indexOf("Codex - newer")
+    const older = html.indexOf("Claude - older")
+    const finished = html.indexOf(">Finished<")
+    const done = html.indexOf("Claude - done")
+    const system = html.indexOf(">System<")
+    const agents = html.indexOf(">Agents<")
+    const diagnostics = html.indexOf(">Diagnostics<")
+    const maintenance = html.indexOf(">Maintenance<")
+    expect(home).toBeGreaterThanOrEqual(0)
+    // Home first, Active (newest first), Finished, then System last.
+    expect(active).toBeGreaterThan(home)
+    expect(newer).toBeGreaterThan(active)
+    expect(older).toBeGreaterThan(newer)
+    expect(finished).toBeGreaterThan(older)
+    expect(done).toBeGreaterThan(finished)
+    expect(system).toBeGreaterThan(done)
+    expect(agents).toBeGreaterThan(system)
+    expect(diagnostics).toBeGreaterThan(agents)
+    expect(maintenance).toBeGreaterThan(diagnostics)
+
+    // Home is the selected destination.
+    expect(html.match(/aria-current="page"/g) ?? []).toHaveLength(1)
+    expect(html.match(/data-active="true"/g) ?? []).toHaveLength(1)
+  })
+
+  it("hides empty session groups and marks the selected System destination", () => {
+    const html = renderSidebar([], { kind: "diagnostics" })
+
+    expect(html).not.toContain('aria-label="Active sessions"')
+    expect(html).not.toContain('aria-label="Finished sessions"')
+    expect(html).toContain(">Home<")
+    expect(html).toContain(">Agents<")
+    expect(html).toContain(">Maintenance<")
+    // Exactly one selection: the Diagnostics destination.
+    expect(html.match(/aria-current="page"/g) ?? []).toHaveLength(1)
+    const currentIndex = html.indexOf('aria-current="page"')
+    expect(html.indexOf(">Diagnostics<")).toBeGreaterThan(currentIndex)
+  })
+
+  it("shows one prioritized attention badge per row that needs you", () => {
+    const html = renderSidebar(
+      [
+        session("broken", {
+          title: "Claude - broken",
+          lifecycle: "failed",
+          statusLabel: "Failed",
+          startedAt: "2026-07-01T04:00:00Z",
+        }),
+        session("auth", {
+          agent: "codex",
+          title: "Codex - auth",
+          startedAt: "2026-07-01T03:00:00Z",
+          nextAction: {
+            kind: "auth_attention",
+            label: "Finish auth",
+            detail: "Sign in to continue.",
+          },
+        }),
+        session("review", {
+          title: "Claude - review",
+          lifecycle: "finished",
+          statusLabel: "Finished",
+          startedAt: "2026-07-01T02:00:00Z",
+          cleanup: {
+            available: true,
+            target: "worktree",
+            label: "Discard saved copy",
+            detail: "This session saved an isolated copy.",
+          },
+        }),
+        session("calm", {
+          title: "Claude - calm",
+          startedAt: "2026-07-01T01:00:00Z",
+        }),
+      ],
+      { kind: "home" },
+    )
+
+    // One symbol-in-dot badge per needy row, none for the calm one, and the
+    // paired status text names the state (never color or symbol alone).
+    expect(html).toContain('data-attention="failed"')
+    expect(html).toContain('data-attention="needs-sign-in"')
+    expect(html).toContain('data-attention="ready-to-review"')
+    expect(html.match(/data-attention=/g) ?? []).toHaveLength(3)
+    expect(html).toContain("Needs sign-in")
+    expect(html).toContain("Ready to review")
+    // Badges carry states, never counts.
+    expect(html).not.toContain(">3<")
   })
 
   it("keeps same-agent and mixed-agent sessions distinguishable", () => {
-    const html = renderToStaticMarkup(
-      <TooltipProvider>
-        <SidebarProvider>
-          <RunHavenSidebar
-            sessions={[
-              session("alpha", {
-                session: "planning",
-                title: "Claude - docs",
-                project: "docs",
-                containerName: "runhaven-codex-hidden-home",
-                detailCommand:
-                  "runhaven runs show /Users/c/private/docs --env TOKEN=value",
-              }),
-              session("beta", {
-                agent: "claude",
-                session: "review",
-                title: "Claude - docs",
-                project: "/Users/c/private/docs",
-                authStatus: "ready",
-                authScope: "project",
-                network: "internal",
-                input: {
-                  attached: false,
-                  status: "detached",
-                  detail: "Input is not attached for this session.",
-                },
-                statusLabel: "Waiting",
-              }),
-              session("gamma", {
-                agent: "codex",
-                session: "gamma",
-                title: "Codex - gamma",
-                project: "sandbox",
-                authStatus: "ready",
-                authScope: "project",
-                network: "internet",
-                input: {
-                  attached: false,
-                  status: "detached",
-                  detail: "Input is not attached for this session.",
-                },
-                statusLabel: "Needs auth",
-              }),
-            ]}
-            selectedSessionId="beta"
-            onStartSelect={() => undefined}
-            onSessionSelect={() => undefined}
-          />
-        </SidebarProvider>
-      </TooltipProvider>,
+    const html = renderSidebar(
+      [
+        session("alpha", {
+          session: "planning",
+          title: "Claude - docs",
+          project: "docs",
+          containerName: "runhaven-codex-hidden-home",
+          detailCommand:
+            "runhaven runs show /Users/c/private/docs --env TOKEN=value",
+        }),
+        session("beta", {
+          agent: "claude",
+          session: "review",
+          title: "Claude - docs",
+          project: "/Users/c/private/docs",
+          authStatus: "ready",
+          authScope: "project",
+          network: "internal",
+          input: {
+            attached: false,
+            status: "detached",
+            detail: "Input is not attached for this session.",
+          },
+          statusLabel: "Waiting",
+        }),
+        session("gamma", {
+          agent: "codex",
+          session: "gamma",
+          title: "Codex - gamma",
+          project: "sandbox",
+          authStatus: "ready",
+          authScope: "project",
+          network: "internet",
+          input: {
+            attached: false,
+            status: "detached",
+            detail: "Input is not attached for this session.",
+          },
+          statusLabel: "Needs auth",
+        }),
+      ],
+      { kind: "session", id: "beta" },
     )
 
     expect(html).toContain("Claude - docs")
@@ -175,49 +247,41 @@ describe("RunHavenSidebar", () => {
   })
 
   it("shows compact auth labels without leaking unsafe auth values", () => {
-    const html = renderToStaticMarkup(
-      <TooltipProvider>
-        <SidebarProvider>
-          <RunHavenSidebar
-            sessions={[
-              session("login", {
-                session: "saved",
-                title: "Claude - saved",
-                project: "/Users/c/private/saved",
-                authStatus: "login-state",
-                detailCommand:
-                  "runhaven runs show /Users/c/private/saved --env TOKEN=value",
-              }),
-              session("signin", {
-                agent: "codex",
-                session: "signin",
-                title: "Codex - signin",
-                project: "signin",
-                authStatus: "needs-sign-in",
-                statusLabel: "Needs auth",
-              }),
-              session("local", {
-                agent: "shell",
-                session: "local",
-                title: "Shell - local",
-                project: "local",
-                authStatus: "no-auth-needed",
-                network: "internal",
-              }),
-              session("unsafe", {
-                agent: "gemini",
-                session: "unsafe",
-                title: "Gemini - unsafe",
-                project: "unsafe",
-                authStatus: "/Users/c/private/TOKEN=value",
-              }),
-            ]}
-            selectedSessionId="login"
-            onStartSelect={() => undefined}
-            onSessionSelect={() => undefined}
-          />
-        </SidebarProvider>
-      </TooltipProvider>,
+    const html = renderSidebar(
+      [
+        session("login", {
+          session: "saved",
+          title: "Claude - saved",
+          project: "/Users/c/private/saved",
+          authStatus: "login-state",
+          detailCommand:
+            "runhaven runs show /Users/c/private/saved --env TOKEN=value",
+        }),
+        session("signin", {
+          agent: "codex",
+          session: "signin",
+          title: "Codex - signin",
+          project: "signin",
+          authStatus: "needs-sign-in",
+          statusLabel: "Needs auth",
+        }),
+        session("local", {
+          agent: "shell",
+          session: "local",
+          title: "Shell - local",
+          project: "local",
+          authStatus: "no-auth-needed",
+          network: "internal",
+        }),
+        session("unsafe", {
+          agent: "gemini",
+          session: "unsafe",
+          title: "Gemini - unsafe",
+          project: "unsafe",
+          authStatus: "/Users/c/private/TOKEN=value",
+        }),
+      ],
+      { kind: "session", id: "login" },
     )
 
     expect(html).toContain("Login state")

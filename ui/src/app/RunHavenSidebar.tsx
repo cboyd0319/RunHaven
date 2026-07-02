@@ -1,7 +1,17 @@
-import { AppWindow, Terminal, type LucideIcon } from "lucide-react"
+import {
+  Activity,
+  Bot,
+  CircleX,
+  GitBranch,
+  House,
+  KeyRound,
+  Terminal,
+  TriangleAlert,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react"
 
 import logo from "@/assets/logo.png"
-import { Badge } from "@/components/ui/badge"
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +25,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { cn } from "@/lib/utils"
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 
 import {
@@ -23,32 +34,27 @@ import {
   networkLabel,
   safeBackendLabel,
 } from "./labels"
+import { groupSessions, type NavDestination } from "./navigation"
 import {
-  agentLabel,
-  sessionIdentityLabel,
-  sessionInputLabel,
-} from "./sessionIdentity"
+  sessionAttention,
+  type SessionAttention,
+  type SessionAttentionKind,
+} from "./sessionAttention"
+import { sessionIdentityLabel, sessionInputLabel } from "./sessionIdentity"
 
-type SidebarNavItem = {
-  label: string
-  Icon: LucideIcon
-  onClick?: () => void
-}
-
+// Sidebar taxonomy per docs/plans/native-gui-navigation-spec.md section 2:
+// a fixed Home row first, dynamic Active and Finished session groups (hidden
+// when empty), and a fixed System group last. The sidebar is navigation only.
 export function RunHavenSidebar({
   sessions,
-  selectedSessionId,
-  onStartSelect,
-  onSessionSelect,
+  navigation,
+  onNavigate,
 }: {
   sessions: ManagedSessionSummary[]
-  selectedSessionId: string | null
-  onStartSelect: () => void
-  onSessionSelect: (sessionId: string) => void
+  navigation: NavDestination
+  onNavigate: (destination: NavDestination) => void
 }) {
-  const navItems: SidebarNavItem[] = [
-    { label: "Start", Icon: AppWindow, onClick: onStartSelect },
-  ]
+  const groups = groupSessions(sessions)
 
   return (
     <Sidebar collapsible="icon">
@@ -69,115 +75,203 @@ export function RunHavenSidebar({
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map(({ label, Icon, onClick }) => (
-                <SidebarMenuItem key={label}>
-                  <SidebarMenuButton
-                    isActive={label === "Start" && selectedSessionId === null}
-                    tooltip={label}
-                    type="button"
-                    onClick={onClick}
-                  >
-                    <Icon />
-                    <span>{label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              <DestinationRow
+                label="Home"
+                Icon={House}
+                active={navigation.kind === "home"}
+                onSelect={() => onNavigate({ kind: "home" })}
+              />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        {sessions.length > 0 ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>Sessions ({sessions.length})</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <div className="flex flex-col gap-4">
-                {groupSessionsByAgent(sessions).map(([agent, agentSessions]) => (
-                  <section key={agent} aria-label={`${agentLabel(agent)} sessions`}>
-                    <div className="mb-2 flex items-center justify-between px-2 group-data-[collapsible=icon]:hidden">
-                      <div className="text-[11px] font-medium tracking-[0.2em] text-muted-foreground uppercase">
-                        {agentLabel(agent)}
-                      </div>
-                      <SidebarSessionBadge>{String(agentSessions.length)}</SidebarSessionBadge>
-                    </div>
-                    <SidebarMenu>
-                      {agentSessions.map((session) => {
-                        const selected = selectedSessionId === session.id
-
-                        return (
-                          <SidebarMenuItem key={session.id}>
-                            <SidebarMenuButton
-                              aria-current={selected ? "page" : undefined}
-                              className="h-auto items-start gap-3 rounded-xl border border-transparent py-3 pr-24 data-[active=true]:border-sidebar-primary/25 data-[active=true]:bg-sidebar-accent/70"
-                              tooltip={session.title}
-                              type="button"
-                              isActive={selected}
-                              onClick={() => onSessionSelect(session.id)}
-                            >
-                              <Terminal />
-                              <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                                <div className="truncate text-sm font-medium">
-                                  {session.title}
-                                </div>
-                                <div className="truncate text-[11px] text-muted-foreground">
-                                  {sessionIdentityLabel(session)}
-                                </div>
-                                <div className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                                  {authStatusLabel(session.authStatus)}
-                                  {" • "}
-                                  {authScopeLabel(session.authScope)}
-                                </div>
-                                <div className="text-[11px] leading-4 text-muted-foreground">
-                                  {networkLabel(session.network)}
-                                  {" • "}
-                                  {sessionInputLabel(session)}
-                                </div>
-                              </div>
-                            </SidebarMenuButton>
-                            <SidebarMenuBadge className="max-w-20 truncate">
-                              {safeBackendLabel(session.statusLabel, "Unknown")}
-                            </SidebarMenuBadge>
-                          </SidebarMenuItem>
-                        )
-                      })}
-                    </SidebarMenu>
-                  </section>
-                ))}
-              </div>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ) : null}
+        <SessionGroup
+          label="Active"
+          sessions={groups.active}
+          navigation={navigation}
+          onNavigate={onNavigate}
+        />
+        <SessionGroup
+          label="Finished"
+          sessions={groups.finished}
+          navigation={navigation}
+          onNavigate={onNavigate}
+        />
+        <SidebarGroup>
+          <SidebarGroupLabel className="tracking-[0.2em] uppercase">
+            System
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <DestinationRow
+                label="Agents"
+                Icon={Bot}
+                active={navigation.kind === "agents"}
+                onSelect={() => onNavigate({ kind: "agents" })}
+              />
+              <DestinationRow
+                label="Diagnostics"
+                Icon={Activity}
+                active={navigation.kind === "diagnostics"}
+                onSelect={() => onNavigate({ kind: "diagnostics" })}
+              />
+              <DestinationRow
+                label="Maintenance"
+                Icon={Wrench}
+                active={navigation.kind === "maintenance"}
+                onSelect={() => onNavigate({ kind: "maintenance" })}
+              />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
   )
 }
 
-function SidebarSessionBadge({ children }: { children: string }) {
+function DestinationRow({
+  label,
+  Icon,
+  active,
+  onSelect,
+}: {
+  label: string
+  Icon: LucideIcon
+  active: boolean
+  onSelect: () => void
+}) {
   return (
-    <Badge
-      variant="outline"
-      className="h-auto rounded-md px-1.5 py-0 text-[10px] leading-4 whitespace-normal"
-    >
-      {children}
-    </Badge>
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        aria-current={active ? "page" : undefined}
+        isActive={active}
+        tooltip={label}
+        type="button"
+        onClick={onSelect}
+      >
+        <Icon />
+        <span>{label}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
   )
 }
 
-function groupSessionsByAgent(
-  sessions: ManagedSessionSummary[],
-): Array<[agent: string, sessions: ManagedSessionSummary[]]> {
-  const groups = new Map<string, ManagedSessionSummary[]>()
-  for (const session of sessions) {
-    const agentSessions = groups.get(session.agent) ?? []
-    agentSessions.push(session)
-    groups.set(session.agent, agentSessions)
+function SessionGroup({
+  label,
+  sessions,
+  navigation,
+  onNavigate,
+}: {
+  label: string
+  sessions: ManagedSessionSummary[]
+  navigation: NavDestination
+  onNavigate: (destination: NavDestination) => void
+}) {
+  if (sessions.length === 0) {
+    return null
   }
-  return [...groups.entries()].sort(([left], [right]) => {
-    const labelOrder = agentLabel(left).localeCompare(agentLabel(right), undefined, {
-      sensitivity: "base",
-    })
-    return labelOrder || left.localeCompare(right)
-  })
+  return (
+    <SidebarGroup aria-label={`${label} sessions`}>
+      <SidebarGroupLabel className="tracking-[0.2em] uppercase">
+        {label}
+      </SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {sessions.map((session) => (
+            <SessionRow
+              key={session.id}
+              session={session}
+              selected={
+                navigation.kind === "session" && navigation.id === session.id
+              }
+              onSelect={() => onNavigate({ kind: "session", id: session.id })}
+            />
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  )
+}
+
+function SessionRow({
+  session,
+  selected,
+  onSelect,
+}: {
+  session: ManagedSessionSummary
+  selected: boolean
+  onSelect: () => void
+}) {
+  const attention = sessionAttention(session)
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        aria-current={selected ? "page" : undefined}
+        className="h-auto items-start gap-3 rounded-xl border border-transparent py-3 pr-10 data-[active=true]:border-sidebar-primary/25 data-[active=true]:bg-sidebar-accent/70"
+        tooltip={session.title}
+        type="button"
+        isActive={selected}
+        onClick={onSelect}
+      >
+        <Terminal />
+        <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+          <div className="truncate text-sm font-medium">{session.title}</div>
+          <div className="truncate text-[11px] text-muted-foreground">
+            {sessionIdentityLabel(session)}
+          </div>
+          <div className="mt-1 text-[11px] leading-4 text-muted-foreground">
+            {attention
+              ? attention.label
+              : safeBackendLabel(session.statusLabel, "Unknown")}
+          </div>
+          <div className="text-[11px] leading-4 text-muted-foreground">
+            {authStatusLabel(session.authStatus)}
+            {" • "}
+            {authScopeLabel(session.authScope)}
+          </div>
+          <div className="text-[11px] leading-4 text-muted-foreground">
+            {networkLabel(session.network)}
+            {" • "}
+            {sessionInputLabel(session)}
+          </div>
+        </div>
+      </SidebarMenuButton>
+      {attention ? (
+        // The visible status line above names the state, so the dot itself is
+        // decoration for assistive tech.
+        <SidebarMenuBadge aria-hidden>
+          <AttentionDot attention={attention} />
+        </SidebarMenuBadge>
+      ) : null}
+    </SidebarMenuItem>
+  )
+}
+
+// One symbol-in-dot badge per row: a distinct symbol per state plus the status
+// text in the row, never color alone and never a count.
+const ATTENTION_ICONS: Record<SessionAttentionKind, LucideIcon> = {
+  failed: CircleX,
+  "needs-sign-in": KeyRound,
+  "not-responding": TriangleAlert,
+  "ready-to-review": GitBranch,
+}
+
+function AttentionDot({ attention }: { attention: SessionAttention }) {
+  const Icon = ATTENTION_ICONS[attention.kind]
+  return (
+    <span
+      data-attention={attention.kind}
+      className={cn(
+        "flex size-4 items-center justify-center rounded-full",
+        attention.tone === "failed"
+          ? "bg-destructive text-white"
+          : "bg-amber-500 text-amber-950",
+      )}
+    >
+      <Icon className="size-3" />
+    </span>
+  )
 }

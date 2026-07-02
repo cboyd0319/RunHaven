@@ -347,6 +347,22 @@ Useful GUI design docs:
 
 Branch: `docs/native-gui-wireframe`.
 
+Navigation correction Wave A slice 1 (A1 of
+`docs/plans/native-gui-navigation-gap.md`) is implemented: the sidebar now
+follows the spec taxonomy (fixed Home row, Active/Finished lifecycle groups
+newest-first with hidden empty groups, fixed System group with Agents,
+Diagnostics, Maintenance destinations), session rows carry one prioritized
+symbol-in-dot attention badge (`sessionAttention.ts`: Failed > Needs sign-in >
+Not responding > Ready to review, always paired with status text), and the
+selection model is a navigation union (`navigation.ts`, `useNavigation.ts`)
+with the spec's removal fallback (adjacent row, else other group, else Home)
+replacing the old reset-to-wizard behavior. The bottom Diagnostics/Maintenance
+accordions are deleted; Agents/Diagnostics/Maintenance render as full views
+(`ui/src/app/views/`), image rebuild moved from Maintenance to Agents, and
+`AppMainContent.tsx` is now a thin router (131 lines) under the split gate.
+The wizard stays inline on Home; the modal launch sheet is the next slice
+(A2/A3), along with the real Home destination content.
+
 Active slice: bring CLI plus native-feeling desktop GUI to 100 percent ready
 for real external user testing. Start by keeping TUI work out of scope, then
 continue hardest-first through live session ownership, real-agent auth/session

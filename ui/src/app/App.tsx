@@ -14,9 +14,8 @@ export default function App() {
       <SidebarProvider>
         <RunHavenSidebar
           sessions={app.managedSessions.sessions}
-          selectedSessionId={app.selectedSessionId}
-          onStartSelect={() => app.selectSession(null)}
-          onSessionSelect={app.selectSession}
+          navigation={app.navigation}
+          onNavigate={app.navigate}
         />
         <SidebarInset className="h-screen overflow-hidden">
           <AppHeader
@@ -28,6 +27,7 @@ export default function App() {
             onRefresh={() => void app.refresh()}
           />
           <AppMainContent
+            navigation={app.navigation}
             error={app.error}
             launchMessage={app.launchMessage}
             loading={app.loading}

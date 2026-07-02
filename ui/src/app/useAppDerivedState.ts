@@ -10,6 +10,7 @@ import {
   type RunPlanResponse,
 } from "@/commands/runhaven"
 
+import type { NavDestination } from "./navigation"
 import { sessionIdForRun } from "./sessionSelection"
 
 type AppDerivedStateInput = {
@@ -20,8 +21,37 @@ type AppDerivedStateInput = {
   launchConfirmation: boolean
   confirmedWarnings: string[]
   managedSessions: ManagedSessionList
+  navigation: NavDestination
   selectedSessionId: string | null
   lastLaunch: LaunchRunResponse | null
+}
+
+// Header title and description per destination, in the shared plain-language
+// vocabulary.
+const PAGE_HEADINGS: Record<
+  NavDestination["kind"],
+  { title: string; description: string }
+> = {
+  home: {
+    title: "Home",
+    description: "Choose an agent and project. Review access before launch.",
+  },
+  session: {
+    title: "Session",
+    description: "Review status and access for the selected agent session.",
+  },
+  agents: {
+    title: "Agents",
+    description: "Sign in and keep each agent ready to run.",
+  },
+  diagnostics: {
+    title: "Diagnostics",
+    description: "Read-only trust checks. Nothing here changes your Mac.",
+  },
+  maintenance: {
+    title: "Maintenance",
+    description: "Clean up what RunHaven left behind.",
+  },
 }
 
 export function useAppDerivedState(input: AppDerivedStateInput) {
@@ -49,10 +79,8 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
       ) ?? null,
     [input.managedSessions.sessions, input.selectedSessionId],
   )
-  const pageTitle = selectedSession ? "Session" : "Launch"
-  const pageDescription = selectedSession
-    ? "Review status and access for the selected agent session."
-    : "Choose an agent and project. Review access before launch."
+  const { title: pageTitle, description: pageDescription } =
+    PAGE_HEADINGS[input.navigation.kind]
   const outputSessionId = selectedSession?.id ?? null
   const outputRunId = selectedSession ? null : input.lastLaunch?.runId ?? null
   const outputTargetId = outputSessionId

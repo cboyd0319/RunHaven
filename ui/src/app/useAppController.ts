@@ -54,8 +54,10 @@ export function useAppController() {
   const [lastLaunch, setLastLaunch] = useState<LaunchRunResponse | null>(null)
   const {
     managedSessions,
+    navigation,
     selectedSessionId,
     selectedSessionIdRef,
+    navigate,
     selectSession,
     loadManagedSessions,
   } = useManagedSessionsState(lastLaunch?.runId ?? null)
@@ -78,6 +80,7 @@ export function useAppController() {
     launchConfirmation,
     confirmedWarnings,
     managedSessions,
+    navigation,
     selectedSessionId,
     lastLaunch,
   })
@@ -303,6 +306,7 @@ export function useAppController() {
     lastLaunch,
     lastLaunchSessionId: derived.lastLaunchSessionId,
     managedSessions,
+    navigation,
     selectedSessionId,
     sessionInputDraft: sessionInput.draft,
     sessionInputSending: sessionInput.sending,
@@ -338,6 +342,7 @@ export function useAppController() {
     pageDescription: derived.pageDescription,
     runOutput,
     refresh,
+    navigate,
     selectSession,
     changeAgent,
     updateNetworkMode,

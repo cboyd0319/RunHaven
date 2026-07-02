@@ -11,7 +11,7 @@ test("renders the dashboard without runtime errors", async ({ page }) => {
 
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { level: 1, name: "Launch" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
   await expect(page.getByText("Sign-in method")).toBeVisible();
   await expect(page.getByText("Auth status")).toBeVisible();
@@ -44,15 +44,18 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByText("Monitor session")).toBeVisible();
   await expect(page.getByText("Run record")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Message" })).toBeVisible();
-  // The session view has its own Session diagnostics card, so the global
-  // Diagnostics accordion stays on the Start screen only.
-  await expect(page.getByText("Diagnostics", { exact: true })).toHaveCount(0);
+  // The session view has its own Session diagnostics card; the app-wide
+  // Diagnostics surface is a sidebar destination, never a second panel in the
+  // session view's content pane.
+  await expect(
+    page.getByRole("main").getByText("Diagnostics", { exact: true }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "Load session diagnostics" }).click();
   await expect(page.getByText("Auth state: api-key-broker")).toBeVisible();
   await expect(page.getByText("api.openai.com")).toBeVisible();
   await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
   await page.getByLabel("Message").fill("draft for selected session");
-  await page.getByRole("button", { name: "Start" }).click();
+  await page.getByRole("button", { name: "Home" }).click();
   await page.getByText("Codex - runhaven-preview").click();
   await expect(page.getByLabel("Message")).toHaveValue("draft for selected session");
   await page.getByLabel("Message").fill("hello session");
@@ -82,8 +85,8 @@ test("reviews and starts a preview run", async ({ page }) => {
   await page.getByLabel("Confirm clearing this session's stale session record.").check();
   await page.getByRole("button", { name: "Repair session record" }).click();
   await expect(page.getByText(/Stale session record cleared for preview-/)).toBeVisible();
-  await page.getByRole("button", { name: "Start" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Launch" })).toBeVisible();
+  await page.getByRole("button", { name: "Home" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
 
   // Once the launched run is a managed session, the Start screen must not offer
   // a second control surface for it: only the one-line notice remains, and the
@@ -98,7 +101,7 @@ test("reviews and starts a preview run", async ({ page }) => {
 test("loads secret-free diagnostics", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByText("Diagnostics", { exact: true }).click();
+  await page.getByRole("button", { name: "Diagnostics" }).click();
   await expect(page.getByRole("heading", { name: "Trust checks" })).toBeVisible();
   await page.getByRole("button", { name: "Load diagnostics" }).click();
   await expect(page.getByRole("heading", { name: "Auth broker status" })).toBeVisible();
@@ -118,7 +121,7 @@ test("keeps selected-session message drafts isolated", async ({ page }) => {
   await expect(page.getByLabel("Message")).toHaveValue("alpha draft");
   await expect(page.getByRole("heading", { name: "Choose agent" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Start" }).click();
+  await page.getByRole("button", { name: "Home" }).click();
   await startPreviewRun(page, "/tmp/runhaven-beta");
   await expect(page.getByLabel("Message")).toHaveValue("");
   await page.getByLabel("Message").fill("beta message");
@@ -146,9 +149,9 @@ test("signs in a preview agent from the Agent step", async ({ page }) => {
 test("runs the maintenance preview flows behind confirm gates", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByText("Maintenance", { exact: true }).click();
-
-  // Image rebuild stays gated until the user confirms.
+  // Image rebuild lives in the Agents destination and stays gated until the
+  // user confirms.
+  await page.getByRole("button", { name: "Agents" }).click();
   const rebuildButton = page.getByRole("button", { name: "Rebuild image" });
   await expect(rebuildButton).toBeDisabled();
   await page.getByLabel("Confirm agent image rebuild").check();
@@ -156,7 +159,9 @@ test("runs the maintenance preview flows behind confirm gates", async ({ page })
   await expect(page.getByText("Succeeded (preview)")).toBeVisible();
   await expect(page.getByText("Preview build output.")).toBeVisible();
 
-  // Network cleanup previews a count first, then gates the prune.
+  // Network cleanup lives in the Maintenance destination: it previews a count
+  // first, then gates the prune.
+  await page.getByRole("button", { name: "Maintenance" }).click();
   await page.getByRole("button", { name: "Check for stale networks" }).click();
   await expect(page.getByText(/Stale RunHaven networks found:/)).toBeVisible();
   const removeButton = page.getByRole("button", { name: "Remove stale networks" });
@@ -212,7 +217,7 @@ async function startPreviewRun(
   workspacePath: string,
   { worktree = false } = {},
 ) {
-  await expect(page.getByRole("heading", { level: 1, name: "Launch" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Project folder path").fill(workspacePath);
   if (worktree) {
