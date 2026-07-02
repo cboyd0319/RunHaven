@@ -151,11 +151,13 @@ show up again when you reopen the app.
 Menu items never skip a safety step. A menu action does exactly what the same
 click in the window would do. **Stop** and **Hard Stop** take you to that
 session's stop control; you still check the confirm box and answer the native
-dialog before anything stops. Items that do not apply right now (for example,
-a session action while you are on Home) simply do nothing. Session shortcuts
-work when the main window is active; while a session watch window is in
-front they do nothing, so a shortcut never acts on a session you are not
-looking at. Everything else in the menus works from any window.
+dialog before anything stops. Items that do not apply right now are grayed out,
+so their shortcut does nothing until it can. For example, the Session menu
+items turn on only when a session is selected and can take that action, and
+Cmd-1 through Cmd-9 light up only for sessions your sidebar actually has.
+Session shortcuts work when the main window is active; while a session watch
+window is in front they do nothing, so a shortcut never acts on a session you
+are not looking at. Everything else in the menus works from any window.
 
 | Shortcut | What it does |
 | --- | --- |
@@ -176,7 +178,9 @@ looking at. Everything else in the menus works from any window.
 
 A few items are visible but grayed out because their screens are not built
 yet: **Filter Sessions** (Cmd-F) and the Help entries. They will turn on when
-those parts of the app ship. The Session menu's worktree actions (Merge, Keep,
+those parts of the app ship. Other items gray out only until they apply again,
+such as **Stop** with no running session selected, or **Next Session That Needs
+You** when nothing needs you. The Session menu's worktree actions (Merge, Keep,
 Recover, Discard) live in the finished session's review for now, and Open
 Recent arrives with a recent-projects list. **Open in New Window** opens a
 watching window for the selected session; see "Watch a session in its own

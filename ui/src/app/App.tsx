@@ -9,10 +9,12 @@ import { sidebarDefaultOpen } from "./uiStatePersistence"
 import { useAppController } from "./useAppController"
 import { useAttentionBadge } from "./useAttentionBadge"
 import { useMenuEvents } from "./useMenuEvents"
+import { useMenuStateSync } from "./useMenuStateSync"
 
 export default function App() {
   const app = useAppController()
   useMenuEvents(app)
+  useMenuStateSync(app.managedSessions.sessions, app.navigation)
   useAttentionBadge(app.managedSessions.sessions, app.settings.dockBadge)
 
   return (

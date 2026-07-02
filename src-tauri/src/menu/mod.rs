@@ -12,11 +12,16 @@
 //! `kill_managed_session` themselves, they only surface the existing stop
 //! affordance which still requires its confirm step plus the native dialog.
 //!
-//! Enabled-state tradeoff: menus are static. Items that act on the selected
-//! session no-op gracefully in the frontend when nothing applies, instead of
-//! running a chatty enabled-state sync protocol between the WebView and Rust.
-//! The only statically disabled items are placeholders for surfaces that do
-//! not exist yet (the session filter and Help content).
+//! Enable-state sync: session-scoped items and the Cmd-1..9 selectors are
+//! built disabled and turned on by [`sync_menu_state`] (see
+//! [`apply_menu_state`]) as the main window's selection and session list
+//! change, so a shortcut with no target grays out instead of silently doing
+//! nothing. The frontend sends only booleans and a count ([`MenuState`]) when
+//! the derived state actually changes, not on every poll; Rust owns the item
+//! handles and the id-to-flag mapping. Enabling an item never lets it mutate:
+//! the frontend handler plus the Rust-owned native dialog still gate every
+//! action. The only permanently disabled items are placeholders for surfaces
+//! that do not exist yet (the session filter and Help content).
 //!
 //! Focus rule: session-scoped items ([`spec::session_scoped_ids`], the
 //! Session menu) act on the main window's selected session, so they dispatch
@@ -33,11 +38,17 @@
 //! The menu contents live as declarative tables in [`spec`].
 
 mod spec;
+mod state;
+
+use std::collections::HashMap;
 
 use tauri::menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 use spec::{Entry, MENU_BAR, Predef, command_ids, session_scoped_ids};
+use state::{is_dynamic_menu_id, menu_item_enabled};
+
+pub(crate) use state::MenuState;
 
 // Menu events target only the main window (crate::MAIN_WINDOW_LABEL); future
 // auxiliary windows must opt in deliberately instead of inheriting dispatch.
@@ -47,13 +58,26 @@ use crate::session_windows::SESSION_WINDOW_LABEL_PREFIX;
 /// The single Rust-to-WebView menu channel. Payload is the menu item id.
 pub const MENU_COMMAND_EVENT: &str = "menu://command";
 
-/// Build the full menu bar. Passed to `tauri::Builder::menu`.
+/// Retained handles for the menu items `sync_menu_state` toggles. muda's
+/// `Menu::get` and `Submenu::get` search only their own direct children
+/// (verified against the pinned tauri 2.11.3 source), so nested items (the
+/// Session menu, the Select Session submenu) could not be looked up by id
+/// after build. Keeping the `MenuItem` handles the builder already created is
+/// the reliable path; each handle is an `Arc` clone, so this is cheap.
+struct DynamicMenuItems<R: Runtime> {
+    items: HashMap<&'static str, MenuItem<R>>,
+}
+
+/// Build the full menu bar. Passed to `tauri::Builder::menu`. Retains the
+/// dynamic item handles in managed state so [`apply_menu_state`] can toggle
+/// them later.
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let menu = Menu::new(app)?;
+    let mut dynamic_items = HashMap::new();
     for (label, entries) in MENU_BAR {
         let submenu = Submenu::new(app, *label, true)?;
         for entry in *entries {
-            append_entry(app, &submenu, entry)?;
+            append_entry(app, &submenu, entry, &mut dynamic_items)?;
         }
         #[cfg(target_os = "macos")]
         {
@@ -68,7 +92,31 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         }
         menu.append(&submenu)?;
     }
+    app.manage(DynamicMenuItems {
+        items: dynamic_items,
+    });
     Ok(menu)
+}
+
+/// Apply the WebView's reported [`MenuState`] to the retained dynamic items:
+/// enable exactly the session-scoped and selector items that apply right now,
+/// and disable the rest. Called only by the `sync_menu_state` command. Toggling
+/// enable state is not a mutation of session state; the frontend handler and
+/// the Rust-owned native dialog still gate every action behind these items.
+pub(crate) fn apply_menu_state<R: Runtime>(
+    app: &AppHandle<R>,
+    state: &MenuState,
+) -> Result<(), String> {
+    let Some(handles) = app.try_state::<DynamicMenuItems<R>>() else {
+        return Err("The menu is not ready yet.".to_string());
+    };
+    for (id, item) in &handles.items {
+        if let Some(enabled) = menu_item_enabled(id, state) {
+            item.set_enabled(enabled)
+                .map_err(|_| "RunHaven could not update the menu.".to_string())?;
+        }
+    }
+    Ok(())
 }
 
 /// Forward custom menu activations to the main window WebView. Predefined
@@ -102,20 +150,24 @@ fn append_entry<R: Runtime>(
     app: &AppHandle<R>,
     submenu: &Submenu<R>,
     entry: &'static Entry,
+    dynamic_items: &mut HashMap<&'static str, MenuItem<R>>,
 ) -> tauri::Result<()> {
     match entry {
-        Entry::Command(spec) => submenu.append(&MenuItem::with_id(
-            app,
-            spec.id,
-            spec.label,
-            spec.enabled,
-            spec.accelerator,
-        )?),
+        Entry::Command(spec) => {
+            let item = MenuItem::with_id(app, spec.id, spec.label, spec.enabled, spec.accelerator)?;
+            // Retain a handle for items the sync path drives so their enabled
+            // state can be updated after build; global and placeholder items
+            // keep their built state and need no handle.
+            if is_dynamic_menu_id(spec.id) {
+                dynamic_items.insert(spec.id, item.clone());
+            }
+            submenu.append(&item)
+        }
         Entry::Separator => submenu.append(&PredefinedMenuItem::separator(app)?),
         Entry::Submenu { label, entries } => {
             let child = Submenu::new(app, *label, true)?;
             for child_entry in *entries {
-                append_entry(app, &child, child_entry)?;
+                append_entry(app, &child, child_entry, dynamic_items)?;
             }
             submenu.append(&child)
         }
@@ -181,7 +233,11 @@ mod tests {
         // test's own source cannot satisfy the search.
         let command_marker = format!("{}{}", "commands", "::");
         let core_marker = format!("{}{}", "runhaven_", "core");
-        for source in [include_str!("mod.rs"), include_str!("spec.rs")] {
+        for source in [
+            include_str!("mod.rs"),
+            include_str!("spec.rs"),
+            include_str!("state.rs"),
+        ] {
             let production = match source.find("#[cfg(test)]") {
                 Some(first_test) => &source[..first_test],
                 None => source,

@@ -112,6 +112,7 @@ pub fn run() {
             commands::launch::plan_run,
             commands::launch::launch_run,
             commands::attention_badge::set_attention_badge,
+            commands::menu_sync::sync_menu_state,
             commands::session_window::open_session_window,
             commands::session_window::get_session_window_target,
         ])

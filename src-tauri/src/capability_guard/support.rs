@@ -53,6 +53,7 @@ pub(super) const MAIN_READ_FORBIDDEN_PERMISSIONS: &[&str] = &[
     "allow-prune-managed-networks",
     "allow-start-agent-sign-in",
     "allow-set-attention-badge",
+    "allow-sync-menu-state",
 ];
 pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-get-log-snapshot", "get_log_snapshot"),
@@ -89,6 +90,8 @@ pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
 ];
 
 pub(super) const ATTENTION_BADGE_PERMISSION: &str = "allow-set-attention-badge";
+
+pub(super) const MENU_STATE_PERMISSION: &str = "allow-sync-menu-state";
 
 /// The exact read-only grant for per-session monitor windows. Widening this
 /// set is a trust-boundary change: monitor windows must never gain output

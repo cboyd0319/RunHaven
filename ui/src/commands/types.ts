@@ -278,6 +278,21 @@ export type ManagedSessionList = {
   sessions: ManagedSessionSummary[];
 };
 
+// Which selection-scoped menu items apply right now, sent to Rust so the
+// native menu grays out actions that would do nothing (navigation invariant 5).
+// Booleans and one count only: no session ids, paths, or secrets cross this
+// boundary. Mirrors MenuState in src-tauri/src/menu/state.rs.
+export type MenuState = {
+  hasSelectedSession: boolean;
+  selectedSessionCanRunControl: boolean;
+  selectedSessionCanSendInput: boolean;
+  selectedSessionCanViewOutput: boolean;
+  selectedSessionHasCleanup: boolean;
+  selectedSessionCanOpenWindow: boolean;
+  hasAttentionSession: boolean;
+  sessionCount: number;
+};
+
 export type LogSnapshotOptions = {
   lines?: number;
   confirmSensitiveOutput: boolean;

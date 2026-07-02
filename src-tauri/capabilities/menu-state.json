@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "menu-state",
+  "description": "Lets the main window tell Rust which menu items apply right now (booleans and one count only) so the native menu grays out actions that would do nothing. No session ids, paths, or secrets cross this boundary; the only effect is menu item enable state.",
+  "windows": ["main"],
+  "permissions": ["allow-sync-menu-state"]
+}

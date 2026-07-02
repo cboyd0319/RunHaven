@@ -36,6 +36,7 @@ pub(crate) mod log_snapshot;
 pub(crate) mod managed_session_input;
 pub(crate) mod managed_session_output;
 pub(crate) mod managed_session_status;
+pub(crate) mod menu_sync;
 pub(crate) mod network;
 pub(crate) mod run_control;
 pub(crate) mod run_status;

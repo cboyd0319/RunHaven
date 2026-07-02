@@ -211,10 +211,11 @@ is the tripwire.
 - Existing-command mapping: Session menu -> run-control/worktree/cleanup/input
   commands above; Agent menu -> sign-in/rebuild/auth-details (all exist); View
   menu -> pure frontend navigation; File > New Run -> opens the sheet
-  (frontend). New backend surface needed only for: enabled-state sync (either
-  Rust-side `set_enabled` driven by a small new `sync_menu_state` command from
-  the frontend, or accept always-enabled items that no-op with a reason -
-  judgment call, prefer the sync command), Open Recent (new
+  (frontend). New backend surface needed only for: enable-state sync (shipped:
+  a narrow `sync_menu_state` command in its own `menu-state` capability drives
+  Rust-side `set_enabled` on retained item handles as the selection and session
+  list change; see the 2026-07-01 follow-up below and `src-tauri/src/menu/`),
+  Open Recent (new
   `get_recent_projects`/`record_recent_project` commands with a Rust-side
   store; can ship as a follow-up sub-slice), and Settings/aux-window items
   (B3/B4).
@@ -380,7 +381,7 @@ slices - split by flow before it nears 450.
 | 2 | Secure default is the shortest path | holds | Secure defaults preselected (`secureNetworkDefault`); warnings add checkboxes (`PlanReviewCard`) |
 | 3 | Lower-security choices visible and warned | holds | Advanced options disclose and warn; nothing hidden |
 | 4 | One prominent action per view | partial violation | Session view stacks Send, Stop run, Hard stop, Repair, Load output as peer primaries (`AppMainContent.tsx` SessionView) |
-| 5 | No dead navigation | holds | Sidebar rows are Start + live sessions only; prior dead nav is gone (verified: every `SidebarMenuButton` has a live handler, `RunHavenSidebar.tsx:75-143`). The spec's persistent destinations are *absent*, not dead |
+| 5 | No dead navigation | holds | Sidebar rows are Start + live sessions only; prior dead nav is gone (verified: every `SidebarMenuButton` has a live handler, `RunHavenSidebar.tsx:75-143`). The spec's persistent destinations are *absent*, not dead. Menu items no longer silently no-op: session-scoped and Cmd-1..9 items gray out until they apply, via `sync_menu_state` (`src-tauri/src/menu/state.rs`, `ui/src/app/useMenuStateSync.ts`); see the 2026-07-01 follow-up |
 | 6 | Toolbar/menu/keyboard parity | violated | No menu bar, no shortcuts (B1) |
 | 7 | Sidebar nav-only; nothing critical at bottom edges | partial violation | Sidebar has no action buttons (good) but rows carry 4 info lines; session controls + composer sit at the content bottom (A6) |
 | 8 | Output only behind acknowledgment | holds | `RunOutputCard` gate; `app.spec.ts:63-71` |
@@ -431,3 +432,18 @@ selector), all baselines green:
   on a jump) were reviewed and left as recorded deferrals: neither is needed
   for the invariants above, and both are cross-cutting enough to belong with
   the menu/focus work rather than this copy-and-shortcut slice.
+- MENU ENABLE-STATE (invariant 5, "no dead affordances"): B1 shipped the menu
+  bar with session-scoped and Cmd-1..9 items statically enabled and a no-op in
+  the frontend when nothing applied, to avoid a chatty protocol. Those items
+  now gray out instead. A narrow `sync_menu_state` command (its own
+  `menu-state` capability, main-window only, booleans and one count in and
+  nothing out) drives Rust-side `set_enabled` on menu item handles retained at
+  build (`Menu::get`/`Submenu::get` are not recursive in the pinned tauri
+  2.11.3, so nested items are kept by handle). The frontend sends state only
+  when it actually changes (`ui/src/app/useMenuStateSync.ts`, deduped, no-op in
+  browser preview), computed from the same helpers the sidebar and attention
+  badge use. Session-scoped and Cmd-1..9 items build disabled so the
+  no-selection launch state is correct; placeholders (Filter Sessions, Help)
+  still gray out for their missing surfaces. The B4 focus rule (session-scoped
+  ids drop while a monitor window is focused) is unchanged. Invariant 5 now
+  CONFORMS for the menu bar; the deviation is retired.

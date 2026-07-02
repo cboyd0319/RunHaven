@@ -6,8 +6,8 @@ use std::fs;
 use std::path::Path;
 
 use super::support::{
-    ATTENTION_BADGE_PERMISSION, MAIN_READ_FORBIDDEN_PERMISSIONS, RUN_CONTROL_PERMISSIONS,
-    SESSION_MONITOR_PERMISSIONS, assert_generated_permission_allows_only,
+    ATTENTION_BADGE_PERMISSION, MAIN_READ_FORBIDDEN_PERMISSIONS, MENU_STATE_PERMISSION,
+    RUN_CONTROL_PERMISSIONS, SESSION_MONITOR_PERMISSIONS, assert_generated_permission_allows_only,
     assert_lacks_forbidden_host_markers, assert_same_permission_set, capability_permissions,
     capability_windows, manifest_dir, normalize, read_text,
 };
@@ -123,6 +123,32 @@ fn attention_badge_capability_stays_narrow() {
             .iter()
             .any(|permission| permission == ATTENTION_BADGE_PERMISSION),
         "run-control must not own the isolated Dock badge command"
+    );
+}
+
+#[test]
+fn menu_state_capability_stays_narrow() {
+    // The menu enable-state sync is benign (booleans and a count in, only menu
+    // gray-out out), but it is still a command the WebView can call, so it
+    // lives in its own one-permission capability instead of widening main-read
+    // (read-only) or run-control (session-sensitive), mirroring the Dock badge.
+    let permissions = capability_permissions("menu-state.json");
+    assert_same_permission_set("menu-state", &permissions, &[MENU_STATE_PERMISSION]);
+    assert_generated_permission_allows_only("sync_menu_state");
+
+    let main_read = capability_permissions("main-read.json");
+    assert!(
+        !main_read
+            .iter()
+            .any(|permission| permission == MENU_STATE_PERMISSION),
+        "main-read must stay read-only and cannot grant the menu-state sync command"
+    );
+    let run_control = capability_permissions("run-control.json");
+    assert!(
+        !run_control
+            .iter()
+            .any(|permission| permission == MENU_STATE_PERMISSION),
+        "run-control must not own the isolated menu-state sync command"
     );
 }
 
@@ -298,6 +324,7 @@ fn session_monitor_capability_grants_exactly_the_monitor_reads() {
             "allow-launch-run",
             "allow-start-agent-sign-in",
             "allow-set-attention-badge",
+            "allow-sync-menu-state",
             "allow-open-session-window",
             "allow-write-session-input",
             "allow-get-managed-session-log-snapshot",
@@ -341,6 +368,7 @@ fn session_window_open_capability_stays_narrow_and_main_only() {
         "launch-run.json",
         "agent-sign-in.json",
         "menu-events.json",
+        "menu-state.json",
         "attention-badge.json",
         "folder-pick.json",
     ] {

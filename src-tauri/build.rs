@@ -47,6 +47,7 @@ fn main() {
             "plan_run",
             "launch_run",
             "set_attention_badge",
+            "sync_menu_state",
             "open_session_window",
             "get_session_window_target",
         ]),

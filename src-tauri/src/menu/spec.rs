@@ -5,8 +5,10 @@
 //! renaming one is a cross-boundary contract change.
 
 /// One custom menu item: a stable id the frontend maps, a plain label, an
-/// optional accelerator in muda syntax (`Mod+Mod+Key`), and a static
-/// enabled flag (`false` only for not-yet-built placeholder surfaces).
+/// optional accelerator in muda syntax (`Mod+Mod+Key`), and the enabled state
+/// the menu is *built* with. `false` covers two cases: a placeholder for a
+/// surface that does not exist yet, and a selection-scoped item that starts
+/// off until `sync_menu_state` (see `state.rs`) enables it once it applies.
 pub(super) struct CommandSpec {
     pub(super) id: &'static str,
     pub(super) label: &'static str,
@@ -59,7 +61,12 @@ const fn command(
     })
 }
 
-const fn placeholder(
+/// An item built disabled. Two kinds use this: placeholders for surfaces that
+/// do not exist yet (never synced), and selection-scoped items that
+/// `sync_menu_state` (see `state.rs`) enables once a matching target exists.
+/// Building them disabled makes the no-selection launch state correct before
+/// the first sync arrives.
+const fn initially_disabled(
     id: &'static str,
     label: &'static str,
     accelerator: Option<&'static str>,
@@ -108,19 +115,21 @@ const EDIT_MENU: &[Entry] = &[
     Entry::Separator,
     // The session filter field does not exist yet; the item and its shortcut
     // are reserved and disabled until the filter ships.
-    placeholder("filter-sessions", "Filter Sessions", Some("Cmd+F")),
+    initially_disabled("filter-sessions", "Filter Sessions", Some("Cmd+F")),
 ];
 
+// Cmd-1..9 select the Nth sidebar row. Each starts disabled and turns on only
+// while the sidebar actually has that many sessions (sync_menu_state).
 const SELECT_SESSION_MENU: &[Entry] = &[
-    command("select-session-1", "Session 1", Some("Cmd+1")),
-    command("select-session-2", "Session 2", Some("Cmd+2")),
-    command("select-session-3", "Session 3", Some("Cmd+3")),
-    command("select-session-4", "Session 4", Some("Cmd+4")),
-    command("select-session-5", "Session 5", Some("Cmd+5")),
-    command("select-session-6", "Session 6", Some("Cmd+6")),
-    command("select-session-7", "Session 7", Some("Cmd+7")),
-    command("select-session-8", "Session 8", Some("Cmd+8")),
-    command("select-session-9", "Session 9", Some("Cmd+9")),
+    initially_disabled("select-session-1", "Session 1", Some("Cmd+1")),
+    initially_disabled("select-session-2", "Session 2", Some("Cmd+2")),
+    initially_disabled("select-session-3", "Session 3", Some("Cmd+3")),
+    initially_disabled("select-session-4", "Session 4", Some("Cmd+4")),
+    initially_disabled("select-session-5", "Session 5", Some("Cmd+5")),
+    initially_disabled("select-session-6", "Session 6", Some("Cmd+6")),
+    initially_disabled("select-session-7", "Session 7", Some("Cmd+7")),
+    initially_disabled("select-session-8", "Session 8", Some("Cmd+8")),
+    initially_disabled("select-session-9", "Session 9", Some("Cmd+9")),
 ];
 
 const VIEW_MENU: &[Entry] = &[
@@ -140,9 +149,11 @@ const VIEW_MENU: &[Entry] = &[
         label: "Select Session",
         entries: SELECT_SESSION_MENU,
     },
-    command("next-session", "Next Session", Some("Shift+Cmd+]")),
-    command("previous-session", "Previous Session", Some("Shift+Cmd+[")),
-    command(
+    // Session movement needs at least one session; jump also needs a session
+    // that actually needs the user. Both start disabled and sync on.
+    initially_disabled("next-session", "Next Session", Some("Shift+Cmd+]")),
+    initially_disabled("previous-session", "Previous Session", Some("Shift+Cmd+[")),
+    initially_disabled(
         "jump-needs-you",
         "Next Session That Needs You",
         Some("Cmd+J"),
@@ -153,25 +164,26 @@ const VIEW_MENU: &[Entry] = &[
     Entry::Predefined(Predef::Fullscreen),
 ];
 
-// Acts on the selected session; every item no-ops in the frontend when no
-// session is selected or its control is not on screen. Worktree review
-// actions (Merge, Keep, Recover, Discard) stay off the menu until their slice
-// lands; the review card in the session view is the affordance for worktree
-// actions today. Open in New Window opens a read-only monitor window through
-// the validated `open_session_window` command (benign, no mutation, so no
-// confirm step); it is the one menu id whose frontend handler invokes a
-// command instead of focusing a control.
+// Acts on the selected session. Every item starts disabled and is enabled by
+// `sync_menu_state` only while it applies (a session is selected and in the
+// right state), so an inapplicable action grays out instead of silently doing
+// nothing. Worktree review actions (Merge, Keep, Recover, Discard) stay off
+// the menu until their slice lands; the review card in the session view is the
+// affordance for worktree actions today. Open in New Window opens a read-only
+// monitor window through the validated `open_session_window` command (benign,
+// no mutation, so no confirm step); it is the one menu id whose frontend
+// handler invokes a command instead of focusing a control.
 const SESSION_MENU: &[Entry] = &[
-    command("send-message", "Send Message...", None),
-    command("show-output", "Show Latest Output", Some("Shift+Cmd+O")),
+    initially_disabled("send-message", "Send Message...", None),
+    initially_disabled("show-output", "Show Latest Output", Some("Shift+Cmd+O")),
     Entry::Separator,
-    command("stop-session", "Stop", Some("Cmd+.")),
-    command("hard-stop-session", "Hard Stop", Some("Option+Cmd+.")),
+    initially_disabled("stop-session", "Stop", Some("Cmd+.")),
+    initially_disabled("hard-stop-session", "Hard Stop", Some("Option+Cmd+.")),
     Entry::Separator,
-    command("repair-session", "Repair Session Record...", None),
-    command("cleanup-session", "Clean Up Session...", None),
+    initially_disabled("repair-session", "Repair Session Record...", None),
+    initially_disabled("cleanup-session", "Clean Up Session...", None),
     Entry::Separator,
-    command("open-session-window", "Open in New Window", None),
+    initially_disabled("open-session-window", "Open in New Window", None),
 ];
 
 // All three land on the Agents view, where sign-in, rebuild, and auth details
@@ -191,9 +203,9 @@ const WINDOW_MENU: &[Entry] = &[
 
 // Help content surfaces are not built yet; reserved and disabled.
 const HELP_MENU: &[Entry] = &[
-    placeholder("help", "RunHaven Help", None),
-    placeholder("help-agent-reach", "What Can an Agent Reach?", None),
-    placeholder("help-report-problem", "Report a Problem...", None),
+    initially_disabled("help", "RunHaven Help", None),
+    initially_disabled("help-agent-reach", "What Can an Agent Reach?", None),
+    initially_disabled("help-report-problem", "Report a Problem...", None),
 ];
 
 /// The whole menu bar, in macOS-standard order. On macOS the first submenu
@@ -242,197 +254,4 @@ pub(super) fn session_scoped_ids() -> Vec<&'static str> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// Modifier tokens verified against the pinned muda 0.19 accelerator
-    /// parser (`parse_modifier`).
-    const MODIFIER_TOKENS: &[&str] = &["Cmd", "Option", "Shift", "Ctrl"];
-
-    /// Key tokens verified against the pinned muda 0.19 accelerator parser:
-    /// single letters, digits, and the punctuation keys this menu uses.
-    fn is_valid_key_token(token: &str) -> bool {
-        let mut chars = token.chars();
-        let (Some(first), None) = (chars.next(), chars.next()) else {
-            return false;
-        };
-        first.is_ascii_alphanumeric() || matches!(first, '.' | '[' | ']' | ',')
-    }
-
-    fn all_specs() -> Vec<&'static CommandSpec> {
-        fn walk(entries: &'static [Entry], specs: &mut Vec<&'static CommandSpec>) {
-            for entry in entries {
-                match entry {
-                    Entry::Command(spec) => specs.push(spec),
-                    Entry::Submenu { entries, .. } => walk(entries, specs),
-                    Entry::Separator | Entry::Predefined(_) => {}
-                }
-            }
-        }
-        let mut specs = Vec::new();
-        for (_, entries) in MENU_BAR {
-            walk(entries, &mut specs);
-        }
-        specs
-    }
-
-    #[test]
-    fn menu_bar_has_the_eight_spec_menus_in_order() {
-        let labels: Vec<&str> = MENU_BAR.iter().map(|(label, _)| *label).collect();
-        assert_eq!(
-            labels,
-            [
-                "RunHaven", "File", "Edit", "View", "Session", "Agent", "Window", "Help"
-            ]
-        );
-    }
-
-    #[test]
-    fn command_ids_are_stable_unique_and_kebab_case() {
-        let ids = command_ids();
-        assert!(!ids.is_empty());
-        for id in &ids {
-            assert!(
-                id.chars()
-                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'),
-                "menu id `{id}` must stay lowercase kebab-case; the frontend maps these strings"
-            );
-        }
-        let mut sorted = ids.clone();
-        sorted.sort_unstable();
-        sorted.dedup();
-        assert_eq!(sorted.len(), ids.len(), "menu ids must be unique");
-        // The frontend listener maps these exact ids; renaming one is a
-        // cross-boundary contract change.
-        assert_eq!(
-            ids,
-            [
-                "settings",
-                "new-run",
-                "filter-sessions",
-                "toggle-sidebar",
-                "go-home",
-                "go-agents",
-                "go-diagnostics",
-                "go-maintenance",
-                "select-session-1",
-                "select-session-2",
-                "select-session-3",
-                "select-session-4",
-                "select-session-5",
-                "select-session-6",
-                "select-session-7",
-                "select-session-8",
-                "select-session-9",
-                "next-session",
-                "previous-session",
-                "jump-needs-you",
-                "check-again",
-                "send-message",
-                "show-output",
-                "stop-session",
-                "hard-stop-session",
-                "repair-session",
-                "cleanup-session",
-                "open-session-window",
-                "agent-sign-in",
-                "agent-rebuild-image",
-                "agent-auth-details",
-                "help",
-                "help-agent-reach",
-                "help-report-problem",
-            ]
-        );
-    }
-
-    #[test]
-    fn session_scoped_ids_are_exactly_the_session_menu_commands() {
-        // These ids act on the main window's selected session and are
-        // dropped while a monitor window is focused; every id not listed
-        // here keeps working from any window. Changing this set changes
-        // which shortcuts a monitor window swallows.
-        let scoped = session_scoped_ids();
-        assert_eq!(
-            scoped,
-            [
-                "send-message",
-                "show-output",
-                "stop-session",
-                "hard-stop-session",
-                "repair-session",
-                "cleanup-session",
-                "open-session-window",
-            ]
-        );
-        let all = command_ids();
-        for id in &scoped {
-            assert!(
-                all.contains(id),
-                "session-scoped id `{id}` must be a menu id"
-            );
-        }
-    }
-
-    #[test]
-    fn only_unbuilt_surfaces_are_disabled() {
-        // "No dead navigation" (spec section 10): an enabled item must do
-        // something user-visible, so an item may be disabled only while its
-        // surface does not exist. Settings is live (in-window dialog, B3).
-        let disabled: Vec<&str> = all_specs()
-            .iter()
-            .filter(|spec| !spec.enabled)
-            .map(|spec| spec.id)
-            .collect();
-        assert_eq!(
-            disabled,
-            [
-                "filter-sessions",
-                "help",
-                "help-agent-reach",
-                "help-report-problem"
-            ]
-        );
-    }
-
-    #[test]
-    fn accelerators_use_only_verified_muda_tokens() {
-        for spec in all_specs() {
-            let Some(accelerator) = spec.accelerator else {
-                continue;
-            };
-            let tokens: Vec<&str> = accelerator.split('+').collect();
-            assert!(
-                tokens.len() >= 2,
-                "accelerator `{accelerator}` on `{}` needs at least one modifier",
-                spec.id
-            );
-            let (key, modifiers) = tokens.split_last().expect("non-empty tokens");
-            for modifier in modifiers {
-                assert!(
-                    MODIFIER_TOKENS.contains(modifier),
-                    "accelerator `{accelerator}` on `{}` uses unverified modifier `{modifier}`",
-                    spec.id
-                );
-            }
-            assert!(
-                is_valid_key_token(key),
-                "accelerator `{accelerator}` on `{}` uses unverified key token `{key}`",
-                spec.id
-            );
-        }
-    }
-
-    #[test]
-    fn accelerators_are_unique() {
-        let mut seen = Vec::new();
-        for spec in all_specs() {
-            if let Some(accelerator) = spec.accelerator {
-                assert!(
-                    !seen.contains(&accelerator),
-                    "accelerator `{accelerator}` is assigned twice"
-                );
-                seen.push(accelerator);
-            }
-        }
-    }
-}
+mod tests;
