@@ -2,12 +2,14 @@
 
 Status: Slice 1 (custody surface, Section 2 capture folded in), Slice 3
 (broker proxy extension: `CLAUDE_OAUTH_BROKER` profile, `ClaudeAuthSource`
-selector, Keychain secret-source seam, F5 decision), and Slice 4 (the three
-Tauri commands plus the isolated `claude-oauth` capability) are implemented.
-Slice 2 (host capture) landed inside Slice 1. Slice 5 (GUI, rotation) and the
-Gate 1/Gate 2 reviews remain; the GUI default has NOT flipped to path C.
-Gate 1 (adversarial + security review of Slices 1-3 together) runs before the
-GUI default flip; a security review of Slice 4 is still pending.
+selector, Keychain secret-source seam, F5 decision), Slice 4 (the three Tauri
+commands plus the isolated `claude-oauth` capability), and Slice 5 (GUI: path C
+default + path A opt-in, the non-secret token-age rotation prompt, and the docs)
+are implemented. Slice 2 (host capture) landed inside Slice 1. Gate 1 passed and
+authorized the GUI default flip to path C, which Slice 5 made. Gate 2 (pre-merge
+full verification plus the live-Keychain / real-setup-token maintainer smokes and
+a final read of the approved claim set against the shipped strings) and the
+double-coverage review remain before merge.
 
 This design adds a second Claude auth path to the desktop app: a macOS Keychain
 OAuth-token broker (path C, the new default), alongside the existing in-sandbox
@@ -520,10 +522,30 @@ GUI default flips to path C.
   below.
 - Slice 4 (original plan): Tauri commands and `claude-oauth` capability
   (Section 4), native confirmation, sanitized status, no secret in responses.
-- Slice 5: GUI control, tooltips, and docs (Section 5), path C default, path A
-  opt-in. Fold in the token-rotation cadence setting (Section 1, Hardening 4): show
-  token age from the non-secret created-at timestamp and prompt a fresh
-  setup-token once past the cadence. Ship docs in the same slice.
+- Slice 5 status: IMPLEMENTED. The Agents Claude control (`ui/src/app/`
+  `ClaudeSignIn.tsx`, `useClaudeOAuthSignIn.ts`) makes path C the primary "Sign
+  in on your Mac" action (native-confirmed `start_claude_oauth_signin`, then
+  polls `get_claude_oauth_status` through `not_signed_in|signing|signed_in|
+  failed`, with a native-confirmed `clear_claude_oauth` remove) and keeps path A
+  as the secondary "Sign in inside the sandbox instead" opt-in running the
+  unchanged T3 terminal login. The three approved tooltip strings ship verbatim
+  (exported constants, asserted character-for-character). Rotation (Hardening 4):
+  `get_claude_oauth_status` now returns a non-secret `ageDays` from the item's own
+  `kSecAttrCreationDate`, read through the SAME attributes-only presence query
+  (no `kSecReturnData`, no prompt, no token read; parsed with the already-present
+  `time` crate); past the Settings cadence (default 90 days, fixed choices) the
+  card surfaces a "sign in again" prompt (a reminder, not a forced expiry). Date
+  parsing was split into `provider/claude_oauth_age.rs` to keep the keychain file
+  under the structure ceiling. Docs shipped in the same slice: `AUTH_BROKER.md`
+  (path C mechanism + the verbatim "does and does not do" claim set + removal +
+  rotation), `SECURITY_MODEL.md` (custody-reversal trade-off), `DESKTOP_APP.md`
+  (GUI how-to + Settings cadence), and `USAGE.md` (brief pointer). No secret
+  crosses to the WebView (Slice 4 holds; the frontend never receives a token and
+  the browser preview never invokes Tauri). Original plan below.
+- Slice 5 (original plan): GUI control, tooltips, and docs (Section 5), path C
+  default, path A opt-in. Fold in the token-rotation cadence setting (Section 1,
+  Hardening 4): show token age from the non-secret created-at timestamp and prompt
+  a fresh setup-token once past the cadence. Ship docs in the same slice.
 - Gate 2 (pre-merge): full verification per `AGENTS.md`, plus a live Keychain
   round-trip and a real setup-token sign-in on macOS 26+, and a final read of the
   approved claim set against the shipped strings.

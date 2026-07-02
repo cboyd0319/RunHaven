@@ -404,21 +404,42 @@ at the broker (Codex custom-provider config, or `ANTHROPIC_BASE_URL` /
 token values, or environment variable names. Even with the broker the credential
 is usable, not readable: a compromised guest cannot read the key but can still
 spend through it within the pinned host and path the broker forwards to. The
-broker is for API keys only; OAuth and subscription logins (and Copilot, which
-cannot be brokered without TLS interception) use isolated in-container state, and
-RunHaven never reads your host `~/.claude.json` or Keychain. `--env NAME` remains
-an explicit fallback that places a token in the guest. See
+API-key broker is for API keys only; other OAuth and subscription logins (and
+Copilot, which cannot be brokered without TLS interception) use isolated
+in-container state. RunHaven never reads your host `~/.claude.json` or your other
+Keychain logins; the one exception is Claude's Keychain OAuth broker (path C),
+which reads only the single Keychain item RunHaven itself created. `--env NAME`
+remains an explicit fallback that places a token in the guest. See
 [`AUTH_BROKER.md`](AUTH_BROKER.md). Use
 [`AUTH_BROKER.md`](AUTH_BROKER.md) for the current boundary and non-goals.
 
-RunHaven never holds any agent token. All four sign-in agents (Claude, Codex,
-Copilot, Antigravity) log in inside the sandbox with `runhaven login <agent>`,
-and the resulting credential lives only in that agent's isolated home volume, so
-RunHaven never sees, stores, logs, or injects it. Claude signs in the same way
-now: `runhaven login claude` runs `claude auth login` in the sandbox instead of
-capturing a host token. `runhaven login claude --clear` also best-effort removes
-any token an older RunHaven stored on your Mac before this change, so nothing
-lingers.
+For Codex, Copilot, and Antigravity, RunHaven holds no agent token: they log in
+inside the sandbox with `runhaven login <agent>`, the credential lives only in
+that agent's isolated home volume, and RunHaven never sees, stores, logs, or
+injects it. Claude's in-sandbox login (`runhaven login claude`, path A) works
+the same way and holds no host custody.
+
+Claude adds one deliberate exception: the desktop app's default "Sign in on your
+Mac" (path C) reintroduces a small host custody for Claude only. RunHaven runs
+`claude setup-token` on the host and stores the printed token in a
+RunHaven-owned macOS Keychain item, then the existing broker injects it as
+`Authorization: Bearer` to `api.anthropic.com`. This trade is bounded on
+purpose: the token lives only in the OS Keychain, is
+`AccessibleWhenUnlockedThisDeviceOnly`, and carries a user-presence access
+control, so every read needs a live Touch ID or device-password approval and
+RunHaven cannot read it silently (cross-app isolation binds only on a signed
+release build, the supported path for this claim; on an unsigned dev build the
+same access control is attached to a legacy-keychain item and confirming the
+presence gate binds there is a pending maintainer check, F3). The token never enters the
+sandbox (the guest holds only a placeholder), it is inference-only (no account
+takeover), and a Settings cadence prompts a fresh sign-in so a leaked token's
+useful life is bounded. During a run the broker holds the token in memory to
+inject it and overwrites its own copy once saved, but cannot fully wipe it from
+memory. "Remove saved token" (or `runhaven login claude --clear`) deletes only
+RunHaven's Keychain item; it does not revoke the token on Anthropic's side. The
+full trade-off analysis and claim set live in
+[`AUTH_BROKER.md`](AUTH_BROKER.md) (Claude Keychain OAuth broker) and the design
+`docs/design/native-gui-claude-oauth-broker.md`.
 
 The selected agent still controls what it reads inside `/workspace` and
 `/home/agent`. If the agent has model credentials inside its project volume and

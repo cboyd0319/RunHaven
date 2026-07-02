@@ -28,14 +28,19 @@ pub(crate) struct ClaudeOAuthStartResponse {
 /// (`not_signed_in` | `signing` | `signed_in` | `failed`) derived from Keychain
 /// item PRESENCE and the in-flight sign-in state, never from the token value.
 /// `reason` is a fixed, path-free failure message present only for `failed`.
-/// `sign_in_id` correlates the last attempt. No token, no token prefix, no
-/// token-derived value ever appears here.
+/// `sign_in_id` correlates the last attempt. `age_days` is how many whole days
+/// ago the token was saved, from the item's own non-secret creation date
+/// (`kSecAttrCreationDate`); it is present only when `signed_in`, drives the
+/// re-sign-in cadence prompt (Hardening 4), and is a plain day count, never a
+/// token-derived value. No token, no token prefix, no token-derived value ever
+/// appears here.
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ClaudeOAuthStatusResponse {
     pub status: String,
     pub reason: Option<String>,
     pub sign_in_id: Option<String>,
+    pub age_days: Option<u32>,
 }
 
 /// Request to remove RunHaven's own saved Claude token. `confirm` must be true,

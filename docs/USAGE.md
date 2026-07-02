@@ -319,7 +319,10 @@ runhaven login claude --clear  # delete that agent's shared home volume (logs it
 browser, then paste the code back into this terminal. The login persists in
 Claude's shared home volume, so later runs reuse it; RunHaven never holds the
 token. `--clear` deletes that volume and also best-effort removes any token an
-older RunHaven stored on your Mac before this change. See
+older RunHaven stored on your Mac before this change. In the desktop app this
+in-sandbox login is the "Sign in inside the sandbox instead" opt-in; the default
+there is "Sign in on your Mac" (path C), which saves the token in your Mac's
+Keychain and never puts it in the sandbox. See
 [`AUTH_BROKER.md`](AUTH_BROKER.md) and [`SECURITY_MODEL.md`](SECURITY_MODEL.md).
 
 Use `--env NAME` only when a headless run deliberately needs one token value

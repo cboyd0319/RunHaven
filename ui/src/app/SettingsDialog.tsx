@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select"
 
 import { agentLabel } from "./sessionIdentity"
+import { CLAUDE_REAUTH_DAY_CHOICES } from "./uiStatePersistence"
 import type { SettingsState } from "./useSettings"
 
 type SettingsDialogProps = {
@@ -94,6 +95,32 @@ export function SettingsForm({ settings, agents }: SettingsDialogProps) {
         <span className="text-sm font-normal text-muted-foreground">
           The agent picked first when you start a new run. You can still change
           it for each run.
+        </span>
+      </label>
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
+        Ask me to sign in to Claude again after
+        <Select
+          value={String(settings.claudeReauthDays)}
+          onValueChange={(value) =>
+            settings.setClaudeReauthDays(Number(value))
+          }
+        >
+          <SelectTrigger aria-label="Claude sign-in reminder">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {CLAUDE_REAUTH_DAY_CHOICES.map((days) => (
+                <SelectItem key={days} value={String(days)}>
+                  {days} days{days === 90 ? " (recommended)" : ""}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <span className="text-sm font-normal text-muted-foreground">
+          When your saved Claude token is older than this, RunHaven suggests
+          signing in again. It is only a reminder, not a cutoff.
         </span>
       </label>
       <p className="text-sm text-muted-foreground">

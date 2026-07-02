@@ -356,30 +356,30 @@ behavior, multi-session isolation, typed status, run control, recovery, and
 fail-closed boundaries before visual polish.
 
 Claude OAuth Keychain broker (`docs/design/native-gui-claude-oauth-broker.md`
-holds the full spec and per-slice status). Slices 1, 3, and 4 landed; Slice 5
-(GUI, rotation) and Gate 1/Gate 2 remain, and the GUI default has not flipped.
-Slice 1: macOS-gated `provider/claude_oauth_keychain.rs`
-custody (user-presence `SecAccessControl`, `Zeroizing` capture, no disk/log
-copy); deps `security-framework =3.5.1` and `zeroize =1.9.0` in `pins.toml`.
-Slice 3 (broker proxy, no GUI yet): `ClaudeAuthSource` replaced the bare
-`api_key_broker_env: Option<String>` on `RunOptions`/`AgentRunPlan` with an env
-NAME (unchanged behavior) or payload-free `KeychainOAuth`, so no token can reach
-a persisted field; the marker writes only a non-secret `keychain-oauth` tag for
-OAuth (F1, test-proven). `CLAUDE_OAUTH_BROKER` reuses `BearerAuth` +
-`ANTHROPIC_BASE_URL`, pins `api.anthropic.com` + `/v1/` (no egress widening).
-The Keychain secret seam (`provider/runtime/broker_secret.rs`, no-leak tripwire)
-reads the token once per launch into the broker's in-memory secret and fails
-closed. F5: guest-forwarded `anthropic-beta` makes Bearer-only correct today.
-Slice 4 (three Tauri commands + isolated `claude-oauth` capability, no GUI):
-`start_claude_oauth_signin` (native-confirm gated, host capture on a background
-thread), `get_claude_oauth_status` (sanitized `not_signed_in|signing|signed_in|
-failed` enum from Keychain PRESENCE via a new attributes-only `token_present`
-that never reads the token or prompts, never `read_token`), and
-`clear_claude_oauth` (native-confirm gated, deletes only RunHaven's item). No
-response carries a token/prefix/path (no-leak serialization test); capability is
-main-only, isolated from run-control and agent-sign-in, and guard-pinned out of
-main-read/session-monitor. Open live smokes and Gate 1/Gate 2 per the design doc
-precede the GUI flip; security review of Slice 4 is still pending.
+holds the full spec and per-slice status). Slices 1, 3, 4, and 5 landed; Gate 1
+passed and authorized the GUI flip; Gate 2 (pre-merge full verification + live
+Keychain / real setup-token maintainer smokes + a final claim-set read) and the
+double-coverage review remain before merge. Slices 1/3/4 (custody + broker +
+commands): macOS-gated `provider/claude_oauth_keychain.rs` custody (user-presence
+`SecAccessControl`, `Zeroizing` capture, no disk/log copy; deps
+`security-framework =3.5.1`, `zeroize =1.9.0`); `ClaudeAuthSource` keeps any
+token off persisted plan/marker fields (`keychain-oauth` tag only, F1);
+`CLAUDE_OAUTH_BROKER` reuses `BearerAuth` + `ANTHROPIC_BASE_URL`, pins
+`api.anthropic.com` + `/v1/`; three `claude-oauth`-capability commands
+(`start_claude_oauth_signin`, `get_claude_oauth_status`, `clear_claude_oauth`),
+main-only, no token/prefix/path in any response. Slice 5 (GUI + rotation + docs):
+`ClaudeSignIn.tsx`/`useClaudeOAuthSignIn.ts` make path C ("Sign in on your Mac")
+the primary action and keep the unchanged T3 terminal login as the "Sign in
+inside the sandbox instead" opt-in; the three approved tooltip strings ship
+verbatim (asserted). `get_claude_oauth_status` now returns a non-secret `ageDays`
+from the item's own `kSecAttrCreationDate` via the SAME attributes-only presence
+query (no `kSecReturnData`, no prompt, no token read; parsed with `time`, split
+into `provider/claude_oauth_age.rs`); past the Settings cadence (default 90 days)
+the card prompts a fresh sign-in (a reminder, not an expiry). Docs shipped:
+`AUTH_BROKER.md` (mechanism + verbatim claim set + removal + rotation),
+`SECURITY_MODEL.md` (custody-reversal trade-off), `DESKTOP_APP.md`, `USAGE.md`.
+No secret reaches the WebView; browser preview shows the placeholder and never
+invokes Tauri.
 
 For this CLI+GUI completion goal, local downloads, installs, tool runs, and
 external research are authorized when they directly reduce risk or accelerate

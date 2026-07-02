@@ -53,6 +53,18 @@ pub(crate) enum ClearOutcome {
     AlreadyAbsent,
 }
 
+/// Non-secret presence plus the token's age, as the status command sees it.
+/// Defined here (not gated) so `build_status` and the test seam compile on every
+/// platform; the macOS seam fills it from the Keychain's attributes-only query
+/// (no token read, no prompt), and non-macOS reports absent.
+pub(crate) struct KeychainPresence {
+    /// Whether RunHaven's Keychain item exists.
+    pub present: bool,
+    /// Whole days since the token was saved, from the item's own non-secret
+    /// creation date, or `None` when absent or the date could not be parsed.
+    pub age_days: Option<u32>,
+}
+
 // -- start ----------------------------------------------------------------
 
 #[tauri::command]
@@ -133,37 +145,55 @@ fn host_capture() -> Result<(), String> {
 pub(crate) fn get_claude_oauth_status(
     claude_oauth: State<'_, ClaudeOAuthSignInRegistry>,
 ) -> Result<ClaudeOAuthStatusResponse, String> {
-    build_status(claude_oauth.snapshot()?, keychain_present)
+    build_status(claude_oauth.snapshot()?, keychain_presence)
 }
 
 /// Derive the sanitized status from the in-flight phase and Keychain presence.
-/// While signing, presence is not even checked. Presence is queried only through
-/// `present`, which never reads the token.
+/// While signing, presence is not even checked. Presence (and the non-secret
+/// age) is queried only through `presence`, which never reads the token. The age
+/// rides along ONLY when signed in, so `not_signed_in`/`failed`/`signing` never
+/// carries a day count.
 fn build_status(
     snapshot: InFlightSnapshot,
-    present: impl FnOnce() -> Result<bool, String>,
+    presence: impl FnOnce() -> Result<KeychainPresence, String>,
 ) -> Result<ClaudeOAuthStatusResponse, String> {
     match snapshot {
-        InFlightSnapshot::Signing { sign_in_id } => {
-            Ok(status_response(STATUS_SIGNING, None, Some(sign_in_id)))
-        }
+        InFlightSnapshot::Signing { sign_in_id } => Ok(status_response(
+            STATUS_SIGNING,
+            None,
+            Some(sign_in_id),
+            None,
+        )),
         InFlightSnapshot::Failed { sign_in_id, reason } => {
-            if present()? {
+            let presence = presence()?;
+            if presence.present {
                 // A token exists despite a prior failed attempt: presence wins.
-                Ok(status_response(STATUS_SIGNED_IN, None, Some(sign_in_id)))
+                Ok(status_response(
+                    STATUS_SIGNED_IN,
+                    None,
+                    Some(sign_in_id),
+                    presence.age_days,
+                ))
             } else {
                 Ok(status_response(
                     STATUS_FAILED,
                     Some(reason),
                     Some(sign_in_id),
+                    None,
                 ))
             }
         }
         InFlightSnapshot::Idle => {
-            if present()? {
-                Ok(status_response(STATUS_SIGNED_IN, None, None))
+            let presence = presence()?;
+            if presence.present {
+                Ok(status_response(
+                    STATUS_SIGNED_IN,
+                    None,
+                    None,
+                    presence.age_days,
+                ))
             } else {
-                Ok(status_response(STATUS_NOT_SIGNED_IN, None, None))
+                Ok(status_response(STATUS_NOT_SIGNED_IN, None, None, None))
             }
         }
     }
@@ -173,26 +203,36 @@ fn status_response(
     status: &str,
     reason: Option<String>,
     sign_in_id: Option<String>,
+    age_days: Option<u32>,
 ) -> ClaudeOAuthStatusResponse {
     ClaudeOAuthStatusResponse {
         status: status.to_string(),
         reason,
         sign_in_id,
+        age_days,
     }
 }
 
-/// Presence-only check: attributes, never the secret data, so no user-presence
-/// prompt fires and the token is never read. Non-macOS has no Keychain broker,
-/// so it reports not-signed-in.
+/// Presence-and-age check: attributes only, never the secret data, so no
+/// user-presence prompt fires and the token is never read. The age is the item's
+/// own non-secret creation date. Non-macOS has no Keychain broker, so it reports
+/// not-signed-in with no age.
 #[cfg(target_os = "macos")]
-fn keychain_present() -> Result<bool, String> {
-    runhaven_core::provider::claude_oauth_keychain::token_present()
-        .map_err(|_| "RunHaven could not check the Claude token in the Keychain.".to_string())
+fn keychain_presence() -> Result<KeychainPresence, String> {
+    let presence = runhaven_core::provider::claude_oauth_keychain::token_presence()
+        .map_err(|_| "RunHaven could not check the Claude token in the Keychain.".to_string())?;
+    Ok(KeychainPresence {
+        present: presence.present,
+        age_days: presence.age_days,
+    })
 }
 
 #[cfg(not(target_os = "macos"))]
-fn keychain_present() -> Result<bool, String> {
-    Ok(false)
+fn keychain_presence() -> Result<KeychainPresence, String> {
+    Ok(KeychainPresence {
+        present: false,
+        age_days: None,
+    })
 }
 
 // -- clear ----------------------------------------------------------------
@@ -277,9 +317,9 @@ pub(crate) fn start_claude_oauth_signin_for_test(
 #[cfg(test)]
 pub(crate) fn get_claude_oauth_status_for_test(
     registry: &ClaudeOAuthSignInRegistry,
-    present: impl FnOnce() -> Result<bool, String>,
+    presence: impl FnOnce() -> Result<KeychainPresence, String>,
 ) -> Result<ClaudeOAuthStatusResponse, String> {
-    build_status(registry.snapshot()?, present)
+    build_status(registry.snapshot()?, presence)
 }
 
 #[cfg(test)]

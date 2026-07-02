@@ -83,23 +83,36 @@ describe("settings persistence", () => {
     window.localStorage.clear()
   })
 
-  it("defaults to badge on and no default agent", () => {
+  it("defaults to badge on, no default agent, and the 90-day cadence", () => {
     expect(loadSettings()).toEqual(DEFAULT_SETTINGS)
-    expect(DEFAULT_SETTINGS).toEqual({ dockBadge: true, defaultAgent: null })
+    expect(DEFAULT_SETTINGS).toEqual({
+      dockBadge: true,
+      defaultAgent: null,
+      claudeReauthDays: 90,
+    })
   })
 
-  it("round-trips the two allowed choices", () => {
-    persistSettings({ dockBadge: false, defaultAgent: "codex" })
-    expect(loadSettings()).toEqual({ dockBadge: false, defaultAgent: "codex" })
+  it("round-trips the allowed choices", () => {
+    persistSettings({ dockBadge: false, defaultAgent: "codex", claudeReauthDays: 30 })
+    expect(loadSettings()).toEqual({
+      dockBadge: false,
+      defaultAgent: "codex",
+      claudeReauthDays: 30,
+    })
 
-    persistSettings({ dockBadge: true, defaultAgent: null })
-    expect(loadSettings()).toEqual({ dockBadge: true, defaultAgent: null })
+    persistSettings({ dockBadge: true, defaultAgent: null, claudeReauthDays: 180 })
+    expect(loadSettings()).toEqual({
+      dockBadge: true,
+      defaultAgent: null,
+      claudeReauthDays: 180,
+    })
   })
 
-  it("stores exactly the two allowed fields, nothing extra", () => {
+  it("stores exactly the allowed fields, nothing extra", () => {
     const settings = {
       dockBadge: false,
       defaultAgent: "codex",
+      claudeReauthDays: 60,
       // Anything beyond the allowed set must never reach the store, even if
       // a future AppSettings variant carries more fields.
       workspacePath: "/Users/someone/secret-project",
@@ -107,7 +120,17 @@ describe("settings persistence", () => {
     persistSettings(settings)
     expect(
       JSON.parse(window.localStorage.getItem(SETTINGS_KEY) ?? ""),
-    ).toEqual({ dockBadge: false, defaultAgent: "codex" })
+    ).toEqual({ dockBadge: false, defaultAgent: "codex", claudeReauthDays: 60 })
+  })
+
+  it("clamps an off-menu or malformed cadence back to the default", () => {
+    for (const claudeReauthDays of [4000, 0, -1, 45, "90", null]) {
+      window.localStorage.setItem(
+        SETTINGS_KEY,
+        JSON.stringify({ dockBadge: true, defaultAgent: null, claudeReauthDays }),
+      )
+      expect(loadSettings().claudeReauthDays).toBe(90)
+    }
   })
 
   it("reads an empty or malformed store as the defaults", () => {
@@ -135,7 +158,7 @@ describe("settings persistence", () => {
       )
       expect(loadSettings().defaultAgent).toBeNull()
 
-      persistSettings({ dockBadge: true, defaultAgent })
+      persistSettings({ dockBadge: true, defaultAgent, claudeReauthDays: 90 })
       expect(
         JSON.parse(window.localStorage.getItem(SETTINGS_KEY) ?? "").defaultAgent,
       ).toBeNull()
@@ -223,7 +246,7 @@ describe("monitor-window write guard", () => {
 
   it("never persists settings from a monitor window", () => {
     window.history.replaceState(null, "", "/?monitor=1")
-    persistSettings({ dockBadge: false, defaultAgent: "codex" })
+    persistSettings({ dockBadge: false, defaultAgent: "codex", claudeReauthDays: 30 })
     expect(window.localStorage.getItem(SETTINGS_KEY)).toBeNull()
   })
 

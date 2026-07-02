@@ -57,35 +57,39 @@ button.
   confirm the box the app pops up, then open the link it shows and enter the
   short code in your browser. The app waits and updates when you are done. It
   shows the link and code, never your token or key.
-- Claude now signs in right in the app too, from a sign-in terminal. Its sign-in
-  needs a code pasted back, which a plain button cannot do, so the Claude card
-  opens a small terminal instead. Click **Open sign-in terminal**, confirm the
-  box the app pops up, and the app runs `claude auth login` inside a sandbox. It
-  prints a link: open it in your browser, approve, then paste the code it gives
-  you back into that terminal. When you are done, come back and refresh. The
-  same standing warning as any in-app terminal applies (see "Open a terminal"):
+- Claude signs in on your Mac by default. Click **Sign in on your Mac**, confirm
+  the box the app pops up, and RunHaven runs Claude's own sign-in on your Mac.
+  RunHaven saves your Claude token to your Mac's Keychain and uses it to sign
+  your runs. The token never goes inside the sandbox. RunHaven can use your token
+  only after you approve it with Touch ID or your device password, and it never
+  shows the token on screen. After you sign in, the Claude card shows how long
+  ago the token was saved. Once it is older than the reminder time you set in
+  **Settings** (90 days to start), the card suggests signing in again. That is
+  only a reminder: the old token keeps working until you replace it.
+- **Remove saved token** deletes only the token RunHaven saved in your Mac's
+  Keychain. It does not touch your other logins, and it does not cancel the token
+  on Anthropic's side. To fully cancel it, revoke it in your Anthropic account.
+- Prefer to keep Claude's login inside the sandbox? Click **Sign in inside the
+  sandbox instead**. This opens a small terminal that runs `claude auth login`
+  inside a sandbox: open the link it prints, approve in your browser, then paste
+  the code it gives you back into that terminal, and come back and refresh. Your
+  Claude login is then saved in the agent's own space, not on your Mac's
+  Keychain. The same standing terminal warning applies (see "Open a terminal"):
   what you type and what it prints, including the code, are shown on screen and
-  are not filtered or saved. While the sign-in terminal is open it holds
-  Claude's saved state, so you cannot start a Claude run until you close it.
-  Finish signing in, then close the terminal. Closing it removes the sign-in
-  sandbox container and its network, even if the sign-in did not finish. If you
-  force-quit RunHaven in the middle of signing in, it may still leave one unused
-  sandbox network behind; the Maintenance panel's "Clean up stale networks"
-  removes it safely.
-- Prefer your own terminal? The Claude card still offers the exact command as a
-  fallback:
+  are not filtered or saved. While that terminal is open it holds Claude's saved
+  state, so you cannot start a Claude run until you close it. Closing it removes
+  the sign-in sandbox container and its network even if sign-in did not finish;
+  a force-quit mid-sign-in may leave one unused network that the Maintenance
+  panel's "Clean up stale networks" removes safely. You can also run
+  `runhaven login claude` in your own terminal; a **Copy command** button copies
+  the exact command.
 
-  ```bash
-  runhaven login claude
-  ```
-
-  A **Copy command** button copies it and confirms with "Copied". Run it in your
-  terminal, then come back and refresh. If the sign-in terminal cannot open (the
-  container tool is not ready), the app keeps this fallback text.
-
-Either way, the login happens inside the sandbox and stays there: RunHaven never
-holds any agent token, and the app never shows or stores your token or key. You
-can also pass an API key by its environment variable name for a headless run.
+For Codex, Copilot, Antigravity, and Claude's in-sandbox option, the login stays
+in the sandbox and RunHaven holds no token. Claude's on-your-Mac option is the
+one place RunHaven keeps a token, saved only in your Mac's Keychain and used only
+to sign your runs; see [`AUTH_BROKER.md`](AUTH_BROKER.md) for exactly what it
+does and does not do. You can also pass an API key by its environment variable
+name for a headless run.
 
 ## Start a run
 
@@ -218,6 +222,9 @@ over the main window and holds only small convenience choices:
 - **Start new runs with.** The agent picked first when you start a new run.
   Leave it on "Choose for me" to let RunHaven pick, and you can still change
   the agent for each run either way.
+- **Ask me to sign in to Claude again after.** How old your saved Claude token
+  can get before the Agents view suggests signing in again (30, 60, 90, or 180
+  days; 90 to start). It is only a reminder, not a cutoff.
 
 RunHaven uses a dark look for now; more appearance choices may come later.
 Safety never lives in Settings: no security default can be changed there and

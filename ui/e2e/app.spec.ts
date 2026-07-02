@@ -186,12 +186,20 @@ test("runs the maintenance preview flows behind confirm gates", async ({ page })
   await page.goto("/");
 
   // Image rebuild lives in the Agents destination and stays gated until the
-  // user confirms. Each agent row shows its image state, and the Claude row
-  // offers a copy button for the terminal sign-in command.
+  // user confirms. Each agent row shows its image state. The Claude row defaults
+  // to path C (sign in on your Mac); the in-sandbox terminal login (path A) is a
+  // secondary opt-in that reveals the copy-command fallback when chosen.
   await page.getByRole("button", { name: "Agents", exact: true }).click();
   await expect(
     page.getByRole("alert").filter({ hasText: "Agent ready" }).first(),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Sign in on your Mac" }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copy command" })).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Sign in inside the sandbox instead" })
+    .click();
   await expect(page.getByRole("button", { name: "Copy command" })).toBeVisible();
   const rebuildButton = page.getByRole("button", { name: "Rebuild image" });
   await expect(rebuildButton).toBeDisabled();

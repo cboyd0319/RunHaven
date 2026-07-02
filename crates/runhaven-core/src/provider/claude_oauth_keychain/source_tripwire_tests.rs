@@ -82,14 +82,15 @@ fn keychain_module_never_persists_or_logs_the_token() {
 
 #[test]
 fn presence_query_reads_attributes_and_never_the_secret_data() {
-    // The presence path (`fn present`) must query attributes only. Loading the
-    // secret data is the one thing that invokes LocalAuthentication and returns
-    // the token, so the whole module must never request it. This proves, at the
-    // source level, that checking presence cannot prompt and cannot read the
-    // token (design Section 4: "checking presence must NOT trigger the prompt").
+    // The presence/age path (`fn presence`) must query attributes only. Loading
+    // the secret data is the one thing that invokes LocalAuthentication and
+    // returns the token, so the whole module must never request it. This proves,
+    // at the source level, that checking presence and reading the token's age
+    // cannot prompt and cannot read the token (design Section 4: "checking
+    // presence must NOT trigger the prompt"; Hardening 4: the age is non-secret).
     let source = production(include_str!("../claude_oauth_keychain.rs"));
     assert!(
-        source.contains("fn present"),
+        source.contains("fn presence"),
         "the scan must cover the presence path"
     );
     assert!(

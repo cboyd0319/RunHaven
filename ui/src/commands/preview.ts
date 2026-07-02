@@ -43,6 +43,11 @@ export {
   previewManagedSessionWorktree,
   previewManagedWorktreeAction
 } from "./preview_worktree";
+export {
+  previewClaudeOAuthClear,
+  previewClaudeOAuthStart,
+  previewClaudeOAuthStatus
+} from "./preview_claude_oauth";
 
 const mockAgents: AgentProfile[] = [
   {

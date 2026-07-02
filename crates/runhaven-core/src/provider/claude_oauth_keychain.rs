@@ -20,6 +20,12 @@
 //!   until proven on the legacy path.
 //! - The item is `AccessibleWhenUnlockedThisDeviceOnly`: readable only while
 //!   the keychain is unlocked, never synced to iCloud or copied by backup.
+//! - Presence and the token's AGE (`token_presence`) come from an
+//!   attributes-only query that requests `kSecReturnAttributes` and NEVER
+//!   `kSecReturnData`, so it reports whether the item exists and how old it is
+//!   (from the item's own non-secret `kSecAttrCreationDate`) without decrypting
+//!   the secret and without a user-presence prompt. The age is a day count, not
+//!   a token-derived value, and it drives only the re-sign-in cadence prompt.
 //! - The setup-token capture holds the transient stdout and the extracted
 //!   token in `Zeroizing` buffers overwritten on drop, and keeps NO persistent
 //!   copy anywhere but the Keychain. On any parse failure it emits only the
@@ -43,6 +49,7 @@ use security_framework::passwords::{
 };
 use zeroize::Zeroizing;
 
+use super::claude_oauth_age::age_days_from_cdat;
 use crate::doctor::find_on_path;
 
 /// RunHaven-owned service label. Distinct from any label Claude Code uses, so a
@@ -51,6 +58,10 @@ const SERVICE: &str = "RunHaven Claude OAuth";
 
 /// Account within the service. Fixed today; room for future per-agent items.
 const ACCOUNT: &str = "claude";
+
+/// The item's `kSecAttrCreationDate` attribute key, returned by an
+/// attributes-only query. Non-secret; used only to age the token (Hardening 4).
+const CREATION_DATE_ATTR: &str = "cdat";
 
 /// Apple `errSecItemNotFound` OSStatus: no matching Keychain item. Stable
 /// Security-framework status; kept local to avoid a second direct dependency on
@@ -66,6 +77,30 @@ pub enum KeychainClear {
     Cleared,
     /// There was no stored item to remove.
     Missing,
+}
+
+/// Non-secret presence of RunHaven's stored token, plus its age when present.
+/// Both fields are derived from the attributes-only query (no secret read, no
+/// user-presence prompt): `present` from item existence, `age_days` from the
+/// item's own `kSecAttrCreationDate`. Never carries the token or any
+/// token-derived value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TokenPresence {
+    /// Whether RunHaven's item exists.
+    pub present: bool,
+    /// Whole days since the item was (re)created, or `None` when absent or the
+    /// creation date could not be parsed. Non-secret; never token-derived.
+    pub age_days: Option<u32>,
+}
+
+impl TokenPresence {
+    /// The no-item outcome: absent, with no age.
+    const fn absent() -> Self {
+        Self {
+            present: false,
+            age_days: None,
+        }
+    }
 }
 
 /// Which keychain the item lives in. The data-protection keychain's silent
@@ -157,14 +192,18 @@ fn get(backend: KeychainBackend) -> Result<Option<Zeroizing<Vec<u8>>>> {
     }
 }
 
-/// Check whether RunHaven's item exists WITHOUT reading its secret. Queries only
-/// the item's attributes (`load_attributes`, i.e. `kSecReturnAttributes`) and
-/// NEVER its secret data (no `kSecReturnData`). Decrypting the
-/// secret is what invokes LocalAuthentication, so an attributes-only query
-/// reports presence with NO Touch ID / device-password prompt. The same exact
-/// `(service, account)` filter as every other query (claim 2). `Ok(false)` means
-/// no item; errors carry only the operation.
-fn present(backend: KeychainBackend) -> Result<bool> {
+/// Check whether RunHaven's item exists WITHOUT reading its secret, and read the
+/// item's own non-secret creation date to age the token. Queries only the item's
+/// attributes (`load_attributes`, i.e. `kSecReturnAttributes`) and NEVER its
+/// secret data (no `kSecReturnData`). Decrypting the secret is what invokes
+/// LocalAuthentication, so this attributes-only query reports presence and age
+/// with NO Touch ID / device-password prompt, and the token is never read. The
+/// same exact `(service, account)` filter as every other query (claim 2). The
+/// age comes from `kSecAttrCreationDate` (a non-secret attribute of the SAME one
+/// item, so "reads only the one item it created" still holds); an unparseable
+/// date reads as `None`. `TokenPresence::absent()` means no item; errors carry
+/// only the operation.
+fn presence(backend: KeychainBackend) -> Result<TokenPresence> {
     let mut options = ItemSearchOptions::new();
     options
         .class(ItemClass::generic_password())
@@ -174,15 +213,28 @@ fn present(backend: KeychainBackend) -> Result<bool> {
         // `kSecReturnData`): loading it is the one thing that triggers the
         // user-presence prompt and returns the token, and a presence check must
         // do neither. At least one return type is required or `search()` would
-        // report a spurious empty result, so attributes stand in.
+        // report a spurious empty result, so attributes stand in and also carry
+        // the non-secret creation date used for the age.
         .load_attributes(true)
         .limit(Limit::Max(1));
     if backend == KeychainBackend::DataProtection {
         options.ignore_legacy_keychains();
     }
     match options.search() {
-        Ok(results) => Ok(!results.is_empty()),
-        Err(err) if err.code() == ERR_SEC_ITEM_NOT_FOUND => Ok(false),
+        Ok(results) => match results.first() {
+            None => Ok(TokenPresence::absent()),
+            Some(result) => Ok(TokenPresence {
+                present: true,
+                // The creation date is the only attribute read for the age; the
+                // secret data is never requested, so this cannot surface a
+                // token. An absent or unparseable date reads as "age unknown".
+                age_days: result
+                    .simplify_dict()
+                    .and_then(|attributes| attributes.get(CREATION_DATE_ATTR).cloned())
+                    .and_then(|cdat| age_days_from_cdat(&cdat)),
+            }),
+        },
+        Err(err) if err.code() == ERR_SEC_ITEM_NOT_FOUND => Ok(TokenPresence::absent()),
         Err(err) => {
             Err(anyhow::Error::new(err)).context("could not check the Claude token in the Keychain")
         }
@@ -222,10 +274,18 @@ pub fn read_token() -> Result<Option<Zeroizing<Vec<u8>>>> {
 /// Report whether RunHaven has a stored Claude OAuth token, WITHOUT reading it.
 /// This never triggers the user-presence prompt and never touches the token, so
 /// the desktop app's sanitized status can be derived from presence alone. Status
-/// polling MUST use this, never [`read_token`], which decrypts the secret and
-/// prompts.
+/// polling MUST use this or [`token_presence`], never [`read_token`], which
+/// decrypts the secret and prompts.
 pub fn token_present() -> Result<bool> {
-    present(select_backend())
+    Ok(presence(select_backend())?.present)
+}
+
+/// Report presence PLUS the token's non-secret age, WITHOUT reading the token.
+/// Same attributes-only path as [`token_present`] (no prompt, no secret read);
+/// the age comes from the item's own `kSecAttrCreationDate` and is used only to
+/// drive the re-sign-in cadence prompt (Hardening 4). Never carries a secret.
+pub fn token_presence() -> Result<TokenPresence> {
+    presence(select_backend())
 }
 
 /// Delete RunHaven's stored Claude OAuth token. Deletes only RunHaven's item.
@@ -289,121 +349,7 @@ fn parse_token(stdout: &[u8]) -> Result<Zeroizing<String>> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn service_and_account_are_the_runhaven_owned_pair() {
-        // The exact identity the "reads only our item" claim rests on.
-        assert_eq!(SERVICE, "RunHaven Claude OAuth");
-        assert_eq!(ACCOUNT, "claude");
-    }
-
-    #[test]
-    #[allow(deprecated)] // introspects the built query to prove claim 2
-    fn generic_password_query_pins_exactly_service_and_account() {
-        // A generic-password query built from (service, account) is exactly
-        // three attributes: class, service, account. No fourth match key means
-        // no `kSecMatchLimitAll` and no broad/account-only match can slip in.
-        let options = PasswordOptions::new_generic_password(SERVICE, ACCOUNT);
-        assert_eq!(
-            options.query.len(),
-            3,
-            "the query must pin class + service + account only, never a match-all"
-        );
-    }
-
-    #[test]
-    fn access_control_flag_is_user_presence_only() {
-        // Bit 0 is `kSecAccessControlUserPresence`. Assert we pass exactly that
-        // flag: it is set, and it is not a biometry-only flag that would lock
-        // out a Mac without Touch ID (design Section 1's explicit choice).
-        let flags = AccessControlOptions::USER_PRESENCE.bits();
-        assert_eq!(flags, 1, "user presence is bit 0");
-        assert_eq!(
-            flags & AccessControlOptions::BIOMETRY_CURRENT_SET.bits(),
-            0,
-            "must not be biometry-only, which would exclude non-Touch-ID Macs"
-        );
-    }
-
-    #[test]
-    fn user_presence_access_control_constructs() {
-        // The real security-framework call must succeed with the design's
-        // protection mode and flag; a build error here means the API drifted.
-        user_presence_access_control().expect("build user-presence access control");
-    }
-
-    #[test]
-    fn parse_token_takes_the_last_token_shaped_line() {
-        let out = b"noise\nsk-ant-oat01-AAAAAAAAAAAAAAAAAAAAAAAA\ntrailing\n";
-        let token = parse_token(out).expect("token");
-        assert_eq!(&*token, "sk-ant-oat01-AAAAAAAAAAAAAAAAAAAAAAAA");
-    }
-
-    #[test]
-    fn parse_token_rejects_blank_and_garbage_without_echoing_the_buffer() {
-        for buffer in [
-            b"".as_slice(),
-            b"   \n\n".as_slice(),
-            b"totally-unrelated-output".as_slice(),
-        ] {
-            let err = parse_token(buffer).expect_err("must reject");
-            let message = err.to_string();
-            assert_eq!(message, "could not read a Claude token; nothing was saved");
-            // The failure path must never echo the captured bytes: the buffer
-            // could itself BE the token.
-            let printable = String::from_utf8_lossy(buffer);
-            let printable = printable.trim();
-            if !printable.is_empty() {
-                assert!(
-                    !message.contains(printable),
-                    "the error must not echo the captured buffer"
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn parse_token_rejects_a_short_token_shaped_line() {
-        // Guards the length heuristic: a bare prefix is not a token.
-        assert!(parse_token(b"sk-ant-\n").is_err());
-    }
-
-    /// Live Keychain round-trip. Ignored by default because it touches the real
-    /// login keychain. It uses a DISTINCT test service and NO access control, so
-    /// it never prompts and never touches the real `RunHaven Claude OAuth` item,
-    /// and it cleans up after itself. Run with:
-    /// `cargo test -p runhaven-core -- --ignored keychain_round_trip`.
-    #[test]
-    #[ignore = "touches the real macOS Keychain"]
-    fn keychain_round_trip_on_a_test_service() {
-        // A throwaway generic-password item, legacy keychain, no ACL -> no
-        // prompt. This never uses SERVICE/ACCOUNT, so the production item is
-        // untouched.
-        let test_service = "RunHaven Claude OAuth (test-roundtrip)";
-        let value = b"sk-ant-NOT-A-REAL-TOKEN-roundtrip-000000";
-
-        let mut store = PasswordOptions::new_generic_password(test_service, ACCOUNT);
-        // Force a clean start in case a prior aborted run left the item.
-        let _ = delete_generic_password_options(PasswordOptions::new_generic_password(
-            test_service,
-            ACCOUNT,
-        ));
-        store.set_comment("RunHaven Slice 1 round-trip test item");
-        set_generic_password_options(value, store).expect("store test item");
-
-        let read = generic_password(PasswordOptions::new_generic_password(test_service, ACCOUNT))
-            .expect("read test item");
-        assert_eq!(read, value);
-
-        delete_generic_password_options(PasswordOptions::new_generic_password(
-            test_service,
-            ACCOUNT,
-        ))
-        .expect("delete test item");
-    }
-}
+mod tests;
 
 #[cfg(test)]
 mod source_tripwire_tests;

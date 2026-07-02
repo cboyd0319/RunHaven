@@ -5,7 +5,7 @@
 
 use crate::claude_oauth_signin::ClaudeOAuthSignInRegistry;
 use crate::commands::claude_oauth::{
-    ClearOutcome, clear_claude_oauth_for_test, get_claude_oauth_status_for_test,
+    ClearOutcome, KeychainPresence, clear_claude_oauth_for_test, get_claude_oauth_status_for_test,
     start_claude_oauth_signin_for_test,
 };
 use crate::contracts::{
@@ -25,6 +25,24 @@ fn clear_request(confirm: bool) -> ClaudeOAuthClearRequest {
     ClaudeOAuthClearRequest { confirm }
 }
 
+/// The absent presence: no item, no age. Injected where status must resolve to
+/// `not_signed_in`/`failed`.
+fn absent() -> KeychainPresence {
+    KeychainPresence {
+        present: false,
+        age_days: None,
+    }
+}
+
+/// A present item with an optional non-secret age (days since it was saved).
+/// `None` models a present token whose creation date could not be parsed.
+fn signed_in(age_days: Option<u32>) -> KeychainPresence {
+    KeychainPresence {
+        present: true,
+        age_days,
+    }
+}
+
 // -- start: input validation and native-confirm gate ----------------------
 
 #[test]
@@ -39,7 +57,7 @@ fn start_fails_closed_without_confirmation_flag() {
     .expect_err("unconfirmed start must fail closed");
     assert!(error.contains("Confirm before"));
     // Nothing was recorded: the singleton phase is still idle (not_signed_in).
-    assert_status(&registry, || Ok(false), "not_signed_in");
+    assert_status(&registry, || Ok(absent()), "not_signed_in");
 }
 
 #[test]
@@ -54,7 +72,7 @@ fn start_does_not_run_capture_when_native_confirm_denied() {
     .expect_err("denied confirmation must not start capture");
     assert!(error.contains("canceled"));
     // Denial left no sign-in behind.
-    assert_status(&registry, || Ok(false), "not_signed_in");
+    assert_status(&registry, || Ok(absent()), "not_signed_in");
 }
 
 #[test]
@@ -75,22 +93,41 @@ fn start_response_reports_signing_and_carries_no_token() {
 #[test]
 fn status_maps_presence_to_signed_in_without_reading_the_token() {
     let registry = ClaudeOAuthSignInRegistry::default();
-    // The injected presence checker stands in for `token_present`: it returns a
-    // bool and NEVER yields the token. A panicking read seam proves status never
-    // takes the data-read/prompt path.
-    let response = get_claude_oauth_status_for_test(&registry, || Ok(true))
+    // The injected presence checker stands in for `token_presence`: it returns
+    // presence (and a non-secret age) and NEVER yields the token. Here the age
+    // is unknown, proving a present token still reports signed_in with no age.
+    let response = get_claude_oauth_status_for_test(&registry, || Ok(signed_in(None)))
         .expect("status derives from presence");
     assert_eq!(response.status, "signed_in");
     assert!(response.reason.is_none());
+    assert_eq!(response.age_days, None);
     assert_no_secret_in(&serialize_status(&response));
+}
+
+#[test]
+fn status_signed_in_carries_the_non_secret_age() {
+    let registry = ClaudeOAuthSignInRegistry::default();
+    // A present token past the default 90-day cadence: the age is a plain day
+    // count carried straight through, never a token or token-derived value.
+    let response = get_claude_oauth_status_for_test(&registry, || Ok(signed_in(Some(97))))
+        .expect("status derives from presence");
+    assert_eq!(response.status, "signed_in");
+    assert_eq!(response.age_days, Some(97));
+    let serialized = serialize_status(&response);
+    assert!(
+        serialized.contains("\"ageDays\":97"),
+        "the non-secret age must serialize as a plain day count: {serialized}"
+    );
+    assert_no_secret_in(&serialized);
 }
 
 #[test]
 fn status_maps_absence_to_not_signed_in() {
     let registry = ClaudeOAuthSignInRegistry::default();
     let response =
-        get_claude_oauth_status_for_test(&registry, || Ok(false)).expect("status derives");
+        get_claude_oauth_status_for_test(&registry, || Ok(absent())).expect("status derives");
     assert_eq!(response.status, "not_signed_in");
+    assert_eq!(response.age_days, None);
 }
 
 #[test]
@@ -117,8 +154,9 @@ fn status_reports_failed_with_path_free_reason_when_absent() {
         )
         .expect("fail");
     let response =
-        get_claude_oauth_status_for_test(&registry, || Ok(false)).expect("status derives");
+        get_claude_oauth_status_for_test(&registry, || Ok(absent())).expect("status derives");
     assert_eq!(response.status, "failed");
+    assert_eq!(response.age_days, None);
     let reason = response.reason.clone().expect("failed carries a reason");
     assert!(!reason.contains("sk-ant-"));
     assert!(!reason.contains('/'));
@@ -182,11 +220,11 @@ fn no_response_ever_serializes_a_secret() {
             .expect("start");
     assert_no_secret_in(&serialize_start(&start));
 
-    // every status variant
-    for present in [true, false] {
+    // every status variant, including a signed-in one carrying an age
+    for presence in [signed_in(Some(120)), signed_in(None), absent()] {
         let status =
             get_claude_oauth_status_for_test(&ClaudeOAuthSignInRegistry::default(), move || {
-                Ok(present)
+                Ok(presence)
             })
             .expect("status");
         assert_no_secret_in(&serialize_status(&status));
@@ -199,7 +237,8 @@ fn no_response_ever_serializes_a_secret() {
             "Claude sign-in did not finish; nothing was saved.".to_string(),
         )
         .expect("fail");
-    let failed = get_claude_oauth_status_for_test(&failed_registry, || Ok(false)).expect("status");
+    let failed =
+        get_claude_oauth_status_for_test(&failed_registry, || Ok(absent())).expect("status");
     assert_no_secret_in(&serialize_status(&failed));
 
     // clear
@@ -215,10 +254,10 @@ fn no_response_ever_serializes_a_secret() {
 
 fn assert_status(
     registry: &ClaudeOAuthSignInRegistry,
-    present: impl FnOnce() -> Result<bool, String>,
+    presence: impl FnOnce() -> Result<KeychainPresence, String>,
     expected: &str,
 ) {
-    let response = get_claude_oauth_status_for_test(registry, present).expect("status");
+    let response = get_claude_oauth_status_for_test(registry, presence).expect("status");
     assert_eq!(response.status, expected);
 }
 

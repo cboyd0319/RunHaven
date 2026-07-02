@@ -108,24 +108,72 @@ reuse it; your host login is never touched. For this to work, the provider
 allowlist must permit the OAuth login and token-refresh hosts, not only the API
 host.
 
-A host-side OAuth-token broker was researched (2026-06-26) and decided against
-for every provider, for three independent reasons:
-
-- Provider terms forbid it. Anthropic, OpenAI, Google, and GitHub all prohibit
-  relaying subscription or OAuth credentials through third-party tools, and
-  several actively detect and block it.
-- The subscription token is not a drop-in bearer. Unlike an API key, an
-  OAuth/subscription token targets a different host (ChatGPT and Google login
-  route to separate endpoints) or requires impersonating the official client
-  (Claude's subscription token is rejected on the API path without
-  client-specific headers and an identity system prompt).
-- It would cross the boundary. A broker would have to read your host credential
-  store or impersonate the official client, which RunHaven does not do.
-
-So OAuth and subscription logins stay on the isolated-in-container path; the
-work there is allowlisting each provider's login and token-refresh hosts and a
-smooth headless login, not a broker. Tracked in
+A host-side OAuth-token broker was researched (2026-06-26) and first decided
+against for every provider. For Codex, Gemini, and Copilot that decision still
+stands: their OAuth/subscription tokens are not drop-in bearers (they target
+separate login endpoints or need the official client), so those logins stay on
+the isolated-in-container path (path A) and the work there is allowlisting each
+provider's login and refresh hosts, not a broker. Tracked in
 [`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md).
+
+For Claude only, that decision was reversed in the desktop app. Claude's
+`setup-token` mints a long-lived token that Claude Code sends as a normal
+`Authorization: Bearer` to `api.anthropic.com`, so it *is* a drop-in bearer the
+existing broker can inject, and sign-in runs on the host with Anthropic's own
+tool (RunHaven never handles your password or OAuth session, only the printed
+token). This is Claude's "path C" (see below). It reintroduces a small,
+OS-vaulted host custody for Claude only; the trade-off is analyzed in
+[`SECURITY_MODEL.md`](SECURITY_MODEL.md).
+
+### Claude Keychain OAuth broker (path C)
+
+Path C is the default Claude sign-in in the desktop app: "Sign in on your Mac."
+RunHaven runs `claude setup-token` on the host, stores the printed token in a
+RunHaven-owned macOS Keychain item, and the broker injects it as
+`Authorization: Bearer` for requests to `api.anthropic.com`. The token never
+enters the sandbox; the guest holds only a placeholder and a broker base URL.
+
+The item lives at service `RunHaven Claude OAuth`, account `claude`. It carries
+an access control with a user-presence flag, so every read needs a live Touch ID
+or device-password approval, and it is `AccessibleWhenUnlockedThisDeviceOnly`
+(never synced to iCloud, never in backups). Cross-app isolation binds only on a
+signed, notarized release build; an unsigned dev build falls back to the legacy
+keychain, where the same user-presence access control is attached. Confirming the
+presence gate binds on that legacy dev keychain is a pending maintainer check
+(F3); the signed release build is the supported path for the claims below.
+
+**What RunHaven does and does not do with your token**
+
+- RunHaven saves no copy of its own; the only saved copy is in your Mac's
+  Keychain.
+- RunHaven reads only the one Keychain item it created. It does not read your
+  other Keychain logins, including Claude's own.
+- RunHaven uses your token only to sign your runs. It does not log it, display
+  it, or keep any saved copy outside your Mac's Keychain.
+- Your token never goes inside the sandbox. The sandbox holds only a
+  placeholder; RunHaven adds the real token on your Mac, only for requests to
+  Anthropic.
+- RunHaven can use your Claude token only after you approve it with Touch ID or
+  your device password. It cannot use your token silently.
+- RunHaven sends your token only to Anthropic, to authorize your runs, and
+  nowhere else.
+
+Honest limits: during a run the broker holds the token in memory to inject it,
+and it overwrites its own copy as soon as it is saved, but it cannot wipe the
+token from memory entirely. On an unsigned dev build the cross-app isolation
+claim does not hold; only the Touch ID / device-password gate does.
+
+**Remove the token.** In the Agents view, "Remove saved token" deletes only
+RunHaven's own Keychain item; it does not touch your other logins and does not
+revoke the token on Anthropic's side (revoke that in your Anthropic account).
+The CLI equivalent stays `runhaven login claude --clear`, which also best-effort
+removes a legacy host token.
+
+**Token age and re-sign-in.** `setup-token` mints a static, non-refreshing
+token, so RunHaven ages it from the Keychain item's own non-secret creation
+date (never the token value). Once the token is older than the cadence you set
+in Settings (default 90 days), the Agents view suggests signing in again. It is
+a reminder, not a cutoff: the old token keeps working until you replace it.
 
 ### `runhaven login`
 
@@ -146,17 +194,18 @@ path-restrict those GitHub hosts). Codex needs the account "Allow device code
 login" setting on. Clear a login with `runhaven login <agent> --clear`, which
 deletes that shared home volume.
 
-**Claude (in-sandbox login).** `runhaven login claude` runs `claude auth login`
-(Claude's default Claude.ai subscription flow) inside the sandbox, the same as
-the other agents. Open the URL it prints, approve in your browser, then paste the
-code it gives you back into the terminal. The login persists in Claude's shared
-home volume, so later runs reuse it, and RunHaven never sees, stores, or injects
-the token. The OAuth token exchange hits `platform.claude.com` and the
-client-metadata fetch hits `claude.ai`, both already in the bundled provider
-allowlist, so no egress change is needed. Clear it with
-`runhaven login claude --clear`, which deletes that shared home volume and
-best-effort removes any token an older RunHaven stored on your Mac before this
-change.
+**Claude (in-sandbox login, path A).** `runhaven login claude` runs
+`claude auth login` (Claude's default Claude.ai subscription flow) inside the
+sandbox, the same as the other agents. Open the URL it prints, approve in your
+browser, then paste the code it gives you back into the terminal. The login
+persists in Claude's shared home volume, so later runs reuse it, and RunHaven
+never sees, stores, or injects the token. The OAuth token exchange hits
+`platform.claude.com` and the client-metadata fetch hits `claude.ai`, both
+already in the bundled provider allowlist, so no egress change is needed. Clear
+it with `runhaven login claude --clear`, which deletes that shared home volume
+and best-effort removes any token an older RunHaven stored on your Mac before
+this change. In the desktop app this is the "Sign in inside the sandbox instead"
+opt-in; the default there is path C (Keychain OAuth broker, above).
 
 **Antigravity (first-run Google login).** `agy` has no login subcommand, so
 `runhaven login antigravity` starts `agy`, which prompts a Google sign-in on

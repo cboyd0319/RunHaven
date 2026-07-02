@@ -29,7 +29,10 @@ export function useSettings() {
     setOpen,
     dockBadge: settings.dockBadge,
     defaultAgent: settings.defaultAgent,
+    claudeReauthDays: settings.claudeReauthDays,
     setDockBadge: (dockBadge: boolean) => update({ dockBadge }),
     setDefaultAgent: (defaultAgent: string | null) => update({ defaultAgent }),
+    setClaudeReauthDays: (claudeReauthDays: number) =>
+      update({ claudeReauthDays }),
   }
 }

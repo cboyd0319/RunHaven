@@ -46,13 +46,14 @@ describe("AgentsView", () => {
     // Per-agent auth status uses the shared label vocabulary.
     expect(markup).toContain("API key broker")
     expect(markup).toContain("Needs sign-in")
-    // In-app sign-in for device-code agents; the in-app Claude sign-in terminal
-    // (path A), with running it in your own terminal kept as a copy fallback.
+    // In-app sign-in for device-code agents; Claude defaults to path C (sign in
+    // on your Mac) with the in-sandbox terminal login (path A) as a secondary
+    // opt-in that is collapsed until chosen.
     expect(markup).toContain("Sign in to Codex")
-    expect(markup).toContain("Claude sign-in terminal")
-    expect(markup).toContain("Prefer your own terminal?")
-    expect(markup).toContain("runhaven login claude")
-    expect(markup).toContain("Copy command")
+    expect(markup).toContain("Sign in on your Mac")
+    expect(markup).toContain("Sign in inside the sandbox instead")
+    // The path-A terminal command stays hidden until the opt-in is expanded.
+    expect(markup).not.toContain("runhaven login claude")
     expect(markup).toContain("Auth details")
     // Per-row image state loads on entry; static markup shows the initial
     // loading line. Check again is the view's only refresh action.
