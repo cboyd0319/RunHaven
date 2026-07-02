@@ -6,7 +6,7 @@
 use crate::claude_oauth_signin::ClaudeOAuthSignInRegistry;
 use crate::commands::claude_oauth::{
     ClearOutcome, KeychainPresence, clear_claude_oauth_for_test, get_claude_oauth_status_for_test,
-    start_claude_oauth_signin_for_test,
+    start_claude_oauth_signin_at_for_test, start_claude_oauth_signin_for_test,
 };
 use crate::contracts::{
     ClaudeOAuthClearRequest, ClaudeOAuthClearResponse, ClaudeOAuthStartResponse,
@@ -86,6 +86,63 @@ fn start_response_reports_signing_and_carries_no_token() {
     assert_eq!(response.state, "signing");
     assert!(!response.sign_in_id.is_empty());
     assert_no_secret_in(&serialize_start(&response));
+}
+
+#[test]
+fn start_shows_and_runs_the_same_resolved_claude_path() {
+    use std::sync::{Arc, Mutex};
+    use std::time::{Duration, Instant};
+
+    let registry = ClaudeOAuthSignInRegistry::default();
+    // A resolved absolute path (not the real binary): the confirmation must show
+    // it and the capture must run this exact path, proving no TOCTOU re-lookup.
+    let resolved = "/opt/homebrew/bin/claude".to_string();
+
+    let shown = Arc::new(Mutex::new(None::<String>));
+    let ran = Arc::new(Mutex::new(None::<String>));
+    let shown_probe = shown.clone();
+    let ran_probe = ran.clone();
+
+    let response = start_claude_oauth_signin_at_for_test(
+        start_request(true),
+        &registry,
+        resolved.clone(),
+        move |message| {
+            *shown_probe.lock().expect("shown lock") = Some(message.to_string());
+            Ok(true)
+        },
+        move |path| {
+            *ran_probe.lock().expect("ran lock") = Some(path.to_string());
+            Ok(())
+        },
+    )
+    .expect("confirmed start begins");
+    assert_eq!(response.state, "signing");
+
+    // The confirmation surface names the resolved path (and still leaks no token).
+    let message = shown
+        .lock()
+        .expect("shown lock")
+        .clone()
+        .expect("confirm shown");
+    assert!(
+        message.contains(&resolved),
+        "confirm must show the resolved claude path: {message}"
+    );
+    assert_no_secret_in(&message);
+
+    // The capture runs on a background thread; wait for it to record the path.
+    let deadline = Instant::now() + Duration::from_secs(5);
+    let ran_path = loop {
+        if let Some(path) = ran.lock().expect("ran lock").clone() {
+            break path;
+        }
+        assert!(Instant::now() < deadline, "capture never ran");
+        std::thread::sleep(Duration::from_millis(10));
+    };
+    // The path the capture ran is exactly the path the confirmation showed.
+    assert_eq!(ran_path, resolved);
+    assert!(message.contains(&ran_path));
 }
 
 // -- status: presence -> enum, no token, no prompt ------------------------

@@ -75,10 +75,36 @@ pub fn broker_upstream_path(target: &str, path_rule: &PathRule) -> Result<String
     let (path, query) = target
         .split_once('?')
         .map_or((target, None), |(path, query)| (path, Some(query)));
+    // Reject anything but a clean origin-form absolute path BEFORE the prefix
+    // check. `PathRule::Prefix` is a raw `starts_with`, so `/v1/../v2/messages`
+    // would pass it and then be forwarded raw; the HTTP client or the upstream
+    // server can normalize the dot-segments and land the signed request outside
+    // the pinned prefix. Rejecting traversal here keeps the allowlist a real
+    // boundary regardless of downstream normalization.
+    if path_is_unsafe(path) {
+        bail!("broker rejects request path {path}");
+    }
     if !path_rule.allows(path) {
         bail!("broker does not allow request path {path}");
     }
     Ok(query.map_or_else(|| path.to_string(), |query| format!("{path}?{query}")))
+}
+
+/// True if `path` is not a clean origin-form absolute path: not rooted at `/`,
+/// contains a backslash, encodes a dot (`%2e`, which can decode to `.`), or has
+/// a `.`/`..` segment. Any of these can normalize past a `PathRule::Prefix`
+/// allowlist in the HTTP client or the upstream server. Anthropic/OpenAI API
+/// paths (`/v1/messages`, `/v1beta/...`) never contain these, so this rejects
+/// only traversal attempts, not legitimate requests.
+fn path_is_unsafe(path: &str) -> bool {
+    if !path.starts_with('/') || path.contains('\\') {
+        return true;
+    }
+    if path.to_ascii_lowercase().contains("%2e") {
+        return true;
+    }
+    path.split('/')
+        .any(|segment| segment == "." || segment == "..")
 }
 
 pub fn sanitize_broker_request_path(path: &str) -> String {
@@ -101,4 +127,27 @@ pub fn parse_content_length(value: Option<&str>) -> Result<Option<usize>> {
         bail!("invalid Content-Length");
     }
     Ok(Some(length as usize))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn broker_upstream_path_rejects_traversal_and_bad_form() {
+        let rule = PathRule::Prefix("/v1/");
+        // Dot-segment traversal that would pass a raw starts_with is rejected.
+        assert!(broker_upstream_path("/v1/../v2/messages", &rule).is_err());
+        assert!(broker_upstream_path("/v1/%2e%2e/v2/messages", &rule).is_err());
+        assert!(broker_upstream_path("/v1/./messages", &rule).is_err());
+        // Non-rooted, backslash, and genuinely off-prefix are rejected too.
+        assert!(broker_upstream_path("v1/messages", &rule).is_err());
+        assert!(broker_upstream_path("/v1/a\\b", &rule).is_err());
+        assert!(broker_upstream_path("/v2/messages", &rule).is_err());
+        // A clean in-prefix path passes and preserves the query.
+        assert_eq!(
+            broker_upstream_path("/v1/messages?beta=1", &rule).unwrap(),
+            "/v1/messages?beta=1"
+        );
+    }
 }

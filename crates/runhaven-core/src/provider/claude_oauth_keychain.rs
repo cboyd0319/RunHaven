@@ -293,10 +293,42 @@ pub fn clear_token() -> Result<KeychainClear> {
     remove(select_backend())
 }
 
-/// Run the host `claude setup-token`, capture its token transiently, and store
-/// it to the Keychain, keeping no copy anywhere else. Fails closed: on a
-/// missing binary, a nonzero exit or user cancel, or a malformed token, nothing
-/// is stored and the error names only the operation and the agent.
+/// Resolve the absolute `claude` path RunHaven will run for `setup-token`, from
+/// the first PATH match. Surfaced so the sign-in command can SHOW the exact
+/// binary in its native confirmation and then run that SAME resolved path: with
+/// no PATH re-lookup between the shown path and the run, a PATH change mid-flow
+/// (or a poisoned entry appearing after approval) cannot swap the binary the
+/// user approved. Fails closed with a fixed, path-free message when `claude` is
+/// not on PATH.
+pub fn resolve_setup_token_binary() -> Result<String> {
+    find_on_path("claude").ok_or_else(|| {
+        anyhow!(
+            "Claude Code is not installed, so `claude setup-token` cannot run; nothing was saved"
+        )
+    })
+}
+
+/// Build the exact `claude setup-token` command RunHaven runs, at the already
+/// resolved absolute `claude` path the confirmation showed. An explicit argument
+/// list (never a shell string) plus the pre-resolved path mean the program the
+/// user approved is exactly the program that runs. Capture stdout (the token);
+/// inherit stdin/stderr so the browser OAuth flow and any prompts reach the user.
+fn setup_token_command(claude: &str) -> Command {
+    let mut command = Command::new(claude);
+    command
+        .arg("setup-token")
+        .stdin(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .stdout(Stdio::piped());
+    command
+}
+
+/// Run the host `claude setup-token` at the caller-resolved `claude` path,
+/// capture its token transiently, and store it to the Keychain, keeping no copy
+/// anywhere else. `claude` is the exact path [`resolve_setup_token_binary`]
+/// returned and the confirmation showed, so there is no TOCTOU between the shown
+/// and run binary. Fails closed: on a nonzero exit or user cancel, or a malformed
+/// token, nothing is stored and the error names only the operation and the agent.
 ///
 /// F4 (live probe, maintainer step): confirm on macOS 26+ with the pinned
 /// Claude Code that `setup-token` prints the token to a pipe (non-TTY stdout)
@@ -304,19 +336,8 @@ pub fn clear_token() -> Result<KeychainClear> {
 /// (deleted `login_claude` at `60e37db^`); if the current CLI suppresses the
 /// token off a terminal, capture must move under a host PTY
 /// (`runtime/terminal.rs` `open_gui_attach_pty`).
-pub fn capture_and_store_setup_token() -> Result<()> {
-    let claude = find_on_path("claude").ok_or_else(|| {
-        anyhow!(
-            "Claude Code is not installed, so `claude setup-token` cannot run; nothing was saved"
-        )
-    })?;
-    // Capture stdout (the token); inherit stdin/stderr so the browser OAuth
-    // flow and any prompts reach the user normally.
-    let output = Command::new(&claude)
-        .arg("setup-token")
-        .stdin(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .stdout(Stdio::piped())
+pub fn capture_and_store_setup_token(claude: &str) -> Result<()> {
+    let output = setup_token_command(claude)
         .output()
         .map_err(|_| anyhow!("could not run `claude setup-token`; nothing was saved"))?;
     if !output.status.success() {

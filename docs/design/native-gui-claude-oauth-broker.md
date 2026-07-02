@@ -348,7 +348,10 @@ run the broker holds the plaintext token in memory (`BrokerState.api_key`). Sect
 6 details the `Zeroizing` mitigation and its limits. The honest claim stays
 "overwrites its own copy," not "wiped from memory."
 
-Rejected wording (would be false):
+Rejected wording (would be false). These forbidden strings are quoted here only
+as design guardrails, paired with the correct alternative; the no-overclaim rule
+governs shipped UI and user docs (verified clean), not this rejected-examples
+list:
 
 - "RunHaven never sends your token anywhere." REJECTED: the broker sends it as
   `Authorization: Bearer` to `api.anthropic.com` on every run. Correct: "RunHaven
@@ -549,3 +552,27 @@ GUI default flips to path C.
 - Gate 2 (pre-merge): full verification per `AGENTS.md`, plus a live Keychain
   round-trip and a real setup-token sign-in on macOS 26+, and a final read of the
   approved claim set against the shipped strings.
+- Selection wiring fix (F1 + F3, load-bearing; closes the double-coverage review
+  block): before this fix, `ClaudeAuthSource::KeychainOAuth` was never constructed
+  in a production launch path (the CLI and GUI mapped only the env-var broker), so
+  a signed-in token was consumed by nothing and the shipped "uses it to sign your
+  runs" claim was false for real runs. The precedence now lives once in
+  `provider/runtime/broker_secret.rs::select_claude_auth_source_with_presence`:
+  an explicit env-var broker NAME wins; otherwise, for the `claude` profile only,
+  a PRESENT Keychain token (the non-prompting attributes-only
+  `claude_oauth_token_present`) drives `KeychainOAuth`; otherwise no broker. Both
+  the CLI (`app/run_plan.rs::make_run_plan`) and the GUI
+  (`commands/launch/plan.rs::agent_run_options`) call it. The GUI selects from
+  REAL Keychain presence, never from a WebView value, so the WebView cannot force
+  or forge the auth source (it supplies at most the env NAME). Read timing (F3):
+  plan preparation and the pre-confirm `validate_runtime_auth_broker_environment`
+  now check PRESENCE only for `KeychainOAuth` (no `read_token`, no user-presence
+  prompt); the single prompting read stays deferred to broker startup in
+  `require_api_key_broker_secret` (`provider/runtime.rs`), after the trusted
+  launch confirmation, and fires exactly once. Non-macOS presence is `false`
+  (selection yields `None`); a declined Touch ID at startup still fails the run
+  closed with the existing path-free error. Tests (hermetic, injected presence +
+  reader; no real Keychain): core precedence + read-once/presence-only proof
+  (`provider/runtime/tests/selection.rs`), CLI real run-plan build
+  (`app/tests.rs`), and GUI launch-plan selection from presence
+  (`commands/tests/claude_auth_source.rs`).

@@ -2,6 +2,7 @@ use std::thread;
 
 use anyhow::{Context, Result, bail};
 use serde_json::json;
+use zeroize::Zeroizing;
 
 use crate::provider::auth_broker::{ApiKeyBrokerProxy, GuestRedirect, ProviderBrokerProfile};
 use crate::provider::egress::{EgressPolicy, ThreadedAllowlistProxy};
@@ -17,7 +18,10 @@ mod broker_secret;
 mod decision_log;
 mod network;
 
-pub use broker_secret::{require_api_key_broker_secret, validate_runtime_auth_broker_environment};
+pub use broker_secret::{
+    claude_oauth_token_present, require_api_key_broker_secret,
+    select_claude_auth_source_with_presence, validate_runtime_auth_broker_environment,
+};
 use decision_log::{ProviderDecisionLogStream, start_provider_decision_log_stream};
 use network::command_starts_with;
 pub use network::{
@@ -328,10 +332,13 @@ pub fn create_provider_proxy(
 
 pub fn create_api_key_broker(
     profile: ProviderBrokerProfile,
-    api_key: String,
+    api_key: Zeroizing<String>,
     network_info: &InternalNetworkInfo,
 ) -> Result<ApiKeyBrokerProxy> {
     let subnets = vec![network_info.ipv4_subnet.clone()];
+    // The gateway-bind attempt consumes `api_key`; the 0.0.0.0 fallback needs it
+    // again, so clone the `Zeroizing<String>` (each copy is overwritten on drop)
+    // rather than reaching for a plain `String`.
     match ApiKeyBrokerProxy::bind_for_profile(
         (&network_info.ipv4_gateway, 0),
         profile,

@@ -8,8 +8,8 @@ use crate::args::RunArgs;
 use runhaven_core::provider::runtime as provider_runtime;
 use runhaven_core::runtime::launch::{launch_run_plan, require_container_cli};
 use runhaven_core::runtime::plans::{
-    AgentRunPlan, AuthScope, ClaudeAuthSource, NetworkMode, RunOptions, WorkspaceScope,
-    WorktreeRun, build_run_plan, default_network_mode,
+    AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
+    default_network_mode,
 };
 use runhaven_core::runtime::profiles::get_profile;
 use runhaven_core::runtime::worktrees::{create_worktree_for_run, preview_worktree};
@@ -87,7 +87,36 @@ pub(super) fn make_run_plan(
     worktree: Option<WorktreeRun>,
     run_id: Option<String>,
 ) -> Result<AgentRunPlan> {
+    make_run_plan_with_presence(
+        args,
+        agent_args,
+        workspace_override,
+        worktree,
+        run_id,
+        provider_runtime::claude_oauth_token_present,
+    )
+}
+
+/// Build the run plan with an injectable Keychain-presence source. Production
+/// uses the non-prompting attributes-only presence check; tests inject a fake so
+/// no real Keychain is touched. Selecting `KeychainOAuth` from PRESENCE here
+/// (never reading the token) keeps the prompting read deferred to broker startup.
+pub(super) fn make_run_plan_with_presence(
+    args: &RunArgs,
+    agent_args: Vec<String>,
+    workspace_override: Option<&Path>,
+    worktree: Option<WorktreeRun>,
+    run_id: Option<String>,
+    keychain_present: impl Fn() -> Result<bool>,
+) -> Result<AgentRunPlan> {
     let profile = get_profile(&args.agent)?;
+    // The env-var broker flag wins; otherwise a saved Claude Keychain token drives
+    // the claude-only OAuth path. Rust decides from real presence, not a raw flag.
+    let claude_auth_source = provider_runtime::select_claude_auth_source_with_presence(
+        args.api_key_broker_env.clone(),
+        &args.agent,
+        keychain_present,
+    )?;
     let tty = match args.tty.as_str() {
         "always" => true,
         "never" => false,
@@ -118,12 +147,7 @@ pub(super) fn make_run_plan(
         allow_sensitive_workspace: args.allow_sensitive_workspace,
         allow_root_user: args.allow_root_user,
         provider_hosts: args.provider_host.clone(),
-        // The CLI offers only the env-var broker path today (the `--api-key-broker-env`
-        // flag); the Keychain OAuth path is a GUI-only sign-in in a later slice.
-        claude_auth_source: args
-            .api_key_broker_env
-            .clone()
-            .map(ClaudeAuthSource::ApiKeyBrokerEnv),
+        claude_auth_source,
         worktree,
         run_id,
     })

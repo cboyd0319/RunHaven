@@ -2,11 +2,14 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use runhaven_core::image::doctor::collect_image_status;
-use runhaven_core::provider::runtime::validate_runtime_auth_broker_environment;
+use runhaven_core::provider::runtime::{
+    claude_oauth_token_present, select_claude_auth_source_with_presence,
+    validate_runtime_auth_broker_environment,
+};
 use runhaven_core::runtime::active::read_active_run_records;
 use runhaven_core::runtime::plans::{
-    AgentRunPlan, AuthScope, ClaudeAuthSource, NetworkMode, RunOptions, WorkspaceScope,
-    WorktreeRun, build_run_plan, normalize_provider_hosts,
+    AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
+    normalize_provider_hosts,
 };
 use runhaven_core::runtime::profiles::get_profile;
 use runhaven_core::runtime::worktrees::create_worktree_for_run;
@@ -75,6 +78,26 @@ pub(crate) fn build_agent_run_plan(
     build_run_plan(options).map_err(|error| error.to_string())
 }
 
+/// Build a launch plan with an injectable Keychain-presence source, so a test can
+/// prove the GUI selects `KeychainOAuth` from signed-in presence without touching
+/// the real Keychain. Presence-only: it never reads the token.
+#[cfg(test)]
+pub(crate) fn build_agent_run_plan_with_presence(
+    request: &RunPlanRequest,
+    run_id: Option<String>,
+    keychain_present: impl Fn() -> anyhow::Result<bool>,
+) -> Result<AgentRunPlan, String> {
+    validate_plan_request_bounds(request)?;
+    let options = agent_run_options_with_presence(
+        request,
+        run_id,
+        PathBuf::from(&request.workspace_path),
+        None,
+        keychain_present,
+    )?;
+    build_run_plan(options).map_err(|error| error.to_string())
+}
+
 /// Build the run plan for a confirmed worktree launch: create the RunHaven-owned
 /// worktree branch through the tested core function, then plan onto the mounted
 /// worktree workspace. Creation errors are collapsed to fixed, path-free guidance.
@@ -126,6 +149,25 @@ fn agent_run_options(
     workspace: PathBuf,
     worktree: Option<WorktreeRun>,
 ) -> Result<RunOptions, String> {
+    agent_run_options_with_presence(
+        request,
+        run_id,
+        workspace,
+        worktree,
+        claude_oauth_token_present,
+    )
+}
+
+/// Build the run options with an injectable Keychain-presence source. Production
+/// uses the non-prompting attributes-only presence check; tests inject a fake so
+/// no real Keychain is touched.
+fn agent_run_options_with_presence(
+    request: &RunPlanRequest,
+    run_id: Option<String>,
+    workspace: PathBuf,
+    worktree: Option<WorktreeRun>,
+    keychain_present: impl Fn() -> anyhow::Result<bool>,
+) -> Result<RunOptions, String> {
     let profile = get_profile(&request.agent).map_err(|error| error.to_string())?;
     let network =
         NetworkMode::try_from(request.network_mode.as_str()).map_err(|error| error.to_string())?;
@@ -135,6 +177,16 @@ fn agent_run_options(
         AuthScope::try_from(request.auth_scope.as_str()).map_err(|error| error.to_string())?;
     let provider_hosts =
         normalize_provider_hosts(&request.provider_hosts).map_err(|error| error.to_string())?;
+    // Rust decides the Claude auth source from the request's env-var broker NAME
+    // and the REAL, non-secret Keychain presence, never from a WebView-supplied
+    // auth-source value: the WebView cannot force or forge KeychainOAuth. The
+    // token itself is read later, once, at broker startup (never here).
+    let claude_auth_source = select_claude_auth_source_with_presence(
+        request.api_key_broker_env.clone(),
+        &request.agent,
+        keychain_present,
+    )
+    .map_err(|error| error.to_string())?;
     Ok(RunOptions {
         profile,
         workspace,
@@ -155,10 +207,7 @@ fn agent_run_options(
         allow_sensitive_workspace: request.allow_sensitive_workspace,
         allow_root_user: request.allow_root_user,
         provider_hosts,
-        // The desktop launch request offers only the env-var broker path today;
-        // Keychain OAuth sign-in arrives as its own command in a later slice.
-        claude_auth_source: non_empty(request.api_key_broker_env.clone())
-            .map(ClaudeAuthSource::ApiKeyBrokerEnv),
+        claude_auth_source,
         worktree,
         run_id,
     })

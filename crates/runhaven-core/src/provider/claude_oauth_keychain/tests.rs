@@ -82,6 +82,26 @@ fn parse_token_rejects_a_short_token_shaped_line() {
     assert!(parse_token(b"sk-ant-\n").is_err());
 }
 
+#[test]
+fn setup_token_command_runs_exactly_the_resolved_path() {
+    // The capture must run the exact path the confirmation resolved and showed,
+    // with no PATH re-lookup (Codex F8). Building the command from a given path
+    // proves there is no second `find_on_path` between the shown and run binary.
+    use std::ffi::OsStr;
+    let command = setup_token_command("/opt/homebrew/bin/claude");
+    assert_eq!(
+        command.get_program(),
+        OsStr::new("/opt/homebrew/bin/claude"),
+        "the capture must run the exact resolved path"
+    );
+    let args: Vec<&OsStr> = command.get_args().collect();
+    assert_eq!(
+        args,
+        [OsStr::new("setup-token")],
+        "exact arg list, never a shell string"
+    );
+}
+
 /// Live Keychain round-trip. Ignored by default because it touches the real
 /// login keychain. It uses a DISTINCT test service and NO access control, so
 /// it never prompts and never touches the real `RunHaven Claude OAuth` item,

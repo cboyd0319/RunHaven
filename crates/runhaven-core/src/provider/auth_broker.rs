@@ -73,7 +73,7 @@ impl ApiKeyBrokerProxy {
     pub fn bind_for_profile(
         address: (&str, u16),
         profile: ProviderBrokerProfile,
-        api_key: String,
+        api_key: Zeroizing<String>,
         allowed_client_subnets: &[String],
     ) -> Result<Self> {
         let upstream = Arc::new(HttpsUpstream::for_host(profile.upstream_host));
@@ -83,7 +83,7 @@ impl ApiKeyBrokerProxy {
     pub fn bind_with_upstream(
         address: (&str, u16),
         profile: ProviderBrokerProfile,
-        api_key: String,
+        api_key: Zeroizing<String>,
         allowed_client_subnets: &[String],
         upstream: Arc<dyn BrokerUpstream>,
     ) -> Result<Self> {
@@ -102,7 +102,9 @@ impl ApiKeyBrokerProxy {
         Ok(Self {
             listener: Arc::new(listener),
             state: Arc::new(BrokerState {
-                api_key: Zeroizing::new(api_key),
+                // Already `Zeroizing` from the secret seam (Keychain read or host
+                // env var), so it lands here without a plain-`String` hop.
+                api_key,
                 profile,
                 upstream,
                 allowed_client_networks: networks,

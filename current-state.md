@@ -202,23 +202,17 @@ Useful GUI design docs:
   sign-in); docs/DESKTOP_APP.md realigned with the real UI; e2e specs updated
   to the new flow (4/4 pass). The deferred comprehensive Apple-HIG visual
   redesign has its references in `docs/design/native-gui-design-resources.md`.
-- Agent login is unified in-sandbox, and host-side token custody is deleted. All
-  four sign-in agents (Claude, Codex, Copilot, Antigravity) now log in *inside*
-  the sandbox on the shared home volume via `runhaven login <agent>`, so RunHaven
-  holds no agent token. Claude was the last host-side custody: `runhaven login
-  claude` now runs `claude auth login` (its Claude.ai subscription flow) in the
-  sandbox. Empirical probe on this machine: Claude Code 2.1.197 has `claude auth
-  login`, and running it in the `runhaven/claude:0.1.0` image as the non-root
-  agent user prints the OAuth URL and a paste-back prompt, the same class as the
-  Antigravity flow. The token exchange (`platform.claude.com`) and
-  client-metadata fetch (`claude.ai`) are already bundled provider hosts, so no
-  egress change was needed. Removed: `runtime/token_store.rs`, the run-time env
-  injection in `runtime/launch.rs`, `login_claude`/`extract_token`/token helpers
-  in `runtime/login.rs`, and the userless `RUNHAVEN_TOKEN_STORE=keychain`
-  Keychain seam with its `security-framework` dependency (workspace + core
-  manifests, `pins.toml`). `login claude --clear` now deletes the shared volume
-  and best-effort removes any legacy host token. Docs updated in `USAGE.md`,
-  `SECURITY_MODEL.md`, `CAPABILITIES.md`, `AUTH_BROKER.md`, and `DESKTOP_APP.md`.
+- Agent login unified in-sandbox (2026-07-01): all four sign-in agents (Claude,
+  Codex, Copilot, Antigravity) log in *inside* the sandbox on the shared home
+  volume via `runhaven login <agent>` (path A), which deleted the old host token
+  store (`runtime/token_store.rs`, the run-time env injection, the
+  `RUNHAVEN_TOKEN_STORE=keychain` seam). CURRENT TRUTH (updated 2026-07-02): the
+  desktop app's Claude Keychain broker (path C, the default for Claude sign-in,
+  see the broker note below) later reintroduced *opt-in* host custody of the
+  Claude OAuth token in the macOS Keychain. So "RunHaven holds no host token" now
+  applies to path A and to the non-Claude agents; a path-C Claude token is held
+  only in the Keychain. `login claude --clear` and the GUI "Remove saved token"
+  delete their respective stores.
 - In-app agent sign-in landed seam-first (live verification is a documented
   follow-up). Codex, Copilot, and Antigravity now sign in from the app. A
   mutating `start_agent_sign_in` command lives behind its own isolated
@@ -379,7 +373,19 @@ the card prompts a fresh sign-in (a reminder, not an expiry). Docs shipped:
 `AUTH_BROKER.md` (mechanism + verbatim claim set + removal + rotation),
 `SECURITY_MODEL.md` (custody-reversal trade-off), `DESKTOP_APP.md`, `USAGE.md`.
 No secret reaches the WebView; browser preview shows the placeholder and never
-invokes Tauri.
+invokes Tauri. Selection wiring fix (F1 + F3, the double-coverage review's
+load-bearing finding): `KeychainOAuth` was never constructed in a production
+launch path, so a signed-in token was unused. Selection precedence now lives once
+in `broker_secret.rs::select_claude_auth_source_with_presence` (env-var broker
+NAME wins; else a PRESENT claude token via non-prompting `claude_oauth_token_present`
+drives `KeychainOAuth`; else none) and both CLI (`make_run_plan`) and GUI
+(`agent_run_options`) call it; the GUI decides from real Keychain presence, never
+a WebView value. The prompting token read stays deferred to broker startup
+(`require_api_key_broker_secret`) after the trusted confirm and fires exactly once;
+plan prep and pre-confirm validation are presence-only. Hermetic tests (injected
+presence/reader): `provider/runtime/tests/selection.rs`, CLI `app/tests.rs`, GUI
+`commands/tests/claude_auth_source.rs`. Lead still owns the review re-verification
+and the Gate 2 live Keychain smokes before merge.
 
 For this CLI+GUI completion goal, local downloads, installs, tool runs, and
 external research are authorized when they directly reduce risk or accelerate

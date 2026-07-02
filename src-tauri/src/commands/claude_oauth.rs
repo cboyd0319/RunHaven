@@ -42,6 +42,7 @@ const SIGN_IN_CANCELED: &str = "Claude sign-in canceled before it started.";
 const CLEAR_CANCELED: &str = "Nothing was removed.";
 const START_MESSAGE: &str = "RunHaven will open Claude sign-in on your Mac and save the token to \
      your Keychain. The token never goes inside the sandbox. Continue?";
+const START_PROGRAM_PREFIX: &str = "RunHaven will run this program to sign in:";
 const CLEAR_MESSAGE: &str = "Remove the Claude token RunHaven saved on your Mac? This deletes only \
      RunHaven's own Keychain item, not your other logins. It does not revoke the token on \
      Anthropic's side.";
@@ -75,10 +76,17 @@ pub(crate) async fn start_claude_oauth_signin(
 ) -> Result<ClaudeOAuthStartResponse, String> {
     let registry = claude_oauth.inner().clone();
     authorize_start(&request)?;
-    if !trusted_start_confirmed(app).await? {
+    // Resolve the `claude` binary ONCE, before the confirmation and before any
+    // capture runs. Fails closed here if it is not installed, so the user never
+    // approves a run that cannot happen. The same resolved path is shown in the
+    // confirmation and run by the capture: no PATH re-lookup between the two, so
+    // an approved binary cannot be swapped out from under the user.
+    let claude_path = resolve_claude_binary()?;
+    if !trusted_start_confirmed(app, &claude_path).await? {
         return Err(SIGN_IN_CANCELED.to_string());
     }
-    start_signin_flow(&registry, host_capture)
+    let capture = move || host_capture(&claude_path);
+    start_signin_flow(&registry, capture)
 }
 
 fn authorize_start(request: &ClaudeOAuthStartRequest) -> Result<(), String> {
@@ -88,13 +96,34 @@ fn authorize_start(request: &ClaudeOAuthStartRequest) -> Result<(), String> {
     Ok(())
 }
 
-async fn trusted_start_confirmed(app: AppHandle) -> Result<bool, String> {
+/// The native sign-in confirmation text, naming the EXACT resolved `claude` path
+/// that will run so the user can see which binary they are approving before the
+/// host command starts. The path is not a secret; it never carries a token.
+fn build_start_message(claude_path: &str) -> String {
+    format!("{START_MESSAGE}\n\n{START_PROGRAM_PREFIX}\n{claude_path}")
+}
+
+/// Resolve the `claude` path RunHaven will run, so it can be shown in the
+/// confirmation and then run unchanged. macOS delegates to the custody module;
+/// other targets have no Keychain broker, so this fails closed before any prompt.
+#[cfg(target_os = "macos")]
+fn resolve_claude_binary() -> Result<String, String> {
+    runhaven_core::provider::claude_oauth_keychain::resolve_setup_token_binary()
+        .map_err(|_| "Claude Code is not installed, so RunHaven cannot start sign-in.".to_string())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn resolve_claude_binary() -> Result<String, String> {
+    Err("Claude Keychain sign-in is only available on macOS.".to_string())
+}
+
+async fn trusted_start_confirmed(app: AppHandle, claude_path: &str) -> Result<bool, String> {
     confirm_native(
         app,
         "Confirm Claude sign-in",
         "Start Claude sign-in",
         MessageDialogKind::Info,
-        START_MESSAGE.to_string(),
+        build_start_message(claude_path),
     )
     .await
 }
@@ -125,17 +154,18 @@ fn start_signin_flow(
     })
 }
 
-/// The production capture: run the host `claude setup-token` and store the token
-/// to the Keychain, collapsing any error to a fixed, path-free reason so no host
-/// path or captured buffer can reach the polled status.
+/// The production capture: run the host `claude setup-token` at the exact
+/// resolved path the confirmation showed and store the token to the Keychain,
+/// collapsing any error to a fixed, path-free reason so no host path or captured
+/// buffer can reach the polled status.
 #[cfg(target_os = "macos")]
-fn host_capture() -> Result<(), String> {
-    runhaven_core::provider::claude_oauth_keychain::capture_and_store_setup_token()
+fn host_capture(claude: &str) -> Result<(), String> {
+    runhaven_core::provider::claude_oauth_keychain::capture_and_store_setup_token(claude)
         .map_err(|_| "Claude sign-in did not finish; nothing was saved.".to_string())
 }
 
 #[cfg(not(target_os = "macos"))]
-fn host_capture() -> Result<(), String> {
+fn host_capture(_claude: &str) -> Result<(), String> {
     Err("Claude Keychain sign-in is only available on macOS.".to_string())
 }
 
@@ -312,6 +342,28 @@ pub(crate) fn start_claude_oauth_signin_for_test(
         return Err(SIGN_IN_CANCELED.to_string());
     }
     start_signin_flow(registry, capture)
+}
+
+/// Test seam mirroring production's resolve-show-run wiring: the confirmation
+/// message is built from `claude_path` and the SAME `claude_path` is handed to
+/// the capture, with no PATH re-lookup between. `approve` receives the shown
+/// message and `capture` receives the exact path that runs, so a test can prove
+/// the path shown and the path run are one value (no TOCTOU).
+#[cfg(test)]
+pub(crate) fn start_claude_oauth_signin_at_for_test(
+    request: ClaudeOAuthStartRequest,
+    registry: &ClaudeOAuthSignInRegistry,
+    claude_path: String,
+    approve: impl FnOnce(&str) -> Result<bool, String>,
+    capture: impl FnOnce(&str) -> Result<(), String> + Send + 'static,
+) -> Result<ClaudeOAuthStartResponse, String> {
+    authorize_start(&request)?;
+    let message = build_start_message(&claude_path);
+    if !approve(&message)? {
+        return Err(SIGN_IN_CANCELED.to_string());
+    }
+    let run = move || capture(&claude_path);
+    start_signin_flow(registry, run)
 }
 
 #[cfg(test)]

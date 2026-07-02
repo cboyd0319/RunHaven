@@ -1,7 +1,7 @@
 use std::thread;
 
 use runhaven_core::runtime::launch::{launch_run_plan_with_runner, new_run_id};
-use runhaven_core::runtime::plans::AgentRunPlan;
+use runhaven_core::runtime::plans::{AgentRunPlan, ClaudeAuthSource};
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::MessageDialogKind;
 
@@ -19,7 +19,10 @@ use super::collect_setup_status;
 mod plan;
 
 #[cfg(test)]
-pub(crate) use plan::{build_agent_run_plan, build_launch_response, image_readiness_error};
+pub(crate) use plan::{
+    build_agent_run_plan, build_agent_run_plan_with_presence, build_launch_response,
+    image_readiness_error,
+};
 pub(crate) use plan::{build_plan_response, validate_launch_confirmation};
 
 use plan::{build_worktree_run_plan, prepare_launch, validate_bundled_image_ready};
@@ -235,20 +238,37 @@ async fn trusted_launch_confirmed(
     confirm_native(app, "Confirm RunHaven launch", "Launch", kind, message).await
 }
 
+/// The auth-broker line in the launch confirmation. For a Keychain OAuth run it
+/// states plainly that the run will use the user's saved Claude token and will
+/// prompt for approval, so the confirmation is informed consent BEFORE the Touch
+/// ID / device-password prompt fires at broker startup. `api_key_broker_env_name`
+/// returns `None` for this variant, which would otherwise read "none" and hide
+/// that a saved token is about to be used. The env-broker and no-broker cases are
+/// unchanged. The line names no token and carries no secret.
+fn auth_broker_line(plan: &AgentRunPlan) -> String {
+    match &plan.claude_auth_source {
+        Some(ClaudeAuthSource::KeychainOAuth) => "Claude auth: your saved Claude token (from your \
+             Mac's Keychain; you'll be asked to approve with Touch ID or your Mac password)"
+            .to_string(),
+        Some(ClaudeAuthSource::ApiKeyBrokerEnv(name)) => format!("API key broker: {name}"),
+        None => "API key broker: none".to_string(),
+    }
+}
+
 fn trusted_launch_message(plan: &AgentRunPlan, warnings: &[PlanWarning], worktree: bool) -> String {
     let provider_hosts = if plan.provider_allowed_hosts.is_empty() {
         "none".to_string()
     } else {
         plan.provider_allowed_hosts.join(", ")
     };
-    let api_key_broker = plan.api_key_broker_env_name().unwrap_or("none");
+    let auth_broker_line = auth_broker_line(plan);
     let worktree_line = if worktree {
         "yes (RunHaven creates a new isolated git branch; your files change only if you merge)"
     } else {
         "no (runs directly in your workspace)"
     };
     let mut message = format!(
-        "Agent: {}\nWorkspace: {}\nSession: {}\nImage: {}\nAuth: {}\nNetwork: {}\nProvider hosts: {}\nAPI key broker: {}\nWorktree: {}\n\nRunHaven will start this session after you confirm.",
+        "Agent: {}\nWorkspace: {}\nSession: {}\nImage: {}\nAuth: {}\nNetwork: {}\nProvider hosts: {}\n{}\nWorktree: {}\n\nRunHaven will start this session after you confirm.",
         plan.profile_name,
         plan.workspace.display(),
         plan.session,
@@ -256,7 +276,7 @@ fn trusted_launch_message(plan: &AgentRunPlan, warnings: &[PlanWarning], worktre
         plan.auth_scope.as_str(),
         plan.network_mode.as_str(),
         provider_hosts,
-        api_key_broker,
+        auth_broker_line,
         worktree_line,
     );
     if !warnings.is_empty() {

@@ -2,8 +2,11 @@
 
 Status: host-side API-key broker for Codex, Claude, and Gemini, plus
 `runhaven login` for all four sign-in agents (Claude, Codex, Copilot, and
-Antigravity) via an in-sandbox login. RunHaven never holds any agent token. No
-Copilot or Antigravity API-key broker is planned.
+Antigravity) via an in-sandbox login. RunHaven holds no agent token on the host,
+with one opt-in exception: the desktop app's Claude Keychain broker (path C,
+default for Claude sign-in) saves your Claude token in your Mac's Keychain only.
+Path A (sign in inside the sandbox) keeps zero host custody. See "Claude token
+custody" below. No Copilot or Antigravity API-key broker is planned.
 
 RunHaven exposes two auth inspection commands:
 

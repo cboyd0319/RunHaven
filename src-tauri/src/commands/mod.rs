@@ -52,10 +52,10 @@ mod warnings;
 #[cfg(test)]
 #[allow(unused_imports)]
 pub(crate) use launch::{
-    build_agent_run_plan, build_launch_response, build_plan_response, image_readiness_error,
-    launch_prepared_with_approval_for_test, launch_run_with_registries,
-    launch_run_with_registries_status_and_approval, trusted_launch_message_for_test,
-    validate_launch_confirmation,
+    build_agent_run_plan, build_agent_run_plan_with_presence, build_launch_response,
+    build_plan_response, image_readiness_error, launch_prepared_with_approval_for_test,
+    launch_run_with_registries, launch_run_with_registries_status_and_approval,
+    trusted_launch_message_for_test, validate_launch_confirmation,
 };
 
 #[tauri::command]

@@ -17,9 +17,63 @@ use crate::provider::auth_broker::{
 };
 use crate::runtime::plans::{AgentRunPlan, ClaudeAuthSource};
 
+/// The one agent profile the Keychain OAuth broker serves. Kept in one place so
+/// selection, presence validation, and the secret read all pin the same profile.
+const CLAUDE_PROFILE: &str = "claude";
+
+/// Choose the run's Claude auth source from the request inputs and the real,
+/// NON-SECRET Keychain presence (design C, Section 3, F1). This is the single
+/// home of the selection precedence, so the CLI and GUI do not re-implement it:
+///
+/// 1. An explicitly requested env-var broker NAME wins (unchanged pre-design-C
+///    behavior).
+/// 2. Else, for the `claude` profile only, a PRESENT Keychain OAuth token drives
+///    the payload-free `KeychainOAuth` path.
+/// 3. Else, no broker.
+///
+/// The caller supplies at most the env-var broker NAME; it can NEVER force or
+/// forge `KeychainOAuth`, because that variant is selected only from a real
+/// signed-in Keychain token that RunHaven checks host-side.
+///
+/// `keychain_present` MUST be the non-prompting, attributes-only presence check
+/// ([`claude_oauth_token_present`]) in production; it never reads the token, so it
+/// is safe during plan preparation. The token itself is read once, later, at
+/// broker startup.
+pub fn select_claude_auth_source_with_presence(
+    env_broker: Option<String>,
+    agent: &str,
+    keychain_present: impl Fn() -> Result<bool>,
+) -> Result<Option<ClaudeAuthSource>> {
+    if let Some(name) = env_broker
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+    {
+        return Ok(Some(ClaudeAuthSource::ApiKeyBrokerEnv(name)));
+    }
+    if agent == CLAUDE_PROFILE && keychain_present()? {
+        return Ok(Some(ClaudeAuthSource::KeychainOAuth));
+    }
+    Ok(None)
+}
+
+/// Non-prompting presence of RunHaven's Claude OAuth Keychain token. On macOS
+/// this is the attributes-only Keychain query (no `kSecReturnData`, no secret
+/// read, no user-presence prompt); on other targets there is no Keychain broker,
+/// so it reports absent. Safe to call during plan preparation and status
+/// polling; it NEVER reads the token and NEVER prompts.
+#[cfg(target_os = "macos")]
+pub fn claude_oauth_token_present() -> Result<bool> {
+    crate::provider::claude_oauth_keychain::token_present()
+}
+
+#[cfg(not(target_os = "macos"))]
+pub fn claude_oauth_token_present() -> Result<bool> {
+    Ok(false)
+}
+
 pub fn require_api_key_broker_secret(
     plan: &AgentRunPlan,
-) -> Result<Option<(ProviderBrokerProfile, String)>> {
+) -> Result<Option<(ProviderBrokerProfile, Zeroizing<String>)>> {
     require_api_key_broker_secret_with_sources(
         plan,
         |name| std::env::var(name).ok(),
@@ -49,50 +103,40 @@ pub(crate) fn require_api_key_broker_secret_with_sources(
     plan: &AgentRunPlan,
     env_value: impl Fn(&str) -> Option<String>,
     keychain_token: impl Fn() -> Result<Option<Zeroizing<Vec<u8>>>>,
-) -> Result<Option<(ProviderBrokerProfile, String)>> {
+) -> Result<Option<(ProviderBrokerProfile, Zeroizing<String>)>> {
     let Some(source) = &plan.claude_auth_source else {
         return Ok(None);
     };
     match source {
         ClaudeAuthSource::ApiKeyBrokerEnv(name) => {
-            let Some(profile) = broker_profile_for_agent(&plan.profile_name) else {
-                bail!(
-                    "the {} profile has no API-key broker; remove --api-key-broker-env",
-                    plan.profile_name
-                );
-            };
-            if name != profile.host_env {
-                bail!(
-                    "{} API key broker only accepts host environment variable {}",
-                    plan.profile_name,
-                    profile.host_env
-                );
-            }
-            let value = env_value(name).unwrap_or_default();
-            if value.trim().is_empty() {
-                bail!("{name} is not set on the host; export it before using --api-key-broker-env");
-            }
-            Ok(Some((profile, value)))
+            Ok(Some(resolve_env_broker(plan, name, &env_value)?))
         }
         ClaudeAuthSource::KeychainOAuth => {
             // Claude-only broker (design C). Read the token from the Keychain
             // exactly once per run launch (the user-presence prompt fires here)
             // and hand it straight to the broker's in-memory state as the
-            // `CLAUDE_OAUTH_BROKER` secret. Fail closed on a missing item, a
-            // read/cancel error, or a non-text token; every error is fixed and
-            // path-free and never echoes the token bytes.
-            if plan.profile_name != "claude" {
+            // `CLAUDE_OAUTH_BROKER` secret. This is the ONLY prompting read; plan
+            // preparation and pre-confirm validation use presence only (F3). Fail
+            // closed on a missing item, a read/cancel error, or a non-text token;
+            // every error is fixed and path-free and never echoes the token bytes.
+            if plan.profile_name != CLAUDE_PROFILE {
                 bail!("the Claude Keychain OAuth broker is only available for the claude profile");
             }
             let Some(secret) = keychain_token()? else {
                 bail!("no Claude token is saved; sign in to Claude before starting the run");
             };
-            let token = std::str::from_utf8(&secret)
-                .map_err(|_| {
-                    anyhow!("the saved Claude token is not valid text; sign in to Claude again")
-                })?
-                .trim()
-                .to_string();
+            // Stay in `Zeroizing` from the Keychain read to `BrokerState.api_key`:
+            // the trimmed copy is wrapped the moment it is allocated, so every
+            // heap copy of the token on this path (and on the error paths below)
+            // is overwritten on drop. No plain `String` ever holds the token.
+            let token = Zeroizing::new(
+                std::str::from_utf8(&secret)
+                    .map_err(|_| {
+                        anyhow!("the saved Claude token is not valid text; sign in to Claude again")
+                    })?
+                    .trim()
+                    .to_string(),
+            );
             if token.is_empty() {
                 bail!("the saved Claude token is empty; sign in to Claude again");
             }
@@ -101,8 +145,77 @@ pub(crate) fn require_api_key_broker_secret_with_sources(
     }
 }
 
+/// Resolve and validate the env-var broker path (shared by the pre-confirm
+/// validation and the broker-startup secret read). Non-prompting: it only reads
+/// a host env var, so it is safe before the trusted launch confirmation.
+fn resolve_env_broker(
+    plan: &AgentRunPlan,
+    name: &str,
+    env_value: &impl Fn(&str) -> Option<String>,
+) -> Result<(ProviderBrokerProfile, Zeroizing<String>)> {
+    let Some(profile) = broker_profile_for_agent(&plan.profile_name) else {
+        bail!(
+            "the {} profile has no API-key broker; remove --api-key-broker-env",
+            plan.profile_name
+        );
+    };
+    if name != profile.host_env {
+        bail!(
+            "{} API key broker only accepts host environment variable {}",
+            plan.profile_name,
+            profile.host_env
+        );
+    }
+    // Wrap the host env value in `Zeroizing` immediately, for symmetry with the
+    // Keychain path: this key is also a secret and the broker's copy is already
+    // `Zeroizing`, so it stays zeroize-on-drop end to end.
+    let value = Zeroizing::new(env_value(name).unwrap_or_default());
+    if value.trim().is_empty() {
+        bail!("{name} is not set on the host; export it before using --api-key-broker-env");
+    }
+    Ok((profile, value))
+}
+
+/// Pre-confirm broker validation. Runs BEFORE the trusted launch confirmation
+/// (GUI plan preparation, CLI worktree preflight) and again at the top of the
+/// launch path, so it MUST NOT read the Keychain token or prompt (F3). The env
+/// path resolves its host env var (non-prompting); the KeychainOAuth path checks
+/// PRESENCE only (attributes-only, no secret read, no prompt) and fails closed
+/// when no token is saved. The prompting token read is deferred to broker
+/// startup in [`require_api_key_broker_secret`].
 pub fn validate_runtime_auth_broker_environment(plan: &AgentRunPlan) -> Result<()> {
-    require_api_key_broker_secret(plan).map(|_| ())
+    validate_runtime_auth_broker_environment_with_sources(
+        plan,
+        |name| std::env::var(name).ok(),
+        claude_oauth_token_present,
+    )
+}
+
+pub(crate) fn validate_runtime_auth_broker_environment_with_sources(
+    plan: &AgentRunPlan,
+    env_value: impl Fn(&str) -> Option<String>,
+    keychain_present: impl Fn() -> Result<bool>,
+) -> Result<()> {
+    let Some(source) = &plan.claude_auth_source else {
+        return Ok(());
+    };
+    match source {
+        ClaudeAuthSource::ApiKeyBrokerEnv(name) => {
+            resolve_env_broker(plan, name, &env_value).map(|_| ())
+        }
+        ClaudeAuthSource::KeychainOAuth => {
+            if plan.profile_name != CLAUDE_PROFILE {
+                bail!("the Claude Keychain OAuth broker is only available for the claude profile");
+            }
+            // Presence only: the attributes-only query never decrypts the secret
+            // and never prompts, so this is safe pre-confirm. The token is read
+            // once later, at broker startup, after the launch is confirmed.
+            if !keychain_present()? {
+                bail!("no Claude token is saved; sign in to Claude before starting the run");
+            }
+            Ok(())
+        }
+    }
 }
 
 #[cfg(test)]

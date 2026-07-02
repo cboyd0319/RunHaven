@@ -1,4 +1,5 @@
 mod network;
+mod selection;
 
 use super::broker_secret::require_api_key_broker_secret_with_sources;
 use super::decision_log::{DecisionCounts, provider_decision_deltas};
@@ -84,7 +85,7 @@ fn codex_broker_wildcard_bind_rejects_clients_outside_container_subnet() {
     };
     let broker = create_api_key_broker(
         crate::provider::auth_broker::CODEX_BROKER,
-        "test-key".to_string(),
+        Zeroizing::new("test-key".to_string()),
         &info,
     )
     .expect("wildcard broker");
@@ -165,7 +166,8 @@ fn api_key_broker_secret_requires_fixed_host_env() {
     .expect("broker enabled");
 
     assert_eq!(secret.0.host_env, "OPENAI_API_KEY");
-    assert_eq!(secret.1, "test-openai-key");
+    // The env key is now carried in `Zeroizing<String>`; compare through the str.
+    assert_eq!(secret.1.as_str(), "test-openai-key");
 
     plan.claude_auth_source = Some(ClaudeAuthSource::ApiKeyBrokerEnv(
         "AWS_SECRET_ACCESS_KEY".to_string(),
@@ -215,7 +217,12 @@ fn keychain_oauth_source_reads_token_from_the_keychain_seam_not_env() {
         profile.injection.injected_header_names(),
         vec!["authorization"]
     );
-    assert_eq!(token, "sk-ant-oat01-FROM-KEYCHAIN", "the token is trimmed");
+    // The token stays in `Zeroizing<String>` end to end; compare through the str.
+    assert_eq!(
+        token.as_str(),
+        "sk-ant-oat01-FROM-KEYCHAIN",
+        "the token is trimmed"
+    );
 }
 
 #[test]

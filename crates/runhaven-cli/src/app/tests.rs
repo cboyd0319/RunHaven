@@ -1,14 +1,103 @@
 use super::*;
 use std::fs;
+use std::path::PathBuf;
 
+use crate::args::RunArgs;
 use runhaven_core::runtime::launch::run_standard_agent;
 use runhaven_core::runtime::plans::{
-    AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
+    AuthScope, ClaudeAuthSource, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
 };
 use runhaven_core::runtime::profiles::get_profile;
 use runhaven_core::support::paths::{
     active_run_path, override_cache_root_for_tests, runs_log_path,
 };
+
+/// Minimal `RunArgs` for a plan-build test. Non-interactive with no TTY so plan
+/// construction is deterministic off a terminal.
+fn run_args(agent: &str, workspace: PathBuf) -> RunArgs {
+    RunArgs {
+        agent: agent.to_string(),
+        workspace,
+        workspace_scope: "current".to_string(),
+        session: None,
+        auth_scope: "agent".to_string(),
+        image: None,
+        cpus: "4".to_string(),
+        memory: "4g".to_string(),
+        tty: "never".to_string(),
+        no_interactive: true,
+        network: None,
+        provider_host: Vec::new(),
+        api_key_broker_env: None,
+        read_only_workspace: false,
+        ssh: false,
+        env: Vec::new(),
+        user: "agent".to_string(),
+        allow_sensitive_workspace: false,
+        allow_root_user: false,
+    }
+}
+
+#[test]
+fn cli_run_plan_for_claude_with_saved_token_selects_keychain_oauth() {
+    let cache = tempfile::tempdir().expect("cache");
+    let _cache_home = override_cache_root_for_tests(cache.path());
+    let workspace = tempfile::tempdir().expect("workspace");
+    let args = run_args("claude", workspace.path().to_path_buf());
+
+    // Injected presence stands in for the non-prompting Keychain check; no real
+    // Keychain is touched. A present token drives the claude-only OAuth path.
+    let plan =
+        super::run_plan::make_run_plan_with_presence(&args, Vec::new(), None, None, None, || {
+            Ok(true)
+        })
+        .expect("claude run plan");
+
+    assert_eq!(
+        plan.claude_auth_source,
+        Some(ClaudeAuthSource::KeychainOAuth)
+    );
+    assert_eq!(plan.network_mode, NetworkMode::Provider);
+}
+
+#[test]
+fn cli_run_plan_for_claude_without_token_selects_no_broker() {
+    let cache = tempfile::tempdir().expect("cache");
+    let _cache_home = override_cache_root_for_tests(cache.path());
+    let workspace = tempfile::tempdir().expect("workspace");
+    let args = run_args("claude", workspace.path().to_path_buf());
+
+    let plan =
+        super::run_plan::make_run_plan_with_presence(&args, Vec::new(), None, None, None, || {
+            Ok(false)
+        })
+        .expect("claude run plan");
+
+    assert_eq!(plan.claude_auth_source, None);
+}
+
+#[test]
+fn cli_run_plan_explicit_env_broker_beats_a_saved_token() {
+    let cache = tempfile::tempdir().expect("cache");
+    let _cache_home = override_cache_root_for_tests(cache.path());
+    let workspace = tempfile::tempdir().expect("workspace");
+    let mut args = run_args("claude", workspace.path().to_path_buf());
+    args.api_key_broker_env = Some("ANTHROPIC_API_KEY".to_string());
+
+    // Even with a present token, the explicit env-var broker wins.
+    let plan =
+        super::run_plan::make_run_plan_with_presence(&args, Vec::new(), None, None, None, || {
+            Ok(true)
+        })
+        .expect("claude run plan");
+
+    assert_eq!(
+        plan.claude_auth_source,
+        Some(ClaudeAuthSource::ApiKeyBrokerEnv(
+            "ANTHROPIC_API_KEY".to_string()
+        ))
+    );
+}
 
 #[test]
 fn split_agent_args_after_separator() {
