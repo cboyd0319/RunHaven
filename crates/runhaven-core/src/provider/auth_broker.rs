@@ -10,6 +10,7 @@ use std::time::Duration;
 use anyhow::{Context, Result, bail};
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
+use zeroize::Zeroizing;
 
 mod headers;
 mod http;
@@ -20,8 +21,9 @@ pub use headers::broker_request_headers;
 pub use http::{broker_upstream_path, parse_content_length, sanitize_broker_request_path};
 use http::{header_value, read_headers, send_error, send_upstream_response};
 pub use profiles::{
-    BROKER_PLACEHOLDER_VALUE, CLAUDE_BROKER, CODEX_BROKER, CredentialInjection, GEMINI_BROKER,
-    GuestRedirect, PathRule, ProviderBrokerProfile, broker_profile_for_agent,
+    BROKER_PLACEHOLDER_VALUE, CLAUDE_BROKER, CLAUDE_OAUTH_BROKER, CODEX_BROKER,
+    CredentialInjection, GEMINI_BROKER, GuestRedirect, PathRule, ProviderBrokerProfile,
+    broker_profile_for_agent,
 };
 
 pub use crate::provider::auth_profiles::{
@@ -54,7 +56,11 @@ pub struct ApiKeyBrokerProxy {
 }
 
 struct BrokerState {
-    api_key: String,
+    // Held in memory for the run so injection can add it per request. Zeroizing
+    // overwrites this copy on drop (Hardening 3) so it is not left in freed heap
+    // after the proxy stops; the residual note in the design covers what this
+    // cannot reach (pipe buffers, prior realloc, the child process).
+    api_key: Zeroizing<String>,
     profile: ProviderBrokerProfile,
     upstream: Arc<dyn BrokerUpstream>,
     allowed_client_networks: Vec<IpNet>,
@@ -96,7 +102,7 @@ impl ApiKeyBrokerProxy {
         Ok(Self {
             listener: Arc::new(listener),
             state: Arc::new(BrokerState {
-                api_key,
+                api_key: Zeroizing::new(api_key),
                 profile,
                 upstream,
                 allowed_client_networks: networks,

@@ -104,7 +104,7 @@ fn executable_plan(name: &str) -> AgentRunPlan {
         egress_summary: "provider allowlist".to_string(),
         image: format!("runhaven/{name}:0.1.0"),
         provider_allowed_hosts: vec!["example.com".to_string()],
-        api_key_broker_env: None,
+        claude_auth_source: None,
         security_notices: Vec::new(),
     }
 }
@@ -126,7 +126,7 @@ fn plan(name: &str) -> LaunchPlanData {
             name: Some("runhaven-provider".to_string()),
             summary: "provider allowlist".to_string(),
             provider_allowed_hosts: vec!["example.com".to_string()],
-            api_key_broker_env: None,
+            claude_auth_source: None,
         },
         boundary: LaunchBoundaryData {
             mounted_workspace: "/tmp/project -> /workspace".to_string(),

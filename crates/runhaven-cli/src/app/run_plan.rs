@@ -8,8 +8,8 @@ use crate::args::RunArgs;
 use runhaven_core::provider::runtime as provider_runtime;
 use runhaven_core::runtime::launch::{launch_run_plan, require_container_cli};
 use runhaven_core::runtime::plans::{
-    AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
-    default_network_mode,
+    AgentRunPlan, AuthScope, ClaudeAuthSource, NetworkMode, RunOptions, WorkspaceScope,
+    WorktreeRun, build_run_plan, default_network_mode,
 };
 use runhaven_core::runtime::profiles::get_profile;
 use runhaven_core::runtime::worktrees::{create_worktree_for_run, preview_worktree};
@@ -118,7 +118,12 @@ pub(super) fn make_run_plan(
         allow_sensitive_workspace: args.allow_sensitive_workspace,
         allow_root_user: args.allow_root_user,
         provider_hosts: args.provider_host.clone(),
-        api_key_broker_env: args.api_key_broker_env.clone(),
+        // The CLI offers only the env-var broker path today (the `--api-key-broker-env`
+        // flag); the Keychain OAuth path is a GUI-only sign-in in a later slice.
+        claude_auth_source: args
+            .api_key_broker_env
+            .clone()
+            .map(ClaudeAuthSource::ApiKeyBrokerEnv),
         worktree,
         run_id,
     })

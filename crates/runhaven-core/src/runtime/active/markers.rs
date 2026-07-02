@@ -4,7 +4,7 @@ use std::io::Write;
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
 
-use crate::runtime::plans::AgentRunPlan;
+use crate::runtime::plans::{AgentRunPlan, ClaudeAuthSource};
 use crate::runtime::worktrees::worktree_record;
 use crate::support::paths::{active_run_path, active_runs_dir, create_private_file};
 use crate::support::validators::{validate_run_id, validate_runhaven_container_name};
@@ -28,8 +28,20 @@ pub fn write_active_run_record(plan: &AgentRunPlan, run_id: &str, started_at: &s
     if let Some(worktree) = &plan.worktree {
         payload["worktree"] = worktree_record(worktree);
     }
-    if let Some(broker_env) = &plan.api_key_broker_env {
-        payload["api_key_broker_env"] = json!(broker_env);
+    // Persist the auth source as a NON-SECRET marker only (design C F1). The
+    // API-key path keeps writing the env-var NAME (harmless, preserves the
+    // managed-session read model). The Keychain OAuth path writes only a fixed
+    // tag: NEVER the token, the Keychain service/account, or any secret-derived
+    // value. The `KeychainOAuth` variant carries no payload, so there is nothing
+    // token-derived that could reach this marker.
+    match &plan.claude_auth_source {
+        Some(ClaudeAuthSource::ApiKeyBrokerEnv(name)) => {
+            payload["api_key_broker_env"] = json!(name);
+        }
+        Some(ClaudeAuthSource::KeychainOAuth) => {
+            payload["claude_auth_source"] = json!("keychain-oauth");
+        }
+        None => {}
     }
     write_active_run_payload(run_id, payload)
 }
@@ -181,7 +193,7 @@ mod tests {
         (cache, cache_home)
     }
 
-    fn broker_plan(api_key_broker_env: Option<&str>) -> AgentRunPlan {
+    fn broker_plan(claude_auth_source: Option<ClaudeAuthSource>) -> AgentRunPlan {
         AgentRunPlan {
             command: vec!["container".to_string(), "run".to_string()],
             preflight: Vec::new(),
@@ -200,7 +212,7 @@ mod tests {
             egress_summary: "provider egress".to_string(),
             image: "image".to_string(),
             provider_allowed_hosts: Vec::new(),
-            api_key_broker_env: api_key_broker_env.map(str::to_string),
+            claude_auth_source,
             security_notices: Vec::new(),
         }
     }
@@ -210,7 +222,9 @@ mod tests {
         let (_cache, _cache_home) = isolated_cache();
 
         write_active_run_record(
-            &broker_plan(Some("OPENAI_API_KEY")),
+            &broker_plan(Some(ClaudeAuthSource::ApiKeyBrokerEnv(
+                "OPENAI_API_KEY".to_string(),
+            ))),
             "run-broker",
             "2026-07-01T00:00:00Z",
         )
@@ -228,6 +242,45 @@ mod tests {
         assert!(
             plain.get("api_key_broker_env").is_none(),
             "runs without a broker env must not fabricate broker proof"
+        );
+    }
+
+    #[test]
+    fn keychain_oauth_run_marker_carries_no_token_and_no_env_name() {
+        // F1 (design C, load-bearing): a Keychain OAuth run must persist ONLY the
+        // non-secret `claude_auth_source` tag. The marker must never carry the
+        // token, an env-var NAME, the Keychain service/account, or any
+        // secret-derived value. This is the whole point of the enum: the OAuth
+        // variant has no field a token or env name could occupy.
+        let (_cache, _cache_home) = isolated_cache();
+
+        write_active_run_record(
+            &broker_plan(Some(ClaudeAuthSource::KeychainOAuth)),
+            "run-oauth",
+            "2026-07-01T00:00:00Z",
+        )
+        .expect("write oauth run");
+        let record = find_active_run_record("run-oauth").expect("oauth record");
+
+        assert_eq!(
+            record.get("claude_auth_source").and_then(Value::as_str),
+            Some("keychain-oauth"),
+            "the OAuth run persists only the non-secret source tag"
+        );
+        assert!(
+            record.get("api_key_broker_env").is_none(),
+            "the OAuth run must persist no env-var name"
+        );
+        // Nothing in the serialized marker may look like a token or name the
+        // Keychain item. Scan every string value in the record.
+        let serialized = serde_json::to_string(&record).expect("serialize record");
+        assert!(
+            !serialized.contains("sk-ant-"),
+            "no token bytes may reach the marker"
+        );
+        assert!(
+            !serialized.contains("RunHaven Claude OAuth"),
+            "the Keychain service label must not reach the marker"
         );
     }
 

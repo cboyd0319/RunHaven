@@ -5,8 +5,8 @@ use runhaven_core::image::doctor::collect_image_status;
 use runhaven_core::provider::runtime::validate_runtime_auth_broker_environment;
 use runhaven_core::runtime::active::read_active_run_records;
 use runhaven_core::runtime::plans::{
-    AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
-    normalize_provider_hosts,
+    AgentRunPlan, AuthScope, ClaudeAuthSource, NetworkMode, RunOptions, WorkspaceScope,
+    WorktreeRun, build_run_plan, normalize_provider_hosts,
 };
 use runhaven_core::runtime::profiles::get_profile;
 use runhaven_core::runtime::worktrees::create_worktree_for_run;
@@ -155,7 +155,10 @@ fn agent_run_options(
         allow_sensitive_workspace: request.allow_sensitive_workspace,
         allow_root_user: request.allow_root_user,
         provider_hosts,
-        api_key_broker_env: non_empty(request.api_key_broker_env.clone()),
+        // The desktop launch request offers only the env-var broker path today;
+        // Keychain OAuth sign-in arrives as its own command in a later slice.
+        claude_auth_source: non_empty(request.api_key_broker_env.clone())
+            .map(ClaudeAuthSource::ApiKeyBrokerEnv),
         worktree,
         run_id,
     })

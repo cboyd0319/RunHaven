@@ -30,7 +30,7 @@ fn test_plan(network: NetworkMode) -> AgentRunPlan {
         allow_sensitive_workspace: false,
         allow_root_user: false,
         provider_hosts: Vec::new(),
-        api_key_broker_env: None,
+        claude_auth_source: None,
         worktree: None,
         run_id: None,
     })

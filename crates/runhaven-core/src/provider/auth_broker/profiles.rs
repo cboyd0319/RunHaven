@@ -133,6 +133,42 @@ pub const CLAUDE_BROKER: ProviderBrokerProfile = ProviderBrokerProfile {
     },
 };
 
+/// Claude OAuth-token broker (design C): the subscription OAuth-token path,
+/// sibling of `CLAUDE_BROKER`. Same pinned upstream host and `/v1/` prefix, so
+/// egress is identical to the API-key Claude broker (no widening). The token is
+/// a Claude subscription OAuth token read from the macOS Keychain at
+/// broker-spawn (never from a host env var) and injected as
+/// `Authorization: Bearer` by `headers.rs`, which also strips any guest-sent
+/// `authorization`. The guest holds only a placeholder `CLAUDE_CODE_OAUTH_TOKEN`
+/// plus the `ANTHROPIC_BASE_URL` redirect.
+///
+/// `host_env` is set to the placeholder env name for consistency but is IGNORED
+/// on this path: `require_api_key_broker_secret` reads the Keychain, not an env
+/// var, when the run's `ClaudeAuthSource` is `KeychainOAuth`.
+///
+/// F5 (`anthropic-beta`): OAuth requests to `/v1/messages` also carry
+/// `anthropic-beta: ...oauth-2025-04-20...`. The guest Claude Code CLI sends
+/// that header and `headers.rs` forwards it unchanged (it is neither hop-by-hop
+/// nor an injected header, so it is never stripped), so Bearer-only injection is
+/// correct today (empirically verified capture, design Section "Verified
+/// facts"). Seam: if a future guest stops sending it, inject it host-side by
+/// extending `CredentialInjection::BearerAuth` with a fixed-header list
+/// mirroring `ApiKeyHeader.extra`; either way only the injected Bearer plus this
+/// non-secret beta tag leave the host, so it is not a leak.
+pub const CLAUDE_OAUTH_BROKER: ProviderBrokerProfile = ProviderBrokerProfile {
+    agent: "claude",
+    host_env: "CLAUDE_CODE_OAUTH_TOKEN",
+    label: "RunHaven Claude OAuth-token broker",
+    upstream_host: "api.anthropic.com",
+    path_rule: PathRule::Prefix("/v1/"),
+    injection: CredentialInjection::BearerAuth,
+    placeholder_env: "CLAUDE_CODE_OAUTH_TOKEN",
+    placeholder_value: BROKER_PLACEHOLDER_VALUE,
+    guest_redirect: GuestRedirect::EnvRedirect {
+        base_url_env: "ANTHROPIC_BASE_URL",
+    },
+};
+
 /// Gemini broker: Generative Language API via the genai base-URL env.
 /// `x-goog-api-key` auth. The base-URL env is currently undocumented and
 /// version-fragile; gate it behind a per-version smoke.
@@ -195,6 +231,102 @@ mod tests {
         assert_eq!(
             GEMINI_BROKER.injection.injected_header_names(),
             vec!["x-goog-api-key"]
+        );
+    }
+
+    #[test]
+    fn claude_oauth_broker_pins_bearer_host_and_path_without_widening_egress() {
+        // BearerAuth so headers.rs emits `Authorization: Bearer` and strips the
+        // guest `authorization` header.
+        assert_eq!(
+            CLAUDE_OAUTH_BROKER.injection,
+            CredentialInjection::BearerAuth
+        );
+        assert_eq!(
+            CLAUDE_OAUTH_BROKER.injection.injected_header_names(),
+            vec!["authorization"]
+        );
+        // Same pinned upstream host and `/v1/` prefix as the API-key Claude
+        // broker: the OAuth broker adds NO new egress destination.
+        assert_eq!(CLAUDE_OAUTH_BROKER.upstream_host, "api.anthropic.com");
+        assert_eq!(
+            CLAUDE_OAUTH_BROKER.upstream_host,
+            CLAUDE_BROKER.upstream_host
+        );
+        assert!(CLAUDE_OAUTH_BROKER.path_rule.allows("/v1/messages"));
+        assert!(
+            CLAUDE_OAUTH_BROKER
+                .path_rule
+                .allows("/v1/messages/count_tokens")
+        );
+        assert!(!CLAUDE_OAUTH_BROKER.path_rule.allows("/v2/messages"));
+        // The guest is pointed at the broker via ANTHROPIC_BASE_URL and holds
+        // only the placeholder OAuth token.
+        assert_eq!(
+            CLAUDE_OAUTH_BROKER.guest_redirect,
+            GuestRedirect::EnvRedirect {
+                base_url_env: "ANTHROPIC_BASE_URL"
+            }
+        );
+        assert_eq!(
+            CLAUDE_OAUTH_BROKER.placeholder_env,
+            "CLAUDE_CODE_OAUTH_TOKEN"
+        );
+        assert_eq!(
+            CLAUDE_OAUTH_BROKER.placeholder_value,
+            BROKER_PLACEHOLDER_VALUE
+        );
+    }
+
+    #[test]
+    fn claude_oauth_broker_injects_bearer_strips_guest_auth_and_forwards_beta() {
+        use crate::provider::auth_broker::broker_request_headers;
+        // A hostile guest sends its own Authorization (the placeholder, or a
+        // stolen value) plus the non-secret anthropic-beta tag.
+        let guest_headers = vec![
+            (
+                "authorization".to_string(),
+                format!("Bearer {BROKER_PLACEHOLDER_VALUE}"),
+            ),
+            ("anthropic-beta".to_string(), "oauth-2025-04-20".to_string()),
+            ("content-type".to_string(), "application/json".to_string()),
+        ];
+        let real_token = "sk-ant-oat01-REAL-TOKEN-000000000000";
+        let forwarded = broker_request_headers(
+            &guest_headers,
+            CLAUDE_OAUTH_BROKER.upstream_host,
+            real_token,
+            &CLAUDE_OAUTH_BROKER.injection,
+            2,
+        );
+        // Exactly one Authorization header, and it carries the real token.
+        let auth: Vec<&(String, String)> = forwarded
+            .iter()
+            .filter(|(name, _)| name.eq_ignore_ascii_case("authorization"))
+            .collect();
+        assert_eq!(auth.len(), 1, "exactly one Authorization header survives");
+        assert_eq!(auth[0].1, format!("Bearer {real_token}"));
+        // The guest placeholder Authorization was stripped before injection.
+        assert!(
+            !forwarded
+                .iter()
+                .any(|(_, value)| value.contains(BROKER_PLACEHOLDER_VALUE)),
+            "the guest placeholder must never reach the upstream request"
+        );
+        // F5: the guest-supplied anthropic-beta tag is forwarded unchanged (not
+        // stripped), so Bearer-only injection is sufficient today.
+        assert!(
+            forwarded
+                .iter()
+                .any(|(name, value)| name.eq_ignore_ascii_case("anthropic-beta")
+                    && value == "oauth-2025-04-20"),
+            "the non-secret anthropic-beta tag must be forwarded"
+        );
+        // The upstream Host is pinned to Anthropic.
+        assert!(
+            forwarded
+                .iter()
+                .any(|(name, value)| name == "Host" && value == "api.anthropic.com")
         );
     }
 

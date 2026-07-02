@@ -241,7 +241,7 @@ fn trusted_launch_message(plan: &AgentRunPlan, warnings: &[PlanWarning], worktre
     } else {
         plan.provider_allowed_hosts.join(", ")
     };
-    let api_key_broker = plan.api_key_broker_env.as_deref().unwrap_or("none");
+    let api_key_broker = plan.api_key_broker_env_name().unwrap_or("none");
     let worktree_line = if worktree {
         "yes (RunHaven creates a new isolated git branch; your files change only if you merge)"
     } else {

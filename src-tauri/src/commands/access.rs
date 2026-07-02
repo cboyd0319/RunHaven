@@ -3,7 +3,7 @@ use runhaven_core::runtime::plans::{AgentRunPlan, AuthScope};
 use crate::contracts::RunPlanAccess;
 
 pub(super) fn plan_access(plan: &AgentRunPlan) -> RunPlanAccess {
-    if let Some(name) = &plan.api_key_broker_env {
+    if let Some(name) = plan.api_key_broker_env_name() {
         let present = std::env::var_os(name).is_some_and(|value| !value.is_empty());
         if present {
             return RunPlanAccess {
@@ -14,7 +14,7 @@ pub(super) fn plan_access(plan: &AgentRunPlan) -> RunPlanAccess {
                 ),
                 remedy: String::new(),
                 blocking: false,
-                api_key_broker_env: Some(name.clone()),
+                api_key_broker_env: Some(name.to_string()),
                 api_key_broker_env_present: Some(true),
             };
         }
@@ -26,7 +26,7 @@ pub(super) fn plan_access(plan: &AgentRunPlan) -> RunPlanAccess {
                 "Set {name} before opening RunHaven, or remove the API key variable and sign in inside the session."
             ),
             blocking: true,
-            api_key_broker_env: Some(name.clone()),
+            api_key_broker_env: Some(name.to_string()),
             api_key_broker_env_present: Some(false),
         };
     }

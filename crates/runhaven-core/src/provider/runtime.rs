@@ -3,9 +3,7 @@ use std::thread;
 use anyhow::{Context, Result, bail};
 use serde_json::json;
 
-use crate::provider::auth_broker::{
-    ApiKeyBrokerProxy, GuestRedirect, ProviderBrokerProfile, broker_profile_for_agent,
-};
+use crate::provider::auth_broker::{ApiKeyBrokerProxy, GuestRedirect, ProviderBrokerProfile};
 use crate::provider::egress::{EgressPolicy, ThreadedAllowlistProxy};
 use crate::provider::observability::{print_provider_blocked_host_review, write_auth_broker_log};
 use crate::records::{RunRecordInput, write_run_record};
@@ -15,9 +13,11 @@ use crate::runtime::launch::{
 };
 use crate::runtime::plans::AgentRunPlan;
 
+mod broker_secret;
 mod decision_log;
 mod network;
 
+pub use broker_secret::{require_api_key_broker_secret, validate_runtime_auth_broker_environment};
 use decision_log::{ProviderDecisionLogStream, start_provider_decision_log_stream};
 use network::command_starts_with;
 pub use network::{
@@ -200,43 +200,6 @@ fn run_provider_agent_command_with_runner(
     runner: &mut impl AgentCommandRunner,
 ) -> Result<AgentCommandExecution> {
     run_agent_command_lifecycle(plan, run_id, command, runner)
-}
-
-pub fn require_api_key_broker_secret(
-    plan: &AgentRunPlan,
-) -> Result<Option<(ProviderBrokerProfile, String)>> {
-    require_api_key_broker_secret_with_env(plan, |name| std::env::var(name).ok())
-}
-
-fn require_api_key_broker_secret_with_env(
-    plan: &AgentRunPlan,
-    env_value: impl Fn(&str) -> Option<String>,
-) -> Result<Option<(ProviderBrokerProfile, String)>> {
-    let Some(name) = &plan.api_key_broker_env else {
-        return Ok(None);
-    };
-    let Some(profile) = broker_profile_for_agent(&plan.profile_name) else {
-        bail!(
-            "the {} profile has no API-key broker; remove --api-key-broker-env",
-            plan.profile_name
-        );
-    };
-    if name != profile.host_env {
-        bail!(
-            "{} API key broker only accepts host environment variable {}",
-            plan.profile_name,
-            profile.host_env
-        );
-    }
-    let value = env_value(name).unwrap_or_default();
-    if value.trim().is_empty() {
-        bail!("{name} is not set on the host; export it before using --api-key-broker-env");
-    }
-    Ok(Some((profile, value)))
-}
-
-pub fn validate_runtime_auth_broker_environment(plan: &AgentRunPlan) -> Result<()> {
-    require_api_key_broker_secret(plan).map(|_| ())
 }
 
 pub fn with_provider_proxy_environment(

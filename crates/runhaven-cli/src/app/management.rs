@@ -107,7 +107,7 @@ fn state_reset(
         allow_sensitive_workspace,
         allow_root_user: false,
         provider_hosts: Vec::new(),
-        api_key_broker_env: None,
+        claude_auth_source: None,
         worktree: None,
         run_id: None,
     })?;

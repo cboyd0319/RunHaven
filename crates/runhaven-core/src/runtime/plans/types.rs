@@ -107,6 +107,40 @@ impl TryFrom<&str> for AuthScope {
     }
 }
 
+/// Which Claude auth path a run uses through the host-side broker. This replaces
+/// a bare `api_key_broker_env: Option<String>` so the OAuth token can never land
+/// on a persisted plan field (design C Section 3, F1): the token is read from
+/// the macOS Keychain at broker-spawn and flows straight into the broker's
+/// in-memory state, never onto the plan, a marker, a record, or a log. Both
+/// variants are non-secret; neither ever holds a token.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub enum ClaudeAuthSource {
+    /// API-key broker: the run reads the real key from this host environment
+    /// variable NAME (e.g. `ANTHROPIC_API_KEY`). Non-secret: the name, never the
+    /// value. This is the only broker path that existed before design C, and it
+    /// is unchanged.
+    ApiKeyBrokerEnv(String),
+    /// Claude subscription OAuth token brokered from the macOS Keychain. No
+    /// payload: the token is fetched from the Keychain at broker-spawn and never
+    /// touches the plan. A run using this variant persists no env NAME and no
+    /// secret-derived value anywhere.
+    KeychainOAuth,
+}
+
+impl ClaudeAuthSource {
+    /// The host environment variable NAME for the API-key broker path, or `None`
+    /// for the Keychain OAuth path (which reads no env var). This NEVER returns a
+    /// secret: `ApiKeyBrokerEnv` carries only the variable name, and
+    /// `KeychainOAuth` carries nothing. Read sites that only need the display or
+    /// persistence name use this.
+    pub fn broker_env_name(&self) -> Option<&str> {
+        match self {
+            Self::ApiKeyBrokerEnv(name) => Some(name.as_str()),
+            Self::KeychainOAuth => None,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct WorktreeRun {
     pub source_workspace: PathBuf,
@@ -139,7 +173,7 @@ pub struct RunOptions {
     pub allow_sensitive_workspace: bool,
     pub allow_root_user: bool,
     pub provider_hosts: Vec<String>,
-    pub api_key_broker_env: Option<String>,
+    pub claude_auth_source: Option<ClaudeAuthSource>,
     pub worktree: Option<WorktreeRun>,
     pub run_id: Option<String>,
 }
@@ -163,13 +197,22 @@ pub struct AgentRunPlan {
     pub egress_summary: String,
     pub image: String,
     pub provider_allowed_hosts: Vec<String>,
-    pub api_key_broker_env: Option<String>,
+    pub claude_auth_source: Option<ClaudeAuthSource>,
     pub security_notices: Vec<String>,
 }
 
 impl AgentRunPlan {
     pub fn shell_command(&self) -> String {
         shell::join(&self.command)
+    }
+
+    /// The API-key broker host environment variable NAME for this run, if it
+    /// uses the env-var broker path. `None` for the Keychain OAuth path or a run
+    /// with no broker. NEVER returns a secret (see [`ClaudeAuthSource`]).
+    pub fn api_key_broker_env_name(&self) -> Option<&str> {
+        self.claude_auth_source
+            .as_ref()
+            .and_then(ClaudeAuthSource::broker_env_name)
     }
 
     pub fn shell_preflight(&self) -> Vec<String> {

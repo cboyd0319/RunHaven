@@ -26,7 +26,7 @@ pub(super) fn print_run_plan(plan: &AgentRunPlan) {
             "Provider egress is limited to these hosts. For package installs or other hosts, add --provider-host HOST or use --network internet."
         );
     }
-    if let Some(name) = &plan.api_key_broker_env {
+    if let Some(name) = plan.api_key_broker_env_name() {
         println!(
             "API key broker: enabled from host environment variable {name}; value is not printed or planned."
         );

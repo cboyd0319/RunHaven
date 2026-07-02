@@ -340,7 +340,7 @@ fn launch_preview_for_workspace(
         egress_summary: network_summary.to_string(),
         image: image.clone(),
         provider_allowed_hosts: provider_allowed_hosts.clone(),
-        api_key_broker_env: None,
+        claude_auth_source: None,
         security_notices: safety_notes.clone(),
     };
     let data = LaunchPlanData {
@@ -359,7 +359,7 @@ fn launch_preview_for_workspace(
             name: executable.network_name.clone(),
             summary: network_summary.to_string(),
             provider_allowed_hosts,
-            api_key_broker_env: None,
+            claude_auth_source: None,
         },
         boundary: LaunchBoundaryData {
             mounted_workspace: format!("{workspace} -> /workspace"),

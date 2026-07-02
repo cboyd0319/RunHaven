@@ -327,70 +327,27 @@ dialog holding the two real preferences (deviation recorded in the
 tracker's B3 section). Menu, relaunch-restore, badge, and Settings behavior
 share one still-pending `tauri dev` smoke.
 
-Terminal slice 1 (Rust host-PTY backend,
-`docs/design/native-gui-terminal-design.md`) is complete: `pty-process` 0.5.3 owned by `runhaven-core`, whose `runtime::terminal` (`open_gui_attach_pty` -> `GuiPtySession`) now owns the host-PTY `container exec` spawn, PTY I/O, and child kill/reap (F1 deadlock test in core), so no `Command::new("container")` sits in `src-tauri` and the structure guard passes; core `gui_attach_plan` still reuses `runs_attach` validation (non-root `agent`, always `--tty`); `src-tauri` keeps the fail-closed `TerminalSessionRegistry` (cap 2), four commands
-and a `TerminalMessage` Channel type; a main-only `terminal` capability with
-`capability_guard` pins, a no-persist tripwire over the reader, teardown that kills live PTYs. Frontend xterm and the `tauri dev` PTY/SIGWINCH smoke follow.
+The in-app terminal is complete and committed
+(`docs/design/native-gui-terminal-design.md`; T1-T4). Host-PTY backend in
+`runhaven-core::runtime::terminal` owns the `container` spawn for both attach
+(`open_gui_attach_pty`) and Claude login (`open_gui_login_pty`, path A running
+`claude auth login` through the real provider launch path so egress stays
+enforced); `src-tauri` keeps the fail-closed `TerminalSessionRegistry` (cap 2),
+the write/resize/close commands, a `TerminalMessage` Channel, and a main-only
+`terminal` capability with `capability_guard` pins and a no-persist reader
+tripwire (registry split into `terminal/registry.rs`). The xterm frontend shows
+the standing no-filter/no-store disclosure and kills the child on unmount. Gates
+A/B/C passed. Live-smoke fixes landed: failed-login container/network teardown
+leak (force-remove before delete), `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`
+in the sandbox, and the sidebar System group pinned to a footer. The live
+terminal + `claude auth login` round-trip is the lead's `tauri dev` smoke.
 
-Terminal slice 2 (xterm frontend, Channel bridge, standing disclosure,
-close-on-unmount) is committed: `TerminalPanel` renders the xterm terminal over
-the `TerminalMessage` Channel with the always-on no-filter/no-store disclosure
-and kills the backend child on unmount/pagehide.
-
-Terminal slice 3 (Claude in-app sign-in via the terminal, path A) is complete in
-this working tree, pending the credential-adjacent adversarial review (gate B)
-before commit. New core `runtime::terminal::open_gui_login_pty("claude", id)`
-opens a host-PTY Claude login: it reuses `login::build_sandbox_login_terminal_plan`
-(TTY-on `claude auth login`) and runs the real provider launch path
-(`launch_run_plan_with_runner`) on a background thread with a PTY-handoff
-`AgentCommandRunner`, so the allowlist proxy and provider-only egress stay
-enforced for the whole login (a bare `container run` of the login plan has no
-egress and would fail); only the child's stdio is a host PTY so the pasted OAuth
-code round-trips. `GuiPtySession` gained a one-shot exit latch (`wait_for_exit`)
-the runner blocks on. A new Rust-owned, native-confirmed `src-tauri` command
-`open_claude_sign_in_terminal` (fixed to Claude; the WebView supplies only the
-session id) reuses the existing `TerminalSessionRegistry` (cap 2 shared with
-attach) and the write/resize/close commands, added to the main-only `terminal`
-capability (`allow-open-claude-sign-in-terminal`, `capability_guard` pins updated,
-`build.rs` command list updated). The captured-output device-code refusal in
-`commands/agent_sign_in.rs` is unchanged (Claude still refused there); only the
-separate terminal path allows Claude. Frontend: the Agents Claude card opens the
-in-app sign-in terminal (`TerminalPanel` login mode -> `openClaudeSignInTerminal`)
-with the Copy-command fallback preserved; fail-closed if the terminal cannot open.
-Docs shipped in-slice: `docs/DESKTOP_APP.md`, `docs/SECURITY_MODEL.md` (Claude
-sign-in terminal). Verified: fmt, clippy -D warnings, cargo test -p runhaven-core
-(154), -p runhaven-tauri (211), build, check-pins, npm check, npm test (337),
-repo-structure, docs-local-paths, git diff --check. The live `claude auth login`
-round-trip is the lead's `tauri dev` smoke. Not committed.
-
-B4 (per-session auxiliary windows) is implemented in this working tree as
-strictly read-only monitor windows; it awaits its adversarial security
-review before commit. Session menu > Open in New Window routes menu ->
-frontend -> the new `open_session_window` command (main-window-only via its
-own one-permission `session-window-open` capability): Rust validates the id
-shape and existence against the read model, mints the `session-<n>` label
-itself (never user data), caps monitors at 6, and focuses an existing
-monitor instead of duplicating. Monitors load a constant
-`index.html?monitor=1` URL and learn their session from Rust
-(`get_session_window_target`, keyed by the calling window's label); the
-`session-monitor` capability (windows `["session-*"]`, glob semantics
-verified in the pinned tauri 2.11.3 sources) grants exactly three reads,
-and Rust pins the session-keyed reads to the window's own registered
-session (`session_windows::authorize_session_read`). Every mutating
-capability stays `"windows": ["main"]`, pinned by a new capability_guard
-test; output viewing stays main-only (fail closed; upgrade path recorded in
-the gap tracker B4 section, which holds the full as-built record and
-deferrals). Status polls coalesce through a new session-keyed ReadGuard;
-WebView persistence no-ops in monitor windows; monitors are never restored
-across relaunch and close with the main window; a removed record shows the
-gone end state until the person closes the window. Docs shipped in-slice:
-`docs/DESKTOP_APP.md`, `docs/SECURITY_MODEL.md` ("Session Monitor
-Windows"), the gap tracker. Verified: fmt, cargo test -p runhaven-tauri
---locked (175), clippy -D warnings, build, check-pins, npm check, npm test
-(303), e2e (7), npm build, repo-structure, docs-local-paths, git diff
---check. Live multi-window behavior (open, focus-dedupe, cap, gone state,
-main-close teardown) still needs the lead's `tauri dev` smoke; Playwright
-stays browser-preview and cannot drive Tauri windows.
+B4 read-only session monitor windows are complete (detail in the gap tracker
+B4 section): Session menu > Open in New Window mints the `session-<n>` label in
+Rust, caps monitors at 6, focuses instead of duplicating, and grants monitors
+exactly three reads over a `session-monitor` (`session-*`) capability pinned to
+their own session; every mutation stays main-only (fail closed). Live
+multi-window behavior is part of the pending `tauri dev` smoke.
 
 Active slice: bring CLI plus native-feeling desktop GUI to 100 percent ready
 for real external user testing. Start by keeping TUI work out of scope, then
@@ -398,19 +355,22 @@ continue hardest-first through live session ownership, real-agent auth/session
 behavior, multi-session isolation, typed status, run control, recovery, and
 fail-closed boundaries before visual polish.
 
-Claude OAuth Keychain broker (`docs/design/native-gui-claude-oauth-broker.md`)
-Slice 1 landed: `crates/runhaven-core/src/provider/claude_oauth_keychain.rs`
-(macOS-gated) stores/reads/clears a single RunHaven-owned Keychain item
-(service `RunHaven Claude OAuth`, account `claude`) behind a user-presence
-`SecAccessControl`, and captures the host `claude setup-token` into `Zeroizing`
-buffers with no disk/log copy. This reintroduces host custody for Claude only
-(reversing zero-custody), in the OS vault only. Deps: `security-framework`
-pinned `=3.5.1` (matches the codex-network-proxy exact pin; 3.7.0 would fork the
-graph) and `zeroize =1.9.0`, both in `pins.toml`. The proxy profile,
-`ClaudeAuthSource` selector, Tauri command, GUI, and rotation are later slices.
-Open maintainer live smokes: F3 dev/signed ACL behavior, F4 setup-token pipe
-capture, and the real biometric prompt. Gate 1 (adversarial + security review
-of Slices 1-3) precedes any GUI default flip.
+Claude OAuth Keychain broker (`docs/design/native-gui-claude-oauth-broker.md`
+holds the full spec and per-slice status). Slices 1 and 3 landed; Slices 4-5
+(Tauri command, capability, GUI, rotation) and Gate 1/Gate 2 remain, and the GUI
+default has not flipped. Slice 1: macOS-gated `provider/claude_oauth_keychain.rs`
+custody (user-presence `SecAccessControl`, `Zeroizing` capture, no disk/log
+copy); deps `security-framework =3.5.1` and `zeroize =1.9.0` in `pins.toml`.
+Slice 3 (broker proxy, no GUI yet): `ClaudeAuthSource` replaced the bare
+`api_key_broker_env: Option<String>` on `RunOptions`/`AgentRunPlan` with an env
+NAME (unchanged behavior) or payload-free `KeychainOAuth`, so no token can reach
+a persisted field; the marker writes only a non-secret `keychain-oauth` tag for
+OAuth (F1, test-proven). `CLAUDE_OAUTH_BROKER` reuses `BearerAuth` +
+`ANTHROPIC_BASE_URL`, pins `api.anthropic.com` + `/v1/` (no egress widening).
+The Keychain secret seam (`provider/runtime/broker_secret.rs`, no-leak tripwire)
+reads the token once per launch into the broker's in-memory secret and fails
+closed. F5: guest-forwarded `anthropic-beta` makes Bearer-only correct today.
+Open live smokes and Gate 1/Gate 2 per the design doc precede the GUI flip.
 
 For this CLI+GUI completion goal, local downloads, installs, tool runs, and
 external research are authorized when they directly reduce risk or accelerate

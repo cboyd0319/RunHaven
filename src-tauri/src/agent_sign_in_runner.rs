@@ -170,7 +170,7 @@ mod tests {
             egress_summary: "unrestricted internet egress".to_string(),
             image: "image".to_string(),
             provider_allowed_hosts: Vec::new(),
-            api_key_broker_env: None,
+            claude_auth_source: None,
             security_notices: Vec::new(),
         }
     }

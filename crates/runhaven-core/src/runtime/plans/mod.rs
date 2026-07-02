@@ -11,9 +11,9 @@ pub use resources::{
     strip_remainder_separator, volume_mount,
 };
 pub use types::{
-    AgentRunPlan, AuthScope, CONTAINER_PATH, DEFAULT_ENV_PASSTHROUGH, NetworkMode, RunOptions,
-    SUPPORTED_NETWORK_MODES, SUPPORTED_WORKSPACE_SCOPES, VOLUME_PREP_IMAGE, VOLUME_PREP_NETWORK,
-    WorkspaceScope, WorktreeRun,
+    AgentRunPlan, AuthScope, CONTAINER_PATH, ClaudeAuthSource, DEFAULT_ENV_PASSTHROUGH,
+    NetworkMode, RunOptions, SUPPORTED_NETWORK_MODES, SUPPORTED_WORKSPACE_SCOPES,
+    VOLUME_PREP_IMAGE, VOLUME_PREP_NETWORK, WorkspaceScope, WorktreeRun,
 };
 pub use validation::{
     apply_workspace_scope, default_network_mode, network_egress_summary, normalize_provider_hosts,
@@ -50,24 +50,39 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     for name in &options.env {
         validate_env_name(name)?;
     }
-    if let Some(name) = &options.api_key_broker_env {
-        validate_env_name(name)?;
-        let Some(broker_profile) = broker_profile_for_agent(options.profile.name) else {
-            bail!(
-                "the {} profile has no API-key broker; remove --api-key-broker-env",
-                options.profile.name
-            );
-        };
-        if name != broker_profile.host_env {
-            bail!(
-                "{} API key broker only accepts host environment variable {}",
-                options.profile.name,
-                broker_profile.host_env
-            );
+    match &options.claude_auth_source {
+        Some(ClaudeAuthSource::ApiKeyBrokerEnv(name)) => {
+            validate_env_name(name)?;
+            let Some(broker_profile) = broker_profile_for_agent(options.profile.name) else {
+                bail!(
+                    "the {} profile has no API-key broker; remove --api-key-broker-env",
+                    options.profile.name
+                );
+            };
+            if name != broker_profile.host_env {
+                bail!(
+                    "{} API key broker only accepts host environment variable {}",
+                    options.profile.name,
+                    broker_profile.host_env
+                );
+            }
+            if options.network != NetworkMode::Provider {
+                bail!("API key broker requires --network provider");
+            }
         }
-        if options.network != NetworkMode::Provider {
-            bail!("API key broker requires --network provider");
+        Some(ClaudeAuthSource::KeychainOAuth) => {
+            // The Keychain OAuth broker is Claude-only (design C): the token is a
+            // Claude subscription OAuth token injected as `Authorization: Bearer`
+            // to api.anthropic.com. No env var name is read here; the token is
+            // fetched from the Keychain at broker-spawn.
+            if options.profile.name != "claude" {
+                bail!("the Claude Keychain OAuth broker is only available for the claude profile");
+            }
+            if options.network != NetworkMode::Provider {
+                bail!("the Claude OAuth broker requires --network provider");
+            }
         }
+        None => {}
     }
     validate_resource_options(&options.cpus, &options.memory, &options.user)?;
     if uses_root_identity(&options.user) && !options.allow_root_user {
@@ -246,7 +261,7 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
             .collect();
     }
     if options
-        .api_key_broker_env
+        .claude_auth_source
         .as_ref()
         .and_then(|_| broker_profile_for_agent(options.profile.name))
         .is_some_and(|profile| {
@@ -282,11 +297,11 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
         egress_summary: network_egress_summary(
             options.network,
             &provider_allowed_hosts,
-            options.api_key_broker_env.is_some(),
+            options.claude_auth_source.is_some(),
         ),
         image,
         provider_allowed_hosts,
-        api_key_broker_env: options.api_key_broker_env,
+        claude_auth_source: options.claude_auth_source,
         security_notices,
     })
 }

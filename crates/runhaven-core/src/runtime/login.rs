@@ -179,7 +179,7 @@ fn build_sandbox_login_run_plan(
         allow_sensitive_workspace: false,
         allow_root_user: false,
         provider_hosts: Vec::new(),
-        api_key_broker_env: None,
+        claude_auth_source: None,
         worktree: None,
         run_id: None,
     })
@@ -261,7 +261,7 @@ mod tests {
         // host login, and carries no token or API-key broker.
         assert!(plan.command.iter().any(|arg| arg == "codex"));
         assert!(plan.command.iter().any(|arg| arg == "--device-auth"));
-        assert!(plan.api_key_broker_env.is_none());
+        assert!(plan.claude_auth_source.is_none());
         // Captured-output runner: no --tty is added to the run command.
         assert!(!plan.command.iter().any(|arg| arg == "--tty"));
         // Claude now has an in-sandbox login command, so a plan builds; the
@@ -299,7 +299,7 @@ mod tests {
         assert_eq!(user, Some("agent"));
         assert!(!plan.command.iter().any(|arg| arg == "root"));
         // No token or API-key broker is ever injected.
-        assert!(plan.api_key_broker_env.is_none());
+        assert!(plan.claude_auth_source.is_none());
         // The caller's login id becomes the run id (the terminal session key).
         assert_eq!(plan.run_id.as_deref(), Some("login-seam"));
         // An agent with no in-sandbox login still fails closed.

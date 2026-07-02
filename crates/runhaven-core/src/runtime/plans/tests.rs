@@ -28,7 +28,7 @@ fn default_plan_uses_non_root_read_only_root_and_project_mount() {
         allow_sensitive_workspace: false,
         allow_root_user: false,
         provider_hosts: Vec::new(),
-        api_key_broker_env: None,
+        claude_auth_source: None,
         worktree: None,
         run_id: None,
     })
@@ -81,7 +81,7 @@ fn volume_prep_container_drops_caps_to_minimum() {
         allow_sensitive_workspace: false,
         allow_root_user: false,
         provider_hosts: Vec::new(),
-        api_key_broker_env: None,
+        claude_auth_source: None,
         worktree: None,
         run_id: None,
     })
@@ -134,7 +134,7 @@ fn auth_scope_agent_shares_one_volume_across_workspaces() {
             allow_sensitive_workspace: false,
             allow_root_user: false,
             provider_hosts: Vec::new(),
-            api_key_broker_env: None,
+            claude_auth_source: None,
             worktree: None,
             run_id: None,
         })
@@ -171,7 +171,7 @@ fn session_names_get_distinct_container_names() {
             allow_sensitive_workspace: false,
             allow_root_user: false,
             provider_hosts: Vec::new(),
-            api_key_broker_env: None,
+            claude_auth_source: None,
             worktree: None,
             run_id: None,
         })
@@ -209,7 +209,7 @@ fn provider_plan_normalizes_extra_hosts_and_rejects_ip_literals() {
         allow_sensitive_workspace: false,
         allow_root_user: false,
         provider_hosts: vec!["API.Example.COM.".to_string()],
-        api_key_broker_env: None,
+        claude_auth_source: None,
         worktree: None,
         run_id: None,
     };
@@ -251,7 +251,9 @@ fn api_key_broker_accepts_brokered_profiles_only_on_provider_network() {
         allow_sensitive_workspace: false,
         allow_root_user: false,
         provider_hosts: Vec::new(),
-        api_key_broker_env: Some(api_key_broker_env.to_string()),
+        claude_auth_source: Some(ClaudeAuthSource::ApiKeyBrokerEnv(
+            api_key_broker_env.to_string(),
+        )),
         worktree: None,
         run_id: None,
     };
@@ -263,7 +265,7 @@ fn api_key_broker_accepts_brokered_profiles_only_on_provider_network() {
     ] {
         let plan = build_run_plan(options_for(agent, NetworkMode::Provider, env_name))
             .unwrap_or_else(|error| panic!("{agent} broker should plan: {error}"));
-        assert_eq!(plan.api_key_broker_env.as_deref(), Some(env_name));
+        assert_eq!(plan.api_key_broker_env_name(), Some(env_name));
         assert!(plan.egress_summary.contains("API key broker enabled"));
     }
 
@@ -319,7 +321,7 @@ fn security_notices_track_lower_security_choices() {
         allow_sensitive_workspace: false,
         allow_root_user: false,
         provider_hosts: Vec::new(),
-        api_key_broker_env: None,
+        claude_auth_source: None,
         worktree: None,
         run_id: None,
     };
@@ -409,7 +411,7 @@ fn ssh_forwarding_adds_the_agent_socket_flag_warns_and_mounts_no_keys() {
         allow_sensitive_workspace: false,
         allow_root_user: false,
         provider_hosts: Vec::new(),
-        api_key_broker_env: None,
+        claude_auth_source: None,
         worktree: None,
         run_id: None,
     })

@@ -93,7 +93,7 @@ impl LaunchPlanData {
                 name: plan.network_name.clone(),
                 summary: plan.egress_summary.clone(),
                 provider_allowed_hosts: plan.provider_allowed_hosts.clone(),
-                api_key_broker_env: plan.api_key_broker_env.clone(),
+                api_key_broker_env: plan.api_key_broker_env_name().map(str::to_string),
             },
             boundary: LaunchBoundaryData {
                 mounted_workspace: format!("{} -> /workspace", plan.workspace.display()),

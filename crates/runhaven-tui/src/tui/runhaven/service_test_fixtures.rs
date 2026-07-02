@@ -38,7 +38,7 @@ pub(crate) fn confirm_required_preview_for_tests() -> AgentLaunchPreview {
             name: Some("runhaven-provider".to_string()),
             summary: "provider allowlist".to_string(),
             provider_allowed_hosts: vec!["api.openai.com".to_string()],
-            api_key_broker_env: None,
+            claude_auth_source: None,
         },
         boundary: LaunchBoundaryData {
             mounted_workspace: "/tmp/project -> /workspace".to_string(),
@@ -78,7 +78,7 @@ pub(crate) fn confirm_required_preview_for_tests() -> AgentLaunchPreview {
         egress_summary: "provider allowlist".to_string(),
         image: "runhaven/codex:0.1.0".to_string(),
         provider_allowed_hosts: vec!["api.openai.com".to_string()],
-        api_key_broker_env: None,
+        claude_auth_source: None,
         security_notices: vec!["This plan uses a less safe launch option.".to_string()],
     };
 

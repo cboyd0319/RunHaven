@@ -1,7 +1,11 @@
 mod network;
 
+use super::broker_secret::require_api_key_broker_secret_with_sources;
 use super::decision_log::{DecisionCounts, provider_decision_deltas};
 use super::*;
+use anyhow::anyhow;
+use zeroize::Zeroizing;
+
 use crate::provider::egress::ProxyDecision;
 use crate::runtime::launch::{AgentCommandContext, AgentCommandRunner};
 use crate::support::paths::override_cache_root_for_tests;
@@ -130,36 +134,140 @@ fn broker_plan(profile_name: &str, agent: &str) -> AgentRunPlan {
         egress_summary: String::new(),
         image: image.to_string(),
         provider_allowed_hosts: vec!["example.com".to_string()],
-        api_key_broker_env: Some("PROVIDER_KEY".to_string()),
+        claude_auth_source: Some(crate::runtime::plans::ClaudeAuthSource::ApiKeyBrokerEnv(
+            "PROVIDER_KEY".to_string(),
+        )),
         security_notices: Vec::new(),
     }
+}
+
+use crate::runtime::plans::ClaudeAuthSource;
+
+/// Keychain reader stub for the env-var broker tests: the API-key path MUST NOT
+/// read the Keychain, so calling this is a test failure.
+fn keychain_never() -> Result<Option<Zeroizing<Vec<u8>>>> {
+    panic!("the API-key broker path must never read the Keychain");
 }
 
 #[test]
 fn api_key_broker_secret_requires_fixed_host_env() {
     let mut plan = broker_plan("codex", "codex");
-    plan.api_key_broker_env = Some("OPENAI_API_KEY".to_string());
+    plan.claude_auth_source = Some(ClaudeAuthSource::ApiKeyBrokerEnv(
+        "OPENAI_API_KEY".to_string(),
+    ));
 
-    let secret = require_api_key_broker_secret_with_env(&plan, |name| {
-        (name == "OPENAI_API_KEY").then(|| "test-openai-key".to_string())
-    })
+    let secret = require_api_key_broker_secret_with_sources(
+        &plan,
+        |name| (name == "OPENAI_API_KEY").then(|| "test-openai-key".to_string()),
+        keychain_never,
+    )
     .expect("broker secret")
     .expect("broker enabled");
 
     assert_eq!(secret.0.host_env, "OPENAI_API_KEY");
     assert_eq!(secret.1, "test-openai-key");
 
-    plan.api_key_broker_env = Some("AWS_SECRET_ACCESS_KEY".to_string());
-    let wrong_env =
-        require_api_key_broker_secret_with_env(&plan, |_| Some("must-not-be-read".to_string()))
-            .expect_err("unrelated env rejected");
+    plan.claude_auth_source = Some(ClaudeAuthSource::ApiKeyBrokerEnv(
+        "AWS_SECRET_ACCESS_KEY".to_string(),
+    ));
+    let wrong_env = require_api_key_broker_secret_with_sources(
+        &plan,
+        |_| Some("must-not-be-read".to_string()),
+        keychain_never,
+    )
+    .expect_err("unrelated env rejected");
     assert!(wrong_env.to_string().contains("OPENAI_API_KEY"));
 
-    plan.api_key_broker_env = Some("OPENAI_API_KEY".to_string());
-    let missing = require_api_key_broker_secret_with_env(&plan, |_| None)
+    plan.claude_auth_source = Some(ClaudeAuthSource::ApiKeyBrokerEnv(
+        "OPENAI_API_KEY".to_string(),
+    ));
+    let missing = require_api_key_broker_secret_with_sources(&plan, |_| None, keychain_never)
         .expect_err("missing fixed env rejected");
     assert!(missing.to_string().contains("OPENAI_API_KEY"));
     assert!(missing.to_string().contains("not set on the host"));
+}
+
+#[test]
+fn keychain_oauth_source_reads_token_from_the_keychain_seam_not_env() {
+    // The Claude OAuth run selects the Bearer OAuth profile and takes its secret
+    // from the injected Keychain reader, never from an env var.
+    let mut plan = broker_plan("claude", "claude");
+    plan.claude_auth_source = Some(ClaudeAuthSource::KeychainOAuth);
+
+    let (profile, token) = require_api_key_broker_secret_with_sources(
+        &plan,
+        |_| panic!("the Keychain OAuth path must never read an env var"),
+        || {
+            Ok(Some(Zeroizing::new(
+                b"  sk-ant-oat01-FROM-KEYCHAIN  ".to_vec(),
+            )))
+        },
+    )
+    .expect("keychain secret")
+    .expect("broker enabled");
+
+    assert_eq!(
+        profile,
+        crate::provider::auth_broker::CLAUDE_OAUTH_BROKER,
+        "the OAuth source must select the Bearer OAuth broker, not the x-api-key broker"
+    );
+    assert_eq!(
+        profile.injection.injected_header_names(),
+        vec!["authorization"]
+    );
+    assert_eq!(token, "sk-ant-oat01-FROM-KEYCHAIN", "the token is trimmed");
+}
+
+#[test]
+fn keychain_oauth_source_fails_closed_on_read_error_or_missing_item() {
+    let mut plan = broker_plan("claude", "claude");
+    plan.claude_auth_source = Some(ClaudeAuthSource::KeychainOAuth);
+
+    // Read failure / user cancel: the read seam returns an error and the run
+    // fails closed with a fixed, path-free message.
+    let read_error = require_api_key_broker_secret_with_sources(
+        &plan,
+        |_| None,
+        || Err(anyhow!("could not read the Claude token from the Keychain")),
+    )
+    .expect_err("read error must fail the run");
+    assert!(
+        read_error
+            .to_string()
+            .contains("could not read the Claude token")
+    );
+
+    // No stored item: fail closed with a plain sign-in prompt.
+    let missing = require_api_key_broker_secret_with_sources(&plan, |_| None, || Ok(None))
+        .expect_err("missing item must fail the run");
+    assert!(missing.to_string().contains("no Claude token is saved"));
+
+    // Empty stored token: fail closed.
+    let empty = require_api_key_broker_secret_with_sources(
+        &plan,
+        |_| None,
+        || Ok(Some(Zeroizing::new(b"   ".to_vec()))),
+    )
+    .expect_err("empty token must fail the run");
+    assert!(empty.to_string().contains("empty"));
+}
+
+#[test]
+fn keychain_oauth_source_is_claude_only() {
+    // A non-Claude profile cannot use the Keychain OAuth broker.
+    let mut plan = broker_plan("codex", "codex");
+    plan.claude_auth_source = Some(ClaudeAuthSource::KeychainOAuth);
+    let error = require_api_key_broker_secret_with_sources(
+        &plan,
+        |_| None,
+        || Ok(Some(Zeroizing::new(b"sk-ant-oat01-x".to_vec()))),
+    )
+    .expect_err("non-claude oauth rejected");
+    assert!(
+        error
+            .to_string()
+            .contains("only available for the claude profile")
+    );
 }
 
 #[test]

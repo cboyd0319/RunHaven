@@ -1,10 +1,12 @@
 # Native GUI Claude OAuth-Token Broker (Design C)
 
-Status: Slice 1 (custody surface) implemented in
-`crates/runhaven-core/src/provider/claude_oauth_keychain.rs` (macOS-gated);
-Slices 2-5 and the Gate 1/Gate 2 reviews remain. A custody-surface adversarial
-gate runs before commit. Slices 2+ (proxy profile, `ClaudeAuthSource` selector,
-Tauri command, GUI, rotation) are still design only.
+Status: Slice 1 (custody surface, Section 2 capture folded in) and Slice 3
+(broker proxy extension: `CLAUDE_OAUTH_BROKER` profile, `ClaudeAuthSource`
+selector, Keychain secret-source seam, F5 decision) are implemented. Slice 2
+(host capture) landed inside Slice 1. Slices 4-5 (Tauri command, GUI, rotation)
+and the Gate 1/Gate 2 reviews remain; the GUI default has NOT flipped to path C.
+Gate 1 (adversarial + security review of Slices 1-3 together) runs before the
+GUI default flip.
 
 This design adds a second Claude auth path to the desktop app: a macOS Keychain
 OAuth-token broker (path C, the new default), alongside the existing in-sandbox
@@ -457,11 +459,37 @@ GUI default flips to path C.
   a host PTY (`open_gui_attach_pty`). Tests reuse `extract_token`, assert the
   parse-failure path logs only operation + agent (never the buffer), and assert no
   token reaches logs, records, or registry.
-- Slice 3: `CLAUDE_OAUTH_BROKER` profile plus the Keychain secret source seam in
-  `provider/runtime.rs`, the `ClaudeAuthSource` selector (Section 3, F1), and the
-  `anthropic-beta` decision (F5). Tests: Bearer injection, placeholder stripping,
-  path and host pinning, no egress widening, and an OAuth-run marker payload with
-  neither token bytes nor any secret-derived value.
+- Slice 3 status: IMPLEMENTED. `ClaudeAuthSource` (in
+  `runtime/plans/types.rs`) replaced the bare `api_key_broker_env: Option<String>`
+  on `RunOptions` and `AgentRunPlan`, with `ApiKeyBrokerEnv(String)` (env NAME
+  only, unchanged behavior) and payload-free `KeychainOAuth`. Every workspace
+  construction/read site migrated (CLI, Tauri, core, and TUI compile-only). The
+  marker (`runtime/active/markers.rs`) now writes the env NAME for the API-key
+  path and only a `"claude_auth_source": "keychain-oauth"` tag for the OAuth path,
+  never a token or secret-derived value; a test proves the OAuth marker carries
+  neither token bytes nor an env name nor the Keychain label. `CLAUDE_OAUTH_BROKER`
+  (`provider/auth_broker/profiles.rs`) reuses the existing `BearerAuth` injection
+  and `ANTHROPIC_BASE_URL` redirect, pins `api.anthropic.com` + `/v1/` (no egress
+  widening). The Keychain secret-source seam lives in
+  `provider/runtime/broker_secret.rs` (split out of `runtime.rs` for the file-size
+  ceiling): `KeychainOAuth` reads the token via `claude_oauth_keychain::read_token`
+  (macOS-gated; non-macOS fails closed) once per run launch into the broker's
+  in-memory secret, and fails closed with fixed path-free errors on read
+  cancel/error, a missing item, or a non-text/empty token. F5 decision: the guest
+  Claude Code sends `anthropic-beta` and `headers.rs` forwards it unchanged, so
+  Bearer-only injection is correct today; the host-side fixed-header seam is
+  documented on `CLAUDE_OAUTH_BROKER` for a future guest that stops sending it.
+  Tests cover Bearer injection + guest-`authorization` stripping + beta
+  forwarding, host/path pinning, the Keychain seam (fake reader), fail-closed
+  paths, Claude-only enforcement, and the no-secret marker. MAINTAINER LIVE SMOKE
+  still open: a real Keychain read triggering the biometric prompt and injecting a
+  live token to `api.anthropic.com` (Gate 2). Original plan below.
+- Slice 3 (original plan): `CLAUDE_OAUTH_BROKER` profile plus the Keychain secret
+  source seam in `provider/runtime.rs`, the `ClaudeAuthSource` selector
+  (Section 3, F1), and the `anthropic-beta` decision (F5). Tests: Bearer
+  injection, placeholder stripping, path and host pinning, no egress widening, and
+  an OAuth-run marker payload with neither token bytes nor any secret-derived
+  value.
 - Gate 1 (before GUI default flip): adversarial and security review of Slices 1 to
   3 together, focused on the custody boundary, the claim set wording, and the
   zeroization residual. Blocking.
