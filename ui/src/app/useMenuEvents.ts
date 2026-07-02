@@ -40,7 +40,7 @@ export const MENU_FOCUS_SELECTORS: Record<string, string> = {
   "repair-session":
     `[aria-label="Confirm clearing this session's stale session record."]`,
   "cleanup-session":
-    `[aria-label="Confirm deleting this session's saved worktree."]`,
+    `[aria-label="Confirm cleaning up this session's saved copy."]`,
   "send-message": 'textarea[placeholder="Type a message for this session."]',
   "show-output":
     '[aria-label="I understand raw output may include private data."]',

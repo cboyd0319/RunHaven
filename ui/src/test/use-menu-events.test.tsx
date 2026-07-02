@@ -298,7 +298,7 @@ describe("menu contract tripwires", () => {
       "Confirm stopping this",
       "Confirm hard-stopping this",
       "Confirm clearing this",
-      "Confirm deleting this session's saved worktree.",
+      "Confirm cleaning up this session's saved copy.",
       "Type a message for this session.",
       "I understand raw output may include private data.",
     ]

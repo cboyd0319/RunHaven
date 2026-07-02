@@ -71,7 +71,7 @@ function NetworkCleanupSection() {
         running session are skipped.
       </p>
       <div>
-        <Button type="button" variant="outline" disabled={loading} onClick={() => void loadPreview()}>
+        <Button type="button" disabled={loading} onClick={() => void loadPreview()}>
           {loading ? "Checking..." : "Check for stale networks"}
         </Button>
       </div>
@@ -103,7 +103,7 @@ function NetworkCleanupSection() {
             <span>Yes, remove these stale networks.</span>
           </label>
           <div>
-            <Button type="button" disabled={busy || !confirm} onClick={() => void prune()}>
+            <Button type="button" variant="outline" disabled={busy || !confirm} onClick={() => void prune()}>
               {busy ? "Removing..." : "Remove stale networks"}
             </Button>
           </div>

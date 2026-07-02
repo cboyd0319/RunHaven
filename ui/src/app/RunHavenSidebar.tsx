@@ -28,19 +28,13 @@ import {
 import { cn } from "@/lib/utils"
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 
-import {
-  authScopeLabel,
-  authStatusLabel,
-  networkLabel,
-  safeBackendLabel,
-} from "./labels"
+import { safeBackendLabel } from "./labels"
 import { groupSessions, type NavDestination } from "./navigation"
 import {
   sessionAttention,
   type SessionAttention,
   type SessionAttentionKind,
 } from "./sessionAttention"
-import { sessionIdentityLabel, sessionInputLabel } from "./sessionIdentity"
 
 // Sidebar taxonomy per docs/plans/native-gui-navigation-spec.md section 2:
 // a fixed Home row first, dynamic Active and Finished session groups (hidden
@@ -217,25 +211,15 @@ function SessionRow({
         onClick={onSelect}
       >
         <Terminal />
+        {/* Spec section 2 row anatomy: primary label, one status line, and the
+            trailing attention badge. Auth, scope, network, and input detail
+            live in the session view and its Details disclosure, not the row. */}
         <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
           <div className="truncate text-sm font-medium">{session.title}</div>
-          <div className="truncate text-[11px] text-muted-foreground">
-            {sessionIdentityLabel(session)}
-          </div>
-          <div className="mt-1 text-[11px] leading-4 text-muted-foreground">
+          <div className="truncate text-[11px] leading-4 text-muted-foreground">
             {attention
               ? attention.label
               : safeBackendLabel(session.statusLabel, "Unknown")}
-          </div>
-          <div className="text-[11px] leading-4 text-muted-foreground">
-            {authStatusLabel(session.authStatus)}
-            {" • "}
-            {authScopeLabel(session.authScope)}
-          </div>
-          <div className="text-[11px] leading-4 text-muted-foreground">
-            {networkLabel(session.network)}
-            {" • "}
-            {sessionInputLabel(session)}
           </div>
         </div>
       </SidebarMenuButton>

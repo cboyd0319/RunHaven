@@ -392,3 +392,42 @@ slices - split by flow before it nears 450.
 | 14 | Plain labels | holds | `labels.ts` scrubbing + plain copy across cards; pinned by sidebar leak tests |
 
 Current violations to burn down: 6, 10, 11, 13 (full) and 4, 7 (partial).
+
+## 6. Acceptance-Audit Follow-Ups (2026-07-01)
+
+A post-Wave-A/B invariant-acceptance pass found small residual gaps against
+spec sections 2, 4, 6, and 10. Resolved in this slice (frontend plus a menu
+selector), all baselines green:
+
+- M1 (undocumented Cmd-B): removed the vendored shadcn global Cmd/Ctrl-B
+  sidebar keydown from `ui/src/components/ui/sidebar.tsx` (it fired inside the
+  composer textarea and collided with Bold, and was never a documented
+  toggle). Opt-Cmd-S and the sidebar trigger button remain the toggle.
+- M2 (Cmd-Return to send, spec section 6): added a Cmd/Ctrl-Return handler on
+  the session composer (`ui/src/app/SessionInputCard.tsx`) that presses the
+  same confirm-gated Send path (no native-dialog bypass). Decision: the
+  composer handler is the real shortcut; the **Send Message** menu item keeps
+  focusing the composer with no accelerator, so Cmd-Return is not double-bound.
+  Documented in `docs/DESKTOP_APP.md`.
+- M3 (row anatomy, spec section 2): collapsed each sidebar session row in
+  `ui/src/app/RunHavenSidebar.tsx` to the spec anatomy (primary label, one
+  status line, trailing attention badge). Removed the identity, auth/scope, and
+  network/input lines; that detail already lives in the session view and its
+  Details disclosure. Invariant 7's "rows carry 4 info lines" gap is resolved.
+- M4 (jargon labels, invariant 14): renamed the finished-session cleanup
+  control from "Delete worktree" / "Confirm deleting this session's saved
+  worktree." to "Clean up session" / "Confirm cleaning up this session's saved
+  copy." (`ui/src/app/RunStatusCard.tsx`), and updated the menu focus selector
+  (`ui/src/app/useMenuEvents.ts`) and its drift test together. Copy only; the
+  confirm gate and worktree-ownership check are unchanged.
+- NAV EDGE (invariant 10): `navigationAfterSessionRemoval`
+  (`ui/src/app/navigation.ts`) now returns Home when the removed session was
+  never in the previous list, instead of selecting a remaining session the user
+  never chose.
+- L1 (invariant 4, Maintenance view): made the safe "Check for stale networks"
+  preview button the one prominent action and demoted the mutating "Remove
+  stale networks" to an outline button (`ui/src/app/views/MaintenanceView.tsx`).
+- L2 (view-aware Cmd-R refresh) and L3 (focus the attention banner's fix button
+  on a jump) were reviewed and left as recorded deferrals: neither is needed
+  for the invariants above, and both are cross-cutting enough to belong with
+  the menu/focus work rather than this copy-and-shortcut slice.

@@ -180,7 +180,7 @@ describe("RunHavenSidebar", () => {
     expect(html).not.toContain(">3<")
   })
 
-  it("keeps same-agent and mixed-agent sessions distinguishable", () => {
+  it("shows only the primary label and one status line per row", () => {
     const html = renderSidebar(
       [
         session("alpha", {
@@ -194,7 +194,7 @@ describe("RunHavenSidebar", () => {
         session("beta", {
           agent: "claude",
           session: "review",
-          title: "Claude - docs",
+          title: "Claude - review",
           project: "/Users/c/private/docs",
           authStatus: "ready",
           authScope: "project",
@@ -211,34 +211,28 @@ describe("RunHavenSidebar", () => {
           session: "gamma",
           title: "Codex - gamma",
           project: "sandbox",
-          authStatus: "ready",
-          authScope: "project",
-          network: "internet",
-          input: {
-            attached: false,
-            status: "detached",
-            detail: "Input is not attached for this session.",
-          },
-          statusLabel: "Needs auth",
+          statusLabel: "Running",
         }),
       ],
       { kind: "session", id: "beta" },
     )
 
+    // Spec section 2 row anatomy: primary label plus a single status line.
     expect(html).toContain("Claude - docs")
+    expect(html).toContain("Claude - review")
     expect(html).toContain("Codex - gamma")
-    expect(html).toContain("Project docs / Session planning")
-    expect(html).toContain("Project docs / Session review")
-    expect(html).toContain("Project sandbox / Session gamma")
-    expect(html).toContain("API key broker")
-    expect(html).toContain("Ready")
-    expect(html).toContain("Shared agent login")
-    expect(html).toContain("Project")
-    expect(html).toContain("Provider only")
-    expect(html).toContain("Local only")
-    expect(html).toContain("Internet")
-    expect(html).toContain("Input ready")
-    expect(html).toContain("Input blocked")
+    expect(html).toContain("Waiting")
+    expect(html).toContain("Running")
+    // The auth, scope, network, input, and identity detail no longer lives in
+    // the row; it stays in the session view and its Details disclosure.
+    expect(html).not.toContain("Project docs / Session")
+    expect(html).not.toContain("API key broker")
+    expect(html).not.toContain("Shared agent login")
+    expect(html).not.toContain("Provider only")
+    expect(html).not.toContain("Local only")
+    expect(html).not.toContain("Input ready")
+    expect(html).not.toContain("Input blocked")
+    // One selection, and no secret ever reaches a row.
     expect(html.match(/data-active="true"/g) ?? []).toHaveLength(1)
     expect(html).toContain('aria-current="page"')
     expect(html).not.toContain("/Users/c/private")
@@ -246,17 +240,9 @@ describe("RunHavenSidebar", () => {
     expect(html).not.toContain("runhaven-codex-hidden-home")
   })
 
-  it("shows compact auth labels without leaking unsafe auth values", () => {
+  it("keeps rows secret-safe when auth values carry sensitive text", () => {
     const html = renderSidebar(
       [
-        session("login", {
-          session: "saved",
-          title: "Claude - saved",
-          project: "/Users/c/private/saved",
-          authStatus: "login-state",
-          detailCommand:
-            "runhaven runs show /Users/c/private/saved --env TOKEN=value",
-        }),
         session("signin", {
           agent: "codex",
           session: "signin",
@@ -265,30 +251,22 @@ describe("RunHavenSidebar", () => {
           authStatus: "needs-sign-in",
           statusLabel: "Needs auth",
         }),
-        session("local", {
-          agent: "shell",
-          session: "local",
-          title: "Shell - local",
-          project: "local",
-          authStatus: "no-auth-needed",
-          network: "internal",
-        }),
         session("unsafe", {
           agent: "gemini",
           session: "unsafe",
           title: "Gemini - unsafe",
           project: "unsafe",
           authStatus: "/Users/c/private/TOKEN=value",
+          detailCommand:
+            "runhaven runs show /Users/c/private/unsafe --env TOKEN=value",
         }),
       ],
-      { kind: "session", id: "login" },
+      { kind: "session", id: "signin" },
     )
 
-    expect(html).toContain("Login state")
+    // The attention status names the state; raw auth values never render.
+    expect(html).toContain("Codex - signin")
     expect(html).toContain("Needs sign-in")
-    expect(html).toContain("No auth needed")
-    expect(html).toContain("Unknown")
-    expect(html).toContain("Project saved")
     expect(html).not.toContain("/Users/c/private")
     expect(html).not.toContain("TOKEN=value")
   })

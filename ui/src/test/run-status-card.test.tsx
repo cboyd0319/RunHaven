@@ -55,8 +55,8 @@ describe("RunStatusCard", () => {
       controlConfirmations: confirmedControls
     });
 
-    expect(unavailable).not.toContain("Delete worktree");
-    expect(unavailable).not.toContain("Confirm deleting");
+    expect(unavailable).not.toContain("Clean up session");
+    expect(unavailable).not.toContain("Confirm cleaning up");
     expect(unavailable).not.toContain("Stop run");
 
     const available = renderCard({
@@ -64,8 +64,8 @@ describe("RunStatusCard", () => {
       cleanupAvailable: true
     });
 
-    expect(available).toContain("Delete worktree");
-    expect(available).toContain("Confirm deleting this session");
+    expect(available).toContain("Clean up session");
+    expect(available).toContain("Confirm cleaning up this session");
     expect(available).not.toContain("Stop run");
     expect(available).not.toContain("Hard stop");
     expect(available).not.toContain("Repair session record");
@@ -80,7 +80,7 @@ describe("RunStatusCard", () => {
     expect(beforeAttempt).toContain("Stop run");
     expect(beforeAttempt).toContain("Hard stop");
     expect(beforeAttempt).toContain("Repair session record");
-    expect(beforeAttempt).toContain("Delete worktree");
+    expect(beforeAttempt).toContain("Clean up session");
     expect(disabledControlCount(beforeAttempt)).toBe(0);
 
     const afterAttempt = renderCard({

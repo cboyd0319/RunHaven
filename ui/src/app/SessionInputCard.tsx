@@ -73,6 +73,19 @@ export function SessionInputCard({
               value={draft}
               disabled={!inputAttached || sending}
               onChange={(event) => onDraftChange(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                // Cmd-Return (Ctrl-Return on non-mac keyboards) sends, matching
+                // the spec keyboard map. It presses the same confirm-gated Send
+                // path the button uses; nothing bypasses the native dialog.
+                if (
+                  event.key === "Enter" &&
+                  (event.metaKey || event.ctrlKey) &&
+                  canSend
+                ) {
+                  event.preventDefault()
+                  onSend()
+                }
+              }}
               placeholder="Type a message for this session."
             />
             <p className="text-sm text-muted-foreground">

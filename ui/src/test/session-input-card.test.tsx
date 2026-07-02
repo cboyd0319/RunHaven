@@ -1,8 +1,13 @@
+// @vitest-environment happy-dom
+import { createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { SessionInputCard } from "../app/SessionInputCard";
 import type { ManagedSessionSummary } from "../commands/runhaven";
+
+import { act } from "./render-hook";
 
 function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSummary {
   return {
@@ -108,5 +113,80 @@ describe("SessionInputCard", () => {
         />
       )
     ).toBe("");
+  });
+
+  it("sends on Cmd/Ctrl-Return through the same Send path, not plain Enter", async () => {
+    const onSend = vi.fn();
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        createElement(SessionInputCard, {
+          session: session(),
+          draft: "ready to send",
+          sending: false,
+          error: "",
+          acceptedMessage: "",
+          onDraftChange: () => undefined,
+          onSend
+        })
+      );
+    });
+
+    const textarea = container.querySelector("textarea");
+    expect(textarea).not.toBeNull();
+
+    function press(init: KeyboardEventInit) {
+      textarea?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true, ...init })
+      );
+    }
+
+    // Plain Enter is a newline in the composer, never a send.
+    await act(async () => press({}));
+    expect(onSend).not.toHaveBeenCalled();
+
+    // Cmd-Return (and Ctrl-Return) send.
+    await act(async () => press({ metaKey: true }));
+    await act(async () => press({ ctrlKey: true }));
+    expect(onSend).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("does not send on Cmd-Return when the draft cannot be sent", async () => {
+    const onSend = vi.fn();
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        createElement(SessionInputCard, {
+          session: session(),
+          draft: "",
+          sending: false,
+          error: "",
+          acceptedMessage: "",
+          onDraftChange: () => undefined,
+          onSend
+        })
+      );
+    });
+
+    container
+      .querySelector("textarea")
+      ?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Enter",
+          metaKey: true,
+          bubbles: true
+        })
+      );
+    expect(onSend).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+    });
   });
 });

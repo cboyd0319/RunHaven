@@ -140,10 +140,13 @@ describe("navigationAfterSessionRemoval", () => {
     })
   })
 
-  it("falls back deliberately even when the removed row was never seen", () => {
+  it("goes Home when the removed row was never in the previous list", () => {
+    // With no neighbor the user was actually looking at, selecting a remaining
+    // session would be the app choosing a destination on its own (invariant
+    // 10). Home is the honest fallback, whether or not sessions remain.
     expect(
       navigationAfterSessionRemoval("ghost", [], [active[1]]),
-    ).toEqual({ kind: "session", id: "middle" })
+    ).toEqual({ kind: "home" })
     expect(navigationAfterSessionRemoval("ghost", [], [])).toEqual({
       kind: "home",
     })

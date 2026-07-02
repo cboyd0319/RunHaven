@@ -77,18 +77,24 @@ export function navigationAfterSessionRemoval(
       ? "finished"
       : null
 
-  if (removedGroup) {
-    const rows = previousGroups[removedGroup]
-    const index = rows.findIndex((session) => session.id === removedId)
-    for (let below = index + 1; below < rows.length; below += 1) {
-      if (remainingIds.has(rows[below].id)) {
-        return { kind: "session", id: rows[below].id }
-      }
+  // The removed session was never in the list we knew about, so there is no
+  // neighbor the user was actually looking at. Go Home instead of selecting a
+  // remaining session the user never chose (spec invariant 10: the app never
+  // self-navigates onto a destination the user did not pick).
+  if (removedGroup === null) {
+    return HOME_NAV
+  }
+
+  const rows = previousGroups[removedGroup]
+  const index = rows.findIndex((session) => session.id === removedId)
+  for (let below = index + 1; below < rows.length; below += 1) {
+    if (remainingIds.has(rows[below].id)) {
+      return { kind: "session", id: rows[below].id }
     }
-    for (let above = index - 1; above >= 0; above -= 1) {
-      if (remainingIds.has(rows[above].id)) {
-        return { kind: "session", id: rows[above].id }
-      }
+  }
+  for (let above = index - 1; above >= 0; above -= 1) {
+    if (remainingIds.has(rows[above].id)) {
+      return { kind: "session", id: rows[above].id }
     }
   }
 

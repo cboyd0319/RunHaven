@@ -131,8 +131,9 @@ Newer sessions sit higher in each group, and rows never jump around when a
 run's status changes. If a session needs you, its row shows a small badge with
 a symbol in a dot plus a status line that names the state: Failed, Needs
 sign-in, Not responding, or Ready to review. If the session you are viewing is
-removed, the app moves you to the nearest session, or Home when none are left.
-It never switches views on its own for any other reason.
+removed, the app moves you to the nearest session in the sidebar, or Home when
+there is no clear neighbor to pick. It never switches views on its own for any
+other reason.
 
 The app icon in your Dock shows the same signal as one number: how many
 sessions need you right now, and nothing else. The number goes down as you
@@ -165,6 +166,7 @@ looking at. Everything else in the menus works from any window.
 | Cmd-J | Jump to the next session that needs you |
 | Cmd-. | Go to the selected session's Stop control |
 | Opt-Cmd-. | Go to the selected session's Hard stop control |
+| Cmd-Return | Send the message you typed in the session's composer |
 | Shift-Cmd-O | Go to the output confirm box for the selected session |
 | Cmd-R | Check again: refresh the app's status |
 | Opt-Cmd-1 / 2 / 3 | Go to Agents / Diagnostics / Maintenance |
@@ -179,6 +181,12 @@ Recover, Discard) live in the finished session's review for now, and Open
 Recent arrives with a recent-projects list. **Open in New Window** opens a
 watching window for the selected session; see "Watch a session in its own
 window" below.
+
+**Send Message** in the Session menu takes you to that session's composer, the
+same way Stop takes you to its Stop control. The real send shortcut is
+Cmd-Return, pressed in the composer: it sends the message you typed through the
+same confirm step and native dialog as the Send button. The menu item carries
+no shortcut of its own so Cmd-Return has one clear meaning.
 
 ## Settings
 
@@ -207,9 +215,10 @@ no drafts, no output, no paths, and no sign-in data are saved this way.
 
 ## Watch your sessions
 
-Each run becomes a managed session in the sidebar. The sidebar shows a short
-identity for every session so you can tell them apart: the agent, the project,
-the status, the sign-in state, the network, and whether input is attached.
+Each run becomes a managed session in the sidebar. Each row stays simple to
+scan: the agent and project as the row's name, and one short status line below
+it. The sign-in state, network, and input detail live in the session's own view
+and its Details section, not in the sidebar row.
 
 Select a session to see it top to bottom in one reading order. If the session
 needs you, a banner leads the view and names the one fix: a failed run points
@@ -283,6 +292,11 @@ The app resolves the run in the backend, checks that the worktree is one
 RunHaven made and that the run has stopped, and refuses if anything is still
 active or looks unexpected. It never shows raw file paths, saved state, or
 secrets.
+
+If you kept the isolated copy earlier, the finished session offers a
+**Clean up session** control that removes that saved copy once you no longer
+need it. Like every change, it asks you to confirm first and answers to the
+same native dialog.
 
 ## Check diagnostics
 

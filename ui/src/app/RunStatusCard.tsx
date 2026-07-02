@@ -151,8 +151,8 @@ export function RunStatusCard({
             ) : null}
             {cleanupAvailable ? (
               <RunControl
-                label="Confirm deleting this session's saved worktree."
-                button="Delete worktree"
+                label="Confirm cleaning up this session's saved copy."
+                button="Clean up session"
                 checked={controlConfirmations.cleanup}
                 disabled={controlBusy}
                 onCheckedChange={(checked) =>
