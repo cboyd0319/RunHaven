@@ -82,6 +82,11 @@ Item naming (load-bearing for the "we read only our item" claim): [J]
 - Account: `claude`. Room for future per-agent OAuth items without collision.
 - Use the data-protection keychain (`kSecUseDataProtectionKeychain`) so the item
   is an access-controlled data-protection item, not a legacy file-keychain entry.
+- Query filter (load-bearing for claim 2, "reads only the one item it created"):
+  every read and delete uses an exact `service` + `account` match. Never
+  `kSecMatchLimitAll`, never an account-only or service-only query. Claim 2 holds
+  by construction only under this exact filter. Slice 1 test asserts the query
+  dictionary pins both attributes and never sets `kSecMatchLimitAll`. [J]
 
 Accessibility class: `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`. [J]
 
@@ -91,13 +96,28 @@ Accessibility class: `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`. [J]
   long-lived one-year token to other devices or backups. For a device-bound
   broker credential that is the correct, narrower default.
 
-Access control (honest scope): the created item carries an ACL so the RunHaven
-app is a trusted application for it. [J] Do not overclaim this as absolute
-isolation. On macOS a same-user process can still be granted access by the user
-through the standard keychain prompt, and a process running with RunHaven's own
-code signature and entitlements is trusted by design. The honest boundary is:
-other apps do not get silent access to this item, and RunHaven does not read
-anyone else's items. Section 6 states the residual malware case plainly.
+Access control (honest scope), tied to code signing: [J] the created item
+carries an ACL so the RunHaven app is a trusted application for it. The
+data-protection keychain scopes access by the `keychain-access-group` /
+`application-identifier` entitlements that a signed, notarized build carries. On
+a signed RunHaven RELEASE build the ACL binds stably and other apps do not get
+silent access to the item. An unsigned or ad-hoc DEV build lacks those
+entitlements, so the ACL may not bind the same way (a prompt per rebuild, or an
+access-group fallback), and macOS 26 behavior here is volatile; Slice 1 probes it
+live. Do not overclaim absolute isolation: a same-user process with RunHaven's
+own signature, or one the user grants access to at a keychain prompt, is trusted
+by design. The honest boundary, scoped to a signed release build, is: other apps
+do not get silent access to this item, and RunHaven does not read anyone else's
+items. Section 6 states the residual malware case plainly.
+
+Dev-build fallback (decided in Slice 1, not deferred to Gate 2): [J] if the
+data-protection keychain needs entitlements the dev build cannot carry, the dev
+build uses a file-based keychain item and the signed release build uses the
+data-protection keychain. The "no silent access" guarantee is claimed only for
+the signed release path; the dev path carries its own honesty note that its item
+may prompt per rebuild or fall back to an access group. The accessibility class
+stays `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` (no iCloud sync) on both
+paths; only the cross-app isolation guarantee depends on signing.
 
 ## Section 2: setup-token orchestration
 
@@ -123,6 +143,18 @@ Capture and transience: [J]
   pipe buffers, any reallocated capacity from before the zeroizing wrapper, and
   the `claude` process's own memory. Document this residual; do not say "fully
   wiped." Add `zeroize` as an exact pin if not already present. [J]
+
+Piped-output prerequisite (verify in Slice 2 on macOS 26, [S] needed): confirm
+`claude setup-token` prints the token to a pipe (non-TTY stdout) identically to a
+TTY, since some CLIs suppress or reformat secret output when stdout is not a
+terminal. If it prints only to a TTY, capture must run under a host PTY using the
+existing `open_gui_attach_pty` pattern
+(`crates/runhaven-core/src/runtime/terminal.rs`), not a plain pipe. Decide
+pipe-vs-PTY from this live check before wiring capture. [J]
+
+Parse-failure discipline (`extract_token`): on ANY parse failure the error emits
+only the operation and the agent, never the captured buffer, because the buffer
+may itself BE the token. Slice 2 test asserts the failure path logs no buffer. [J]
 
 Fail-closed paths (each ends with no stored token and a plain-language error): [J]
 
@@ -161,6 +193,15 @@ New profile (a sibling of `CLAUDE_BROKER` in `profiles.rs`), for example
   `BROKER_PLACEHOLDER_VALUE` plus `ANTHROPIC_BASE_URL` pointed at the broker on
   the RunHaven provider network. The guest's placeholder Bearer is stripped
   host-side, so it is never usable. [S]
+- Beta header (F5): `BearerAuth` injects only `Authorization: Bearer`
+  (`headers.rs:49-51`) with no fixed extra headers, but OAuth requests to
+  Anthropic also need `anthropic-beta: ...oauth-2025-04-20...`. Today the guest
+  CLI supplies it and the broker forwards it (it is not in the hop-by-hop or
+  injected-name strip lists), so the OAuth profile depends on that guest header.
+  If Anthropic requires it server-side, inject it host-side by extending
+  `BearerAuth` with a fixed-header list mirroring `ApiKeyHeader.extra`. Either way
+  it is not a leak: the token stays host-side and only the injected `Bearer` plus
+  this non-secret beta tag leave the host. [S][J]
 
 Coexistence with the x-api-key path: the two Claude brokers are mutually
 exclusive per run and selected by which credential source is configured. The
@@ -181,9 +222,46 @@ on the host during setup-token, before any container exists, so it needs no gues
 egress change. The broker's runtime egress is the same `api.anthropic.com` the
 API-key path already allows. No egress widening. [S]
 
-The token is read from the Keychain by the host broker process only, and only
-the injected Bearer leaves the host, to `api.anthropic.com`. The guest holds a
-placeholder and never sees the real token. [S][J]
+### Plan selector and no-persist constraint (F1, load-bearing)
+
+The OAuth token MUST NEVER populate `api_key_broker_env` or any other persisted
+plan field. That field holds an env-var NAME today (harmless) and the run marker
+persists it (`runtime/active/markers.rs:31-33`), so an OAuth token there would
+leak to disk. Selection uses a distinct, non-secret selector instead.
+
+Replace the bare `api_key_broker_env: Option<String>` on `AgentRunPlan` and
+`RunOptions` (`crates/runhaven-core/src/runtime/plans/types.rs:142,166`) with a
+non-secret enum:
+
+```
+enum ClaudeAuthSource {
+    ApiKeyBrokerEnv(String), // env var NAME only (e.g. "ANTHROPIC_API_KEY"); non-secret; today's value
+    KeychainOAuth,           // no payload; token fetched from Keychain at broker-spawn, never on the plan
+}
+```
+
+Carry it as `claude_auth_source: Option<ClaudeAuthSource>`.
+`require_api_key_broker_secret_with_env` (`provider/runtime.rs:211`) matches the
+variant: `ApiKeyBrokerEnv(name)` keeps today's `std::env::var` read and the
+`name == profile.host_env` gate; `KeychainOAuth` reads the Keychain item
+(Section 1) and reads no env. The two Claude paths are mutually exclusive by
+construction: a single enum cannot select both, so an implementer cannot reach
+for `api_key_broker_env` on the OAuth path. The token flows from the Keychain
+read into the proxy's `api_key` string at broker-spawn, never onto a plan field.
+
+Marker constraint (`runtime/active/markers.rs:31-33`): for `ApiKeyBrokerEnv(name)`
+the marker persists `api_key_broker_env = name` exactly as today (harmless env
+NAME; preserves the existing read-model test). For `KeychainOAuth` it persists at
+most a non-secret literal tag (`"claude_auth_source": "keychain-oauth"`) and
+NEVER the token bytes, the Keychain service or account, or any secret-derived
+value. Hard rule: `markers.rs` gains no token-derived field. The run record path
+is already safe (`records/run_history.rs:71-81` writes only count summaries), so
+the marker is the only exposed persistence surface. A Slice 3 test writes the
+marker for a `KeychainOAuth` plan and asserts the payload holds neither token
+bytes nor any secret-derived value, only the `keychain-oauth` tag. [S][J]
+
+The token is read from the Keychain by the host broker process only; only the
+injected Bearer leaves the host, to `api.anthropic.com`. [S][J]
 
 ## Section 4: Capability and command surface
 
@@ -246,18 +324,27 @@ wording. Claims validated against Sections 1 to 3:
 
 Approved wording:
 
-- "RunHaven saves your token to your Mac's Keychain and keeps no copy of its own
-  outside the Keychain." (True: the only persistent store is the Keychain item;
-  transient in-memory copies during sign-in are minimized and dropped, and the
-  token is never written to a file, log, record, or app response.)
+- "RunHaven saves no copy of its own; the only saved copy is in your Mac's
+  Keychain." (True as a PERSISTENCE claim: the only saved copy is the Keychain
+  item; the token is never written to a file, log, record, or app response. Not
+  an in-memory claim; see the residual below and Section 6.)
 - "RunHaven reads only the one Keychain item it created. It does not read your
-  other Keychain logins, including Claude's own saved login." (True: the query is
-  scoped to RunHaven's own service and account.)
+  other Keychain logins, including Claude's own saved login." (True by
+  construction ONLY under the exact service + account query filter in Section 1,
+  never `kSecMatchLimitAll` or an account-only query.)
 - "RunHaven uses your token only to sign your runs. It does not log it, display
-  it, or save a copy of its own." (True per Sections 2 and 4.)
+  it, or keep any saved copy outside your Mac's Keychain." (True as a persistence
+  claim per Sections 2 and 4; the live broker still holds the token in memory
+  during a run, see below.)
 - "Your token never goes inside the sandbox. The sandbox holds only a placeholder;
   RunHaven adds the real token on your Mac, only for requests to Anthropic."
   (True per the verified routing and header injection.)
+
+In-memory residual (honest, F2): during a run the broker holds the plaintext
+token in `BrokerState.api_key` (`provider/auth_broker.rs:56-62,99`), `Arc`-cloned
+to each handler thread for the run lifetime and not zeroized, because injecting
+the `Bearer` header requires it. The persistence claims above are true; do not
+extend them into an in-memory-wiping claim (Section 6).
 
 Rejected wording (would be false, flagged for review):
 
@@ -269,8 +356,10 @@ Rejected wording (would be false, flagged for review):
 - "Only RunHaven can ever read this Keychain item." REJECTED as overclaiming.
   See Section 1 access-control honesty and Section 6: a same-user process with
   RunHaven's identity, or one the user grants access to at a keychain prompt, is
-  a real case. Correct wording: "Other apps do not get silent access to this
-  item."
+  a real case. Correct wording, scoped to a signed release build: "On a signed
+  RunHaven release build, other apps do not get silent access to this item." On
+  an unsigned or ad-hoc dev build this isolation is NOT claimed; Slice 1 probes
+  actual dev behavior and the dev path uses its own fallback (Section 1).
 - "The token is fully wiped from memory after sign-in." REJECTED. See the
   Section 2 zeroization limits. Correct wording: "RunHaven overwrites its own
   copy of the token as soon as it is saved," with the residual documented.
@@ -289,7 +378,13 @@ Attack surface: [J]
 - Malware running as the same user with RunHaven's code identity, or a process
   the user grants access to at a keychain prompt, could read the item. The OS
   vault raises the bar (locked-when-locked, this-device-only, ACL) but does not
-  make theft impossible.
+  make theft impossible. On a dev build the ACL may not bind as tightly
+  (Section 1), so the "no silent access" bar applies to the signed release build.
+- During a run the host broker holds the plaintext token in memory
+  (`BrokerState.api_key`, `Arc`-cloned to handler threads,
+  `provider/auth_broker.rs:56-99`), not zeroized, for the run lifetime. A host
+  memory-scraping attacker in that window could read it. This is inherent to
+  injecting the credential and is documented, not claimed away.
 - Blast radius if stolen: a one-year inference-only subscription token. No Remote
   Control, no account takeover, but real inference cost and quota abuse until the
   user revokes it in their Claude account. Document how to revoke and that
@@ -325,13 +420,23 @@ and before the GUI default flips to path C.
 - Slice 1: `security-framework` re-add (verified pin, macOS-gated, `pins.toml`,
   lock), Keychain store module with the Section 1 item naming, accessibility
   class, ACL, and store/read/clear. Unit tests for selection and round-trip
-  behind a live-Keychain follow-up. No GUI, no proxy wiring yet.
+  behind a live-Keychain follow-up. Also run the F3 dev-build Keychain probe: on
+  an unsigned/ad-hoc dev binary and on a signed build, record whether access is
+  silent, prompts per rebuild, or falls back to an access group, and decide the
+  dev-build fallback here (Section 1) rather than deferring to Gate 2. Test: the
+  exact service + account query filter, never `kSecMatchLimitAll` (claim 2). No
+  GUI, no proxy wiring yet.
 - Slice 2: host `claude setup-token` capture with the Section 2 transience,
-  zeroization guard, and fail-closed paths. Tests reuse `extract_token`. Assert
-  no token reaches logs, records, or registry.
+  zeroization guard, and fail-closed paths. Prerequisite: F4 verification on
+  macOS 26 that setup-token prints to a pipe like a TTY; if TTY-only, capture
+  under a host PTY (`open_gui_attach_pty`) instead of a pipe. Tests reuse
+  `extract_token` and assert the parse-failure path logs only operation + agent,
+  never the captured buffer. Assert no token reaches logs, records, or registry.
 - Slice 3: `CLAUDE_OAUTH_BROKER` profile plus the Keychain secret source seam in
-  `provider/runtime.rs`. Tests: Bearer injection, placeholder stripping, path and
-  host pinning, no egress widening.
+  `provider/runtime.rs`, the `ClaudeAuthSource` selector (Section 3, F1), and the
+  `anthropic-beta` decision (F5). Tests: Bearer injection, placeholder stripping,
+  path and host pinning, no egress widening, and an OAuth-run marker payload that
+  contains neither the token bytes nor any secret-derived value.
 - Gate 1 (before GUI default flip): adversarial and security review of Slices 1
   to 3 together, focused on the custody boundary, the claim set wording, and the
   zeroization residual. Blocking.
