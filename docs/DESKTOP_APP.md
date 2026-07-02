@@ -287,6 +287,33 @@ Hard stop ends it right away. `Repair session record` clears a stale session
 record; the app also highlights repair when it has confirmed the sandbox is
 gone.
 
+## Open a terminal
+
+A running session has an **Open terminal** button. It gives you a live shell
+inside that session's sandbox, so you can type commands and see what they print,
+right in the app. The terminal shows only for running sessions, not for ones
+that have finished or failed.
+
+When you open it, the app names the sandbox and asks you to confirm first. What
+you type goes straight to the sandbox, as the same non-root agent user, with no
+new access: the terminal adds typing, not reach.
+
+The terminal card carries a standing warning, and it is the plain truth about
+this one stream:
+
+> This is a live terminal inside the sandbox. RunHaven does not filter, read,
+> store, or log it. It just shows what the sandbox prints. So anything here,
+> including passwords or codes, is visible on this screen.
+
+That warning is about the live terminal only, not the rest of the app. The
+terminal text lives in memory while the terminal is open and is thrown away when
+you close it or the app. It is never written to disk and never shown again after
+you close it. This is different from saved run output, which the app does redact
+and keep locally for history.
+
+Close the terminal with **Close terminal**, or just leave the session or reload
+the app; either way the app shuts down the shell in the sandbox.
+
 ## Review a worktree run
 
 When a run that used its own worktree has finished, the app shows a review for

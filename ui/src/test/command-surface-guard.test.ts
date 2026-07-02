@@ -30,8 +30,14 @@ const EXPECTED_TAURI_MODULES = [
   "@tauri-apps/plugin-dialog"
 ];
 // The reviewed Tauri touchpoints: typed invoke plus the folder picker in
-// client.ts, and the listen-only menu event subscription in menu_events.ts.
-const EXPECTED_TAURI_FILES = ["commands/client.ts", "commands/menu_events.ts"];
+// client.ts, the listen-only menu event subscription in menu_events.ts, and the
+// terminal Channel in terminal.ts. terminal.ts routes through client.ts's `call`
+// helper, so `invoke` itself stays centralized in client.ts.
+const EXPECTED_TAURI_FILES = [
+  "commands/client.ts",
+  "commands/menu_events.ts",
+  "commands/terminal.ts"
+];
 const EXPECTED_INVOKED_COMMANDS = [
   "get_dashboard_status",
   "get_image_status",
@@ -74,7 +80,11 @@ const EXPECTED_INVOKED_COMMANDS = [
   "set_attention_badge",
   "sync_menu_state",
   "open_session_window",
-  "get_session_window_target"
+  "get_session_window_target",
+  "open_terminal_session",
+  "write_terminal_input",
+  "resize_terminal",
+  "close_terminal_session"
 ];
 
 type SourceEntry = {
@@ -95,6 +105,20 @@ function readCommandClientSource(): string {
     fileURLToPath(new URL("../commands/client.ts", import.meta.url)),
     "utf8"
   );
+}
+
+// The full WebView command surface: client.ts owns the shared `call`/`invoke`
+// helper and most wrappers; terminal.ts owns the terminal wrappers, which route
+// through the same `call`. Auditing both keeps every host-reaching command in
+// the allow-list even though the surface is split by ownership.
+function readCommandSurfaceSource(): string {
+  return [
+    readCommandClientSource(),
+    readFileSync(
+      fileURLToPath(new URL("../commands/terminal.ts", import.meta.url)),
+      "utf8"
+    )
+  ].join("\n");
 }
 
 function productionSourceEntries(root = sourceRoot()): SourceEntry[] {
@@ -158,7 +182,7 @@ describe("frontend command surface guard", () => {
   });
 
   it("fails if the WebView command map grows forbidden host-reaching commands", () => {
-    const source = readCommandClientSource();
+    const source = readCommandSurfaceSource();
     const commands = invokedCommands(source);
 
     expect(commands).toHaveLength(commandCallSiteCount(source));

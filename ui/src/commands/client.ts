@@ -83,7 +83,8 @@ export function hasTauriRuntime(): boolean {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
 }
 
-async function call<T>(command: string, args: Record<string, unknown>, fallback: () => T): Promise<T> {
+// The one typed invoke touchpoint; domain files (terminal.ts) route through it.
+export async function call<T>(command: string, args: Record<string, unknown>, fallback: () => T): Promise<T> {
   if (!hasTauriRuntime()) {
     return fallback();
   }

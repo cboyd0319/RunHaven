@@ -18,6 +18,7 @@ import { ManagedSessionStatusCard } from "../ManagedSessionStatusCard"
 import { RunOutputCard } from "../RunOutputCard"
 import { RunStatusCard } from "../RunStatusCard"
 import { SessionInputCard } from "../SessionInputCard"
+import { TerminalPanel } from "../TerminalPanel"
 import type { useRunOutput } from "../useRunOutput"
 import { useWorktreeReview } from "../useWorktreeReview"
 import { sessionAllowsWorktreeReview } from "../worktreeReview"
@@ -85,6 +86,12 @@ export function SessionView(
         onDraftChange={props.onSessionInputDraftChange}
         onSend={props.onSendSelectedSessionInput}
       />
+      {runControlsAvailable ? (
+        // Terminal is a secondary action for a live session only: the same
+        // running/starting states that allow run control. Its own card carries
+        // the standing no-filter/no-store disclosure.
+        <TerminalPanel session={props.selectedSession} />
+      ) : null}
       <SessionDetails {...props} />
     </div>
   )

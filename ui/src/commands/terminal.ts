@@ -1,0 +1,48 @@
+import { Channel } from "@tauri-apps/api/core";
+
+import { call, hasTauriRuntime } from "./client";
+import type { TerminalMessage } from "./types";
+
+// The WebView terminal command surface. These wrappers route through the shared
+// `call` helper in client.ts, so `invoke` stays centralized and the browser
+// preview no-ops. The raw PTY stream they carry is rendered in xterm's in-memory
+// scrollback only; nothing here writes it to disk or logs it.
+
+// Open a live terminal for a running session. Rust resolves the target from
+// sessionId (the WebView never names a container), shows the native no-filter/
+// no-store confirm dialog, then spawns a host-PTY-wrapped `container exec` and
+// streams raw output over the Channel. onMessage receives each TerminalMessage.
+// The Channel is constructed only under the desktop runtime because its callback
+// registration needs Tauri internals; the browser preview returns without it.
+export async function openTerminalSession(
+  sessionId: string,
+  onMessage: (message: TerminalMessage) => void
+): Promise<void> {
+  if (!hasTauriRuntime()) {
+    return;
+  }
+  const onEvent = new Channel<TerminalMessage>(onMessage);
+  return call("open_terminal_session", { onEvent, sessionId }, () => undefined);
+}
+
+export async function writeTerminalInput(
+  sessionId: string,
+  data: number[]
+): Promise<void> {
+  return call("write_terminal_input", { sessionId, data }, () => undefined);
+}
+
+export async function resizeTerminal(
+  sessionId: string,
+  cols: number,
+  rows: number
+): Promise<void> {
+  return call("resize_terminal", { sessionId, cols, rows }, () => undefined);
+}
+
+// Tear down the host PTY and container child for this terminal. Called on view
+// unmount and on window unload so navigating away or reloading kills the child;
+// the backend send-error kill is only a backstop.
+export async function closeTerminalSession(sessionId: string): Promise<void> {
+  return call("close_terminal_session", { sessionId }, () => undefined);
+}

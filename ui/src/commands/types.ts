@@ -282,6 +282,15 @@ export type ManagedSessionList = {
   sessions: ManagedSessionSummary[];
 };
 
+// Messages streamed from the host over the terminal Channel. Mirrors the Rust
+// TerminalMessage enum (serde tag "event", snake_case): raw PTY bytes as a
+// number array, or a final exit code. This is the only terminal payload the
+// WebView ever sees; it is rendered in xterm's in-memory scrollback and never
+// stored or logged in the frontend.
+export type TerminalMessage =
+  | { event: "output"; data: number[] }
+  | { event: "exit"; code: number };
+
 // Which selection-scoped menu items apply right now, sent to Rust so the
 // native menu grays out actions that would do nothing (navigation invariant 5).
 // Booleans and one count only: no session ids, paths, or secrets cross this

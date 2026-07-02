@@ -42,6 +42,28 @@ describe("SessionView", () => {
     )
   })
 
+  it("offers the terminal only for a running session", () => {
+    const disclosure = "RunHaven does not filter, read, store, or log it"
+
+    const running = managedSession()
+    const runningHtml = renderToStaticMarkup(
+      <SessionView
+        {...mainViewProps({ selectedSession: running })}
+        selectedSession={running}
+      />,
+    )
+    expect(runningHtml).toContain(disclosure)
+
+    const finished = managedSession({ lifecycle: "finished" })
+    const finishedHtml = renderToStaticMarkup(
+      <SessionView
+        {...mainViewProps({ selectedSession: finished })}
+        selectedSession={finished}
+      />,
+    )
+    expect(finishedHtml).not.toContain(disclosure)
+  })
+
   it("keeps runtime and diagnostics detail behind a closed Details disclosure", () => {
     const session = managedSession()
     const html = renderToStaticMarkup(

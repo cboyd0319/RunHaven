@@ -5,3 +5,4 @@ export * from "./types";
 export * from "./maintenance_types";
 export * from "./client";
 export * from "./plan";
+export * from "./terminal";
