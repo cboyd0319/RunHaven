@@ -1,23 +1,83 @@
 import { CheckCircle2 } from "lucide-react"
 
-import type { LaunchRunResponse } from "@/commands/runhaven"
+import logo from "@/assets/logo.png"
+import type {
+  LaunchRunResponse,
+  ManagedSessionSummary,
+} from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
+import { authStatusLabel, safeBackendLabel } from "../labels"
 import { LastLaunchCard } from "../LastLaunchCard"
-import { LaunchPlanCard } from "../LaunchPlanCard"
+import { LaunchSheet } from "../LaunchSheet"
 import { LaunchStatusCard } from "../LaunchStatusCard"
-import { PlanReviewCard } from "../PlanReviewCard"
+import { groupSessions } from "../navigation"
 import { RunStatusCard } from "../RunStatusCard"
+import { sessionAttention } from "../sessionAttention"
+import { agentLabel } from "../sessionIdentity"
+import { SetupCard } from "../SetupCard"
 import type { MainViewProps } from "./props"
 import { OutputView } from "./SessionView"
 
-// Home hosts the start-a-run wizard inline for now (the modal sheet is a later
-// slice) plus the last-launch notice or failed-launch fallback controls.
+// The Home destination (spec 3.1): is this Mac ready, and what needs you right
+// now? Setup health leads (the blocker renders here instead of a full-screen
+// takeover), New run is the one prominent action, and the lists below point at
+// agents and sessions that need attention. The launch flow itself lives in the
+// New Run modal sheet.
 export function HomeView(props: MainViewProps) {
+  const needsYou = props.sessions.filter(
+    (session) => sessionAttention(session) !== null,
+  )
+  const recentFinished = groupSessions(props.sessions).finished.slice(0, 5)
+  const firstRun = props.sessions.length === 0 && !props.lastLaunch
+
   return (
-    <>
-      <LaunchView {...props} />
+    <div className="flex flex-col gap-4">
+      <SetupHealth {...props} />
+      <LaunchSheet
+        flow={props.launchFlow}
+        agents={props.dashboard?.agents ?? []}
+        selectedAgent={props.selectedAgent}
+        authStatus={props.authStatus}
+        imageLoading={props.imageLoading}
+        imageStatus={props.imageStatus}
+        imageError={props.imageError}
+        setupReady={props.setupReady}
+        launchReady={props.launchReady}
+        launchImageReady={props.launchImageReady}
+        onSignedIn={props.onSignedIn}
+        disabledReason={newRunDisabledReason(props)}
+      />
+      {firstRun && props.setupReady ? <FirstRunCard /> : null}
+      <AgentReadinessStrip {...props} />
+      {needsYou.length > 0 ? (
+        <SessionListCard
+          title="Needs you"
+          description="These sessions are waiting on you."
+          sessions={needsYou}
+          statusFor={(session) => sessionAttention(session)?.label ?? ""}
+          onSelectSession={props.onSelectSession}
+        />
+      ) : null}
+      {recentFinished.length > 0 ? (
+        <SessionListCard
+          title="Recent finished runs"
+          description="Open one to review or clean it up."
+          sessions={recentFinished}
+          statusFor={(session) =>
+            safeBackendLabel(session.statusLabel, "Finished")
+          }
+          onSelectSession={props.onSelectSession}
+        />
+      ) : null}
       {props.lastLaunch ? (
         props.lastLaunchSessionId ? (
           <LaunchedRunNotice
@@ -28,48 +88,151 @@ export function HomeView(props: MainViewProps) {
           <RunView {...props} lastLaunch={props.lastLaunch} />
         )
       ) : null}
-    </>
+    </div>
   )
 }
 
-function LaunchView(props: MainViewProps) {
-  if (props.launchStep === "review" && props.plan) {
+// While setup is blocked, New run stays visible but disabled with the reason
+// (spec: disabled, not hidden). The reason text sits next to the button.
+function newRunDisabledReason(props: MainViewProps): string | null {
+  if (props.setupReady) {
+    return null
+  }
+  if (props.loading || props.dashboard === null) {
+    return "Checking your Mac's setup..."
+  }
+  return "Fix the setup problem above before starting a run."
+}
+
+// Setup health: one quiet line when healthy; the single blocker with its fix
+// and a Check Again action when not. Full doctor detail stays in Diagnostics.
+function SetupHealth(props: MainViewProps) {
+  if (props.setupReady) {
     return (
-      <PlanReviewCard
-        plan={props.plan}
-        launchConfirmation={props.launchConfirmation}
-        confirmedWarnings={props.confirmedWarnings}
-        launchReady={props.launchReady}
-        launching={props.launching}
-        setupOk={props.setupReady}
-        launchImageReady={props.launchImageReady}
-        onLaunchConfirmationChange={props.onLaunchConfirmationChange}
-        onConfirmWarning={props.onConfirmWarning}
-        onBack={() => props.onLaunchStepChange("project")}
-        onStart={props.onStart}
-      />
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <CheckCircle2 className="size-4 text-green-600" aria-hidden />
+        Your Mac is ready to run agents. Full checks live in Diagnostics.
+      </p>
     )
   }
   return (
-    <LaunchPlanCard
-      step={props.launchStep === "review" ? "project" : props.launchStep}
-      agents={props.dashboard?.agents ?? []}
-      request={props.request}
-      selectedAgent={props.selectedAgent}
-      authStatus={props.authStatus}
-      imageLoading={props.imageLoading}
-      imageStatus={props.imageStatus}
-      imageError={props.imageError}
-      planning={props.planning}
-      onAgentChange={props.onAgentChange}
-      onPickFolder={props.onPickFolder}
-      onRequestChange={props.onRequestChange}
-      onNetworkChange={props.onNetworkChange}
-      onBack={() => props.onLaunchStepChange("agent")}
-      onContinue={() => props.onLaunchStepChange("project")}
-      onReviewPlan={props.onReviewPlan}
-      onSignedIn={props.onSignedIn}
+    <SetupCard
+      loading={props.loading}
+      dashboard={props.dashboard}
+      onCheckAgain={props.onRefresh}
     />
+  )
+}
+
+// One line per agent: signed-in state, linking to the Agents view for the
+// sign-in and image jobs themselves.
+function AgentReadinessStrip(props: MainViewProps) {
+  const agents = props.dashboard?.agents ?? []
+  if (agents.length === 0) {
+    return null
+  }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle role="heading" aria-level={2}>
+          Agents
+        </CardTitle>
+        <CardDescription>
+          Sign in and manage agents in the Agents view.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-1 text-sm">
+          {agents.map((agent) => (
+            <li key={agent.name} className="flex justify-between gap-3">
+              <span className="font-medium">{agentLabel(agent.name)}</span>
+              <span className="text-muted-foreground">
+                {authStatusLabel(
+                  props.authStatus?.profiles.find(
+                    (profile) => profile.name === agent.name,
+                  )?.status ?? "",
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => props.onNavigate({ kind: "agents" })}
+          >
+            Open Agents
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SessionListCard({
+  title,
+  description,
+  sessions,
+  statusFor,
+  onSelectSession,
+}: {
+  title: string
+  description: string
+  sessions: ManagedSessionSummary[]
+  statusFor: (session: ManagedSessionSummary) => string
+  onSelectSession: (sessionId: string) => void
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle role="heading" aria-level={2}>
+          {title}
+        </CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="flex flex-col gap-2">
+          {sessions.map((session) => (
+            <li key={session.id}>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-between gap-3"
+                onClick={() => onSelectSession(session.id)}
+              >
+                <span className="truncate">{session.title}</span>
+                <span className="text-muted-foreground">
+                  {statusFor(session)}
+                </span>
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  )
+}
+
+// First-run empty state: what RunHaven does and never shares, in two
+// sentences. The New run button above is the next action.
+function FirstRunCard() {
+  return (
+    <Card>
+      <CardContent className="flex items-center gap-4">
+        <img
+          src={logo}
+          alt=""
+          className="size-12 rounded-xl border bg-background object-cover"
+        />
+        <p className="text-sm text-muted-foreground">
+          RunHaven runs AI coding agents in a sandbox on your Mac. An agent
+          sees only the project folder you pick, never your home folder, keys,
+          or logins.
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 

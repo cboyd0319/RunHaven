@@ -28,11 +28,19 @@ This opens the app in a development window. The first build takes a few minutes.
 
 To make a local app build instead, run `npm --prefix ui run tauri:build`.
 
-## First look: setup check
+## First look: Home
+
+The app opens on **Home**. Home answers two questions: is this Mac ready, and
+what needs you right now? It shows a one-line health note when setup is good,
+your agents and their sign-in states with a link to the Agents view, a
+"Needs you" list of sessions waiting on you, your recent finished runs, and
+the **New run** button.
 
 When the app opens, it checks that your Mac is ready: the right macOS version,
 Apple `container` installed and running, and the agent images built. If a check
-fails, the app shows a short, plain fix. Follow it, then reopen or refresh.
+fails, Home leads with that one problem, a short plain fix, and a
+**Check again** button. While setup is broken, **New run** is disabled and says
+why, but your running sessions and the sidebar views all stay reachable.
 
 ## Sign in to an agent
 
@@ -60,7 +68,7 @@ can also pass an API key by its environment variable name for a headless run.
 
 ## Start a run
 
-Starting a run takes three short steps at the top of the app:
+Click **New run** on Home. A window opens over the app with three short steps:
 
 1. Agent: choose which agent runs.
 2. Project: pick the folder the agent works in.
@@ -70,6 +78,11 @@ The review step shows the plan in plain language: which agent, which folder, the
 network setting, and the sign-in it will use. Nothing starts until you confirm.
 If a choice is less safe than the default (for example, opening the internet or
 passing an extra environment value), the app says so first.
+
+You can close the window at any time with **Cancel** or the Escape key. That
+never starts anything, and the values you entered are kept, so opening
+**New run** again picks up where you left off. When you launch and confirm,
+the window closes and the app takes you straight to the new session.
 
 On the Agent step you can open `Auth details` to see, for the chosen agent, how
 it signs in, what stays on this Mac, what the agent gets, and which provider
@@ -83,7 +96,7 @@ only a verdict, such as whether the folder can be mounted, never the full path.
 These are read-only checks; they do not change your run and show no secrets or
 file paths.
 
-On the Project step, under **Advanced options**, you can turn on `Run in an
+On the Project step you can turn on `Run in an
 isolated copy (git worktree)`. This is off by default. When it is on, RunHaven runs the agent on a
 new branch in a separate copy of your project, so your original files do not
 change until you choose to merge. The review and the confirm dialog both say
@@ -101,8 +114,8 @@ clears and a one-line notice points you at the new session in the sidebar.
 
 ## Find your way around
 
-The sidebar is how you move around the app. **Home** is always first and holds
-the start-a-run steps. Below it, your sessions appear in two groups: **Active**
+The sidebar is how you move around the app. **Home** is always first and shows
+what needs you, plus the **New run** button. Below it, your sessions appear in two groups: **Active**
 for runs that are starting, running, or stopping, and **Finished** for runs
 that ended and may need review or cleanup. Empty groups hide. At the bottom,
 the **System** group holds three fixed places: **Agents** (sign in and rebuild

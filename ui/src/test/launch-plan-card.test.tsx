@@ -46,6 +46,7 @@ const handlers = {
   onPickFolder: async () => {},
   onRequestChange: () => {},
   onNetworkChange: () => {},
+  onCancel: () => {},
   onBack: () => {},
   onContinue: () => {},
   onReviewPlan: async () => {},
@@ -63,6 +64,7 @@ function agentProps() {
     imageStatus: null,
     imageError: "",
     planning: false,
+    setupOk: true,
     ...handlers
   };
 }
@@ -75,15 +77,26 @@ function projectProps() {
 }
 
 describe("LaunchPlanCard", () => {
-  it("renders the agent step with a continue action and no back button", () => {
+  it("renders the agent step with cancel leading, continue trailing, no back", () => {
     const html = renderToStaticMarkup(<LaunchPlanCard {...agentProps()} />);
 
     expect(html).toContain("Choose agent");
     expect(html).toContain("Pick the agent you want to run.");
     expect(html).toContain("OpenAI Codex agent.");
     expect(html).toContain("Continue");
+    expect(html).toContain(">Cancel</");
     expect(html).not.toContain(">Back</");
     expect(html).not.toContain("Review access");
+  });
+
+  it("shows the setup blocker and disables continue while setup is broken", () => {
+    const html = renderToStaticMarkup(
+      <LaunchPlanCard {...agentProps()} setupOk={false} />
+    );
+
+    expect(html).toContain("Setup needs attention");
+    expect(html).toContain("Fix the setup problem on Home before starting a run.");
+    expect(html).toContain('disabled=""');
   });
 
   it("shows a checking-image state on the agent step", () => {

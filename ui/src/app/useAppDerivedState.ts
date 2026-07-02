@@ -34,7 +34,7 @@ const PAGE_HEADINGS: Record<
 > = {
   home: {
     title: "Home",
-    description: "Choose an agent and project. Review access before launch.",
+    description: "See what needs you, then start a new run.",
   },
   session: {
     title: "Session",

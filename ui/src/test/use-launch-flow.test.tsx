@@ -1,0 +1,186 @@
+// @vitest-environment happy-dom
+import { describe, expect, it } from "vitest"
+
+import { useLaunchFlow, type LaunchFlowDeps } from "../app/useLaunchFlow"
+import type {
+  LaunchRunResponse,
+  ManagedSessionList,
+} from "../commands/runhaven"
+import { act, renderHook } from "./render-hook"
+
+// The preview command fallbacks (no Tauri runtime in tests) back the flow, so
+// planRun and launchRun behave like the real intent-capture pipeline.
+function deps(patch: Partial<LaunchFlowDeps> = {}): LaunchFlowDeps & {
+  launched: LaunchRunResponse[]
+  selected: string[]
+  errors: string[]
+} {
+  const launched: LaunchRunResponse[] = []
+  const selected: string[] = []
+  const errors: string[] = []
+  return {
+    launched,
+    selected,
+    errors,
+    dashboard: null,
+    loadImageStatus: async () => {},
+    loadRunStatus: async () => {},
+    loadManagedSessions: async (): Promise<ManagedSessionList> => ({
+      sessions: [],
+    }),
+    selectSession: (sessionId) => selected.push(sessionId),
+    onLaunched: (launch) => launched.push(launch),
+    onError: (message) => errors.push(message),
+    ...patch,
+  }
+}
+
+async function renderFlow(flowDeps: LaunchFlowDeps) {
+  return renderHook(() => useLaunchFlow(flowDeps), undefined)
+}
+
+describe("useLaunchFlow", () => {
+  it("keeps the request draft across close and reopen, resetting only flow state", async () => {
+    const { result } = await renderFlow(deps())
+
+    await act(async () => {
+      result.current.setOpen(true)
+      result.current.updateRequest({
+        agent: "codex",
+        workspacePath: "/tmp/draft-project",
+        worktree: true,
+      })
+    })
+    await act(async () => {
+      await result.current.reviewPlan()
+    })
+    await act(async () => {
+      result.current.setLaunchConfirmation(true)
+      result.current.setWarningConfirmation("some-warning", true)
+    })
+    expect(result.current.launchStep).toBe("review")
+    expect(result.current.plan).not.toBeNull()
+
+    // Cancel/Escape: no side effects on the draft, but the reviewed plan and
+    // every confirmation clear so nothing stays silently confirmed.
+    await act(async () => {
+      result.current.setOpen(false)
+    })
+    expect(result.current.sheetOpen).toBe(false)
+    expect(result.current.launchStep).toBe("agent")
+    expect(result.current.plan).toBeNull()
+    expect(result.current.launchConfirmation).toBe(false)
+    expect(result.current.confirmedWarnings).toEqual([])
+
+    await act(async () => {
+      result.current.setOpen(true)
+    })
+    expect(result.current.request.workspacePath).toBe("/tmp/draft-project")
+    expect(result.current.request.worktree).toBe(true)
+    expect(result.current.request.agent).toBe("codex")
+  })
+
+  it("editing the request invalidates the reviewed plan and confirmations", async () => {
+    const { result } = await renderFlow(deps())
+
+    await act(async () => {
+      result.current.updateRequest({
+        agent: "codex",
+        workspacePath: "/tmp/plan-project",
+      })
+    })
+    await act(async () => {
+      await result.current.reviewPlan()
+    })
+    await act(async () => {
+      result.current.setLaunchConfirmation(true)
+    })
+    await act(async () => {
+      result.current.updateRequest({ workspacePath: "/tmp/other-project" })
+    })
+    expect(result.current.plan).toBeNull()
+    expect(result.current.launchConfirmation).toBe(false)
+  })
+
+  it("closes the sheet, selects the session, and arms a new name on launch", async () => {
+    const flowDeps = deps()
+    // Once a launch is accepted, the sessions list reports it as a managed
+    // session so the flow can navigate to it.
+    flowDeps.loadManagedSessions = async () => ({
+      sessions: flowDeps.launched.map((launch, index) => ({
+        id: `session-${index + 1}`,
+        runId: launch.runId,
+        agent: "codex",
+        session: "alpha",
+        title: "Codex - alpha",
+        project: "alpha",
+        status: "running",
+        statusLabel: "Running",
+        authStatus: "ready",
+        authScope: "project",
+        network: "provider",
+        startedAt: "2026-07-01T01:00:00Z",
+        containerName: "runhaven-1",
+        detailCommand: "runhaven runs show",
+        lifecycle: "running",
+        input: { attached: true, status: "attached", detail: "" },
+        nextAction: { kind: "monitor", label: "Monitor", detail: "" },
+        events: [],
+      })),
+    })
+    const { result } = await renderFlow(flowDeps)
+
+    await act(async () => {
+      result.current.setOpen(true)
+      result.current.updateRequest({
+        agent: "codex",
+        workspacePath: "/tmp/launch-project",
+      })
+    })
+    await act(async () => {
+      await result.current.reviewPlan()
+    })
+    const sessionNameBefore = result.current.request.sessionName
+    await act(async () => {
+      result.current.setLaunchConfirmation(true)
+    })
+    await act(async () => {
+      await result.current.startRun()
+    })
+
+    expect(flowDeps.launched).toHaveLength(1)
+    expect(flowDeps.selected).toEqual(["session-1"])
+    expect(flowDeps.errors).toEqual([])
+    expect(result.current.sheetOpen).toBe(false)
+    expect(result.current.launchStep).toBe("agent")
+    expect(result.current.plan).toBeNull()
+    expect(result.current.launchConfirmation).toBe(false)
+    expect(result.current.request.sessionName).not.toBe(sessionNameBefore)
+    // The draft itself survives for the next run.
+    expect(result.current.request.workspacePath).toBe("/tmp/launch-project")
+  })
+
+  it("keeps the sheet open and shows the error when the launch is rejected", async () => {
+    const flowDeps = deps()
+    const { result } = await renderFlow(flowDeps)
+
+    await act(async () => {
+      result.current.setOpen(true)
+      result.current.updateRequest({
+        agent: "codex",
+        workspacePath: "/tmp/reject-project",
+      })
+    })
+    await act(async () => {
+      await result.current.reviewPlan()
+    })
+    // No launch confirmation: the preview backend rejects, like the real one.
+    await act(async () => {
+      await result.current.startRun()
+    })
+
+    expect(flowDeps.launched).toHaveLength(0)
+    expect(result.current.sheetOpen).toBe(true)
+    expect(result.current.error).toContain("Confirm the launch")
+  })
+})

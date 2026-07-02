@@ -359,9 +359,24 @@ with the spec's removal fallback (adjacent row, else other group, else Home)
 replacing the old reset-to-wizard behavior. The bottom Diagnostics/Maintenance
 accordions are deleted; Agents/Diagnostics/Maintenance render as full views
 (`ui/src/app/views/`), image rebuild moved from Maintenance to Agents, and
-`AppMainContent.tsx` is now a thin router (131 lines) under the split gate.
-The wizard stays inline on Home; the modal launch sheet is the next slice
-(A2/A3), along with the real Home destination content.
+`AppMainContent.tsx` is now a thin router under the split gate.
+
+Slice 2 (A2 plus A3) is implemented: the launch wizard moved out of Home into
+a modal New Run sheet (`LaunchSheet.tsx`, shadcn/Radix Dialog; the Rust-owned
+native confirmation stays the mutation boundary above it), opened by the one
+prominent `New run` button on Home. Cancel/Escape closes with no side effects:
+the request draft survives for the session, while the step, reviewed plan, and
+confirmed warnings reset on close. Launch state lives in the new
+`useLaunchFlow.ts` hook (plan/launch errors render inside the sheet), which
+shrank `useAppController.ts` and the `views/props.ts` bag. Home is now the
+spec 3.1 destination: setup health line or the single blocker with fix and
+Check again (the old full-screen `SetupCard` takeover is gone; sessions and
+System views stay reachable while blocked, and `New run` disables with a
+reason), agent readiness strip linking to Agents, Needs-you and recent
+finished lists, first-run note, and the run-started notice or failed-launch
+fallback. The worktree toggle moved out of Advanced options to the Project
+step top level. On an accepted launch the sheet closes and the app selects the
+new session. Remaining Wave A items: A4-A6 per the gap tracker.
 
 Active slice: bring CLI plus native-feeling desktop GUI to 100 percent ready
 for real external user testing. Start by keeping TUI work out of scope, then

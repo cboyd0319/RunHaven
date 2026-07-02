@@ -11,18 +11,43 @@ test("renders the dashboard without runtime errors", async ({ page }) => {
 
   await page.goto("/");
 
+  // Home is the welcome surface: setup health, agent readiness, and the one
+  // prominent New run action. The wizard is not inline anymore.
   await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
-  await expect(page.getByText("Sign-in method")).toBeVisible();
-  await expect(page.getByText("Auth status")).toBeVisible();
-  await expect(page.getByText("Ready", { exact: true })).toBeVisible();
+  await expect(page.getByText("Your Mac is ready to run agents.")).toBeVisible();
+  await expect(page.locator("header").getByText("Ready", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Setup ready" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Choose agent" })).toHaveCount(0);
+
+  // The launch flow lives in a modal sheet.
+  await page.getByRole("button", { name: "New run" }).click();
+  const sheet = page.getByRole("dialog", { name: "New run" });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole("heading", { name: "Choose agent" })).toBeVisible();
+  await expect(sheet.getByText("Sign-in method")).toBeVisible();
+  await expect(sheet.getByText("Auth status")).toBeVisible();
+
+  // Escape cancels with no side effects: the sheet closes, focus returns to
+  // the New run button, and entered values survive for the next open.
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByLabel("Project folder path").fill("/tmp/runhaven-draft");
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+  await expect(page.getByRole("button", { name: "New run" })).toBeFocused();
+  await page.getByRole("button", { name: "New run" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByLabel("Project folder path")).toHaveValue("/tmp/runhaven-draft");
+  await page.getByRole("button", { name: "Back" }).click();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(sheet).toBeHidden();
+
   expect(runtimeErrors).toEqual([]);
 });
 
 test("reviews and starts a preview run", async ({ page }) => {
   await page.goto("/");
 
+  await page.getByRole("button", { name: "New run" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Agent ready" })).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByRole("heading", { name: "Choose project" })).toBeVisible();
@@ -136,6 +161,7 @@ test("keeps selected-session message drafts isolated", async ({ page }) => {
 test("signs in a preview agent from the Agent step", async ({ page }) => {
   await page.goto("/");
 
+  await page.getByRole("button", { name: "New run" }).click();
   await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   // The preview sign-in surfaces the device link and code, then succeeds.
@@ -151,7 +177,7 @@ test("runs the maintenance preview flows behind confirm gates", async ({ page })
 
   // Image rebuild lives in the Agents destination and stays gated until the
   // user confirms.
-  await page.getByRole("button", { name: "Agents" }).click();
+  await page.getByRole("button", { name: "Agents", exact: true }).click();
   const rebuildButton = page.getByRole("button", { name: "Rebuild image" });
   await expect(rebuildButton).toBeDisabled();
   await page.getByLabel("Confirm agent image rebuild").check();
@@ -218,10 +244,11 @@ async function startPreviewRun(
   { worktree = false } = {},
 ) {
   await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
+  await page.getByRole("button", { name: "New run" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Project folder path").fill(workspacePath);
   if (worktree) {
-    await page.getByText("Advanced options").click();
+    // The isolated-copy toggle sits at the top level of the Project step.
     await page.getByLabel("Run in an isolated copy (git worktree)").check();
   }
   await page.getByRole("button", { name: "Review access" }).click();

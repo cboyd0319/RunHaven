@@ -59,29 +59,17 @@ export default function App() {
             onControlConfirmationChange={app.setControlConfirmation}
             onControl={app.runControl}
             onWorktreeResolved={app.refreshAfterWorktree}
-            launchStep={app.launchStep}
-            plan={app.plan}
-            launchConfirmation={app.launchConfirmation}
-            confirmedWarnings={app.confirmedWarnings}
+            launchFlow={app.launchFlow}
             launchReady={app.launchReady}
-            launching={app.launching}
             launchImageReady={app.launchImageReady}
-            onLaunchConfirmationChange={app.setLaunchConfirmation}
-            onConfirmWarning={app.setWarningConfirmation}
-            onLaunchStepChange={app.setLaunchStep}
-            onStart={app.startRun}
-            request={app.request}
             selectedAgent={app.selectedAgent}
             imageLoading={app.imageLoading}
             imageStatus={app.imageStatus}
             imageError={app.imageError}
-            planning={app.planning}
-            onAgentChange={app.changeAgent}
-            onPickFolder={app.pickFolder}
-            onRequestChange={app.updateRequest}
-            onNetworkChange={app.updateNetworkMode}
-            onReviewPlan={app.reviewPlan}
             onSignedIn={() => void app.refresh()}
+            sessions={app.managedSessions.sessions}
+            onNavigate={app.navigate}
+            onRefresh={() => void app.refresh()}
             lastLaunch={app.lastLaunch}
             lastLaunchSessionId={app.lastLaunchSessionId}
             onSelectSession={app.selectSession}

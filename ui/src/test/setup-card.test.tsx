@@ -123,6 +123,23 @@ describe("SetupCard", () => {
     expect(html).not.toContain("All checks passed.");
   });
 
+  it("offers a Check again action only when a handler is provided", () => {
+    const withHandler = renderToStaticMarkup(
+      <SetupCard loading={false} dashboard={null} onCheckAgain={() => {}} />
+    );
+    expect(withHandler).toContain("Check again");
+
+    const busy = renderToStaticMarkup(
+      <SetupCard loading={true} dashboard={null} onCheckAgain={() => {}} />
+    );
+    expect(busy).toContain(">Checking...</");
+
+    const without = renderToStaticMarkup(
+      <SetupCard loading={false} dashboard={null} />
+    );
+    expect(without).not.toContain("Check again");
+  });
+
   it("summarizes remaining failures with singular and plural wording", () => {
     const twoFailures = renderToStaticMarkup(
       <SetupCard

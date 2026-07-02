@@ -8,16 +8,12 @@ import type {
   ManagedSessionStatusResponse,
   ManagedSessionDiagnosticsResponse,
   ManagedSessionSummary,
-  RunPlanRequest,
-  RunPlanResponse,
   RunStatusResponse,
 } from "@/commands/runhaven"
 
-import type {
-  DiagnosticsState,
-  LaunchStep,
-  RunControlAction,
-} from "../types"
+import type { NavDestination } from "../navigation"
+import type { DiagnosticsState, RunControlAction } from "../types"
+import type { LaunchFlow } from "../useLaunchFlow"
 import type { useRunOutput } from "../useRunOutput"
 
 // The prop bag the app controller feeds the main content router. Home and
@@ -58,29 +54,19 @@ export type MainViewProps = {
   ) => void
   onControl: (action: RunControlAction) => Promise<void>
   onWorktreeResolved: () => Promise<void>
-  launchStep: LaunchStep
-  plan: RunPlanResponse | null
-  launchConfirmation: boolean
-  confirmedWarnings: string[]
+  // The New Run sheet's whole state and actions travel as one object; Home
+  // hosts the sheet and the router never unpacks it.
+  launchFlow: LaunchFlow
   launchReady: boolean
-  launching: boolean
   launchImageReady: boolean
-  onLaunchConfirmationChange: (checked: boolean) => void
-  onConfirmWarning: (code: string, checked: boolean) => void
-  onLaunchStepChange: (step: LaunchStep) => void
-  onStart: () => Promise<void>
-  request: RunPlanRequest
   selectedAgent: AgentProfile | undefined
   imageLoading: boolean
   imageStatus: ImageStatusResponse | null
   imageError: string
-  planning: boolean
-  onAgentChange: (agentName: string) => void
-  onPickFolder: () => Promise<void>
-  onRequestChange: (patch: Partial<RunPlanRequest>) => void
-  onNetworkChange: (networkMode: RunPlanRequest["networkMode"]) => void
-  onReviewPlan: () => Promise<void>
   onSignedIn: () => void
+  sessions: ManagedSessionSummary[]
+  onNavigate: (destination: NavDestination) => void
+  onRefresh: () => void
   lastLaunch: LaunchRunResponse | null
   lastLaunchSessionId: string | null
   onSelectSession: (sessionId: string) => void

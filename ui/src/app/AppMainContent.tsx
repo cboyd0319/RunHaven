@@ -4,8 +4,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 import { DiagnosticsCard } from "./DiagnosticsCard"
 import type { NavDestination } from "./navigation"
-import { SetupCard } from "./SetupCard"
-import type { LaunchStep } from "./types"
 import { useFocusOnChange } from "./useFocusOnChange"
 import { sessionAllowsWorktreeReview } from "./worktreeReview"
 import { AgentsView } from "./views/AgentsView"
@@ -18,15 +16,17 @@ type AppMainContentProps = MainViewProps & { navigation: NavDestination }
 
 // Routes the selected sidebar destination to its full view. Every destination
 // always renders something real (no dead navigation), and the focus region key
-// covers destination changes, launch steps, session switches, and worktree
-// resolution so keyboard and AT users land on the new view instead of <body>.
+// covers destination changes, session switches, and worktree resolution so
+// keyboard and AT users land on the new view instead of <body>. A setup
+// blocker renders as Home content, never as a takeover: running sessions and
+// System destinations stay reachable while blocked.
 export function AppMainContent(props: AppMainContentProps) {
   const { navigation, error, launchMessage } = props
   const worktreeReviewEligible = props.selectedSession
     ? sessionAllowsWorktreeReview(props.selectedSession)
     : false
   const focusRef = useFocusOnChange<HTMLDivElement>(
-    mainViewFocusKey(navigation, props.launchStep, worktreeReviewEligible),
+    mainViewFocusKey(navigation, worktreeReviewEligible),
   )
 
   return (
@@ -81,33 +81,25 @@ function MainView(props: AppMainContentProps) {
     case "maintenance":
       return <MaintenanceView />
     case "session":
-      if (!props.setupReady) {
-        return <SetupCard loading={props.loading} dashboard={props.dashboard} />
-      }
       // A removed record renavigates via the selection fallback; render nothing
       // for the one frame in between instead of flashing another view.
       return props.selectedSession ? (
         <SessionView {...props} selectedSession={props.selectedSession} />
       ) : null
     case "home":
-      if (!props.setupReady) {
-        return <SetupCard loading={props.loading} dashboard={props.dashboard} />
-      }
       return <HomeView {...props} />
   }
 }
 
-// One focus key for the whole content pane: destination changes, launch step
-// changes, session switches, and worktree-review resolution all move focus;
-// background polls change none of these inputs, so quiet refresh stays quiet.
+// One focus key for the whole content pane: destination changes, session
+// switches, and worktree-review resolution all move focus; background polls
+// change none of these inputs, so quiet refresh stays quiet. The New Run
+// sheet manages its own focus (dialog trap plus a per-step region).
 function mainViewFocusKey(
   navigation: NavDestination,
-  launchStep: LaunchStep,
   worktreeReviewEligible: boolean,
 ): string {
   switch (navigation.kind) {
-    case "home":
-      return `home:${launchStep}`
     case "session":
       return `session:${navigation.id}:${worktreeReviewEligible}`
     default:
@@ -118,7 +110,7 @@ function mainViewFocusKey(
 function mainViewLabel(navigation: NavDestination): string {
   switch (navigation.kind) {
     case "home":
-      return "Launch a run"
+      return "Home"
     case "session":
       return "Session details"
     case "agents":

@@ -4,7 +4,8 @@ import {
   type ImageStatusResponse,
   type RunPlanRequest,
 } from "@/commands/runhaven"
-import { ClipboardCheck, FolderOpen } from "lucide-react"
+import { CircleAlert, ClipboardCheck, FolderOpen } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -49,10 +50,12 @@ type LaunchPlanCardProps = {
   imageStatus: ImageStatusResponse | null
   imageError: string
   planning: boolean
+  setupOk: boolean
   onAgentChange: (agentName: string) => void
   onPickFolder: () => Promise<void>
   onRequestChange: (patch: Partial<RunPlanRequest>) => void
   onNetworkChange: (networkMode: RunPlanRequest["networkMode"]) => void
+  onCancel: () => void
   onBack: () => void
   onContinue: () => void
   onReviewPlan: () => Promise<void>
@@ -69,10 +72,12 @@ export function LaunchPlanCard({
   imageStatus,
   imageError,
   planning,
+  setupOk,
   onAgentChange,
   onPickFolder,
   onRequestChange,
   onNetworkChange,
+  onCancel,
   onBack,
   onContinue,
   onReviewPlan,
@@ -103,6 +108,16 @@ export function LaunchPlanCard({
           }}
         >
           <LaunchSteps step={step} />
+
+          {step === "agent" && !setupOk ? (
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>Setup needs attention</AlertTitle>
+              <AlertDescription>
+                Fix the setup problem on Home before starting a run.
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           {step === "agent" ? (
             <>
@@ -179,6 +194,27 @@ export function LaunchPlanCard({
                 onChange={(authScope) => onRequestChange({ authScope })}
               />
 
+              <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+                <Checkbox
+                  checked={request.worktree}
+                  onCheckedChange={(checked) =>
+                    onRequestChange({ worktree: checked === true })
+                  }
+                  aria-label="Run in an isolated copy (git worktree)"
+                />
+                <span className="flex flex-col gap-1">
+                  <span className="font-medium">
+                    Run in an isolated copy (git worktree)
+                  </span>
+                  <span className="text-muted-foreground">
+                    RunHaven makes a separate copy of your project on a new
+                    git branch. Your project folder must be a clean git repo.
+                    Your original files change only if you merge the copy
+                    back later.
+                  </span>
+                </span>
+              </label>
+
               <details className="rounded-lg border p-3">
                 <summary className="cursor-pointer text-sm font-medium">
                   Advanced options
@@ -250,26 +286,6 @@ export function LaunchPlanCard({
                     <span>Read-only project folder</span>
                   </label>
 
-                  <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
-                    <Checkbox
-                      checked={request.worktree}
-                      onCheckedChange={(checked) =>
-                        onRequestChange({ worktree: checked === true })
-                      }
-                      aria-label="Run in an isolated copy (git worktree)"
-                    />
-                    <span className="flex flex-col gap-1">
-                      <span className="font-medium">
-                        Run in an isolated copy (git worktree)
-                      </span>
-                      <span className="text-muted-foreground">
-                        RunHaven makes a separate copy of your project on a new
-                        git branch. Your project folder must be a clean git repo.
-                        Your original files change only if you merge the copy
-                        back later.
-                      </span>
-                    </span>
-                  </label>
                 </div>
               </details>
 
@@ -283,18 +299,24 @@ export function LaunchPlanCard({
             </>
           ) : null}
 
-          <div className={step === "agent" ? "flex justify-end" : "flex justify-between gap-3"}>
-            {step === "project" ? (
+          {/* HIG multi-step sheet chrome: Cancel leads step 1, Back leads
+              later steps, the primary action trails. */}
+          <div className="flex justify-between gap-3">
+            {step === "agent" ? (
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+            ) : (
               <Button type="button" variant="outline" onClick={onBack}>
                 Back
               </Button>
-            ) : null}
+            )}
             <Button
               type="submit"
               disabled={
                 step === "project"
                   ? !request.workspacePath || planning
-                  : !request.agent
+                  : !request.agent || !setupOk
               }
             >
               <ClipboardCheck />

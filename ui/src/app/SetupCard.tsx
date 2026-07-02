@@ -1,5 +1,6 @@
 import type { DashboardStatus } from "@/commands/runhaven"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardAction,
@@ -12,9 +13,11 @@ import {
 export function SetupCard({
   loading,
   dashboard,
+  onCheckAgain,
 }: {
   loading: boolean
   dashboard: DashboardStatus | null
+  onCheckAgain?: () => void
 }) {
   const setupKnown = dashboard !== null
   const setupReady = setupKnown && dashboard.setup.ok
@@ -95,6 +98,18 @@ export function SetupCard({
             {remainingFailures === 1 ? "check needs" : "checks need"} attention.
             Open Diagnostics for full details.
           </p>
+        ) : null}
+        {onCheckAgain ? (
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading}
+              onClick={onCheckAgain}
+            >
+              {loading ? "Checking..." : "Check again"}
+            </Button>
+          </div>
         ) : null}
       </CardContent>
     </Card>
