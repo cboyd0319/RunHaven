@@ -3,10 +3,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
 import {
   DEFAULT_SETTINGS,
+  MAX_SESSION_LABEL_LENGTH,
   loadLastDestination,
+  loadSessionLabels,
   loadSettings,
   persistLastDestination,
+  persistSessionLabels,
   persistSettings,
+  sanitizeSessionLabel,
   sidebarDefaultOpen,
 } from "../app/uiStatePersistence"
 
@@ -14,6 +18,7 @@ import { installLocalStorageStub } from "./local-storage"
 
 const KEY = "runhaven.lastDestination"
 const SETTINGS_KEY = "runhaven.settings"
+const SESSION_LABELS_KEY = "runhaven.sessionLabels"
 
 installLocalStorageStub()
 
@@ -138,6 +143,69 @@ describe("settings persistence", () => {
   })
 })
 
+describe("session label sanitization", () => {
+  it("strips control characters and trims", () => {
+    expect(sanitizeSessionLabel("  Fix\tlogin\nbug \r")).toBe("Fixloginbug")
+    expect(sanitizeSessionLabel("clean name")).toBe("clean name")
+    expect(sanitizeSessionLabel("withdel")).toBe("withdel")
+  })
+
+  it("treats a blank or whitespace-only label as empty", () => {
+    expect(sanitizeSessionLabel("")).toBe("")
+    expect(sanitizeSessionLabel("   ")).toBe("")
+    expect(sanitizeSessionLabel("\n\t")).toBe("")
+  })
+
+  it("caps the label length", () => {
+    const long = "a".repeat(MAX_SESSION_LABEL_LENGTH + 40)
+    expect(sanitizeSessionLabel(long)).toHaveLength(MAX_SESSION_LABEL_LENGTH)
+  })
+})
+
+describe("session label persistence", () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+  })
+
+  it("round-trips labels keyed by the opaque session id", () => {
+    persistSessionLabels({ abc123: "Fix the login bug" })
+    expect(loadSessionLabels()).toEqual({ abc123: "Fix the login bug" })
+  })
+
+  it("sanitizes on write and drops blank labels", () => {
+    persistSessionLabels({
+      abc123: "  Trimmed\tname  ",
+      def456: "   ",
+    })
+    expect(loadSessionLabels()).toEqual({ abc123: "Trimmedname" })
+  })
+
+  it("rejects keys that are not opaque session ids", () => {
+    persistSessionLabels({
+      "../../etc/passwd": "evil",
+      "id with spaces": "bad",
+      abc123: "ok",
+    })
+    expect(loadSessionLabels()).toEqual({ abc123: "ok" })
+  })
+
+  it("reads an empty, malformed, or non-string store as no labels", () => {
+    expect(loadSessionLabels()).toEqual({})
+
+    window.localStorage.setItem(SESSION_LABELS_KEY, "not json")
+    expect(loadSessionLabels()).toEqual({})
+
+    window.localStorage.setItem(SESSION_LABELS_KEY, JSON.stringify("home"))
+    expect(loadSessionLabels()).toEqual({})
+
+    window.localStorage.setItem(
+      SESSION_LABELS_KEY,
+      JSON.stringify({ abc123: 42, def456: null }),
+    )
+    expect(loadSessionLabels()).toEqual({})
+  })
+})
+
 describe("monitor-window write guard", () => {
   beforeEach(() => {
     window.localStorage.clear()
@@ -157,6 +225,12 @@ describe("monitor-window write guard", () => {
     window.history.replaceState(null, "", "/?monitor=1")
     persistSettings({ dockBadge: false, defaultAgent: "codex" })
     expect(window.localStorage.getItem(SETTINGS_KEY)).toBeNull()
+  })
+
+  it("never persists session labels from a monitor window", () => {
+    window.history.replaceState(null, "", "/?monitor=1")
+    persistSessionLabels({ abc123: "Fix the login bug" })
+    expect(window.localStorage.getItem(SESSION_LABELS_KEY)).toBeNull()
   })
 
   it("keeps persisting normally in the main window", () => {

@@ -24,6 +24,7 @@ const dashboardStatusChecked = {
   activeRuns: true,
   recentRuns: true,
   warnings: true,
+  appVersion: true,
 } satisfies Record<keyof DashboardStatus, true>
 void dashboardStatusChecked
 
@@ -162,7 +163,8 @@ export function sameDashboardStatus(
     sameRunSummaries(current.activeRuns, next.activeRuns) &&
     sameRunSummaries(current.recentRuns, next.recentRuns) &&
     current.warnings.length === next.warnings.length &&
-    current.warnings.every((warning, index) => warning === next.warnings[index])
+    current.warnings.every((warning, index) => warning === next.warnings[index]) &&
+    current.appVersion === next.appVersion
   )
 }
 

@@ -123,6 +123,7 @@ fn collect_dashboard_status() -> DashboardStatus {
         active_runs: read_active_run_records().iter().map(run_summary).collect(),
         recent_runs,
         warnings,
+        app_version: env!("CARGO_PKG_VERSION").to_string(),
     }
 }
 

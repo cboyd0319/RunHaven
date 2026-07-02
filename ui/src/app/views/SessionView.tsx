@@ -2,12 +2,16 @@ import { useState } from "react"
 
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 import {
   ManagedSessionCard,
   sessionAllowsCleanup,
   sessionAllowsRunControl,
 } from "../ManagedSessionCard"
+import { useSessionLabels } from "../sessionLabels"
+import { MAX_SESSION_LABEL_LENGTH } from "../uiStatePersistence"
 import { SessionAttentionBanner } from "../SessionAttentionBanner"
 import { ManagedSessionDiagnosticsCard } from "../ManagedSessionDiagnosticsCard"
 import { ManagedSessionStatusCard } from "../ManagedSessionStatusCard"
@@ -69,6 +73,7 @@ export function SessionView(
           onResolved={props.onWorktreeResolved}
         />
       ) : null}
+      <SessionLabelEditor session={props.selectedSession} />
       <ManagedSessionCard session={props.selectedSession} />
       <OutputView runOutput={props.runOutput} />
       <SessionInputCard
@@ -82,6 +87,82 @@ export function SessionView(
       />
       <SessionDetails {...props} />
     </div>
+  )
+}
+
+// A GUI-only display name for the session, shown right above the title it
+// renames. This is a cosmetic label held only in this Mac's WebView storage:
+// it never renames the run's real volume identity key, crosses no backend
+// command, and needs no capability or native dialog. A blank name clears the
+// label so the title falls back to the derived "Agent - project" text.
+function SessionLabelEditor({ session }: { session: ManagedSessionSummary }) {
+  const { labels, setLabel } = useSessionLabels()
+  const current = labels[session.id] ?? ""
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(current)
+  const inputId = `session-label-${session.id}`
+
+  function start() {
+    setDraft(current)
+    setEditing(true)
+  }
+
+  function save() {
+    setLabel(session.id, draft)
+    setEditing(false)
+  }
+
+  if (!editing) {
+    return (
+      <div>
+        <Button type="button" variant="outline" size="sm" onClick={start}>
+          {current ? "Rename session" : "Name this session"}
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <form
+      className="flex flex-col gap-2"
+      onSubmit={(event) => {
+        event.preventDefault()
+        save()
+      }}
+    >
+      <Label htmlFor={inputId}>Session name</Label>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          id={inputId}
+          value={draft}
+          maxLength={MAX_SESSION_LABEL_LENGTH}
+          autoFocus
+          placeholder={session.title}
+          className="max-w-xs"
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setEditing(false)
+            }
+          }}
+        />
+        <Button type="submit" size="sm">
+          Save
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setEditing(false)}
+        >
+          Cancel
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        This name shows only in this app on this Mac. Leave it blank to use the
+        agent and project name. It does not rename the session itself.
+      </p>
+    </form>
   )
 }
 

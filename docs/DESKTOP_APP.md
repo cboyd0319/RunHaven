@@ -232,6 +232,13 @@ run points at its review. The session controls sit near the top, never at the
 bottom of the window. Below them come the session overview with its recent
 events, the output, and the message box.
 
+You can give a session your own name. Use **Name this session** (or **Rename
+session**) near the top of the session, type a short name, and save. The name
+then shows on the sidebar row and at the top of the session, in place of the
+"agent and project" name. Leave it blank to go back to the default name. This
+name is just a label for you: it shows only in this app on this Mac, it does
+not rename the session itself, and nothing sensitive is saved with it.
+
 The output is trimmed so it will not flood the window, but raw output can
 still include private data, so the app asks you to confirm before it shows
 any. If a session is ready for input, you can type a message and send it. The
@@ -304,15 +311,26 @@ same native dialog.
 
 ## Check diagnostics
 
-The **Diagnostics** view in the sidebar is read-only trust evidence for the
-whole app. It loads by itself when you open it and shows every setup check
-with its result and fix, plus the trust checks: sign-in broker decisions and
-provider network decisions. A **Check again** button re-reads everything. It
-never changes anything, and it shows only safe summary details, never full
-paths, secrets, or request bodies.
+The **Diagnostics** view in the sidebar is read-only trust and health evidence
+for the whole app. It loads by itself when you open it. A **Check again** button
+re-reads everything. It never changes anything, and it shows only safe summary
+details, never full paths, secrets, or request bodies. From top to bottom it
+shows:
 
-A session's own diagnostics live in that session's view behind **Show
-details**, so there is one surface at a time.
+- A one-line health summary: green when your Mac passes every setup check, or
+  amber with the number of checks that need attention.
+- **Versions and pins**: the RunHaven app version and the runtime versions it
+  expects (Apple container and the pinned runtime).
+- **Agent images**: whether each agent's sandbox image is built and ready.
+  Rebuilding an image stays in the Agents view.
+- **Stale networks**: how many leftover RunHaven networks could be cleaned up.
+  Cleaning them up stays in the Maintenance view.
+- Every setup check with its result and fix.
+- The trust checks: sign-in broker decisions and provider network decisions.
+
+Everything here only reads; the actions that change things (rebuild, prune)
+stay in their own views. A session's own diagnostics live in that session's
+view behind **Show details**, so there is one surface at a time.
 
 ## Maintenance
 

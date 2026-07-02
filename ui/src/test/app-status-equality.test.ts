@@ -52,6 +52,7 @@ function dashboard(patch: Partial<DashboardStatus> = {}): DashboardStatus {
     activeRuns: [runSummary()],
     recentRuns: [runSummary({ runId: "run-0", status: "finished" })],
     warnings: ["one warning"],
+    appVersion: "0.5.0",
     ...patch,
   }
 }
@@ -230,6 +231,13 @@ describe("sameDashboardStatus", () => {
     expect(sameDashboardStatus(base, { ...base, warnings: [] })).toBe(false)
     expect(
       sameDashboardStatus(base, { ...base, warnings: ["different warning"] }),
+    ).toBe(false)
+  })
+
+  it("detects an app version change", () => {
+    const base = dashboard()
+    expect(
+      sameDashboardStatus(base, { ...base, appVersion: "0.6.0" }),
     ).toBe(false)
   })
 })

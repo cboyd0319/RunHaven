@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/card"
 
 import { DiagnosticsCard } from "../DiagnosticsCard"
+import { DiagnosticsSystemPanels } from "../DiagnosticsSystemPanels"
 import type { DiagnosticsState } from "../types"
+import { useDiagnosticsReadModels } from "../useDiagnosticsReadModels"
 
 // The Diagnostics destination: read-only support and trust evidence. It never
 // mutates anything, so the trust data loads as soon as the view opens; Check
@@ -35,11 +37,17 @@ export function DiagnosticsView({
   onLoadDiagnostics: () => Promise<void>
   onRefresh: () => void
 }) {
+  // Read-only system panels (health rollup, versions, image matrix, stale
+  // networks) built from existing commands. The hook loads on entry and
+  // reloads when the agent set changes; Check again reloads it too.
+  const readModels = useDiagnosticsReadModels(dashboard?.agents ?? [])
   // Load on entry, once per visit. Background polls never remount this view,
   // so quiet refresh stays quiet; re-entering the destination reloads.
   useEffect(() => {
     void onLoadDiagnostics()
   }, [])
+
+  const busy = refreshing || diagnosticsLoading || readModels.loading
 
   return (
     <div className="flex flex-col gap-4">
@@ -48,15 +56,17 @@ export function DiagnosticsView({
           type="button"
           variant="outline"
           size="sm"
-          disabled={refreshing || diagnosticsLoading}
+          disabled={busy}
           onClick={() => {
             onRefresh()
             void onLoadDiagnostics()
+            void readModels.reload()
           }}
         >
-          {refreshing || diagnosticsLoading ? "Checking..." : "Check again"}
+          {busy ? "Checking..." : "Check again"}
         </Button>
       </div>
+      <DiagnosticsSystemPanels dashboard={dashboard} readModels={readModels} />
       <SetupChecksCard dashboard={dashboard} refreshing={refreshing} />
       <DiagnosticsCard
         diagnostics={diagnostics}

@@ -38,6 +38,18 @@ export function sessionInputLabel(session: ManagedSessionSummary): string {
   return session.input.attached ? "Input ready" : "Input blocked"
 }
 
+// The display name for a session: the user's GUI-only label when one is set,
+// otherwise the derived "Agent - project" title. The label map is keyed by the
+// opaque session id and its values are already sanitized in persistence; the
+// trim guard here keeps a blank label from ever winning over the derived title.
+export function sessionDisplayTitle(
+  session: ManagedSessionSummary,
+  labels: Record<string, string>,
+): string {
+  const label = labels[session.id]
+  return label && label.trim() ? label : session.title
+}
+
 function identityValue(value: string): string {
   const cleaned = displayValue(value)
   if (cleaned === "Unknown" || cleaned === "-") {

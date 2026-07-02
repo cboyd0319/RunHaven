@@ -17,7 +17,8 @@ import {
 
 import { Metric } from "./Metric"
 import { authScopeLabel, authStatusLabel, networkLabel } from "./labels"
-import { displayValue } from "./sessionIdentity"
+import { useSessionLabels } from "./sessionLabels"
+import { displayValue, sessionDisplayTitle } from "./sessionIdentity"
 
 export function ManagedSessionCard({
   session,
@@ -26,6 +27,7 @@ export function ManagedSessionCard({
 }) {
   const needsAttention = sessionNeedsAttention(session)
   const action = session.nextAction
+  const { labels } = useSessionLabels()
 
   return (
     <Card aria-live="polite">
@@ -33,7 +35,7 @@ export function ManagedSessionCard({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <CardTitle role="heading" aria-level={2}>
-              {session.title}
+              {sessionDisplayTitle(session, labels)}
             </CardTitle>
             <CardDescription>Selected session overview.</CardDescription>
           </div>

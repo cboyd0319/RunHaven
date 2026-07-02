@@ -80,6 +80,7 @@ export function dashboard(setupOk: boolean): DashboardStatus {
     activeRuns: [],
     recentRuns: [],
     warnings: [],
+    appVersion: "0.5.0",
   }
 }
 

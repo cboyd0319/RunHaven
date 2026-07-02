@@ -56,4 +56,8 @@ pub(crate) struct DashboardStatus {
     pub active_runs: Vec<RunSummary>,
     pub recent_runs: Vec<RunSummary>,
     pub warnings: Vec<String>,
+    /// The RunHaven desktop app version, taken from the crate version at build
+    /// time. A plain, non-secret string the Diagnostics view shows alongside
+    /// the pinned runtime versions already in the setup checks.
+    pub app_version: String,
 }

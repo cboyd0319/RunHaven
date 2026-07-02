@@ -1,6 +1,5 @@
 import { CheckCircle2 } from "lucide-react"
 
-import logo from "@/assets/logo.png"
 import type {
   LaunchRunResponse,
   ManagedSessionSummary,
@@ -22,7 +21,8 @@ import { LaunchStatusCard } from "../LaunchStatusCard"
 import { groupSessions } from "../navigation"
 import { RunStatusCard } from "../RunStatusCard"
 import { sessionAttention } from "../sessionAttention"
-import { agentLabel } from "../sessionIdentity"
+import { useSessionLabels } from "../sessionLabels"
+import { agentLabel, sessionDisplayTitle } from "../sessionIdentity"
 import { SetupCard } from "../SetupCard"
 import type { MainViewProps } from "./props"
 import { OutputView } from "./SessionView"
@@ -188,6 +188,7 @@ function SessionListCard({
   statusFor: (session: ManagedSessionSummary) => string
   onSelectSession: (sessionId: string) => void
 }) {
+  const { labels } = useSessionLabels()
   return (
     <Card>
       <CardHeader>
@@ -206,7 +207,9 @@ function SessionListCard({
                 className="w-full justify-between gap-3"
                 onClick={() => onSelectSession(session.id)}
               >
-                <span className="truncate">{session.title}</span>
+                <span className="truncate">
+                  {sessionDisplayTitle(session, labels)}
+                </span>
                 <span className="text-muted-foreground">
                   {statusFor(session)}
                 </span>
@@ -220,16 +223,12 @@ function SessionListCard({
 }
 
 // First-run empty state: what RunHaven does and never shares, in two
-// sentences. The New run button above is the next action.
+// sentences. The New run button above is the next action. The sidebar header
+// is the single brand anchor, so this card carries no logo of its own.
 function FirstRunCard() {
   return (
     <Card>
-      <CardContent className="flex items-center gap-4">
-        <img
-          src={logo}
-          alt=""
-          className="size-12 rounded-xl border bg-background object-cover"
-        />
+      <CardContent>
         <p className="text-sm text-muted-foreground">
           RunHaven runs AI coding agents in a sandbox on your Mac. An agent
           sees only the project folder you pick, never your home folder, keys,

@@ -96,7 +96,8 @@ export function previewDashboardStatus(): DashboardStatus {
     agents: mockAgents,
     activeRuns: [],
     recentRuns: [],
-    warnings: ["Desktop runtime commands are unavailable in browser preview."]
+    warnings: ["Desktop runtime commands are unavailable in browser preview."],
+    appVersion: "preview"
   };
 }
 

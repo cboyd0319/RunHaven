@@ -48,6 +48,10 @@ export type DashboardStatus = {
   activeRuns: RunSummary[];
   recentRuns: RunSummary[];
   warnings: string[];
+  // The RunHaven desktop app version (crate version at build time). A plain,
+  // non-secret string the Diagnostics view shows with the pinned runtime
+  // versions from the setup checks.
+  appVersion: string;
 };
 
 // Known image states. The wire field stays a raw string (open backend

@@ -37,6 +37,20 @@ describe("DiagnosticsView", () => {
     expect(html).toContain("Trust checks")
   })
 
+  it("shows the read-only system panels: health rollup, versions, images, networks", () => {
+    const healthy = renderToStaticMarkup(<DiagnosticsView {...viewProps()} />)
+    expect(healthy).toContain("Your Mac passes every setup check.")
+    expect(healthy).toContain("Versions and pins")
+    expect(healthy).toContain("RunHaven app")
+    expect(healthy).toContain("Agent images")
+    expect(healthy).toContain("Stale networks")
+
+    const blocked = renderToStaticMarkup(
+      <DiagnosticsView {...viewProps({ dashboard: dashboard(false) })} />,
+    )
+    expect(blocked).toContain("1 setup check needs attention.")
+  })
+
   it("marks passing checks and shows no remedy for them", () => {
     const html = renderToStaticMarkup(<DiagnosticsView {...viewProps()} />)
 

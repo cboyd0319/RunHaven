@@ -50,6 +50,7 @@ function dashboard(patch: Partial<DashboardStatus> = {}): DashboardStatus {
       }
     ],
     warnings: [],
+    appVersion: "0.5.0",
     ...patch
   };
 }

@@ -30,6 +30,8 @@ import type { ManagedSessionSummary } from "@/commands/runhaven"
 
 import { safeBackendLabel } from "./labels"
 import { groupSessions, type NavDestination } from "./navigation"
+import { useSessionLabels } from "./sessionLabels"
+import { sessionDisplayTitle } from "./sessionIdentity"
 import {
   sessionAttention,
   type SessionAttention,
@@ -199,13 +201,15 @@ function SessionRow({
   onSelect: () => void
 }) {
   const attention = sessionAttention(session)
+  const { labels } = useSessionLabels()
+  const title = sessionDisplayTitle(session, labels)
 
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         aria-current={selected ? "page" : undefined}
         className="h-auto items-start gap-3 rounded-xl border border-transparent py-3 pr-10 data-[active=true]:border-sidebar-primary/25 data-[active=true]:bg-sidebar-accent/70"
-        tooltip={session.title}
+        tooltip={title}
         type="button"
         isActive={selected}
         onClick={onSelect}
@@ -215,7 +219,7 @@ function SessionRow({
             trailing attention badge. Auth, scope, network, and input detail
             live in the session view and its Details disclosure, not the row. */}
         <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-          <div className="truncate text-sm font-medium">{session.title}</div>
+          <div className="truncate text-sm font-medium">{title}</div>
           <div className="truncate text-[11px] leading-4 text-muted-foreground">
             {attention
               ? attention.label
