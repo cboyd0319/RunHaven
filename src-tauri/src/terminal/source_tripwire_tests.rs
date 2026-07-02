@@ -1,9 +1,10 @@
 //! No-persist / no-log source tripwire for the terminal module (terminal design
 //! section 5). This is a source-invariant test, kept separate from the behavior
-//! tests in `terminal::tests`: it scans the production text of `mod.rs` and
-//! `pty.rs` and fails the build if either ever gains a persistence or logging
-//! sink for the live stream. The terminal production module must relay to the
-//! Tauri `Channel` only.
+//! tests in `terminal::tests`: it scans the production text of `mod.rs`,
+//! `pty.rs`, and `registry.rs` and fails the build if any of them ever gains a
+//! persistence or logging sink for the live stream. The terminal production
+//! module must relay to the Tauri `Channel` only. `registry.rs` is scanned
+//! explicitly so registry code split out of `mod.rs` cannot escape the guard.
 
 /// Forbidden symbols, built at runtime so this test file's own source cannot
 /// satisfy the search (mirroring the menu dispatch-only tripwire). The
@@ -57,19 +58,22 @@ fn terminal_module_never_persists_or_logs_the_stream() {
     let forbidden = forbidden_terminal_markers();
     let mod_production = terminal_production(include_str!("mod.rs"));
     let pty_production = terminal_production(include_str!("pty.rs"));
+    // `registry.rs` has no `mod tests;`, so the whole file is production text.
+    let registry_production = terminal_production(include_str!("registry.rs"));
 
-    // Proof the scan now reaches the command/registry layer, not just the head
-    // above the first `#[cfg(test)]` attribute (the old truncation point).
+    // Proof the scan reaches the command layer in `mod.rs` (below the first
+    // `#[cfg(test)]` attribute, the old truncation point) and the registry
+    // teardown now living in `registry.rs`.
     assert!(
         mod_production.contains("fn register_and_stream"),
         "the scan must cover the command layer below the first cfg(test) item"
     );
     assert!(
-        mod_production.contains("fn close_all"),
-        "the scan must cover the registry teardown"
+        registry_production.contains("fn close_all"),
+        "the scan must cover the registry teardown in registry.rs"
     );
 
-    for production in [mod_production, pty_production] {
+    for production in [mod_production, pty_production, registry_production] {
         assert!(
             first_forbidden_marker(production, &forbidden).is_none(),
             "the terminal module must relay to the Channel only and never persist or log the \

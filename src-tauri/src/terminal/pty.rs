@@ -20,9 +20,8 @@ use runhaven_core::runtime::active::GuiAttachPlan;
 use runhaven_core::runtime::terminal::{GuiPtySession, open_gui_attach_pty, open_gui_login_pty};
 use tauri::ipc::Channel;
 
-use super::{
-    ReaderStart, SpawnedTerminal, TerminalHandle, TerminalMessage, TerminalSessionRegistry,
-};
+use super::registry::{ReaderStart, SpawnedTerminal, TerminalSessionRegistry};
+use super::{TerminalHandle, TerminalMessage};
 
 /// Bounded read window for the master, matching the existing runners' 8 KB
 /// chunks so a busy stream cannot grow an unbounded buffer in the reader.
