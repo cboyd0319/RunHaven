@@ -100,7 +100,13 @@ fn path_is_unsafe(path: &str) -> bool {
     if !path.starts_with('/') || path.contains('\\') {
         return true;
     }
-    if path.to_ascii_lowercase().contains("%2e") {
+    // Reject ANY percent-encoding in the path. The query is split off before
+    // this check, and a legitimate Anthropic/OpenAI path (`/v1/messages`,
+    // `/v1beta/...`) never needs it, so any `%xx` here is an attempt to smuggle
+    // an encoded dot (`%2e`), slash (`%2f`), or backslash (`%5c`) past the
+    // prefix via downstream normalization. Rejecting the whole class closes
+    // single- and double-encoded (`%252e`) traversal in one check.
+    if path.contains('%') {
         return true;
     }
     path.split('/')
@@ -136,9 +142,13 @@ mod tests {
     #[test]
     fn broker_upstream_path_rejects_traversal_and_bad_form() {
         let rule = PathRule::Prefix("/v1/");
-        // Dot-segment traversal that would pass a raw starts_with is rejected.
+        // Dot-segment traversal that would pass a raw starts_with is rejected,
+        // including encoded dots, encoded slash/backslash, and double-encoding.
         assert!(broker_upstream_path("/v1/../v2/messages", &rule).is_err());
         assert!(broker_upstream_path("/v1/%2e%2e/v2/messages", &rule).is_err());
+        assert!(broker_upstream_path("/v1/..%2fadmin", &rule).is_err());
+        assert!(broker_upstream_path("/v1/..%5cadmin", &rule).is_err());
+        assert!(broker_upstream_path("/v1/%252e%252e/x", &rule).is_err());
         assert!(broker_upstream_path("/v1/./messages", &rule).is_err());
         // Non-rooted, backslash, and genuinely off-prefix are rejected too.
         assert!(broker_upstream_path("v1/messages", &rule).is_err());
