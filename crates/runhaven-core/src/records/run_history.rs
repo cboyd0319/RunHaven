@@ -48,7 +48,7 @@ pub fn write_run_record(input: RunRecordInput<'_>) -> Result<()> {
         "status": input.status.unwrap_or(if input.return_code == 0 { "succeeded" } else { "failed" }),
         "return_code": input.return_code,
         "provider_policy": summarize_provider_policy(input.provider_decisions),
-        "auth_broker": summarize_auth_broker(input.auth_decisions),
+        "auth_broker": summarize_auth_broker(input.auth_decisions, input.plan.broker_label()),
         "cleanup": input.cleanup,
         "git": input.git,
     });
@@ -68,12 +68,12 @@ pub fn summarize_provider_policy(decisions: &[ProxyDecision]) -> Value {
     })
 }
 
-pub fn summarize_auth_broker(decisions: Option<&[BrokerDecision]>) -> Value {
+pub fn summarize_auth_broker(decisions: Option<&[BrokerDecision]>, broker: &str) -> Value {
     let Some(decisions) = decisions else {
         return json!({"broker": null, "entries": 0, "allowed": 0, "denied": 0, "no_requests": false});
     };
     json!({
-        "broker": "codex-api-key",
+        "broker": broker,
         "entries": decisions.len(),
         "allowed": decisions.iter().filter(|decision| decision.decision == "allowed").map(|decision| decision.count).sum::<usize>(),
         "denied": decisions.iter().filter(|decision| decision.decision == "denied").map(|decision| decision.count).sum::<usize>(),

@@ -215,6 +215,18 @@ impl AgentRunPlan {
             .and_then(ClaudeAuthSource::broker_env_name)
     }
 
+    /// A non-secret label for the auth broker this run uses, for audit logs and
+    /// run records: `keychain-oauth` for the Claude Keychain OAuth broker,
+    /// `api-key` for the env-var API-key broker (Codex/Gemini/Claude). Matches
+    /// the injection kind; never a secret. Replaces a hardcoded `codex-api-key`
+    /// that mislabeled every broker.
+    pub fn broker_label(&self) -> &'static str {
+        match self.claude_auth_source {
+            Some(ClaudeAuthSource::KeychainOAuth) => "keychain-oauth",
+            _ => "api-key",
+        }
+    }
+
     pub fn shell_preflight(&self) -> Vec<String> {
         self.preflight
             .iter()
@@ -333,5 +345,48 @@ mod tests {
             1,
             "make_interactive_tty must be idempotent"
         );
+    }
+
+    #[test]
+    fn broker_label_names_the_auth_source_not_a_hardcoded_codex() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut plan = build_run_plan(RunOptions {
+            profile: get_profile("shell").expect("profile"),
+            workspace: workspace.path().to_path_buf(),
+            agent_args: vec![
+                "/bin/bash".to_string(),
+                "-lc".to_string(),
+                "true".to_string(),
+            ],
+            image: None,
+            cpus: "4".to_string(),
+            memory: "4g".to_string(),
+            network: NetworkMode::Internet,
+            workspace_scope: WorkspaceScope::Current,
+            session: None,
+            auth_scope: AuthScope::Agent,
+            read_only_workspace: true,
+            ssh: false,
+            env: Vec::new(),
+            user: "agent".to_string(),
+            interactive: true,
+            tty: false,
+            allow_sensitive_workspace: false,
+            allow_root_user: false,
+            provider_hosts: Vec::new(),
+            claude_auth_source: None,
+            worktree: None,
+            run_id: Some("label".to_string()),
+        })
+        .expect("plan");
+        // No source and the env-var API-key broker both read as "api-key"; only
+        // the Keychain OAuth broker reads as "keychain-oauth". Never "codex-api-key".
+        assert_eq!(plan.broker_label(), "api-key");
+        plan.claude_auth_source = Some(ClaudeAuthSource::ApiKeyBrokerEnv(
+            "ANTHROPIC_API_KEY".to_string(),
+        ));
+        assert_eq!(plan.broker_label(), "api-key");
+        plan.claude_auth_source = Some(ClaudeAuthSource::KeychainOAuth);
+        assert_eq!(plan.broker_label(), "keychain-oauth");
     }
 }

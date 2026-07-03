@@ -247,7 +247,7 @@ fn managed_session_finished_run_proves_broker_from_history_auth_broker_channel()
     };
 
     let mut brokered = finished_record("run-history-brokered", "brokered");
-    brokered["auth_broker"] = serde_json::json!({"broker": "codex-api-key", "entries": 0});
+    brokered["auth_broker"] = serde_json::json!({"broker": "api-key", "entries": 0});
     let mut sign_in = finished_record("run-history-sign-in", "signin");
     sign_in["auth_broker"] = serde_json::json!({"broker": null, "entries": 0});
 
