@@ -327,6 +327,16 @@ plan under a PTY, and main-only `open_agent_run_terminal` reuses
 `prepare_confirmed_launch` then forces `--interactive --tty` (`make_interactive_tty`)
 so Claude runs its TUI; the New Run flow opens a run-mode `TerminalPanel` for
 interactive agents (shared cap, disclosure, no-persist tripwire; background kept).
+Placement fix (frontend-only): the interactive run terminal no longer renders
+inside the New Run modal (it grew unbounded off-screen there). Confirming an
+interactive launch closes the sheet and navigates to a new `run-terminal`
+main-content destination (`NavDestination`, `RUN_TERMINAL_NAV`; ephemeral, never
+persisted) where `AppMainContent` renders the run-mode `TerminalPanel` with a new
+`fill` prop: the xterm container is `flex-1 min-h-0` in a bounded full-height
+column (replacing the old `min-h-72` no-max), so FitAddon settles and cannot
+drive a growth loop. `Close`/`End run` (and Escape/unmount) tear down via the
+existing close-on-unmount + `closeTerminalSession` and return Home. Backend
+contract, `open_agent_run_terminal`, disclosure, and native confirm unchanged.
 
 B4 read-only session monitor windows are complete (detail in the gap tracker
 B4 section): Session menu > Open in New Window mints the `session-<n>` label in

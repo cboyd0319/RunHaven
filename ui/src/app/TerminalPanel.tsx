@@ -16,6 +16,7 @@ import {
 } from "@/commands/runhaven"
 
 import { errorMessage } from "./types"
+import { cn } from "@/lib/utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -115,6 +116,11 @@ export type TerminalPanelProps =
       run: { sessionId: string; request: LaunchRunRequest }
       session?: undefined
       login?: undefined
+      // The run terminal in its main-content destination. `fill` makes the card
+      // and the xterm container flex-fill a bounded parent (no min-height growth
+      // loop); `onClose` ends the run and leaves the destination.
+      fill?: boolean
+      onClose?: () => void
     }
 
 export function TerminalPanel(props: TerminalPanelProps) {
@@ -129,6 +135,11 @@ export function TerminalPanel(props: TerminalPanelProps) {
     : props.login
       ? "login"
       : "run"
+  // fill/onClose only exist on the run variant; attach and login keep their
+  // bounded-card layout and their own idle/close behavior untouched.
+  const runProps = props.run ? props : null
+  const fill = runProps?.fill ?? false
+  const onClose = runProps?.onClose
   // A stable open per mode, so the streaming effect can depend on it without
   // re-running mid-session. `run` binds the captured launch request (fixed for
   // this terminal's life) into the uniform (sessionId, onMessage) open shape, so
@@ -257,36 +268,64 @@ export function TerminalPanel(props: TerminalPanelProps) {
   }
 
   function closeTerminal() {
+    // Run-terminal destination: closing ends the run and leaves the view; the
+    // parent navigates Home, unmounting this panel so close-on-unmount kills the
+    // child. Attach/login keep returning to their idle "open" button.
+    if (onClose) {
+      onClose()
+      return
+    }
     setActive(false)
     setPhase("idle")
     setErrorText("")
   }
 
   return (
-    <Card>
+    <Card className={cn(fill && "min-h-0 flex-1")}>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
           {config.title}
         </CardTitle>
         <CardDescription>{config.description}</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className={cn("flex flex-col gap-4", fill && "min-h-0 flex-1")}>
         <TerminalDisclosure />
         {!hasTauriRuntime() ? (
-          <p className="text-sm text-muted-foreground">{config.previewText}</p>
+          <div className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">{config.previewText}</p>
+            {onClose ? (
+              // Even in browser preview (nothing to invoke) the run-terminal
+              // destination stays leaveable, so a preview user is never stranded.
+              <div>
+                <Button type="button" variant="ghost" onClick={onClose}>
+                  Close
+                </Button>
+              </div>
+            ) : null}
+          </div>
         ) : !active ? (
-          <div>
+          <div className="flex flex-wrap items-center gap-3">
             <Button type="button" variant="outline" onClick={openTerminal}>
               {config.openLabel}
             </Button>
+            {onClose ? (
+              // Always reachable: a way out before the run is even started, so
+              // the user is never stranded on the destination.
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Close
+              </Button>
+            ) : null}
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className={cn("flex flex-col gap-3", fill && "min-h-0 flex-1")}>
             <div
               ref={containerRef}
               role="group"
               aria-label="Sandbox terminal"
-              className="min-h-72 overflow-hidden rounded-lg border bg-black p-2"
+              className={cn(
+                "overflow-hidden rounded-lg border bg-black p-2",
+                fill ? "min-h-0 flex-1" : "min-h-72",
+              )}
             />
             {phase === "error" ? (
               <Alert variant="destructive">
@@ -297,7 +336,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
             ) : null}
             <div className="flex flex-wrap items-center gap-3">
               <Button type="button" variant="outline" onClick={closeTerminal}>
-                Close terminal
+                {onClose ? "End run" : "Close terminal"}
               </Button>
               <span className="text-sm text-muted-foreground" aria-live="polite">
                 {terminalStatusText(phase, config.connectedText)}

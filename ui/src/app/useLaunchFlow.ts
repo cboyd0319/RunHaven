@@ -18,6 +18,7 @@ import {
   type RunPlanResponse,
 } from "@/commands/runhaven"
 
+import { HOME_NAV, RUN_TERMINAL_NAV, type NavDestination } from "./navigation"
 import { loadSessionsUntilRunPresent } from "./sessionSelection"
 import { errorMessage, type LaunchStep } from "./types"
 
@@ -58,6 +59,9 @@ export type LaunchFlowDeps = {
   loadRunStatus: (runId: string) => Promise<void>
   loadManagedSessions: () => Promise<ManagedSessionList>
   selectSession: (sessionId: string) => void
+  // Move the main window to a destination. Used to open the interactive run
+  // terminal as a main-content view and to return Home when it closes.
+  navigate: (destination: NavDestination) => void
   onLaunched: (launch: LaunchRunResponse) => void
   onError: (message: string) => void
 }
@@ -87,8 +91,10 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
   const [confirmedWarnings, setConfirmedWarnings] = useState<string[]>([])
   const [launchMessage, setLaunchMessage] = useState("")
   // The active interactive run terminal, set when startRun routes a reviewed,
-  // confirmed interactive launch to its in-app terminal instead of a background
-  // run. Cleared when the sheet closes or the user leaves the terminal step.
+  // confirmed interactive launch to the run-terminal main-content destination
+  // instead of a background run. It is independent of the New Run sheet (which
+  // closes on launch); closeRunTerminal clears it and navigates Home, which
+  // unmounts the panel and tears down the backend child.
   const [runTerminal, setRunTerminal] = useState<RunTerminalLaunch | null>(null)
   // Errors from planning or launching render inside the sheet; the app-level
   // alert would sit behind the modal overlay where nobody can read it.
@@ -112,10 +118,9 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     setLaunchConfirmation(false)
     setConfirmedWarnings([])
     setError("")
-    // Drop any interactive run terminal: closing the sheet unmounts the panel,
-    // which tears down the backend child; clearing state keeps a re-open from
-    // showing a stale terminal.
-    setRunTerminal(null)
+    // The run terminal is a main-content destination now, not sheet content, so
+    // closing the sheet must not tear it down. It is cleared only by
+    // closeRunTerminal (navigating Home unmounts the panel and kills the child).
   }
 
   // Reconcile the request draft with a fresh dashboard: pick the default agent
@@ -218,11 +223,12 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     })
   }
 
-  // Leave the interactive run terminal step: close-on-unmount tears down the
-  // backend child, and clearing state returns the sheet to the plan review.
+  // Leave the interactive run terminal: clearing state and navigating Home
+  // unmounts the panel, whose close-on-unmount tears down the backend child.
+  // Home (or the sessions list) is where the user lands, never stranded.
   function closeRunTerminal() {
     setRunTerminal(null)
-    setLaunchStep("review")
+    deps.navigate(HOME_NAV)
   }
 
   async function startRun() {
@@ -246,7 +252,12 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
       setError("")
       setLaunchMessage("")
       setRunTerminal({ sessionId: newTerminalSessionId(), request: fullRequest })
-      setLaunchStep("terminal")
+      // A live interactive session must not live in a modal that can grow past
+      // the window. Close the sheet and open the run terminal as a bounded
+      // main-content destination. setOpen(false) resets the sheet's own step and
+      // plan but leaves runTerminal intact.
+      setOpen(false)
+      deps.navigate(RUN_TERMINAL_NAV)
       return
     }
     setLaunching(true)

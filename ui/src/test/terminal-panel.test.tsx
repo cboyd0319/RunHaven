@@ -232,6 +232,55 @@ describe("TerminalPanel run mode", () => {
     expect(closeTerminalSession).toHaveBeenCalledWith(launch.sessionId)
     container.remove()
   })
+
+  it("in the fill destination keeps a reachable Close before start and an End run after, tearing down on close", async () => {
+    const launch = runLaunch()
+    let closed = 0
+    const onClose = () => {
+      closed += 1
+    }
+    const container = document.createElement("div")
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    await act(async () => {
+      root.render(
+        createElement(TerminalPanel, { run: launch, fill: true, onClose }),
+      )
+    })
+    // Before the run is started the disclosure is up and a Close escape hatch is
+    // reachable, so the user is never stranded on the destination.
+    expect(container.textContent).toContain(DISCLOSURE)
+    const preClose = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent?.trim() === "Close",
+    )
+    expect(preClose).toBeDefined()
+
+    // Start the run, then the terminal-level control ends the run (leaves the
+    // destination) instead of dead-ending on a re-launch button.
+    const startButton = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Start run"),
+    )
+    await act(async () => {
+      startButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    await act(async () => {})
+    const endButton = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("End run"),
+    )
+    expect(endButton).toBeDefined()
+    await act(async () => {
+      endButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    expect(closed).toBe(1)
+
+    // Unmounting (what the parent navigation does on close) tears down the child.
+    closeTerminalSession.mockClear()
+    await act(async () => {
+      root.unmount()
+    })
+    expect(closeTerminalSession).toHaveBeenCalledWith(launch.sessionId)
+    container.remove()
+  })
 })
 
 describe("TerminalPanel disclosure", () => {

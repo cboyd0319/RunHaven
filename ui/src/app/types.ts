@@ -13,11 +13,11 @@ export type DiagnosticsState = {
 
 export type RunControlAction = "stop" | "kill" | "repair" | "cleanup"
 
-// "terminal" is the interactive-agent run step (task #23, Option A): after review
-// and confirm, an interactive agent (Claude Code) opens its run terminal here so
-// the user types their task in the agent's TUI instead of a headless background
-// run.
-export type LaunchStep = "agent" | "project" | "review" | "terminal"
+// The New Run sheet's three intent-capture steps. An interactive agent (Claude
+// Code) confirmed at "review" does not add a fourth step: it opens the run
+// terminal as the run-terminal main-content destination (a live coding session
+// belongs in the bounded content area, not inside the modal).
+export type LaunchStep = "agent" | "project" | "review"
 
 export function networkHelp(mode: RunPlanRequest["networkMode"]): string {
   if (mode === "provider") {

@@ -53,6 +53,7 @@ export function useAppController() {
     loadRunStatus: statusLoaders.loadRunStatus,
     loadManagedSessions,
     selectSession,
+    navigate,
     onLaunched: setLastLaunch,
     onError: setError,
   })

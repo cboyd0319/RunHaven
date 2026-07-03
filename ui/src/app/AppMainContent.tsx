@@ -3,6 +3,7 @@ import { CheckCircle2, CircleAlert } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 import type { NavDestination } from "./navigation"
+import { TerminalPanel } from "./TerminalPanel"
 import { useFocusOnChange } from "./useFocusOnChange"
 import { sessionAllowsWorktreeReview } from "./worktreeReview"
 import { AgentsView } from "./views/AgentsView"
@@ -28,6 +29,38 @@ export function AppMainContent(props: AppMainContentProps) {
   const focusRef = useFocusOnChange<HTMLDivElement>(
     mainViewFocusKey(navigation, worktreeReviewEligible),
   )
+
+  // The interactive run terminal is a bounded full-height destination, not the
+  // scrolling max-width column the other views use: the xterm container must
+  // flex-fill a definite parent so FitAddon settles at a stable size and can
+  // never grow the layout past the window. It renders only with a live run
+  // terminal in state; the impossible null case falls through to the normal
+  // views (MainView renders Home) so navigation is never dead.
+  if (navigation.kind === "run-terminal" && props.launchFlow.runTerminal) {
+    return (
+      <main className="flex min-h-0 flex-1 flex-col gap-3 p-4">
+        {error ? (
+          <Alert variant="destructive">
+            <CircleAlert />
+            <AlertTitle>Action failed</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        <div
+          ref={focusRef}
+          tabIndex={-1}
+          aria-label="Run terminal"
+          className="flex min-h-0 flex-1 flex-col outline-none"
+        >
+          <TerminalPanel
+            run={props.launchFlow.runTerminal}
+            fill
+            onClose={props.launchFlow.closeRunTerminal}
+          />
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-0 flex-1 overflow-y-auto p-4">
@@ -91,6 +124,12 @@ function MainView(props: AppMainContentProps) {
       return props.selectedSession ? (
         <SessionView {...props} selectedSession={props.selectedSession} />
       ) : null
+    case "run-terminal":
+      // Reached only in the impossible case of a run-terminal destination with
+      // no run terminal in state (AppMainContent renders the real terminal
+      // before MainView otherwise). Fall back to Home so navigation is never
+      // dead and the user is never stranded on a blank view.
+      return <HomeView {...props} />
     case "home":
       return <HomeView {...props} />
   }
@@ -124,5 +163,7 @@ function mainViewLabel(navigation: NavDestination): string {
       return "Diagnostics"
     case "maintenance":
       return "Maintenance"
+    case "run-terminal":
+      return "Run terminal"
   }
 }

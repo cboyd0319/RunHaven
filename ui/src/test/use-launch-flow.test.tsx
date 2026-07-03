@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest"
 
 import { useLaunchFlow, type LaunchFlowDeps } from "../app/useLaunchFlow"
+import type { NavDestination } from "../app/navigation"
 import type {
   LaunchRunResponse,
   ManagedSessionList,
@@ -16,14 +17,17 @@ function deps(patch: Partial<LaunchFlowDeps> = {}): LaunchFlowDeps & {
   launched: LaunchRunResponse[]
   selected: string[]
   errors: string[]
+  navigated: NavDestination[]
 } {
   const launched: LaunchRunResponse[] = []
   const selected: string[] = []
   const errors: string[] = []
+  const navigated: NavDestination[] = []
   return {
     launched,
     selected,
     errors,
+    navigated,
     dashboard: null,
     defaultAgent: null,
     loadImageStatus: async () => {},
@@ -32,6 +36,7 @@ function deps(patch: Partial<LaunchFlowDeps> = {}): LaunchFlowDeps & {
       sessions: [],
     }),
     selectSession: (sessionId) => selected.push(sessionId),
+    navigate: (destination) => navigated.push(destination),
     onLaunched: (launch) => launched.push(launch),
     onError: (message) => errors.push(message),
     ...patch,
@@ -188,7 +193,7 @@ describe("useLaunchFlow", () => {
     expect(result.current.request.agent).toBe("codex")
   })
 
-  it("opens the in-app run terminal for an interactive agent instead of a background launch", async () => {
+  it("opens the run terminal as a main-content destination for an interactive agent instead of a background launch", async () => {
     const flowDeps = deps()
     const { result } = await renderFlow(flowDeps)
 
@@ -209,24 +214,29 @@ describe("useLaunchFlow", () => {
       await result.current.startRun()
     })
 
-    // Routed to the run terminal step, carrying the reviewed, confirmed request;
-    // nothing launched in the background and no session navigation happened.
-    expect(result.current.launchStep).toBe("terminal")
+    // Routed to the run-terminal destination carrying the reviewed, confirmed
+    // request: the sheet closes (a live session never lives in the modal),
+    // nothing launched in the background, and no session navigation happened.
     expect(result.current.runTerminal).not.toBeNull()
     expect(result.current.runTerminal?.request.plan.agent).toBe("claude")
     expect(result.current.runTerminal?.request.confirmLaunch).toBe(true)
     // The session key is a dash-free label so it passes the backend run-id rule.
     expect(result.current.runTerminal?.sessionId).not.toContain("-")
-    expect(result.current.sheetOpen).toBe(true)
+    expect(result.current.sheetOpen).toBe(false)
+    expect(flowDeps.navigated).toEqual([{ kind: "run-terminal" }])
     expect(flowDeps.launched).toHaveLength(0)
     expect(flowDeps.selected).toEqual([])
 
-    // Leaving the terminal step clears it (close-on-unmount tears down the child).
+    // Closing the run terminal clears it and returns Home; the panel unmounts,
+    // and close-on-unmount tears down the backend child.
     await act(async () => {
       result.current.closeRunTerminal()
     })
     expect(result.current.runTerminal).toBeNull()
-    expect(result.current.launchStep).toBe("review")
+    expect(flowDeps.navigated).toEqual([
+      { kind: "run-terminal" },
+      { kind: "home" },
+    ])
   })
 
   it("keeps the sheet open and shows the error when the launch is rejected", async () => {

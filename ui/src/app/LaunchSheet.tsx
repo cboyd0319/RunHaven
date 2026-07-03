@@ -18,7 +18,6 @@ import {
 
 import { LaunchPlanCard } from "./LaunchPlanCard"
 import { PlanReviewCard } from "./PlanReviewCard"
-import { TerminalPanel } from "./TerminalPanel"
 import type { LaunchFlow } from "./useLaunchFlow"
 import { useFocusOnChange } from "./useFocusOnChange"
 
@@ -100,29 +99,10 @@ export function LaunchSheet(props: LaunchSheetProps) {
 
 function LaunchSheetStep(props: LaunchSheetProps) {
   const { flow } = props
-  // Interactive agent (Claude Code): after review and confirm, its run opens in
-  // an in-app terminal here (task #23, Option A) so the user types their task in
-  // the agent's TUI. Leaving this step or closing the sheet unmounts the panel,
-  // which tears down the backend run child.
-  if (flow.launchStep === "terminal" && flow.runTerminal) {
-    return (
-      <div className="flex flex-col gap-3">
-        <TerminalPanel run={flow.runTerminal} />
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={flow.closeRunTerminal}
-          >
-            Back to review
-          </Button>
-          <Button type="button" onClick={() => flow.setOpen(false)}>
-            Done
-          </Button>
-        </div>
-      </div>
-    )
-  }
+  // Interactive agent (Claude Code): confirming at review closes this sheet and
+  // opens the run terminal as the run-terminal main-content destination (see
+  // AppMainContent), so the live session fills the bounded window instead of
+  // growing this modal off-screen.
   if (flow.launchStep === "review" && flow.plan) {
     return (
       <PlanReviewCard

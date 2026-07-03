@@ -111,15 +111,18 @@ the window closes and the app takes you straight to the new session.
 
 Some agents are interactive: they work as a chat in their own terminal, so there
 is no separate box to type your task into. When you start one of these (Claude
-Code today), RunHaven opens the run right here in a terminal instead of running
-it in the background, and you type your task in the terminal the same way you
-would in your own. The same confirm step runs first, so nothing starts until you
-approve it, and the run uses the same sandbox rules as any other run: the same
-non-root agent user, the same network setting, and your saved Claude sign-in
-added only to the run's requests, never inside the sandbox. The same standing
-terminal warning applies (see [Open a terminal](#open-a-terminal)): what the run
-prints is shown but not filtered or saved. Use **Back to review** to change the
-run, or **Done** (or closing the window) to end it.
+Code today) and confirm, the **New run** window closes and RunHaven opens the run
+in a full terminal that fills the main area of the window, the same place a
+session opens. You type your task in the terminal the same way you would in your
+own. The same confirm step runs first, so nothing starts until you approve it,
+and the run uses the same sandbox rules as any other run: the same non-root agent
+user, the same network setting, and your saved Claude sign-in added only to the
+run's requests, never inside the sandbox. The same standing terminal warning
+applies (see [Open a terminal](#open-a-terminal)): what the run prints is shown
+but not filtered or saved. A **Close** button is always visible, and **End run**
+appears once the run starts. Either one ends the run and takes you back Home, so
+the terminal can never grow past the window or leave you stuck. Pressing Escape
+or closing the window also ends the run cleanly.
 
 On the Agent step you can open `Auth details` to see, for the chosen agent, how
 it signs in, what stays on this Mac, what the agent gets, and which provider

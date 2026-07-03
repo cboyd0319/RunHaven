@@ -52,6 +52,10 @@ const PAGE_HEADINGS: Record<
     title: "Maintenance",
     description: "Clean up what RunHaven left behind.",
   },
+  "run-terminal": {
+    title: "Run terminal",
+    description: "Type your task for the interactive agent, live in its sandbox.",
+  },
 }
 
 export function useAppDerivedState(input: AppDerivedStateInput) {
