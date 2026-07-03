@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { TriangleAlert } from "lucide-react"
 import "@xterm/xterm/css/xterm.css"
 
 import {
   closeTerminalSession,
   hasTauriRuntime,
+  openAgentRunTerminal,
   openClaudeSignInTerminal,
   openTerminalSession,
   resizeTerminal,
   writeTerminalInput,
+  type LaunchRunRequest,
   type ManagedSessionSummary,
   type TerminalMessage,
 } from "@/commands/runhaven"
@@ -38,16 +40,19 @@ const SCROLLBACK_LINES = 1000
 
 type TerminalPhase = "idle" | "opening" | "live" | "ended" | "error"
 
-// The two panel modes share every mechanic (host PTY over a Channel, xterm,
+// The three panel modes share every mechanic (host PTY over a Channel, xterm,
 // close-on-unmount) and differ only in the open command, the fixed session key,
 // and the surrounding copy. `attach` types live inside a running session's
-// sandbox; `login` runs the in-app Claude sign-in terminal (path A).
+// sandbox; `login` runs the in-app Claude sign-in terminal (path A); `run`
+// launches an interactive agent and lets the user type their task in its TUI
+// (task #23, Option A).
+type TerminalOpen = (
+  sessionId: string,
+  onMessage: (message: TerminalMessage) => void,
+) => Promise<void>
+
 type TerminalConfig = {
   sessionId: string
-  open: (
-    sessionId: string,
-    onMessage: (message: TerminalMessage) => void,
-  ) => Promise<void>
   title: string
   description: string
   openLabel: string
@@ -58,7 +63,6 @@ type TerminalConfig = {
 function attachConfig(session: ManagedSessionSummary): TerminalConfig {
   return {
     sessionId: session.id,
-    open: openTerminalSession,
     title: "Terminal",
     description: "Type live inside this session's sandbox.",
     openLabel: "Open terminal",
@@ -71,7 +75,6 @@ function attachConfig(session: ManagedSessionSummary): TerminalConfig {
 function loginConfig(sessionId: string): TerminalConfig {
   return {
     sessionId,
-    open: openClaudeSignInTerminal,
     title: "Claude sign-in terminal",
     description:
       "Sign in to Claude here. RunHaven runs claude auth login in a sandbox, prints a link to open in your browser, and reads the code you paste back.",
@@ -79,6 +82,19 @@ function loginConfig(sessionId: string): TerminalConfig {
     previewText:
       "The sign-in terminal needs the desktop app. Open RunHaven on your Mac to sign in to Claude here.",
     connectedText: "Connected. Open the printed link, approve, then paste the code here.",
+  }
+}
+
+function runConfig(sessionId: string): TerminalConfig {
+  return {
+    sessionId,
+    title: "Run terminal",
+    description:
+      "This agent is interactive, so you type your task right here in its terminal. RunHaven starts the run in a sandbox and connects it to this terminal.",
+    openLabel: "Start run",
+    previewText:
+      "The run terminal needs the desktop app. Open RunHaven on your Mac to start this agent and type here.",
+    connectedText: "Connected. Type your task for the agent here.",
   }
 }
 
@@ -93,17 +109,44 @@ function TerminalDisclosure() {
 }
 
 export type TerminalPanelProps =
-  | { session: ManagedSessionSummary; login?: undefined }
-  | { login: { sessionId: string }; session?: undefined }
+  | { session: ManagedSessionSummary; login?: undefined; run?: undefined }
+  | { login: { sessionId: string }; session?: undefined; run?: undefined }
+  | {
+      run: { sessionId: string; request: LaunchRunRequest }
+      session?: undefined
+      login?: undefined
+    }
 
 export function TerminalPanel(props: TerminalPanelProps) {
   const config = props.session
     ? attachConfig(props.session)
-    : loginConfig(props.login.sessionId)
+    : props.login
+      ? loginConfig(props.login.sessionId)
+      : runConfig(props.run.sessionId)
   const { sessionId } = config
-  // A stable module-function reference per mode, so the streaming effect can
-  // depend on it without re-running mid-session.
-  const open = props.session ? openTerminalSession : openClaudeSignInTerminal
+  const mode: "attach" | "login" | "run" = props.session
+    ? "attach"
+    : props.login
+      ? "login"
+      : "run"
+  // A stable open per mode, so the streaming effect can depend on it without
+  // re-running mid-session. `run` binds the captured launch request (fixed for
+  // this terminal's life) into the uniform (sessionId, onMessage) open shape, so
+  // the plan the backend launches is the reviewed request, not a WebView value.
+  const runRequest = props.run?.request
+  const open = useMemo<TerminalOpen>(() => {
+    switch (mode) {
+      case "attach":
+        return openTerminalSession
+      case "login":
+        return openClaudeSignInTerminal
+      case "run": {
+        const request = runRequest as LaunchRunRequest
+        return (sessionId, onMessage) =>
+          openAgentRunTerminal(sessionId, request, onMessage)
+      }
+    }
+  }, [mode, runRequest])
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [active, setActive] = useState(false)
   const [phase, setPhase] = useState<TerminalPhase>("idle")

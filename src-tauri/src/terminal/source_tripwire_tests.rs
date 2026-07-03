@@ -72,6 +72,13 @@ fn terminal_module_never_persists_or_logs_the_stream() {
         registry_production.contains("fn close_all"),
         "the scan must cover the registry teardown in registry.rs"
     );
+    // Proof the run terminal (task #23) reuses the scanned reader: its spawn lives
+    // in pty.rs under this same no-persist scan, so the interactive-run stream
+    // cannot gain a storage or logging sink either.
+    assert!(
+        pty_production.contains("fn spawn_run_terminal"),
+        "the scan must cover the interactive run terminal spawn in pty.rs"
+    );
 
     for production in [mod_production, pty_production, registry_production] {
         assert!(

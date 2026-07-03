@@ -11,6 +11,7 @@ import {
   secureNetworkDefault,
   withLaunchSessionName,
   type DashboardStatus,
+  type LaunchRunRequest,
   type LaunchRunResponse,
   type ManagedSessionList,
   type RunPlanRequest,
@@ -19,6 +20,34 @@ import {
 
 import { loadSessionsUntilRunPresent } from "./sessionSelection"
 import { errorMessage, type LaunchStep } from "./types"
+
+// The captured, reviewed launch for an interactive agent's run terminal: the
+// full LaunchRunRequest (with confirmLaunch and confirmed warnings) plus the
+// terminal session key. The backend fires the native launch confirmation before
+// anything runs, so this is intent capture, not the mutation boundary.
+export type RunTerminalLaunch = {
+  sessionId: string
+  request: LaunchRunRequest
+}
+
+// Which agents run as an interactive TUI, so the New Run flow opens the in-app
+// run terminal (task #23, Option A) instead of a headless background run. Claude
+// Code is the only one today. Seam to generalize: when core exposes a per-agent
+// "interactive" flag on the profile, read it here instead of hard-coding claude.
+function agentRunsInteractively(agent: string): boolean {
+  return agent === "claude"
+}
+
+// A fresh terminal session key for a run terminal. Like the sign-in terminal, it
+// is only the registry key / run label (dash-free so it passes the backend run-id
+// validator); it never steers what runs, which the backend decides from the
+// reviewed request.
+function newTerminalSessionId(): string {
+  return (globalThis.crypto?.randomUUID?.() ?? `run-${Date.now()}`).replaceAll(
+    "-",
+    "",
+  )
+}
 
 export type LaunchFlowDeps = {
   dashboard: DashboardStatus | null
@@ -57,6 +86,10 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
   const [launchConfirmation, setLaunchConfirmation] = useState(false)
   const [confirmedWarnings, setConfirmedWarnings] = useState<string[]>([])
   const [launchMessage, setLaunchMessage] = useState("")
+  // The active interactive run terminal, set when startRun routes a reviewed,
+  // confirmed interactive launch to its in-app terminal instead of a background
+  // run. Cleared when the sheet closes or the user leaves the terminal step.
+  const [runTerminal, setRunTerminal] = useState<RunTerminalLaunch | null>(null)
   // Errors from planning or launching render inside the sheet; the app-level
   // alert would sit behind the modal overlay where nobody can read it.
   const [error, setError] = useState("")
@@ -79,6 +112,10 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     setLaunchConfirmation(false)
     setConfirmedWarnings([])
     setError("")
+    // Drop any interactive run terminal: closing the sheet unmounts the panel,
+    // which tears down the backend child; clearing state keeps a re-open from
+    // showing a stale terminal.
+    setRunTerminal(null)
   }
 
   // Reconcile the request draft with a fresh dashboard: pick the default agent
@@ -181,8 +218,35 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     })
   }
 
+  // Leave the interactive run terminal step: close-on-unmount tears down the
+  // backend child, and clearing state returns the sheet to the plan review.
+  function closeRunTerminal() {
+    setRunTerminal(null)
+    setLaunchStep("review")
+  }
+
   async function startRun() {
     if (!plan) {
+      return
+    }
+    const launchRequest = request.sessionName
+      ? request
+      : { ...request, sessionName: plan.session || nextLaunchSessionName() }
+    const fullRequest: LaunchRunRequest = {
+      plan: launchRequest,
+      confirmLaunch: launchConfirmation,
+      confirmedWarnings,
+    }
+    // Interactive agent (Claude Code): its prompt lives in its own TUI and a
+    // RunHaven run carries no prompt, so open the in-app run terminal instead of
+    // a headless background run. The reviewed request (confirmLaunch + confirmed
+    // warnings) is handed straight to the backend, which fires the Rust-owned
+    // native launch confirmation before anything runs.
+    if (agentRunsInteractively(launchRequest.agent)) {
+      setError("")
+      setLaunchMessage("")
+      setRunTerminal({ sessionId: newTerminalSessionId(), request: fullRequest })
+      setLaunchStep("terminal")
       return
     }
     setLaunching(true)
@@ -190,14 +254,7 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     setLaunchMessage("")
     let started: LaunchRunResponse
     try {
-      const launchRequest = request.sessionName
-        ? request
-        : { ...request, sessionName: plan.session || nextLaunchSessionName() }
-      started = await launchRun({
-        plan: launchRequest,
-        confirmLaunch: launchConfirmation,
-        confirmedWarnings,
-      })
+      started = await launchRun(fullRequest)
     } catch (cause) {
       setError(errorMessage(cause))
       setLaunching(false)
@@ -241,6 +298,7 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     confirmedWarnings,
     launchMessage,
     error,
+    runTerminal,
     setOpen,
     applyDashboard,
     changeAgent,
@@ -250,6 +308,7 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     reviewPlan,
     setWarningConfirmation,
     startRun,
+    closeRunTerminal,
     setLaunchConfirmation,
     setLaunchStep,
   }

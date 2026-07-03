@@ -188,6 +188,47 @@ describe("useLaunchFlow", () => {
     expect(result.current.request.agent).toBe("codex")
   })
 
+  it("opens the in-app run terminal for an interactive agent instead of a background launch", async () => {
+    const flowDeps = deps()
+    const { result } = await renderFlow(flowDeps)
+
+    await act(async () => {
+      result.current.setOpen(true)
+      result.current.updateRequest({
+        agent: "claude",
+        workspacePath: "/tmp/claude-project",
+      })
+    })
+    await act(async () => {
+      await result.current.reviewPlan()
+    })
+    await act(async () => {
+      result.current.setLaunchConfirmation(true)
+    })
+    await act(async () => {
+      await result.current.startRun()
+    })
+
+    // Routed to the run terminal step, carrying the reviewed, confirmed request;
+    // nothing launched in the background and no session navigation happened.
+    expect(result.current.launchStep).toBe("terminal")
+    expect(result.current.runTerminal).not.toBeNull()
+    expect(result.current.runTerminal?.request.plan.agent).toBe("claude")
+    expect(result.current.runTerminal?.request.confirmLaunch).toBe(true)
+    // The session key is a dash-free label so it passes the backend run-id rule.
+    expect(result.current.runTerminal?.sessionId).not.toContain("-")
+    expect(result.current.sheetOpen).toBe(true)
+    expect(flowDeps.launched).toHaveLength(0)
+    expect(flowDeps.selected).toEqual([])
+
+    // Leaving the terminal step clears it (close-on-unmount tears down the child).
+    await act(async () => {
+      result.current.closeRunTerminal()
+    })
+    expect(result.current.runTerminal).toBeNull()
+    expect(result.current.launchStep).toBe("review")
+  })
+
   it("keeps the sheet open and shows the error when the launch is rejected", async () => {
     const flowDeps = deps()
     const { result } = await renderFlow(flowDeps)

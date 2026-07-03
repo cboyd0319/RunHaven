@@ -109,6 +109,18 @@ never starts anything, and the values you entered are kept, so opening
 **New run** again picks up where you left off. When you launch and confirm,
 the window closes and the app takes you straight to the new session.
 
+Some agents are interactive: they work as a chat in their own terminal, so there
+is no separate box to type your task into. When you start one of these (Claude
+Code today), RunHaven opens the run right here in a terminal instead of running
+it in the background, and you type your task in the terminal the same way you
+would in your own. The same confirm step runs first, so nothing starts until you
+approve it, and the run uses the same sandbox rules as any other run: the same
+non-root agent user, the same network setting, and your saved Claude sign-in
+added only to the run's requests, never inside the sandbox. The same standing
+terminal warning applies (see [Open a terminal](#open-a-terminal)): what the run
+prints is shown but not filtered or saved. Use **Back to review** to change the
+run, or **Done** (or closing the window) to end it.
+
 On the Agent step you can open `Auth details` to see, for the chosen agent, how
 it signs in, what stays on this Mac, what the agent gets, and which provider
 hosts it can reach. These are read-only summaries with no secrets, tokens, or
@@ -333,6 +345,11 @@ terminal text lives in memory while the terminal is open and is thrown away when
 you close it or the app. It is never written to disk and never shown again after
 you close it. This is different from saved run output, which the app does redact
 and keep locally for history.
+
+The interactive run terminal from **New run** (above) works the same way: it is
+the same live shell, the same non-root agent user, and the same shown-but-not-
+saved rule for what it prints. The only difference is that it starts a fresh run
+rather than joining one already running.
 
 Close the terminal with **Close terminal**, or just leave the session or reload
 the app; either way the app shuts down the shell in the sandbox.

@@ -13,7 +13,11 @@ export type DiagnosticsState = {
 
 export type RunControlAction = "stop" | "kill" | "repair" | "cleanup"
 
-export type LaunchStep = "agent" | "project" | "review"
+// "terminal" is the interactive-agent run step (task #23, Option A): after review
+// and confirm, an interactive agent (Claude Code) opens its run terminal here so
+// the user types their task in the agent's TUI instead of a headless background
+// run.
+export type LaunchStep = "agent" | "project" | "review" | "terminal"
 
 export function networkHelp(mode: RunPlanRequest["networkMode"]): string {
   if (mode === "provider") {

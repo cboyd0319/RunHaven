@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-02 UTC
+Last updated: 2026-07-03 UTC
 
 ## Current Direction
 
@@ -152,47 +152,14 @@ Useful GUI design docs:
   point for both failed-login and terminal-close paths; hermetic red/green tests
   in `provider/runtime/tests/network.rs`. `docs/DESKTOP_APP.md` caveat tightened.
   Lead's live re-smoke (fail a login, confirm no orphan) is the remaining step.
-- Live-runtime verification ran on a real macOS 27 / Apple container 1.0.0
-  host: all five live Tauri container tests passed against real containers
-  (self-contained smokes on a clean state; the two attach-style tests against a
-  deliberately started marker run), `runs repair --all` was exercised on two
-  genuinely stale markers (removed=2 kept=0 unverified=0), and
-  `scripts/apple_container_smoke.sh --with-provider --with-ssh` passed end to
-  end (doctor pins, internal read-only run lifecycle, live SSH agent-socket
-  forwarding as the non-root agent, provider allowlist egress, cleanup). The
-  stale `--ssh` clap help ("currently disabled") was fixed in the same pass.
-- Subprocess-spawning read commands (`get_managed_sessions`,
-  `get_network_prune_preview`, `get_image_status`) now coalesce behind a
-  keyed single-flight cache with a 2s TTL (`src-tauri/src/read_guard.rs`):
-  at most one in-flight `container` subprocess per read family regardless of
-  WebView call rate; errors are never cached and mutating commands are
-  untouched. This closes the last whole-GUI security-audit finding with code.
-- Wire contracts flattened (F8): LaunchRunResponse lost its duplicated nested
-  snapshot (containerName hoisted), LogSnapshotResponse collapsed to one
-  encoding (the cursor clone that defeated the live-output equality guard is
-  gone, so the no-blink guard now holds), preflight_count deleted, and all
-  eleven confirm flags take `#[serde(default)]` so an omitted flag fails
-  closed with the friendly message instead of a raw serde error.
-- The frontend punch list closed: explicit
-  session-status reloads now coalesce onto an in-flight poll and take one
-  follow-up fetch, so post-action success messages never show against stale
-  status; first-load request defaults apply exactly once via an agent-name ref
-  (a double-invoked mount refresh can no longer reset networkMode or the Codex
-  default); every `same*` equality helper now carries a compile-time
-  `satisfies Record<keyof T, true>` checklist so a new backend field fails
-  `tsc` until it is compared (shared `sameRunStatusContainer` replaced the
-  duplicated container comparison); UX: the global Diagnostics accordion hides
-  while a session is open, the duplicate inner Maintenance title is gone, the
-  "Run accepted" alert clears once the run appears as a managed session,
-  Advanced options say "CPU cores" / "Memory (4g = 4 GB)", and the disabled
-  "Load latest output" button points at the ack checkbox with visible helper
-  text (ack gate unchanged); the network-cleanup success alert no longer
-  self-clears (prune refreshes the count without wiping the result); e2e grew
-  to 7/7 covering preview sign-in to `succeeded`, both confirm-gated
-  maintenance flows, and worktree review (preview fixtures now finish a stopped
-  worktree run with a saved copy and one stale preview network);
-  `useAppController` split `sessionActions.ts` out by ownership for the
-  structure gate; 191 unit tests pass.
+- Earlier verification and hardening milestones are complete (detail in
+  `feature_list.json` evidence and git): live-runtime verification on a real
+  macOS 27 / Apple container 1.0.0 host (five live Tauri container tests, `runs
+  repair --all`, the `--with-provider --with-ssh` smoke); a keyed single-flight
+  read cache (`read_guard.rs`) coalescing container subprocesses; wire-contract
+  flattening (F8, `#[serde(default)]` fail-closed confirm flags); and the
+  frontend punch list (coalesced status reloads, compile-time `same*` checklists,
+  UX copy fixes, e2e to 7/7).
 - A whole-GUI analysis pass (security, frontend, shell architecture, empirical
   UX with screenshots) ran over the accumulated desktop surface, and its fixes
   landed in three verified waves. Verdict: the trust boundary held under a
@@ -353,6 +320,13 @@ A/B/C passed. Live-smoke fixes landed: failed-login container/network teardown
 leak (force-remove before delete), `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`
 in the sandbox, and the sidebar System group pinned to a footer. The live
 terminal + `claude auth login` round-trip is the lead's `tauri dev` smoke.
+
+Interactive agent runs (task #23, Option A) reuse that machinery: core
+`open_gui_run_pty` (sharing new `run_plan_through_pty` with login) runs a full RUN
+plan under a PTY, and main-only `open_agent_run_terminal` reuses
+`prepare_confirmed_launch` then forces `--interactive --tty` (`make_interactive_tty`)
+so Claude runs its TUI; the New Run flow opens a run-mode `TerminalPanel` for
+interactive agents (shared cap, disclosure, no-persist tripwire; background kept).
 
 B4 read-only session monitor windows are complete (detail in the gap tracker
 B4 section): Session menu > Open in New Window mints the `session-<n>` label in

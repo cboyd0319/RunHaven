@@ -221,4 +221,117 @@ impl AgentRunPlan {
             .map(|command| shell::join(command))
             .collect()
     }
+
+    /// Ensure this plan's `container run` argv runs the agent under a host PTY by
+    /// carrying both `--interactive` and `--tty`. The desktop in-app run-terminal
+    /// path calls this on the plan a normal launch built, which is `--interactive`
+    /// but not `--tty` (the background captured runner drives the agent through
+    /// pipes). An interactive agent such as Claude Code needs a real TTY: with
+    /// none it drops to `--print` (headless) and errors when no piped prompt is
+    /// supplied, so a terminal run must run the interactive TUI.
+    ///
+    /// Idempotent and argv-only: it touches no other argument (image, `--user`,
+    /// mounts, network, env are unchanged). A plan that already carries `--tty` is
+    /// left as-is. In the normal path `--interactive` is present, so `--tty` is
+    /// inserted right after it, among the container-run option flags before the
+    /// positional image. The defensive branch (no `--interactive`, not produced by
+    /// the GUI launch path) inserts both right after the `run` subcommand so they
+    /// still precede the image.
+    pub fn make_interactive_tty(&mut self) {
+        if self.command.iter().any(|arg| arg == "--tty") {
+            return;
+        }
+        match self.command.iter().position(|arg| arg == "--interactive") {
+            Some(pos) => self.command.insert(pos + 1, "--tty".to_string()),
+            None => {
+                let run_pos = self
+                    .command
+                    .iter()
+                    .position(|arg| arg == "run")
+                    .map_or(0, |pos| pos + 1);
+                self.command.insert(run_pos, "--tty".to_string());
+                self.command.insert(run_pos, "--interactive".to_string());
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::runtime::plans::build_run_plan;
+    use crate::runtime::profiles::get_profile;
+
+    /// A GUI-built run plan is `--interactive` but not `--tty` (the background
+    /// captured runner drives the agent through pipes). The desktop terminal-run
+    /// path calls `make_interactive_tty` before running the plan under a host PTY
+    /// via `open_gui_run_pty`; prove it yields an interactive TTY run that still
+    /// stays on the non-root `agent` user, so the agent starts its TUI instead of
+    /// headless `--print`. Hermetic: it builds the plan through the normal seam
+    /// and touches no container.
+    #[test]
+    fn make_interactive_tty_forces_a_tty_run_and_keeps_it_non_root() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut plan = build_run_plan(RunOptions {
+            profile: get_profile("shell").expect("profile"),
+            workspace: workspace.path().to_path_buf(),
+            agent_args: vec![
+                "/bin/bash".to_string(),
+                "-lc".to_string(),
+                "true".to_string(),
+            ],
+            image: None,
+            cpus: "4".to_string(),
+            memory: "4g".to_string(),
+            network: NetworkMode::Internet,
+            workspace_scope: WorkspaceScope::Current,
+            session: None,
+            auth_scope: AuthScope::Agent,
+            read_only_workspace: true,
+            ssh: false,
+            env: Vec::new(),
+            user: "agent".to_string(),
+            interactive: true,
+            tty: false,
+            allow_sensitive_workspace: false,
+            allow_root_user: false,
+            provider_hosts: Vec::new(),
+            claude_auth_source: None,
+            worktree: None,
+            run_id: Some("term-run".to_string()),
+        })
+        .expect("plan");
+
+        // Baseline: the launch path emits --interactive but not --tty.
+        assert!(plan.command.iter().any(|arg| arg == "--interactive"));
+        assert!(!plan.command.iter().any(|arg| arg == "--tty"));
+
+        plan.make_interactive_tty();
+
+        // --tty lands right after --interactive, among the container-run flags.
+        let interactive_pos = plan
+            .command
+            .iter()
+            .position(|arg| arg == "--interactive")
+            .expect("--interactive present");
+        assert_eq!(
+            plan.command.get(interactive_pos + 1).map(String::as_str),
+            Some("--tty"),
+            "--tty must sit right after --interactive"
+        );
+        // Non-root is preserved: still --user agent, and no bare root argument.
+        assert!(plan.command.windows(2).any(|w| w == ["--user", "agent"]));
+        assert!(!plan.command.iter().any(|arg| arg == "root"));
+        // Read-only rootfs and cap-drop are untouched by the argv rewrite.
+        assert!(plan.command.iter().any(|arg| arg == "--read-only"));
+        assert!(plan.command.windows(2).any(|w| w == ["--cap-drop", "ALL"]));
+
+        // Idempotent: a second call adds no duplicate --tty.
+        plan.make_interactive_tty();
+        assert_eq!(
+            plan.command.iter().filter(|arg| *arg == "--tty").count(),
+            1,
+            "make_interactive_tty must be idempotent"
+        );
+    }
 }

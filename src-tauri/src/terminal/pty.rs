@@ -17,7 +17,10 @@ use std::sync::Arc;
 use std::thread;
 
 use runhaven_core::runtime::active::GuiAttachPlan;
-use runhaven_core::runtime::terminal::{GuiPtySession, open_gui_attach_pty, open_gui_login_pty};
+use runhaven_core::runtime::plans::AgentRunPlan;
+use runhaven_core::runtime::terminal::{
+    GuiPtySession, open_gui_attach_pty, open_gui_login_pty, open_gui_run_pty,
+};
 use tauri::ipc::Channel;
 
 use super::registry::{ReaderStart, SpawnedTerminal, TerminalSessionRegistry};
@@ -76,9 +79,27 @@ pub(super) fn spawn_login_terminal(
     Ok(spawned_from_session(session, channel))
 }
 
+/// Open a host-PTY-wrapped interactive **agent run** in core and wire the same
+/// reader/handle glue as an attach/login. Core runs the finalized run plan through
+/// the real provider launch path (proxy-enforced egress, non-root `agent` user,
+/// read-only rootfs, cap-drop, workspace mount, and the Keychain OAuth broker),
+/// with the child's stdio on a host PTY so the agent's interactive TUI can be
+/// typed in-app; the plan already carries `--interactive --tty`. On failure the
+/// core error is collapsed to a fixed message (it can name host paths) so the
+/// WebView keeps its background-run fallback text.
+pub(super) fn spawn_run_terminal(
+    plan: AgentRunPlan,
+    run_label: &str,
+    channel: Channel<TerminalMessage>,
+) -> Result<SpawnedTerminal, String> {
+    let session = open_gui_run_pty(plan, run_label)
+        .map_err(|_| "RunHaven could not open the run terminal.".to_string())?;
+    Ok(spawned_from_session(session, channel))
+}
+
 /// Build the registry control handle and the output-reader one-shot for a live
-/// [`GuiPtySession`], shared by the attach and login open paths so both stream,
-/// reap, and tear down identically.
+/// [`GuiPtySession`], shared by the attach, login, and run open paths so all
+/// stream, reap, and tear down identically.
 fn spawned_from_session(
     session: GuiPtySession,
     channel: Channel<TerminalMessage>,

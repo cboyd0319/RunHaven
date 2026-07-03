@@ -202,6 +202,34 @@ fn spawn_launch_thread(
     Ok(())
 }
 
+/// Prepare, natively confirm, and finalize a launch for the in-app terminal run
+/// path (task #23, Option A). Reuses `launch_run`'s exact plan build, presence-
+/// based Keychain OAuth selection, native launch confirmation, and worktree
+/// finalize; only the caller differs: it runs the returned plan under a host PTY
+/// (`terminal::open_agent_run_terminal`) instead of the background captured runner
+/// in [`spawn_launch_thread`]. Returns `Ok(None)` when the user cancels the native
+/// confirmation, so nothing is spawned. Any worktree branch is created only here,
+/// after approval, exactly as in `launch_run`, so no git mutation happens before
+/// consent.
+pub(crate) async fn prepare_confirmed_terminal_run(
+    app: AppHandle,
+    request: LaunchRunRequest,
+) -> Result<Option<AgentRunPlan>, String> {
+    let prepared = prepare_confirmed_launch(request)?;
+    if !trusted_launch_confirmed(
+        app,
+        &prepared.preview_plan,
+        &prepared.warnings,
+        prepared.worktree(),
+    )
+    .await?
+    {
+        return Ok(None);
+    }
+    let plan = finalize_launch_plan(prepared)?;
+    Ok(Some(plan))
+}
+
 fn prepare_confirmed_launch(request: LaunchRunRequest) -> Result<PreparedLaunch, String> {
     let warnings = validate_launch_confirmation(&request)?;
     let setup = collect_setup_status();

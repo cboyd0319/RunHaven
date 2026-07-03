@@ -13,17 +13,22 @@
 //! (`runhaven-tauri`'s `terminal::pty`) forwards each master chunk to the Tauri
 //! `Channel` and nowhere else, under that crate's source tripwire.
 //!
-//! Claude login variant ([`open_gui_login_pty`]): unlike an attach (which joins
-//! an already-running provider container whose egress proxy is already up), a
-//! login has no running container, so it must *start* one with the provider
-//! egress proxy alive for the whole login. It therefore runs the real provider
-//! launch path ([`launch_run_plan_with_runner`]) on a background thread with a
-//! PTY-handoff runner: the runner spawns the proxy-injected `container run`
-//! child through a host PTY, hands the session to the desktop reader, and blocks
-//! until the child exits, which keeps the allowlist proxy and provider-only
-//! egress enforced exactly as `runhaven login claude` does. That path writes the
-//! same login *metadata* (run record, run id line) the CLI login writes; it
-//! still never reads or persists the terminal byte stream.
+//! Plan-under-PTY variants ([`open_gui_login_pty`], [`open_gui_run_pty`]): unlike
+//! an attach (which joins an already-running provider container whose egress
+//! proxy is already up), a login or a fresh interactive run has no running
+//! container, so it must *start* one with the provider egress proxy alive for the
+//! whole session. Both therefore run the real provider launch path
+//! ([`launch_run_plan_with_runner`]) on a background thread with a PTY-handoff
+//! runner (the shared [`run_plan_through_pty`] mechanism): the runner spawns the
+//! proxy-injected `container run` child through a host PTY, hands the session to
+//! the desktop reader, and blocks until the child exits, which keeps the
+//! allowlist proxy and provider-only egress enforced exactly as `runhaven login
+//! claude` and a background run do. The login runs `claude auth login` with no
+//! broker; the interactive run runs the agent's TUI with the same Keychain OAuth
+//! broker a background run uses, so the token is injected into the child env and
+//! never reaches the plan or the terminal stream. Both write the same run
+//! *metadata* (run record, run id line) the launch path writes; neither ever
+//! reads or persists the terminal byte stream.
 
 use std::io::{self, Read, Write};
 use std::process::Child;
@@ -40,6 +45,7 @@ use crate::runtime::launch::{
     AgentCommandContext, AgentCommandRunner, launch_run_plan_with_runner,
 };
 use crate::runtime::login::build_sandbox_login_terminal_plan;
+use crate::runtime::plans::AgentRunPlan;
 
 /// Initial PTY size before the frontend's first resize, so the guest shell has
 /// a sane geometry immediately. Overwritten by [`GuiPtySession::resize`].
@@ -140,31 +146,64 @@ pub fn open_gui_login_pty(agent: &str, login_id: &str) -> Result<GuiPtySession> 
         return Err(anyhow!("the in-app login terminal only supports claude"));
     }
     let plan = build_sandbox_login_terminal_plan(agent, login_id)?;
-    // The runner hands the spawned session back over this channel the instant
-    // the child exists; if the launch fails before that, the sender is dropped
-    // and `recv` errors, so we fail closed with a fixed, path-free message.
-    let (session_tx, session_rx) = std::sync::mpsc::sync_channel(1);
-    thread::Builder::new()
-        .name(format!("runhaven-login-{login_id}"))
-        .spawn(move || {
-            let mut runner = PtyHandoffRunner { session_tx };
-            // The result is intentionally dropped: the terminal stream carries
-            // the login outcome to the user, and the run record is written by
-            // the launch path itself. Nothing to return from the detached
-            // thread. It self-terminates when the login child exits.
-            let _ = launch_run_plan_with_runner(&plan, &mut runner);
-        })
-        .map_err(|error| anyhow!("could not start the login terminal: {error}"))?;
-    session_rx
-        .recv()
-        .map_err(|_| anyhow!("could not start the Claude login terminal"))
+    run_plan_through_pty(plan, &format!("login-{login_id}"))
 }
 
-/// A one-login command runner that swaps the container child's stdio for a host
-/// PTY and blocks until it exits. Used only by [`open_gui_login_pty`]; it plugs
-/// into the normal provider launch path so the egress proxy and all run
-/// hardening apply, while the login's controlling terminal is RunHaven's host
-/// PTY (so `claude auth login` can read the pasted code).
+/// Open a host-PTY-wrapped in-app **agent run** for `plan`, keyed by the
+/// caller-supplied `label` (the terminal session id / run label). Returns the
+/// shared session handle once the run child is spawned, or an error (fail
+/// closed) if the run cannot start, so the desktop app keeps its background-run
+/// fallback.
+///
+/// This is the interactive-run counterpart of [`open_gui_login_pty`]: it drives
+/// the exact same provider launch path ([`launch_run_plan_with_runner`]) on a
+/// background thread with a PTY-handoff runner, so the egress proxy, non-root
+/// `agent` user, read-only rootfs, cap-drop, workspace mount, and (for Claude)
+/// the Keychain OAuth broker all apply exactly as a background run does; only the
+/// child's stdio becomes RunHaven's host PTY. The stream is relayed by the
+/// desktop reader, never read or persisted here.
+///
+/// The `plan` MUST already carry `--interactive --tty` in its `container run`
+/// argv (see [`AgentRunPlan::make_interactive_tty`]). An interactive agent such
+/// as Claude Code needs a real TTY: with none it drops to `--print` (headless)
+/// and errors when no piped prompt is supplied. The desktop terminal-run command
+/// forces this before calling in; the argument is by value so the run owns the
+/// plan for the life of the detached launch thread.
+pub fn open_gui_run_pty(plan: AgentRunPlan, label: &str) -> Result<GuiPtySession> {
+    run_plan_through_pty(plan, &format!("run-{label}"))
+}
+
+/// Run a full provider launch `plan` on a background thread with the child's
+/// stdio swapped for a host PTY, returning the shared session handle the instant
+/// the child exists. Shared mechanism behind [`open_gui_login_pty`] and
+/// [`open_gui_run_pty`]: the [`PtyHandoffRunner`] spawns the proxy-injected
+/// `container run` child through a host PTY, hands the session back over the
+/// channel, then blocks until the child exits so the egress proxy stays alive for
+/// the whole run. The launch result is intentionally dropped: the terminal
+/// stream carries the outcome to the user and the launch path writes the run
+/// record; the detached thread self-terminates when the child exits. If the
+/// launch fails before the child exists the sender is dropped and `recv` errors,
+/// so this fails closed with a fixed, path-free message.
+fn run_plan_through_pty(plan: AgentRunPlan, label: &str) -> Result<GuiPtySession> {
+    let (session_tx, session_rx) = std::sync::mpsc::sync_channel(1);
+    thread::Builder::new()
+        .name(format!("runhaven-{label}"))
+        .spawn(move || {
+            let mut runner = PtyHandoffRunner { session_tx };
+            let _ = launch_run_plan_with_runner(&plan, &mut runner);
+        })
+        .map_err(|error| anyhow!("could not start the terminal: {error}"))?;
+    session_rx
+        .recv()
+        .map_err(|_| anyhow!("could not start the terminal"))
+}
+
+/// A one-session command runner that swaps the container child's stdio for a
+/// host PTY and blocks until it exits. Used by [`open_gui_login_pty`] and
+/// [`open_gui_run_pty`] through [`run_plan_through_pty`]; it plugs into the normal
+/// provider launch path so the egress proxy and all run hardening apply, while
+/// the session's controlling terminal is RunHaven's host PTY (so `claude auth
+/// login` can read the pasted code, or an interactive agent TUI can be typed in).
 struct PtyHandoffRunner {
     session_tx: SyncSender<GuiPtySession>,
 }

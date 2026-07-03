@@ -55,6 +55,7 @@ fn main() {
             "get_session_window_target",
             "open_terminal_session",
             "open_claude_sign_in_terminal",
+            "open_agent_run_terminal",
             "write_terminal_input",
             "resize_terminal",
             "close_terminal_session",

@@ -26,19 +26,22 @@
 //! relaunch.
 //!
 //! Quit-time limitation (gate C, low): on main-window destroy [`close_all`] kills
-//! every terminal child, but the Claude sign-in terminal (path A) additionally
-//! creates a provider internal network and proxy whose teardown runs on the
-//! login's detached runner thread after the child is reaped. Quitting mid-login
-//! can win the race and leave an orphaned `runhaven-*` internal network (no
-//! secret, no live process). It is cleaned by Maintenance "Clean up stale
-//! networks" / `runhaven network prune`. Follow-up: track the login runner
-//! thread so `close_all` can drain its network teardown; deferred as a
+//! every terminal child, but the plan-under-PTY terminals (the Claude sign-in
+//! terminal, path A, and the interactive agent run terminal) additionally create
+//! a provider internal network and proxy whose teardown runs on the detached
+//! runner thread after the child is reaped. Quitting mid-flow can win the race
+//! and leave an orphaned `runhaven-*` internal network (and, for a run, its run
+//! container) behind (no secret, no live process). It is cleaned by Maintenance
+//! "Clean up stale networks" / `runhaven network prune`. Follow-up: track the
+//! runner thread so `close_all` can drain its network teardown; deferred as a
 //! recoverable, low-frequency case, not new quit-latency machinery.
 
 mod pty;
 mod registry;
 
 use runhaven_core::runtime::active::{GuiAttachPlan, gui_attach_plan};
+#[cfg(test)]
+use runhaven_core::runtime::plans::AgentRunPlan;
 use runhaven_core::support::validators::validate_run_id;
 use serde::Serialize;
 use tauri::ipc::Channel;
@@ -46,6 +49,8 @@ use tauri::{AppHandle, State};
 use tauri_plugin_dialog::MessageDialogKind;
 
 use crate::commands::dialog::confirm_native;
+use crate::commands::launch::prepare_confirmed_terminal_run;
+use crate::contracts::LaunchRunRequest;
 // The session-registry ownership boundary lives in `registry`; re-export the
 // registry state so `terminal::TerminalSessionRegistry` stays the crate-facing
 // path (`lib.rs` manages it) and `SpawnedTerminal` is in scope for the flow
@@ -204,6 +209,52 @@ pub(crate) async fn open_claude_sign_in_terminal(
     register_and_stream(&registry, &session_id, spawned)
 }
 
+/// Open a live **interactive agent run** terminal (task #23, Option A).
+///
+/// An interactive agent (Claude Code today) is a TUI: with no controlling
+/// terminal it drops to headless `--print` and errors when no piped prompt is
+/// supplied, and a RunHaven run carries no prompt by design. This command routes
+/// such a launch into a host-PTY terminal instead of the background captured
+/// runner, so the user types their prompt in the agent's own TUI.
+///
+/// It reuses the normal launch machinery end to end: [`prepare_confirmed_launch`]
+/// builds the exact same plan and selects the Keychain OAuth broker from token
+/// presence, the same Rust-owned native launch confirmation is shown (on cancel
+/// nothing runs and no worktree branch is created), and `open_gui_run_pty` runs
+/// the finalized plan under the same provider egress proxy, non-root `agent`
+/// user, read-only rootfs, cap-drop, and workspace mount as a background run. Only
+/// the EXECUTION differs: the child's stdio is a host PTY streamed over `on_event`
+/// and nowhere else (no store, no log). `session_id` is only the registry key /
+/// run label, so a WebView value cannot steer what runs; the plan content comes
+/// from `request` and Rust-side selection. The broker injects the token into the
+/// child env at spawn; it never touches the plan or the terminal stream. The
+/// shared terminal cap and the write/resize/close commands apply. Fails closed: on
+/// a launch failure nothing is registered and the caller reports it, so the UI
+/// keeps its background-run fallback.
+///
+/// [`prepare_confirmed_launch`]: crate::commands::launch
+#[tauri::command]
+pub(crate) async fn open_agent_run_terminal(
+    app: AppHandle,
+    on_event: Channel<TerminalMessage>,
+    registry: State<'_, TerminalSessionRegistry>,
+    session_id: String,
+    request: LaunchRunRequest,
+) -> Result<(), String> {
+    let registry = registry.inner().clone();
+    // Validate the id and enforce the shared cap before any dialog, worktree
+    // branch, or child.
+    registry.precheck(&session_id)?;
+    let Some(mut plan) = prepare_confirmed_terminal_run(app, request).await? else {
+        return Err(TERMINAL_CANCELED.to_string());
+    };
+    // A terminal run is always interactive: force the argv to carry
+    // `--interactive --tty` so the agent starts its TUI, not headless `--print`.
+    plan.make_interactive_tty();
+    let spawned = pty::spawn_run_terminal(plan, &session_id, on_event)?;
+    register_and_stream(&registry, &session_id, spawned)
+}
+
 /// The one native confirmation for the Claude sign-in terminal, stating what it
 /// runs and the same no-filter/no-store facts as an attach, plus that the pasted
 /// code is visible on screen and the login is kept only inside the sandbox.
@@ -329,6 +380,29 @@ pub(crate) fn open_claude_sign_in_terminal_for_test(
         return Err(TERMINAL_CANCELED.to_string());
     }
     let spawned = spawn()?;
+    register_and_stream(registry, session_id, spawned)
+}
+
+/// Test seam mirroring [`open_agent_run_terminal`] with the prepare+confirm step
+/// and the real host-PTY run spawn injected, so id validation, the shared cap,
+/// confirm-cancel, the forced interactive+tty argv rewrite, and register/remove
+/// are unit-testable without a live container or the heavy launch preconditions.
+/// The plan content comes from the injected `prepare_confirm`, matching the
+/// command's use of `prepare_confirmed_terminal_run`. The real run round-trip is
+/// the maintainer's `tauri dev` smoke.
+#[cfg(test)]
+pub(crate) fn open_agent_run_terminal_for_test(
+    registry: &TerminalSessionRegistry,
+    session_id: &str,
+    prepare_confirm: impl FnOnce() -> Result<Option<AgentRunPlan>, String>,
+    spawn: impl FnOnce(AgentRunPlan) -> Result<SpawnedTerminal, String>,
+) -> Result<(), String> {
+    registry.precheck(session_id)?;
+    let Some(mut plan) = prepare_confirm()? else {
+        return Err(TERMINAL_CANCELED.to_string());
+    };
+    plan.make_interactive_tty();
+    let spawned = spawn(plan)?;
     register_and_stream(registry, session_id, spawned)
 }
 

@@ -302,6 +302,33 @@ its own:
   registered and the app keeps its "run `runhaven login claude` in your terminal"
   fallback.
 
+The interactive agent run terminal (New run for Claude Code) shares that same
+boundary and adds a few facts of its own:
+
+- It is Rust-owned and native-confirmed. The New Run flow hands the reviewed
+  request to Rust, which reuses the exact normal-launch path: it builds the same
+  plan, selects the saved Claude token (Keychain OAuth) from token presence, and
+  shows the same native launch confirmation a background run shows. Nothing runs,
+  and no worktree branch is created, until you confirm. The WebView supplies only
+  a session id (a registry key and run label), never what runs; the plan comes
+  from the reviewed request and Rust-side selection.
+- Only the execution differs from a background run. The same finalized plan runs
+  under the same provider egress proxy, non-root `agent` user, read-only root
+  filesystem, dropped capabilities, and workspace mount; nothing is widened. The
+  one change is that the run's argv is forced to `--interactive --tty` and its
+  stdio is a host PTY, so the agent runs its interactive TUI (an interactive agent
+  with no terminal would otherwise drop to headless `--print` and error with no
+  prompt). The token stays outside the sandbox: the broker injects it into the
+  run's requests at spawn, never onto the plan and never into the terminal stream.
+- The run byte stream follows the same shown-not-stored rule as any terminal: the
+  reader relays each chunk to the WebView `Channel` and nowhere else, and the same
+  build-time source test covers the run spawn, so it cannot gain a storage or
+  logging sink. The run metadata the launch path writes (a run record) is not the
+  stream.
+- It shares the terminal capability and the two-terminal cap, main window only,
+  and fails closed: if the run terminal cannot open, nothing is registered and the
+  app keeps its background-run behavior for non-interactive agents.
+
 ## What This Does Not Solve Yet
 
 Internet mode is unrestricted egress within the host's network policy. It is the

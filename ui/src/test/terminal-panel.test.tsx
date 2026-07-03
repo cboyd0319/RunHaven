@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { TerminalMessage } from "../commands/runhaven"
 
 import { act } from "./render-hook"
-import { managedSession } from "./main-view-props"
+import { managedSession, planRequest } from "./main-view-props"
 
 // A fake xterm Terminal so the teardown, input, and message-handler contracts
 // are testable without booting the real WebView terminal in happy-dom.
@@ -71,6 +71,7 @@ vi.mock("@/commands/runhaven", async (importActual) => ({
   hasTauriRuntime: vi.fn(() => true),
   openTerminalSession: vi.fn(() => Promise.resolve()),
   openClaudeSignInTerminal: vi.fn(() => Promise.resolve()),
+  openAgentRunTerminal: vi.fn(() => Promise.resolve()),
   writeTerminalInput: vi.fn(() => Promise.resolve()),
   resizeTerminal: vi.fn(() => Promise.resolve()),
   closeTerminalSession: vi.fn(() => Promise.resolve()),
@@ -85,8 +86,21 @@ const DISCLOSURE =
 const hasTauriRuntime = vi.mocked(runhaven.hasTauriRuntime)
 const openTerminalSession = vi.mocked(runhaven.openTerminalSession)
 const openClaudeSignInTerminal = vi.mocked(runhaven.openClaudeSignInTerminal)
+const openAgentRunTerminal = vi.mocked(runhaven.openAgentRunTerminal)
 const closeTerminalSession = vi.mocked(runhaven.closeTerminalSession)
 const writeTerminalInput = vi.mocked(runhaven.writeTerminalInput)
+
+// A reviewed, confirmed interactive launch as the run panel receives it.
+function runLaunch() {
+  return {
+    sessionId: "runabc123",
+    request: {
+      plan: { ...planRequest(), agent: "claude" },
+      confirmLaunch: true,
+      confirmedWarnings: [],
+    },
+  }
+}
 
 beforeEach(() => {
   xtermState.instances.length = 0
@@ -94,6 +108,7 @@ beforeEach(() => {
   hasTauriRuntime.mockReturnValue(true)
   openTerminalSession.mockResolvedValue(undefined)
   openClaudeSignInTerminal.mockResolvedValue(undefined)
+  openAgentRunTerminal.mockResolvedValue(undefined)
   closeTerminalSession.mockResolvedValue(undefined)
   writeTerminalInput.mockResolvedValue(undefined)
 })
@@ -171,6 +186,50 @@ describe("TerminalPanel Claude login mode", () => {
     await act(async () => {
       root.unmount()
     })
+    container.remove()
+  })
+})
+
+describe("TerminalPanel run mode", () => {
+  it("shows the desktop-only placeholder and never launches during preview", () => {
+    hasTauriRuntime.mockReturnValue(false)
+    const html = renderToStaticMarkup(<TerminalPanel run={runLaunch()} />)
+    // The standing no-filter/no-store disclosure still shows for a run terminal.
+    expect(html).toContain(DISCLOSURE)
+    expect(html).toContain("The run terminal needs the desktop app")
+    expect(html).not.toContain("Start run")
+    expect(openAgentRunTerminal).not.toHaveBeenCalled()
+  })
+
+  it("opens the run command with the reviewed request (not attach) under the desktop runtime", async () => {
+    const launch = runLaunch()
+    const container = document.createElement("div")
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    await act(async () => {
+      root.render(createElement(TerminalPanel, { run: launch }))
+    })
+    const openButton = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Start run"),
+    )
+    expect(openButton).toBeDefined()
+    await act(async () => {
+      openButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    await act(async () => {})
+    expect(openAgentRunTerminal).toHaveBeenCalledTimes(1)
+    expect(openAgentRunTerminal.mock.calls[0][0]).toBe(launch.sessionId)
+    // The reviewed launch request is handed straight to the backend.
+    expect(openAgentRunTerminal.mock.calls[0][1]).toBe(launch.request)
+    // The run path must not fall through to attach or login.
+    expect(openTerminalSession).not.toHaveBeenCalled()
+    expect(openClaudeSignInTerminal).not.toHaveBeenCalled()
+    // Close-on-unmount tears down the backend run child.
+    closeTerminalSession.mockClear()
+    await act(async () => {
+      root.unmount()
+    })
+    expect(closeTerminalSession).toHaveBeenCalledWith(launch.sessionId)
     container.remove()
   })
 })

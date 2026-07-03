@@ -1,7 +1,7 @@
 import { Channel } from "@tauri-apps/api/core";
 
 import { call, hasTauriRuntime } from "./client";
-import type { TerminalMessage } from "./types";
+import type { LaunchRunRequest, TerminalMessage } from "./types";
 
 // The WebView terminal command surface. These wrappers route through the shared
 // `call` helper in client.ts, so `invoke` stays centralized and the browser
@@ -42,6 +42,34 @@ export async function openClaudeSignInTerminal(
   return call(
     "open_claude_sign_in_terminal",
     { onEvent, sessionId },
+    () => undefined
+  );
+}
+
+// Open a live interactive agent-run terminal (task #23, Option A). An
+// interactive agent (Claude Code today) is a TUI: with no terminal it drops to
+// headless --print and errors without a piped prompt, and a RunHaven run carries
+// no prompt by design. Rust reuses the normal launch machinery end to end: it
+// builds the plan from `request`, selects the Keychain OAuth broker from token
+// presence, shows the native launch confirm (on cancel nothing runs), then runs
+// the finalized plan under a host PTY streamed over the Channel so the user types
+// their prompt in the agent's TUI. Same egress proxy, non-root user, read-only
+// rootfs, cap-drop, and workspace mount as a background run; only the execution
+// surface (a host PTY, never stored or logged) differs. `sessionId` is only the
+// registry key / run label; the plan content comes from `request` and Rust-side
+// selection. The browser preview returns without invoking.
+export async function openAgentRunTerminal(
+  sessionId: string,
+  request: LaunchRunRequest,
+  onMessage: (message: TerminalMessage) => void
+): Promise<void> {
+  if (!hasTauriRuntime()) {
+    return;
+  }
+  const onEvent = new Channel<TerminalMessage>(onMessage);
+  return call(
+    "open_agent_run_terminal",
+    { onEvent, sessionId, request },
     () => undefined
   );
 }

@@ -46,6 +46,7 @@ export function launchFlow(): LaunchFlow {
     confirmedWarnings: [],
     launchMessage: "",
     error: "",
+    runTerminal: null,
     setOpen: () => {},
     applyDashboard: async () => {},
     changeAgent: () => {},
@@ -55,6 +56,7 @@ export function launchFlow(): LaunchFlow {
     reviewPlan: async () => {},
     setWarningConfirmation: () => {},
     startRun: async () => {},
+    closeRunTerminal: () => {},
     setLaunchConfirmation: () => {},
     setLaunchStep: () => {},
   }
