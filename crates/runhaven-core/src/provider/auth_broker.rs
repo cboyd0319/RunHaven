@@ -9,8 +9,8 @@ use std::time::Duration;
 
 use anyhow::{Context, Result, bail};
 use ipnet::IpNet;
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
-use zeroize::Zeroizing;
 
 mod headers;
 mod http;
@@ -56,11 +56,16 @@ pub struct ApiKeyBrokerProxy {
 }
 
 struct BrokerState {
-    // Held in memory for the run so injection can add it per request. Zeroizing
-    // overwrites this copy on drop (Hardening 3) so it is not left in freed heap
-    // after the proxy stops; the residual note in the design covers what this
-    // cannot reach (pipe buffers, prior realloc, the child process).
-    api_key: Zeroizing<String>,
+    // Held in memory for the run so injection can add it per request.
+    // `SecretString` composes zeroize (overwrites this copy on drop, Hardening 3,
+    // so it is not left in freed heap after the proxy stops) and adds
+    // compile-time protection: its `Debug` is `[REDACTED]` and it has no
+    // `Display`, so a stray `{:?}`/`{}` on `BrokerState` or this field cannot leak
+    // the token. Plaintext is reachable only through the one `expose_secret()`
+    // call at the header-injection site below. The residual note in the design
+    // covers what neither wipe nor redaction can reach (pipe buffers, prior
+    // realloc, the child process).
+    api_key: SecretString,
     profile: ProviderBrokerProfile,
     upstream: Arc<dyn BrokerUpstream>,
     allowed_client_networks: Vec<IpNet>,
@@ -73,7 +78,7 @@ impl ApiKeyBrokerProxy {
     pub fn bind_for_profile(
         address: (&str, u16),
         profile: ProviderBrokerProfile,
-        api_key: Zeroizing<String>,
+        api_key: SecretString,
         allowed_client_subnets: &[String],
     ) -> Result<Self> {
         let upstream = Arc::new(HttpsUpstream::for_host(profile.upstream_host));
@@ -83,11 +88,16 @@ impl ApiKeyBrokerProxy {
     pub fn bind_with_upstream(
         address: (&str, u16),
         profile: ProviderBrokerProfile,
-        api_key: Zeroizing<String>,
+        api_key: SecretString,
         allowed_client_subnets: &[String],
         upstream: Arc<dyn BrokerUpstream>,
     ) -> Result<Self> {
-        if api_key.trim().is_empty() {
+        // Bind-time validation read: reject an empty or whitespace-only key so a
+        // blank credential is never held or injected. This only measures the
+        // trimmed length; it does not copy the plaintext out. The single site
+        // that moves the plaintext into an outbound header is the injection call
+        // in `handle_broker_client` below.
+        if api_key.expose_secret().trim().is_empty() {
             bail!("{} requires a host API key", profile.label);
         }
         let listener = TcpListener::bind(address)?;
@@ -102,8 +112,9 @@ impl ApiKeyBrokerProxy {
         Ok(Self {
             listener: Arc::new(listener),
             state: Arc::new(BrokerState {
-                // Already `Zeroizing` from the secret seam (Keychain read or host
-                // env var), so it lands here without a plain-`String` hop.
+                // Already a `SecretString` from the secret seam (Keychain read or
+                // host env var), so it lands here without a plain-`String` hop and
+                // stays redacted/zeroize-on-drop end to end.
                 api_key,
                 profile,
                 upstream,
@@ -271,7 +282,10 @@ fn handle_broker_client(
     let request_headers = broker_request_headers(
         &headers,
         state.profile.upstream_host,
-        &state.api_key,
+        // The one and only plaintext read of the held token: expose it here, at
+        // the point it is injected into the outbound upstream request headers.
+        // Grep `expose_secret` to audit every plaintext access to the credential.
+        state.api_key.expose_secret(),
         &state.profile.injection,
         body.len(),
     );

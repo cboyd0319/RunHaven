@@ -100,6 +100,12 @@ runhaven-cli = { path = "crates/runhaven-cli", version = "=0.5.0" }
 runhaven-core = { path = "crates/runhaven-core", version = "=0.5.0" }
 runhaven-tui = { path = "crates/runhaven-tui", version = "=0.5.0" }
 schemars = "=0.8.22"
+# Type-enforced secret wrapper for the in-memory Claude OAuth broker token
+# (crates/runhaven-core). Redacts Debug and omits Display so a stray `{:?}`/`{}`
+# on the held credential cannot leak it, and composes zeroize's wipe-on-drop
+# (secrecy re-exports and drives zeroize; no separate feature to enable). All-
+# platform, `forbid(unsafe_code)`. Pinned to =0.10.3.
+secrecy = "=0.10.3"
 # macOS Keychain custody for the Claude OAuth broker (crates/runhaven-core,
 # target-gated to macOS). `OSX_10_15` unlocks the data-protection keychain
 # (`kSecUseDataProtectionKeychain`) plus `SecAccessControl` user-presence.

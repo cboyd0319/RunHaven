@@ -6,6 +6,7 @@
 use std::cell::Cell;
 
 use anyhow::Result;
+use secrecy::ExposeSecret;
 use zeroize::Zeroizing;
 
 use super::super::broker_secret::{
@@ -111,8 +112,9 @@ fn keychain_read_happens_once_at_startup_and_validation_is_presence_only() {
         1,
         "the token is read exactly once, at broker startup"
     );
-    // The token stays in `Zeroizing<String>`; compare through the str.
-    assert_eq!(token.as_str(), "sk-ant-oat01-STARTUP");
+    // The token stays a `SecretString`; compare through the one `expose_secret()`
+    // accessor.
+    assert_eq!(token.expose_secret(), "sk-ant-oat01-STARTUP");
 }
 
 #[test]

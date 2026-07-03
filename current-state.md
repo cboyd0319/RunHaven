@@ -125,6 +125,16 @@ Useful GUI design docs:
 
 ## Latest State
 
+- Broker credential redaction is now type-enforced (task #22). The held Claude
+  OAuth token is `BrokerState.api_key: secrecy::SecretString` (was
+  `Zeroizing<String>`), and the broker-secret resolver plus the setup-token
+  capture return `SecretString` end to end. `SecretString` composes zeroize's
+  wipe-on-drop AND redacts `Debug` (`[REDACTED]`, no `Display`), so a stray
+  `{:?}`/`{}` on the state or token cannot leak it; the only plaintext access is
+  the single greppable `expose_secret()` at header injection (broker) and at the
+  Keychain store (capture). Dep `secrecy =0.10.3` (all-platform,
+  `forbid(unsafe_code)`) added to `pins.toml`, workspace, and `runhaven-core`;
+  `runhaven-check-pins` passes. Transient PTY read buffers stay `Zeroizing`.
 - F3 resolved by live smoke: the Claude Keychain STORE failed on the unsigned
   dev build because it attached a user-presence `SecAccessControl`, which is a
   data-protection-keychain feature the legacy file keychain rejects. Fix

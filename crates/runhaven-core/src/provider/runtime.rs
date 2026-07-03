@@ -1,8 +1,8 @@
 use std::thread;
 
 use anyhow::{Context, Result, bail};
+use secrecy::SecretString;
 use serde_json::json;
-use zeroize::Zeroizing;
 
 use crate::provider::auth_broker::{ApiKeyBrokerProxy, GuestRedirect, ProviderBrokerProfile};
 use crate::provider::egress::{EgressPolicy, ThreadedAllowlistProxy};
@@ -332,13 +332,13 @@ pub fn create_provider_proxy(
 
 pub fn create_api_key_broker(
     profile: ProviderBrokerProfile,
-    api_key: Zeroizing<String>,
+    api_key: SecretString,
     network_info: &InternalNetworkInfo,
 ) -> Result<ApiKeyBrokerProxy> {
     let subnets = vec![network_info.ipv4_subnet.clone()];
     // The gateway-bind attempt consumes `api_key`; the 0.0.0.0 fallback needs it
-    // again, so clone the `Zeroizing<String>` (each copy is overwritten on drop)
-    // rather than reaching for a plain `String`.
+    // again, so clone the `SecretString` (each copy stays redacted and is
+    // overwritten on drop) rather than reaching for a plain `String`.
     match ApiKeyBrokerProxy::bind_for_profile(
         (&network_info.ipv4_gateway, 0),
         profile,

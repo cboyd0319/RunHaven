@@ -173,17 +173,22 @@ Capture and transience: [J]
   window; extract the token (the deleted `extract_token` took the last non-empty
   token-shaped line; reuse that logic and its test), store it to the Keychain item,
   then drop every transient copy.
-- Zeroization with a real mechanism, stated honestly (Hardening 3). Rust
+- Zeroization plus type-enforced redaction, stated honestly (Hardening 3). Rust
   `String`/`Vec<u8>` do not zero on drop, `Command::output` hands back a `Vec<u8>`
   whose capacity and prior reallocs we do not control, and the kernel pipe buffer is
-  outside our reach. Add the `zeroize` crate (exact-pinned, verified at pin time;
-  all-platform, since the broker field below is not macOS-only) and wrap the
-  transient stdout buffer, the extracted token, and the broker's held copy
-  (`BrokerState.api_key`, Section 3) in `Zeroizing`, overwritten by a volatile write
-  on drop. It composes with `unsafe_code = forbid` (encapsulates its own unsafe);
-  `secrecy`/`SecretString` is the alternative if Debug-redaction is wanted. Residual
-  we must not claim to wipe: kernel pipe buffers, prior reallocated capacity, and the
-  `claude` process memory. Not "fully wiped."
+  outside our reach. Two exact-pinned, all-platform crates cover this, both composing
+  with `unsafe_code = forbid` (each encapsulates its own unsafe): `zeroize` wraps the
+  transient PTY read buffers (`Zeroizing<Vec<u8>>`/`Zeroizing<String>`), overwritten
+  by a volatile write on drop; and `secrecy::SecretString` holds the two long-lived
+  credential values, the broker's held copy (`BrokerState.api_key`, Section 3) and
+  the extracted setup-token, from the Keychain/env read to injection. `SecretString`
+  composes zeroize's wipe-on-drop AND adds compile-time protection: its `Debug` is
+  `[REDACTED]` and it has no `Display`, so a stray `{:?}`/`{}` on the state or the
+  token cannot leak it. Plaintext is reachable only through explicit, greppable
+  `expose_secret()` calls: exactly one at header injection (the broker) and one at
+  the Keychain store (the capture). Residual we must not claim to wipe: kernel pipe
+  buffers, prior reallocated capacity, and the `claude` process memory. Not "fully
+  wiped."
 
 Piped-output prerequisite (F4): RESOLVED by a live probe on macOS 26+.
 `claude setup-token` is a TTY-required Claude Code (ink) POLLING flow: with a

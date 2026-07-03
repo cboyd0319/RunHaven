@@ -10,6 +10,7 @@
 //! never onto a plan, marker, record, or log.
 
 use anyhow::{Result, anyhow, bail};
+use secrecy::{ExposeSecret, SecretString};
 use zeroize::Zeroizing;
 
 use crate::provider::auth_broker::{
@@ -73,7 +74,7 @@ pub fn claude_oauth_token_present() -> Result<bool> {
 
 pub fn require_api_key_broker_secret(
     plan: &AgentRunPlan,
-) -> Result<Option<(ProviderBrokerProfile, Zeroizing<String>)>> {
+) -> Result<Option<(ProviderBrokerProfile, SecretString)>> {
     require_api_key_broker_secret_with_sources(
         plan,
         |name| std::env::var(name).ok(),
@@ -103,7 +104,7 @@ pub(crate) fn require_api_key_broker_secret_with_sources(
     plan: &AgentRunPlan,
     env_value: impl Fn(&str) -> Option<String>,
     keychain_token: impl Fn() -> Result<Option<Zeroizing<Vec<u8>>>>,
-) -> Result<Option<(ProviderBrokerProfile, Zeroizing<String>)>> {
+) -> Result<Option<(ProviderBrokerProfile, SecretString)>> {
     let Some(source) = &plan.claude_auth_source else {
         return Ok(None);
     };
@@ -125,19 +126,20 @@ pub(crate) fn require_api_key_broker_secret_with_sources(
             let Some(secret) = keychain_token()? else {
                 bail!("no Claude token is saved; sign in to Claude before starting the run");
             };
-            // Stay in `Zeroizing` from the Keychain read to `BrokerState.api_key`:
-            // the trimmed copy is wrapped the moment it is allocated, so every
-            // heap copy of the token on this path (and on the error paths below)
-            // is overwritten on drop. No plain `String` ever holds the token.
-            let token = Zeroizing::new(
+            // Wrap the trimmed token into a `SecretString` the moment it is
+            // allocated, so it flows into `BrokerState.api_key` with the same
+            // type end to end: no named plain-`String` binding ever holds the
+            // token, and the raw Keychain bytes stay in `Zeroizing<Vec<u8>>`
+            // (wiped on drop). `SecretString` composes zeroize's wipe and adds
+            // Debug redaction, so a stray `{:?}` on this value cannot leak it.
+            let token = SecretString::from(
                 std::str::from_utf8(&secret)
                     .map_err(|_| {
                         anyhow!("the saved Claude token is not valid text; sign in to Claude again")
                     })?
-                    .trim()
-                    .to_string(),
+                    .trim(),
             );
-            if token.is_empty() {
+            if token.expose_secret().is_empty() {
                 bail!("the saved Claude token is empty; sign in to Claude again");
             }
             Ok(Some((CLAUDE_OAUTH_BROKER, token)))
@@ -152,7 +154,7 @@ fn resolve_env_broker(
     plan: &AgentRunPlan,
     name: &str,
     env_value: &impl Fn(&str) -> Option<String>,
-) -> Result<(ProviderBrokerProfile, Zeroizing<String>)> {
+) -> Result<(ProviderBrokerProfile, SecretString)> {
     let Some(profile) = broker_profile_for_agent(&plan.profile_name) else {
         bail!(
             "the {} profile has no API-key broker; remove --api-key-broker-env",
@@ -166,11 +168,12 @@ fn resolve_env_broker(
             profile.host_env
         );
     }
-    // Wrap the host env value in `Zeroizing` immediately, for symmetry with the
-    // Keychain path: this key is also a secret and the broker's copy is already
-    // `Zeroizing`, so it stays zeroize-on-drop end to end.
-    let value = Zeroizing::new(env_value(name).unwrap_or_default());
-    if value.trim().is_empty() {
+    // Wrap the host env value in `SecretString` immediately, for symmetry with
+    // the Keychain path: this key is also a secret and the broker's held copy is
+    // a `SecretString`, so it stays redacted and zeroize-on-drop end to end with
+    // no named plain-`String` binding.
+    let value = SecretString::from(env_value(name).unwrap_or_default());
+    if value.expose_secret().trim().is_empty() {
         bail!("{name} is not set on the host; export it before using --api-key-broker-env");
     }
     Ok((profile, value))

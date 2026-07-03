@@ -35,7 +35,10 @@ fn ink_sample() -> Vec<u8> {
 #[test]
 fn extracts_the_exact_token_from_a_wrapped_ansi_ink_sample() {
     let token = extract_token(&ink_sample()).expect("token");
-    assert_eq!(&*token, EXPECTED_TOKEN, "the exact de-wrapped token");
+    // The extractor now returns a `SecretString`; read the plaintext through the
+    // one auditable `expose_secret()` accessor for the value comparison.
+    let token = token.expose_secret();
+    assert_eq!(token, EXPECTED_TOKEN, "the exact de-wrapped token");
     assert!(
         !token.contains("Store"),
         "must not swallow the glued trailing sentence"
@@ -52,7 +55,7 @@ fn prefers_the_env_var_occurrence_but_both_yield_the_same_token() {
     // `CLAUDE_CODE_OAUTH_TOKEN=` run; either path must land the same value.
     let only_plain = b"\x1b[32msk-ant-oat01-AAAABBBBCCCC\r\nDDDDEEEEFFFF\x1b[0m\r\n".as_slice();
     let token = extract_token(only_plain).expect("token from the plain occurrence");
-    assert_eq!(&*token, EXPECTED_TOKEN);
+    assert_eq!(token.expose_secret(), EXPECTED_TOKEN);
 }
 
 #[test]
@@ -69,7 +72,7 @@ fn rejects_a_half_streamed_token_until_a_boundary_arrives() {
     whole.extend_from_slice(b"\n");
     // Still no continuation after the newline -> the newline terminates it.
     let token = extract_token(&whole).expect("token once terminated");
-    assert_eq!(&*token, "sk-ant-oat01-AAAABBBBCCCC");
+    assert_eq!(token.expose_secret(), "sk-ant-oat01-AAAABBBBCCCC");
 }
 
 #[test]

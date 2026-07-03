@@ -25,9 +25,11 @@
 //!   `["setup-token"]` and never a shell string. There is no second PATH lookup
 //!   between the shown and the run binary, so a PATH change after approval cannot
 //!   swap the binary (Codex F8).
-//! - The captured PTY bytes and the extracted token live only in `Zeroizing`
-//!   buffers, overwritten on drop, and reach NO file, log, record, registry, or
-//!   response; the only sink is the Keychain store. A source tripwire denies the
+//! - The captured PTY bytes live only in `Zeroizing` buffers and the extracted
+//!   token in a `SecretString` (both overwritten on drop; `SecretString` also
+//!   redacts Debug), and reach NO file, log, record, registry, or response; the
+//!   only sink is the Keychain store, exposed at the single `expose_secret()`
+//!   call in [`capture_and_store_setup_token`]. A source tripwire denies the
 //!   known file/log/record sink names in this module's own source.
 //! - Every failure path (claude missing, PTY spawn failure, timeout with no
 //!   token, buffer cap exceeded, extraction failure, empty/short token, Keychain
@@ -47,6 +49,7 @@ use std::time::Duration;
 use anyhow::{Result, anyhow};
 use pty_process::Size;
 use pty_process::blocking::{Command, Pty};
+use secrecy::{ExposeSecret, SecretString};
 use zeroize::Zeroizing;
 
 use crate::doctor::find_on_path;
@@ -111,14 +114,16 @@ pub fn resolve_setup_token_binary() -> Result<String> {
 /// the captured buffer.
 pub fn capture_and_store_setup_token(claude: &str) -> Result<()> {
     let token = capture_setup_token(claude)?;
-    crate::provider::claude_oauth_keychain::store_token(token.as_bytes())
+    // The one plaintext read of the extracted token: expose its bytes at the
+    // single Keychain-store call. Grep `expose_secret` to audit it.
+    crate::provider::claude_oauth_keychain::store_token(token.expose_secret().as_bytes())
 }
 
 /// Spawn `claude setup-token` on a host PTY, stream its output on a worker
 /// thread, and return the extracted token. The worker owns the PTY master and
 /// its `Zeroizing` buffer; this thread enforces the wall-clock budget and reaps
 /// the child on every path so nothing is left running.
-fn capture_setup_token(claude: &str) -> Result<Zeroizing<String>> {
+fn capture_setup_token(claude: &str) -> Result<SecretString> {
     let (pty, pts) = pty_process::blocking::open().map_err(|_| anyhow!(ERR_START))?;
     pty.resize(Size::new(CAPTURE_ROWS, CAPTURE_COLS))
         .map_err(|_| anyhow!(ERR_START))?;
@@ -166,11 +171,11 @@ fn reap(mut child: Child) {
 }
 
 /// Outcome the PTY reader hands back. Only [`CaptureOutcome::Token`] carries the
-/// secret (in `Zeroizing`); the rest are buffer-free signals mapped to fixed
-/// messages by [`capture_setup_token`].
+/// secret (in a redacted, zeroize-on-drop `SecretString`); the rest are
+/// buffer-free signals mapped to fixed messages by [`capture_setup_token`].
 enum CaptureOutcome {
     /// The token was extracted from the accumulated output.
-    Token(Zeroizing<String>),
+    Token(SecretString),
     /// The child reached EOF without ever producing an extractable token.
     NoToken,
     /// The accumulated output exceeded [`MAX_CAPTURE_BYTES`].
@@ -225,9 +230,13 @@ fn is_token_char(byte: u8) -> bool {
 /// `CLAUDE_CODE_OAUTH_TOKEN=` occurrence, else the first `sk-ant-` run. Returns a
 /// token only when it is TERMINATED by a real boundary in the de-wrapped stream,
 /// so a token still streaming in is not accepted half-formed.
-fn extract_token(raw: &[u8]) -> Option<Zeroizing<String>> {
+fn extract_token(raw: &[u8]) -> Option<SecretString> {
     let cleaned = strip_ansi(raw);
-    token_from_cleaned(&cleaned)
+    // Build the token in a transient `Zeroizing<String>` (like the PTY byte
+    // buffers), then wrap it into a `SecretString` at this boundary so the
+    // returned credential is redacted and zeroize-on-drop. The transient builder
+    // is wiped when it drops at the end of this scope.
+    token_from_cleaned(&cleaned).map(|token| SecretString::from(token.as_str()))
 }
 
 /// Strip ANSI CSI/OSC escape sequences and control bytes from `raw`, keeping
