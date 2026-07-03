@@ -179,10 +179,16 @@ Capture and transience: [J]
   we must not claim to wipe: kernel pipe buffers, prior reallocated capacity, and the
   `claude` process memory. Not "fully wiped."
 
-Piped-output prerequisite (verify in Slice 2 on macOS 26, [S] needed): confirm
-`claude setup-token` prints the token to a pipe (non-TTY stdout) like a TTY, since
-some CLIs suppress secret output off a terminal. If TTY-only, capture must run
-under a host PTY (`open_gui_attach_pty`, `runtime/terminal.rs`), not a plain pipe.
+Piped-output prerequisite (F4): RESOLVED by a live probe on macOS 26+.
+`claude setup-token` is a TTY-required Claude Code (ink) POLLING flow: with a
+non-TTY stdout its UI and OAuth polling loop never run, so a plain pipe HANGS and
+prints no token. Under a real controlling terminal the user authorizes in the
+browser (no paste, no stdin) and setup-token polls `platform.claude.com` and
+prints the one-year token. So the capture runs it under a host PTY
+(`provider/claude_oauth_capture.rs`, the same `pty-process` primitive
+`runtime/terminal.rs` uses), reads UNTIL the token appears (setup-token does not
+exit promptly after printing it), extracts it, and reaps the child. Path C stays
+one-click: authorize in the browser, no paste.
 
 Parse-failure discipline (`extract_token`): on ANY parse failure the error emits
 only the operation and the agent, never the captured buffer, because the buffer

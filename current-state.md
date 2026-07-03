@@ -125,6 +125,16 @@ Useful GUI design docs:
 
 ## Latest State
 
+- Claude OAuth capture (path C) now runs `claude setup-token` under a host PTY,
+  not a pipe. Live smoke (F4) proved setup-token is a TTY-required Claude Code
+  (ink) polling flow: piped stdout hangs it; under a PTY the user authorizes in
+  the browser (no paste) and it polls and prints the one-year token. The capture
+  (`provider/claude_oauth_capture.rs`, split from `claude_oauth_keychain.rs`)
+  reads until the token appears, extracts it (ANSI/soft-wrap tolerant, rejects a
+  half-streamed token, no glue), reaps the child, and stores it; buffers and
+  token stay `Zeroizing`; 180s timeout + 256 KiB cap fail closed. Path C stays
+  one-click. Remaining live smoke: click Sign in end to end, token lands in the
+  Keychain, Touch ID on a later run.
 - Provider-network teardown no longer leaks the run container or its network on
   a mid-flow killed login/attach client. `cleanup_provider_network`
   (`provider/runtime/network.rs`) force-removes the run container

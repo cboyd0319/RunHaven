@@ -46,61 +46,9 @@ fn user_presence_access_control_constructs() {
     user_presence_access_control().expect("build user-presence access control");
 }
 
-#[test]
-fn parse_token_takes_the_last_token_shaped_line() {
-    let out = b"noise\nsk-ant-oat01-AAAAAAAAAAAAAAAAAAAAAAAA\ntrailing\n";
-    let token = parse_token(out).expect("token");
-    assert_eq!(&*token, "sk-ant-oat01-AAAAAAAAAAAAAAAAAAAAAAAA");
-}
-
-#[test]
-fn parse_token_rejects_blank_and_garbage_without_echoing_the_buffer() {
-    for buffer in [
-        b"".as_slice(),
-        b"   \n\n".as_slice(),
-        b"totally-unrelated-output".as_slice(),
-    ] {
-        let err = parse_token(buffer).expect_err("must reject");
-        let message = err.to_string();
-        assert_eq!(message, "could not read a Claude token; nothing was saved");
-        // The failure path must never echo the captured bytes: the buffer
-        // could itself BE the token.
-        let printable = String::from_utf8_lossy(buffer);
-        let printable = printable.trim();
-        if !printable.is_empty() {
-            assert!(
-                !message.contains(printable),
-                "the error must not echo the captured buffer"
-            );
-        }
-    }
-}
-
-#[test]
-fn parse_token_rejects_a_short_token_shaped_line() {
-    // Guards the length heuristic: a bare prefix is not a token.
-    assert!(parse_token(b"sk-ant-\n").is_err());
-}
-
-#[test]
-fn setup_token_command_runs_exactly_the_resolved_path() {
-    // The capture must run the exact path the confirmation resolved and showed,
-    // with no PATH re-lookup (Codex F8). Building the command from a given path
-    // proves there is no second `find_on_path` between the shown and run binary.
-    use std::ffi::OsStr;
-    let command = setup_token_command("/opt/homebrew/bin/claude");
-    assert_eq!(
-        command.get_program(),
-        OsStr::new("/opt/homebrew/bin/claude"),
-        "the capture must run the exact resolved path"
-    );
-    let args: Vec<&OsStr> = command.get_args().collect();
-    assert_eq!(
-        args,
-        [OsStr::new("setup-token")],
-        "exact arg list, never a shell string"
-    );
-}
+// Token extraction (`extract_token`) and the exact-resolved-path capture moved
+// to `claude_oauth_capture` and are tested there (`claude_oauth_capture::tests`);
+// the Tauri command's show-and-run-the-same-path check covers F8 at that layer.
 
 /// Live Keychain round-trip. Ignored by default because it touches the real
 /// login keychain. It uses a DISTINCT test service and NO access control, so

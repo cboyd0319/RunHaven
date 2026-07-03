@@ -61,12 +61,10 @@ fn keychain_module_never_persists_or_logs_the_token() {
     let forbidden = forbidden_sinks();
     let source = production(include_str!("../claude_oauth_keychain.rs"));
 
-    // Prove the scan reaches the capture and store paths, where a leak would
-    // most plausibly be introduced.
-    assert!(
-        source.contains("fn capture_and_store_setup_token"),
-        "the scan must cover the capture path"
-    );
+    // Prove the scan reaches the store path, where a leak would most plausibly
+    // be introduced. The `setup-token` capture moved to `claude_oauth_capture`,
+    // covered by that module's own tripwire
+    // (`capture_module_never_persists_or_logs_the_token`).
     assert!(
         source.contains("fn store_token"),
         "the scan must cover the store path"

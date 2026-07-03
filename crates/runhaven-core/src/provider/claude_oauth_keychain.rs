@@ -26,21 +26,18 @@
 //!   (from the item's own non-secret `kSecAttrCreationDate`) without decrypting
 //!   the secret and without a user-presence prompt. The age is a day count, not
 //!   a token-derived value, and it drives only the re-sign-in cadence prompt.
-//! - The setup-token capture holds the transient stdout and the extracted
-//!   token in `Zeroizing` buffers overwritten on drop, and keeps NO persistent
-//!   copy anywhere but the Keychain. On any parse failure it emits only the
-//!   operation and the agent, never the captured buffer (the buffer may BE the
-//!   token). A source tripwire test denies a list of known file/log/record sink
-//!   names in this module's own source (slice-1, single-file scope; not a proof
-//!   that any conceivable sink is impossible). Later slices that add a token
-//!   reader need their own review or scan.
+//! - The host `claude setup-token` capture that fills this item lives in the
+//!   sibling [`crate::provider::claude_oauth_capture`] module (re-exported below
+//!   so callers keep one import surface). It runs setup-token under a host PTY,
+//!   holds the transient output and the extracted token in `Zeroizing` buffers,
+//!   and stores only through [`store_token`]. Both modules carry their own
+//!   no-persist source tripwire; the capture's PTY reader is covered by the
+//!   capture module's tripwire, this module's by its own.
 //!
 //! `security-framework`'s safe wrappers own all FFI, so nothing here needs
 //! `unsafe`; this composes with the workspace `unsafe_code = forbid` lint.
 
-use std::process::{Command, Stdio};
-
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{Context, Result, anyhow};
 use security_framework::access_control::{ProtectionMode, SecAccessControl};
 use security_framework::item::{ItemClass, ItemSearchOptions, Limit};
 use security_framework::passwords::{
@@ -50,7 +47,12 @@ use security_framework::passwords::{
 use zeroize::Zeroizing;
 
 use super::claude_oauth_age::age_days_from_cdat;
-use crate::doctor::find_on_path;
+
+// The host `claude setup-token` capture lives in the sibling module; re-exported
+// so the sign-in command keeps a single `claude_oauth_keychain::` import surface
+// (design C, Section 2). The custody surface below (store/read/clear/presence)
+// is the only sink the capture writes to.
+pub use super::claude_oauth_capture::{capture_and_store_setup_token, resolve_setup_token_binary};
 
 /// RunHaven-owned service label. Distinct from any label Claude Code uses, so a
 /// query for this service can only match RunHaven's own item.
@@ -291,82 +293,6 @@ pub fn token_presence() -> Result<TokenPresence> {
 /// Delete RunHaven's stored Claude OAuth token. Deletes only RunHaven's item.
 pub fn clear_token() -> Result<KeychainClear> {
     remove(select_backend())
-}
-
-/// Resolve the absolute `claude` path RunHaven will run for `setup-token`, from
-/// the first PATH match. Surfaced so the sign-in command can SHOW the exact
-/// binary in its native confirmation and then run that SAME resolved path: with
-/// no PATH re-lookup between the shown path and the run, a PATH change mid-flow
-/// (or a poisoned entry appearing after approval) cannot swap the binary the
-/// user approved. Fails closed with a fixed, path-free message when `claude` is
-/// not on PATH.
-pub fn resolve_setup_token_binary() -> Result<String> {
-    find_on_path("claude").ok_or_else(|| {
-        anyhow!(
-            "Claude Code is not installed, so `claude setup-token` cannot run; nothing was saved"
-        )
-    })
-}
-
-/// Build the exact `claude setup-token` command RunHaven runs, at the already
-/// resolved absolute `claude` path the confirmation showed. An explicit argument
-/// list (never a shell string) plus the pre-resolved path mean the program the
-/// user approved is exactly the program that runs. Capture stdout (the token);
-/// inherit stdin/stderr so the browser OAuth flow and any prompts reach the user.
-fn setup_token_command(claude: &str) -> Command {
-    let mut command = Command::new(claude);
-    command
-        .arg("setup-token")
-        .stdin(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .stdout(Stdio::piped());
-    command
-}
-
-/// Run the host `claude setup-token` at the caller-resolved `claude` path,
-/// capture its token transiently, and store it to the Keychain, keeping no copy
-/// anywhere else. `claude` is the exact path [`resolve_setup_token_binary`]
-/// returned and the confirmation showed, so there is no TOCTOU between the shown
-/// and run binary. Fails closed: on a nonzero exit or user cancel, or a malformed
-/// token, nothing is stored and the error names only the operation and the agent.
-///
-/// F4 (live probe, maintainer step): confirm on macOS 26+ with the pinned
-/// Claude Code that `setup-token` prints the token to a pipe (non-TTY stdout)
-/// as it does to a TTY. This capture reuses the previously shipped pipe path
-/// (deleted `login_claude` at `60e37db^`); if the current CLI suppresses the
-/// token off a terminal, capture must move under a host PTY
-/// (`runtime/terminal.rs` `open_gui_attach_pty`).
-pub fn capture_and_store_setup_token(claude: &str) -> Result<()> {
-    let output = setup_token_command(claude)
-        .output()
-        .map_err(|_| anyhow!("could not run `claude setup-token`; nothing was saved"))?;
-    if !output.status.success() {
-        bail!("Claude sign-in did not finish; nothing was saved");
-    }
-    // Hold the raw output and the extracted token only for the store window,
-    // overwritten on drop. Residual outside our reach (documented, not claimed
-    // wiped): the kernel pipe buffer, any reallocated capacity, the child
-    // process memory, and the un-zeroized `CFData` copy security-framework makes
-    // inside the Keychain store call.
-    let stdout = Zeroizing::new(output.stdout);
-    let token = parse_token(&stdout)?;
-    store_token(token.as_bytes())
-}
-
-/// Extract the OAuth token from `claude setup-token` output: the last non-empty
-/// line shaped like an Anthropic OAuth token (reuses the deleted `extract_token`
-/// logic and its heuristic). The token line is copied into a `Zeroizing` buffer.
-///
-/// On ANY failure the error names only the operation and the agent, never the
-/// captured bytes, because the buffer may itself BE the token.
-fn parse_token(stdout: &[u8]) -> Result<Zeroizing<String>> {
-    let text = std::str::from_utf8(stdout)
-        .map_err(|_| anyhow!("could not read a Claude token; nothing was saved"))?;
-    text.lines()
-        .map(str::trim)
-        .rfind(|line| line.starts_with("sk-ant-") && line.len() > 20)
-        .map(|line| Zeroizing::new(line.to_string()))
-        .ok_or_else(|| anyhow!("could not read a Claude token; nothing was saved"))
 }
 
 #[cfg(test)]
