@@ -160,8 +160,13 @@ fn start_signin_flow(
 /// buffer can reach the polled status.
 #[cfg(target_os = "macos")]
 fn host_capture(claude: &str) -> Result<(), String> {
+    // Surface the capture's OWN failure reason (timeout vs no-token vs
+    // spawn-fail). Those messages are fixed, path-free, and buffer-free by the
+    // capture's contract (asserted by its `all_failure_messages_are_path_free`
+    // test), so passing them through leaks nothing and tells the user (and us)
+    // what actually failed instead of a generic "did not finish".
     runhaven_core::provider::claude_oauth_keychain::capture_and_store_setup_token(claude)
-        .map_err(|_| "Claude sign-in did not finish; nothing was saved.".to_string())
+        .map_err(|error| error.to_string())
 }
 
 #[cfg(not(target_os = "macos"))]
