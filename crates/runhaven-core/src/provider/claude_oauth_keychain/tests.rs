@@ -46,6 +46,26 @@ fn user_presence_access_control_constructs() {
     user_presence_access_control().expect("build user-presence access control");
 }
 
+#[test]
+fn access_for_backend_gates_only_the_data_protection_keychain() {
+    // F3: an access control is a data-protection-keychain feature; the legacy
+    // keychain (unsigned dev) rejects it, so an item there carries NO gate and
+    // stores successfully, while the data-protection keychain (signed release)
+    // carries the user-presence gate.
+    assert!(
+        access_for_backend(KeychainBackend::LegacyFile)
+            .expect("legacy access")
+            .is_none(),
+        "the legacy keychain must store without an access control"
+    );
+    assert!(
+        access_for_backend(KeychainBackend::DataProtection)
+            .expect("data-protection access")
+            .is_some(),
+        "the data-protection keychain must carry the user-presence gate"
+    );
+}
+
 // Token extraction (`extract_token`) and the exact-resolved-path capture moved
 // to `claude_oauth_capture` and are tested there (`claude_oauth_capture::tests`);
 // the Tauri command's show-and-run-the-same-path check covers F8 at that layer.

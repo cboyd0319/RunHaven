@@ -168,6 +168,22 @@ fn user_presence_access_control() -> Result<SecAccessControl> {
     })
 }
 
+/// The access control to attach for `backend`, or `None` when the backend does
+/// not support one. The user-presence `SecAccessControl` is a data-protection
+/// keychain feature (`kSecAttrAccessControl`); the LEGACY file keychain rejects
+/// an item that carries one, failing the store. So the presence gate is attached
+/// only on the data-protection keychain, which a signed, notarized release build
+/// uses; an unsigned dev build (legacy keychain, `select_backend`) stores a
+/// usable token WITHOUT the gate. This is the F3 live-probe answer, and it
+/// matches the design's scoping of the "cannot read the token silently"
+/// guarantee to signed release builds only.
+fn access_for_backend(backend: KeychainBackend) -> Result<Option<SecAccessControl>> {
+    match backend {
+        KeychainBackend::DataProtection => Ok(Some(user_presence_access_control()?)),
+        KeychainBackend::LegacyFile => Ok(None),
+    }
+}
+
 /// Add a generic-password item for `(service, account)` with an optional access
 /// control. Overwrites any existing value (the caller deletes first for a clean
 /// replace). Errors carry only the operation, never the secret.
@@ -181,10 +197,12 @@ fn put(backend: KeychainBackend, access: Option<SecAccessControl>, secret: &[u8]
         .context("could not save the Claude token to the Keychain")
 }
 
-/// Read the item for `(service, account)`. A stored user-presence item triggers
-/// the LocalAuthentication prompt here. `Ok(None)` means no item exists; the
-/// bytes are wrapped in `Zeroizing` so the caller's copy is overwritten on
-/// drop. Errors carry only the operation.
+/// Read the item for `(service, account)`. On the data-protection keychain a
+/// stored user-presence item triggers the LocalAuthentication prompt here; a
+/// legacy-keychain item carries no gate (see [`access_for_backend`]) and does
+/// not prompt. `Ok(None)` means no item exists; the bytes are wrapped in
+/// `Zeroizing` so the caller's copy is overwritten on drop. Errors carry only
+/// the operation.
 fn get(backend: KeychainBackend) -> Result<Option<Zeroizing<Vec<u8>>>> {
     match generic_password(base_options(backend)) {
         Ok(bytes) => Ok(Some(Zeroizing::new(bytes))),
@@ -255,15 +273,17 @@ fn remove(backend: KeychainBackend) -> Result<KeychainClear> {
 }
 
 /// Store `token` as RunHaven's Claude OAuth item, replacing any existing value.
-/// Delete-then-add gives a clean replace so the fresh user-presence access
-/// control and value fully overwrite a prior login (re-login may prompt to
-/// remove the old item, which is expected during an explicit re-sign-in).
+/// Delete-then-add gives a clean replace so a fresh value (and, on the
+/// data-protection keychain, a fresh access control) fully overwrites a prior
+/// login. On the data-protection keychain (signed release) the item carries the
+/// user-presence gate; on the legacy keychain (unsigned dev) it does not, since
+/// that keychain rejects an access control (see [`access_for_backend`]).
 pub fn store_token(token: &[u8]) -> Result<()> {
     let backend = select_backend();
     // Ignore the clear outcome: a missing prior item is the common first-login
     // case and must not fail the store.
     let _ = remove(backend);
-    put(backend, Some(user_presence_access_control()?), token)
+    put(backend, access_for_backend(backend)?, token)
 }
 
 /// Read RunHaven's stored Claude OAuth token. Triggers the user-presence

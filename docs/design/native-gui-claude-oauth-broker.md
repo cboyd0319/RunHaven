@@ -136,11 +136,17 @@ theft-impossible for someone holding the unlocked device (Section 6).
 Cross-app isolation and signing: [J] silent cross-app access is scoped by the
 entitlement identity of a signed, notarized build; that isolation is a security
 gate covered under Future / release hardening below and is not claimed for an
-unsigned dev build. Dev-build fallback (decided in Slice 1): if the data-protection
-keychain needs entitlements the dev build cannot carry, the dev build uses a
-file-based keychain item and the release build the data-protection keychain; both
-keep `AccessibleWhenUnlockedThisDeviceOnly`, and the user-presence gate applies
-wherever `SecAccessControl` binds.
+unsigned dev build. Dev-build fallback (F3, RESOLVED by a live probe): a
+`SecAccessControl` is a data-protection-keychain feature (`kSecAttrAccessControl`);
+the LEGACY file keychain REJECTS an item that carries one, so an unsigned dev
+build (which cannot use the data-protection keychain and falls back to the legacy
+keychain, `select_backend`) stores the token WITHOUT the user-presence gate, and
+a signed release (data-protection keychain) stores it WITH the gate
+(`access_for_backend`). Both keep `AccessibleWhenUnlockedThisDeviceOnly`. Earlier
+wording that "the gate applies wherever `SecAccessControl` binds / binds in both"
+was wrong: attaching a gate on the legacy keychain fails the store outright. So
+the "cannot read the token silently" guarantee is scoped to signed release, as
+the claim set already states; the dev build stores a usable, presence-free token.
 
 Token rotation and bounded lifetime (Hardening 4): [J] `claude setup-token` mints
 a static one-year token with no refresh (Gate 0 fact), so RunHaven owns aging it.

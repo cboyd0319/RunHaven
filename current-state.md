@@ -125,6 +125,14 @@ Useful GUI design docs:
 
 ## Latest State
 
+- F3 resolved by live smoke: the Claude Keychain STORE failed on the unsigned
+  dev build because it attached a user-presence `SecAccessControl`, which is a
+  data-protection-keychain feature the legacy file keychain rejects. Fix
+  (`access_for_backend`): attach the presence gate only on the data-protection
+  keychain (signed release); the legacy keychain (dev) stores a usable token
+  WITHOUT the gate. The "cannot read the token silently" guarantee stays scoped
+  to signed release, as the claim set says. This is why sign-in reached capture
+  but failed at store; the honest error (`60bc161`) surfaced it.
 - Claude OAuth capture (path C) now runs `claude setup-token` under a host PTY,
   not a pipe. Live smoke (F4) proved setup-token is a TTY-required Claude Code
   (ink) polling flow: piped stdout hangs it; under a PTY the user authorizes in
