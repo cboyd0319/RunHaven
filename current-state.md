@@ -145,24 +145,14 @@ Useful GUI design docs:
   keyboard escape (A11Y-1). Deferred: agent sign-in backend concurrency guard
   (#32), the run/session + sign-in vocabulary rename (#33, awaiting user). P2
   (native shell) and P3 (nits) are next.
-- Broker credential redaction is now type-enforced (task #22). The held Claude
-  OAuth token is `BrokerState.api_key: secrecy::SecretString` (was
-  `Zeroizing<String>`), and the broker-secret resolver plus the setup-token
-  capture return `SecretString` end to end. `SecretString` composes zeroize's
-  wipe-on-drop AND redacts `Debug` (`[REDACTED]`, no `Display`), so a stray
-  `{:?}`/`{}` on the state or token cannot leak it; the only plaintext access is
-  the single greppable `expose_secret()` at header injection (broker) and at the
-  Keychain store (capture). Dep `secrecy =0.10.3` (all-platform,
-  `forbid(unsafe_code)`) added to `pins.toml`, workspace, and `runhaven-core`;
-  `runhaven-check-pins` passes. Transient PTY read buffers stay `Zeroizing`.
-- F3 resolved by live smoke: the Claude Keychain STORE failed on the unsigned
-  dev build because it attached a user-presence `SecAccessControl`, which is a
-  data-protection-keychain feature the legacy file keychain rejects. Fix
-  (`access_for_backend`): attach the presence gate only on the data-protection
-  keychain (signed release); the legacy keychain (dev) stores a usable token
-  WITHOUT the gate. The "cannot read the token silently" guarantee stays scoped
-  to signed release, as the claim set says. This is why sign-in reached capture
-  but failed at store; the honest error (`60bc161`) surfaced it.
+- Broker hardening complete (detail in
+  `docs/design/native-gui-claude-oauth-broker.md` and git): the held Claude OAuth
+  token is `secrecy::SecretString` (`=0.10.3`, pinned) redacting Debug/Display on
+  top of zeroize's wipe, plaintext only via the single greppable `expose_secret()`
+  at header injection + the Keychain store (task #22). F3 resolved: the
+  user-presence `SecAccessControl` gate attaches only on the data-protection
+  keychain (signed release), while the legacy dev keychain stores a usable token
+  without it, so the "cannot read the token silently" guarantee is release-scoped.
 - Claude OAuth capture (path C) now runs `claude setup-token` under a host PTY,
   not a pipe. Live smoke (F4) proved setup-token is a TTY-required Claude Code
   (ink) polling flow: piped stdout hangs it; under a PTY the user authorizes in
