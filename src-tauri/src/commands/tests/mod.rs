@@ -40,6 +40,7 @@ mod session_window;
 mod session_worktree;
 mod sessions;
 mod sessions_diagnostics;
+mod sessions_output;
 mod sessions_status;
 mod validation;
 

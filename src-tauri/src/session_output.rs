@@ -67,6 +67,14 @@ impl SessionOutputRegistry {
         let Some(buffer) = buffer else {
             return Ok(None);
         };
+        // An empty buffer -- registered but nothing streamed yet, or a run that
+        // produced no output -- is "nothing to serve". Callers prefer this
+        // snapshot over the slow container CLI, so returning None lets a
+        // just-started run fall through to the container's early output instead
+        // of showing a blank log for the registration-before-first-append window.
+        if buffer.bytes.is_empty() {
+            return Ok(None);
+        }
 
         let (tail, line_truncated) =
             tail_lines(&String::from_utf8_lossy(&buffer.bytes), requested_lines);
@@ -140,6 +148,22 @@ mod tests {
                 .expect("retained output")
                 .text
                 .contains("hello")
+        );
+    }
+
+    #[test]
+    fn session_output_registry_empty_buffer_snapshots_none() {
+        // Registered but nothing appended: snapshot must be None so the log
+        // command falls through to the container instead of serving blank.
+        let registry = SessionOutputRegistry::default();
+        registry
+            .register("output-registry-empty")
+            .expect("register");
+        assert!(
+            registry
+                .snapshot("output-registry-empty", 20)
+                .expect("snapshot")
+                .is_none()
         );
     }
 

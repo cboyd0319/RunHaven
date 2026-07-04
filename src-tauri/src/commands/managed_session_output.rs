@@ -72,21 +72,22 @@ fn read_prepared_managed_session_log_snapshot(
         run_id,
         lines,
     } = prepared;
-    let container_snapshot = super::log_snapshot::read_log_snapshot(&run_id, lines);
-    let snapshot = match container_snapshot {
-        Ok(snapshot) => snapshot,
-        Err(container_error) => {
-            if let Some(output_registry) = output_registry {
-                if let Some(snapshot) = output_registry.snapshot(&session.run_id, lines)? {
-                    snapshot
-                } else {
-                    return Err(container_error);
-                }
-            } else {
-                return Err(container_error);
-            }
-        }
+    // Serve from the in-memory streamed output first: it is instant, while the
+    // container path spawns the `container logs` CLI (measured 1-3.6s per poll,
+    // a real lag on a live log view that the SLOW-invoke WARN surfaced). Both
+    // paths bound and redact through the same `log_snapshot_payload_from_stdout`
+    // (`SessionOutputRegistry::snapshot` and `read_log_snapshot` alike), so this
+    // reorder never widens what a viewer can see. Fall back to the container CLI
+    // only when the registry has nothing for this run (not captured by this app
+    // instance, or evicted), preserving the original behavior for those cases.
+    let registry_snapshot = match output_registry {
+        Some(registry) => registry.snapshot(&session.run_id, lines)?,
+        None => None,
     };
+    if let Some(snapshot) = registry_snapshot {
+        return Ok(managed_session_log_snapshot_response(session, snapshot));
+    }
+    let snapshot = super::log_snapshot::read_log_snapshot(&run_id, lines)?;
     Ok(managed_session_log_snapshot_response(session, snapshot))
 }
 
