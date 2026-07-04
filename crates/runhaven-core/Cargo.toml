@@ -21,6 +21,7 @@ test-support = []
 anyhow.workspace = true
 idna.workspace = true
 ipnet.workspace = true
+log.workspace = true
 pty-process.workspace = true
 regex.workspace = true
 secrecy.workspace = true

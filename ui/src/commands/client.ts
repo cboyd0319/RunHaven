@@ -80,6 +80,11 @@ import type {
 // re-exported here so existing consumers keep one import site.
 export { hasTauriRuntime } from "./logging";
 
+// A successful invoke slower than this is traced at warn (SLOW ok) so it stands
+// out in the log; faster ones stay at debug. One real session showed a 15648ms
+// invoke that was only findable by grepping every "ok in Xms" line.
+const SLOW_INVOKE_MS = 1000;
+
 // The one typed invoke touchpoint; domain files (terminal.ts) route through it.
 // Every call is traced into the dev log by name, duration, and outcome only;
 // args and results never leave this function (they may carry workspace paths
@@ -91,7 +96,8 @@ export async function call<T>(command: string, args: Record<string, unknown>, fa
   const startedAt = performance.now();
   try {
     const result = await invoke<T>(command, args);
-    traceInvoke(command, performance.now() - startedAt);
+    const durationMs = performance.now() - startedAt;
+    traceInvoke(command, durationMs, undefined, durationMs > SLOW_INVOKE_MS);
     return result;
   } catch (failure) {
     traceInvoke(command, performance.now() - startedAt, failure ?? "unknown error");

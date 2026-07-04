@@ -8961,6 +8961,7 @@ dependencies = [
  "anyhow",
  "idna",
  "ipnet",
+ "log",
  "pty-process",
  "regex",
  "secrecy",
@@ -8991,6 +8992,7 @@ dependencies = [
  "tauri-plugin-log",
  "tauri-plugin-window-state",
  "tempfile",
+ "time",
 ]
 
 [[package]]

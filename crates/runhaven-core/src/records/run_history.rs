@@ -7,6 +7,7 @@ use crate::provider::auth_broker::BrokerDecision;
 use crate::provider::egress::ProxyDecision;
 mod diff;
 mod log;
+mod summary;
 
 pub use diff::{run_diff_text, runs_diff};
 pub use log::runs_log;
@@ -73,6 +74,7 @@ pub fn write_run_record(input: RunRecordInput<'_>) -> Result<()> {
     }
     let mut file = open_private_append(&path)?;
     writeln!(file, "{}", serde_json::to_string(&payload)?)?;
+    summary::log_run_summary(&input, &status);
     Ok(())
 }
 

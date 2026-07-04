@@ -1,7 +1,8 @@
 import { debug, error, info, trace, warn } from "@tauri-apps/plugin-log";
 
-// Diagnostic log trail for the WebView, active in EVERY build (TRACE detail in
-// dev, INFO and up in release; the level lives in src-tauri/src/lib.rs).
+// Diagnostic log trail for the WebView, active in EVERY build (DEBUG detail in
+// dev, INFO and up in release; the level lives in src-tauri/src/lib.rs, capped
+// below TRACE on purpose so the in-process HTTP stack cannot wire-dump a token).
 // Everything here is write-only telemetry into the local app log file (main
 // window only, `logging` capability): the original console behavior is
 // preserved, forwarding failures are swallowed so logging can never break or
@@ -66,16 +67,24 @@ const UNTRACED_COMMANDS = new Set(["write_terminal_input", "resize_terminal"]);
 
 // Invoke tracing choke point, called from `call` in client.ts: command name,
 // duration, and outcome only. Never the args or the result; both may carry
-// workspace paths and user text.
-export function traceInvoke(command: string, durationMs: number, failure?: unknown): void {
+// workspace paths and user text. A slow ok forwards at warn instead of debug
+// so an unusually long invoke is greppable, not buried in the DEBUG "ok" lines.
+export function traceInvoke(
+  command: string,
+  durationMs: number,
+  failure?: unknown,
+  slow = false
+): void {
   if (!hasTauriRuntime() || UNTRACED_COMMANDS.has(command)) {
     return;
   }
   const duration = durationMs.toFixed(1);
-  if (failure === undefined) {
-    forward(debug, `invoke ${command}: ok in ${duration}ms`);
-  } else {
+  if (failure !== undefined) {
     forward(error, `invoke ${command}: failed in ${duration}ms: ${formatValue(failure)}`);
+  } else if (slow) {
+    forward(warn, `invoke ${command}: SLOW ok in ${duration}ms`);
+  } else {
+    forward(debug, `invoke ${command}: ok in ${duration}ms`);
   }
 }
 

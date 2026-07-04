@@ -2,6 +2,7 @@ use std::io::{Read, Write};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Instant;
 
 use anyhow::{Context, Result, bail};
 use runhaven_core::runtime::launch::{AgentCommandContext, AgentCommandRunner};
@@ -85,6 +86,17 @@ impl AgentCommandRunner for TauriLaunchRunner {
         env: Option<(&str, &str)>,
         context: AgentCommandContext<'_>,
     ) -> Result<i32> {
+        let run_id = context.run_id;
+        // Wall-clock from just before spawn. The Apple `container` startup steps
+        // ("[0/6] Fetching image" .. "[6/6] Starting container") are opaque child
+        // stdout captured into the sanitized session-output registry, not lines
+        // this runner emits, so per-step timing cannot be intercepted here
+        // without touching core launch.rs or routing captured child bytes (an
+        // agent-output leak surface). Instead, log the two boundaries this runner
+        // owns -- process spawn and process exit -- with elapsed time, so a slow
+        // launch shows spawn-to-running cost and total run duration.
+        let launch_start = Instant::now();
+        log::info!("run {run_id}: launching container process");
         let Some(program) = command.first() else {
             bail!("agent command is empty");
         };
@@ -134,6 +146,10 @@ impl AgentCommandRunner for TauriLaunchRunner {
         self.launch_status
             .mark_running(context.run_id)
             .map_err(anyhow::Error::msg)?;
+        log::info!(
+            "run {run_id}: container process spawned and running after {} ms",
+            launch_start.elapsed().as_millis()
+        );
 
         let status = child
             .wait()
@@ -141,7 +157,12 @@ impl AgentCommandRunner for TauriLaunchRunner {
         join_output_capture(stdout_handle)?;
         join_output_capture(stderr_handle)?;
         drop(registration);
-        Ok(status.code().unwrap_or(1))
+        let code = status.code().unwrap_or(1);
+        log::info!(
+            "run {run_id}: container process exited code={code} after {} ms total",
+            launch_start.elapsed().as_millis()
+        );
+        Ok(code)
     }
 }
 
@@ -159,8 +180,8 @@ struct InputRegistration<'a> {
 impl Drop for InputRegistration<'_> {
     fn drop(&mut self) {
         if let Err(error) = self.registry.unregister(&self.session_id) {
-            eprintln!(
-                "runhaven session input unregister {} failed: {error}",
+            log::warn!(
+                "run {}: session input unregister failed: {error}",
                 self.session_id
             );
         }

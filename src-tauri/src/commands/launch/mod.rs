@@ -187,14 +187,14 @@ fn spawn_launch_thread(
             match launch_run_plan_with_runner(&plan, &mut runner) {
                 Ok(code) => {
                     if let Err(error) = launch_status.mark_finished(&run_id, code) {
-                        eprintln!("runhaven launch {run_id} status update failed: {error}");
+                        log::error!("run {run_id}: launch status update failed: {error}");
                     }
                 }
                 Err(error) => {
                     if let Err(status_error) = launch_status.mark_failed(&run_id) {
-                        eprintln!("runhaven launch {run_id} status update failed: {status_error}");
+                        log::error!("run {run_id}: launch status update failed: {status_error}");
                     }
-                    eprintln!("runhaven launch {run_id} failed: {error}");
+                    log::error!("run {run_id}: launch failed: {error}");
                 }
             }
         })

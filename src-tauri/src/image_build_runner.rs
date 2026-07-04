@@ -27,7 +27,7 @@ pub(crate) fn spawn_image_build(
         .spawn(move || match run_build(&build_id, &plan, &registry) {
             Ok(0) => {
                 if let Err(error) = registry.mark_succeeded(&build_id) {
-                    eprintln!("runhaven image build {build_id} status update failed: {error}");
+                    log::error!("image build {build_id}: status update failed: {error}");
                 }
             }
             Ok(_) => mark_failed(
@@ -37,7 +37,7 @@ pub(crate) fn spawn_image_build(
                     .to_string(),
             ),
             Err(error) => {
-                eprintln!("runhaven image build {build_id} failed: {error}");
+                log::error!("image build {build_id}: failed: {error}");
                 mark_failed(
                     &registry,
                     &build_id,
@@ -95,13 +95,13 @@ where
     let registry = registry.clone();
     thread::spawn(move || {
         if let Err(error) = capture_lines(reader, |line| registry.append_output(&build_id, line)) {
-            eprintln!("runhaven image build {build_id} output capture failed: {error}");
+            log::warn!("image build {build_id}: output capture failed: {error}");
         }
     })
 }
 
 fn mark_failed(registry: &ImageBuildStatusRegistry, build_id: &str, detail: String) {
     if let Err(error) = registry.mark_failed(build_id, detail) {
-        eprintln!("runhaven image build {build_id} status update failed: {error}");
+        log::error!("image build {build_id}: status update failed: {error}");
     }
 }

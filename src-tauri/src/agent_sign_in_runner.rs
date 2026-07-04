@@ -39,7 +39,7 @@ pub(crate) fn spawn_agent_sign_in(
             match launch_run_plan_with_runner(&plan, &mut runner) {
                 Ok(0) => {
                     if let Err(error) = registry.mark_succeeded(&sign_in_id, &agent) {
-                        eprintln!("runhaven sign-in {sign_in_id} status update failed: {error}");
+                        log::error!("sign-in {sign_in_id}: status update failed: {error}");
                     }
                 }
                 Ok(_) => mark_failed(
@@ -48,7 +48,7 @@ pub(crate) fn spawn_agent_sign_in(
                     "Sign-in did not finish. Open the link again or try once more.".to_string(),
                 ),
                 Err(error) => {
-                    eprintln!("runhaven sign-in {sign_in_id} failed: {error}");
+                    log::error!("sign-in {sign_in_id}: failed: {error}");
                     mark_failed(
                         &registry,
                         &sign_in_id,
@@ -87,7 +87,7 @@ impl AgentSignInRunner {
             if let Err(error) =
                 capture_lines(reader, |line| registry.append_output(&sign_in_id, line))
             {
-                eprintln!("runhaven sign-in {sign_in_id} output capture failed: {error}");
+                log::warn!("sign-in {sign_in_id}: output capture failed: {error}");
             }
         })
     }
@@ -142,7 +142,7 @@ impl AgentCommandRunner for AgentSignInRunner {
 
 fn mark_failed(registry: &AgentSignInStatusRegistry, sign_in_id: &str, detail: String) {
     if let Err(error) = registry.mark_failed(sign_in_id, detail) {
-        eprintln!("runhaven sign-in {sign_in_id} status update failed: {error}");
+        log::error!("sign-in {sign_in_id}: status update failed: {error}");
     }
 }
 

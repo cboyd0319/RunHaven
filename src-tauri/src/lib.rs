@@ -7,6 +7,7 @@ mod contracts;
 mod image_build_runner;
 mod launch_runner;
 mod launch_status;
+mod log_format;
 mod menu;
 mod read_guard;
 mod registry_support;
@@ -28,6 +29,7 @@ use session_windows::SESSION_WINDOW_LABEL_PREFIX;
 pub(crate) const MAIN_WINDOW_LABEL: &str = "main";
 
 pub fn run() {
+    install_panic_log_hook();
     tauri::Builder::default()
         // Diagnostic log trail, active in every build (not compiled out of
         // release), registered first so every later plugin, setup
@@ -35,10 +37,10 @@ pub fn run() {
         // (picked up by the tauri:dev:log tee) and runhaven.log under the app
         // log dir (~/Library/Logs/<identifier>/ on macOS), rotated at 5 MiB
         // with the five most recent rotated files kept, so a test run always
-        // leaves a bounded, reviewable trail. TRACE in debug builds, INFO in
-        // release. Never log secrets, request/plan payloads, env values, or
-        // terminal bytes: the live PTY stream flows over Channels and stays
-        // out of the `log` pipeline by construction.
+        // leaves a bounded, reviewable trail. The global level is capped below
+        // Trace (see the level cap below). Never log secrets, request/plan
+        // payloads, env values, or terminal bytes: the live PTY stream flows
+        // over Channels and stays out of the `log` pipeline by construction.
         .plugin(
             tauri_plugin_log::Builder::new()
                 // Global cap DEBUG in dev, INFO in release -- deliberately NOT
@@ -73,6 +75,20 @@ pub fn run() {
                 .level_for("hyper_util", log::LevelFilter::Warn)
                 .level_for("h2", log::LevelFilter::Warn)
                 .level_for("reqwest", log::LevelFilter::Warn)
+                // Reproduce the plugin's default human layout
+                // (`[date][time][target][level] message`) but scrub any residual
+                // secret shape from the final message text. Belt-and-suspenders
+                // on top of the level cap above, NOT a replacement for it: the
+                // cap still stops wire dumps at the source. See log_format.rs.
+                .format(|out, message, record| {
+                    out.finish(format_args!(
+                        "{}[{}][{}] {}",
+                        log_format::utc_log_timestamp(),
+                        record.target(),
+                        record.level(),
+                        log_format::redact_log_line(&message.to_string()),
+                    ));
+                })
                 .targets([
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
@@ -207,4 +223,32 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running RunHaven desktop app");
+}
+
+/// Route Rust panics into the diagnostic log before the process unwinds, then
+/// chain to the previous hook so nothing else changes. A panic otherwise reaches
+/// stderr only and never lands in runhaven.log. Installed before the Tauri
+/// builder so a panic in setup, a command, or a background runner is captured.
+/// The payload flows through the log format filter, so a stray secret in a panic
+/// message is scrubbed like any other log line. The panic itself is not
+/// swallowed: the previous hook still runs and unwinding proceeds.
+fn install_panic_log_hook() {
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let thread = std::thread::current();
+        let thread_name = thread.name().unwrap_or("unnamed");
+        let location = info
+            .location()
+            .map(|loc| format!("{}:{}:{}", loc.file(), loc.line(), loc.column()))
+            .unwrap_or_else(|| "unknown location".to_string());
+        let payload = if let Some(text) = info.payload().downcast_ref::<&str>() {
+            *text
+        } else if let Some(text) = info.payload().downcast_ref::<String>() {
+            text.as_str()
+        } else {
+            "non-string panic payload"
+        };
+        log::error!("panic in thread '{thread_name}' at {location}: {payload}");
+        previous(info);
+    }));
 }

@@ -12,7 +12,7 @@
     "test:e2e": "playwright test",
     "tauri": "tauri",
     "tauri:dev": "cd .. && CARGO_TARGET_DIR=\"$PWD/target\" ./ui/node_modules/.bin/tauri dev --config src-tauri/tauri.conf.json",
-    "tauri:dev:log": "mkdir -p \"$HOME/Library/Logs/RunHaven\" && { echo \"===== tauri:dev session $(date -u +%Y-%m-%dT%H:%M:%SZ) =====\"; npm run tauri:dev 2>&1; } | tee -a \"$HOME/Library/Logs/RunHaven/dev.log\"",
+    "tauri:dev:log": "cd .. && ./scripts/dev-with-logs.sh",
     "tauri:build": "cd .. && CARGO_TARGET_DIR=\"$PWD/target\" ./ui/node_modules/.bin/tauri build --config src-tauri/tauri.conf.json --debug --no-bundle"
   },
   "dependencies": {
