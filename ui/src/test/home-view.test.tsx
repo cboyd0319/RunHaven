@@ -34,6 +34,37 @@ describe("HomeView", () => {
     expect(html).not.toContain("Your Mac is ready to run agents.");
   });
 
+  it("does not say 'Checking...' forever after a failed first setup read", () => {
+    // First load failed: not loading, no dashboard. New run must explain the
+    // failure and offer Check again, not sit on "Checking..." indefinitely.
+    const html = renderToStaticMarkup(
+      <HomeView
+        {...mainViewProps({
+          setupReady: false,
+          loading: false,
+          dashboard: null
+        })}
+      />
+    );
+
+    // (Static markup escapes the apostrophe, so match on the plain tail.)
+    expect(html).toContain("could not read your Mac");
+    expect(html).toContain("Try Check again.");
+    expect(html).not.toContain("Checking your Mac");
+  });
+
+  it("keeps New run enabled during a transient manual refresh when setup is ready", () => {
+    // A manual refresh flips loading true but keeps the loaded dashboard, so
+    // setup stays ready and New run must not disable or fall back to "Checking".
+    const html = renderToStaticMarkup(
+      <HomeView {...mainViewProps({ loading: true })} />
+    );
+
+    expect(html).not.toContain('disabled=""');
+    // (Static markup escapes the apostrophe; match on the plain prefix.)
+    expect(html).not.toContain("Checking your Mac");
+  });
+
   it("lists agent readiness with a link to the Agents view", () => {
     const html = renderToStaticMarkup(<HomeView {...mainViewProps()} />);
 

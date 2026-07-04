@@ -84,7 +84,9 @@ export function useDiagnosticsState() {
           : nextData
       })
     } catch (cause) {
-      setData(null)
+      // Keep the last-good auth/egress data so one failing sub-call does not
+      // blank the whole panel; the error banner surfaces alongside it, matching
+      // useManagedSessionStatus/useLaunchStatus.
       setError(errorMessage(cause))
     } finally {
       setLoading(false)

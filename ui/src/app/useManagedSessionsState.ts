@@ -9,6 +9,10 @@ import { sameManagedSessionList } from "./sessionList"
 import { useNavigation } from "./useNavigation"
 
 const MANAGED_SESSION_POLL_MS = 4_000
+// With no session context, still poll on a slow baseline so a session started
+// outside this window (the CLI, another window) shows up on its own instead of
+// waiting for a manual Refresh. Kept slow and coalesced so it never spams.
+const MANAGED_SESSION_BASELINE_POLL_MS = 30_000
 
 export function useManagedSessionsState(lastLaunchRunId: string | null) {
   const [managedSessions, setManagedSessions] = useState<ManagedSessionList>({
@@ -34,9 +38,9 @@ export function useManagedSessionsState(lastLaunchRunId: string | null) {
       managedSessions.sessions.length > 0 ||
       selectedSessionId !== null ||
       lastLaunchRunId !== null
-    if (!hasSessionContext) {
-      return
-    }
+    const intervalMs = hasSessionContext
+      ? MANAGED_SESSION_POLL_MS
+      : MANAGED_SESSION_BASELINE_POLL_MS
 
     let inFlight = false
     const interval = window.setInterval(() => {
@@ -49,7 +53,7 @@ export function useManagedSessionsState(lastLaunchRunId: string | null) {
         .finally(() => {
           inFlight = false
         })
-    }, MANAGED_SESSION_POLL_MS)
+    }, intervalMs)
 
     return () => window.clearInterval(interval)
   }, [lastLaunchRunId, managedSessions.sessions.length, selectedSessionId])

@@ -102,8 +102,17 @@ function newRunDisabledReason(props: MainViewProps): string | null {
   if (props.setupReady) {
     return null
   }
-  if (props.loading || props.dashboard === null) {
+  // Only the very first setup read (still loading, nothing loaded yet) shows
+  // "Checking...". A transient manual refresh keeps the loaded dashboard, so
+  // setupReady above already governs whether New run is disabled; loading does
+  // not disable it on its own.
+  if (props.loading && props.dashboard === null) {
     return "Checking your Mac's setup..."
+  }
+  // A failed or never-completed first read leaves no dashboard to point at, so
+  // do not imply a fixed blocker above; ask the user to check again.
+  if (props.dashboard === null) {
+    return "RunHaven could not read your Mac's setup. Try Check again."
   }
   return "Fix the setup problem above before starting a run."
 }

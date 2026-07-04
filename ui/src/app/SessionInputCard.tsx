@@ -72,6 +72,16 @@ export function SessionInputCard({
               maxLength={MAX_SESSION_INPUT_BYTES}
               value={draft}
               disabled={!inputAttached || sending}
+              onFocus={() => {
+                // Clear a stale "Message sent" acknowledgement the moment the
+                // user comes back to type. onDraftChange with the current draft
+                // keeps the text as-is while resetting the ack, so the notice
+                // never lingers or stacks. (No-op when there is nothing to
+                // clear: the state reducer short-circuits an equal update.)
+                if (acceptedMessage) {
+                  onDraftChange(draft)
+                }
+              }}
               onChange={(event) => onDraftChange(event.currentTarget.value)}
               onKeyDown={(event) => {
                 // Cmd-Return (Ctrl-Return on non-mac keyboards) sends, matching
@@ -97,11 +107,6 @@ export function SessionInputCard({
               <Send />
               {sending ? "Sending..." : "Send"}
             </Button>
-            {acceptedMessage ? (
-              <span className="text-sm text-muted-foreground">
-                {acceptedMessage}
-              </span>
-            ) : null}
           </div>
           {error ? (
             <Alert variant="destructive">
@@ -121,8 +126,9 @@ export function SessionInputCard({
             <Alert>
               <CheckCircle2 />
               <AlertTitle>Message sent</AlertTitle>
-              <AlertDescription>
-                RunHaven sent the message to {session.title}.
+              <AlertDescription className="flex flex-col gap-1">
+                <span>RunHaven sent the message to {session.title}.</span>
+                <span>{acceptedMessage}</span>
               </AlertDescription>
             </Alert>
           ) : null}

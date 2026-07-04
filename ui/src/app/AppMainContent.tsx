@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react"
 import { CheckCircle2, CircleAlert } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 
 import type { NavDestination } from "./navigation"
 import { TerminalPanel } from "./TerminalPanel"
@@ -30,6 +32,19 @@ export function AppMainContent(props: AppMainContentProps) {
     mainViewFocusKey(navigation, worktreeReviewEligible),
   )
 
+  // The top-level action error clears on the next refresh, but a user should be
+  // able to dismiss it right away once they have read it. The error lives in the
+  // controller, so we suppress it view-locally. Reset the dismissal on ANY error
+  // change (not just a clear): after dismissing A, an A->B->A flap is a fresh,
+  // current error and must show again. Dismiss itself sets dismissedError=error
+  // while error is unchanged, so this effect does not re-fire and the alert stays
+  // hidden until the error actually changes.
+  const [dismissedError, setDismissedError] = useState("")
+  useEffect(() => {
+    setDismissedError("")
+  }, [error])
+  const showError = error !== "" && error !== dismissedError
+
   // A live interactive run terminal stays MOUNTED here for its whole life,
   // shown only on its own destination and hidden (not unmounted) on every other.
   // This is load-bearing: the run's sandbox uses this terminal's host PTY as its
@@ -51,12 +66,11 @@ export function AppMainContent(props: AppMainContentProps) {
           hidden={!showTerminal}
           className="flex min-h-0 flex-1 flex-col gap-3 p-4"
         >
-          {showTerminal && error ? (
-            <Alert variant="destructive">
-              <CircleAlert />
-              <AlertTitle>Action failed</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+          {showTerminal && showError ? (
+            <AppErrorAlert
+              message={error}
+              onDismiss={() => setDismissedError(error)}
+            />
           ) : null}
           <div
             ref={showTerminal ? focusRef : undefined}
@@ -83,12 +97,11 @@ export function AppMainContent(props: AppMainContentProps) {
               aria-label={mainViewLabel(navigation)}
               className="flex flex-col gap-4 outline-none"
             >
-              {error ? (
-                <Alert variant="destructive">
-                  <CircleAlert />
-                  <AlertTitle>Action failed</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
+              {showError ? (
+                <AppErrorAlert
+                  message={error}
+                  onDismiss={() => setDismissedError(error)}
+                />
               ) : null}
               {launchMessage ? (
                 <Alert>
@@ -103,6 +116,34 @@ export function AppMainContent(props: AppMainContentProps) {
         </div>
       ) : null}
     </main>
+  )
+}
+
+// The shared top-level action error, with a Dismiss action so it does not
+// outlive its cause while the user waits for the next refresh.
+function AppErrorAlert({
+  message,
+  onDismiss,
+}: {
+  message: string
+  onDismiss: () => void
+}) {
+  return (
+    <Alert variant="destructive">
+      <CircleAlert />
+      <AlertTitle>Action failed</AlertTitle>
+      <AlertDescription className="flex flex-col items-start gap-2">
+        <span>{message}</span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onDismiss}
+        >
+          Dismiss
+        </Button>
+      </AlertDescription>
+    </Alert>
   )
 }
 

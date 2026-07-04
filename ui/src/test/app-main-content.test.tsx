@@ -1,3 +1,6 @@
+// @vitest-environment happy-dom
+import { createElement } from "react"
+import { createRoot } from "react-dom/client"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
@@ -5,6 +8,7 @@ import { AppMainContent } from "../app/AppMainContent"
 import type { RunTerminalLaunch } from "../app/useLaunchFlow"
 
 import { launchFlow, mainViewProps, planRequest } from "./main-view-props"
+import { act } from "./render-hook"
 
 // A reviewed, confirmed interactive launch as it reaches the run-terminal
 // destination.
@@ -62,6 +66,75 @@ describe("AppMainContent run-terminal destination", () => {
     expect(html).toContain("hidden")
     // ...and the Home destination renders alongside it (New run action present).
     expect(html).toContain("New run")
+  })
+
+  it("offers a Dismiss action on the top-level error and hides it when used", async () => {
+    const container = document.createElement("div")
+    const root = createRoot(container)
+    await act(async () => {
+      root.render(
+        createElement(AppMainContent, {
+          ...mainViewProps({ error: "Something went wrong." }),
+          navigation: { kind: "home" },
+        }),
+      )
+    })
+
+    expect(container.textContent).toContain("Action failed")
+    expect(container.textContent).toContain("Something went wrong.")
+    const dismiss = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Dismiss",
+    )
+    expect(dismiss).toBeDefined()
+
+    await act(async () =>
+      dismiss?.dispatchEvent(new MouseEvent("click", { bubbles: true })),
+    )
+
+    // The error clears view-locally without waiting for the next refresh.
+    expect(container.textContent).not.toContain("Action failed")
+    expect(container.textContent).not.toContain("Something went wrong.")
+
+    await act(async () => {
+      root.unmount()
+    })
+  })
+
+  it("re-shows a dismissed error after an A -> B -> A flap", async () => {
+    const container = document.createElement("div")
+    const root = createRoot(container)
+    function show(message: string) {
+      return act(async () => {
+        root.render(
+          createElement(AppMainContent, {
+            ...mainViewProps({ error: message }),
+            navigation: { kind: "home" },
+          }),
+        )
+      })
+    }
+
+    await show("Error A.")
+    const dismiss = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Dismiss",
+    )
+    await act(async () =>
+      dismiss?.dispatchEvent(new MouseEvent("click", { bubbles: true })),
+    )
+    expect(container.textContent).not.toContain("Error A.")
+
+    // A different failure shows normally...
+    await show("Error B.")
+    expect(container.textContent).toContain("Error B.")
+
+    // ...and Error A recurring (B -> A) is a fresh, current error, not the one
+    // that was dismissed, so it must show again (the flap the review flagged).
+    await show("Error A.")
+    expect(container.textContent).toContain("Error A.")
+
+    await act(async () => {
+      root.unmount()
+    })
   })
 
   it("falls back to Home when the destination has no live run terminal", () => {

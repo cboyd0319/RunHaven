@@ -115,6 +115,87 @@ describe("SessionInputCard", () => {
     ).toBe("");
   });
 
+  it("shows the sent acknowledgement once, not as a duplicate muted line", () => {
+    const html = renderToStaticMarkup(
+      <SessionInputCard
+        session={session()}
+        draft=""
+        sending={false}
+        error=""
+        acceptedMessage="Sent 5 bytes."
+        onDraftChange={() => undefined}
+        onSend={() => undefined}
+      />
+    );
+
+    // One unified acknowledgement: the title and the byte-count detail each
+    // appear exactly once, not as two separate notices side by side.
+    expect(html.split("Message sent").length - 1).toBe(1);
+    expect(html.split("Sent 5 bytes.").length - 1).toBe(1);
+  });
+
+  it("clears the sent acknowledgement when the composer is focused again", async () => {
+    const onDraftChange = vi.fn();
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        createElement(SessionInputCard, {
+          session: session(),
+          draft: "next message",
+          sending: false,
+          error: "",
+          acceptedMessage: "Sent 5 bytes.",
+          onDraftChange,
+          onSend: () => undefined
+        })
+      );
+    });
+
+    // Refocusing to type again clears the stale ack by re-applying the current
+    // draft (text unchanged, acknowledgement reset), so it never lingers.
+    await act(async () =>
+      container
+        .querySelector("textarea")
+        ?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }))
+    );
+    expect(onDraftChange).toHaveBeenCalledWith("next message");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("does not clear on focus when there is no acknowledgement to clear", async () => {
+    const onDraftChange = vi.fn();
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(
+        createElement(SessionInputCard, {
+          session: session(),
+          draft: "typing",
+          sending: false,
+          error: "",
+          acceptedMessage: "",
+          onDraftChange,
+          onSend: () => undefined
+        })
+      );
+    });
+
+    await act(async () =>
+      container
+        .querySelector("textarea")
+        ?.dispatchEvent(new FocusEvent("focusin", { bubbles: true }))
+    );
+    expect(onDraftChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
   it("sends on Cmd/Ctrl-Return through the same Send path, not plain Enter", async () => {
     const onSend = vi.fn();
     const container = document.createElement("div");

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { CheckCircle2, CircleAlert, Hammer } from "lucide-react"
 
 import {
   getImageStatus,
+  isTerminalState,
   type AgentProfile,
   type AuthStatusResponse,
   type ImageStatusResponse,
@@ -45,6 +46,16 @@ export function AgentsView({
   onSignedIn: () => void
   onRefresh: () => void
 }) {
+  // Per-row image readiness is loaded inside each AgentRow, so "Check again"
+  // and a completed rebuild have to poke those rows to re-read. Bumping this
+  // key re-runs every row's image fetch; onRefresh still reloads the shared
+  // dashboard and auth status.
+  const [imageReloadKey, setImageReloadKey] = useState(0)
+  const reloadImages = useCallback(
+    () => setImageReloadKey((key) => key + 1),
+    [],
+  )
+
   if (agents.length === 0) {
     return (
       <Card>
@@ -70,7 +81,10 @@ export function AgentsView({
           variant="outline"
           size="sm"
           disabled={refreshing}
-          onClick={onRefresh}
+          onClick={() => {
+            reloadImages()
+            onRefresh()
+          }}
         >
           {refreshing ? "Checking..." : "Check again"}
         </Button>
@@ -79,6 +93,7 @@ export function AgentsView({
         <AgentRow
           key={agent.name}
           agent={agent}
+          reloadKey={imageReloadKey}
           status={
             authStatus?.profiles.find(
               (profile) => profile.name === agent.name,
@@ -87,7 +102,10 @@ export function AgentsView({
           onSignedIn={onSignedIn}
         />
       ))}
-      <ImageRebuildCard agents={agents.map((agent) => agent.name)} />
+      <ImageRebuildCard
+        agents={agents.map((agent) => agent.name)}
+        onRebuilt={reloadImages}
+      />
     </div>
   )
 }
@@ -95,13 +113,15 @@ export function AgentsView({
 function AgentRow({
   agent,
   status,
+  reloadKey,
   onSignedIn,
 }: {
   agent: AgentProfile
   status: string
+  reloadKey: number
   onSignedIn: () => void
 }) {
-  const image = useAgentImageStatus(agent.name)
+  const image = useAgentImageStatus(agent.name, reloadKey)
   return (
     <Card>
       <CardHeader>
@@ -126,10 +146,12 @@ function AgentRow({
   )
 }
 
-// Read-only image readiness for one agent row, loaded once when the row
-// mounts. It reuses the launch flow's ImageReadiness rendering so the Agents
-// view and the New Run sheet describe image state with the same words.
-function useAgentImageStatus(agentName: string) {
+// Read-only image readiness for one agent row. It re-reads when `reloadKey`
+// changes, so "Check again" and a completed rebuild refresh a stale row. It
+// reuses the launch flow's ImageReadiness rendering so the Agents view and the
+// New Run sheet describe image state with the same words. Exported so a focused
+// test can drive the reload without the whole view's other command calls.
+export function useAgentImageStatus(agentName: string, reloadKey = 0) {
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<ImageStatusResponse | null>(null)
   const [error, setError] = useState("")
@@ -158,7 +180,7 @@ function useAgentImageStatus(agentName: string) {
     return () => {
       cancelled = true
     }
-  }, [agentName])
+  }, [agentName, reloadKey])
 
   return { loading, status, error }
 }
@@ -166,9 +188,25 @@ function useAgentImageStatus(agentName: string) {
 // Rebuilds an agent image through the run-control command, which requires a
 // native confirmation in Rust before any change. Moved from the old
 // Maintenance accordion; the flow and labels are unchanged.
-function ImageRebuildCard({ agents }: { agents: string[] }) {
+function ImageRebuildCard({
+  agents,
+  onRebuilt,
+}: {
+  agents: string[]
+  onRebuilt: () => void
+}) {
   const [agent, setAgent] = useState(agents[0] ?? "")
   const { confirm, setConfirm, busy, error, status, rebuild } = useImageRebuild()
+
+  // Once a rebuild reaches a terminal state the on-disk image changed, so tell
+  // the parent to re-read the per-agent readiness rows. Keyed on the terminal
+  // state string so it fires once per finished build, not on every poll tick.
+  const rebuildState = status?.state ?? ""
+  useEffect(() => {
+    if (isTerminalState(rebuildState)) {
+      onRebuilt()
+    }
+  }, [onRebuilt, rebuildState])
 
   return (
     <Card aria-live="polite">
