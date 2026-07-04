@@ -110,6 +110,12 @@ export function installDiagnosticLogging(): void {
     forwardConsole(level);
   }
   window.addEventListener("error", (event) => {
+    // A benign, non-actionable browser quirk: the observer just reschedules to
+    // the next frame. Chromium fires it as an uncaught error, so it would spam
+    // the log (264 lines in one real session) and bury real errors. Drop it.
+    if (event.message.includes("ResizeObserver loop")) {
+      return;
+    }
     const stack = event.error instanceof Error ? `\n${event.error.stack ?? ""}` : "";
     forward(
       error,

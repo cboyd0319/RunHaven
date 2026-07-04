@@ -185,7 +185,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
       return
     }
     const teardown = () => {
-      void closeTerminalSession(sessionId)
+      void closeTerminalSession(sessionId).catch(() => undefined)
     }
     window.addEventListener("beforeunload", teardown)
     window.addEventListener("pagehide", teardown)
@@ -254,7 +254,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
             void navigator.clipboard.readText().then((text) => {
               const bytes = [...new TextEncoder().encode(text)]
               if (bytes.length > 0) {
-                void writeTerminalInput(sessionId, bytes)
+                void writeTerminalInput(sessionId, bytes).catch(() => undefined)
               }
             })
           }
@@ -264,10 +264,10 @@ export function TerminalPanel(props: TerminalPanelProps) {
       })
       fitAddon.fit()
       term.onData((data) => {
-        void writeTerminalInput(sessionId, [...new TextEncoder().encode(data)])
+        void writeTerminalInput(sessionId, [...new TextEncoder().encode(data)]).catch(() => undefined)
       })
       term.onResize(({ cols, rows }) => {
-        void resizeTerminal(sessionId, cols, rows)
+        void resizeTerminal(sessionId, cols, rows).catch(() => undefined)
       })
       if (typeof ResizeObserver !== "undefined") {
         observer = new ResizeObserver(() => {
@@ -298,7 +298,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
           return
         }
         // Make sure the guest starts at the current viewport size.
-        void resizeTerminal(sessionId, term.cols, term.rows)
+        void resizeTerminal(sessionId, term.cols, term.rows).catch(() => undefined)
         term.focus()
         setPhase("live")
       } catch (cause) {
@@ -319,7 +319,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
       // not optional. The backend send-error kill is only a backstop. The run
       // terminal reaches here only when the panel truly unmounts (End run
       // clears it); navigating away keeps it mounted, so the run is not killed.
-      void closeTerminalSession(sessionId)
+      void closeTerminalSession(sessionId).catch(() => undefined)
       term?.dispose()
     }
   }, [active, sessionId, open])
