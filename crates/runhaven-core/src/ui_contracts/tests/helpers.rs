@@ -95,6 +95,7 @@ fn status_label_maps_known_states_and_titlecases_unknown() {
     assert_eq!(status_label("succeeded"), "Finished");
     assert_eq!(status_label("failed"), "Failed");
     assert_eq!(status_label("stopped"), "Stopped");
+    assert_eq!(status_label("ended"), "Ended");
     // Unknown states fall back to title-casing.
     assert_eq!(status_label("queued"), "Queued");
     assert_eq!(status_label(""), "-");

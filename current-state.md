@@ -170,33 +170,16 @@ Useful GUI design docs:
   flattening (F8, `#[serde(default)]` fail-closed confirm flags); and the
   frontend punch list (coalesced status reloads, compile-time `same*` checklists,
   UX copy fixes, e2e to 7/7).
-- A whole-GUI analysis pass (security, frontend, shell architecture, empirical
-  UX with screenshots) ran over the accumulated desktop surface, and its fixes
-  landed in three verified waves. Verdict: the trust boundary held under a
-  hostile whole-surface audit (every mutation behind a Rust-owned native dialog,
-  backend-resolved targets, allowlisted no-leak mappers); findings were
-  consistency and hygiene, not boundary breaks. Fixed: session cleanup now
-  routes through the same gated worktree discard (post-dialog ownership
-  reverify); one shared `confirm_native` dialog helper replaced nine copies;
-  poisoned test-lock recovery; five no-blink polling bugs (stale-session flash,
-  poll-failure blanking, error flap, missing output equality guard, sign-in
-  interval churn) with 15 new hook tests (happy-dom devDependency, pinned);
-  status registries merged onto shared bounded helpers (`registry_support.rs`,
-  `tail_status.rs`) and run-control collapsed onto the worktree action pattern;
-  image-build/sign-in runners now read bounded 8 KB chunks; the session-input
-  grant is metered (256 KB or 30 minutes, then a fresh native confirmation;
-  documented in SECURITY_MODEL.md); diagnostics strings are control-stripped
-  before the WebView; dead code deleted (SafetyCard, no-op output registration,
-  unused commands `get_setup_status`/`list_agents`, constant-false
-  `ssh_available`); one canonical frontend label vocabulary + safeBackendLabel
-  guard; closed status unions; focus management and aria-current; blue primary
-  actions (teal/green reserved for ready states); the post-launch Start screen
-  no longer dual-controls a run that lives in the sidebar; plain-language copy
-  at decision points ("Session record", "API key handling", "Can reach: hosts
-  only"); dead sidebar nav removed; Codex is the default agent (in-app
-  sign-in); docs/DESKTOP_APP.md realigned with the real UI; e2e specs updated
-  to the new flow (4/4 pass). The deferred comprehensive Apple-HIG visual
-  redesign has its references in `docs/design/native-gui-design-resources.md`.
+- A whole-GUI hostile analysis pass (security, frontend, shell architecture,
+  empirical UX) landed in three verified waves (detail in `feature_list.json`
+  and git). Verdict: the trust boundary held (every mutation behind a Rust-owned
+  native dialog, backend-resolved targets, no-leak mappers); findings were
+  consistency/hygiene, not boundary breaks. Fixes: a shared `confirm_native`
+  dialog helper, five no-blink polling fixes, bounded status/registry helpers,
+  the metered session-input grant (SECURITY_MODEL.md), control-stripped
+  diagnostics, one canonical label vocabulary + accessibility/focus, dead-code
+  deletion, and docs/e2e realignment. The deferred Apple-HIG visual redesign has
+  its references in `docs/design/native-gui-design-resources.md`.
 - Agent login unified in-sandbox (2026-07-01): all four sign-in agents (Claude,
   Codex, Copilot, Antigravity) log in *inside* the sandbox on the shared home
   volume via `runhaven login <agent>` (path A), which deleted the old host token
@@ -347,6 +330,20 @@ column (replacing the old `min-h-72` no-max), so FitAddon settles and cannot
 drive a growth loop. `Close`/`End run` (and Escape/unmount) tear down via the
 existing close-on-unmount + `closeTerminalSession` and return Home. Backend
 contract, `open_agent_run_terminal`, disclosure, and native confirm unchanged.
+
+Session-display fix (display/labeling only; no broker/auth/capability/egress or
+terminal change): a working interactive Claude run no longer shows "Failed" or
+"API key broker". Interactive TTY runs exit non-zero when the user closes the
+TUI, so `write_run_record` records the neutral status `ended` for any
+`AgentRunPlan::is_interactive_tty()` plan (`--tty`) absent an explicit status;
+background runs keep the exit-code succeeded/failed split. `ended` threads as a
+neutral terminal state like `stopped`/`finished` (lifecycle, next-action "none",
+cleanup, `status_label` "Ended") through `ui_contracts` and the frontend
+(`SessionLifecycle`, `sessionAttention` null), never the red failed styling.
+`managed_session_auth_status` now returns `keychain-oauth` when
+`/auth_broker/broker == "keychain-oauth"` (label "Claude subscription
+(Keychain)", not needs-attention); `labels.ts`/`authDetails.ts` mirror it.
+`DESKTOP_APP.md` documents the Ended status.
 
 B4 read-only session monitor windows are complete (detail in the gap tracker
 B4 section): Session menu > Open in New Window mints the `session-<n>` label in

@@ -122,7 +122,9 @@ applies (see [Open a terminal](#open-a-terminal)): what the run prints is shown
 but not filtered or saved. A **Close** button is always visible, and **End run**
 appears once the run starts. Either one ends the run and takes you back Home, so
 the terminal can never grow past the window or leave you stuck. Pressing Escape
-or closing the window also ends the run cleanly.
+or closing the window also ends the run cleanly. Afterward the session shows as
+**Ended** in the Finished group, not Failed: you close an interactive run
+yourself, so ending it is normal and never marked as an error.
 
 On the Agent step you can open `Auth details` to see, for the chosen agent, how
 it signs in, what stays on this Mac, what the agent gets, and which provider

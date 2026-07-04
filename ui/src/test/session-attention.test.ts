@@ -50,6 +50,13 @@ describe("sessionAttention", () => {
     expect(sessionAttention(session({ lifecycle: "finished" }))).toBeNull()
   })
 
+  it("treats an ended interactive run as neutral, not a failure", () => {
+    // The in-app run terminal ends with lifecycle "ended"; it must not raise the
+    // red failure signal.
+    const ended = session({ lifecycle: "ended", statusLabel: "Ended" })
+    expect(sessionAttention(ended)).toBeNull()
+  })
+
   it("flags a failed session as red", () => {
     expect(sessionAttention(session({ lifecycle: "failed" }))).toEqual({
       kind: "failed",

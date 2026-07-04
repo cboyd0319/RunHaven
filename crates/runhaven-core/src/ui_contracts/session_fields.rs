@@ -15,6 +15,9 @@ pub(super) fn managed_session_lifecycle(status: &str) -> String {
         "finished" | "succeeded" => "finished".to_string(),
         "failed" | "error" | "crashed" => "failed".to_string(),
         "stopped" | "exited" => "stopped".to_string(),
+        // An interactive TTY run the user ended by closing it: a terminal,
+        // neutral state, never the red "failed" styling.
+        "ended" => "ended".to_string(),
         "" | "-" => "unknown".to_string(),
         other => other.to_string(),
     }
@@ -41,7 +44,7 @@ pub(super) fn managed_session_next_action(
             label: "Monitor session".to_string(),
             detail: "RunHaven is tracking status for this session.".to_string(),
         },
-        "finished" | "stopped" => ManagedSessionNextActionData {
+        "finished" | "stopped" | "ended" => ManagedSessionNextActionData {
             kind: "none".to_string(),
             label: "No action needed".to_string(),
             detail: "The session is no longer running.".to_string(),
@@ -63,7 +66,7 @@ pub(super) fn managed_session_cleanup(
     record: &serde_json::Value,
     lifecycle: &str,
 ) -> ManagedSessionCleanupData {
-    if matches!(lifecycle, "finished" | "failed" | "stopped")
+    if matches!(lifecycle, "finished" | "failed" | "stopped" | "ended")
         && managed_session_worktree_cleanup_available(record)
     {
         return ManagedSessionCleanupData {
@@ -112,6 +115,16 @@ pub(super) fn managed_session_auth_status(
         return "no-auth-needed".to_string();
     }
     if managed_session_has_run_owned_broker(record) {
+        // Distinguish the Claude Keychain OAuth broker from the env-var API-key
+        // broker so the session view names the real path instead of always
+        // saying "API key broker". The broker label is non-secret.
+        if record
+            .pointer("/auth_broker/broker")
+            .and_then(serde_json::Value::as_str)
+            == Some("keychain-oauth")
+        {
+            return "keychain-oauth".to_string();
+        }
         return "api-key-broker".to_string();
     }
     if managed_session_uses_login_state(agent, auth_scope) {
@@ -157,7 +170,13 @@ fn managed_session_auth_needs_attention(agent: &str, auth_status: &str) -> bool 
 
     !matches!(
         auth_status.trim().to_lowercase().as_str(),
-        "api-key-broker" | "brokered" | "ready" | "available" | "n/a" | "no-auth-needed"
+        "api-key-broker"
+            | "keychain-oauth"
+            | "brokered"
+            | "ready"
+            | "available"
+            | "n/a"
+            | "no-auth-needed"
     )
 }
 
@@ -202,6 +221,7 @@ fn network_label(network: &str) -> String {
 fn auth_status_label(status: &str) -> String {
     match status.trim().to_lowercase().as_str() {
         "api-key-broker" => "API key broker".to_string(),
+        "keychain-oauth" => "Claude subscription (Keychain)".to_string(),
         "login-state" => "Sign in needed".to_string(),
         "no-auth-needed" => "No auth needed".to_string(),
         "n/a" => "N/A".to_string(),

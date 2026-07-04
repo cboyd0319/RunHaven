@@ -266,6 +266,16 @@ impl AgentRunPlan {
             }
         }
     }
+
+    /// True when this plan runs the agent under an interactive host PTY, i.e. its
+    /// argv carries `--tty`. The desktop run-terminal path adds `--tty` via
+    /// [`AgentRunPlan::make_interactive_tty`]; background captured runs stay
+    /// `--interactive` only, so this cleanly distinguishes an interactive TUI run.
+    /// The user ends such a run by closing the TUI, so a non-zero exit is normal
+    /// and its exit code is not a success/failure signal.
+    pub fn is_interactive_tty(&self) -> bool {
+        self.command.iter().any(|arg| arg == "--tty")
+    }
 }
 
 #[cfg(test)]
@@ -345,6 +355,48 @@ mod tests {
             1,
             "make_interactive_tty must be idempotent"
         );
+    }
+
+    #[test]
+    fn is_interactive_tty_distinguishes_terminal_runs_from_background_runs() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut plan = build_run_plan(RunOptions {
+            profile: get_profile("shell").expect("profile"),
+            workspace: workspace.path().to_path_buf(),
+            agent_args: vec![
+                "/bin/bash".to_string(),
+                "-lc".to_string(),
+                "true".to_string(),
+            ],
+            image: None,
+            cpus: "4".to_string(),
+            memory: "4g".to_string(),
+            network: NetworkMode::Internet,
+            workspace_scope: WorkspaceScope::Current,
+            session: None,
+            auth_scope: AuthScope::Agent,
+            read_only_workspace: true,
+            ssh: false,
+            env: Vec::new(),
+            user: "agent".to_string(),
+            interactive: true,
+            tty: false,
+            allow_sensitive_workspace: false,
+            allow_root_user: false,
+            provider_hosts: Vec::new(),
+            claude_auth_source: None,
+            worktree: None,
+            run_id: Some("tty-probe".to_string()),
+        })
+        .expect("plan");
+
+        // A background --interactive-only run (the captured runner) is not an
+        // interactive TTY run.
+        assert!(!plan.is_interactive_tty());
+
+        // The run-terminal path adds --tty, marking it an interactive TUI run.
+        plan.make_interactive_tty();
+        assert!(plan.is_interactive_tty());
     }
 
     #[test]

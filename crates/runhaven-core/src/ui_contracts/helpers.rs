@@ -56,6 +56,7 @@ pub(super) fn status_label(status: &str) -> String {
         "finished" | "succeeded" => "Finished".to_string(),
         "failed" => "Failed".to_string(),
         "stopped" => "Stopped".to_string(),
+        "ended" => "Ended".to_string(),
         other => display_agent_name(other),
     }
 }

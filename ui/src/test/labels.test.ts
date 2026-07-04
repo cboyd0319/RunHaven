@@ -38,6 +38,12 @@ describe("authStatusLabel", () => {
     expect(authStatusLabel("brokered")).toBe("API key broker")
   })
 
+  it("names the Claude Keychain OAuth broker distinctly", () => {
+    expect(authStatusLabel("keychain-oauth")).toBe(
+      "Claude subscription (Keychain)",
+    )
+  })
+
   it("maps no-auth, ready, and design-only states", () => {
     expect(authStatusLabel("no-auth-needed")).toBe("No auth needed")
     expect(authStatusLabel("n/a")).toBe("No auth needed")

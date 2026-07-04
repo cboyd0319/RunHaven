@@ -39,6 +39,7 @@ describe("authStatusLabel", () => {
 describe("authStatusBadgeVariant", () => {
   it("marks brokered and ready states as success", () => {
     expect(authStatusBadgeVariant("api-key-broker")).toBe("success");
+    expect(authStatusBadgeVariant("keychain-oauth")).toBe("success");
     expect(authStatusBadgeVariant("n/a")).toBe("success");
   });
 

@@ -33,6 +33,22 @@ pub struct RunRecordInput<'a> {
 
 pub fn write_run_record(input: RunRecordInput<'_>) -> Result<()> {
     let path = runs_log_path();
+    // An explicit caller override wins. Otherwise an interactive TTY run (the
+    // in-app run terminal) records the neutral terminal status "ended": the user
+    // ends it by closing the TUI, so its exit code is not a success/failure
+    // signal. Tradeoff: a rare interactive run that fails to START also shows
+    // "ended"; the user saw it live in the terminal, so "ended" is honest and
+    // never falsely alarms with "Failed". Background captured runs keep the
+    // exit-code split.
+    let status = input.status.map(str::to_string).unwrap_or_else(|| {
+        if input.plan.is_interactive_tty() {
+            "ended".to_string()
+        } else if input.return_code == 0 {
+            "succeeded".to_string()
+        } else {
+            "failed".to_string()
+        }
+    });
     let mut payload = json!({
         "timestamp": input.finished_at,
         "started_at": input.started_at,
@@ -45,7 +61,7 @@ pub fn write_run_record(input: RunRecordInput<'_>) -> Result<()> {
         "state_volume": input.plan.state_volume,
         "session": input.plan.session,
         "network": input.plan.network_mode.as_str(),
-        "status": input.status.unwrap_or(if input.return_code == 0 { "succeeded" } else { "failed" }),
+        "status": status,
         "return_code": input.return_code,
         "provider_policy": summarize_provider_policy(input.provider_decisions),
         "auth_broker": summarize_auth_broker(input.auth_decisions, input.plan.broker_label()),
@@ -305,7 +321,93 @@ pub fn read_run_records_tail_bounded(limit: usize, max_tail_bytes: u64) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::plans::{
+        AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
+    };
+    use crate::runtime::profiles::get_profile;
+    use crate::support::git::GitChange;
     use crate::support::paths::{ensure_private_parent, override_cache_root_for_tests};
+
+    fn record_status_for_run(interactive_tty: bool, return_code: i32) -> String {
+        let workspace = tempfile::tempdir().expect("workspace");
+        let mut plan = build_run_plan(RunOptions {
+            profile: get_profile("shell").expect("profile"),
+            workspace: workspace.path().to_path_buf(),
+            agent_args: vec![
+                "/bin/bash".to_string(),
+                "-lc".to_string(),
+                "true".to_string(),
+            ],
+            image: None,
+            cpus: "4".to_string(),
+            memory: "4g".to_string(),
+            network: NetworkMode::Internet,
+            workspace_scope: WorkspaceScope::Current,
+            session: None,
+            auth_scope: AuthScope::Agent,
+            read_only_workspace: true,
+            ssh: false,
+            env: Vec::new(),
+            user: "agent".to_string(),
+            interactive: true,
+            tty: false,
+            allow_sensitive_workspace: false,
+            allow_root_user: false,
+            provider_hosts: Vec::new(),
+            claude_auth_source: None,
+            worktree: None,
+            run_id: Some("status-probe".to_string()),
+        })
+        .expect("plan");
+        if interactive_tty {
+            plan.make_interactive_tty();
+        }
+
+        write_run_record(RunRecordInput {
+            plan: &plan,
+            run_id: "status-probe",
+            started_at: "2026-07-01T00:00:00Z",
+            finished_at: "2026-07-01T00:01:00Z",
+            return_code,
+            status: None,
+            provider_decisions: &[],
+            auth_decisions: None,
+            cleanup: json!({}),
+            git: GitChange::Unavailable {
+                reason: "test".to_string(),
+                repo_root: None,
+            },
+        })
+        .expect("write run record");
+
+        find_run_record("status-probe")
+            .expect("record")
+            .get("status")
+            .and_then(Value::as_str)
+            .expect("status")
+            .to_string()
+    }
+
+    #[test]
+    fn interactive_tty_run_records_ended_even_on_non_zero_exit() {
+        let cache = tempfile::tempdir().expect("cache");
+        let _cache_home = override_cache_root_for_tests(cache.path());
+        ensure_private_parent(&runs_log_path()).expect("runs log parent");
+        // The in-app run terminal exits non-zero when its TUI is closed; that is
+        // an ended session, not a failure.
+        assert_eq!(record_status_for_run(true, 1), "ended");
+    }
+
+    #[test]
+    fn background_run_keeps_the_exit_code_status_split() {
+        let cache = tempfile::tempdir().expect("cache");
+        let _cache_home = override_cache_root_for_tests(cache.path());
+        ensure_private_parent(&runs_log_path()).expect("runs log parent");
+        // A background (non-interactive) run still reports failure on non-zero
+        // exit and success on zero.
+        assert_eq!(record_status_for_run(false, 1), "failed");
+        assert_eq!(record_status_for_run(false, 0), "succeeded");
+    }
 
     #[test]
     fn run_records_tail_bounded_keeps_recent_records() {

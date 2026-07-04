@@ -15,6 +15,7 @@ export function authStatusBadgeVariant(
 ): "destructive" | "secondary" | "success" | "warning" {
   switch (status.trim().toLowerCase()) {
     case "api-key-broker":
+    case "keychain-oauth":
     case "brokered":
     case "ready":
     case "available":

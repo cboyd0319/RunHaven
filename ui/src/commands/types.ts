@@ -222,6 +222,7 @@ export type SessionLifecycle =
   | "kill-requested"
   | "finished"
   | "failed"
+  | "ended"
   | "removed"
   | "cleaned-up";
 

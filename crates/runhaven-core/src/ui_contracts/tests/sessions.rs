@@ -248,12 +248,15 @@ fn managed_session_finished_run_proves_broker_from_history_auth_broker_channel()
 
     let mut brokered = finished_record("run-history-brokered", "brokered");
     brokered["auth_broker"] = serde_json::json!({"broker": "api-key", "entries": 0});
+    let mut keychain = finished_record("run-history-keychain", "keychain");
+    keychain["profile"] = serde_json::json!("claude");
+    keychain["auth_broker"] = serde_json::json!({"broker": "keychain-oauth", "entries": 0});
     let mut sign_in = finished_record("run-history-sign-in", "signin");
     sign_in["auth_broker"] = serde_json::json!({"broker": null, "entries": 0});
 
     let data = ManagedSessionListData::from_active_and_recent_runs(
         [],
-        [brokered, sign_in],
+        [brokered, keychain, sign_in],
         serde_json::json!({"profiles": [{"name": "codex", "status": "api-key-broker"}]}),
     );
 
@@ -264,12 +267,59 @@ fn managed_session_finished_run_proves_broker_from_history_auth_broker_channel()
         .expect("brokered finished session");
     assert_eq!(brokered.auth_status, "api-key-broker");
 
+    // The Claude Keychain OAuth broker reads as its own status and label, not
+    // the env-var "API key broker", and never asks the user to finish auth.
+    let keychain = data
+        .sessions
+        .iter()
+        .find(|session| session.run_id == "run-history-keychain")
+        .expect("keychain finished session");
+    assert_eq!(keychain.auth_status, "keychain-oauth");
+    assert_eq!(keychain.events[1].detail, "Claude subscription (Keychain)");
+    assert_eq!(keychain.next_action.kind, "none");
+
     let sign_in = data
         .sessions
         .iter()
         .find(|session| session.run_id == "run-history-sign-in")
         .expect("sign-in finished session");
     assert_eq!(sign_in.auth_status, "login-state");
+}
+
+#[test]
+fn managed_session_ended_run_is_neutral_terminal_not_a_failure() {
+    // An interactive TTY run the user ended by closing it records status
+    // "ended". It must render as a neutral terminal state: "Ended" label, no
+    // action needed, and worktree cleanup allowed like other terminal states.
+    let ended = serde_json::json!({
+        "timestamp": "2026-07-01T05:00:00Z",
+        "started_at": "2026-07-01T04:00:00Z",
+        "finished_at": "2026-07-01T05:00:00Z",
+        "run_id": "run-ended",
+        "profile": "claude",
+        "workspace": "/sensitive/workspaces/ended",
+        "network": "provider",
+        "status": "ended",
+        "auth_scope": "agent",
+        "session": "ended"
+    });
+
+    let data = ManagedSessionListData::from_active_and_recent_runs(
+        [],
+        [ended],
+        serde_json::json!({"profiles": [{"name": "claude", "status": "unknown"}]}),
+    );
+
+    let session = data
+        .sessions
+        .iter()
+        .find(|session| session.run_id == "run-ended")
+        .expect("ended session");
+    assert_eq!(session.status, "ended");
+    assert_eq!(session.status_label, "Ended");
+    assert_eq!(session.lifecycle, "ended");
+    assert_eq!(session.next_action.kind, "none");
+    assert_eq!(session.next_action.label, "No action needed");
 }
 
 #[test]
