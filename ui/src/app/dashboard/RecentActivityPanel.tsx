@@ -37,13 +37,13 @@ export function RecentActivityPanel({
       {sessions.length === 0 ? (
         <p className="py-2 text-sm text-muted-foreground">No runs yet.</p>
       ) : (
-        <table className="w-full border-collapse text-sm">
+        <table className="w-full table-fixed border-collapse text-sm">
           <thead>
             <tr className="text-left text-xs text-muted-foreground">
               <th className="pb-2 pl-2 font-medium">Run</th>
-              <th className="pb-2 font-medium">Agent</th>
-              <th className="pb-2 font-medium">Status</th>
-              <th className="pb-2 pr-2 font-medium">Updated</th>
+              <th className="w-[20%] pb-2 font-medium">Agent</th>
+              <th className="w-[20%] pb-2 font-medium">Status</th>
+              <th className="w-[16%] pb-2 pr-2 font-medium">Updated</th>
             </tr>
           </thead>
           <tbody>
@@ -56,18 +56,18 @@ export function RecentActivityPanel({
                   className="cursor-pointer border-t transition-colors hover:bg-muted/50"
                   onClick={() => onSelectSession(session.id)}
                 >
-                  <td className="w-full py-2.5 pl-2">
+                  <td className="py-2.5 pl-2">
                     <span className="block truncate font-medium">
                       {sessionDisplayTitle(session, labels)}
                     </span>
                   </td>
-                  <td className="py-2.5 whitespace-nowrap">
+                  <td className="py-2.5">
                     <AgentCell agent={session.agent} />
                   </td>
-                  <td className="py-2.5 whitespace-nowrap">
+                  <td className="py-2.5">
                     <StatusDot tone={tone} label={label} />
                   </td>
-                  <td className="py-2.5 pr-2 whitespace-nowrap text-muted-foreground tabular-nums">
+                  <td className="py-2.5 pr-2 text-muted-foreground tabular-nums">
                     {timeAgo(session.startedAt)}
                   </td>
                 </tr>

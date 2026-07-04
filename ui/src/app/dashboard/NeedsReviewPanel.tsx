@@ -24,14 +24,14 @@ export function NeedsReviewPanel({
   const { labels } = useSessionLabels()
   return (
     <DashboardPanel title="Needs review" count={sessions.length}>
-      <table className="w-full border-collapse text-sm">
+      <table className="w-full table-fixed border-collapse text-sm">
         <thead>
           <tr className="text-left text-xs text-muted-foreground">
             <th className="pb-2 pl-2 font-medium">Run</th>
-            <th className="pb-2 font-medium">Agent</th>
-            <th className="pb-2 font-medium">Issue</th>
-            <th className="pb-2 font-medium">Updated</th>
-            <th className="pb-2 pr-2 text-right font-medium">Action</th>
+            <th className="w-[16%] pb-2 font-medium">Agent</th>
+            <th className="w-[20%] pb-2 font-medium">Issue</th>
+            <th className="w-[15%] pb-2 font-medium">Updated</th>
+            <th className="w-[13%] pb-2 pr-2 text-right font-medium">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -43,8 +43,8 @@ export function NeedsReviewPanel({
                 className="cursor-pointer border-t transition-colors hover:bg-muted/50"
                 onClick={() => onSelectSession(session.id)}
               >
-                <td className="w-full py-2.5 pl-2">
-                  <span className="flex items-center gap-2 truncate font-medium">
+                <td className="py-2.5 pl-2">
+                  <span className="flex items-center gap-2 font-medium">
                     <span
                       aria-hidden
                       className="size-2 shrink-0 rounded-full bg-destructive"
@@ -54,13 +54,13 @@ export function NeedsReviewPanel({
                     </span>
                   </span>
                 </td>
-                <td className="py-2.5 whitespace-nowrap">
+                <td className="py-2.5">
                   <AgentCell agent={session.agent} />
                 </td>
-                <td className="py-2.5 text-muted-foreground">
+                <td className="truncate py-2.5 text-muted-foreground">
                   {attention?.label ?? "Needs review"}
                 </td>
-                <td className="py-2.5 whitespace-nowrap text-muted-foreground tabular-nums">
+                <td className="py-2.5 text-muted-foreground tabular-nums">
                   {timeAgo(session.startedAt)}
                 </td>
                 <td className="py-2.5 pr-2 text-right">
