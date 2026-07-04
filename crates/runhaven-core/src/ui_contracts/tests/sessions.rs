@@ -287,6 +287,43 @@ fn managed_session_finished_run_proves_broker_from_history_auth_broker_channel()
 }
 
 #[test]
+fn managed_session_running_keychain_oauth_run_is_authed_not_needing_sign_in() {
+    // A RUNNING keychain-oauth Claude run tags its source on the marker's
+    // `claude_auth_source` (the completed run's `/auth_broker/broker` does not
+    // exist yet). Without reading that field the live session falls through to
+    // login-state and wrongly shows "Needs sign-in" while it is authed via the
+    // broker and working. It must read as keychain-oauth and need no action.
+    let running = serde_json::json!({
+        "timestamp": "2026-07-04T18:00:00Z",
+        "started_at": "2026-07-04T17:57:00Z",
+        "run_id": "run-active-keychain",
+        "profile": "claude",
+        "workspace": "/sensitive/workspaces/keychain-live",
+        "network": "provider",
+        "status": "running",
+        "auth_scope": "agent",
+        "state_volume": "runhaven-claude-keychain-live-home",
+        "session": "keychain-live",
+        "claude_auth_source": "keychain-oauth"
+    });
+
+    let data = ManagedSessionListData::from_active_and_recent_runs(
+        [running],
+        [],
+        serde_json::json!({"profiles": [{"name": "claude", "status": "unknown"}]}),
+    );
+
+    let session = data
+        .sessions
+        .iter()
+        .find(|session| session.run_id == "run-active-keychain")
+        .expect("running keychain session");
+    assert_eq!(session.auth_status, "keychain-oauth");
+    assert_ne!(session.next_action.kind, "auth_attention");
+    assert_eq!(session.next_action.kind, "monitor");
+}
+
+#[test]
 fn managed_session_ended_run_is_neutral_terminal_not_a_failure() {
     // An interactive TTY run the user ended by closing it records status
     // "ended". It must render as a neutral terminal state: "Ended" label, no

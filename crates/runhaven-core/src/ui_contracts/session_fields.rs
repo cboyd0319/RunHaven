@@ -117,11 +117,15 @@ pub(super) fn managed_session_auth_status(
     if managed_session_has_run_owned_broker(record) {
         // Distinguish the Claude Keychain OAuth broker from the env-var API-key
         // broker so the session view names the real path instead of always
-        // saying "API key broker". The broker label is non-secret.
+        // saying "API key broker". The broker label is non-secret. A RUNNING run
+        // exposes the source on the marker's `claude_auth_source`; a completed run
+        // exposes it on `/auth_broker/broker`. Match both so a live keychain-oauth
+        // session is not misread as needing sign-in.
         if record
             .pointer("/auth_broker/broker")
             .and_then(serde_json::Value::as_str)
             == Some("keychain-oauth")
+            || string_field(record, "claude_auth_source") == "keychain-oauth"
         {
             return "keychain-oauth".to_string();
         }
@@ -144,6 +148,9 @@ pub(super) fn managed_session_auth_status(
 
 fn managed_session_has_run_owned_broker(record: &serde_json::Value) -> bool {
     present_value(&string_field(record, "api_key_broker_env"))
+        // A running keychain-oauth run has no env-var name; its marker tags the
+        // source here so the live session is recognized as brokered, not login.
+        || present_value(&string_field(record, "claude_auth_source"))
         || record
             .pointer("/auth_broker/broker")
             .and_then(serde_json::Value::as_str)
