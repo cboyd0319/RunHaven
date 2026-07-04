@@ -134,8 +134,10 @@ Useful GUI design docs:
   interactive runs. P1: terminal keyboard trap, sign-in cancel/timeout, native
   launch-confirm raw codes plus a one-vocabulary shared label source, status-icon
   tokens. P2 is the phased macOS-native shell (title bar, vibrancy, button shape,
-  sheet, SF Symbols). Foundation verified strong. Fixes are follow-up, not yet
-  applied.
+  sheet, SF Symbols). Foundation verified strong. The P0 (#28) is fixed and gated
+  SOUND: the interactive run terminal now stays mounted (hidden) across navigation
+  instead of unmounting and killing the run, with a sidebar "Run terminal" handle
+  to return; End run and app-quit still tear down. P1-P3 are in progress.
 - Broker credential redaction is now type-enforced (task #22). The held Claude
   OAuth token is `BrokerState.api_key: secrecy::SecretString` (was
   `Zeroizing<String>`), and the broker-secret resolver plus the setup-token

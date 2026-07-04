@@ -6,8 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { TerminalMessage } from "../commands/runhaven"
 
+import { AppMainContent } from "../app/AppMainContent"
 import { act } from "./render-hook"
-import { managedSession, planRequest } from "./main-view-props"
+import {
+  launchFlow,
+  managedSession,
+  mainViewProps,
+  planRequest,
+} from "./main-view-props"
 
 // A fake xterm Terminal so the teardown, input, and message-handler contracts
 // are testable without booting the real WebView terminal in happy-dom.
@@ -366,5 +372,66 @@ describe("TerminalPanel message handling", () => {
     })
     expect(writeTerminalInput).toHaveBeenCalledWith(managedSession().id, [97])
     await panel.unmount()
+  })
+})
+
+// Pins the P0 fix (audit RT-1): the run's sandbox uses this terminal's PTY as
+// its controlling TTY, so navigating away must keep the panel MOUNTED (not
+// unmount-and-kill). Guards against a future refactor silently reintroducing
+// kill-on-nav, which every static-markup test would miss.
+describe("AppMainContent keeps a live run mounted across navigation", () => {
+  it("does not tear down the run on nav change and preserves the terminal node, ending only on unmount", async () => {
+    const launch = runLaunch()
+    const container = document.createElement("div")
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    async function show(kind: "run-terminal" | "home") {
+      await act(async () => {
+        root.render(
+          createElement(AppMainContent, {
+            ...mainViewProps({
+              launchFlow: { ...launchFlow(), runTerminal: launch },
+            }),
+            navigation: { kind },
+          }),
+        )
+      })
+    }
+
+    // Start the run on its destination (active), then flush the async xterm open.
+    await show("run-terminal")
+    const start = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Start run"),
+    )
+    if (!start) {
+      throw new Error("Start run button not found")
+    }
+    await act(async () => {
+      start.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+    })
+    await act(async () => {})
+    expect(openAgentRunTerminal).toHaveBeenCalledTimes(1)
+    const node = container.querySelector('[aria-label="Sandbox terminal"]')
+    expect(node).not.toBeNull()
+
+    // Navigate AWAY to Home: the run must NOT be torn down, and the xterm node
+    // identity must be preserved (proves no remount, so the agent survives).
+    closeTerminalSession.mockClear()
+    await show("home")
+    expect(closeTerminalSession).not.toHaveBeenCalled()
+    expect(container.querySelector('[aria-label="Sandbox terminal"]')).toBe(node)
+
+    // Navigate BACK: still the same live node, still no teardown.
+    await show("run-terminal")
+    expect(closeTerminalSession).not.toHaveBeenCalled()
+    expect(container.querySelector('[aria-label="Sandbox terminal"]')).toBe(node)
+
+    // Only a real unmount (End run clears runTerminal) tears down the child.
+    await act(async () => {
+      root.unmount()
+    })
+    expect(closeTerminalSession).toHaveBeenCalledWith(launch.sessionId)
+    container.remove()
   })
 })

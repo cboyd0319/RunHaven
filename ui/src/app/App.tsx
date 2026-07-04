@@ -26,6 +26,7 @@ export default function App() {
             sessions={app.managedSessions.sessions}
             navigation={app.navigation}
             onNavigate={app.navigate}
+            runTerminalActive={app.launchFlow.runTerminal !== null}
           />
           <SidebarInset className="h-screen overflow-hidden">
             <AppHeader

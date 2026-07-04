@@ -72,6 +72,7 @@ describe("session labels in the sidebar", () => {
               sessions={sessions}
               navigation={{ kind: "home" }}
               onNavigate={() => undefined}
+              runTerminalActive={false}
             />
           </SidebarProvider>
         </TooltipProvider>

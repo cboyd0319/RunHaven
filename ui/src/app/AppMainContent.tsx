@@ -30,64 +30,78 @@ export function AppMainContent(props: AppMainContentProps) {
     mainViewFocusKey(navigation, worktreeReviewEligible),
   )
 
-  // The interactive run terminal is a bounded full-height destination, not the
-  // scrolling max-width column the other views use: the xterm container must
-  // flex-fill a definite parent so FitAddon settles at a stable size and can
-  // never grow the layout past the window. It renders only with a live run
-  // terminal in state; the impossible null case falls through to the normal
-  // views (MainView renders Home) so navigation is never dead.
-  if (navigation.kind === "run-terminal" && props.launchFlow.runTerminal) {
-    return (
-      <main className="flex min-h-0 flex-1 flex-col gap-3 p-4">
-        {error ? (
-          <Alert variant="destructive">
-            <CircleAlert />
-            <AlertTitle>Action failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-        <div
-          ref={focusRef}
-          tabIndex={-1}
-          aria-label="Run terminal"
-          className="flex min-h-0 flex-1 flex-col outline-none"
-        >
-          <TerminalPanel
-            run={props.launchFlow.runTerminal}
-            fill
-            onClose={props.launchFlow.closeRunTerminal}
-          />
-        </div>
-      </main>
-    )
-  }
+  // A live interactive run terminal stays MOUNTED here for its whole life,
+  // shown only on its own destination and hidden (not unmounted) on every other.
+  // This is load-bearing: the run's sandbox uses this terminal's host PTY as its
+  // controlling TTY, so unmounting the panel would close the PTY and kill the
+  // running agent (audit RT-1). Navigating away therefore hides it; it is torn
+  // down only when the run terminal is cleared (End run), which unmounts the
+  // panel and fires its teardown. The impossible null case (run-terminal
+  // destination with no terminal in state) falls through to the normal views.
+  const runTerminal = props.launchFlow.runTerminal
+  const showTerminal = navigation.kind === "run-terminal" && runTerminal !== null
 
   return (
-    <main className="min-h-0 flex-1 overflow-y-auto p-4">
-      <section className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-4">
+    <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {runTerminal ? (
         <div
-          ref={focusRef}
-          tabIndex={-1}
-          aria-label={mainViewLabel(navigation)}
-          className="flex flex-col gap-4 outline-none"
+          // The bounded full-height layout the xterm needs: the container must
+          // flex-fill a definite parent so FitAddon settles and never grows the
+          // layout past the window. `hidden` keeps it mounted but out of view.
+          hidden={!showTerminal}
+          className="flex min-h-0 flex-1 flex-col gap-3 p-4"
         >
-          {error ? (
+          {showTerminal && error ? (
             <Alert variant="destructive">
               <CircleAlert />
               <AlertTitle>Action failed</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
-          {launchMessage ? (
-            <Alert>
-              <CheckCircle2 />
-              <AlertTitle>{launchMessage}</AlertTitle>
-              <AlertDescription>You can follow it below.</AlertDescription>
-            </Alert>
-          ) : null}
-          <MainView {...props} />
+          <div
+            ref={showTerminal ? focusRef : undefined}
+            tabIndex={-1}
+            aria-label="Run terminal"
+            className="flex min-h-0 flex-1 flex-col outline-none"
+          >
+            <TerminalPanel
+              run={runTerminal}
+              fill
+              visible={showTerminal}
+              onClose={props.launchFlow.closeRunTerminal}
+            />
+          </div>
         </div>
-      </section>
+      ) : null}
+
+      {!showTerminal ? (
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <section className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-4">
+            <div
+              ref={focusRef}
+              tabIndex={-1}
+              aria-label={mainViewLabel(navigation)}
+              className="flex flex-col gap-4 outline-none"
+            >
+              {error ? (
+                <Alert variant="destructive">
+                  <CircleAlert />
+                  <AlertTitle>Action failed</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+              {launchMessage ? (
+                <Alert>
+                  <CheckCircle2 />
+                  <AlertTitle>{launchMessage}</AlertTitle>
+                  <AlertDescription>You can follow it below.</AlertDescription>
+                </Alert>
+              ) : null}
+              <MainView {...props} />
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   )
 }

@@ -43,6 +43,27 @@ describe("AppMainContent run-terminal destination", () => {
     expect(html).toContain("Close")
   })
 
+  it("keeps the run terminal mounted but hidden when navigated away from it", () => {
+    // RT-1: the run's sandbox uses this terminal's PTY as its controlling TTY,
+    // so navigating away must NOT unmount the panel (that would close the PTY and
+    // kill the run). With a live run and a non-run-terminal destination, the
+    // panel stays rendered (hidden) AND the normal destination shows alongside.
+    const html = renderToStaticMarkup(
+      <AppMainContent
+        {...mainViewProps({
+          launchFlow: { ...launchFlow(), runTerminal: runTerminal() },
+        })}
+        navigation={{ kind: "home" }}
+      />,
+    )
+
+    // The terminal is still in the tree (its standing disclosure renders)...
+    expect(html).toContain("RunHaven does not filter, read, store, or log it")
+    expect(html).toContain("hidden")
+    // ...and the Home destination renders alongside it (New run action present).
+    expect(html).toContain("New run")
+  })
+
   it("falls back to Home when the destination has no live run terminal", () => {
     const html = renderToStaticMarkup(
       <AppMainContent

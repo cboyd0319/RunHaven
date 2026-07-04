@@ -118,9 +118,13 @@ export type TerminalPanelProps =
       login?: undefined
       // The run terminal in its main-content destination. `fill` makes the card
       // and the xterm container flex-fill a bounded parent (no min-height growth
-      // loop); `onClose` ends the run and leaves the destination.
+      // loop); `onClose` ends the run and leaves the destination. `visible` is
+      // false while the run is live but its destination is not shown (the panel
+      // stays mounted to keep the PTY alive); it drives a re-fit when the
+      // terminal comes back into view.
       fill?: boolean
       onClose?: () => void
+      visible?: boolean
     }
 
 export function TerminalPanel(props: TerminalPanelProps) {
@@ -140,6 +144,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
   const runProps = props.run ? props : null
   const fill = runProps?.fill ?? false
   const onClose = runProps?.onClose
+  const visible = runProps?.visible ?? true
   // A stable open per mode, so the streaming effect can depend on it without
   // re-running mid-session. `run` binds the captured launch request (fixed for
   // this terminal's life) into the uniform (sessionId, onMessage) open shape, so
@@ -159,6 +164,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
     }
   }, [mode, runRequest])
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const fitRef = useRef<import("@xterm/addon-fit").FitAddon | null>(null)
   const [active, setActive] = useState(false)
   const [phase, setPhase] = useState<TerminalPhase>("idle")
   const [errorText, setErrorText] = useState("")
@@ -207,6 +213,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
         cursorBlink: false,
       })
       const fitAddon = new FitAddon()
+      fitRef.current = fitAddon
       term.loadAddon(fitAddon)
       term.open(container)
       fitAddon.fit()
@@ -217,7 +224,14 @@ export function TerminalPanel(props: TerminalPanelProps) {
         void resizeTerminal(sessionId, cols, rows)
       })
       if (typeof ResizeObserver !== "undefined") {
-        observer = new ResizeObserver(() => fitAddon.fit())
+        observer = new ResizeObserver(() => {
+          // Skip while hidden (0-size): fitting a display:none container would
+          // push a 0x0 resize to the guest. The visibility effect re-fits on
+          // re-show.
+          if (container.clientWidth > 0 && container.clientHeight > 0) {
+            fitAddon.fit()
+          }
+        })
         observer.observe(container)
       }
       try {
@@ -254,12 +268,27 @@ export function TerminalPanel(props: TerminalPanelProps) {
     return () => {
       disposed = true
       observer?.disconnect()
+      fitRef.current = null
       // Teardown contract: killing the backend child on unmount is required,
-      // not optional. The backend send-error kill is only a backstop.
+      // not optional. The backend send-error kill is only a backstop. The run
+      // terminal reaches here only when the panel truly unmounts (End run
+      // clears it); navigating away keeps it mounted, so the run is not killed.
       void closeTerminalSession(sessionId)
       term?.dispose()
     }
   }, [active, sessionId, open])
+
+  // Re-fit when the run terminal returns to view. While its destination is not
+  // shown the panel stays mounted but hidden (0-size), so the ResizeObserver is
+  // suppressed; on re-show the container is laid out again and xterm must match
+  // the real size and resize the guest. rAF waits for layout before measuring.
+  useEffect(() => {
+    if (!visible || !active) {
+      return
+    }
+    const frame = requestAnimationFrame(() => fitRef.current?.fit())
+    return () => cancelAnimationFrame(frame)
+  }, [visible, active])
 
   function openTerminal() {
     setErrorText("")

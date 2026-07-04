@@ -45,6 +45,7 @@ function session(
 function renderSidebar(
   sessions: ManagedSessionSummary[],
   navigation: NavDestination,
+  runTerminalActive = false,
 ): string {
   return renderToStaticMarkup(
     <TooltipProvider>
@@ -53,6 +54,7 @@ function renderSidebar(
           sessions={sessions}
           navigation={navigation}
           onNavigate={() => undefined}
+          runTerminalActive={runTerminalActive}
         />
       </SidebarProvider>
     </TooltipProvider>,
@@ -113,6 +115,22 @@ describe("RunHavenSidebar", () => {
     // Home is the selected destination.
     expect(html.match(/aria-current="page"/g) ?? []).toHaveLength(1)
     expect(html.match(/data-active="true"/g) ?? []).toHaveLength(1)
+  })
+
+  it("shows a Run terminal handle only while a run terminal is live", () => {
+    // A live interactive run is not a managed session, so without this fixed row
+    // navigating away would leave no way back to it (audit RT-1/RT-2).
+    expect(renderSidebar([], { kind: "home" }, false)).not.toContain(
+      ">Run terminal<",
+    )
+
+    const live = renderSidebar([], { kind: "run-terminal" }, true)
+    expect(live).toContain(">Run terminal<")
+    // It sits right after Home and is the selected destination.
+    expect(live.indexOf(">Run terminal<")).toBeGreaterThan(live.indexOf(">Home<"))
+    expect(live.match(/aria-current="page"/g) ?? []).toHaveLength(1)
+    const current = live.indexOf('aria-current="page"')
+    expect(live.indexOf(">Run terminal<")).toBeGreaterThan(current)
   })
 
   it("hides empty session groups and marks the selected System destination", () => {

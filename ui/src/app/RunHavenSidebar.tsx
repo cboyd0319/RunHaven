@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils"
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 
 import { safeBackendLabel } from "./labels"
-import { groupSessions, type NavDestination } from "./navigation"
+import { groupSessions, RUN_TERMINAL_NAV, type NavDestination } from "./navigation"
 import { useSessionLabels } from "./sessionLabels"
 import { sessionDisplayTitle } from "./sessionIdentity"
 import {
@@ -46,10 +46,15 @@ export function RunHavenSidebar({
   sessions,
   navigation,
   onNavigate,
+  runTerminalActive,
 }: {
   sessions: ManagedSessionSummary[]
   navigation: NavDestination
   onNavigate: (destination: NavDestination) => void
+  // True while an interactive run terminal is live. It is not a managed session,
+  // so it gets its own fixed row: without it, navigating away from a live run
+  // would leave no way back (audit RT-1/RT-2).
+  runTerminalActive: boolean
 }) {
   const groups = groupSessions(sessions)
 
@@ -80,6 +85,14 @@ export function RunHavenSidebar({
                 active={navigation.kind === "home"}
                 onSelect={() => onNavigate({ kind: "home" })}
               />
+              {runTerminalActive ? (
+                <DestinationRow
+                  label="Run terminal"
+                  Icon={Terminal}
+                  active={navigation.kind === "run-terminal"}
+                  onSelect={() => onNavigate(RUN_TERMINAL_NAV)}
+                />
+              ) : null}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
