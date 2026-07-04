@@ -109,8 +109,11 @@ export function DiagnosticsCard({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {diagnostics.egressLog.entries.map((entry) => (
-                      <TableRow key={`${entry.runId}-${entry.host}`}>
+                    {/* The snapshot list is replaced wholesale on load and rows
+                        are stateless, so the index disambiguates repeat hosts
+                        within one run (the same host can be decided twice). */}
+                    {diagnostics.egressLog.entries.map((entry, index) => (
+                      <TableRow key={`${index}-${entry.runId}-${entry.host}`}>
                         <TableCell>{entry.profile}</TableCell>
                         <TableCell>{entry.host}</TableCell>
                         <TableCell>{entry.decision}</TableCell>

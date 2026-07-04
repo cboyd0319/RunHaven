@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-03 UTC
+Last updated: 2026-07-04 UTC
 
 ## Current Direction
 
@@ -125,6 +125,25 @@ Useful GUI design docs:
 
 ## Latest State
 
+- Live-test iteration (2026-07-04, adversarial gate CONCERNS -> remediated; all
+  suites green): (1) COPY-2 vocabulary unified across 43 files (sign in / run /
+  session; "Sign-in sharing", "Shared agent sign-in" / "This project only",
+  "Finish sign-in"; display-only, wire values unchanged) with a REAL Rust<->TS
+  drift pin that reads `ui/src/app/labels.ts` from a Rust test. (2) macOS shell
+  NAT-1: overlay title bar + hidden title, full-height sidebar with drag strip,
+  draggable header, `window-chrome` capability (start-dragging +
+  internal-toggle-maximize, the permission the drag-region double-click really
+  invokes), minWidth 800 so the sub-768 no-sidebar WebView state is unreachable.
+  (3) Comprehensive diagnostic logging: tauri-plugin-log =2.8.0 (log =0.4.32,
+  forced by vendored codex pty) to `~/Library/Logs/dev.runhaven.desktop/
+  runhaven.log` (5MiB x5, TRACE dev / INFO release, tao/wry damped), WebView
+  console + window errors + invoke tracing (name/ms/outcome only;
+  write_terminal_input + resize_terminal excluded so typing cadence stays out),
+  `logging` capability (log:allow-log, main-only), a no-console source guard,
+  and a `tauri:dev:log` tee. Terminal stream and secrets stay out by contract +
+  guards. The log's first session already caught and fixed duplicate React keys
+  in both diagnostics tables and confirmed double-click zoom works.
+
 - Comprehensive UI/UX audit shipped (task #25,
   `docs/design/native-gui-uiux-audit.md`): five parallel read-only lenses
   (visual, accessibility, copy, macOS-native/HIG, states/flows) over every
@@ -207,31 +226,13 @@ Useful GUI design docs:
   applies to path A and to the non-Claude agents; a path-C Claude token is held
   only in the Keychain. `login claude --clear` and the GUI "Remove saved token"
   delete their respective stores.
-- In-app agent sign-in landed seam-first (live verification is a documented
-  follow-up). Codex, Copilot, and Antigravity now sign in from the app. A
-  mutating `start_agent_sign_in` command lives behind its own isolated
-  `agent-sign-in` capability (not run-control): it validates the agent against
-  core `supports_sandbox_login`, fails closed on unconfirmed, unknown, or
-  non-device-code input, requires a Rust-owned native confirmation, then runs
-  the tested core device-code login plan on a background thread through the
-  `AgentCommandRunner` seam. Claude is deliberately not an in-app target because
-  its in-sandbox sign-in needs a code pasted back into the terminal, which this
-  captured-output runner cannot host; the GUI keeps claude out of this device-code
-  path via an explicit `agent == "claude"` check (core `supports_sandbox_login`
-  is now true for claude). Claude sign-in instead runs in the in-app sign-in
-  terminal (Terminal slice 3, separate `open_claude_sign_in_terminal` command),
-  with `runhaven login claude` kept as a copy-command fallback. A read-only
-  `get_agent_sign_in_status`
-  (main-read) returns sanitized progress (starting/needs_browser/succeeded/
-  failed) plus a bounded, `redact_run_output`-scrubbed output tail, so the
-  sign-in link and short-lived device code show while any leaked token or key is
-  scrubbed. The GUI only triggers sign-in and shows progress; the credential
-  lives in the agent's isolated home volume and no command returns, logs, or
-  stores it. On success the app refreshes auth status. Core reuse:
-  `supports_sandbox_login` and `build_sandbox_login_plan` in
-  `crates/runhaven-core/src/runtime/login.rs`; `AgentProfileSummary`
-  `supportsInAppSignIn` drives the GUI button and excludes claude explicitly
-  (core `supports_sandbox_login` now includes it).
+- In-app agent sign-in landed seam-first (detail in git and
+  `docs/DESKTOP_APP.md`): Codex/Copilot/Antigravity sign in from the app via the
+  isolated `agent-sign-in` capability (native confirm, fail-closed, device-code
+  plan on the `AgentCommandRunner` seam, sanitized redacted progress). Claude is
+  excluded from the device-code path by an explicit check and signs in via the
+  in-app terminal (T3) or the path-C Keychain broker; credentials stay in the
+  agent's home volume, never returned or stored.
 - The GUI now has parity for git-worktree runs and their review lifecycle (V1
   milestone M4). The launch flow has an opt-in worktree choice (secure default
   off): `RunPlanRequest.worktree` threads into the planner, the plan review and

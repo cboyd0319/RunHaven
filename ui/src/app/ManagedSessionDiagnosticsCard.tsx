@@ -69,8 +69,10 @@ export function ManagedSessionDiagnosticsCard({
             <SessionLogTable
               title="Auth records"
               empty="No auth broker records for this session."
-              rows={diagnostics.authLogEntries.map((entry) => ({
-                key: `${entry.timestamp}-${entry.path}-${entry.decision}`,
+              rows={diagnostics.authLogEntries.map((entry, index) => ({
+                // Index first: the log writer stamps one timestamp per batch,
+                // so timestamp-path-decision alone can collide within a batch.
+                key: `${index}-${entry.timestamp}-${entry.path}-${entry.decision}`,
                 first: entry.path,
                 second: entry.decision,
                 third: entry.reason,
@@ -79,8 +81,8 @@ export function ManagedSessionDiagnosticsCard({
             <SessionLogTable
               title="Network records"
               empty="No provider network records for this session."
-              rows={diagnostics.egressLogEntries.map((entry) => ({
-                key: `${entry.timestamp}-${entry.host}-${entry.decision}`,
+              rows={diagnostics.egressLogEntries.map((entry, index) => ({
+                key: `${index}-${entry.timestamp}-${entry.host}-${entry.decision}`,
                 first: entry.host,
                 second: entry.decision,
                 third: entry.reason,
