@@ -137,7 +137,14 @@ Useful GUI design docs:
   sheet, SF Symbols). Foundation verified strong. The P0 (#28) is fixed and gated
   SOUND: the interactive run terminal now stays mounted (hidden) across navigation
   instead of unmounting and killing the run, with a sidebar "Run terminal" handle
-  to return; End run and app-quit still tear down. P1-P3 are in progress.
+  to return; End run and app-quit still tear down. P1 shipped (gated CONCERNS ->
+  fixed): sign-in Stop-waiting cancel + 45s stall (poll kept alive after cancel so
+  a late success still refreshes auth, F1), the native launch confirm now shows
+  friendly labels not raw enum codes (COPY-1), status icons use success/warning
+  tokens + ready-to-review is teal not amber (VIS-1/2), and a Shift+Esc terminal
+  keyboard escape (A11Y-1). Deferred: agent sign-in backend concurrency guard
+  (#32), the run/session + sign-in vocabulary rename (#33, awaiting user). P2
+  (native shell) and P3 (nits) are next.
 - Broker credential redaction is now type-enforced (task #22). The held Claude
   OAuth token is `BrokerState.api_key: secrecy::SecretString` (was
   `Zeroizing<String>`), and the broker-secret resolver plus the setup-token

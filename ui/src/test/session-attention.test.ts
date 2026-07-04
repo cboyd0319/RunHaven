@@ -93,7 +93,9 @@ describe("sessionAttention", () => {
     })
   })
 
-  it("flags a finished worktree session as ready to review", () => {
+  it("flags a finished worktree session as ready to review with the ready tone", () => {
+    // Ready to review is a positive, ready state (VIS-2), so it carries the teal
+    // success tone, not warning amber.
     expect(
       sessionAttention(
         session({ lifecycle: "finished", cleanup: worktreeCleanup }),
@@ -101,7 +103,7 @@ describe("sessionAttention", () => {
     ).toEqual({
       kind: "ready-to-review",
       label: "Ready to review",
-      tone: "needs-you",
+      tone: "ready",
     })
   })
 

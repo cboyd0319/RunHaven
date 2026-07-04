@@ -114,7 +114,7 @@ function SetupHealth(props: MainViewProps) {
   if (props.setupReady) {
     return (
       <p className="flex items-center gap-2 text-sm text-muted-foreground">
-        <CheckCircle2 className="size-4 text-green-600" aria-hidden />
+        <CheckCircle2 className="size-4 text-success" aria-hidden />
         Your Mac is ready to run agents. Full checks live in Diagnostics.
       </p>
     )

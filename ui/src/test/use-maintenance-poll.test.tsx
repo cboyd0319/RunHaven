@@ -115,6 +115,121 @@ describe("useAgentSignIn", () => {
     await hook.unmount()
   })
 
+  it("stops the waiting UI without stopping the poll", async () => {
+    startSignIn.mockResolvedValue({
+      signInId: "si1",
+      agent: "codex",
+      state: "starting",
+      label: "Signing in",
+      detail: "Starting.",
+    })
+    getSignInStatus.mockResolvedValue(signInStatus("needs_browser"))
+
+    const hook = await renderHook(
+      (cb: () => void) => useAgentSignIn(cb),
+      () => undefined,
+    )
+    await act(async () => {
+      await hook.result.current.signIn("codex")
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_500)
+    })
+    expect(hook.result.current.signing).toBe(true)
+
+    // Stopping hides the active waiting UI but does not tear down the poll.
+    await act(async () => {
+      hook.result.current.cancel()
+    })
+    expect(hook.result.current.signing).toBe(false)
+    expect(hook.result.current.canceled).toBe(true)
+    expect(hook.result.current.polling).toBe(true)
+
+    const callsAfterCancel = getSignInStatus.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6_000)
+    })
+    // The poll keeps reading status after cancel.
+    expect(getSignInStatus.mock.calls.length).toBeGreaterThan(callsAfterCancel)
+    await hook.unmount()
+  })
+
+  it("still fires onSignedIn when the device login finishes after cancel", async () => {
+    // The user hits "Stop waiting", then the device login succeeds. onSignedIn
+    // must still fire once, with no manual reload.
+    startSignIn.mockResolvedValue({
+      signInId: "si1",
+      agent: "codex",
+      state: "starting",
+      label: "Signing in",
+      detail: "Starting.",
+    })
+    getSignInStatus.mockResolvedValue(signInStatus("needs_browser"))
+
+    const onSignedIn = vi.fn()
+    const hook = await renderHook(
+      (cb: () => void) => useAgentSignIn(cb),
+      onSignedIn,
+    )
+    await act(async () => {
+      await hook.result.current.signIn("codex")
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_500)
+    })
+    expect(hook.result.current.signing).toBe(true)
+
+    // Stop waiting while the device login is still open.
+    await act(async () => {
+      hook.result.current.cancel()
+    })
+    expect(hook.result.current.signing).toBe(false)
+    expect(onSignedIn).not.toHaveBeenCalled()
+
+    // The device login completes; the still-live poll reads succeeded.
+    getSignInStatus.mockResolvedValue(signInStatus("succeeded"))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_500)
+    })
+    expect(hook.result.current.status?.state).toBe("succeeded")
+    expect(onSignedIn).toHaveBeenCalledTimes(1)
+
+    // Once succeeded, the poll settles and onSignedIn never re-fires.
+    const callsAfterSuccess = getSignInStatus.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6_000)
+    })
+    expect(getSignInStatus.mock.calls.length).toBe(callsAfterSuccess)
+    expect(onSignedIn).toHaveBeenCalledTimes(1)
+    await hook.unmount()
+  })
+
+  it("surfaces a start-over hint after a long wait", async () => {
+    startSignIn.mockResolvedValue({
+      signInId: "si1",
+      agent: "codex",
+      state: "starting",
+      label: "Signing in",
+      detail: "Starting.",
+    })
+    getSignInStatus.mockResolvedValue(signInStatus("needs_browser"))
+
+    const hook = await renderHook(
+      (cb: () => void) => useAgentSignIn(cb),
+      () => undefined,
+    )
+    await act(async () => {
+      await hook.result.current.signIn("codex")
+    })
+    expect(hook.result.current.stalled).toBe(false)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(45_000)
+    })
+    expect(hook.result.current.stalled).toBe(true)
+    await hook.unmount()
+  })
+
   it("does not re-arm the interval when the onSignedIn identity changes", async () => {
     startSignIn.mockResolvedValue({
       signInId: "si1",

@@ -267,6 +267,16 @@ const ATTENTION_ICONS: Record<SessionAttentionKind, LucideIcon> = {
   "ready-to-review": GitBranch,
 }
 
+// Every dot pairs a design token background with a token foreground so the
+// glyph stays legible in light and dark. The failed dot uses text-background
+// (the dark navy) instead of raw white, which the light-red dark-mode
+// destructive would wash out.
+const ATTENTION_DOT_TONE: Record<SessionAttention["tone"], string> = {
+  failed: "bg-destructive text-background",
+  ready: "bg-success text-success-foreground",
+  "needs-you": "bg-warning text-warning-foreground",
+}
+
 function AttentionDot({ attention }: { attention: SessionAttention }) {
   const Icon = ATTENTION_ICONS[attention.kind]
   return (
@@ -274,9 +284,7 @@ function AttentionDot({ attention }: { attention: SessionAttention }) {
       data-attention={attention.kind}
       className={cn(
         "flex size-4 items-center justify-center rounded-full",
-        attention.tone === "failed"
-          ? "bg-destructive text-white"
-          : "bg-amber-500 text-amber-950",
+        ATTENTION_DOT_TONE[attention.tone],
       )}
     >
       <Icon className="size-3" />

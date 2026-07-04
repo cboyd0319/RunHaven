@@ -2,18 +2,21 @@ use std::env;
 
 use anyhow::{Context, Result, bail};
 
+mod modes;
 mod resources;
 mod types;
 mod validation;
 
+pub use modes::{
+    AuthScope, NetworkMode, SUPPORTED_NETWORK_MODES, SUPPORTED_WORKSPACE_SCOPES, WorkspaceScope,
+};
 pub use resources::{
     bind_mount, home_setup_command, project_identifier, safe_resource_name,
     strip_remainder_separator, volume_mount,
 };
 pub use types::{
-    AgentRunPlan, AuthScope, CONTAINER_PATH, ClaudeAuthSource, DEFAULT_ENV_PASSTHROUGH,
-    NetworkMode, RunOptions, SUPPORTED_NETWORK_MODES, SUPPORTED_WORKSPACE_SCOPES,
-    VOLUME_PREP_IMAGE, VOLUME_PREP_NETWORK, WorkspaceScope, WorktreeRun,
+    AgentRunPlan, CONTAINER_PATH, ClaudeAuthSource, DEFAULT_ENV_PASSTHROUGH, RunOptions,
+    VOLUME_PREP_IMAGE, VOLUME_PREP_NETWORK, WorktreeRun,
 };
 pub use validation::{
     apply_workspace_scope, default_network_mode, network_egress_summary, normalize_provider_hosts,

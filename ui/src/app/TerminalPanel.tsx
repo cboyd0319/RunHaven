@@ -165,6 +165,14 @@ export function TerminalPanel(props: TerminalPanelProps) {
   }, [mode, runRequest])
   const containerRef = useRef<HTMLDivElement | null>(null)
   const fitRef = useRef<import("@xterm/addon-fit").FitAddon | null>(null)
+  // The primary control the keyboard escape lands on. xterm captures Tab and
+  // most keys, so without this a keyboard-only user who focuses the terminal
+  // cannot Tab back out (WCAG 2.1.2, audit A11Y-1). The key handler moves DOM
+  // focus here so there is always a keyboard way out.
+  const primaryControlRef = useRef<HTMLButtonElement | null>(null)
+  // "End run" on the run destination, "Close terminal" for attach/login. Names
+  // both the visible button and the discoverable escape hint from one source.
+  const primaryControlLabel = onClose ? "End run" : "Close terminal"
   const [active, setActive] = useState(false)
   const [phase, setPhase] = useState<TerminalPhase>("idle")
   const [errorText, setErrorText] = useState("")
@@ -216,6 +224,23 @@ export function TerminalPanel(props: TerminalPanelProps) {
       fitRef.current = fitAddon
       term.loadAddon(fitAddon)
       term.open(container)
+      // Keyboard escape from the terminal trap (WCAG 2.1.2). Shift+Esc blurs the
+      // terminal and moves focus to the primary control, so a keyboard-only user
+      // is never stuck behind xterm's key capture. A bare Esc and a double-Esc
+      // are both meaningful to guest TUIs (Claude Code uses both), so the chord
+      // adds Shift to keep the "escape" mnemonic without swallowing them. The
+      // chord is kept out of the PTY (returns false); every other key still
+      // reaches the terminal (returns true).
+      term.attachCustomKeyEventHandler((event) => {
+        if (event.key === "Escape" && event.shiftKey) {
+          if (event.type === "keydown") {
+            term?.blur()
+            primaryControlRef.current?.focus()
+          }
+          return false
+        }
+        return true
+      })
       fitAddon.fit()
       term.onData((data) => {
         void writeTerminalInput(sessionId, [...new TextEncoder().encode(data)])
@@ -364,11 +389,16 @@ export function TerminalPanel(props: TerminalPanelProps) {
               </Alert>
             ) : null}
             <div className="flex flex-wrap items-center gap-3">
-              <Button type="button" variant="outline" onClick={closeTerminal}>
-                {onClose ? "End run" : "Close terminal"}
+              <Button
+                ref={primaryControlRef}
+                type="button"
+                variant="outline"
+                onClick={closeTerminal}
+              >
+                {primaryControlLabel}
               </Button>
               <span className="text-sm text-muted-foreground" aria-live="polite">
-                {terminalStatusText(phase, config.connectedText)}
+                {terminalStatusText(phase, config.connectedText, primaryControlLabel)}
               </span>
             </div>
           </div>
@@ -378,12 +408,18 @@ export function TerminalPanel(props: TerminalPanelProps) {
   )
 }
 
-function terminalStatusText(phase: TerminalPhase, connectedText: string): string {
+function terminalStatusText(
+  phase: TerminalPhase,
+  connectedText: string,
+  escapeTarget: string,
+): string {
   switch (phase) {
     case "opening":
       return "Confirm the terminal in the dialog to start."
     case "live":
-      return connectedText
+      // Discoverable keyboard escape (WCAG 2.1.2): the aria-live status names the
+      // chord and where it lands, so keyboard and screen-reader users can leave.
+      return `${connectedText} To leave with the keyboard, press Shift+Esc to move to the ${escapeTarget} button.`
     case "ended":
       return "This session ended."
     default:

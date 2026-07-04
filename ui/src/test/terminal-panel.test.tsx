@@ -12,23 +12,21 @@ import {
   launchFlow,
   managedSession,
   mainViewProps,
-  planRequest,
 } from "./main-view-props"
+import {
+  type FakeTerminalLike,
+  mountActiveTerminal,
+  runLaunch,
+} from "./terminal-panel-fixtures"
 
 // A fake xterm Terminal so the teardown, input, and message-handler contracts
-// are testable without booting the real WebView terminal in happy-dom.
+// are testable without booting the real WebView terminal in happy-dom. The
+// class stays inline because its `vi.mock` factory is hoisted above imports and
+// cannot reference imported values; the reusable helpers live in the fixtures
+// module.
 const xtermState = vi.hoisted(() => ({
   instances: [] as FakeTerminalLike[],
 }))
-
-type FakeTerminalLike = {
-  cols: number
-  rows: number
-  options: Record<string, unknown>
-  writes: string[]
-  disposed: boolean
-  dataHandlers: ((data: string) => void)[]
-}
 
 vi.mock("@xterm/xterm/css/xterm.css", () => ({}))
 
@@ -39,7 +37,9 @@ vi.mock("@xterm/xterm", () => {
     options: Record<string, unknown> = {}
     writes: string[] = []
     disposed = false
+    blurred = false
     dataHandlers: ((data: string) => void)[] = []
+    keyEventHandler: ((event: KeyboardEvent) => boolean) | undefined
     constructor(options: Record<string, unknown>) {
       this.options = { ...options }
       xtermState.instances.push(this)
@@ -47,6 +47,12 @@ vi.mock("@xterm/xterm", () => {
     loadAddon() {}
     open() {}
     focus() {}
+    blur() {
+      this.blurred = true
+    }
+    attachCustomKeyEventHandler(handler: (event: KeyboardEvent) => boolean) {
+      this.keyEventHandler = handler
+    }
     onData(handler: (data: string) => void) {
       this.dataHandlers.push(handler)
     }
@@ -96,18 +102,6 @@ const openAgentRunTerminal = vi.mocked(runhaven.openAgentRunTerminal)
 const closeTerminalSession = vi.mocked(runhaven.closeTerminalSession)
 const writeTerminalInput = vi.mocked(runhaven.writeTerminalInput)
 
-// A reviewed, confirmed interactive launch as the run panel receives it.
-function runLaunch() {
-  return {
-    sessionId: "runabc123",
-    request: {
-      plan: { ...planRequest(), agent: "claude" },
-      confirmLaunch: true,
-      confirmedWarnings: [],
-    },
-  }
-}
-
 beforeEach(() => {
   xtermState.instances.length = 0
   vi.clearAllMocks()
@@ -122,39 +116,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks()
 })
-
-async function mountActiveTerminal(): Promise<{
-  container: HTMLDivElement
-  unmount: () => Promise<void>
-}> {
-  const container = document.createElement("div")
-  document.body.appendChild(container)
-  const root = createRoot(container)
-  await act(async () => {
-    root.render(createElement(TerminalPanel, { session: managedSession() }))
-  })
-  // Click "Open terminal" to activate the panel, then flush the async xterm
-  // load + open.
-  const openButton = [...container.querySelectorAll("button")].find((button) =>
-    button.textContent?.includes("Open terminal"),
-  )
-  if (!openButton) {
-    throw new Error("Open terminal button not found")
-  }
-  await act(async () => {
-    openButton.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-  })
-  await act(async () => {})
-  return {
-    container,
-    async unmount() {
-      await act(async () => {
-        root.unmount()
-      })
-      container.remove()
-    },
-  }
-}
 
 describe("TerminalPanel Claude login mode", () => {
   it("shows the desktop-only placeholder and never signs in during preview", () => {
@@ -371,6 +332,35 @@ describe("TerminalPanel message handling", () => {
       term.dataHandlers.forEach((handler) => handler("a"))
     })
     expect(writeTerminalInput).toHaveBeenCalledWith(managedSession().id, [97])
+    await panel.unmount()
+  })
+})
+
+describe("TerminalPanel keyboard escape (WCAG 2.1.2, audit A11Y-1)", () => {
+  it("Shift+Esc escapes to the primary control without forwarding; bare Esc and normal keys reach xterm", async () => {
+    const panel = await mountActiveTerminal()
+    const term = xtermState.instances[0]
+    expect(term.keyEventHandler).toBeDefined()
+    const closeButton = [...panel.container.querySelectorAll("button")].find(
+      (button) => button.textContent?.trim() === "Close terminal",
+    )
+    writeTerminalInput.mockClear()
+    let handled: boolean | undefined
+    await act(async () => {
+      handled = term.keyEventHandler?.(
+        new KeyboardEvent("keydown", { key: "Escape", shiftKey: true }),
+      )
+    })
+    // Chord kept out of the PTY (false), terminal blurred, focus on the visible
+    // control so a keyboard-only user is never trapped.
+    expect(handled).toBe(false)
+    expect(term.blurred).toBe(true)
+    expect(document.activeElement).toBe(closeButton)
+    expect(writeTerminalInput).not.toHaveBeenCalled()
+    // Bare Esc (Claude uses single/double Esc) and normal keys still reach xterm.
+    const bareEsc = new KeyboardEvent("keydown", { key: "Escape" })
+    expect(term.keyEventHandler?.(bareEsc)).toBe(true)
+    expect(term.keyEventHandler?.(new KeyboardEvent("keydown", { key: "a" }))).toBe(true)
     await panel.unmount()
   })
 })

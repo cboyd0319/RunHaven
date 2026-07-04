@@ -59,9 +59,9 @@ function HealthRollup({ dashboard }: { dashboard: DashboardStatus | null }) {
       <CardContent>
         <p className="flex items-center gap-2 text-sm">
           {ok ? (
-            <CheckCircle2 className="size-4 text-green-600" aria-hidden />
+            <CheckCircle2 className="size-4 text-success" aria-hidden />
           ) : (
-            <TriangleAlert className="size-4 text-amber-500" aria-hidden />
+            <TriangleAlert className="size-4 text-warning" aria-hidden />
           )}
           {ok
             ? "Your Mac passes every setup check."

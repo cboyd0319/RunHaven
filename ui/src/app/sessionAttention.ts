@@ -4,19 +4,23 @@ import { sessionAllowsWorktreeReview } from "./worktreeReview"
 
 // The one needs-you signal per session row. Priority order comes from
 // docs/design/native-gui-navigation-spec.md section 4: Failed (red) beats
-// Needs sign-in, then Not responding, then Ready to review (all amber). The
-// highest state wins; the badge is a symbol in a dot and the label names the
-// state in text, so the signal is never color-only and never a count.
+// Needs sign-in, then Not responding (both amber), then Ready to review. Ready
+// to review is a positive, ready state, not a warning, so it carries the teal
+// success treatment rather than warning amber. The highest state wins; the
+// badge is a symbol in a dot and the label names the state in text, so the
+// signal is never color-only and never a count.
 export type SessionAttentionKind =
   | "failed"
   | "needs-sign-in"
   | "not-responding"
   | "ready-to-review"
 
+// Tone drives the badge color: "failed" is destructive red, "needs-you" is
+// warning amber, and "ready" is success teal for the positive ready state.
 export type SessionAttention = {
   kind: SessionAttentionKind
   label: string
-  tone: "failed" | "needs-you"
+  tone: "failed" | "needs-you" | "ready"
 }
 
 export function sessionAttention(
@@ -42,7 +46,7 @@ export function sessionAttention(
     return {
       kind: "ready-to-review",
       label: "Ready to review",
-      tone: "needs-you",
+      tone: "ready",
     }
   }
   return null

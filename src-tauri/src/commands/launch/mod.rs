@@ -296,13 +296,13 @@ fn trusted_launch_message(plan: &AgentRunPlan, warnings: &[PlanWarning], worktre
         "no (runs directly in your workspace)"
     };
     let mut message = format!(
-        "Agent: {}\nWorkspace: {}\nSession: {}\nImage: {}\nAuth: {}\nNetwork: {}\nProvider hosts: {}\n{}\nWorktree: {}\n\nRunHaven will start this session after you confirm.",
+        "Agent: {}\nWorkspace: {}\nSession: {}\nImage: {}\nSign-in: {}\nNetwork: {}\nProvider hosts: {}\n{}\nWorktree: {}\n\nRunHaven will start this session after you confirm.",
         plan.profile_name,
         plan.workspace.display(),
         plan.session,
         plan.image,
-        plan.auth_scope.as_str(),
-        plan.network_mode.as_str(),
+        plan.auth_scope.friendly_label(),
+        plan.network_mode.friendly_label(),
         provider_hosts,
         auth_broker_line,
         worktree_line,

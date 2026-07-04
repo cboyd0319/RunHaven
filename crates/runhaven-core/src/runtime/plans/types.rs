@@ -1,111 +1,17 @@
 use std::path::PathBuf;
 
-use anyhow::{Result, bail};
 use serde::Serialize;
 
+use super::modes::{AuthScope, NetworkMode, WorkspaceScope};
 use crate::runtime::profiles::AgentProfile;
 use crate::support::shell;
 
-pub const SUPPORTED_NETWORK_MODES: &[&str] = &["internet", "internal", "provider"];
-pub const SUPPORTED_WORKSPACE_SCOPES: &[&str] = &["current", "git-root"];
 pub const DEFAULT_ENV_PASSTHROUGH: &[&str] = &["TERM", "COLORTERM", "LANG", "LC_ALL", "NO_COLOR"];
 pub const CONTAINER_PATH: &str =
     "/opt/runhaven-agent/node_modules/.bin:/home/agent/.local/bin:/usr/local/bin:/usr/bin:/bin";
 pub const VOLUME_PREP_IMAGE: &str =
     "debian:trixie-slim@sha256:4e401d95de7083948053197a9c3913343cd06b706bf15eb6a0c3ccd26f436a0e";
 pub const VOLUME_PREP_NETWORK: &str = "runhaven-volume-prep-internal";
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum NetworkMode {
-    Internet,
-    Internal,
-    Provider,
-}
-
-impl NetworkMode {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Internet => "internet",
-            Self::Internal => "internal",
-            Self::Provider => "provider",
-        }
-    }
-}
-
-impl TryFrom<&str> for NetworkMode {
-    type Error = anyhow::Error;
-
-    fn try_from(value: &str) -> Result<Self> {
-        match value {
-            "internet" => Ok(Self::Internet),
-            "internal" => Ok(Self::Internal),
-            "provider" => Ok(Self::Provider),
-            _ => bail!("invalid network mode: {value:?}"),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum WorkspaceScope {
-    Current,
-    GitRoot,
-}
-
-impl WorkspaceScope {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Current => "current",
-            Self::GitRoot => "git-root",
-        }
-    }
-}
-
-impl TryFrom<&str> for WorkspaceScope {
-    type Error = anyhow::Error;
-
-    fn try_from(value: &str) -> Result<Self> {
-        match value {
-            "current" => Ok(Self::Current),
-            "git-root" => Ok(Self::GitRoot),
-            _ => bail!("invalid workspace scope: {value:?}"),
-        }
-    }
-}
-
-/// Where an agent's login and state volume live, so an OAuth login can be done
-/// once and reused.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Default, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum AuthScope {
-    /// One login per agent, reused across every workspace (log in once).
-    #[default]
-    Agent,
-    /// A login isolated to this workspace (the per-workspace default state).
-    Project,
-}
-
-impl AuthScope {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Agent => "agent",
-            Self::Project => "project",
-        }
-    }
-}
-
-impl TryFrom<&str> for AuthScope {
-    type Error = anyhow::Error;
-
-    fn try_from(value: &str) -> Result<Self> {
-        match value {
-            "agent" => Ok(Self::Agent),
-            "project" => Ok(Self::Project),
-            _ => bail!("invalid auth scope: {value:?} (use agent or project)"),
-        }
-    }
-}
 
 /// Which Claude auth path a run uses through the host-side broker. This replaces
 /// a bare `api_key_broker_env: Option<String>` so the OAuth token can never land

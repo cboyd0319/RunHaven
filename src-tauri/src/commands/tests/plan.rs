@@ -275,9 +275,13 @@ fn trusted_launch_prompt_contains_reviewable_launch_facts() {
 
     assert!(message.contains("Agent: codex"));
     assert!(message.contains(&format!("Workspace: {}", plan.workspace.display())));
-    assert!(message.contains("Auth: agent"));
+    // COPY-1: the consent dialog shows the plain shared labels, never the raw
+    // enum codes a non-technical user cannot read.
+    assert!(message.contains("Sign-in: Shared agent login"));
     assert!(message.contains("Image: runhaven/codex"));
-    assert!(message.contains("Network: provider"));
+    assert!(message.contains("Network: Provider only"));
+    assert!(!message.contains("Auth: agent"));
+    assert!(!message.contains("Network: provider"));
     assert!(message.contains("Provider hosts: "));
     assert!(message.contains("API key broker: OPENAI_API_KEY"));
     assert!(message.contains("Worktree: no"));

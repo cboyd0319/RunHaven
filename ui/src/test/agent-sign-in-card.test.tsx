@@ -1,9 +1,44 @@
 // @vitest-environment happy-dom
+import { createElement } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AgentSignIn } from "../app/AgentSignIn";
-import type { AgentProfile } from "../commands/runhaven";
+import type {
+  AgentProfile,
+  AgentSignInStatusResponse,
+} from "../commands/runhaven";
+import { act } from "./render-hook";
+
+vi.mock("@/commands/runhaven", async (importActual) => {
+  const actual = await importActual<typeof import("@/commands/runhaven")>();
+  return {
+    ...actual,
+    startAgentSignIn: vi.fn(),
+    getAgentSignInStatus: vi.fn(),
+  };
+});
+
+const commands = await import("@/commands/runhaven");
+const startSignIn = vi.mocked(commands.startAgentSignIn);
+const getSignInStatus = vi.mocked(commands.getAgentSignInStatus);
+
+function signInStatus(
+  state: string,
+  patch: Partial<AgentSignInStatusResponse> = {},
+): AgentSignInStatusResponse {
+  return {
+    signInId: "si1",
+    agent: "codex",
+    state,
+    label: "Signing in",
+    detail: "Open the link to finish.",
+    outputTail: "",
+    updatedAt: "2026-07-01T02:00:00Z",
+    ...patch,
+  };
+}
 
 function agent(patch: Partial<AgentProfile> = {}): AgentProfile {
   return {
@@ -58,5 +93,63 @@ describe("AgentSignIn", () => {
   it("renders nothing without a selected agent", () => {
     const html = renderToStaticMarkup(<AgentSignIn agent={undefined} />);
     expect(html).toBe("");
+  });
+});
+
+describe("AgentSignIn stop-waiting behavior", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    startSignIn.mockReset();
+    getSignInStatus.mockReset();
+  });
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("hides the restart while still signing after the user stops waiting", async () => {
+    // Once the device login is open, stopping must not offer a restart that
+    // would start a second sign-in. The card shows only the honest message.
+    startSignIn.mockResolvedValue({
+      signInId: "si1",
+      agent: "codex",
+      state: "starting",
+      label: "Signing in",
+      detail: "Starting.",
+    });
+    getSignInStatus.mockResolvedValue(signInStatus("needs_browser"));
+
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(createElement(AgentSignIn, { agent: agent() }));
+    });
+
+    const signIn = Array.from(container.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("Sign in"),
+    );
+    await act(async () => {
+      signIn?.click();
+    });
+    const stop = Array.from(container.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("Stop waiting"),
+    );
+    expect(stop).toBeDefined();
+
+    await act(async () => {
+      stop?.click();
+    });
+
+    expect(container.textContent).toContain(
+      "You stopped waiting. The sign-in may still finish on its own.",
+    );
+    // No restart control while the backend is still signing.
+    const restart = Array.from(container.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("Sign in"),
+    );
+    expect(restart).toBeUndefined();
+    await act(async () => {
+      root.unmount();
+    });
   });
 });

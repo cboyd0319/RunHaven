@@ -54,6 +54,12 @@ export function ClaudeSignIn({
     status,
     busy,
     error,
+    statusError,
+    signing,
+    polling,
+    stalled,
+    canceled,
+    cancel,
     signIn,
     clearing,
     clearError,
@@ -87,10 +93,16 @@ export function ClaudeSignIn({
             clearMessage={clearMessage}
             clearError={clearError}
           />
-        ) : state === "signing" ? (
+        ) : signing ? (
+          <SigningState stalled={stalled} onCancel={cancel} />
+        ) : canceled && polling ? (
+          // The user stopped waiting, but the host capture is still running. Do
+          // not offer a restart: the backend refuses a concurrent capture, so a
+          // second "Sign in" would just fail. Say plainly that it may still
+          // finish; the poll flips this to signed in on its own if it does.
           <p className="text-sm text-muted-foreground">
-            Signing in on your Mac. Finish in your browser, then approve saving
-            the token.
+            You stopped waiting. The sign-in may still finish on its own.
+            You&apos;ll see it here if it does.
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -98,6 +110,11 @@ export function ClaudeSignIn({
               RunHaven saves your Claude token to your Mac&apos;s Keychain and
               uses it to sign your runs. The token never goes inside the sandbox.
             </p>
+            {canceled ? (
+              <p className="text-sm text-muted-foreground">
+                You stopped waiting. You can start over below.
+              </p>
+            ) : null}
             <div>
               <TipButton tip={PATH_C_TOOLTIP} disabled={busy} onClick={() => void signIn()}>
                 <LogIn />
@@ -114,6 +131,13 @@ export function ClaudeSignIn({
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
+        {statusError ? (
+          <Alert variant="destructive">
+            <CircleAlert />
+            <AlertTitle>Could not check sign-in status</AlertTitle>
+            <AlertDescription>{statusError}</AlertDescription>
+          </Alert>
+        ) : null}
         {state === "failed" && status?.reason ? (
           <Alert variant="destructive">
             <CircleAlert />
@@ -125,6 +149,38 @@ export function ClaudeSignIn({
         <SandboxOptIn />
       </section>
     </TooltipProvider>
+  )
+}
+
+// The in-flight view while the host capture runs. It always offers a way to stop
+// waiting, and after a reasonable wait adds a calm hint that starting over is
+// fine. Stopping is client-side: it frees the UI even if the host capture is
+// still open, and a real cancel command is a backend follow-up.
+function SigningState({
+  stalled,
+  onCancel,
+}: {
+  stalled: boolean
+  onCancel: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-muted-foreground">
+        Signing in on your Mac. Finish in your browser, then approve saving the
+        token. Keep RunHaven open until it finishes.
+      </p>
+      {stalled ? (
+        <p className="text-sm text-muted-foreground">
+          Still waiting. If the browser step did not open or you closed it, you
+          can stop and start over.
+        </p>
+      ) : null}
+      <div>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Stop waiting
+        </Button>
+      </div>
+    </div>
   )
 }
 
@@ -153,7 +209,7 @@ function SignedInState({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 text-sm">
-        <CheckCircle2 className="size-4 text-emerald-500" aria-hidden />
+        <CheckCircle2 className="size-4 text-success" aria-hidden />
         <span>Signed in on your Mac. {savedAgeLabel(ageDays)}</span>
       </div>
 

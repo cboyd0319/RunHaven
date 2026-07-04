@@ -196,6 +196,20 @@ describe("RunHavenSidebar", () => {
     expect(html).toContain("Ready to review")
     // Badges carry states, never counts.
     expect(html).not.toContain(">3<")
+
+    // Dot color comes from design tokens, never raw palette. Ready to review is
+    // the teal success state (VIS-2); the remaining needs-you state is warning
+    // amber; failed is destructive with a token foreground (never raw white) so
+    // the glyph stays legible on the light-red dark-mode dot (visual M2).
+    expect(html).toMatch(/data-attention="ready-to-review"[^>]*bg-success/)
+    expect(html).toMatch(
+      /data-attention="ready-to-review"[^>]*text-success-foreground/,
+    )
+    expect(html).toMatch(/data-attention="needs-sign-in"[^>]*bg-warning/)
+    expect(html).toMatch(/data-attention="failed"[^>]*bg-destructive/)
+    expect(html).toMatch(/data-attention="failed"[^>]*text-background/)
+    expect(html).not.toContain("text-white")
+    expect(html).not.toContain("bg-amber-500")
   })
 
   it("shows only the primary label and one status line per row", () => {
