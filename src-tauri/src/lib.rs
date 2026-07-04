@@ -41,8 +41,15 @@ pub fn run() {
         // out of the `log` pipeline by construction.
         .plugin(
             tauri_plugin_log::Builder::new()
+                // Global cap DEBUG in dev, INFO in release -- deliberately NOT
+                // Trace. The broker's HTTP client runs in-process, and several
+                // http/tls crates hexdump raw request bytes (token + body) only
+                // at Trace; capping the global level below Trace means no crate,
+                // present or future, can wire-dump a secret into the log, not
+                // just the ones named below. RunHaven's own logging uses
+                // info/debug, so nothing of ours is lost.
                 .level(if cfg!(debug_assertions) {
-                    log::LevelFilter::Trace
+                    log::LevelFilter::Debug
                 } else {
                     log::LevelFilter::Info
                 })
@@ -52,6 +59,20 @@ pub fn run() {
                 // Real window problems still surface at info and above.
                 .level_for("tao", log::LevelFilter::Info)
                 .level_for("wry", log::LevelFilter::Info)
+                // SECURITY, not just noise: the broker's HTTP client runs IN this
+                // process, and at TRACE the http/tls stack hexdumps raw request
+                // bytes -- which include the injected `Authorization: Bearer
+                // sk-ant-...` token and the request bodies (prompts, code). Cap
+                // the whole stack at WARN so no wire content ever reaches the log.
+                // The broker's own audit trail (auth-broker.jsonl) records
+                // method/path/status without secrets. Do not raise these.
+                .level_for("ureq", log::LevelFilter::Warn)
+                .level_for("ureq_proto", log::LevelFilter::Warn)
+                .level_for("rustls", log::LevelFilter::Warn)
+                .level_for("hyper", log::LevelFilter::Warn)
+                .level_for("hyper_util", log::LevelFilter::Warn)
+                .level_for("h2", log::LevelFilter::Warn)
+                .level_for("reqwest", log::LevelFilter::Warn)
                 .targets([
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {

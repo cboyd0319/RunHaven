@@ -28,6 +28,14 @@ note is the maintainer-facing detail.
   `resize_terminal`) are excluded from invoke tracing so even typing cadence
   stays out of the file. xterm.js at its default `logLevel` ("info") never
   sends buffer content through console; do not lower that option.
+- The broker's HTTP request bytes. The broker's HTTP client runs IN the app
+  process, and the http/tls crates (`ureq`, `ureq_proto`, `rustls`, ...)
+  hexdump the raw request -- including the injected `Authorization: Bearer`
+  token and the request body -- only at TRACE. The global log level is capped
+  at DEBUG in dev (INFO in release), so no crate can wire-dump a secret, and
+  the http/tls targets are further pinned to WARN. `scripts/scan-dev-log.sh`
+  fails on any token-shaped text as a backstop. Do NOT raise the global level
+  to TRACE or un-cap those targets.
 - Secrets: no env values, tokens, headers, bodies, or broker payloads. The
   broker token is a Debug-redacted `SecretString`. No log line formats a
   launch request or plan payload. Because the console forwarder would copy

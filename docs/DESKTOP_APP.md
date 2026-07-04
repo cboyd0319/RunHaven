@@ -419,9 +419,14 @@ wrong, share this file instead of a screenshot:
 `~/Library/Logs/dev.runhaven.desktop/runhaven.log`
 
 The log records app events, errors, and the name and timing of each action.
-It never records what you see or type in the live terminal, and it never
-records tokens or other secrets. The file rotates at 5 MiB and the app keeps
-the five most recent older files, so it stays small.
+It does not record what you see or type in the live terminal, request bodies,
+or tokens: the log level is capped below the point where the network layer
+would print raw request bytes, so a token or a request body cannot reach the
+file. The file rotates at 5 MiB and the app keeps the five most recent older
+files, so it stays small.
+
+Before sharing a log, you can double-check it with `scripts/scan-dev-log.sh`,
+which fails if any token-shaped text ever appears.
 
 ## Maintenance
 
