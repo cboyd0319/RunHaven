@@ -129,11 +129,13 @@ Useful GUI design docs:
   suites green): (1) COPY-2 vocabulary unified across 43 files (sign in / run /
   session; "Sign-in sharing", "Shared agent sign-in" / "This project only",
   "Finish sign-in"; display-only, wire values unchanged) with a REAL Rust<->TS
-  drift pin that reads `ui/src/app/labels.ts` from a Rust test. (2) macOS shell
-  NAT-1: overlay title bar + hidden title, full-height sidebar with drag strip,
-  draggable header, `window-chrome` capability (start-dragging +
-  internal-toggle-maximize, the permission the drag-region double-click really
-  invokes), minWidth 800 so the sub-768 no-sidebar WebView state is unreachable.
+  drift pin that reads `ui/src/app/labels.ts` from a Rust test. (2) macOS shell:
+  NAT-1 overlay title bar + hidden title, full-height sidebar, draggable header,
+  `window-chrome` capability, minWidth 800; NAT-2 native vibrancy
+  (window-vibrancy =0.6.0 NSVisualEffectMaterial::Sidebar, transparent main
+  window + macOSPrivateApi + macos-private-api feature -> App Store ineligible,
+  RunHaven ships direct; body transparent, sidebar 72% glass, content opaque,
+  monitors stay opaque). Vibrancy is cosmetic; tint needs a live-look tune.
   (3) Comprehensive diagnostic logging (tauri-plugin-log =2.8.0, log =0.4.32
   vendored-forced) to `~/Library/Logs/dev.runhaven.desktop/runhaven.log`: WebView
   console + window errors + invoke tracing (name/ms/outcome, write/resize
