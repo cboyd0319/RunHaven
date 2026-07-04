@@ -134,15 +134,15 @@ Useful GUI design docs:
   draggable header, `window-chrome` capability (start-dragging +
   internal-toggle-maximize, the permission the drag-region double-click really
   invokes), minWidth 800 so the sub-768 no-sidebar WebView state is unreachable.
-  (3) Comprehensive diagnostic logging: tauri-plugin-log =2.8.0 (log =0.4.32,
-  forced by vendored codex pty) to `~/Library/Logs/dev.runhaven.desktop/
-  runhaven.log` (5MiB x5, TRACE dev / INFO release, tao/wry damped), WebView
-  console + window errors + invoke tracing (name/ms/outcome only;
-  write_terminal_input + resize_terminal excluded so typing cadence stays out),
-  `logging` capability (log:allow-log, main-only), a no-console source guard,
-  and a `tauri:dev:log` tee. Terminal stream and secrets stay out by contract +
-  guards. The log's first session already caught and fixed duplicate React keys
-  in both diagnostics tables and confirmed double-click zoom works.
+  (3) Comprehensive diagnostic logging (tauri-plugin-log =2.8.0, log =0.4.32
+  vendored-forced) to `~/Library/Logs/dev.runhaven.desktop/runhaven.log`: WebView
+  console + window errors + invoke tracing (name/ms/outcome, write/resize
+  excluded), run-id correlation, per-run summary, panic hook, 12 runner
+  eprintln->log, >1s SLOW-invoke WARN. SECURITY: a live session leaked the broker
+  Bearer token via TRACE http wire-dumps -> fixed by capping the global level
+  below TRACE (DEBUG dev/INFO release) + http/tls WARN pins + a redaction filter;
+  `scripts/dev-with-logs.sh` auto-scans (`scan-dev-log.sh`) on every exit.
+  `logging` cap (log:allow-log, main-only) + no-console guard; leak-gated SOUND.
 
 - Comprehensive UI/UX audit shipped (task #25,
   `docs/design/native-gui-uiux-audit.md`): five parallel read-only lenses
