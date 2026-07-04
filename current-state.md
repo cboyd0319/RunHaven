@@ -125,6 +125,17 @@ Useful GUI design docs:
 
 ## Latest State
 
+- Comprehensive UI/UX audit shipped (task #25,
+  `docs/design/native-gui-uiux-audit.md`): five parallel read-only lenses
+  (visual, accessibility, copy, macOS-native/HIG, states/flows) over every
+  destination plus the Rust user-facing strings, ranked P0-P3. Headline is one
+  P0 data-loss bug (navigating away from a live interactive run kills the agent
+  and strands the user, a #24 regression) plus no durable session handle for
+  interactive runs. P1: terminal keyboard trap, sign-in cancel/timeout, native
+  launch-confirm raw codes plus a one-vocabulary shared label source, status-icon
+  tokens. P2 is the phased macOS-native shell (title bar, vibrancy, button shape,
+  sheet, SF Symbols). Foundation verified strong. Fixes are follow-up, not yet
+  applied.
 - Broker credential redaction is now type-enforced (task #22). The held Claude
   OAuth token is `BrokerState.api_key: secrecy::SecretString` (was
   `Zeroizing<String>`), and the broker-secret resolver plus the setup-token
