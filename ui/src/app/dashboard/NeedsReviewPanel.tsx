@@ -43,7 +43,7 @@ export function NeedsReviewPanel({
                 className="cursor-pointer border-t transition-colors hover:bg-muted/50"
                 onClick={() => onSelectSession(session.id)}
               >
-                <td className="max-w-0 py-2.5 pl-2">
+                <td className="w-full py-2.5 pl-2">
                   <span className="flex items-center gap-2 truncate font-medium">
                     <span
                       aria-hidden

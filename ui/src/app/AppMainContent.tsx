@@ -89,8 +89,8 @@ export function AppMainContent(props: AppMainContentProps) {
       ) : null}
 
       {!showTerminal ? (
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          <section className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">
+          <section className="flex w-full min-w-0 flex-col gap-4">
             <div
               ref={focusRef}
               tabIndex={-1}
