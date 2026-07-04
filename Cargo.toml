@@ -130,7 +130,7 @@ strum = "=0.27.2"
 strum_macros = "=0.28.0"
 supports-color = "=3.0.2"
 syntect = "=5.3.0"
-tauri = { version = "=2.11.3", features = [] }
+tauri = { version = "=2.11.3", features = ["macos-private-api"] }
 tauri-build = { version = "=2.6.3", features = [] }
 tauri-plugin-dialog = "=2.7.1"
 # Official Tauri v2 log plugin: writes app logs to stdout plus a rotated file
@@ -140,6 +140,11 @@ tauri-plugin-dialog = "=2.7.1"
 # (crates.io, verified 2026-07-04).
 tauri-plugin-log = "=2.8.0"
 tauri-plugin-window-state = "=2.4.1"
+# Tauri-ecosystem crate for the native macOS NSVisualEffectView sidebar
+# vibrancy (NAT-2). Already resolved in the lockfile via the Tauri stack, so
+# making it a direct dep adds no new transitive surface. Pinned to the current
+# 0.6.0 (crates.io, verified 2026-07-04).
+window-vibrancy = "=0.6.0"
 tempfile = "=3.27.0"
 textwrap = "=0.16.2"
 time = { version = "=0.3.51", features = ["formatting", "parsing"] }

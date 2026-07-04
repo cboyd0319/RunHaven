@@ -90,7 +90,9 @@
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
+    /* Alpha lets the macOS Sidebar vibrancy show as glass (NAT-2). Light mode
+     * is not currently reachable (html is hardcoded .dark) but kept correct. */
+    --sidebar: oklch(0.985 0 0 / 72%);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.48 0.13 246);
     --sidebar-primary-foreground: oklch(0.985 0.015 246);
@@ -136,7 +138,7 @@
     --chart-3: oklch(0.55 0.16 250);
     --chart-4: oklch(0.756 0.208 147);
     --chart-5: oklch(0.762 0.167 57);
-    --sidebar: oklch(0.155 0.044 224 / 85%);
+    --sidebar: oklch(0.155 0.044 224 / 72%);
     --sidebar-foreground: oklch(1 0 0 / 96%);
     --sidebar-primary: oklch(0.55 0.16 250);
     --sidebar-primary-foreground: oklch(0.985 0.015 246);
@@ -151,7 +153,12 @@
     @apply border-border outline-ring/50;
     }
   body {
-    @apply min-h-screen bg-background text-foreground;
+    /* Transparent so the native macOS window vibrancy (NAT-2, applied in
+     * src-tauri/src/lib.rs) shows through. The sidebar paints a translucent
+     * tint over the frosted material (glass); the main content region
+     * (SidebarInset) is bg-background and stays opaque. */
+    @apply min-h-screen text-foreground;
+    background-color: transparent;
     }
   html {
     @apply font-sans;

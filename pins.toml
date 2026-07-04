@@ -44,6 +44,7 @@ tauri-build = "2.6.3"
 tauri-plugin-dialog = "2.7.1"
 tauri-plugin-log = "2.8.0"
 tauri-plugin-window-state = "2.4.1"
+window-vibrancy = "0.6.0"
 
 [frontend]
 "@playwright/test" = "1.61.1"

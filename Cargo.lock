@@ -8993,6 +8993,7 @@ dependencies = [
  "tauri-plugin-window-state",
  "tempfile",
  "time",
+ "window-vibrancy",
 ]
 
 [[package]]

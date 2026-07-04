@@ -117,6 +117,7 @@ fn check_tauri_cargo_against_ledger(root: &Path, pins: &Value) -> Vec<String> {
         ("dependencies", "tauri-plugin-dialog", tauri_pins),
         ("dependencies", "tauri-plugin-window-state", tauri_pins),
         ("dependencies", "tauri-plugin-log", tauri_pins),
+        ("dependencies", "window-vibrancy", tauri_pins),
         ("dependencies", "log", rust_pins),
         ("dependencies", "serde", rust_pins),
         ("dependencies", "serde_json", rust_pins),

@@ -73,12 +73,20 @@ This is the deferred native visual pass the design-resources doc anticipates. Be
 done as one coordinated pass with a real bundle build; several items need
 Tauri/Rust window/menu work, not just CSS.
 
-- **NAT-1** Double chrome: default OS title bar + a separate web header
-  (`tauri.conf.json:12`, `AppHeader.tsx:28`). Fix: `titleBarStyle: Overlay` +
-  `hiddenTitle`, full-height sidebar, drag-region header.
-- **NAT-2** No vibrancy; "glass" is flat alpha (`src-tauri/Cargo.toml:25`,
-  `lib.rs:30`). Fix: `window-vibrancy` + `NSVisualEffectMaterial::Sidebar` (needs
-  NAT-1).
+- **NAT-1 (done)** Double chrome: default OS title bar + a separate web header.
+  Shipped `titleBarStyle: Overlay` + `hiddenTitle`, full-height sidebar,
+  drag-region header.
+- **NAT-2 (done)** Native vibrancy. `window-vibrancy =0.6.0` +
+  `NSVisualEffectMaterial::Sidebar` applied to the transparent main window in
+  `lib.rs` setup; `body` is transparent so the frosted material shows, the
+  sidebar paints a 72%-alpha tint over it (glass), and the main content
+  (`SidebarInset`, `bg-background`) stays opaque. Requires `transparent: true`
+  on the main window plus `macOSPrivateApi: true` and the `macos-private-api`
+  Tauri feature. Tradeoff: apps using the private API cannot ship through the
+  Mac App Store; RunHaven distributes directly (notarized), so this does not
+  constrain its distribution model. Main window only; the read-only session
+  monitors stay opaque. Vibrancy failure is non-fatal (logs a warning, keeps
+  the per-region backgrounds).
 - **NAT-3** Full-pill buttons, not macOS rounded-rects (`button.tsx:8`).
 - **NAT-4** New Run is a center-zoom modal, not a top-attached sheet
   (`LaunchSheet.tsx:49`, `dialog.tsx:62`).

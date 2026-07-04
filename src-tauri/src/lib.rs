@@ -19,6 +19,7 @@ pub(crate) mod terminal;
 
 use tauri::Manager;
 use tauri_plugin_window_state::StateFlags;
+use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
 
 use session_windows::SESSION_WINDOW_LABEL_PREFIX;
 
@@ -133,6 +134,19 @@ pub fn run() {
                 ),
             }
             commands::attention_badge::clear_badge_on_start(app.handle());
+            // Native macOS sidebar vibrancy (NAT-2): the transparent main
+            // window's backdrop becomes a frosted NSVisualEffectView. The
+            // sidebar paints a translucent tint over it (glass); the main
+            // content stays opaque (SidebarInset is bg-background). Non-fatal --
+            // if the effect cannot apply, the transparent window falls back to
+            // the per-region backgrounds and the app runs normally. Main window
+            // only; the read-only session monitors stay opaque.
+            if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL)
+                && let Err(error) =
+                    apply_vibrancy(&window, NSVisualEffectMaterial::Sidebar, None, None)
+            {
+                log::warn!("macOS vibrancy unavailable, using solid background: {error}");
+            }
             Ok(())
         })
         // Monitor windows exist to watch sessions while the main window is

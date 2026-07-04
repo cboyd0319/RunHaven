@@ -27,6 +27,7 @@ tauri.workspace = true
 tauri-plugin-dialog.workspace = true
 tauri-plugin-log.workspace = true
 tauri-plugin-window-state.workspace = true
+window-vibrancy.workspace = true
 time.workspace = true
 
 [dev-dependencies]
