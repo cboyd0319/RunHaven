@@ -17,6 +17,7 @@ import {
   type FakeTerminalLike,
   mountActiveTerminal,
   runLaunch,
+  stubClipboard,
 } from "./terminal-panel-fixtures"
 
 // A fake xterm Terminal so the teardown, input, and message-handler contracts
@@ -40,6 +41,7 @@ vi.mock("@xterm/xterm", () => {
     blurred = false
     dataHandlers: ((data: string) => void)[] = []
     keyEventHandler: ((event: KeyboardEvent) => boolean) | undefined
+    getSelection = () => ""
     constructor(options: Record<string, unknown>) {
       this.options = { ...options }
       xtermState.instances.push(this)
@@ -362,6 +364,26 @@ describe("TerminalPanel keyboard escape (WCAG 2.1.2, audit A11Y-1)", () => {
     expect(term.keyEventHandler?.(bareEsc)).toBe(true)
     expect(term.keyEventHandler?.(new KeyboardEvent("keydown", { key: "a" }))).toBe(true)
     await panel.unmount()
+  })
+})
+
+describe("TerminalPanel clipboard (audit NAT-8)", () => {
+  it("Cmd-C copies a selection and blocks ^C, passes a no-selection Cmd-C through, and Cmd-V pastes utf-8 into the PTY", async () => {
+    const writeText = stubClipboard("pasted")
+    await mountActiveTerminal()
+    const term = xtermState.instances[0]
+    const id = managedSession().id
+    const cmd = (k: string) =>
+      new KeyboardEvent("keydown", { key: k, metaKey: true })
+    term.getSelection = () => "copied"
+    expect(term.keyEventHandler?.(cmd("c"))).toBe(false)
+    expect(writeText).toHaveBeenCalledWith("copied")
+    term.getSelection = () => ""
+    expect(term.keyEventHandler?.(cmd("c"))).toBe(true)
+    expect(term.keyEventHandler?.(cmd("v"))).toBe(false)
+    await act(async () => {})
+    const bytes = [...new TextEncoder().encode("pasted")]
+    expect(writeTerminalInput).toHaveBeenCalledExactlyOnceWith(id, bytes)
   })
 })
 

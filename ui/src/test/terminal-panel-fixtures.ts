@@ -7,10 +7,24 @@
 // file's module graph.
 import { createElement } from "react"
 import { createRoot } from "react-dom/client"
+import { vi } from "vitest"
 
 import { TerminalPanel } from "../app/TerminalPanel"
 import { act } from "./render-hook"
 import { managedSession, planRequest } from "./main-view-props"
+
+// happy-dom exposes navigator.clipboard as a getter-only property, so a plain
+// assignment throws; install a fake through defineProperty instead. readText
+// resolves `readValue` (the pasted text); the returned writeText spy captures
+// what Cmd-C copied for the caller to assert on.
+export function stubClipboard(readValue: string) {
+  const writeText = vi.fn(() => Promise.resolve())
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText, readText: () => Promise.resolve(readValue) },
+  })
+  return writeText
+}
 
 // The shape of the fake xterm Terminal captured by the per-spec mock. Used both
 // by the hoisted `xtermState` container and by the assertions in each spec.
@@ -23,6 +37,7 @@ export type FakeTerminalLike = {
   blurred: boolean
   dataHandlers: ((data: string) => void)[]
   keyEventHandler: ((event: KeyboardEvent) => boolean) | undefined
+  getSelection: () => string
 }
 
 // A reviewed, confirmed interactive launch as the run panel receives it.

@@ -160,3 +160,24 @@
     @apply min-h-screen;
     }
 }
+
+/*
+ * Reduced motion. tw-animate-css ships no prefers-reduced-motion guard, so the
+ * dialog, sheet, alert-dialog, and select enter/exit animations (fade, zoom,
+ * slide) and long transitions (button transition-all, sheet slide) run at full
+ * motion. Under the query, collapse the animate-in/animate-out utilities and
+ * every transition to near-instant. Open/close still works: Radix waits on the
+ * animation/transition end, which now fires immediately. Continuous loading
+ * animations on other utilities are left alone.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-out {
+    animation-duration: 1ms !important;
+  }
+  *,
+  ::before,
+  ::after {
+    transition-duration: 1ms !important;
+  }
+}

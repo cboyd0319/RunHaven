@@ -239,6 +239,27 @@ export function TerminalPanel(props: TerminalPanelProps) {
           }
           return false
         }
+        // Mac clipboard on the xterm canvas (audit NAT-8): the native Edit menu
+        // targets NSText, not this canvas selection. Only Cmd(meta) is caught, so
+        // Ctrl+C still interrupts the guest; a no-selection Cmd-C passes through.
+        if (event.metaKey && event.key === "c") {
+          const selection = term?.getSelection() ?? ""
+          if (selection && event.type === "keydown") {
+            void navigator.clipboard.writeText(selection)
+          }
+          return !selection
+        }
+        if (event.metaKey && event.key === "v") {
+          if (event.type === "keydown") {
+            void navigator.clipboard.readText().then((text) => {
+              const bytes = [...new TextEncoder().encode(text)]
+              if (bytes.length > 0) {
+                void writeTerminalInput(sessionId, bytes)
+              }
+            })
+          }
+          return false
+        }
         return true
       })
       fitAddon.fit()
