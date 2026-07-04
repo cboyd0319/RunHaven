@@ -27,6 +27,7 @@ export default function App() {
             navigation={app.navigation}
             onNavigate={app.navigate}
             runTerminalActive={app.launchFlow.runTerminal !== null}
+            appVersion={app.dashboard?.appVersion ?? ""}
           />
           <SidebarInset className="h-screen overflow-hidden">
             <AppHeader

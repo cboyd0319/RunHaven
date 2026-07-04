@@ -14,7 +14,7 @@ test("renders the dashboard without runtime errors", async ({ page }) => {
   // Home is the welcome surface: setup health, agent readiness, and the one
   // prominent New run action. The wizard is not inline anymore.
   await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
-  await expect(page.getByText("Your Mac is ready to run agents.")).toBeVisible();
+  await expect(page.getByText("Ready to run", { exact: true })).toBeVisible();
   await expect(page.locator("header").getByText("Ready", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Setup ready" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Choose agent" })).toHaveCount(0);
@@ -121,7 +121,7 @@ test("reviews and starts a preview run", async ({ page }) => {
   // Once the launched run is a managed session, the Start screen must not offer
   // a second control surface for it: only the one-line notice remains, and the
   // run's controls live in the per-session view.
-  await expect(page.getByText("Run started. Find it in your sidebar.")).toBeVisible();
+  await expect(page.getByText("Run started. Find it in Recent activity.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Stop run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Hard stop" })).toHaveCount(0);
   await page.getByRole("button", { name: "Open session" }).click();
@@ -131,7 +131,7 @@ test("reviews and starts a preview run", async ({ page }) => {
 test("loads secret-free diagnostics on entry", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Diagnostics" }).click();
+  await page.getByRole("button", { name: "Diagnostics", exact: true }).click();
   // The destination is read-only, so it loads by itself: full doctor detail
   // plus the trust checks, with no manual load button.
   await expect(page.getByRole("heading", { name: "Setup checks" })).toBeVisible();
@@ -163,6 +163,9 @@ test("keeps selected-session message drafts isolated", async ({ page }) => {
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText("Message sent")).toBeVisible();
 
+  // Variant 06 lists sessions in Home's Recent activity, not the sidebar, so
+  // switching sessions routes through Home.
+  await page.getByRole("button", { name: "Home" }).click();
   await page.getByText("Codex - runhaven-alpha").click();
   await expect(page.getByLabel("Message")).toHaveValue("alpha draft");
   await expect(page.getByText("beta message")).toHaveCount(0);

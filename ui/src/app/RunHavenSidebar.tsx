@@ -1,12 +1,11 @@
 import {
   Activity,
   Bot,
-  CircleX,
-  GitBranch,
+  CheckCircle2,
+  CircleAlert,
+  CirclePlay,
   House,
-  KeyRound,
   Terminal,
-  TriangleAlert,
   Wrench,
   type LucideIcon,
 } from "lucide-react"
@@ -26,27 +25,22 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { cn } from "@/lib/utils"
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 
-import { safeBackendLabel } from "./labels"
 import { groupSessions, RUN_TERMINAL_NAV, type NavDestination } from "./navigation"
-import { useSessionLabels } from "./sessionLabels"
-import { sessionDisplayTitle } from "./sessionIdentity"
-import {
-  sessionAttention,
-  type SessionAttention,
-  type SessionAttentionKind,
-} from "./sessionAttention"
+import { sessionAttention } from "./sessionAttention"
 
-// Sidebar taxonomy per docs/design/native-gui-navigation-spec.md section 2:
-// a fixed Home row first, dynamic Active and Finished session groups (hidden
-// when empty), and a fixed System group last. The sidebar is navigation only.
+// Sidebar (design variant 06): the four destinations at the top, then a Runs
+// summary of the run pipeline as three counts (Needs review, Active, Finished),
+// then the app version. Individual sessions are no longer listed here; they are
+// reached from Home's Needs review and Recent activity tables. The count rows
+// navigate to Home, the run overview.
 export function RunHavenSidebar({
   sessions,
   navigation,
   onNavigate,
   runTerminalActive,
+  appVersion,
 }: {
   sessions: ManagedSessionSummary[]
   navigation: NavDestination
@@ -55,8 +49,12 @@ export function RunHavenSidebar({
   // so it gets its own fixed row: without it, navigating away from a live run
   // would leave no way back (audit RT-1/RT-2).
   runTerminalActive: boolean
+  appVersion: string
 }) {
   const groups = groupSessions(sessions)
+  const needsReview = sessions.filter(
+    (session) => sessionAttention(session) !== null,
+  ).length
 
   return (
     <Sidebar collapsible="icon">
@@ -74,9 +72,7 @@ export function RunHavenSidebar({
           />
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
             <div className="font-medium">RunHaven</div>
-            <div className="text-xs text-muted-foreground">
-              Agent launcher
-            </div>
+            <div className="text-xs text-muted-foreground">Agent launcher</div>
           </div>
         </div>
       </SidebarHeader>
@@ -90,41 +86,6 @@ export function RunHavenSidebar({
                 active={navigation.kind === "home"}
                 onSelect={() => onNavigate({ kind: "home" })}
               />
-              {runTerminalActive ? (
-                <DestinationRow
-                  label="Run terminal"
-                  Icon={Terminal}
-                  active={navigation.kind === "run-terminal"}
-                  onSelect={() => onNavigate(RUN_TERMINAL_NAV)}
-                />
-              ) : null}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SessionGroup
-          label="Active"
-          sessions={groups.active}
-          navigation={navigation}
-          onNavigate={onNavigate}
-        />
-        <SessionGroup
-          label="Finished"
-          sessions={groups.finished}
-          navigation={navigation}
-          onNavigate={onNavigate}
-        />
-      </SidebarContent>
-      {/* System destinations are fixed navigation, not session data, so they
-          live in the footer and stay visible no matter how long the Active and
-          Finished lists grow (the scrollable content above). Design nav spec
-          section 2 keeps them last. */}
-      <SidebarFooter>
-        <SidebarGroup className="py-0">
-          <SidebarGroupLabel className="tracking-[0.2em] uppercase">
-            System
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
               <DestinationRow
                 label="Agents"
                 Icon={Bot}
@@ -143,9 +104,52 @@ export function RunHavenSidebar({
                 active={navigation.kind === "maintenance"}
                 onSelect={() => onNavigate({ kind: "maintenance" })}
               />
+              {runTerminalActive ? (
+                <DestinationRow
+                  label="Run terminal"
+                  Icon={Terminal}
+                  active={navigation.kind === "run-terminal"}
+                  onSelect={() => onNavigate(RUN_TERMINAL_NAV)}
+                />
+              ) : null}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel className="tracking-[0.2em] uppercase">
+            Runs
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <CountRow
+                label="Needs review"
+                Icon={CircleAlert}
+                iconClassName="text-destructive"
+                count={needsReview}
+                onSelect={() => onNavigate({ kind: "home" })}
+              />
+              <CountRow
+                label="Active"
+                Icon={CirclePlay}
+                iconClassName="text-primary"
+                count={groups.active.length}
+                onSelect={() => onNavigate({ kind: "home" })}
+              />
+              <CountRow
+                label="Finished"
+                Icon={CheckCircle2}
+                iconClassName="text-success"
+                count={groups.finished.length}
+                onSelect={() => onNavigate({ kind: "home" })}
+              />
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <div className="px-3 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+          {`RunHaven ${appVersion}`.trim()}
+        </div>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
@@ -179,120 +183,28 @@ function DestinationRow({
   )
 }
 
-function SessionGroup({
+// A run-pipeline summary row: a tone-colored icon, a label, and a fixed count
+// badge. The count is not the only cue; the label names the group in text.
+function CountRow({
   label,
-  sessions,
-  navigation,
-  onNavigate,
-}: {
-  label: string
-  sessions: ManagedSessionSummary[]
-  navigation: NavDestination
-  onNavigate: (destination: NavDestination) => void
-}) {
-  if (sessions.length === 0) {
-    return null
-  }
-  return (
-    <SidebarGroup aria-label={`${label} sessions`}>
-      <SidebarGroupLabel className="tracking-[0.2em] uppercase">
-        {label}
-      </SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {sessions.map((session) => (
-            <SessionRow
-              key={session.id}
-              session={session}
-              selected={
-                navigation.kind === "session" && navigation.id === session.id
-              }
-              onSelect={() => onNavigate({ kind: "session", id: session.id })}
-            />
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  )
-}
-
-function SessionRow({
-  session,
-  selected,
+  Icon,
+  iconClassName,
+  count,
   onSelect,
 }: {
-  session: ManagedSessionSummary
-  selected: boolean
+  label: string
+  Icon: LucideIcon
+  iconClassName: string
+  count: number
   onSelect: () => void
 }) {
-  const attention = sessionAttention(session)
-  const { labels } = useSessionLabels()
-  const title = sessionDisplayTitle(session, labels)
-
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton
-        aria-current={selected ? "page" : undefined}
-        className="h-auto items-start gap-3 rounded-xl border border-transparent py-3 pr-10 data-[active=true]:border-sidebar-primary/25 data-[active=true]:bg-sidebar-accent/70"
-        tooltip={title}
-        type="button"
-        isActive={selected}
-        onClick={onSelect}
-      >
-        <Terminal />
-        {/* Spec section 2 row anatomy: primary label, one status line, and the
-            trailing attention badge. Auth, scope, network, and input detail
-            live in the session view and its Details disclosure, not the row. */}
-        <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-          <div className="truncate text-sm font-medium">{title}</div>
-          <div className="truncate text-[11px] leading-4 text-muted-foreground">
-            {attention
-              ? attention.label
-              : safeBackendLabel(session.statusLabel, "Unknown")}
-          </div>
-        </div>
+      <SidebarMenuButton tooltip={`${label}: ${count}`} type="button" onClick={onSelect}>
+        <Icon className={iconClassName} />
+        <span>{label}</span>
       </SidebarMenuButton>
-      {attention ? (
-        // The visible status line above names the state, so the dot itself is
-        // decoration for assistive tech.
-        <SidebarMenuBadge aria-hidden>
-          <AttentionDot attention={attention} />
-        </SidebarMenuBadge>
-      ) : null}
+      <SidebarMenuBadge className="tabular-nums">{count}</SidebarMenuBadge>
     </SidebarMenuItem>
-  )
-}
-
-// One symbol-in-dot badge per row: a distinct symbol per state plus the status
-// text in the row, never color alone and never a count.
-const ATTENTION_ICONS: Record<SessionAttentionKind, LucideIcon> = {
-  failed: CircleX,
-  "needs-sign-in": KeyRound,
-  "not-responding": TriangleAlert,
-  "ready-to-review": GitBranch,
-}
-
-// Every dot pairs a design token background with a token foreground so the
-// glyph stays legible in light and dark. The failed dot uses text-background
-// (the dark navy) instead of raw white, which the light-red dark-mode
-// destructive would wash out.
-const ATTENTION_DOT_TONE: Record<SessionAttention["tone"], string> = {
-  failed: "bg-destructive text-background",
-  ready: "bg-success text-success-foreground",
-  "needs-you": "bg-warning text-warning-foreground",
-}
-
-function AttentionDot({ attention }: { attention: SessionAttention }) {
-  const Icon = ATTENTION_ICONS[attention.kind]
-  return (
-    <span
-      data-attention={attention.kind}
-      className={cn(
-        "flex size-4 items-center justify-center rounded-full",
-        ATTENTION_DOT_TONE[attention.tone],
-      )}
-    >
-      <Icon className="size-3" />
-    </span>
   )
 }

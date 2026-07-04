@@ -165,13 +165,13 @@ Useful GUI design docs:
   tokens + ready-to-review is teal not amber (VIS-1/2), and a Shift+Esc terminal
   keyboard escape (A11Y-1). Deferred: agent sign-in backend concurrency guard
   (#32), the run/session + sign-in vocabulary rename (#33, awaiting user). P2
-  Wave 1 (rounded-rect buttons, ease-out + reduced motion, terminal Cmd-C/V) and
-  the high-value P3 state bugs (baseline poll at zero sessions, failed-load stuck
-  state, diagnostics last-good on transient error, single message-sent ack, image
-  refresh, dismissable error) shipped and gated. Held for the maintainer: P2
-  Wave 2 (window chrome/vibrancy, needs a live macOS bundle), and the remaining
-  P3 nits (cross-cutting aria-live scoping, copy tidy, loading-verb consistency,
-  ended-run label; TerminalPanel is at its line ceiling and needs a split first).
+  Wave 1 (rounded-rect buttons, motion, terminal Cmd-C/V) + high-value P3 state
+  bugs shipped. P2 NAT-1 overlay chrome + NAT-2 native vibrancy shipped; P3 nits
+  held (TerminalPanel at its line ceiling needs a split first).
+- Home dashboard redesign (variant 06, `docs/design/native-gui-home-dashboard.md`):
+  sidebar keeps nav + Runs counts (sessions on Home, not sidebar); Home = 4
+  secret-free panels (Needs review, Recent activity, Agent setup, Secure boundary)
+  + `ui/src/app/dashboard/` primitives. Deferred: run-history view + session switcher.
 - Broker hardening complete (detail in
   `docs/design/native-gui-claude-oauth-broker.md` and git): the held Claude OAuth
   token is `secrecy::SecretString` (`=0.10.3`, pinned) redacting Debug/Display on

@@ -34,7 +34,7 @@ const PAGE_HEADINGS: Record<
 > = {
   home: {
     title: "Home",
-    description: "See what needs you, then start a new run.",
+    description: "Start a run, review sessions, or check setup.",
   },
   session: {
     title: "Session",

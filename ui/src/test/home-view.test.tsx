@@ -6,14 +6,18 @@ import { HomeView } from "../app/views/HomeView";
 import { dashboard, mainViewProps, managedSession } from "./main-view-props";
 
 describe("HomeView", () => {
-  it("shows the one-line health, the New run action, and the first-run note when healthy and empty", () => {
+  it("shows the readiness line, the New run action, and the dashboard panels when healthy", () => {
     const html = renderToStaticMarkup(<HomeView {...mainViewProps()} />);
 
-    expect(html).toContain("Your Mac is ready to run agents.");
+    expect(html).toContain("Ready to run");
     expect(html).toContain("New run");
     expect(html).not.toContain('disabled=""');
-    expect(html).toContain("RunHaven runs AI coding agents in a sandbox on your Mac.");
-    // The wizard is no longer inline on Home; it lives in the closed sheet.
+    // The four Home panels are present; the empty recent list is a compact row.
+    expect(html).toContain("Agent setup");
+    expect(html).toContain("Secure boundary");
+    expect(html).toContain("Recent activity");
+    expect(html).toContain("No runs yet.");
+    // The wizard is never inline on Home; it lives in the closed sheet.
     expect(html).not.toContain("Choose agent");
     expect(html).not.toContain("Finish setup");
   });
@@ -31,19 +35,15 @@ describe("HomeView", () => {
     expect(html).toContain("Check again");
     expect(html).toContain('disabled=""');
     expect(html).toContain("Fix the setup problem above before starting a run.");
-    expect(html).not.toContain("Your Mac is ready to run agents.");
+    // The readiness line reads "Setup needed", not the ready copy.
+    expect(html).toContain("Setup needed");
+    expect(html).not.toContain("Ready to run");
   });
 
   it("does not say 'Checking...' forever after a failed first setup read", () => {
-    // First load failed: not loading, no dashboard. New run must explain the
-    // failure and offer Check again, not sit on "Checking..." indefinitely.
     const html = renderToStaticMarkup(
       <HomeView
-        {...mainViewProps({
-          setupReady: false,
-          loading: false,
-          dashboard: null
-        })}
+        {...mainViewProps({ setupReady: false, loading: false, dashboard: null })}
       />
     );
 
@@ -54,57 +54,75 @@ describe("HomeView", () => {
   });
 
   it("keeps New run enabled during a transient manual refresh when setup is ready", () => {
-    // A manual refresh flips loading true but keeps the loaded dashboard, so
-    // setup stays ready and New run must not disable or fall back to "Checking".
     const html = renderToStaticMarkup(
       <HomeView {...mainViewProps({ loading: true })} />
     );
 
     expect(html).not.toContain('disabled=""');
-    // (Static markup escapes the apostrophe; match on the plain prefix.)
     expect(html).not.toContain("Checking your Mac");
   });
 
-  it("lists agent readiness with a link to the Agents view", () => {
+  it("summarizes agent readiness with a link to the Agents view", () => {
     const html = renderToStaticMarkup(<HomeView {...mainViewProps()} />);
 
+    expect(html).toContain("Agent setup");
     expect(html).toContain("Codex");
     expect(html).toContain("Ready");
     expect(html).toContain("Open Agents");
+    // The one-agent-ready preview drives the summary line.
+    expect(html).toContain("1 ready");
   });
 
-  it("shows needs-you sessions and recent finished runs as navigable rows", () => {
+  it("splits attention runs into Needs review and the rest into Recent activity", () => {
+    const html = renderToStaticMarkup(
+      <HomeView
+        {...mainViewProps({
+          sessions: [
+            managedSession({ id: "s1", title: "Codex - failing", lifecycle: "failed" }),
+            managedSession({
+              id: "s2",
+              title: "Codex - done",
+              lifecycle: "finished",
+              statusLabel: "Finished",
+            }),
+            managedSession({ id: "s3", title: "Codex - quiet" }),
+          ],
+        })}
+      />
+    );
+
+    expect(html).toContain("Needs review");
+    expect(html).toContain("Codex - failing");
+    expect(html).toContain("Recent activity");
+    expect(html).toContain("Codex - done");
+    // A quiet running session is now reachable from Recent activity (the sidebar
+    // no longer lists sessions), so it appears there.
+    expect(html).toContain("Codex - quiet");
+    // A failed run sits in Needs review only, never repeated in Recent activity.
+    expect(html.split("Codex - failing").length - 1).toBe(1);
+  });
+
+  it("never leaks raw paths, containers, or env values into the Home panels", () => {
     const html = renderToStaticMarkup(
       <HomeView
         {...mainViewProps({
           sessions: [
             managedSession({
-              id: "s1",
-              title: "Codex - failing",
-              lifecycle: "failed"
+              id: "leak",
+              title: "Codex - review",
+              lifecycle: "failed",
+              project: "/Users/c/private/leak",
+              containerName: "runhaven-codex-hidden-home",
+              detailCommand: "runhaven runs show --env TOKEN=value",
             }),
-            managedSession({
-              id: "s2",
-              title: "Codex - done",
-              lifecycle: "finished",
-              statusLabel: "Finished"
-            }),
-            managedSession({ id: "s3", title: "Codex - quiet" })
-          ]
+          ],
         })}
       />
     );
 
-    expect(html).toContain("Needs you");
-    expect(html).toContain("Codex - failing");
-    expect(html).toContain("Recent finished runs");
-    expect(html).toContain("Codex - done");
-    // A quiet running session appears in neither Home list.
-    expect(html).not.toContain("Codex - quiet");
-    // A failed run sits in Needs you only: it never repeats in the finished
-    // list, so each run has exactly one Home row.
-    expect(html.split("Codex - failing").length - 1).toBe(1);
-    // With sessions present, the first-run note goes away.
-    expect(html).not.toContain("RunHaven runs AI coding agents in a sandbox");
+    expect(html).toContain("Codex - review");
+    expect(html).not.toContain("/Users/c/private");
+    expect(html).not.toContain("runhaven-codex-hidden-home");
+    expect(html).not.toContain("TOKEN=value");
   });
 });

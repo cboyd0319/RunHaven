@@ -42,6 +42,13 @@ Rejected alternatives:
 
 ## 2. Sidebar Taxonomy
 
+> Superseded for the Home redesign (variant 06, see
+> `docs/design/native-gui-home-dashboard.md`): the sidebar no longer lists
+> individual sessions. It carries the four destinations plus a `Runs` summary
+> (Needs review / Active / Finished counts); sessions are reached from Home's
+> Needs review and Recent activity tables. The rest of this section (navigation
+> only, no action buttons, two levels) still holds.
+
 The sidebar is navigation only: no action buttons, no status panels, at most
 two levels (group headers plus rows), nothing critical at its bottom edge
 `[HIG sidebars]`.

@@ -4,12 +4,10 @@ import { createRoot } from "react-dom/client"
 import { renderToStaticMarkup } from "react-dom/server"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { RunHavenSidebar } from "../app/RunHavenSidebar"
+import { RecentActivityPanel } from "../app/dashboard/RecentActivityPanel"
 import { SessionLabelsProvider } from "../app/sessionLabels"
 import { sessionDisplayTitle } from "../app/sessionIdentity"
 import { SessionView } from "../app/views/SessionView"
-import { SidebarProvider } from "../components/ui/sidebar"
-import { TooltipProvider } from "../components/ui/tooltip"
 import type { ManagedSessionSummary } from "../commands/runhaven"
 
 import { installLocalStorageStub } from "./local-storage"
@@ -49,12 +47,12 @@ describe("sessionDisplayTitle", () => {
   })
 })
 
-describe("session labels in the sidebar", () => {
+describe("session labels in the run tables", () => {
   beforeEach(() => {
     window.localStorage.clear()
   })
 
-  it("shows the label for a labeled row and the derived title otherwise", () => {
+  it("shows the label for a labeled run and the derived title otherwise", () => {
     seedLabels({ s1: "Login bug" })
     const sessions: ManagedSessionSummary[] = [
       managedSession({ id: "s1", title: "Codex - alpha" }),
@@ -66,16 +64,11 @@ describe("session labels in the sidebar", () => {
     ]
     const html = renderToStaticMarkup(
       <SessionLabelsProvider>
-        <TooltipProvider>
-          <SidebarProvider>
-            <RunHavenSidebar
-              sessions={sessions}
-              navigation={{ kind: "home" }}
-              onNavigate={() => undefined}
-              runTerminalActive={false}
-            />
-          </SidebarProvider>
-        </TooltipProvider>
+        <RecentActivityPanel
+          sessions={sessions}
+          onSelectSession={() => undefined}
+          onOpenHistory={() => undefined}
+        />
       </SessionLabelsProvider>,
     )
 
