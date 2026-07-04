@@ -6,11 +6,21 @@ use std::path::{Path, PathBuf};
 /// Plugin and core permissions intentionally granted to the frontend. Adding
 /// an entry here is a deliberate trust-boundary decision and must be reviewed
 /// against the security model. The two event permissions let the main window
-/// receive menu ids from Rust (listen/unlisten only, never emit).
+/// receive menu ids from Rust (listen/unlisten only, never emit). The two
+/// window permissions back the overlay title bar's drag regions
+/// (data-tauri-drag-region): start a window drag and double-click zoom, both
+/// user-gesture window management with no data access. The log permission is
+/// the log plugin's single `log` command: write-only dev/test diagnostics into
+/// the local app log file (main window only, `logging` capability). It grants
+/// no read, list, or delete surface, and the forwarding layer never sends
+/// payloads, secrets, or terminal PTY bytes.
 pub(super) const VETTED_PLUGIN_PERMISSIONS: &[&str] = &[
     "dialog:allow-open",
     "core:event:allow-listen",
     "core:event:allow-unlisten",
+    "core:window:allow-start-dragging",
+    "core:window:allow-internal-toggle-maximize",
+    "log:allow-log",
 ];
 pub(super) const FORBIDDEN_HOST_MARKERS: &[&str] = &[
     "app_server",

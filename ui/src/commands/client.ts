@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 
+import { hasTauriRuntime, traceInvoke } from "./logging";
 import {
   previewAuthExplain,
   previewAuthStatus,
@@ -23,8 +24,6 @@ import {
   previewManagedSessionStatus,
   previewManagedSessionsList,
   previewManagedStop,
-  previewManagedSessionWorktree,
-  previewManagedWorktreeAction,
   previewPlanRun,
   previewRunStatus,
   previewSessionInput,
@@ -66,8 +65,6 @@ import type {
   RunStatusResponse,
   StopManagedSessionResponse,
   StopRunResponse,
-  WorktreeActionResponse,
-  WorktreeReviewResponse,
   WriteSessionInputResponse
 } from "./types";
 import type {
@@ -79,16 +76,27 @@ import type {
   NetworkPruneResponse
 } from "./maintenance_types";
 
-export function hasTauriRuntime(): boolean {
-  return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
-}
+// Runtime detection lives in logging.ts (which must not import this module);
+// re-exported here so existing consumers keep one import site.
+export { hasTauriRuntime } from "./logging";
 
 // The one typed invoke touchpoint; domain files (terminal.ts) route through it.
+// Every call is traced into the dev log by name, duration, and outcome only;
+// args and results never leave this function (they may carry workspace paths
+// and user text).
 export async function call<T>(command: string, args: Record<string, unknown>, fallback: () => T): Promise<T> {
   if (!hasTauriRuntime()) {
     return fallback();
   }
-  return invoke<T>(command, args);
+  const startedAt = performance.now();
+  try {
+    const result = await invoke<T>(command, args);
+    traceInvoke(command, performance.now() - startedAt);
+    return result;
+  } catch (failure) {
+    traceInvoke(command, performance.now() - startedAt, failure ?? "unknown error");
+    throw failure;
+  }
 }
 
 export async function getDashboardStatus(): Promise<DashboardStatus> {
@@ -308,56 +316,6 @@ export async function cleanupManagedSession(
     "cleanup_managed_session",
     { request: { sessionId, confirmCleanup: true } },
     () => previewManagedCleanup(sessionId)
-  );
-}
-
-export async function getManagedSessionWorktree(
-  sessionId: string
-): Promise<WorktreeReviewResponse> {
-  return call(
-    "get_managed_session_worktree",
-    { request: { sessionId } },
-    () => previewManagedSessionWorktree(sessionId)
-  );
-}
-
-export async function keepManagedSessionWorktree(
-  sessionId: string
-): Promise<WorktreeActionResponse> {
-  return call(
-    "keep_managed_session_worktree",
-    { request: { sessionId, confirm: true } },
-    () => previewManagedWorktreeAction(sessionId, "keep")
-  );
-}
-
-export async function mergeManagedSessionWorktree(
-  sessionId: string
-): Promise<WorktreeActionResponse> {
-  return call(
-    "merge_managed_session_worktree",
-    { request: { sessionId, confirm: true } },
-    () => previewManagedWorktreeAction(sessionId, "merge")
-  );
-}
-
-export async function recoverManagedSessionWorktree(
-  sessionId: string
-): Promise<WorktreeActionResponse> {
-  return call(
-    "recover_managed_session_worktree",
-    { request: { sessionId, confirm: true } },
-    () => previewManagedWorktreeAction(sessionId, "recover")
-  );
-}
-
-export async function discardManagedSessionWorktree(
-  sessionId: string
-): Promise<WorktreeActionResponse> {
-  return call(
-    "discard_managed_session_worktree",
-    { request: { sessionId, confirm: true } },
-    () => previewManagedWorktreeAction(sessionId, "discard")
   );
 }
 

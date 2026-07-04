@@ -29,6 +29,39 @@ pub(crate) const MAIN_WINDOW_LABEL: &str = "main";
 
 pub fn run() {
     tauri::Builder::default()
+        // Diagnostic log trail, active in every build (not compiled out of
+        // release), registered first so every later plugin, setup
+        // step, and command failure is captured. Two local-only sinks: stdout
+        // (picked up by the tauri:dev:log tee) and runhaven.log under the app
+        // log dir (~/Library/Logs/<identifier>/ on macOS), rotated at 5 MiB
+        // with the five most recent rotated files kept, so a test run always
+        // leaves a bounded, reviewable trail. TRACE in debug builds, INFO in
+        // release. Never log secrets, request/plan payloads, env values, or
+        // terminal bytes: the live PTY stream flows over Channels and stays
+        // out of the `log` pipeline by construction.
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(if cfg!(debug_assertions) {
+                    log::LevelFilter::Trace
+                } else {
+                    log::LevelFilter::Info
+                })
+                // Dampen the window machinery: tao emits a TRACE line for every
+                // window-delegate callback (resize, key focus), which was 74% of
+                // a real test session's log and drowned the app's own trail.
+                // Real window problems still surface at info and above.
+                .level_for("tao", log::LevelFilter::Info)
+                .level_for("wry", log::LevelFilter::Info)
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("runhaven".into()),
+                    }),
+                ])
+                .max_file_size(5 * 1024 * 1024)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(5))
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         // Frame persistence only: size, position, and maximized state restore
         // on relaunch. Fullscreen and visibility are excluded on purpose so
@@ -49,6 +82,19 @@ pub fn run() {
         .menu(menu::build)
         .on_menu_event(menu::on_menu_event)
         .setup(|app| {
+            // Anchor every log trail: version plus where the file sink lives,
+            // so a shared log is self-describing.
+            match app.path().app_log_dir() {
+                Ok(dir) => log::info!(
+                    "RunHaven desktop {} started; log file: {}",
+                    app.package_info().version,
+                    dir.join("runhaven.log").display()
+                ),
+                Err(error) => log::warn!(
+                    "RunHaven desktop {} started; app log dir unresolved: {error}",
+                    app.package_info().version
+                ),
+            }
             commands::attention_badge::clear_badge_on_start(app.handle());
             Ok(())
         })
@@ -60,8 +106,10 @@ pub fn run() {
         .on_window_event(|window, event| {
             if window.label() == MAIN_WINDOW_LABEL && matches!(event, tauri::WindowEvent::Destroyed)
             {
+                log::info!("main window destroyed; closing monitor windows and terminal sessions");
                 for (label, monitor) in window.app_handle().webview_windows() {
                     if label.starts_with(SESSION_WINDOW_LABEL_PREFIX) {
+                        log::debug!("closing monitor window {label}");
                         let _ = monitor.close();
                     }
                 }

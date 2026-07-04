@@ -61,6 +61,11 @@ export function RunHavenSidebar({
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
+        {/* Overlay title bar (NAT-1): the macOS traffic lights float over this
+            top-left strip, so it insets the logo below them and doubles as a
+            draggable region (data-tauri-drag-region -> the window-chrome
+            capability's start-dragging permission). */}
+        <div data-tauri-drag-region className="h-7 shrink-0" />
         <div className="flex items-center gap-3 px-2 py-2">
           <img
             src={logo}

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "logging",
+  "description": "Dev/test log forwarding for the main window: the WebView may append log lines to the app's local log file through the log plugin's single write-only command. It cannot read, list, or remove logs, and no other plugin surface rides along. Console output, window errors, and stray promise rejections land in the same rotated file as the Rust-side log.",
+  "windows": ["main"],
+  "permissions": ["log:allow-log"]
+}

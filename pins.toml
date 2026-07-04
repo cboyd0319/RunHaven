@@ -1,4 +1,7 @@
 # Current stable pins verified on 2026-06-24.
+# Logging pins (log, tauri-plugin-log, @tauri-apps/plugin-log) verified on 2026-07-04.
+# log stays at 0.4.32 (not current 0.4.33): the vendored codex-utils-pty pins
+# log = "=0.4.32" exactly, and one 0.4.x graph cannot hold two exact pins.
 
 [runhaven]
 version = "0.5.0"
@@ -12,6 +15,7 @@ clap = "4.6.1"
 idna = "1.1.0"
 image = "0.25.10"
 ipnet = "2.12.0"
+log = "0.4.32"
 ratatui = "0.30.2"
 regex = "1.12.4"
 schemars = "0.8.22"
@@ -38,6 +42,7 @@ vt100 = "0.16.2"
 tauri = "2.11.3"
 tauri-build = "2.6.3"
 tauri-plugin-dialog = "2.7.1"
+tauri-plugin-log = "2.8.0"
 tauri-plugin-window-state = "2.4.1"
 
 [frontend]
@@ -45,6 +50,7 @@ tauri-plugin-window-state = "2.4.1"
 "@tauri-apps/api" = "2.11.1"
 "@tauri-apps/cli" = "2.11.3"
 "@tauri-apps/plugin-dialog" = "2.7.1"
+"@tauri-apps/plugin-log" = "2.8.0"
 "@tailwindcss/vite" = "4.3.2"
 "@types/react" = "19.2.14"
 "@types/react-dom" = "19.2.3"

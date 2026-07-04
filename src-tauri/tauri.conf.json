@@ -16,9 +16,11 @@
         "title": "RunHaven",
         "width": 1080,
         "height": 720,
-        "minWidth": 720,
+        "minWidth": 800,
         "minHeight": 560,
-        "resizable": true
+        "resizable": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ],
     "security": {
@@ -35,7 +37,9 @@
         "attention-badge",
         "session-window-open",
         "session-monitor",
-        "terminal"
+        "terminal",
+        "window-chrome",
+        "logging"
       ]
     }
   },

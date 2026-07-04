@@ -86,6 +86,13 @@ insta = { version = "=1.48.0", default-features = false }
 ipnet = "=2.12.0"
 itertools = "=0.14.0"
 lazy_static = "=1.5.0"
+# Logging facade for the desktop shell's dev/test log trail (src-tauri). The
+# tauri-plugin-log backend routes these records to stdout and the local app
+# log file; log lines must never carry secrets, payloads, or terminal bytes.
+# Pinned to 0.4.32, not current stable 0.4.33: the vendored codex-utils-pty
+# crate exact-pins log =0.4.32 and one 0.4.x must resolve for the whole graph
+# (same vendored-tree constraint as security-framework =3.5.1).
+log = "=0.4.32"
 pathdiff = "=0.2.3"
 pretty_assertions = "=1.4.1"
 pty-process = "=0.5.3"
@@ -126,6 +133,12 @@ syntect = "=5.3.0"
 tauri = { version = "=2.11.3", features = [] }
 tauri-build = { version = "=2.6.3", features = [] }
 tauri-plugin-dialog = "=2.7.1"
+# Official Tauri v2 log plugin: writes app logs to stdout plus a rotated file
+# under the app log dir, and exposes exactly one WebView command (`log`,
+# write-only) behind the main-window-only `logging` capability. Local-only
+# diagnostics; no network targets. Pinned to the current stable 2.8.0
+# (crates.io, verified 2026-07-04).
+tauri-plugin-log = "=2.8.0"
 tauri-plugin-window-state = "=2.4.1"
 tempfile = "=3.27.0"
 textwrap = "=0.16.2"

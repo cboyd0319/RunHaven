@@ -97,6 +97,29 @@ fn menu_events_capability_stays_listen_only() {
 }
 
 #[test]
+fn window_chrome_capability_stays_drag_only() {
+    // The overlay title bar's drag regions need exactly two user-gesture window
+    // APIs: start a drag, and the internal toggle-maximize that Tauri's
+    // drag-region script invokes on double-click (NOT the general
+    // allow-toggle-maximize). Nothing that reads data, closes, resizes
+    // programmatically, or reaches another window may ride along.
+    let permissions = capability_permissions("window-chrome.json");
+    assert_same_permission_set(
+        "window-chrome",
+        &permissions,
+        &[
+            "core:window:allow-start-dragging",
+            "core:window:allow-internal-toggle-maximize",
+        ],
+    );
+    assert_eq!(
+        capability_windows("window-chrome.json"),
+        vec!["main".to_string()],
+        "window-chrome must stay main-window-only"
+    );
+}
+
+#[test]
 fn attention_badge_capability_stays_narrow() {
     // The Dock badge command is benign UI state, but it is still a mutation
     // the WebView can trigger, so it lives in its own one-permission

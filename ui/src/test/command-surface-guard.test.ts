@@ -27,14 +27,18 @@ const FORBIDDEN_HOST_MARKERS = [
 const EXPECTED_TAURI_MODULES = [
   "@tauri-apps/api/core",
   "@tauri-apps/api/event",
-  "@tauri-apps/plugin-dialog"
+  "@tauri-apps/plugin-dialog",
+  "@tauri-apps/plugin-log"
 ];
 // The reviewed Tauri touchpoints: typed invoke plus the folder picker in
-// client.ts, the listen-only menu event subscription in menu_events.ts, and the
-// terminal Channel in terminal.ts. terminal.ts routes through client.ts's `call`
-// helper, so `invoke` itself stays centralized in client.ts.
+// client.ts, the write-only dev log forwarding in logging.ts (log plugin's
+// single `log` command; name/duration/outcome only, never payloads or the
+// terminal stream), the listen-only menu event subscription in menu_events.ts,
+// and the terminal Channel in terminal.ts. terminal.ts routes through
+// client.ts's `call` helper, so `invoke` itself stays centralized in client.ts.
 const EXPECTED_TAURI_FILES = [
   "commands/client.ts",
+  "commands/logging.ts",
   "commands/menu_events.ts",
   "commands/terminal.ts"
 ];
@@ -113,10 +117,10 @@ function readCommandClientSource(): string {
 }
 
 // The full WebView command surface: client.ts owns the shared `call`/`invoke`
-// helper and most wrappers; terminal.ts and claude_oauth.ts own their domain
-// wrappers, which route through the same `call`. Auditing all three keeps every
-// host-reaching command in the allow-list even though the surface is split by
-// ownership.
+// helper and most wrappers; terminal.ts, claude_oauth.ts, and worktree.ts own
+// their domain wrappers, which route through the same `call`. Auditing all
+// four keeps every host-reaching command in the allow-list even though the
+// surface is split by ownership.
 function readCommandSurfaceSource(): string {
   return [
     readCommandClientSource(),
@@ -126,6 +130,10 @@ function readCommandSurfaceSource(): string {
     ),
     readFileSync(
       fileURLToPath(new URL("../commands/claude_oauth.ts", import.meta.url)),
+      "utf8"
+    ),
+    readFileSync(
+      fileURLToPath(new URL("../commands/worktree.ts", import.meta.url)),
       "utf8"
     )
   ].join("\n");
