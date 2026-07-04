@@ -55,7 +55,7 @@ describe("PlanReviewCard", () => {
     const html = renderToStaticMarkup(<PlanReviewCard plan={plan()} {...ready} />);
 
     expect(html).toContain("Review access");
-    expect(html).toContain("Project session");
+    expect(html).toContain("This project only");
     expect(html).toContain("Access looks good");
     expect(html).toContain("This run uses the secure default access.");
     expect(html).toContain("Only reviewed provider hosts are reachable.");

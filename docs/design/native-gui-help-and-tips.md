@@ -103,7 +103,7 @@ RunHaven moments [J]:
   xterm scrollback in WebView memory. Show this as an always-on on-screen line,
   not buried in a menu.
 - Launch review (`PlanReviewCard.tsx`): the review already lists Network,
-  Image, Project, and Login state. The privacy copy on that view states what
+  Image, Project, and Sign-in sharing. The privacy copy on that view states what
   leaves the Mac (provider egress to allowlisted hosts) and what stays local
   (run records, diagnostics, redacted saved output). Transparency here is a
   feature, not a warning.

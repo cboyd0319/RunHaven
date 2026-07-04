@@ -63,7 +63,7 @@ export function PlanReviewCard({
               ["Agent", plan.profile],
               ["Project", plan.workspace],
               ["Session name", plan.session],
-              ["Login state", authScopeLabel(plan.authScope)],
+              ["Sign-in sharing", authScopeLabel(plan.authScope)],
               ["Network", networkLabel(plan.networkMode)],
               ["Image", plan.image],
             ].map(([label, value]) => (

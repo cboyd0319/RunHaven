@@ -215,11 +215,11 @@ function previewAccess(request: RunPlanRequest): RunPlanAccess {
   }
   return {
     status: "setup",
-    label: request.authScope === "agent" ? "Shared agent login" : "Project session login",
+    label: request.authScope === "agent" ? "Shared agent sign-in" : "This project only",
     detail:
       request.authScope === "agent"
-        ? `RunHaven will use the shared ${request.agent} login state across projects on this Mac.`
-        : "RunHaven will keep login state separate for this project session.",
+        ? `RunHaven will use the shared ${request.agent} sign-in across projects on this Mac.`
+        : "RunHaven will keep the sign-in separate, just for this project.",
     remedy:
       request.authScope === "agent"
         ? `If the agent asks for sign-in, finish it in the session or run runhaven login ${request.agent}.`

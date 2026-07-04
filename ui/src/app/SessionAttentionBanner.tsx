@@ -66,7 +66,7 @@ export function SessionAttentionBanner({
           <CircleAlert />
           <AlertTitle>Not responding</AlertTitle>
           <AlertDescription>
-            The sandbox for this run is gone. Use Repair session record in
+            The sandbox for this session is gone. Use Repair session record in
             Session controls below to clear the stale record.
           </AlertDescription>
         </Alert>

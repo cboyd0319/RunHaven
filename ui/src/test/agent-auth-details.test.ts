@@ -23,7 +23,7 @@ describe("authStatusLabel", () => {
   it("maps known statuses to beginner-friendly text", () => {
     expect(authStatusLabel("api-key-broker")).toBe("API key broker");
     expect(authStatusLabel("design-only")).toBe("Not ready");
-    expect(authStatusLabel("n/a")).toBe("No auth needed");
+    expect(authStatusLabel("n/a")).toBe("No sign-in needed");
   });
 
   it("treats missing status as unknown", () => {

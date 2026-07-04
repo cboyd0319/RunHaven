@@ -191,8 +191,8 @@ fn managed_session_summary_with_auth_status(auth_status: &str) -> ManagedSession
         },
         next_action: ManagedSessionNextActionData {
             kind: "auth_attention".to_string(),
-            label: "Finish auth setup".to_string(),
-            detail: "Auth is not ready for Codex.".to_string(),
+            label: "Finish sign-in".to_string(),
+            detail: "Sign-in is not ready for Codex.".to_string(),
         },
         events: Vec::<ManagedSessionEventData>::new(),
     }

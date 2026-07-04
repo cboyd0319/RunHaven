@@ -69,9 +69,9 @@ export function defaultRunPlanRequest(agent: AgentProfile | undefined): RunPlanR
 
 export function authScopeHelp(scope: RunPlanRequest["authScope"]): string {
   if (scope === "agent") {
-    return "Reuse the login from runhaven login for this agent across projects on this Mac.";
+    return "Use the sign-in you did in RunHaven for this agent across your projects on this Mac.";
   }
-  return "Keep login state separate for this project and session.";
+  return "Keep the sign-in separate, just for this project.";
 }
 
 export function withLaunchSessionName(request: RunPlanRequest): RunPlanRequest {

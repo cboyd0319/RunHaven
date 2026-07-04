@@ -113,7 +113,7 @@ important actions trailing; every item also a menu bar command
 - Steps follow the HIG multi-step sheet pattern (step 1: Cancel leading;
   later steps: Back leading; primary trailing) `[HIG sheets]`:
   1. Agent: single picker; per-agent readiness; inline sign-in when needed
-     (section 3.7); `Auth details` disclosure.
+     (section 3.7); `Sign-in details` disclosure.
   2. Project: folder picker plus recent projects (mirrors File > Open
      Recent); `Run in an isolated copy (git worktree)` toggle, off by
      default; `Advanced options` disclosure for network mode, read-only
@@ -181,7 +181,7 @@ important actions trailing; every item also a menu bar command
 - Shows: one row per agent (Claude, Codex, Copilot, Antigravity, Shell) with
   sign-in state and `Sign In` action (section 3.7), image state and
   `Rebuild Image...` (native confirm, then background progress with a
-  bounded, secret-safe tail), and an `Auth details` disclosure (what stays
+  bounded, secret-safe tail), and a `Sign-in details` disclosure (what stays
   on this Mac, what the agent gets, provider hosts; read-only).
 - Toolbar: title "Agents"; trailing `Check Again` (Cmd-R). No default
   prominent action; a row's `Sign In` becomes prominent only when that agent
@@ -297,7 +297,7 @@ rather than hiding, ellipsis when more input follows `[HIG the-menu-bar]`.
   Changes...; Keep Branch; Recover...; Discard Changes...; Clean Up
   Session...; Open in New Window.
 - Agent (app-specific; acts on the Agents-view selection, else the selected
-  session's agent): Sign In...; Rebuild Image...; Show Auth Details.
+  session's agent): Sign In...; Rebuild Image...; Show Sign-In Details.
   Session before Agent orders app menus most-used first `[HIG the-menu-bar]`.
 - Window: Minimize (Cmd-M); Zoom; Bring All to Front; open window list. A
   Window menu exists even with one window `[HIG the-menu-bar]`.

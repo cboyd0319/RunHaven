@@ -33,8 +33,8 @@ pub(super) fn managed_session_next_action(
     {
         return ManagedSessionNextActionData {
             kind: "auth_attention".to_string(),
-            label: "Finish auth setup".to_string(),
-            detail: format!("Auth is not ready for {}.", display_agent_name(agent)),
+            label: "Finish sign-in".to_string(),
+            detail: format!("Sign-in is not ready for {}.", display_agent_name(agent)),
         };
     }
 
@@ -202,7 +202,7 @@ pub(super) fn managed_session_events(
         },
         ManagedSessionEventData {
             source: "auth".to_string(),
-            label: "Auth".to_string(),
+            label: "Sign-in".to_string(),
             detail: auth_status_label(auth_status),
             timestamp: timestamp.to_string(),
         },
@@ -230,7 +230,7 @@ fn auth_status_label(status: &str) -> String {
         "api-key-broker" => "API key broker".to_string(),
         "keychain-oauth" => "Claude subscription (Keychain)".to_string(),
         "login-state" => "Sign in needed".to_string(),
-        "no-auth-needed" => "No auth needed".to_string(),
+        "no-auth-needed" => "No sign-in needed".to_string(),
         "n/a" => "N/A".to_string(),
         "" | "-" => "Unknown".to_string(),
         _ => display_words(status),

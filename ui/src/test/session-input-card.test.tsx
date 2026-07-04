@@ -95,8 +95,8 @@ describe("SessionInputCard", () => {
     const blocked = session({
       nextAction: {
         kind: "auth_attention",
-        label: "Finish auth setup",
-        detail: "Auth is not ready."
+        label: "Finish sign-in",
+        detail: "Sign-in is not ready."
       }
     });
 

@@ -68,8 +68,8 @@ export function ManagedSessionCard({
           <Metric label="Project" value={displayValue(session.project)} />
           <Metric label="Session name" value={displayValue(session.session)} />
           <Metric label="Status" value={displayValue(session.statusLabel)} />
-          <Metric label="Auth" value={authStatusLabel(session.authStatus)} />
-          <Metric label="Login state" value={authScopeLabel(session.authScope)} />
+          <Metric label="Sign-in" value={authStatusLabel(session.authStatus)} />
+          <Metric label="Sign-in sharing" value={authScopeLabel(session.authScope)} />
           <Metric label="Network" value={networkLabel(session.network)} />
           <Metric label="Started" value={displayValue(session.startedAt)} />
         </div>

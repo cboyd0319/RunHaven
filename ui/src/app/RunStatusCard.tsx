@@ -19,7 +19,6 @@ import { formatMemory, type RunControlAction } from "./types"
 
 type RunStatusCardProps = {
   title?: string
-  controlTarget?: "run" | "session"
   showStatus?: boolean
   controlsAvailable?: boolean
   cleanupAvailable?: boolean
@@ -36,7 +35,6 @@ type RunStatusCardProps = {
 
 export function RunStatusCard({
   title = "Run status",
-  controlTarget = "run",
   showStatus = true,
   controlsAvailable = true,
   cleanupAvailable = false,
@@ -118,7 +116,7 @@ export function RunStatusCard({
             {controlsAvailable ? (
               <>
                 <RunControl
-                  label={`Confirm stopping this ${controlTarget}.`}
+                  label="Confirm stopping this session."
                   button="Stop run"
                   checked={controlConfirmations.stop}
                   disabled={controlBusy}
@@ -128,7 +126,7 @@ export function RunStatusCard({
                   onClick={() => void onControl("stop")}
                 />
                 <RunControl
-                  label={`Confirm hard-stopping this ${controlTarget}.`}
+                  label="Confirm hard-stopping this session."
                   button="Hard stop"
                   checked={controlConfirmations.kill}
                   disabled={controlBusy}
@@ -138,7 +136,7 @@ export function RunStatusCard({
                   onClick={() => void onControl("kill")}
                 />
                 <RunControl
-                  label={`Confirm clearing this ${controlTarget}'s stale session record.`}
+                  label="Confirm clearing this session's stale session record."
                   button="Repair session record"
                   checked={controlConfirmations.repair}
                   disabled={controlBusy}

@@ -71,7 +71,7 @@ describe("runhaven command helpers", () => {
     expect(supportsApiKeyBroker({ ...providerAgent, name: "other" })).toBe(false);
   });
 
-  it("defaults GUI launches to shared agent login state", () => {
+  it("defaults GUI launches to the shared agent sign-in", () => {
     const request = defaultRunPlanRequest(providerAgent);
 
     expect(request.authScope).toBe("agent");
@@ -251,7 +251,7 @@ function planWithWarnings(warnings: Array<{ code: string; message: string }>, bl
     warnings,
     access: {
       status: blocking ? "blocked" : "setup",
-      label: blocking ? "API key variable missing" : "Shared agent login",
+      label: blocking ? "API key variable missing" : "Shared agent sign-in",
       detail: "",
       remedy: "",
       blocking,

@@ -47,7 +47,7 @@ function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSumm
       },
       {
         source: "auth",
-        label: "Auth",
+        label: "Sign-in",
         detail: "API key broker",
         timestamp: "2026-06-30T02:00:00Z"
       },
@@ -71,7 +71,7 @@ describe("ManagedSessionCard", () => {
     expect(html).toContain("Codex - project");
     expect(html).toContain("secret-project");
     expect(html).toContain("Provider only");
-    expect(html).toContain("Login state");
+    expect(html).toContain("Sign-in sharing");
     expect(html).toContain("Project");
     expect(html).toContain("Selected session overview.");
     expect(html).toContain("Monitor session");
@@ -87,13 +87,13 @@ describe("ManagedSessionCard", () => {
       authStatus: "unknown",
       nextAction: {
         kind: "auth_attention",
-        label: "Finish auth setup",
-        detail: "Auth is not ready for Codex."
+        label: "Finish sign-in",
+        detail: "Sign-in is not ready for Codex."
       },
       events: [
         {
           source: "auth",
-          label: "Auth",
+          label: "Sign-in",
           detail: "Unknown",
           timestamp: "2026-06-30T02:00:00Z"
         }
@@ -104,8 +104,8 @@ describe("ManagedSessionCard", () => {
 
     const html = renderToStaticMarkup(<ManagedSessionCard session={blocked} />);
 
-    expect(html).toContain("Finish auth setup");
-    expect(html).toContain("Auth is not ready for Codex.");
+    expect(html).toContain("Finish sign-in");
+    expect(html).toContain("Sign-in is not ready for Codex.");
     expect(html).toContain("Needs attention");
     expect(html).not.toContain("Start session");
   });
@@ -133,9 +133,9 @@ describe("ManagedSessionCard", () => {
   it("renders explicit auth labels for managed-session statuses", () => {
     const cases: Array<[authStatus: string, label: string]> = [
       ["api-key-broker", "API key broker"],
-      ["login-state", "Login state"],
+      ["login-state", "Sign in needed"],
       ["needs-sign-in", "Needs sign-in"],
-      ["no-auth-needed", "No auth needed"],
+      ["no-auth-needed", "No sign-in needed"],
       ["unknown", "Unknown"]
     ];
 
@@ -248,8 +248,8 @@ describe("ManagedSessionCard", () => {
             },
             nextAction: {
               kind: "auth_attention",
-              label: "Finish auth setup",
-              detail: "Auth is not ready."
+              label: "Finish sign-in",
+              detail: "Sign-in is not ready."
             }
           })
         ]

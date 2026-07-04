@@ -25,7 +25,7 @@ test("renders the dashboard without runtime errors", async ({ page }) => {
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole("heading", { name: "Choose agent" })).toBeVisible();
   await expect(sheet.getByText("Sign-in method")).toBeVisible();
-  await expect(sheet.getByText("Auth status")).toBeVisible();
+  await expect(sheet.getByText("Sign-in status")).toBeVisible();
 
   // Escape cancels with no side effects: the sheet closes, focus returns to
   // the New run button, and entered values survive for the next open.
@@ -51,13 +51,13 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByRole("alert").filter({ hasText: "Agent ready" })).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByRole("heading", { name: "Choose project" })).toBeVisible();
-  await expect(page.getByText("Reuse the login from runhaven login for this agent across projects on this Mac.")).toBeVisible();
+  await expect(page.getByText("Use the sign-in you did in RunHaven for this agent across your projects on this Mac.")).toBeVisible();
   await page.getByLabel("Project folder path").fill("/tmp/runhaven-preview");
   await page.getByRole("button", { name: "Review access" }).click();
 
   await expect(page.getByRole("heading", { name: "Review access" })).toBeVisible();
-  await expect(page.getByRole("rowheader", { name: "Login state" })).toBeVisible();
-  await expect(page.getByText("RunHaven will use the shared codex login state across projects on this Mac.")).toBeVisible();
+  await expect(page.getByRole("rowheader", { name: "Sign-in sharing" })).toBeVisible();
+  await expect(page.getByText("RunHaven will use the shared codex sign-in across projects on this Mac.")).toBeVisible();
   await page.getByLabel("I reviewed this plan and want to start this run.").check();
   await page.getByRole("button", { name: "Launch run" }).click();
 
@@ -121,7 +121,7 @@ test("reviews and starts a preview run", async ({ page }) => {
   // Once the launched run is a managed session, the Start screen must not offer
   // a second control surface for it: only the one-line notice remains, and the
   // run's controls live in the per-session view.
-  await expect(page.getByText("Run started - find it in your sidebar")).toBeVisible();
+  await expect(page.getByText("Run started. Find it in your sidebar.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Stop run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Hard stop" })).toHaveCount(0);
   await page.getByRole("button", { name: "Open session" }).click();

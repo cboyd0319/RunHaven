@@ -35,7 +35,7 @@ export function AgentAuthDetailsCard({ agentName }: { agentName: string }) {
     <section className="rounded-lg border p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h3 className="text-sm font-medium">Auth details</h3>
+          <h3 className="text-sm font-medium">Sign-in details</h3>
           <p className="text-sm text-muted-foreground">
             See how this agent signs in and what stays on this Mac. No secrets are
             shown.
@@ -48,20 +48,20 @@ export function AgentAuthDetailsCard({ agentName }: { agentName: string }) {
           onClick={() => void load()}
         >
           <ShieldCheck className="size-4" />
-          {loading ? "Loading..." : details ? "Refresh" : "Show auth details"}
+          {loading ? "Loading..." : details ? "Refresh" : "Show sign-in details"}
         </Button>
       </div>
       {error ? (
         <Alert variant="destructive" className="mt-3">
           <CircleAlert />
-          <AlertTitle>Auth details unavailable</AlertTitle>
+          <AlertTitle>Sign-in details unavailable</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
       {details ? (
         <div className="mt-3 flex flex-col gap-3 text-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground">Auth status</span>
+            <span className="text-muted-foreground">Sign-in status</span>
             <Badge variant={authStatusBadgeVariant(details.status)}>
               {authStatusLabel(details.status)}
             </Badge>

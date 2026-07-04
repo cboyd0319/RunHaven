@@ -46,9 +46,9 @@ pub(super) fn plan_access(plan: &AgentRunPlan) -> RunPlanAccess {
     match plan.auth_scope {
         AuthScope::Agent => RunPlanAccess {
             status: "setup".to_string(),
-            label: "Shared agent login".to_string(),
+            label: "Shared agent sign-in".to_string(),
             detail: format!(
-                "RunHaven will use the shared {} login state across projects on this Mac.",
+                "RunHaven will use the shared {} sign-in across projects on this Mac.",
                 plan.profile_name
             ),
             remedy: format!(
@@ -61,8 +61,8 @@ pub(super) fn plan_access(plan: &AgentRunPlan) -> RunPlanAccess {
         },
         AuthScope::Project => RunPlanAccess {
             status: "setup".to_string(),
-            label: "Project session login".to_string(),
-            detail: "RunHaven will keep login state separate for this project session.".to_string(),
+            label: "This project only".to_string(),
+            detail: "RunHaven will keep the sign-in separate, just for this project.".to_string(),
             remedy: "If the agent asks for sign-in, finish it inside this session.".to_string(),
             blocking: false,
             api_key_broker_env: None,

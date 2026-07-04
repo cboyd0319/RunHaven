@@ -115,11 +115,11 @@ stop, kill, and repair mutate runtime state.
 ## Launch Access Preflight
 
 Desktop launch planning returns a typed `access` summary with the reviewed
-login state before launch:
+sign-in sharing before launch:
 
-- `Shared agent login` reuses the per-agent login created by `runhaven login`
-  across projects on this Mac.
-- `Project session login` keeps login state separate for this project session.
+- `Shared agent sign-in` reuses the per-agent sign-in created by
+  `runhaven login` across projects on this Mac.
+- `This project only` keeps the sign-in separate, just for this project.
 - `API key variable found` means the fixed per-agent host environment variable
   is present for this app process.
 - `API key variable missing` blocks launch until that fixed variable is set or

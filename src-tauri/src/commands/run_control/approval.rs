@@ -14,16 +14,16 @@ pub(super) enum RunControlAction {
 impl RunControlAction {
     pub(super) fn confirm_error(self) -> &'static str {
         match self {
-            Self::Stop => "Confirm the stop before stopping this run.",
-            Self::Kill => "Confirm the hard-stop before killing this run.",
+            Self::Stop => "Confirm the stop before stopping this session.",
+            Self::Kill => "Confirm the hard-stop before killing this session.",
             Self::Repair => "Confirm the repair before clearing a stale marker.",
         }
     }
 
     pub(super) fn canceled_error(self) -> &'static str {
         match self {
-            Self::Stop => "Stop canceled before changing this run.",
-            Self::Kill => "Hard-stop canceled before changing this run.",
+            Self::Stop => "Stop canceled before changing this session.",
+            Self::Kill => "Hard-stop canceled before changing this session.",
             Self::Repair => "Repair canceled before clearing the stale marker.",
         }
     }
@@ -95,8 +95,8 @@ impl RunControlAction {
 
     fn dialog_effect(self) -> &'static str {
         match self {
-            Self::Stop => "stop this active run",
-            Self::Kill => "hard-stop this active run",
+            Self::Stop => "stop this active session",
+            Self::Kill => "hard-stop this active session",
             Self::Repair => "clear this stale active marker",
         }
     }

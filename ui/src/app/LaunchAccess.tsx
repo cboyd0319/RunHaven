@@ -43,13 +43,13 @@ export function AgentAccessSummary({
         </Badge>
       </div>
       <div>
-        <div className="text-muted-foreground">Auth status</div>
+        <div className="text-muted-foreground">Sign-in status</div>
         <Badge variant={authStatusBadgeVariant(profileStatus)}>
           {authStatusLabel(profileStatus)}
         </Badge>
       </div>
       <div>
-        <div className="text-muted-foreground">Login state</div>
+        <div className="text-muted-foreground">Sign-in sharing</div>
         <div className="font-medium">{authScopeLabels[authScope]}</div>
       </div>
     </div>
@@ -65,7 +65,7 @@ export function AuthScopePicker({
 }) {
   return (
     <fieldset className="rounded-lg border p-3">
-      <legend className="px-1 text-sm font-medium">Login state</legend>
+      <legend className="px-1 text-sm font-medium">Sign-in sharing</legend>
       <div className="grid gap-2 sm:grid-cols-2">
         {(["agent", "project"] as const).map((scope) => (
           <label

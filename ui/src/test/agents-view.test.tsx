@@ -54,7 +54,7 @@ describe("AgentsView", () => {
     expect(markup).toContain("Sign in inside the sandbox instead")
     // The path-A terminal command stays hidden until the opt-in is expanded.
     expect(markup).not.toContain("runhaven login claude")
-    expect(markup).toContain("Auth details")
+    expect(markup).toContain("Sign-in details")
     // Per-row image state loads on entry; static markup shows the initial
     // loading line. Check again is the view's only refresh action.
     expect(markup).toContain("Checking image...")

@@ -236,7 +236,7 @@ export function previewSessionInput(
   validatePreviewSessionInput(input);
   const session = previewSession(sessionId);
   if (session.nextAction.kind === "auth_attention") {
-    throw new Error("Session auth is not ready. Finish auth setup before sending input.");
+    throw new Error("Session sign-in is not ready. Finish sign-in before sending input.");
   }
   if (session.nextAction.kind !== "monitor") {
     throw new Error(`Session cannot accept input while action is ${session.nextAction.kind}.`);
@@ -296,7 +296,7 @@ export function rememberPreviewManagedSession(
       },
       {
         source: "auth",
-        label: "Auth",
+        label: "Sign-in",
         detail: "API key broker",
         timestamp: "preview"
       },

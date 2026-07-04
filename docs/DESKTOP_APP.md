@@ -46,10 +46,10 @@ why, but your running sessions and the sidebar views all stay reachable.
 
 ## Sign in to an agent
 
-Signing in stores your agent login once so your runs can reuse it. Open
+Signing in stores your agent sign-in once so your runs can reuse it. Open
 **Agents** in the sidebar to see every agent in one place: its sign-in state,
-whether its image is ready, its read-only auth details, and the image rebuild
-task. A **Check again** button refreshes the view. You can also pick an agent
+whether its image is ready, its read-only sign-in details, and the image
+rebuild task. A **Check again** button refreshes the view. You can also pick an agent
 in the first step of a run. Both places show, for most agents, a **Sign in**
 button.
 
@@ -67,13 +67,14 @@ button.
   **Settings** (90 days to start), the card suggests signing in again. That is
   only a reminder: the old token keeps working until you replace it.
 - **Remove saved token** deletes only the token RunHaven saved in your Mac's
-  Keychain. It does not touch your other logins, and it does not cancel the token
-  on Anthropic's side. To fully cancel it, revoke it in your Anthropic account.
-- Prefer to keep Claude's login inside the sandbox? Click **Sign in inside the
+  Keychain. It does not touch anything else in your Keychain, and it does not
+  cancel the token on Anthropic's side. To fully cancel it, revoke it in your
+  Anthropic account.
+- Prefer to keep Claude's sign-in inside the sandbox? Click **Sign in inside the
   sandbox instead**. This opens a small terminal that runs `claude auth login`
   inside a sandbox: open the link it prints, approve in your browser, then paste
   the code it gives you back into that terminal, and come back and refresh. Your
-  Claude login is then saved in the agent's own space, not on your Mac's
+  Claude sign-in is then saved in the agent's own space, not on your Mac's
   Keychain. The same standing terminal warning applies (see "Open a terminal"):
   what you type and what it prints, including the code, are shown on screen and
   are not filtered or saved. While that terminal is open it holds Claude's saved
@@ -84,7 +85,7 @@ button.
   `runhaven login claude` in your own terminal; a **Copy command** button copies
   the exact command.
 
-For Codex, Copilot, Antigravity, and Claude's in-sandbox option, the login stays
+For Codex, Copilot, Antigravity, and Claude's in-sandbox option, the sign-in stays
 in the sandbox and RunHaven holds no token. Claude's on-your-Mac option is the
 one place RunHaven keeps a token, saved only in your Mac's Keychain and used only
 to sign your runs; see [`AUTH_BROKER.md`](AUTH_BROKER.md) for exactly what it
@@ -126,10 +127,10 @@ or closing the window also ends the run cleanly. Afterward the session shows as
 **Ended** in the Finished group, not Failed: you close an interactive run
 yourself, so ending it is normal and never marked as an error.
 
-On the Agent step you can open `Auth details` to see, for the chosen agent, how
-it signs in, what stays on this Mac, what the agent gets, and which provider
-hosts it can reach. These are read-only summaries with no secrets, tokens, or
-file paths.
+On the Agent step you can open `Sign-in details` to see, for the chosen agent,
+how it signs in, what stays on this Mac, what the agent gets, and which
+provider hosts it can reach. These are read-only summaries with no secrets,
+tokens, or file paths.
 
 On the Project step, the `Why is this safe?` panel explains four boundaries in
 plain language: the network setting, the workspace folder, a provider host you
@@ -409,6 +410,18 @@ shows:
 Everything here only reads; the actions that change things (rebuild, prune)
 stay in their own views. A session's own diagnostics live in that session's
 view behind **Show details**, so there is one surface at a time.
+
+## Debug logs
+
+The desktop app writes a local log file while it runs. If something looks
+wrong, share this file instead of a screenshot:
+
+`~/Library/Logs/dev.runhaven.desktop/runhaven.log`
+
+The log records app events, errors, and the name and timing of each action.
+It never records what you see or type in the live terminal, and it never
+records tokens or other secrets. The file rotates at 5 MiB and the app keeps
+the five most recent older files, so it stays small.
 
 ## Maintenance
 

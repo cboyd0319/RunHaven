@@ -25,7 +25,6 @@ function renderCard(
   return renderToStaticMarkup(
     <RunStatusCard
       title="Session controls"
-      controlTarget="session"
       showStatus={false}
       controlsAvailable={true}
       cleanupAvailable={false}

@@ -262,7 +262,7 @@ function LaunchedRunNotice({
   return (
     <Alert role="status">
       <CheckCircle2 />
-      <AlertTitle>Run started - find it in your sidebar</AlertTitle>
+      <AlertTitle>Run started. Find it in your sidebar.</AlertTitle>
       <AlertDescription className="flex flex-col items-start gap-2">
         <span>Open the session to watch its status and controls.</span>
         <Button

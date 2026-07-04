@@ -41,7 +41,7 @@ fn prepare_session_input(
         super::sessions::managed_session_for_id_with_input(&request.session_id, Some(registry))?;
     if session.next_action.kind == "auth_attention" {
         return Err(
-            "Session auth is not ready. Finish auth setup before sending input.".to_string(),
+            "Session sign-in is not ready. Finish sign-in before sending input.".to_string(),
         );
     }
     if session.next_action.kind != "monitor" {

@@ -37,22 +37,22 @@ describe("LastLaunchCard", () => {
     expect(html).not.toContain("runhaven-state-secret");
   });
 
-  it("maps the agent auth scope to a plain-language login label", () => {
+  it("maps the agent auth scope to a plain-language sign-in label", () => {
     const html = renderToStaticMarkup(
       <LastLaunchCard lastLaunch={lastLaunch({ authScope: "agent" })} />
     );
 
-    expect(html).toContain("Shared agent login");
-    expect(html).not.toContain("Project session");
+    expect(html).toContain("Shared agent sign-in");
+    expect(html).not.toContain("This project only");
   });
 
-  it("maps the project auth scope to a plain-language login label", () => {
+  it("maps the project auth scope to a plain-language sign-in label", () => {
     const html = renderToStaticMarkup(
       <LastLaunchCard lastLaunch={lastLaunch({ authScope: "project" })} />
     );
 
-    expect(html).toContain("Project session");
-    expect(html).not.toContain("Shared agent login");
+    expect(html).toContain("This project only");
+    expect(html).not.toContain("Shared agent sign-in");
   });
 
   it("falls back to Unknown for an empty auth scope", () => {

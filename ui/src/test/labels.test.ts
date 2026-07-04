@@ -21,9 +21,9 @@ describe("networkLabel", () => {
 })
 
 describe("authScopeLabel", () => {
-  it("maps known scopes to the canonical login wording", () => {
-    expect(authScopeLabel("agent")).toBe("Shared agent login")
-    expect(authScopeLabel(" Project ")).toBe("Project session")
+  it("maps known scopes to the canonical sign-in wording", () => {
+    expect(authScopeLabel("agent")).toBe("Shared agent sign-in")
+    expect(authScopeLabel(" Project ")).toBe("This project only")
   })
 
   it("falls back to a display value for unknown scopes", () => {
@@ -45,8 +45,8 @@ describe("authStatusLabel", () => {
   })
 
   it("maps no-auth, ready, and design-only states", () => {
-    expect(authStatusLabel("no-auth-needed")).toBe("No auth needed")
-    expect(authStatusLabel("n/a")).toBe("No auth needed")
+    expect(authStatusLabel("no-auth-needed")).toBe("No sign-in needed")
+    expect(authStatusLabel("n/a")).toBe("No sign-in needed")
     expect(authStatusLabel("ready")).toBe("Ready")
     expect(authStatusLabel("available")).toBe("Ready")
     expect(authStatusLabel("design-only")).toBe("Not ready")

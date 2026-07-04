@@ -221,7 +221,7 @@ fn managed_session_auth_marks_shell_no_auth_needed() {
     let session = data.sessions.first().expect("shell session");
     assert_eq!(session.auth_status, "no-auth-needed");
     assert_eq!(session.next_action.kind, "monitor");
-    assert_eq!(session.events[1].detail, "No auth needed");
+    assert_eq!(session.events[1].detail, "No sign-in needed");
 }
 
 #[test]
@@ -408,8 +408,8 @@ fn managed_session_contract_derives_lifecycle_action_and_events() {
     let auth = &data.sessions[0];
     assert_eq!(auth.lifecycle, "running");
     assert_eq!(auth.next_action.kind, "auth_attention");
-    assert_eq!(auth.next_action.label, "Finish auth setup");
-    assert_eq!(auth.next_action.detail, "Auth is not ready for Claude.");
+    assert_eq!(auth.next_action.label, "Finish sign-in");
+    assert_eq!(auth.next_action.detail, "Sign-in is not ready for Claude.");
 
     let ready = &data.sessions[1];
     assert_eq!(ready.lifecycle, "running");
@@ -425,6 +425,7 @@ fn managed_session_contract_derives_lifecycle_action_and_events() {
     );
     assert_eq!(ready.events[0].label, "Run record");
     assert_eq!(ready.events[0].detail, "Running");
+    assert_eq!(ready.events[1].label, "Sign-in");
     assert_eq!(ready.events[1].detail, "API key broker");
     assert_eq!(ready.events[2].detail, "Provider only");
 

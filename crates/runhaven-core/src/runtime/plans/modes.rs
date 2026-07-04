@@ -105,8 +105,8 @@ impl AuthScope {
     /// one voice. Change both sides together.
     pub fn friendly_label(&self) -> &'static str {
         match self {
-            Self::Agent => "Shared agent login",
-            Self::Project => "Project session",
+            Self::Agent => "Shared agent sign-in",
+            Self::Project => "This project only",
         }
     }
 }
@@ -127,19 +127,19 @@ impl TryFrom<&str> for AuthScope {
 mod tests {
     use super::*;
 
-    /// Pin the plain user-facing labels for every variant. These strings are the
-    /// shared launch vocabulary and must stay byte-for-byte identical to the
-    /// WebView labels in `ui/src/app/labels.ts` (`networkLabels`,
-    /// `authScopeLabels`); if the WebView copy changes, this test should fail so
-    /// the two surfaces cannot drift silently.
+    /// Pin the plain user-facing labels for every variant against the RUST side
+    /// of the shared launch vocabulary. This alone cannot see the WebView copy;
+    /// the cross-boundary check below reads `ui/src/app/labels.ts` so a reword
+    /// on either side fails a test instead of silently splitting the native
+    /// consent dialog from the in-app screen.
     #[test]
     fn friendly_label_matches_the_shared_webview_vocabulary() {
         assert_eq!(NetworkMode::Provider.friendly_label(), "Provider only");
         assert_eq!(NetworkMode::Internal.friendly_label(), "Local only");
         assert_eq!(NetworkMode::Internet.friendly_label(), "Internet");
 
-        assert_eq!(AuthScope::Agent.friendly_label(), "Shared agent login");
-        assert_eq!(AuthScope::Project.friendly_label(), "Project session");
+        assert_eq!(AuthScope::Agent.friendly_label(), "Shared agent sign-in");
+        assert_eq!(AuthScope::Project.friendly_label(), "This project only");
 
         // The friendly label is never the raw enum code: that is the whole point
         // (COPY-1), so a non-technical user never reads "provider" or "agent".
@@ -148,5 +148,39 @@ mod tests {
             NetworkMode::Provider.as_str()
         );
         assert_ne!(AuthScope::Agent.friendly_label(), AuthScope::Agent.as_str());
+    }
+
+    /// The REAL Rust<->TS drift pin: read the WebView label source and require
+    /// every `friendly_label` string to appear in it. Rewording a label in
+    /// `ui/src/app/labels.ts` without updating `friendly_label` (or vice versa)
+    /// fails here, so the native launch consent dialog and the in-app summary
+    /// cannot drift into two different words for the same value.
+    #[test]
+    fn friendly_labels_exist_in_the_webview_labels_source() {
+        let mut dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let labels = loop {
+            let candidate = dir.join("ui/src/app/labels.ts");
+            if candidate.is_file() {
+                break candidate;
+            }
+            assert!(
+                dir.pop(),
+                "ui/src/app/labels.ts not found above CARGO_MANIFEST_DIR"
+            );
+        };
+        let source = std::fs::read_to_string(&labels).expect("read ui/src/app/labels.ts");
+        for (mode, label) in [
+            ("network", NetworkMode::Provider.friendly_label()),
+            ("network", NetworkMode::Internal.friendly_label()),
+            ("network", NetworkMode::Internet.friendly_label()),
+            ("auth scope", AuthScope::Agent.friendly_label()),
+            ("auth scope", AuthScope::Project.friendly_label()),
+        ] {
+            assert!(
+                source.contains(label),
+                "ui/src/app/labels.ts no longer contains the {mode} label {label:?}; \
+                 the WebView and friendly_label must be reworded together"
+            );
+        }
     }
 }

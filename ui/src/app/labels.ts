@@ -47,8 +47,8 @@ export function networkLabel(network: string): string {
 }
 
 export const authScopeLabels: Record<RunPlanRequest["authScope"], string> = {
-  agent: "Shared agent login",
-  project: "Project session",
+  agent: "Shared agent sign-in",
+  project: "This project only",
 }
 
 export function authScopeLabel(scope: string): string {
@@ -72,12 +72,12 @@ export function authStatusLabel(status: string): string {
     case "keychain-oauth":
       return "Claude subscription (Keychain)"
     case "login-state":
-      return "Login state"
+      return "Sign in needed"
     case "needs-sign-in":
       return "Needs sign-in"
     case "no-auth-needed":
     case "n/a":
-      return "No auth needed"
+      return "No sign-in needed"
     case "ready":
     case "available":
       return "Ready"

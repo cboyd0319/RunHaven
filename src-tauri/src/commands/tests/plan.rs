@@ -28,7 +28,7 @@ fn build_plan_response_uses_existing_runhaven_planner() {
     assert_eq!(response.auth_scope, "agent");
     assert_eq!(response.network_mode, "provider");
     assert!(response.egress_summary.contains("provider allowlist"));
-    assert_eq!(response.access.label, "Shared agent login");
+    assert_eq!(response.access.label, "Shared agent sign-in");
     assert!(
         response
             .access
@@ -277,7 +277,7 @@ fn trusted_launch_prompt_contains_reviewable_launch_facts() {
     assert!(message.contains(&format!("Workspace: {}", plan.workspace.display())));
     // COPY-1: the consent dialog shows the plain shared labels, never the raw
     // enum codes a non-technical user cannot read.
-    assert!(message.contains("Sign-in: Shared agent login"));
+    assert!(message.contains("Sign-in: Shared agent sign-in"));
     assert!(message.contains("Image: runhaven/codex"));
     assert!(message.contains("Network: Provider only"));
     assert!(!message.contains("Auth: agent"));

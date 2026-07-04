@@ -140,7 +140,7 @@ fn managed_session_input_contract_accepts_only_ready_session() {
         &registry,
     )
     .expect_err("auth attention rejected");
-    assert!(auth_blocked.contains("auth"));
+    assert!(auth_blocked.contains("Finish sign-in before sending input"));
 
     registry
         .register_writer(

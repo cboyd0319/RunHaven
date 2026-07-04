@@ -186,12 +186,13 @@ const SESSION_MENU: &[Entry] = &[
     initially_disabled("open-session-window", "Open in New Window", None),
 ];
 
-// All three land on the Agents view, where sign-in, rebuild, and auth details
-// live; per-agent targeting arrives with Agents-view selection focus work.
+// All three land on the Agents view, where sign-in, rebuild, and sign-in
+// details live; per-agent targeting arrives with Agents-view selection focus
+// work.
 const AGENT_MENU: &[Entry] = &[
     command("agent-sign-in", "Sign In...", None),
     command("agent-rebuild-image", "Rebuild Image...", None),
-    command("agent-auth-details", "Show Auth Details", None),
+    command("agent-auth-details", "Show Sign-In Details", None),
 ];
 
 const WINDOW_MENU: &[Entry] = &[

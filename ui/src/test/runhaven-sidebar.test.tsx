@@ -259,7 +259,7 @@ describe("RunHavenSidebar", () => {
     // the row; it stays in the session view and its Details disclosure.
     expect(html).not.toContain("Project docs / Session")
     expect(html).not.toContain("API key broker")
-    expect(html).not.toContain("Shared agent login")
+    expect(html).not.toContain("Shared agent sign-in")
     expect(html).not.toContain("Provider only")
     expect(html).not.toContain("Local only")
     expect(html).not.toContain("Input ready")

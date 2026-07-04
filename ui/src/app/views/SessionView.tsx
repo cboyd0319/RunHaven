@@ -53,7 +53,6 @@ export function SessionView(
       {showRunControlCard ? (
         <RunStatusCard
           title="Session controls"
-          controlTarget="session"
           showStatus={false}
           controlsAvailable={runControlsAvailable}
           cleanupAvailable={cleanupAvailable}
