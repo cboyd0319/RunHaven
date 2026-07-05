@@ -264,6 +264,18 @@ test("reviews a finished worktree session with per-action confirm gating", async
   await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
 });
 
+test("reaches a run from the full Run history view", async ({ page }) => {
+  await page.goto("/");
+
+  await startPreviewRun(page, "/tmp/runhaven-history");
+  // The sidebar lists no individual sessions, so the run is reached through the
+  // Run history view opened from the Runs counts. A running run sits under Active.
+  await page.getByRole("button", { name: "Active" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Run history" })).toBeVisible();
+  await page.getByText("Codex - runhaven-history").click();
+  await expect(page.getByRole("heading", { level: 1, name: "Session" })).toBeVisible();
+});
+
 async function startPreviewRun(
   page: Page,
   workspacePath: string,

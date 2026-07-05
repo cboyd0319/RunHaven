@@ -79,7 +79,7 @@ export function HomeView(props: MainViewProps) {
           <RecentActivityPanel
             sessions={recent}
             onSelectSession={props.onSelectSession}
-            onOpenHistory={() => props.onNavigate({ kind: "home" })}
+            onOpenHistory={() => props.onNavigate({ kind: "runs" })}
           />
         </div>
         <div className="flex min-w-0 flex-col gap-5">

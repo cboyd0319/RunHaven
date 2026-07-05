@@ -130,21 +130,21 @@ export function RunHavenSidebar({
                 Icon={CircleAlert}
                 iconClassName="text-destructive"
                 count={needsReview}
-                onSelect={() => onNavigate({ kind: "home" })}
+                onSelect={() => onNavigate({ kind: "runs" })}
               />
               <CountRow
                 label="Active"
                 Icon={CirclePlay}
                 iconClassName="text-primary"
                 count={groups.active.length}
-                onSelect={() => onNavigate({ kind: "home" })}
+                onSelect={() => onNavigate({ kind: "runs" })}
               />
               <CountRow
                 label="Finished"
                 Icon={CheckCircle2}
                 iconClassName="text-success"
                 count={groups.finished.length}
-                onSelect={() => onNavigate({ kind: "home" })}
+                onSelect={() => onNavigate({ kind: "runs" })}
               />
             </SidebarMenu>
           </SidebarGroupContent>

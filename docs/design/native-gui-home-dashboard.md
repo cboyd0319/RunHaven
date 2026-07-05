@@ -19,12 +19,15 @@ the right. `NavDestination` and the navigation model are unchanged.
   Run terminal row appears only while an interactive run is live.
 - A `Runs` summary: three count rows -- Needs review, Active, Finished --
   derived from the session list (`groupSessions` plus `sessionAttention`). The
-  counts are a pipeline summary; each navigates to Home, the run overview.
+  counts are a pipeline summary; each opens the Run history view.
 - App version footer.
 
-The sidebar no longer lists individual sessions. Sessions are reached from
-Home's Needs review and Recent activity tables. Consequence: switching between
-two sessions routes through Home rather than a persistent sidebar list.
+The sidebar no longer lists individual sessions. Any session is reachable from
+the Run history view (`{ kind: "runs" }`, `views/RunsView.tsx`) -- the full list
+of every run, newest first, keyboard-operable -- opened from the Runs counts or
+Home's "Open full run history". Home's Needs review and Recent activity tables
+reach the recent ones directly. Consequence: switching between two sessions
+routes through Home or Run history rather than a persistent sidebar list.
 
 ## Home content (`HomeView`)
 
@@ -95,8 +98,6 @@ panels never leak those shapes.
 
 ## Deferred / follow-ups
 
-- A dedicated full run-history view. Today the sidebar counts and Recent
-  activity's "Open full run history" navigate to Home; older runs beyond the
-  recent list are not yet listable. Add a `runs` destination and a list view.
-- A cross-session switcher so switching sessions does not require going Home.
+- A cross-session switcher (command palette) so switching sessions does not
+  require a trip through Home or Run history.
 - The New run split-button dropdown (per-agent quick launch) from the mockup.

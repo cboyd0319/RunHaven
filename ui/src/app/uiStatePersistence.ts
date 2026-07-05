@@ -29,7 +29,7 @@ import { OPAQUE_TOKEN, isSessionMonitorWindow } from "./windowMode"
 // remembered place or settings.
 const LAST_DESTINATION_KEY = "runhaven.lastDestination"
 
-const SYSTEM_KINDS = ["home", "agents", "diagnostics", "maintenance"] as const
+const SYSTEM_KINDS = ["home", "runs", "agents", "diagnostics", "maintenance"] as const
 
 export function persistLastDestination(destination: NavDestination): void {
   if (isSessionMonitorWindow()) {

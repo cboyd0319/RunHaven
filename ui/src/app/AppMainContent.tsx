@@ -13,6 +13,7 @@ import { DiagnosticsView } from "./views/DiagnosticsView"
 import { HomeView } from "./views/HomeView"
 import { MaintenanceView } from "./views/MaintenanceView"
 import type { MainViewProps } from "./views/props"
+import { RunsView } from "./views/RunsView"
 import { SessionView } from "./views/SessionView"
 
 type AppMainContentProps = MainViewProps & { navigation: NavDestination }
@@ -173,6 +174,13 @@ function MainView(props: AppMainContentProps) {
       )
     case "maintenance":
       return <MaintenanceView />
+    case "runs":
+      return (
+        <RunsView
+          sessions={props.sessions}
+          onSelectSession={props.onSelectSession}
+        />
+      )
     case "session":
       // A removed record renavigates via the selection fallback; render nothing
       // for the one frame in between instead of flashing another view.
@@ -218,6 +226,8 @@ function mainViewLabel(navigation: NavDestination): string {
       return "Diagnostics"
     case "maintenance":
       return "Maintenance"
+    case "runs":
+      return "Run history"
     case "run-terminal":
       return "Run terminal"
   }

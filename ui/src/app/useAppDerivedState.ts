@@ -36,6 +36,10 @@ const PAGE_HEADINGS: Record<
     title: "Home",
     description: "Start a run, review sessions, or check setup.",
   },
+  runs: {
+    title: "Run history",
+    description: "Open a past run to review or clean it up.",
+  },
   session: {
     title: "Session",
     description: "Review status and access for the selected agent session.",

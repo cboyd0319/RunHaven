@@ -6,6 +6,7 @@ import type { ManagedSessionSummary } from "@/commands/runhaven"
 export type NavDestination =
   | { kind: "home" }
   | { kind: "session"; id: string }
+  | { kind: "runs" }
   | { kind: "agents" }
   | { kind: "diagnostics" }
   | { kind: "maintenance" }
