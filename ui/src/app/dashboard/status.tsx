@@ -1,50 +1,10 @@
-import {
-  Activity,
-  CheckCircle2,
-  CircleAlert,
-  CircleDashed,
-  Square,
-  type LucideIcon,
-} from "lucide-react"
-
-import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 // Shared status primitives for the Launchpad dashboard. One place decides the
-// tone, icon, and badge variant for a run or agent state, so every panel
-// (sidebar rows, agents table, recent-runs table, needs-you cards) reads the
-// same and no panel invents a one-off badge style (design doc "Status Badge
-// System" + "shared status primitives").
+// tone for a run state, so every panel (recent-runs table, run history, sidebar
+// counts) reads the same and no panel invents a one-off status style.
 
 export type StatusTone = "success" | "failed" | "stopped" | "active" | "neutral"
-
-const TONE_ICON: Record<StatusTone, LucideIcon> = {
-  success: CheckCircle2,
-  failed: CircleAlert,
-  stopped: Square,
-  active: Activity,
-  neutral: CircleDashed,
-}
-
-// Badge variant per tone, mapped onto the existing shadcn Badge variants (one
-// canonical color source; no parallel token set). "stopped"/"neutral" use the
-// muted secondary so gray never competes with real success/failure color.
-const TONE_BADGE: Record<StatusTone, "success" | "destructive" | "secondary" | "outline"> = {
-  success: "success",
-  failed: "destructive",
-  stopped: "secondary",
-  active: "outline",
-  neutral: "secondary",
-}
-
-// Icon color per tone. Kept token-based so light/dark both pass contrast.
-const TONE_ICON_CLASS: Record<StatusTone, string> = {
-  success: "text-success",
-  failed: "text-destructive",
-  stopped: "text-muted-foreground",
-  active: "text-primary",
-  neutral: "text-muted-foreground",
-}
 
 // Map a backend lifecycle/status word to a tone. Lifecycle is the primary
 // signal (the backend's own grouping); the human statusLabel is only a
@@ -67,6 +27,14 @@ export function runStatusTone(lifecycle: string, statusLabel: string): StatusTon
   return "neutral"
 }
 
+const DOT_TONE: Record<StatusTone, string> = {
+  success: "bg-success",
+  failed: "bg-destructive",
+  stopped: "bg-muted-foreground",
+  active: "bg-primary",
+  neutral: "bg-muted-foreground",
+}
+
 // A small colored status dot with an accessible text label beside it (never
 // color alone, per the doc's accessibility rules). The label is a real span so
 // screen readers and sighted users read the same word.
@@ -87,35 +55,5 @@ export function StatusDot({
       />
       <span>{label}</span>
     </span>
-  )
-}
-
-const DOT_TONE: Record<StatusTone, string> = {
-  success: "bg-success",
-  failed: "bg-destructive",
-  stopped: "bg-muted-foreground",
-  active: "bg-primary",
-  neutral: "bg-muted-foreground",
-}
-
-// The leading run icon for a sidebar or table row: a tone-colored glyph that
-// pairs with the always-present text label elsewhere in the row.
-export function RunStatusIcon({
-  tone,
-  className,
-}: {
-  tone: StatusTone
-  className?: string
-}) {
-  const Icon = TONE_ICON[tone]
-  return <Icon aria-hidden className={cn("size-4", TONE_ICON_CLASS[tone], className)} />
-}
-
-// A fixed-height status chip for tables. Text names the state; color reinforces.
-export function StatusBadge({ tone, label }: { tone: StatusTone; label: string }) {
-  return (
-    <Badge variant={TONE_BADGE[tone]} className="min-w-16">
-      {label}
-    </Badge>
   )
 }

@@ -115,6 +115,10 @@ export function RunHavenSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {/* The three counts are independent status flags, not a partition: a
+            finished run that is ready to review is intentionally in both "Needs
+            review" (attention) and "Finished" (lifecycle), matching the Home
+            panels, so they can sum to more than the session total. */}
         <SidebarGroup>
           <SidebarGroupLabel className="tracking-[0.2em] uppercase">
             Runs

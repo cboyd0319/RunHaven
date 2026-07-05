@@ -57,9 +57,18 @@ export function RecentActivityPanel({
                   onClick={() => onSelectSession(session.id)}
                 >
                   <td className="py-2.5 pl-2">
-                    <span className="block truncate font-medium">
+                    {/* A real button is the keyboard/SR affordance to open the
+                        session; the row onClick is a mouse convenience on top. */}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onSelectSession(session.id)
+                      }}
+                      className="block max-w-full truncate text-left font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    >
                       {sessionDisplayTitle(session, labels)}
-                    </span>
+                    </button>
                   </td>
                   <td className="py-2.5">
                     <AgentCell agent={session.agent} />

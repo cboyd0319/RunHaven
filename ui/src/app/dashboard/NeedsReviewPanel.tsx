@@ -68,6 +68,7 @@ export function NeedsReviewPanel({
                     type="button"
                     variant="outline"
                     size="sm"
+                    aria-label={`Review ${sessionDisplayTitle(session, labels)}`}
                     onClick={(event) => {
                       event.stopPropagation()
                       onSelectSession(session.id)

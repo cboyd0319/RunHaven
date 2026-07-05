@@ -99,30 +99,43 @@ describe("HomeView", () => {
     // no longer lists sessions), so it appears there.
     expect(html).toContain("Codex - quiet");
     // A failed run sits in Needs review only, never repeated in Recent activity.
-    expect(html.split("Codex - failing").length - 1).toBe(1);
+    // It renders twice WITHIN Needs review (the Run cell + the "Review <title>"
+    // button aria-label); a leak into Recent activity would add a third.
+    expect(html.split("Codex - failing").length - 1).toBe(2);
   });
 
-  it("never leaks raw paths, containers, or env values into the Home panels", () => {
+  it("never leaks raw paths, containers, env, network, or session ids into the Home panels", () => {
+    // Poison every raw ManagedSessionSummary field. One failed session routes to
+    // Needs review, one running session to Recent activity, so BOTH table paths
+    // are exercised (not just Needs review). None of the raw values may render.
+    const poison = {
+      project: "/Users/c/private/leak",
+      containerName: "runhaven-codex-hidden-home",
+      detailCommand: "runhaven runs show --env TOKEN=value",
+      network: "provider-secret-net",
+      session: "raw-session-8080",
+    };
     const html = renderToStaticMarkup(
       <HomeView
         {...mainViewProps({
           sessions: [
-            managedSession({
-              id: "leak",
-              title: "Codex - review",
-              lifecycle: "failed",
-              project: "/Users/c/private/leak",
-              containerName: "runhaven-codex-hidden-home",
-              detailCommand: "runhaven runs show --env TOKEN=value",
-            }),
+            managedSession({ id: "nr", title: "Codex - review", lifecycle: "failed", ...poison }),
+            managedSession({ id: "ra", title: "Codex - active", ...poison }),
           ],
         })}
       />
     );
 
     expect(html).toContain("Codex - review");
-    expect(html).not.toContain("/Users/c/private");
-    expect(html).not.toContain("runhaven-codex-hidden-home");
-    expect(html).not.toContain("TOKEN=value");
+    expect(html).toContain("Codex - active");
+    for (const secret of [
+      "/Users/c/private",
+      "runhaven-codex-hidden-home",
+      "TOKEN=value",
+      "provider-secret-net",
+      "raw-session-8080",
+    ]) {
+      expect(html).not.toContain(secret);
+    }
   });
 });
