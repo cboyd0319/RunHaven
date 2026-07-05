@@ -122,6 +122,7 @@ export function mainViewProps(
     error: "",
     launchMessage: "",
     loading: false,
+    lastRefreshedAt: null,
     dashboard: dashboard(true),
     authStatus: {
       status: "ok",

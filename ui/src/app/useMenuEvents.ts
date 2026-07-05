@@ -56,9 +56,11 @@ const ATTENTION_PRIORITY: Record<SessionAttentionKind, number> = {
   "ready-to-review": 3,
 }
 
-// Sessions in the order the sidebar renders them: Active group first, then
-// Finished, newest-first inside each group.
-function sidebarOrder(
+// The canonical session order: Active group first, then Finished, newest-first
+// inside each group. Drives Cmd-1..9, next/previous, and jump. Since variant 06
+// the sidebar no longer lists sessions, so this is the session-list order, not a
+// reflection of sidebar rows.
+function sessionOrder(
   sessions: ManagedSessionSummary[],
 ): ManagedSessionSummary[] {
   const groups = groupSessions(sessions)
@@ -82,7 +84,7 @@ export function handleMenuCommand(id: string, app: MenuActions): void {
     return
   }
   if (id.startsWith("select-session-")) {
-    const ordered = sidebarOrder(app.managedSessions.sessions)
+    const ordered = sessionOrder(app.managedSessions.sessions)
     const index = Number(id.slice("select-session-".length)) - 1
     const target = ordered[index]
     if (target) {
@@ -122,7 +124,7 @@ export function handleMenuCommand(id: string, app: MenuActions): void {
       return
     case "next-session":
     case "previous-session": {
-      const ordered = sidebarOrder(app.managedSessions.sessions)
+      const ordered = sessionOrder(app.managedSessions.sessions)
       if (ordered.length === 0) {
         return
       }
@@ -138,7 +140,7 @@ export function handleMenuCommand(id: string, app: MenuActions): void {
     case "jump-needs-you": {
       // Highest-priority needs-you session first; if it is already selected,
       // move to the next one so repeated jumps walk every waiting session.
-      const needsYou = sidebarOrder(app.managedSessions.sessions)
+      const needsYou = sessionOrder(app.managedSessions.sessions)
         .map((session, order) => {
           const attention = sessionAttention(session)
           return attention

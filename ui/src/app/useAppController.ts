@@ -32,6 +32,9 @@ export function useAppController() {
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null)
   const [authStatus, setAuthStatus] = useState<AuthStatusResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  // When the last successful status read completed, for the Home "Last check"
+  // freshness line. Null until the first read lands.
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null)
   const [lastLaunch, setLastLaunch] = useState<LaunchRunResponse | null>(null)
   const {
     managedSessions,
@@ -118,6 +121,8 @@ export function useAppController() {
           ? current
           : nextAuthStatus,
       )
+      // The status read succeeded; stamp it for the Home freshness line.
+      setLastRefreshedAt(new Date().toISOString())
       await loadManagedSessions()
       await launchFlow.applyDashboard(nextDashboard)
       if (lastLaunch) {
@@ -160,6 +165,7 @@ export function useAppController() {
     launchFlow,
     settings,
     loading,
+    lastRefreshedAt,
     imageLoading: statusLoaders.imageLoading,
     imageStatus: statusLoaders.imageStatus,
     imageError: statusLoaders.imageError,

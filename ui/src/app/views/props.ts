@@ -23,6 +23,8 @@ export type MainViewProps = {
   error: string
   launchMessage: string
   loading: boolean
+  // ISO time of the last successful status read, for the Home freshness line.
+  lastRefreshedAt: string | null
   dashboard: DashboardStatus | null
   authStatus: AuthStatusResponse | null
   setupReady: boolean

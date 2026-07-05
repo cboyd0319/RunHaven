@@ -12,6 +12,8 @@ describe("HomeView", () => {
     expect(html).toContain("Ready to run");
     expect(html).toContain("New run");
     expect(html).not.toContain('disabled=""');
+    // No status read has landed in this fixture, so no freshness line yet.
+    expect(html).not.toContain("Last check");
     // The four Home panels are present; the empty recent list is a compact row.
     expect(html).toContain("Agent setup");
     expect(html).toContain("Secure boundary");
@@ -20,6 +22,13 @@ describe("HomeView", () => {
     // The wizard is never inline on Home; it lives in the closed sheet.
     expect(html).not.toContain("Choose agent");
     expect(html).not.toContain("Finish setup");
+  });
+
+  it("shows the last-check freshness line once a status read has landed", () => {
+    const html = renderToStaticMarkup(
+      <HomeView {...mainViewProps({ lastRefreshedAt: "2026-07-04T18:00:00Z" })} />
+    );
+    expect(html).toContain("Last check");
   });
 
   it("leads with the setup blocker and disables New run with a reason while blocked", () => {

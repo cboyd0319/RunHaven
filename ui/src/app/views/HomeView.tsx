@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react"
 import { ArrowUpRight, CheckCircle2, CircleAlert, Loader2 } from "lucide-react"
 
 import type { LaunchRunResponse } from "@/commands/runhaven"
@@ -5,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 
 import { AgentSetupPanel } from "../dashboard/AgentSetupPanel"
+import { lastCheckLabel } from "../dashboard/timeAgo"
 import { NeedsReviewPanel } from "../dashboard/NeedsReviewPanel"
 import { RecentActivityPanel } from "../dashboard/RecentActivityPanel"
 import { SecureBoundaryPanel } from "../dashboard/SecureBoundaryPanel"
@@ -133,6 +135,7 @@ function ReadinessLine(props: MainViewProps) {
             ? "Checking setup..."
             : "Setup needed"}
       </span>
+      {props.lastRefreshedAt ? <LastChecked at={props.lastRefreshedAt} /> : null}
       <button
         type="button"
         aria-label="Open diagnostics"
@@ -144,6 +147,22 @@ function ReadinessLine(props: MainViewProps) {
       </button>
     </div>
   )
+}
+
+// "Last check 12s ago": a live freshness read of the status poll. Its own timer
+// re-renders only this span every 15s so the label counts up (and reveals a
+// stalled poll) without re-rendering the rest of Home.
+function LastChecked({ at }: { at: string }) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15000)
+    return () => clearInterval(id)
+  }, [])
+  const label = lastCheckLabel(at, now)
+  if (!label) {
+    return null
+  }
+  return <span className="text-muted-foreground">Last check {label}</span>
 }
 
 // While setup is blocked, New run stays visible but disabled with the reason

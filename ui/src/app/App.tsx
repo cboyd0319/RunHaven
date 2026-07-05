@@ -43,6 +43,7 @@ export default function App() {
               error={app.error}
               launchMessage={app.launchMessage}
               loading={app.loading}
+              lastRefreshedAt={app.lastRefreshedAt}
               dashboard={app.dashboard}
               authStatus={app.authStatus}
               setupReady={app.setupReady}
