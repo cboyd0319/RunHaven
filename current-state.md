@@ -169,9 +169,10 @@ Useful GUI design docs:
   bugs shipped. P2 NAT-1 overlay chrome + NAT-2 native vibrancy shipped; P3 nits
   held (TerminalPanel at its line ceiling needs a split first).
 - Home dashboard redesign (variant 06, `docs/design/native-gui-home-dashboard.md`):
-  sidebar keeps nav + Runs counts (sessions on Home, not sidebar); Home = 4
-  secret-free panels (Needs review, Recent activity, Agent setup, Secure boundary)
-  + `ui/src/app/dashboard/` primitives. Deferred: run-history view + session switcher.
+  sidebar keeps nav + Runs counts; Home = 4 secret-free panels + dashboard
+  primitives, a11y-review-fixed. Agent setup shows REAL per-agent sign-in (sandbox
+  marker + Claude Keychain, secret-free, `provider/agent_sign_in_record.rs`,
+  security SOUND). Deferred: run-history #37, switcher, sign-in ceilings #39.
 - Broker hardening complete (detail in
   `docs/design/native-gui-claude-oauth-broker.md` and git): the held Claude OAuth
   token is `secrecy::SecretString` (`=0.10.3`, pinned) redacting Debug/Display on
