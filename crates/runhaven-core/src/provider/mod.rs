@@ -1,3 +1,4 @@
+pub mod agent_sign_in_record;
 pub mod auth_broker;
 pub mod auth_profiles;
 /// Non-secret age of the stored Claude token, from the Keychain item's own

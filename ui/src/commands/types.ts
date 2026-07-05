@@ -4,56 +4,6 @@ import type {
   EgressLogEntry
 } from "./diagnostics_types";
 
-export type CheckStatus = {
-  name: string;
-  ok: boolean;
-  detail: string;
-  remedy: string;
-};
-
-export type SetupStatus = {
-  ok: boolean;
-  checks: CheckStatus[];
-  blockerCount: number;
-};
-
-export type AgentProfile = {
-  name: string;
-  description: string;
-  image: string;
-  defaultCommand: string[];
-  providerHosts: string[];
-  signIn: string;
-  broker: string;
-  // True when the desktop app can sign this agent in fully in-app (device-code
-  // login). False agents (like claude) sign in from a terminal. Derived from
-  // core in the backend, never re-decided here.
-  supportsInAppSignIn: boolean;
-};
-
-export type RunSummary = {
-  runId: string;
-  profile: string;
-  workspace: string;
-  network: string;
-  status: string;
-  timestamp: string;
-  authScope: string;
-  session: string;
-};
-
-export type DashboardStatus = {
-  setup: SetupStatus;
-  agents: AgentProfile[];
-  activeRuns: RunSummary[];
-  recentRuns: RunSummary[];
-  warnings: string[];
-  // The RunHaven desktop app version (crate version at build time). A plain,
-  // non-secret string the Diagnostics view shows with the pinned runtime
-  // versions from the setup checks.
-  appVersion: string;
-};
-
 // Known image states. The wire field stays a raw string (open backend
 // contract); the union names the values the UI understands.
 export type ProfileImageState = "ok" | "missing" | "stale";
@@ -446,3 +396,12 @@ export type {
   WorktreeActionResult,
   WorktreeActionResponse
 } from "./worktree_types";
+
+export type {
+  CheckStatus,
+  SetupStatus,
+  AgentProfile,
+  RunSummary,
+  AgentReadiness,
+  DashboardStatus
+} from "./dashboard_types";

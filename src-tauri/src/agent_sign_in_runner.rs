@@ -16,6 +16,7 @@ use std::process::{Command, Stdio};
 use std::thread;
 
 use anyhow::{Context, Result, bail};
+use runhaven_core::provider::agent_sign_in_record::{AGENT_SIGN_IN_SCOPE, record_agent_sign_in};
 use runhaven_core::runtime::launch::{
     AgentCommandContext, AgentCommandRunner, launch_run_plan_with_runner,
 };
@@ -40,6 +41,16 @@ pub(crate) fn spawn_agent_sign_in(
                 Ok(0) => {
                     if let Err(error) = registry.mark_succeeded(&sign_in_id, &agent) {
                         log::error!("sign-in {sign_in_id}: status update failed: {error}");
+                    }
+                    // The device-code sign-in exited 0: the agent completed
+                    // sign-in in its sandbox. Record the secret-free marker (no
+                    // token is read here or anywhere). A device-code sign-in is
+                    // always the shared agent scope. Recording is best-effort:
+                    // a marker write failure must not fail the sign-in.
+                    if let Err(error) = record_agent_sign_in(&agent, AGENT_SIGN_IN_SCOPE) {
+                        log::warn!(
+                            "sign-in {sign_in_id}: could not record sign-in marker: {error}"
+                        );
                     }
                 }
                 Ok(_) => mark_failed(

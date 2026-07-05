@@ -99,6 +99,11 @@ export function previewDashboardStatus(): DashboardStatus {
       ]
     },
     agents: mockAgents,
+    agentReadiness: [
+      { name: "claude", category: "signed-in", label: "Signed in" },
+      { name: "codex", category: "needs-sign-in", label: "Needs sign-in" },
+      { name: "shell", category: "ready", label: "Ready" }
+    ],
     activeRuns: [],
     recentRuns: [],
     warnings: ["Desktop runtime commands are unavailable in browser preview."],

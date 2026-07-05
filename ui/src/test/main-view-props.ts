@@ -79,6 +79,9 @@ export function dashboard(setupOk: boolean): DashboardStatus {
       ],
     },
     agents: [providerAgent],
+    agentReadiness: [
+      { name: "codex", category: "signed-in", label: "Signed in" },
+    ],
     activeRuns: [],
     recentRuns: [],
     warnings: [],

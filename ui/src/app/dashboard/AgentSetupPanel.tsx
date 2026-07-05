@@ -1,25 +1,25 @@
 import { Users } from "lucide-react"
 
-import type { AgentProfile, AuthStatusResponse } from "@/commands/runhaven"
+import type { AgentReadiness } from "@/commands/runhaven"
 
-import { agentReadiness, readinessSummary } from "./agentReadiness"
+import { readinessSummary, readinessTone } from "./agentReadiness"
 import { AgentCell } from "./AgentCell"
 import { DashboardPanel, PanelFooterLink } from "./DashboardPanel"
 import { StatusDot } from "./status"
 
-// Home "Agent setup": a one-line readiness summary and a row per agent showing
-// its truthful auth state as a status dot. The footer opens the Agents view,
-// where sign-in and key setup actually happen (Home never performs a mutation).
+// Home "Agent setup": a one-line summary and a row per agent showing its real,
+// backend-derived sign-in state as a status dot. Every label is agent-state only
+// (Signed in / Needs sign-in / Ready) and never implies RunHaven holds the
+// credential; the credential lives in the isolated sandbox (or, for Claude's
+// opt-in Keychain broker, the Keychain). The footer opens the Agents view, where
+// sign-in actually happens (Home never performs a mutation).
 export function AgentSetupPanel({
-  agents,
-  authStatus,
+  readiness,
   onOpenAgents,
 }: {
-  agents: AgentProfile[]
-  authStatus: AuthStatusResponse | null
+  readiness: AgentReadiness[]
   onOpenAgents: () => void
 }) {
-  const readiness = agentReadiness(agents, authStatus)
   return (
     <DashboardPanel
       title="Agent setup"
@@ -36,7 +36,7 @@ export function AgentSetupPanel({
           >
             <AgentCell agent={agent.name} />
             <StatusDot
-              tone={agent.tone}
+              tone={readinessTone(agent.category)}
               label={agent.label}
               className="whitespace-nowrap text-muted-foreground"
             />

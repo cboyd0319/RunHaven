@@ -67,10 +67,10 @@ describe("HomeView", () => {
 
     expect(html).toContain("Agent setup");
     expect(html).toContain("Codex");
-    expect(html).toContain("Ready");
+    expect(html).toContain("Signed in");
     expect(html).toContain("Open Agents");
-    // The one-agent-ready preview drives the summary line.
-    expect(html).toContain("1 ready");
+    // The backend-derived readiness (one signed-in agent) drives the summary.
+    expect(html).toContain("1 signed in");
   });
 
   it("splits attention runs into Needs review and the rest into Recent activity", () => {

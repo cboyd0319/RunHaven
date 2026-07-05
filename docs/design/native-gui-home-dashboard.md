@@ -39,23 +39,51 @@ two sessions routes through Home rather than a persistent sidebar list.
     and `Recent activity` (newest runs of any lifecycle except the ones in Needs
     review, so each run appears once; row opens the session; footer opens the
     full run history).
-  - Right: `Agent setup` (a readiness summary and a per-agent status row, footer
-    Open Agents) and `Secure boundary` (a plain-language summary of the standing
-    safety posture -- project-folder-only workspace, isolated sign-in, provider
-    allowlist, home not mounted -- footer View security model, which opens
-    Diagnostics).
+  - Right: `Agent setup` (a summary and a per-agent real sign-in-state row, see
+    "Agent sign-in state" below; footer Open Agents) and `Secure boundary` (a
+    plain-language summary of the standing safety posture -- project-folder-only
+    workspace, isolated sign-in, provider allowlist, home not mounted -- footer
+    View security model, which opens Diagnostics).
 
 ## Shared primitives (`app/dashboard/`)
 
-- `status.tsx`: `runStatusTone`, `StatusDot`, `RunStatusIcon`, `StatusBadge`.
-  One tone/icon/badge mapping onto the existing shadcn variants (no parallel
-  token set), so every panel reads the same and none invents a one-off badge.
+- `status.tsx`: `runStatusTone`, `StatusDot`. One tone -> dot-color mapping onto
+  the existing shadcn tokens (no parallel token set); tones include a `warning`
+  amber for the needs-sign-in agent state.
 - `agentVisuals.ts`: product-safe lucide glyphs tinted per provider (no vendor
   logos). `AgentCell` pairs the glyph with the agent display name.
-- `agentReadiness.ts`: agent auth status -> truthful label (from `labels.ts`)
-  plus a tone and a ready/needs-setup/unavailable category for the summary line.
+- `agentReadiness.ts`: maps the backend-derived per-agent readiness
+  (`DashboardStatus.agentReadiness`) to a dot tone and a one-line summary. The
+  category and label are computed in core, not here.
 - `timeAgo.ts`: compact relative times ("2m ago").
 - `DashboardPanel` / `PanelFooterLink`: the shared panel chrome and footer row.
+
+## Agent sign-in state
+
+`Agent setup` shows each agent's REAL sign-in state, not a static "API key
+broker" method label. `DashboardStatus.agentReadiness` is computed in core
+(`provider/agent_sign_in_record.rs`) from what RunHaven can truthfully know
+without reading an isolated credential:
+
+- Shell (no auth needed) -> `ready` / "Ready".
+- Claude -> Keychain token presence (the opt-in broker, attributes-only, no
+  token read, no prompt) -> "Signed in" / "Needs sign-in".
+- Other agents -> a secret-free sandbox sign-in marker
+  (`cache_root/agent-sign-ins.jsonl`, fields `{agent, scope, signed_in_at}`,
+  0600) written only when RunHaven's device-code sign-in exits 0.
+
+Labels describe the AGENT'S state only. Nothing implies RunHaven holds or
+manages the credential (no "via RunHaven"); the marker means the agent completed
+sign-in in its isolated sandbox, which RunHaven observed -- it never sees the
+credential. Security-reviewed SOUND (secret-free marker, no Keychain read/prompt,
+no secret across IPC).
+
+Honesty ceilings (documented, not worked around by reading the token):
+- The marker means "signed in in its sandbox", not "the token is still valid".
+- A sign-out / cleared sandbox state does not remove the marker, so it can read
+  stale "Signed in" until re-evaluated. Follow-up.
+- An agent signed in ONLY through a terminal (not the device-code runner, not
+  Claude Keychain) leaves no marker and reads "Needs sign-in". Follow-up.
 
 ## Safety
 

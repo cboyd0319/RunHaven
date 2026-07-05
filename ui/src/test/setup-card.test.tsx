@@ -25,6 +25,7 @@ function dashboard(patch: Partial<DashboardStatus> = {}): DashboardStatus {
       blockerCount: 0
     },
     agents: [],
+    agentReadiness: [],
     activeRuns: [
       {
         runId: "run-9",

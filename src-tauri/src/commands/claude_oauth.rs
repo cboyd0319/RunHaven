@@ -248,6 +248,16 @@ fn status_response(
     }
 }
 
+/// Whether RunHaven's Claude Keychain token exists, for the dashboard readiness
+/// panel. Uses the same attributes-only presence check as the status command
+/// (no token read, no user-presence prompt). A check error reads as absent so a
+/// Keychain hiccup degrades to "needs sign-in" rather than a hard error.
+pub(super) fn claude_keychain_present() -> bool {
+    keychain_presence()
+        .map(|presence| presence.present)
+        .unwrap_or(false)
+}
+
 /// Presence-and-age check: attributes only, never the secret data, so no
 /// user-presence prompt fires and the token is never read. The age is the item's
 /// own non-secret creation date. Non-macOS has no Keychain broker, so it reports

@@ -4,7 +4,13 @@ import { cn } from "@/lib/utils"
 // tone for a run state, so every panel (recent-runs table, run history, sidebar
 // counts) reads the same and no panel invents a one-off status style.
 
-export type StatusTone = "success" | "failed" | "stopped" | "active" | "neutral"
+export type StatusTone =
+  | "success"
+  | "failed"
+  | "stopped"
+  | "active"
+  | "warning"
+  | "neutral"
 
 // Map a backend lifecycle/status word to a tone. Lifecycle is the primary
 // signal (the backend's own grouping); the human statusLabel is only a
@@ -32,6 +38,7 @@ const DOT_TONE: Record<StatusTone, string> = {
   failed: "bg-destructive",
   stopped: "bg-muted-foreground",
   active: "bg-primary",
+  warning: "bg-warning",
   neutral: "bg-muted-foreground",
 }
 

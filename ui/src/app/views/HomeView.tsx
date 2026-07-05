@@ -84,8 +84,7 @@ export function HomeView(props: MainViewProps) {
         </div>
         <div className="flex min-w-0 flex-col gap-5">
           <AgentSetupPanel
-            agents={props.dashboard?.agents ?? []}
-            authStatus={props.authStatus}
+            readiness={props.dashboard?.agentReadiness ?? []}
             onOpenAgents={() => props.onNavigate({ kind: "agents" })}
           />
           <SecureBoundaryPanel

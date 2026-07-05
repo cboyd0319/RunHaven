@@ -21,6 +21,7 @@ import type {
 const dashboardStatusChecked = {
   setup: true,
   agents: true,
+  agentReadiness: true,
   activeRuns: true,
   recentRuns: true,
   warnings: true,
@@ -160,6 +161,7 @@ export function sameDashboardStatus(
       )
     }) &&
     sameAgents(current.agents, next.agents) &&
+    sameAgentReadiness(current.agentReadiness, next.agentReadiness) &&
     sameRunSummaries(current.activeRuns, next.activeRuns) &&
     sameRunSummaries(current.recentRuns, next.recentRuns) &&
     current.warnings.length === next.warnings.length &&
@@ -192,6 +194,24 @@ function sameAgents(
         agent.providerHosts.every(
           (value, valueIndex) => value === nextAgent.providerHosts[valueIndex],
         )
+      )
+    })
+  )
+}
+
+function sameAgentReadiness(
+  current: DashboardStatus["agentReadiness"],
+  next: DashboardStatus["agentReadiness"],
+): boolean {
+  return (
+    current.length === next.length &&
+    current.every((item, index) => {
+      const nextItem = next[index]
+      return (
+        nextItem !== undefined &&
+        item.name === nextItem.name &&
+        item.category === nextItem.category &&
+        item.label === nextItem.label
       )
     })
   )

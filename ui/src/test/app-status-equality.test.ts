@@ -49,6 +49,7 @@ function dashboard(patch: Partial<DashboardStatus> = {}): DashboardStatus {
       checks: [{ name: "container", ok: true, detail: "ready", remedy: "" }],
     },
     agents: [agent()],
+    agentReadiness: [{ name: "codex", category: "signed-in", label: "Signed in" }],
     activeRuns: [runSummary()],
     recentRuns: [runSummary({ runId: "run-0", status: "finished" })],
     warnings: ["one warning"],

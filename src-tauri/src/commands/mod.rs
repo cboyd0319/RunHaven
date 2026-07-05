@@ -1,4 +1,5 @@
 use runhaven_core::doctor::collect_checks;
+use runhaven_core::provider::agent_sign_in_record::agent_setup_readiness;
 use runhaven_core::provider::auth_profiles::{agent_broker, agent_sign_in};
 use runhaven_core::records::read_run_records;
 use runhaven_core::runtime::active::read_active_run_records;
@@ -118,9 +119,15 @@ fn collect_dashboard_status() -> DashboardStatus {
             Vec::new()
         }
     };
+    let names = profiles()
+        .iter()
+        .map(|profile| profile.name)
+        .collect::<Vec<_>>();
+    let agent_readiness = agent_setup_readiness(&names, claude_oauth::claude_keychain_present());
     DashboardStatus {
         setup: collect_setup_status(),
         agents: agent_summaries(),
+        agent_readiness,
         active_runs: read_active_run_records().iter().map(run_summary).collect(),
         recent_runs,
         warnings,

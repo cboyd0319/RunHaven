@@ -71,6 +71,12 @@ pub fn runs_log_path() -> PathBuf {
     runhaven_cache_root().join("runs.jsonl")
 }
 
+/// Secret-free per-agent sign-in markers. One JSONL line per observed in-sandbox
+/// sign-in; never holds a token, key, or path (see `agent_sign_in_record`).
+pub fn agent_sign_ins_path() -> PathBuf {
+    runhaven_cache_root().join("agent-sign-ins.jsonl")
+}
+
 pub fn egress_policy_log_path() -> PathBuf {
     runhaven_cache_root().join("egress-policy.jsonl")
 }

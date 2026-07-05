@@ -1,3 +1,4 @@
+use runhaven_core::provider::agent_sign_in_record::AgentReadiness;
 use serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
@@ -53,6 +54,10 @@ pub(crate) struct RunSummary {
 pub(crate) struct DashboardStatus {
     pub setup: SetupStatus,
     pub agents: Vec<AgentProfileSummary>,
+    /// Per-agent sign-in readiness for the Home "Agent setup" panel. Describes
+    /// each agent's own state ("ready" | "signed-in" | "needs-sign-in"), never
+    /// implies RunHaven stores the credential.
+    pub agent_readiness: Vec<AgentReadiness>,
     pub active_runs: Vec<RunSummary>,
     pub recent_runs: Vec<RunSummary>,
     pub warnings: Vec<String>,
