@@ -171,7 +171,7 @@ Useful GUI design docs:
 - Home dashboard redesign (variant 06, `docs/design/native-gui-home-dashboard.md`):
   sidebar keeps nav + Runs counts; Home = 4 secret-free panels + primitives,
   a11y-fixed. Agent setup shows real per-agent sign-in (sandbox marker + Claude
-  Keychain, secret-free, security SOUND). Deferred: run-history #37, switcher, #39.
+  Keychain, secret-free, security SOUND). Run-history view shipped; deferred: switcher #37, ceilings #39.
 - Broker hardening complete (detail in
   `docs/design/native-gui-claude-oauth-broker.md` and git): the held Claude OAuth
   token is `secrecy::SecretString` (`=0.10.3`, pinned) redacting Debug/Display on
