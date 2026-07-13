@@ -16,7 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -33,6 +32,7 @@ import {
   ImageReadiness,
 } from "./LaunchAccess"
 import { networkLabels } from "./labels"
+import { ResourceLimitsFields } from "./ResourceLimitsFields"
 import { agentLabel, orderProductAgents } from "./sessionIdentity"
 import { networkHelp } from "./types"
 import type { LaunchStep } from "./types"
@@ -324,34 +324,11 @@ export function LaunchPlanCard({
                     ) : null}
                   </fieldset>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="flex flex-col gap-1.5 text-sm font-medium">
-                      CPU cores
-                      <Input
-                        inputMode="decimal"
-                        pattern="[1-9][0-9]*(\.[0-9]+)?"
-                        required
-                        title="Enter a CPU count such as 4 or 2.5."
-                        value={request.cpus}
-                        onChange={(event) =>
-                          onRequestChange({ cpus: event.currentTarget.value })
-                        }
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1.5 text-sm font-medium">
-                      Memory
-                      <Input
-                        inputMode="text"
-                        pattern="[1-9][0-9]*[KkMmGgTtPp]?"
-                        required
-                        title="Enter memory such as 4g for 4 GB or 4096m."
-                        value={request.memory}
-                        onChange={(event) =>
-                          onRequestChange({ memory: event.currentTarget.value })
-                        }
-                      />
-                    </label>
-                  </div>
+                  <ResourceLimitsFields
+                    cpus={request.cpus}
+                    memory={request.memory}
+                    onChange={onRequestChange}
+                  />
 
                   <ApiKeyBrokerField
                     agent={selectedAgent}

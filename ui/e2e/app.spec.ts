@@ -71,6 +71,14 @@ test("Home is a focused one-click launchpad at minimum and normal sizes", async 
         page.getByRole("button", { name: assistant, exact: true }),
       ).toBeVisible()
     }
+    await expect(
+      page.getByText("Choose the assistant account you already use."),
+    ).toBeVisible()
+    await page.getByRole("button", { name: "Not sure?" }).click()
+    await expect(
+      page.getByRole("heading", { level: 1, name: "RunHaven Help" }),
+    ).toBeVisible()
+    await expect(page.getByRole("heading", { name: "Start safely" })).toBeVisible()
     await expect(page.getByText("Needs attention", { exact: true })).toHaveCount(0)
     await expect(page.getByText("Recent activity", { exact: true })).toHaveCount(0)
     await expect(page.getByText("Run history", { exact: true })).toHaveCount(0)
@@ -106,10 +114,12 @@ test("sidebar, appearance, and keyboard paths behave like Mac controls", async (
   const desktopSidebar = page.locator('[data-slot="sidebar"]')
   const sidebarContainer = page.locator('[data-slot="sidebar-container"]')
   await page.getByRole("button", { name: "Home", exact: true }).focus()
+  await expect(sidebarToggle).toHaveAccessibleName("Hide Sidebar")
   await sidebarToggle.evaluate((button: HTMLElement) => button.click())
   await expect(desktopSidebar).toHaveAttribute("data-state", "collapsed")
   await expect(sidebarContainer).toHaveAttribute("aria-hidden", "true")
   await expect(sidebarContainer).toHaveAttribute("inert", "")
+  await expect(sidebarToggle).toHaveAccessibleName("Show Sidebar")
   await expect(sidebarToggle).toBeFocused()
   await expectNoHorizontalOverflow(page)
   await sidebarToggle.click()
@@ -127,6 +137,23 @@ test("Advanced options keep safe defaults first and explain supported exceptions
 }) => {
   await openProjectStep(page, "Codex", "/tmp/runhaven-advanced")
   await page.getByText("Advanced options", { exact: true }).click()
+
+  await expect(page.getByText("Use a number such as 4 or 2.5.")).toBeVisible()
+  await expect(
+    page.getByText("Use a number and unit, such as 4g or 4096m."),
+  ).toBeVisible()
+  await expect(page.getByLabel("CPU cores")).toHaveAccessibleName("CPU cores")
+  await expect(page.getByLabel("Memory")).toHaveAccessibleName("Memory")
+  await page.getByLabel("CPU cores").fill("four")
+  await page.getByLabel("Memory").fill("4 GB")
+  await expect(page.getByLabel("CPU cores")).toHaveAccessibleName("CPU cores")
+  await expect(page.getByLabel("Memory")).toHaveAccessibleName("Memory")
+  await expect(page.getByLabel("CPU cores")).toHaveAttribute("aria-invalid", "true")
+  await expect(page.getByLabel("Memory")).toHaveAttribute("aria-invalid", "true")
+  await expect(
+    page.getByText("Enter CPU cores as a number, such as 4 or 2.5."),
+  ).toBeVisible()
+  await expect(page.getByText("Enter a value such as 4g or 4096m.")).toBeVisible()
 
   await expect(
     page.getByRole("radio", { name: /^Protected copy/ }),

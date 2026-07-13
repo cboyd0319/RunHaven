@@ -26,6 +26,8 @@ export function AppHeader({
 }: AppHeaderProps) {
   const { state: sidebarState } = useSidebar()
   const canStop = session !== null && sessionAllowsRunControl(session)
+  const sidebarAction =
+    sidebarState === "collapsed" ? "Show Sidebar" : "Hide Sidebar"
 
   return (
     // data-tauri-drag-region: with the overlay title bar the header doubles as
@@ -41,7 +43,11 @@ export function AppHeader({
         sidebarState === "collapsed" && "pl-8",
       )}
     >
-      <SidebarTrigger variant="outline" />
+      <SidebarTrigger
+        variant="outline"
+        aria-label={sidebarAction}
+        title={sidebarAction}
+      />
       {title ? (
         <div className="flex min-w-0 items-center gap-2">
           <h1 className="truncate text-lg font-semibold">{title}</h1>

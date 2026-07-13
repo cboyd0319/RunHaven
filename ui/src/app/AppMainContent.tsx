@@ -4,12 +4,13 @@ import { CheckCircle2, CircleAlert } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 
-import type { NavDestination } from "./navigation"
+import { helpReturnLabel, type NavDestination } from "./navigation"
 import { TerminalPanel } from "./TerminalPanel"
 import { useFocusOnChange } from "./useFocusOnChange"
 import { sessionAllowsWorktreeReview } from "./worktreeReview"
 import { DiagnosticsView } from "./views/DiagnosticsView"
 import { HomeView } from "./views/HomeView"
+import { HelpView } from "./views/HelpView"
 import { NewSessionView } from "./views/NewSessionView"
 import type { MainViewProps } from "./views/props"
 import { RunsView } from "./views/RunsView"
@@ -174,6 +175,15 @@ function MainView(props: AppMainContentProps) {
           onStart={() => props.onNavigate({ kind: "home" })}
         />
       )
+    case "help": {
+      const returnTo = props.navigation.returnTo
+      return (
+        <HelpView
+          backLabel={helpReturnLabel(returnTo)}
+          onBack={() => props.onNavigate(returnTo)}
+        />
+      )
+    }
     case "session":
       // A removed record renavigates via the selection fallback. Home is a safe,
       // useful frame while that reconciliation happens; an empty main area looks
@@ -219,6 +229,8 @@ function mainViewLabel(navigation: NavDestination): string {
       return "Session details"
     case "diagnostics":
       return "System details"
+    case "help":
+      return "RunHaven Help"
     case "runs":
       return "Session history"
     case "run-terminal":

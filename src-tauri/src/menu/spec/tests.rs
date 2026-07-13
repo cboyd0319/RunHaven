@@ -52,8 +52,26 @@ fn menu_bar_has_only_the_standard_and_contextual_menus_in_order() {
     let labels: Vec<&str> = MENU_BAR.iter().map(|(label, _)| *label).collect();
     assert_eq!(
         labels,
-        ["RunHaven", "File", "Edit", "View", "Session", "Window"]
+        [
+            "RunHaven", "File", "Edit", "View", "Session", "Window", "Help"
+        ]
     );
+}
+
+#[test]
+fn help_menu_has_one_global_enabled_command_without_a_shortcut() {
+    let entries = MENU_BAR
+        .iter()
+        .find_map(|(label, entries)| (*label == "Help").then_some(*entries))
+        .expect("Help menu");
+    let [Entry::Command(spec)] = entries else {
+        panic!("Help menu must contain exactly one command");
+    };
+    assert_eq!(spec.id, "show-help");
+    assert_eq!(spec.label, "RunHaven Help");
+    assert!(spec.enabled);
+    assert_eq!(spec.accelerator, None);
+    assert!(!is_dynamic_menu_id(spec.id));
 }
 
 #[test]
@@ -83,6 +101,7 @@ fn command_ids_are_stable_unique_and_kebab_case() {
             "stop-session",
             "hard-stop-session",
             "cleanup-session",
+            "show-help",
         ]
     );
 }

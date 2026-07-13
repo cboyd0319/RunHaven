@@ -54,6 +54,24 @@ describe("handleMenuCommand", () => {
     expect(app.navigate).toHaveBeenCalledWith({ kind: "new-session" })
   })
 
+  it("opens the in-app guide from RunHaven Help", () => {
+    const app = actions()
+    handleMenuCommand("show-help", app)
+    expect(app.navigate).toHaveBeenCalledWith({
+      kind: "help",
+      returnTo: { kind: "home" },
+    })
+  })
+
+  it("keeps the current destination when RunHaven Help opens", () => {
+    const app = actions({ navigation: { kind: "new-session" } })
+    handleMenuCommand("show-help", app)
+    expect(app.navigate).toHaveBeenCalledWith({
+      kind: "help",
+      returnTo: { kind: "new-session" },
+    })
+  })
+
   it("toggles the app icon count from the View menu", () => {
     const app = actions()
     handleMenuCommand("show-attention-badge", app)
@@ -158,6 +176,7 @@ describe("menu contract tripwires", () => {
       readFileSync(join(rustMenuDir, "mod.rs"), "utf8")
     const handledIds = [
       "new-run",
+      "show-help",
       "show-attention-badge",
       "toggle-sidebar",
       ...Object.keys(MENU_FOCUS_SELECTORS),

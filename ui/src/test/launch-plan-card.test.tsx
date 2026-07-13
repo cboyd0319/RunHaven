@@ -205,6 +205,23 @@ describe("LaunchPlanCard", () => {
     expect(html).toContain('title="Enter a CPU count such as 4 or 2.5."');
     expect(html).toContain(">Memory<");
     expect(html).toContain('title="Enter memory such as 4g for 4 GB or 4096m."');
+    expect(html).toContain("Use a number such as 4 or 2.5.");
+    expect(html).toContain("Use a number and unit, such as 4g or 4096m.");
+    expect(html).toContain('aria-describedby="cpu-help"');
+    expect(html).toContain('aria-describedby="memory-help"');
+  });
+
+  it("shows adjacent plain-language errors for invalid resource values", () => {
+    const html = renderToStaticMarkup(
+      <LaunchPlanCard
+        {...projectProps()}
+        request={request({ cpus: "four", memory: "4 GB" })}
+      />
+    );
+
+    expect(html).toContain('aria-invalid="true"');
+    expect(html).toContain("Enter CPU cores as a number, such as 4 or 2.5.");
+    expect(html).toContain("Enter a value such as 4g or 4096m.");
   });
 
   it("keeps the protected-copy implementation out of the ordinary project step", () => {

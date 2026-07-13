@@ -2,12 +2,17 @@ import { useEffect, useRef } from "react"
 
 import { listenForMenuCommands } from "@/commands/menu_events"
 
-import { NEW_SESSION_NAV, type NavDestination } from "./navigation"
+import {
+  helpNavigation,
+  NEW_SESSION_NAV,
+  type NavDestination,
+} from "./navigation"
 import type { RunControlAction } from "./types"
 
 // Translates native menu activations into the same UI actions a click takes.
-// New Session opens its page, the View preference toggles, and Run actions activate
-// the same on-screen buttons, so the Rust-owned dialog still gates mutations.
+// New Session and Help open their pages, the View preference toggles, and Run
+// actions activate the same on-screen buttons, so the Rust-owned dialog still
+// gates mutations.
 // Send Message focuses the composer instead of sending a draft. Ids that do not
 // apply right now (no selection or control not on screen) no-op; unknown ids are
 // ignored.
@@ -56,6 +61,9 @@ export function handleMenuCommand(id: string, app: MenuActions): void {
     case "new-run":
       app.launchFlow.setOpen(false)
       app.navigate(NEW_SESSION_NAV)
+      return
+    case "show-help":
+      app.navigate(helpNavigation(app.navigation))
       return
     case "show-attention-badge":
       app.settings.setDockBadge(!app.settings.dockBadge)

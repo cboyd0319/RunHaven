@@ -27,6 +27,7 @@ const PAGE_TITLES: Record<NavDestination["kind"], string> = {
   runs: "History",
   session: "Session",
   diagnostics: "System",
+  help: "Help",
   "run-terminal": "Session terminal",
 }
 

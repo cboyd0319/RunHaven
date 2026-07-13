@@ -420,23 +420,27 @@ Only address-in-use bind failures are retried. No existing local service is
 reused, stopped, or treated as RunHaven. Browser Import and bookmarklets do not
 exist in this repository, so no unrelated Settings surface was added.
 
-The clean full `./init.sh` closure passed workspace tests and warnings-denied
-Clippy, pins, structure, release-script tests, JSON validation, 332 frontend
-tests, the production UI build, all nine Playwright and axe flows, the no-bundle
-Tauri build, the workspace build, documentation paths, and diff hygiene. It
-also caught and closed the missing strict-TypeScript declaration for the new
-Node ESM loopback helper before commit.
+The source-backed macOS design closure added a standard registered Help menu
+and a plain-language guide through the existing dispatch-only path. Home gives
+account-choice and safe-exit guidance. Help retains the prior screen, including
+an in-progress New session. Advanced resource fields show format guidance and
+immediate errors while keeping exact accessible names. The sidebar announces
+its next action. No command, capability, dependency, setting, mutation path, or
+safety boundary changed.
 
-The old navigation spec and gap tracker are retained below as historical design
-records, not as current product requirements.
+The macOS specialist fully reviewed the supplied sources, implementation, and
+exact 0.7.0 debug app, then approved remediation with no medium-or-higher issue.
+Full `./init.sh`, 339 frontend tests, nine Playwright and axe flows, TypeScript,
+production build, 21 menu tests, structure, docs, JSON, and diff checks pass.
+One app bundle remains and both its plist and the CLI report 0.7.0. VoiceOver,
+Voice Control, Switch Control, reduced transparency, localization, and
+multiple-display use remain human QA gaps.
 
-Detailed superseded navigation and terminal history lives in
-`feature_list.json` evidence and the historical navigation documents. Keep
-that history out of this restart handoff. Current verification and remaining
-release gates are recorded below.
+Superseded navigation and terminal details live in `feature_list.json` and the
+historical design documents, not this restart handoff.
 
 ## Next Step
 
-Build the exact debug bundle from the new commit, then complete the requested
-source-backed macOS design review. Keep TUI deferred and do not distribute until
-Developer ID notarization and clean-Mac distribution gates pass.
+Rebuild the exact 0.7.0 debug bundle from this commit, then run the remaining
+human accessibility checks with a nontechnical coworker. Keep TUI deferred and
+do not distribute until Developer ID notarization and clean-Mac distribution gates pass.

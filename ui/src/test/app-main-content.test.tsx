@@ -2,7 +2,7 @@
 import { createElement } from "react"
 import { createRoot } from "react-dom/client"
 import { renderToStaticMarkup } from "react-dom/server"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { AppMainContent } from "../app/AppMainContent"
 import type { RunTerminalLaunch } from "../app/useLaunchFlow"
@@ -26,7 +26,44 @@ function runTerminal(): RunTerminalLaunch {
   }
 }
 
-describe("AppMainContent run-terminal destination", () => {
+describe("AppMainContent", () => {
+  it("renders a concise in-app guide at the Help destination", () => {
+    const html = renderToStaticMarkup(
+      <AppMainContent
+        {...mainViewProps()}
+        navigation={{ kind: "help", returnTo: { kind: "home" } }}
+      />,
+    )
+
+    expect(html).toContain("RunHaven Help")
+    expect(html).toContain("Start safely")
+    expect(html).toContain("Find a previous session")
+    expect(html).toContain("Fix a setup problem")
+    expect(html).toContain("Back to Home")
+  })
+
+  it("returns from Help to the destination the user was using", async () => {
+    const onNavigate = vi.fn()
+    const container = document.createElement("div")
+    const root = createRoot(container)
+    await act(async () => {
+      root.render(
+        <AppMainContent
+          {...mainViewProps({ onNavigate })}
+          navigation={{ kind: "help", returnTo: { kind: "new-session" } }}
+        />,
+      )
+    })
+
+    const back = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Back to New session",
+    )
+    expect(back).toBeDefined()
+    await act(async () => back?.click())
+    expect(onNavigate).toHaveBeenCalledWith({ kind: "new-session" })
+    await act(async () => root.unmount())
+  })
+
   it("renders the interactive run terminal in the bounded main content", () => {
     const html = renderToStaticMarkup(
       <AppMainContent

@@ -97,10 +97,16 @@ The finished DMG still needs a clean supported-Mac install test before sharing.
 ## First look: Home
 
 The app always opens on **Home**. Home is a launchpad with four choices:
-Claude, Codex, Antigravity, and Copilot. Choose the assistant you
-want. Home does not show run history, logs, failures, or system checks. Those
+Claude, Codex, Antigravity, and Copilot. Choose the assistant account you
+already use. You can go back without starting anything. If you are not sure,
+choose **Not sure?** or **Help > RunHaven Help**. Home does not show run
+history, logs, failures, or system checks. Those
 details live in **History** and **System details**, where they have room to
 explain what happened and what to do next.
+
+Help returns you to the screen you were using. For example, if you open Help
+while choosing a project, choose **Back to New session** to continue with the
+same choices.
 
 After you choose an assistant, **New session** checks whether your Mac and that
 assistant are ready. If something needs work, it shows one problem, a plain
@@ -134,7 +140,7 @@ action.
 
 ## Sign in to an assistant
 
-On Home, choose **Start** for Claude, Codex, Antigravity, or Copilot. If that
+On Home, choose **Claude**, **Codex**, **Antigravity**, or **Copilot**. If that
 assistant needs sign-in, choose
 **Open sign-in terminal** beside it in New session.
 RunHaven shows a native confirmation before it starts anything.
@@ -174,35 +180,31 @@ The optional API-key broker remains under **Advanced options** for explicitly
 configured Claude or Codex API keys. It is not selected automatically and is not
 the ordinary sign-in path. See [Authentication and API-key brokers](AUTH_BROKER.md).
 
-## Start a run
+## Start a session
 
-Choose an assistant on Home. The main area opens a two-step flow with that assistant
-already selected:
-
-1. Project: pick the folder the selected assistant works in.
-2. Review: check what the run can reach before anything starts.
-
-Opening **New session** directly adds an Assistant step before these two steps.
-Starting from Home keeps the chosen assistant and does not ask again. The Project
-step uses the normal Mac folder picker; there is no path to type by hand.
+Choose an assistant on Home. The main area opens **Choose project** with that
+assistant already selected. Opening **File > New Session** starts with **Choose
+assistant**, then continues to **Choose project**. The project page uses the
+normal Mac folder picker; there is no path to type by hand.
 Sign-in sharing, network access, resource limits, and direct-folder access stay
 under **Advanced options**. The safer protected copy is automatic. Advanced
 users can explicitly choose to work in the original folder after reading its
-warning. The Review step leads with the assistant, project, and access result.
-Network, image, and run-name details stay under **Technical details**.
+warning.
 
-Choose **Start run** when the summary is right. RunHaven then asks for final
-confirmation in a native Mac dialog. There is no second confirmation checkbox
-in the app. If a choice is less safe than the default, such as full internet
-access, its specific warning still requires explicit acknowledgement. The
-normal confirmation stays short. If you chose advanced host access, it lists
-the exact extra sites, Mac environment names, API-key source name, or custom
-image so the trusted Mac dialog cannot hide what the run requested. It never
-shows an environment value.
+Choose **Start session** when the project page is right. RunHaven then shows the
+assistant, project, file access, and network access in a native Mac dialog before
+anything starts. There is no separate Review page or second confirmation
+checkbox in the app. If a choice is less safe than the default, such as full
+internet access, its specific warning still requires explicit acknowledgement.
+The normal confirmation stays short. If you chose advanced host access, it
+lists the exact extra sites, Mac environment names, API-key source name, or
+custom image so the trusted Mac dialog cannot hide what the session requested.
+It never shows an environment value.
 
-You can leave at any time with **Cancel**. That never starts anything, and the
-values you entered are kept, so returning to **New session** picks up where you
-left off. When you start and confirm, the app takes you straight to the new run.
+Choose **Back** to return to assistant selection. Choose **Cancel** there to
+leave without starting anything. RunHaven keeps the values you entered, so
+returning to **New session** picks up where you left off. When you start and
+confirm, the app takes you straight to the new session.
 
 Some assistants are interactive: they work as a chat in their own terminal, so there
 is no separate box to type your task into. When you start one of these (Claude
@@ -226,8 +228,9 @@ yourself, so ending it is normal and never marked as an error.
 Under **Advanced options** on the Project step, people can change project access,
 sign-in sharing, network access, CPU, memory, and supported API-key behavior.
 These controls stay collapsed because the secure defaults already cover the
-ordinary path. Raw host paths, commands, keys, and implementation details do not
-appear there.
+ordinary path. CPU and memory fields explain the accepted format and show an
+error as soon as a value needs correction. Raw host paths, commands, keys, and
+implementation details do not appear there.
 
 **Assistant services only** stays the default, but every supported network mode remains
 available. Choosing another mode turns off the optional API key broker. Native
@@ -276,8 +279,9 @@ You can turn the number off with **View > Show Count on App Icon**.
 
 ## Menu bar and keyboard shortcuts
 
-The app has a normal Mac menu bar: RunHaven, File, Edit, View, Session, and
-Window. Standard items like About, Quit, Undo, Copy, Paste, Close,
+The app has a normal Mac menu bar: RunHaven, File, Edit, View, Session, Window,
+and Help. Choose **Help > RunHaven Help** for the built-in guide. Standard items
+like About, Quit, Undo, Copy, Paste, Close,
 Minimize, Zoom, and Full Screen behave the way they do in every Mac app.
 Quitting the app does not stop background runs; they keep working in the
 sandbox and show up again when you reopen the app. A live **Run terminal** or

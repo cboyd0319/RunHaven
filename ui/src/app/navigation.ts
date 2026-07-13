@@ -1,9 +1,9 @@
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 
 // The one navigation truth for the main window. Exactly one destination is
-// selected at all times: Home, a session, or a System view. See
+// selected at all times, including menu-only destinations such as Help. See
 // docs/design/native-gui-navigation-spec.md sections 2 and 4.
-export type NavDestination =
+export type HelpReturnDestination =
   | { kind: "home" }
   | { kind: "new-session" }
   | { kind: "session"; id: string }
@@ -15,9 +15,37 @@ export type NavDestination =
   // restored. Every app launch starts on Home instead.
   | { kind: "run-terminal" }
 
-export const HOME_NAV: NavDestination = { kind: "home" }
-export const NEW_SESSION_NAV: NavDestination = { kind: "new-session" }
-export const RUN_TERMINAL_NAV: NavDestination = { kind: "run-terminal" }
+export type NavDestination =
+  | HelpReturnDestination
+  | { kind: "help"; returnTo: HelpReturnDestination }
+
+export const HOME_NAV: HelpReturnDestination = { kind: "home" }
+export const NEW_SESSION_NAV: HelpReturnDestination = { kind: "new-session" }
+export const RUN_TERMINAL_NAV: HelpReturnDestination = { kind: "run-terminal" }
+
+export function helpNavigation(returnTo: NavDestination): NavDestination {
+  return {
+    kind: "help",
+    returnTo: returnTo.kind === "help" ? returnTo.returnTo : returnTo,
+  }
+}
+
+export function helpReturnLabel(destination: HelpReturnDestination): string {
+  switch (destination.kind) {
+    case "home":
+      return "Home"
+    case "new-session":
+      return "New session"
+    case "session":
+      return "Session"
+    case "runs":
+      return "History"
+    case "diagnostics":
+      return "System"
+    case "run-terminal":
+      return "Session terminal"
+  }
+}
 
 // Sidebar lifecycle groups. Active covers runs that are starting, running, or
 // waiting to stop. Everything else (finished, failed, and any unknown state)

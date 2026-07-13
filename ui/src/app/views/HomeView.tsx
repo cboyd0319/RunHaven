@@ -1,6 +1,9 @@
 import { ArrowRight } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
+
 import { AgentMonogram } from "../AgentMonogram"
+import { helpNavigation, HOME_NAV } from "../navigation"
 import { agentLabel, PRODUCT_AGENTS } from "../sessionIdentity"
 import type { MainViewProps } from "./props"
 
@@ -21,9 +24,21 @@ export function HomeView(props: MainViewProps) {
         <h1 className="font-heading text-3xl leading-none font-semibold tracking-[-0.025em]">
           Start a session
         </h1>
-        <p className="max-w-xl text-base leading-relaxed text-muted-foreground">
-          Choose the coding assistant you want to use.
-        </p>
+        <div className="max-w-xl text-base leading-relaxed text-muted-foreground">
+          <p>Choose the assistant account you already use.</p>
+          <p className="flex flex-wrap items-center gap-x-1">
+            You can go back without starting anything.
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto px-0"
+              onClick={() => props.onNavigate(helpNavigation(HOME_NAV))}
+            >
+              Not sure?
+            </Button>
+          </p>
+        </div>
       </header>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -51,6 +66,7 @@ function AgentLaunchCard({
   return (
     <button
       type="button"
+      data-agent-launch={agent}
       className="flex min-h-[7.25rem] items-center gap-4 rounded-xl border bg-card p-5 text-left text-card-foreground transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:bg-accent"
       onClick={onStart}
     >

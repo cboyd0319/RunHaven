@@ -39,7 +39,7 @@ describe("HomeView", () => {
     expect(html).not.toContain("Google Antigravity")
     expect(html).not.toContain("GitHub Copilot")
     expect(html).not.toContain("Start with")
-    expect(html.match(/<button/g) ?? []).toHaveLength(4)
+    expect(html.match(/data-agent-launch=/g) ?? []).toHaveLength(4)
     for (const monogram of ["CL", "CO", "AG", "CP"]) {
       expect(html).toContain(`>${monogram}</span>`)
     }
@@ -48,6 +48,38 @@ describe("HomeView", () => {
     expect(html).not.toContain("Recent work")
     expect(html).not.toContain("Run history")
     expect(html).not.toContain("Setup checks")
+    expect(html).toContain("Choose the assistant account you already use.")
+    expect(html).toContain("You can go back without starting anything.")
+    expect(html).toContain("Not sure?")
+  })
+
+  it("opens Help without starting a session", async () => {
+    const onNavigate = vi.fn()
+    const changeAgent = vi.fn()
+    const container = document.createElement("div")
+    const root = createRoot(container)
+    await act(async () => {
+      root.render(
+        <HomeView
+          {...launchpadProps()}
+          launchFlow={{ ...launchpadProps().launchFlow, changeAgent }}
+          onNavigate={onNavigate}
+        />,
+      )
+    })
+
+    const help = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Not sure?",
+    )
+    expect(help).toBeDefined()
+    await act(async () => help?.click())
+
+    expect(onNavigate).toHaveBeenCalledWith({
+      kind: "help",
+      returnTo: { kind: "home" },
+    })
+    expect(changeAgent).not.toHaveBeenCalled()
+    await act(async () => root.unmount())
   })
 
   it("does not put run failures or history on the landing screen", () => {

@@ -152,6 +152,8 @@ const WINDOW_MENU: &[Entry] = &[
     Entry::Predefined(Predef::BringAllToFront),
 ];
 
+const HELP_MENU: &[Entry] = &[command("show-help", "RunHaven Help", None)];
+
 /// The whole menu bar, in macOS-standard order. On macOS the first submenu
 /// becomes the application menu.
 pub(super) const MENU_BAR: &[(&str, &[Entry])] = &[
@@ -161,6 +163,7 @@ pub(super) const MENU_BAR: &[(&str, &[Entry])] = &[
     ("View", VIEW_MENU),
     ("Session", SESSION_MENU),
     ("Window", WINDOW_MENU),
+    ("Help", HELP_MENU),
 ];
 
 fn collect_command_ids(entries: &'static [Entry], ids: &mut Vec<&'static str>) {

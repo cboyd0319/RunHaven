@@ -20,6 +20,17 @@ describe("AppHeader", () => {
     expect(html).not.toContain(">Ready<")
     expect(html).not.toContain(">Blocked<")
     expect(html).not.toContain("Refresh status")
+    expect(html).toContain('aria-label="Hide Sidebar"')
+  })
+
+  it("names the collapsed-sidebar action", () => {
+    const html = renderToStaticMarkup(
+      <SidebarProvider defaultOpen={false}>
+        <AppHeader title="Home" />
+      </SidebarProvider>,
+    )
+
+    expect(html).toContain('aria-label="Show Sidebar"')
   })
 
   it("uses the selected-session toolbar for status and the normal stop action", () => {

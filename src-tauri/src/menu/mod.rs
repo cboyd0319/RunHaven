@@ -4,8 +4,8 @@
 //! only emits its own id string to the main window WebView over the
 //! [`MENU_COMMAND_EVENT`] event. The frontend listener
 //! (`ui/src/app/useMenuEvents.ts`) translates ids into the same UI affordances
-//! a click would use: open New Session, toggle the app-icon count, or focus an
-//! existing confirm control. Mutations keep flowing through the existing
+//! a click would use: open New Session or Help, toggle the app-icon count, or
+//! focus an existing confirm control. Mutations keep flowing through the existing
 //! invoke commands and their Rust-owned native dialogs; in particular the
 //! Stop and Hard Stop items never call `stop_managed_session` or
 //! `kill_managed_session` themselves, they only surface the existing stop
@@ -70,9 +70,11 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         }
         #[cfg(target_os = "macos")]
         {
-            // Give the Window menu its native open-window list.
-            if *label == "Window" {
-                submenu.set_as_windows_menu_for_nsapp()?;
+            // Register the two menu roles AppKit treats specially.
+            match *label {
+                "Window" => submenu.set_as_windows_menu_for_nsapp()?,
+                "Help" => submenu.set_as_help_menu_for_nsapp()?,
+                _ => {}
             }
         }
         menu.append(&submenu)?;
@@ -210,6 +212,22 @@ mod tests {
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '/' | ':' | '_'))
         );
+    }
+
+    #[test]
+    fn macos_registers_the_window_and_help_submenus_with_nsapp() {
+        let source = include_str!("mod.rs");
+        let production = source
+            .split("#[cfg(test)]")
+            .next()
+            .expect("production menu source");
+        for role in ["windows", "help"] {
+            let marker = format!("set_as_{role}_menu_{}", "for_nsapp");
+            assert!(
+                production.contains(&marker),
+                "the {role} submenu must be registered with NSApp"
+            );
+        }
     }
 
     #[test]
