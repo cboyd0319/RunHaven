@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/logo.png" alt="RunHaven logo" width="180">
+  <img src="docs/assets/app-icon.png" alt="" width="180">
 </p>
 
 # RunHaven

@@ -59,6 +59,9 @@ scripts/local-sign-desktop.test.sh
 echo "== scripts/rust-toolchain.test.sh =="
 scripts/rust-toolchain.test.sh
 
+echo "== scripts/review-gui.test.sh =="
+scripts/review-gui.test.sh
+
 if ! command -v python3 >/dev/null 2>&1; then
   echo "python3 was not found on PATH."
   exit 1

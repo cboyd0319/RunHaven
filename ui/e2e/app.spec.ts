@@ -88,6 +88,22 @@ test("200% text remains usable at the minimum window size", async ({ page }) => 
   await page.reload()
 
   await expect(page.locator("html")).toHaveCSS("font-size", "32px")
+  await expect(page.locator('[data-slot="sidebar-container"]')).toHaveCSS(
+    "width",
+    "264px",
+  )
+  await expect(page.locator('[data-slot="sidebar-header"] img')).toHaveCSS(
+    "width",
+    "32px",
+  )
+  const mainBounds = await page.getByRole("main").boundingBox()
+  expect(mainBounds?.width).toBeGreaterThanOrEqual(520)
+  expect(
+    await page
+      .getByRole("button", { name: "New session", exact: true })
+      .locator("span")
+      .evaluate((label) => label.scrollWidth <= label.clientWidth),
+  ).toBe(true)
   await expect(page.getByRole("button", { name: "Continue" })).toBeVisible()
   await expectNoHorizontalOverflow(page)
 
@@ -153,6 +169,25 @@ test("sidebar, appearance, and keyboard paths behave like Mac controls", async (
   await page.keyboard.press("Enter")
   await expect(page.getByRole("heading", { name: "Choose project" })).toBeVisible()
   await expectNoAccessibilityViolations(page)
+})
+
+test("saved-setup warning text stays readable in both appearances", async ({
+  page,
+}) => {
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme })
+    await openNewSession(page)
+    await page.locator('[data-slot="sidebar-header"]').evaluate((header) => {
+      const warning = document.createElement("span")
+      warning.className = "text-xs text-warning-text"
+      warning.textContent = "Project folder can’t be found"
+      header.append(warning)
+    })
+    await expect(
+      page.getByText("Project folder can’t be found", { exact: true }),
+    ).toBeVisible()
+    await expectNoAccessibilityViolations(page)
+  }
 })
 
 test("Advanced options keep safe defaults first and explain supported exceptions", async ({

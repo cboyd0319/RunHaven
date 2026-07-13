@@ -16,5 +16,7 @@ describe("HelpView", () => {
     expect(html).toContain("provider’s terms")
     expect(html).toContain("stores this content")
     expect(html).toContain("uses it for training")
+    expect(html).toContain("Start with recommended settings")
+    expect(html).not.toContain("Start safely")
   })
 })

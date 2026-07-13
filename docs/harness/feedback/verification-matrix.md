@@ -14,6 +14,7 @@ outside the release workspace until that product surface is reopened.
 | Rust code | `cargo fmt --check`; focused `cargo test` target; `cargo test --workspace --locked`; `cargo clippy --workspace --all-targets --locked -- -D warnings`; `scripts/check-repo-structure.sh`; maintainability check for touched modules and duplication |
 | Frontend UI | `npm --prefix ui run check`; `npm --prefix ui test`; `npm --prefix ui run test:e2e`; `npm --prefix ui run build`; relevant Tauri command tests; `scripts/check-repo-structure.sh`; maintainability check for touched components and adapters |
 | Tauri shell | Frontend checks plus `cargo fmt --check`; `cargo test --workspace --locked` (includes the `capability_guard` scope test); `cargo clippy --workspace --all-targets --locked -- -D warnings`; `scripts/check-repo-structure.sh`; capability review |
+| GUI visual or macOS design review | `scripts/review-gui.test.sh`; close every existing RunHaven app; `scripts/review-gui.sh`; give the reviewer its exact app path, bundle ID, PID/start time, build ID, executable hash, icon hash, and review fingerprint |
 | GUI/Tauri live managed-session path | `scripts/gui_tauri_live_smoke.sh` on macOS 26+ Apple silicon with Apple `container`; set `RUNHAVEN_GUI_LIVE_REAL_AGENT=1` plus `--with-agent codex` or another built real-agent profile and the fixed broker env for that profile when changing real-agent launch/session ownership. Confirms no-bundle Tauri build plus live selected-session bounded output, confirmed stop, multi-session isolation, and opt-in real-agent launch through typed Tauri commands. This is a brokered-launch smoke, not a TTY or OAuth/login parity check |
 | CLI command construction | Rust checks plus focused CLI and planning tests |
 | Full CLI surface confirmation | `scripts/cli_surface_check.sh` (breadth: every command family); `scripts/apple_container_smoke.sh --with-provider --with-ssh` (depth: provider egress denial and SSH fail-closed); coverage indexed in `docs/CLI_SURFACE_COVERAGE.md` |
@@ -40,6 +41,8 @@ npm --prefix ui test
 npm --prefix ui run test:e2e
 npm --prefix ui run build
 npm --prefix ui run tauri:build
+scripts/review-gui.test.sh
+scripts/review-gui.sh
 scripts/gui_tauri_live_smoke.sh
 scripts/check-docs-local-paths.sh
 scripts/check-repo-structure.sh

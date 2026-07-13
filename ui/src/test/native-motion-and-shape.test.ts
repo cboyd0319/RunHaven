@@ -65,4 +65,10 @@ describe("macOS visual accessibility preferences", () => {
     expect(css).toMatch(/prefers-contrast:[\s\S]*--sidebar-border:/);
     expect(css).toMatch(/prefers-contrast:[\s\S]*--muted-foreground:/);
   });
+
+  it("owns standalone warning text through one adaptive semantic token", () => {
+    expect(css).toContain("--color-warning-text: var(--warning-text)");
+    expect(css).toMatch(/:root[\s\S]*--warning-text:/);
+    expect(css).toMatch(/\.dark[\s\S]*--warning-text:/);
+  });
 });

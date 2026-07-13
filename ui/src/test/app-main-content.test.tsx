@@ -45,7 +45,7 @@ describe("AppMainContent", () => {
     )
 
     expect(html).toContain("RunHaven Help")
-    expect(html).toContain("Start safely")
+    expect(html).toContain("Start with recommended settings")
     expect(html).toContain("Find a previous session")
     expect(html).toContain("Fix a setup problem")
     expect(html).toContain("Back to New session")

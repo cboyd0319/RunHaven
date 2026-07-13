@@ -26,7 +26,7 @@ export function HelpView({
         </Button>
       </div>
 
-      <HelpSection title="Start safely">
+      <HelpSection title="Start with recommended settings">
         <ol className="list-decimal space-y-2 pl-5">
           <li>Open New session and choose the assistant account you already use.</li>
           <li>Choose the folder that contains your project.</li>
@@ -94,7 +94,7 @@ function HelpSection({
 }) {
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="font-heading text-xl font-semibold">{title}</h2>
+      <h2 className="font-heading text-base font-semibold">{title}</h2>
       <div className="max-w-2xl leading-relaxed text-muted-foreground">
         {children}
       </div>

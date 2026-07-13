@@ -40,8 +40,9 @@ RunHaven should feel like a calm macOS utility:
 
 ## Logo And Brand Asset
 
-Use `docs/assets/logo.png` as the canonical GUI logo. It is a 512 x 512 RGBA
-PNG with a glass cube over blue and teal stacked layers.
+This historical wireframe used the retired transparent logo. The current
+identity and usage rules live in `docs/design/runhaven-design-spec.md`; the
+approved master is `docs/assets/app-icon.png`.
 
 Usage:
 
@@ -53,8 +54,8 @@ Usage:
   destructive or blocked states.
 - Let the logo guide the surface treatment: dark navy base, translucent
   glass-like panes, thin blue-teal borders, and clear contrast.
-- Keep the asset crisp on Retina screens by using the PNG at rendered sizes
-  well below 512 px.
+- Keep the asset crisp on Retina screens by using the approved master at
+  rendered sizes well below 1024 px.
 - Provide an accessible text label through surrounding text or `alt="RunHaven"`
   if rendered as an image.
 

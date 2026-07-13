@@ -71,7 +71,7 @@ Treat those changes as product changes with scope, verification, and rollback.
 | Test suite | crate-local integration tests plus compiled module tests | Focused Rust tests cover CLI, plans, egress, images, state, worktrees, auth, Tauri commands, and repo policy. The Codex-vendored TUI contains dormant upstream test modules while their parent modules are staged; treat `cargo test -p runhaven-tui --locked -- --list` as the active TUI test registry. |
 | Harness operating layer | `AGENTS.md`, `.agents/skills/`, `feature_list.json`, `current-state.md`, `docs/harness/` | Keep the three startup files compact and load repo-local skills plus focused harness docs only on demand. |
 | Human documentation | `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/` | Docs are product surfaces. Keep macOS 26+ only support, Apple `container` 1.1.0, security boundaries, and command examples aligned with code. |
-| Project assets | `docs/assets/logo.png`, `docs/assets/app-icon.png`, `src-tauri/icons/` | The transparent logo serves README and in-app identity. The full-square app-icon master produces the tracked Tauri desktop bundle assets. |
+| Project assets | `docs/assets/app-icon.png`, `ui/src/assets/app-icon.png`, `src-tauri/icons/`, `crates/runhaven-tui/assets/` | The selected full-square master owns public and in-app identity and produces the tracked Tauri desktop bundle assets. The WebView keeps one packaged copy. The deferred TUI's compile-time Cubby package stays with its crate owner. |
 
 ## Routing Rules
 

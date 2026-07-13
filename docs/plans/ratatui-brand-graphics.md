@@ -123,9 +123,10 @@ RunHaven is a security tool first. The experience principles follow from that.
 
 ## Source Asset and Brand Expansion
 
-Primary source: `docs/assets/logo.png` (verified present): PNG, 512 x 512,
-8-bit/color RGBA, non-interlaced. This is the best first-use asset; no SVG
-conversion or normalization is needed before prototyping.
+The original source named by this historical plan was retired. The current
+identity master is `docs/assets/app-icon.png`: PNG, 1024 x 1024, fully opaque
+RGBA. Future TUI work must re-evaluate whether the current app icon belongs in
+a terminal surface before using it.
 
 The logo has glassy gradients and a square app-icon composition, so it reads
 better as a compact badge or an ambient mark than as a large illustration.

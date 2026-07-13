@@ -12,8 +12,8 @@ in-app help, and first-encounter tips. Scope is what to say and when to show it,
 implemented in React and CSS inside the Tauri WKWebView. This doc is design
 only; it proposes no component code.
 
-It extends `docs/design/native-gui-hig-foundation.md` (the visual and interaction
-bar) and applies the privacy discipline already set in
+It predates `docs/design/runhaven-design-spec.md` (the current visual and
+interaction bar) and applies the privacy discipline already set in
 `docs/design/native-gui-claude-oauth-broker.md` and
 `docs/design/native-gui-terminal-design.md`.
 

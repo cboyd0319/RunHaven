@@ -26,9 +26,11 @@ import { PanelLeftIcon } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
-const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
+// Structural pane widths stay stable while the View menu scales readable text.
+// Root-rem widths made the sidebar consume 512 of 800 pixels at 200% text.
+const SIDEBAR_WIDTH = "264px"
+const SIDEBAR_WIDTH_MOBILE = "288px"
+const SIDEBAR_WIDTH_ICON = "48px"
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
@@ -112,7 +114,7 @@ function SidebarProvider({
 
   // The upstream shadcn sidebar shipped a global Cmd/Ctrl-B keydown here that
   // toggled the sidebar. RunHaven removed it: it fired inside the composer
-  // textarea (colliding with Bold) and was undocumented. Opt-Cmd-S (View menu)
+  // textarea (colliding with Bold) and was undocumented. Ctrl-Cmd-S (View menu)
   // and the sidebar trigger button are the documented toggle. See
   // docs/design/native-gui-navigation-spec.md section 6.
 

@@ -246,9 +246,9 @@ not mounted, credentials not mounted by default, auth scope, network mode, and
 the exact command preview. The generic selection behavior, side-content layout,
 footer rendering, cancellation, and list keys remain Codex source.
 
-Legacy terminal-mascot assets remain under `docs/assets/terminal-mascot/` as
-historical QA/source evidence from the earlier Cubby hero experiment. They are
-not active TUI code.
+Legacy terminal-mascot QA and source exports were removed after the earlier
+Cubby hero experiment ended. The one bundled Cubby package still required for
+workspace compilation lives with its owner under `crates/runhaven-tui/assets/`.
 
 Source-first candidates to evaluate before adding custom TUI behavior:
 

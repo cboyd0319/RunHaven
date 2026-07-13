@@ -432,7 +432,7 @@ real logic change. MIXED = both. All are RunHaven edits (commit-exact baseline).
 
 22 of 26 are pure glue. The 4 BEHAVIOR files are all the sanctioned Cubby
 pet/asset swap, which AGENTS.md explicitly permits ("RunHaven domain data",
-"asset swaps such as `docs/assets/logo.png`"). No unsanctioned behavioral rewrite
+"asset swaps such as `docs/assets/app-icon.png`"). No unsanctioned behavioral rewrite
 of vendored logic was found. This is the strongest single signal that
 vendor-first is being respected at the file level.
 

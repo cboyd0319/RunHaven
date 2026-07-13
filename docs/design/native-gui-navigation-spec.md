@@ -16,8 +16,8 @@ The ideal-state navigation and IA contract for the RunHaven desktop app,
 grounded in Apple HIG guidance fetched 2026-07-01 (see Sources). It is
 deliberately unconstrained by today's implementation; a separate gap-analysis
 pass maps current state to this spec. It authorizes no new backend commands
-and changes no security boundary. Visual rules (type, color, dialog copy) live
-in `docs/design/native-gui-hig-foundation.md`; boundaries live in
+and changes no security boundary. Current visual rules (type, color, dialog
+copy) live in `docs/design/runhaven-design-spec.md`; boundaries live in
 `docs/SECURITY_MODEL.md`. Evidence tags: `[HIG]` cited Apple guidance, `[AK]`
 AppKit/macOS convention not HIG-stated, `[RH]` RunHaven product judgment.
 User-facing labels here are final proposed strings for nontechnical users.
@@ -461,7 +461,7 @@ component pages), `sidebars`, `toolbars`, `windows`, `the-menu-bar`,
 `split-views`, `sheets`, `tab-views`, `keyboards`, `searching`, `settings`,
 `notifications`, `going-full-screen`, `onboarding`.
 
-Repo grounding: `docs/design/native-gui-hig-foundation.md` (visual and dialog
+Repo grounding: `docs/design/runhaven-design-spec.md` (visual and dialog
 rules), `docs/plans/native-gui-wireframe.md` (prior wireframe),
 `docs/DESKTOP_APP.md` (current user-facing behavior), `docs/SECURITY_MODEL.md`
 (boundary), `current-state.md` (product laws cited as "repo law").

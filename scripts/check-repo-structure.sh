@@ -20,9 +20,7 @@ LOCK_LINES=20000
 VENDORED_SOURCE_LINES=12000
 VENDORED_JSON_LINES=25000
 THIRD_PARTY_LINES=5000
-ASSET_JSON_LINES=1000
 BINARY_ASSET_BYTES=$((2048 * KIB))
-SOURCE_IMAGE_BYTES=$((6144 * KIB))
 LOCK_BYTES=$((1024 * KIB))
 PDF_BYTES=$((1024 * KIB))
 SPLIT_HEADROOM_PERCENT=90
@@ -103,12 +101,6 @@ line_limit_for() {
     third_party/**)
       echo "$THIRD_PARTY_LINES"
       ;;
-    docs/assets/skill/**)
-      echo 1000
-      ;;
-    docs/assets/**/*.json|docs/assets/*.json)
-      echo "$ASSET_JSON_LINES"
-      ;;
     docs/plans/**/*.md|docs/plans/*.md|docs/design/**/*.md|docs/design/*.md)
       echo "$PLAN_DOC_LINES"
       ;;
@@ -154,10 +146,10 @@ byte_limit_for() {
     Cargo.lock|ui/package-lock.json)
       echo "$LOCK_BYTES"
       ;;
-    docs/assets/source-images/**)
-      echo "$SOURCE_IMAGE_BYTES"
-      ;;
     docs/assets/**/*.png|docs/assets/**/*.gif|docs/assets/**/*.webp|docs/assets/*.png|docs/assets/*.gif|docs/assets/*.webp)
+      echo "$BINARY_ASSET_BYTES"
+      ;;
+    crates/runhaven-tui/assets/**/*.webp)
       echo "$BINARY_ASSET_BYTES"
       ;;
     # Tauri generates multi-resolution desktop icon containers from the

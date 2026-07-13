@@ -160,6 +160,9 @@ describe("RunHavenSidebar", () => {
 
     expect(html).toContain('aria-describedby="saved-setup-setup-a-status"')
     expect(html).toContain('aria-label="Unpin Codex · RunHaven"')
+    expect(html).toContain("text-warning-text")
+    expect(html).not.toContain("dark:text-")
+    expect(html).not.toContain('text-xs text-warning"')
     expect(html).toContain('role="alert"')
     expect(html).toContain("RunHaven could not update this saved setup.")
   })

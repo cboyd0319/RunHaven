@@ -53,8 +53,9 @@ GUI job is narrower:
 Container management can exist later as expert detail, but it should not be the
 first screen or the mental model for nontechnical users.
 
-Use `docs/assets/logo.png` as the canonical GUI logo. It should appear as a
-small app-identity mark, not a hero, background, splash screen, or mascot-first
+The current identity and usage rules live in
+`docs/design/runhaven-design-spec.md`. Use `docs/assets/app-icon.png` as a small
+app-identity mark, not a hero, background, splash screen, or mascot-first
 surface.
 
 ## Packaging Constraint

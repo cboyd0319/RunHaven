@@ -126,7 +126,8 @@ Tauri launch/run-control behavior.
 - Before every GUI change, enumerate each touched window, destination, control,
   state, and interaction, then check its current official Apple HIG topic and
   update `docs/design/native-gui-uiux-audit.md`. Document security or Tauri
-  deviations. Require macOS design source and packaged live review.
+  deviations. Require macOS design source and packaged live review. Start the
+  live target with `scripts/review-gui.sh`; never reuse a pre-existing process.
 - TUI backlog rule: during the current CLI plus native GUI push, do not spend
   implementation time on `crates/runhaven-tui` or Codex TUI surfaces except to
   revert accidental edits, preserve workspace compilation after CLI/GUI

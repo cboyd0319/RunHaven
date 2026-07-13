@@ -1,4 +1,0 @@
-interface:
-  display_name: "Pet Mascot Studio"
-  short_description: "Build Codex pets and terminal mascots"
-  default_prompt: "Use $pet-mascot-studio to create a complete Codex pet and Terminal.app-safe header mascot from this reference image."

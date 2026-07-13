@@ -172,12 +172,12 @@ Setup:
   runhaven-gui-spike-react --cwd /private/tmp --yes --no-rtl --pointer`
 - `npx shadcn@latest add sidebar alert-dialog dialog field input select
   checkbox table tabs empty alert sheet badge separator --yes`
-- Added a static RunHaven launch shell using `docs/assets/logo.png`.
+- Added a static RunHaven launch shell using the then-current logo, which was
+  removed after the selected app icon became the canonical identity.
 
 Result:
 
-- Screenshot: [React 1080 x 720](../assets/gui-stack-spike/react-1080.png)
-- Screenshot: [React 720 x 560](../assets/gui-stack-spike/react-720.png)
+- Historical screenshots were removed after the stack decision was complete.
 - Dependencies: React 19.2.6, Vite 8.1.2, Tailwind 4, shadcn 4.12.0,
   `radix-ui`, `lucide-react`, `class-variance-authority`,
   `tailwind-merge`, `tw-animate-css`, and Geist font assets.
@@ -200,12 +200,12 @@ Setup:
   `shadcn-svelte/preset`, then ran `npx shadcn-svelte@latest init --preset b0`.
 - Added sidebar, alert dialog, dialog, field, input, select, checkbox, table,
   tabs, empty, alert, sheet, badge, separator, and button components.
-- Added a static RunHaven launch shell using `docs/assets/logo.png`.
+- Added a static RunHaven launch shell using the then-current logo, which was
+  removed after the selected app icon became the canonical identity.
 
 Result:
 
-- Screenshot: [Svelte 1080 x 720](../assets/gui-stack-spike/svelte-1080.png)
-- Screenshot: [Svelte 720 x 560](../assets/gui-stack-spike/svelte-720.png)
+- Historical screenshots were removed after the stack decision was complete.
 - Dependencies: Svelte 5.56.4, Vite 8.1.2, Tailwind 4.3.2,
   `shadcn-svelte` 1.3.0, `@lucide/svelte`, `bits-ui`, `tailwind-variants`,
   `tailwind-merge`, `tw-animate-css`, and Inter font assets.

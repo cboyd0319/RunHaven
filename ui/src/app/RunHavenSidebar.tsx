@@ -7,7 +7,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import logo from "@/assets/logo.png"
+import appIcon from "@/assets/app-icon.png"
 import { Button } from "@/components/ui/button"
 import {
   Sidebar,
@@ -72,13 +72,12 @@ export function RunHavenSidebar({
         <div data-tauri-drag-region className="h-7 shrink-0" />
         <div className="flex items-center gap-3 px-2 py-2">
           <img
-            src={logo}
+            src={appIcon}
             alt=""
-            className="size-12 rounded-xl border bg-background object-cover"
+            className="size-[32px] rounded-[7px] object-cover"
           />
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">
             <div className="font-medium">RunHaven</div>
-            <div className="text-xs text-muted-foreground">Safe coding sessions</div>
           </div>
         </div>
       </SidebarHeader>
@@ -163,7 +162,7 @@ export function RunHavenSidebar({
                     {setup.available === false ? (
                       <span
                         id={`saved-setup-${setup.id}-status`}
-                        className="px-2 text-xs text-warning group-data-[collapsible=icon]:hidden"
+                        className="px-2 text-xs text-warning-text group-data-[collapsible=icon]:hidden"
                       >
                         Project folder can’t be found
                       </span>

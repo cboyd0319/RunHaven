@@ -24,11 +24,11 @@ pub(crate) const RUNHAVEN_BUNDLED_CUBBY_DESCRIPTION: &str =
 
 const CUBBY_PET_JSON: &[u8] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../docs/assets/installed-pet/cubby/pet.json"
+    "/assets/cubby/pet.json"
 ));
 const CUBBY_SPRITESHEET: &[u8] = include_bytes!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../docs/assets/installed-pet/cubby/spritesheet.webp"
+    "/assets/cubby/spritesheet.webp"
 ));
 
 pub(crate) fn is_runhaven_bundled_cubby_selector(selector: &str) -> bool {

@@ -96,10 +96,16 @@ paths without a designed and tested RunHaven boundary.
 
 Design direction: follow system appearance; stay restrained and native-feeling;
 use blue actions, green ready states, amber warnings, and red only for blocked
-or destructive states. The canonical in-app and public logo remains
-`docs/assets/logo.png`. The user-selected, unmasked 1024 by 1024 bundle-icon
-master is `docs/assets/app-icon.png`; Tauri's generated desktop assets are in
-`src-tauri/icons/`.
+or destructive states. `docs/assets/app-icon.png` is the only RunHaven identity
+master; derived WebView and Tauri assets live under `ui/src/assets/` and
+`src-tauri/icons/`. The retired logo and obsolete concept, QA, spike, source,
+skill, and terminal-mascot assets were deleted; the deferred Cubby source
+package moved to `crates/runhaven-tui/assets/`. The canonical brand, visual,
+voice, component, and implementation contract is
+`docs/design/runhaven-design-spec.md`. Deep specialist and independent
+adversarial reviews close with no blocker, high, or medium defect. Fixed sidebar
+and identity geometry leave at least 520 pixels for the main task at 200-percent
+text. Release and migration gaps stay explicit in the spec and current UI audit.
 
 Refresh, polling, and status updates must keep the current workspace stable.
 Session views should update panels in place without full-page blink/remounts,
@@ -112,17 +118,9 @@ use Rust-owned native confirmation and fail closed. State prune stays CLI-only
 because it can erase sign-in state. Live mutation remains a documented
 follow-up. End-user guide: `docs/DESKTOP_APP.md`.
 
-Useful GUI design docs:
-
-- `docs/plans/native-gui-reference-pass.md`
-- `docs/plans/native-gui-stack-spike.md`
-- `docs/plans/native-gui-wireframe.md`
-- `docs/plans/native-gui-managed-sessions.md`
-- `docs/plans/native-gui-session-input-contract.md`
-- `docs/plans/native-gui-microsandbox-reference.md`
-- `docs/design/native-gui-design-resources.md` (Apple HIG and macOS design
-  references)
-- `docs/design/native-gui-uiux-audit.md` (current per-surface HIG contract)
+GUI authority: `docs/design/runhaven-design-spec.md` owns the canonical system;
+`docs/design/native-gui-uiux-audit.md` owns current per-surface HIG evidence.
+Files under `docs/plans/` are historical implementation evidence.
 
 ## Latest State
 
@@ -238,8 +236,8 @@ Useful GUI design docs:
   dialog helper, five no-blink polling fixes, bounded status/registry helpers,
   the metered session-input grant (SECURITY_MODEL.md), control-stripped
   diagnostics, one canonical label vocabulary + accessibility/focus, dead-code
-  deletion, and docs/e2e realignment. The deferred Apple-HIG visual redesign has
-  its references in `docs/design/native-gui-design-resources.md`.
+  deletion, and docs/e2e realignment. The Apple-HIG visual direction is now
+  canonical in `docs/design/runhaven-design-spec.md`.
 - Agent authentication is consistent across CLI and GUI. Claude wraps
   `claude auth login` and requires `claude auth status`; Codex runs `codex login
   --device-auth`; Antigravity wraps first-launch `agy`; Copilot runs `copilot
@@ -359,11 +357,6 @@ supports 80 to 200 percent text, including terminal canvas text, with Increase
 Text Size, Decrease Text Size, and Actual Text Size commands. The bounded choice
 persists locally.
 
-The selected app icon is separate from the public and in-app logo. Its unmasked
-1024 by 1024 RGBA master is `docs/assets/app-icon.png`; the pinned Tauri CLI owns
-`src-tauri/icons/`. The 0.7.0 bundle, NSWorkspace mask, and light/dark rendering
-passed. Direct Dock, Finder, Spotlight, and About inspection remains release QA.
-
 All native confirmations are parented to the trusted main WebviewWindow. A
 cancelled confirmation is a quiet no-op before any mutation; real failures
 remain errors. The custom menu surface is reduced to New Session, text-size,
@@ -389,8 +382,9 @@ Development is **RunHaven Debug** with `dev.runhaven.desktop.debug` and a
 visible `Debug` version suffix; local signing remains **RunHaven Local** with
 `dev.runhaven.desktop.local`; release remains **RunHaven** with
 `dev.runhaven.desktop`. This prevents Debug, Local, and release identities from
-colliding. Multiple old Debug copies can still share the Debug identity, so
-native QA must close stale copies and target the exact newly built app bundle.
+colliding. `scripts/review-gui.sh` now refuses every existing RunHaven process,
+builds and launches one uniquely identified Debug bundle, and prints its exact
+path, identity, PID/start time, build ID, and package hashes for review.
 Desktop setup status also discards raw doctor
 details before WebView serialization and shows only failed checks, so host
 paths, commands, URLs, runtime dumps, and successful technical checks do not
@@ -443,6 +437,6 @@ displays, nontechnical coworker use, and clean-Mac distribution.
 
 ## Next Step
 
-Run the remaining human accessibility checks with a nontechnical coworker.
-Keep TUI deferred. Do not tag, sign, notarize, or distribute until explicitly
-authorized and the Developer ID and clean-Mac distribution gates pass.
+Choose one bounded design migration from the canonical spec, starting with the
+sidebar Unpin action or nested launch groups. Keep TUI deferred and distribution
+gated on legal clearance, human accessibility, Developer ID, and clean-Mac QA.

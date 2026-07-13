@@ -197,7 +197,7 @@ Source-first rule: for any TUI behavior with an equivalent in the pinned
 upstream Codex source at `openai/codex@5267e805fb830891c0b23376bcd9cbd382c3473c:codex-rs/tui`, vendor or adapt
 that source before writing custom code. Rare exceptions are RunHaven domain data,
 RunHaven security-boundary mapping, RunHaven asset swaps such as
-`docs/assets/logo.png`, and small glue where Codex has no equivalent. Every
+`docs/assets/app-icon.png`, and small glue where Codex has no equivalent. Every
 exception needs a short note in this plan or `docs/plans/tui-architecture.md`.
 
 We vendor the proven primitives first and adapt only the parts tied to Codex's
