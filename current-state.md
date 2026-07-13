@@ -429,18 +429,20 @@ its next action. No command, capability, dependency, setting, mutation path, or
 safety boundary changed.
 
 The macOS specialist fully reviewed the supplied sources, implementation, and
-exact 0.7.0 debug app, then approved remediation with no medium-or-higher issue.
-Full `./init.sh`, 339 frontend tests, nine Playwright and axe flows, TypeScript,
-production build, 21 menu tests, structure, docs, JSON, and diff checks pass.
-One app bundle remains and both its plist and the CLI report 0.7.0. VoiceOver,
-Voice Control, Switch Control, reduced transparency, localization, and
-multiple-display use remain human QA gaps.
+exact 0.7.0 debug app, then approved it with no medium-or-higher issue. Full
+`./init.sh` and the focused GUI checks pass. A live macOS accessibility-tree
+check covered Home, New session, Help return paths, focus order, disabled-action
+skipping, field names, and validation. Test values were restored and the app
+was closed. One bundle remains; its plist and the CLI report 0.7.0.
 
-Superseded navigation and terminal details live in `feature_list.json` and the
-historical design documents, not this restart handoff.
+Release preflight and staging tests pass under Xcode 27.0 beta build 27A5218g.
+Distribution remains fail-closed without an exact `v0.7.0` tag, Developer ID
+identity, provisioning profile, and notary profile. Human QA still covers
+assistive technologies, visual accessibility settings, localization, multiple
+displays, nontechnical coworker use, and clean-Mac distribution.
 
 ## Next Step
 
-Rebuild the exact 0.7.0 debug bundle from this commit, then run the remaining
-human accessibility checks with a nontechnical coworker. Keep TUI deferred and
-do not distribute until Developer ID notarization and clean-Mac distribution gates pass.
+Run the remaining human accessibility checks with a nontechnical coworker.
+Keep TUI deferred. Do not tag, sign, notarize, or distribute until explicitly
+authorized and the Developer ID and clean-Mac distribution gates pass.
