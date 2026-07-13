@@ -3,8 +3,8 @@ import { createElement } from "react"
 import { createRoot } from "react-dom/client"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { MaintenanceView } from "../app/views/MaintenanceView"
-
+import { DiagnosticsView } from "../app/views/DiagnosticsView"
+import { dashboard } from "./main-view-props"
 import { act } from "./render-hook"
 
 vi.mock("@/commands/runhaven", async (importActual) => {
@@ -27,32 +27,36 @@ beforeEach(() => {
   prune.mockReset()
 })
 
-describe("network cleanup flow", () => {
-  it("warns when one or more stale networks could not be removed", async () => {
+describe("System details network cleanup", () => {
+  it("loads on entry, removes in one click, and reports partial failure", async () => {
     getPreview.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 0 })
     prune.mockResolvedValue({ removed: 0, failed: 1 })
     const container = document.createElement("div")
     const root = createRoot(container)
-    await act(async () => {
-      root.render(createElement(MaintenanceView, { setupReady: true }))
-    })
 
-    const button = (label: string) =>
-      Array.from(container.querySelectorAll("button")).find((item) =>
-        item.textContent?.includes(label),
+    await act(async () => {
+      root.render(
+        createElement(DiagnosticsView, {
+          dashboard: dashboard(true),
+          refreshing: false,
+          onRefresh: () => {},
+        }),
       )
-    await act(async () => {
-      button("Check for stale networks")?.click()
-    })
-    expect(container.textContent).toContain("Remove stale networks")
-    await act(async () => {
-      button("Remove stale networks")?.click()
     })
 
-    expect(container.textContent).toContain("Could not remove 1")
-    expect(container.textContent).not.toContain("Cleanup finished")
+    const remove = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Remove stale networks"),
+    )
+    expect(remove).toBeDefined()
+    expect(remove?.disabled).toBe(false)
+
     await act(async () => {
-      root.unmount()
+      remove?.click()
     })
+
+    expect(prune).toHaveBeenCalledTimes(1)
+    expect(container.textContent).toContain("Could not remove 1 network")
+    expect(container.textContent).not.toContain("Cleanup complete")
+    await act(async () => root.unmount())
   })
 })

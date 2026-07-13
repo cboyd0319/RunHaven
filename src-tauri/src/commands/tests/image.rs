@@ -17,7 +17,7 @@ fn launch_run_blocks_missing_bundled_image() {
     .expect("image readiness error");
 
     assert!(error.contains("Image for codex is missing"));
-    assert!(error.contains("Open Agents and install this agent"));
+    assert!(error.contains("Open New Session and install this agent"));
     assert!(!error.contains("runhaven image rebuild codex"));
 }
 

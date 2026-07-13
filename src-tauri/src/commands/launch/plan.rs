@@ -320,7 +320,7 @@ pub(crate) fn image_readiness_error(
         return None;
     }
     Some(format!(
-        "Image for {agent} is {status}: {image}. Open Agents and install this agent before launching."
+        "Image for {agent} is {status}: {image}. Open New Session and install this agent before launching."
     ))
 }
 

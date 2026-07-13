@@ -1,4 +1,6 @@
 {
+  "productName": "RunHaven Debug",
+  "identifier": "dev.runhaven.desktop.debug",
   "app": {
     "security": {
       "capabilities": [

@@ -31,6 +31,7 @@ import {
   loginTerminalConfig,
   runTerminalConfig,
   TerminalDisclosure,
+  terminalStatusText,
 } from "./terminalPresentation"
 
 // Bounded in-WebView scrollback (design F5). The raw stream lives only here, in
@@ -53,7 +54,7 @@ type TerminalInteractionError = {
 type TerminalOpen = (
   sessionId: string,
   onMessage: (message: TerminalMessage) => void,
-) => Promise<void>
+) => Promise<boolean>
 
 export type TerminalPanelProps =
   | { session: ManagedSessionSummary; login?: undefined; run?: undefined }
@@ -255,7 +256,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
         observer.observe(container)
       }
       try {
-        await open(sessionId, (message) => {
+        const opened = await open(sessionId, (message) => {
           if (disposed || !term) {
             return
           }
@@ -279,6 +280,12 @@ export function TerminalPanel(props: TerminalPanelProps) {
           }
         })
         if (disposed || !term) {
+          return
+        }
+        if (!opened) {
+          setErrorText("")
+          setPhase("idle")
+          setActive(false)
           return
         }
         // Make sure the guest starts at the current viewport size.
@@ -425,24 +432,4 @@ export function TerminalPanel(props: TerminalPanelProps) {
       </CardContent>
     </Card>
   )
-}
-
-function terminalStatusText(
-  phase: TerminalPhase,
-  connectedText: string,
-  endedText: string,
-  escapeTarget: string,
-): string {
-  switch (phase) {
-    case "opening":
-      return "Confirm the terminal in the dialog to start."
-    case "live":
-      // Discoverable keyboard escape (WCAG 2.1.2): the aria-live status names the
-      // chord and where it lands, so keyboard and screen-reader users can leave.
-      return `${connectedText} To leave with the keyboard, press Shift+Esc to move to the ${escapeTarget} button.`
-    case "ended":
-      return endedText
-    default:
-      return ""
-  }
 }

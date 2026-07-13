@@ -4,32 +4,29 @@
 //! only emits its own id string to the main window WebView over the
 //! [`MENU_COMMAND_EVENT`] event. The frontend listener
 //! (`ui/src/app/useMenuEvents.ts`) translates ids into the same UI affordances
-//! a click would use: open the launch sheet, open the settings dialog, select
-//! a sidebar row, or focus an existing confirm control. Mutations keep
-//! flowing through the existing
+//! a click would use: open New Session, open inline Settings, or focus
+//! an existing confirm control. Mutations keep flowing through the existing
 //! invoke commands and their Rust-owned native dialogs; in particular the
 //! Stop and Hard Stop items never call `stop_managed_session` or
 //! `kill_managed_session` themselves, they only surface the existing stop
-//! affordance which still requires its confirm step plus the native dialog.
+//! affordance; the Rust-owned native dialog remains the confirmation boundary.
 //!
-//! Enable-state sync: session-scoped items and the Cmd-1..9 selectors are
-//! built disabled and turned on by [`sync_menu_state`] (see
-//! [`apply_menu_state`]) as the main window's selection and session list
-//! change, so a shortcut with no target grays out instead of silently doing
-//! nothing. The frontend sends only booleans and a count ([`MenuState`]) when
+//! Enable-state sync: contextual Run items are built disabled and turned on by
+//! [`sync_menu_state`] (see [`apply_menu_state`]) as the main window's
+//! selection changes, so an action with no target grays out instead of silently
+//! doing nothing. The frontend sends only primitive state ([`MenuState`]) when
 //! the derived state actually changes, not on every poll; Rust owns the item
 //! handles and the id-to-flag mapping. Enabling an item never lets it mutate:
 //! the frontend handler plus the Rust-owned native dialog still gate every
-//! action. The only permanently disabled items are placeholders for surfaces
-//! that do not exist yet (the session filter and Help content).
+//! action.
 //!
-//! Focus rule: session-scoped items ([`spec::session_scoped_ids`], the
-//! Session menu) act on the main window's selected session, so they dispatch
+//! Focus rule: session-scoped items ([`spec::session_scoped_ids`], the Run
+//! menu) act on the main window's selected session, so they dispatch
 //! only while no monitor window is focused. A user watching session A in a
 //! monitor window must not trigger a shortcut that silently targets the main
 //! window's selection (possibly session B); the event is dropped instead.
-//! Global items (navigation, session selection, refresh, New Run, agent
-//! surfaces) are unambiguous and dispatch from any window.
+//! Global items (Settings, New Session, and the sidebar toggle) are unambiguous and
+//! dispatch from any window.
 //!
 //! Standard system items (About, Services, Hide, Quit, Undo/Redo, clipboard,
 //! Close Window, Minimize, Zoom, Full Screen) use [`PredefinedMenuItem`] so
@@ -59,11 +56,9 @@ use crate::session_windows::SESSION_WINDOW_LABEL_PREFIX;
 pub const MENU_COMMAND_EVENT: &str = "menu://command";
 
 /// Retained handles for the menu items `sync_menu_state` toggles. muda's
-/// `Menu::get` and `Submenu::get` search only their own direct children
-/// (verified against the pinned tauri 2.11.3 source), so nested items (the
-/// Session menu, the Select Session submenu) could not be looked up by id
-/// after build. Keeping the `MenuItem` handles the builder already created is
-/// the reliable path; each handle is an `Arc` clone, so this is cheap.
+/// Keeping the `MenuItem` handles the builder already created is more reliable
+/// than looking them up after build; each handle is an `Arc` clone, so this is
+/// cheap.
 struct DynamicMenuItems<R: Runtime> {
     items: HashMap<&'static str, MenuItem<R>>,
 }
@@ -99,8 +94,8 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 }
 
 /// Apply the WebView's reported [`MenuState`] to the retained dynamic items:
-/// enable exactly the session-scoped and selector items that apply right now,
-/// and disable the rest. Called only by the `sync_menu_state` command. Toggling
+/// enable exactly the contextual Run items that apply right now, and disable
+/// the rest. Called only by the `sync_menu_state` command. Toggling
 /// enable state is not a mutation of session state; the frontend handler and
 /// the Rust-owned native dialog still gate every action behind these items.
 pub(crate) fn apply_menu_state<R: Runtime>(
@@ -156,21 +151,14 @@ fn append_entry<R: Runtime>(
         Entry::Command(spec) => {
             let item = MenuItem::with_id(app, spec.id, spec.label, spec.enabled, spec.accelerator)?;
             // Retain a handle for items the sync path drives so their enabled
-            // state can be updated after build; global and placeholder items
-            // keep their built state and need no handle.
+            // state can be updated after build; global items keep their built
+            // state and need no handle.
             if is_dynamic_menu_id(spec.id) {
                 dynamic_items.insert(spec.id, item.clone());
             }
             submenu.append(&item)
         }
         Entry::Separator => submenu.append(&PredefinedMenuItem::separator(app)?),
-        Entry::Submenu { label, entries } => {
-            let child = Submenu::new(app, *label, true)?;
-            for child_entry in *entries {
-                append_entry(app, &child, child_entry, dynamic_items)?;
-            }
-            submenu.append(&child)
-        }
         Entry::Predefined(kind) => append_predefined(app, submenu, kind),
     }
 }

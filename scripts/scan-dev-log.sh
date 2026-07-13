@@ -7,12 +7,16 @@
 set -u
 
 logs=(
+  "$HOME/Library/Logs/dev.runhaven.desktop.debug/runhaven.log"
   "$HOME/Library/Logs/dev.runhaven.desktop/runhaven.log"
+  "$HOME/Library/Logs/dev.runhaven.desktop.local/runhaven.log"
   "$HOME/Library/Logs/RunHaven/dev.log"
 )
 # Rotated files too.
 shopt -s nullglob
+logs+=("$HOME/Library/Logs/dev.runhaven.desktop.debug/"runhaven_*.log)
 logs+=("$HOME/Library/Logs/dev.runhaven.desktop/"runhaven_*.log)
+logs+=("$HOME/Library/Logs/dev.runhaven.desktop.local/"runhaven_*.log)
 shopt -u nullglob
 
 # Token/secret shapes. sk-ant- is the Claude OAuth/API token prefix; the hex

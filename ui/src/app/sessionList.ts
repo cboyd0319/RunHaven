@@ -7,6 +7,21 @@ import type {
   ManagedSessionSummary,
 } from "@/commands/runhaven"
 
+// Sign-in helpers and the CLI-only shell use managed run records internally,
+// but they are not work the user asked RunHaven to remember. Keeping this one
+// filter at the presentation boundary prevents those implementation details
+// from polluting Home, History, badges, or menu state without changing the
+// backend record or weakening its audit trail.
+export function userSessions(
+  sessions: ManagedSessionSummary[],
+): ManagedSessionSummary[] {
+  return sessions.filter(
+    (session) =>
+      session.agent.trim().toLowerCase() !== "shell" &&
+      session.project.trim().toLowerCase() !== "login-workspace",
+  )
+}
+
 // Compile-time drift guards for the equality helpers below; see
 // appStatusEquality.ts for the pattern.
 const managedSessionSummaryChecked = {

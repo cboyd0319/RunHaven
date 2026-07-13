@@ -49,7 +49,7 @@ describe("SessionAttentionBanner", () => {
     expect(html).not.toContain("Not responding")
   })
 
-  it("offers the Agents view as the sign-in fix", () => {
+  it("offers one contextual sign-in fix", () => {
     const html = renderToStaticMarkup(
       <SessionAttentionBanner
         session={managedSession({ authStatus: "needs-sign-in" })}
@@ -57,8 +57,9 @@ describe("SessionAttentionBanner", () => {
       />,
     )
     expect(html).toContain("Needs sign-in")
-    expect(html).toContain("Sign in to Codex in Agents")
-    expect(html).toContain("Open Agents")
+    expect(html).toContain("Sign in to Codex")
+    expect(html).not.toContain("Agents")
+    expect(html).toContain(">Sign in<")
   })
 
   it("names the repair control for a not-responding session", () => {
@@ -68,11 +69,12 @@ describe("SessionAttentionBanner", () => {
           nextAction: { kind: "recover", label: "Repair", detail: "" },
         })}
         onNavigate={onNavigate}
+        onRepair={() => undefined}
       />,
     )
     expect(html).toContain("Not responding")
-    expect(html).toContain("More actions")
-    expect(html).toContain("Run actions")
+    expect(html).toContain("Repair run record")
+    expect(html).not.toContain("More actions")
   })
 
   it("points a finished worktree run at the review below", () => {

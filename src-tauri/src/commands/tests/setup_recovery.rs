@@ -51,6 +51,26 @@ fn failed_container_system_check_offers_only_the_fixed_start_action() {
 }
 
 #[test]
+fn desktop_setup_check_copy_never_exposes_raw_doctor_output() {
+    let status = check_status(Check {
+        name: "container system".to_string(),
+        ok: false,
+        detail: "appRoot /Users/example/Library/Application Support/com.apple.container"
+            .to_string(),
+        remedy: "Run `/usr/local/bin/container system start`.".to_string(),
+    });
+
+    let serialized = serde_json::to_string(&status).expect("serialize check");
+    assert!(!serialized.contains("/Users/example"));
+    assert!(!serialized.contains("/usr/local/bin"));
+    assert_eq!(
+        status.detail,
+        "Apple container's local service is not running."
+    );
+    assert_eq!(status.remedy, "Start the service, then check again.");
+}
+
+#[test]
 fn setup_recovery_request_accepts_only_an_opaque_supported_action_id() {
     let request: SetupRecoveryRequest = serde_json::from_value(serde_json::json!({
         "actionId": "start-container-system"
@@ -216,7 +236,7 @@ fn setup_recovery_hides_process_errors_from_the_webview() {
 
     assert_eq!(
         error,
-        "RunHaven could not start the container service. Open System Check or try again."
+        "RunHaven could not start the container service. Open System details or try again."
     );
     assert!(!error.contains("/Users/"));
     assert!(!error.contains("secret"));
@@ -327,7 +347,7 @@ fn exit_zero_is_not_success_until_the_service_recheck_passes() {
     assert_eq!(status_checks, 3);
     assert_eq!(
         error,
-        "The container service did not become ready. Open System Check or try again."
+        "The container service did not become ready. Open System details or try again."
     );
 }
 

@@ -148,8 +148,7 @@ export function RunStatusCard({
                   More actions
                 </summary>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Use these only when a normal stop does not work or a saved run
-                  record is stale.
+                  Use hard stop only when a normal stop does not work.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button
@@ -160,15 +159,6 @@ export function RunStatusCard({
                     onClick={() => void onControl("kill")}
                   >
                     Hard stop
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    aria-label="Repair run record"
-                    disabled={controlBusy}
-                    onClick={() => void onControl("repair")}
-                  >
-                    Repair run record
                   </Button>
                 </div>
               </details>

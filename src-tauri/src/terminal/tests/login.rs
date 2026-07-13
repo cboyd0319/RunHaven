@@ -5,7 +5,7 @@
 
 use super::{FakeTerminal, open_fake};
 use crate::terminal::{
-    MAX_TERMINAL_SESSIONS, SpawnedTerminal, TERMINAL_CANCELED, TerminalSessionRegistry,
+    MAX_TERMINAL_SESSIONS, SpawnedTerminal, TerminalSessionRegistry,
     open_agent_sign_in_terminal_for_test,
 };
 
@@ -15,7 +15,7 @@ fn open_login_fake(
     registry: &TerminalSessionRegistry,
     agent: &str,
     login_id: &str,
-) -> (Result<(), String>, FakeTerminal) {
+) -> (Result<bool, String>, FakeTerminal) {
     let fake = FakeTerminal::default();
     let spawn_fake = fake.clone();
     let result = open_agent_sign_in_terminal_for_test(
@@ -54,7 +54,7 @@ fn login_terminal_confirm_cancel_spawns_nothing() {
         |_| Ok(false),
         |_, _| panic!("cancel must spawn nothing"),
     );
-    assert_eq!(result, Err(TERMINAL_CANCELED.to_string()));
+    assert_eq!(result, Ok(false));
     assert!(registry.remove("login-cancel").is_none());
 }
 

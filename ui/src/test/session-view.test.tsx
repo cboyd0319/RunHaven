@@ -42,7 +42,7 @@ describe("SessionView", () => {
     )
   })
 
-  it("offers the terminal only for a running session", () => {
+  it("keeps the terminal in Advanced tools and only while running", () => {
     const disclosure = "RunHaven does not filter, read, store, or log it"
 
     const running = managedSession()
@@ -52,6 +52,7 @@ describe("SessionView", () => {
         selectedSession={running}
       />,
     )
+    expect(runningHtml).toContain("Advanced tools")
     expect(runningHtml).toContain(disclosure)
 
     const finished = managedSession({ lifecycle: "finished" })
@@ -62,6 +63,20 @@ describe("SessionView", () => {
       />,
     )
     expect(finishedHtml).not.toContain(disclosure)
+  })
+
+  it("does not offer Message or Terminal after a run ends", () => {
+    for (const lifecycle of ["failed", "finished"] as const) {
+      const session = managedSession({ lifecycle })
+      const html = renderToStaticMarkup(
+        <SessionView
+          {...mainViewProps({ selectedSession: session })}
+          selectedSession={session}
+        />,
+      )
+      expect(html).not.toContain(">Message<")
+      expect(html).not.toContain("Attach terminal")
+    }
   })
 
   it("keeps runtime and diagnostics detail behind a closed Details disclosure", () => {

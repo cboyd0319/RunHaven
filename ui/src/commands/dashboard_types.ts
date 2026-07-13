@@ -51,8 +51,8 @@ export type RunSummary = {
   session: string;
 };
 
-// Per-agent sign-in state for the Home "Agent setup" panel. Backend-derived and
-// secret-free: `category` reflects only what RunHaven can truthfully know
+// Per-agent sign-in state for New Session. Backend-derived and secret-free:
+// `category` reflects only what RunHaven can truthfully know
 // (Shell needs no auth; product agents use secret-free native sign-in state).
 // `label` is an agent-state string, never a claim that RunHaven manages the
 // credential.

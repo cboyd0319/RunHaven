@@ -8,19 +8,16 @@ import {
   sessionAllowsRunControl,
 } from "./ManagedSessionCard"
 import type { NavDestination } from "./navigation"
-import { sessionAttention } from "./sessionAttention"
 import { sessionAllowsWorktreeReview } from "./worktreeReview"
 
 // Which selection-scoped menu items apply right now. Computed from the exact
-// same helpers the sidebar, session view, and attention badge use, so the
+// same helpers the session view uses, so the
 // grayed-out menu always matches what the window actually offers:
 // - run control (Stop/Hard Stop/Repair) shares the run-control card's gate
 // - the message composer shows only for a monitor session
-// - the output confirm surface and Open in New Window need a real selection
+// - the output action and Open in New Window need a real selection
 // - clean up mirrors the session view, which hides it while the worktree
 //   review owns removal
-// - Jump needs a session that actually needs the user
-// - the count drives Cmd-1..9 and next/previous
 export function computeMenuState(
   sessions: ManagedSessionSummary[],
   navigation: NavDestination,
@@ -31,7 +28,6 @@ export function computeMenuState(
       : null
   const hasSelected = selected !== null
   return {
-    hasSelectedSession: hasSelected,
     selectedSessionCanRunControl: selected
       ? sessionAllowsRunControl(selected)
       : false,
@@ -43,10 +39,6 @@ export function computeMenuState(
       ? sessionAllowsCleanup(selected) && !sessionAllowsWorktreeReview(selected)
       : false,
     selectedSessionCanOpenWindow: hasSelected,
-    hasAttentionSession: sessions.some(
-      (session) => sessionAttention(session) !== null,
-    ),
-    sessionCount: sessions.length,
   }
 }
 
@@ -54,14 +46,11 @@ export function computeMenuState(
 // join is enough and never re-invokes on an unchanged state.
 function menuStateKey(state: MenuState): string {
   return [
-    state.hasSelectedSession,
     state.selectedSessionCanRunControl,
     state.selectedSessionCanSendInput,
     state.selectedSessionCanViewOutput,
     state.selectedSessionHasCleanup,
     state.selectedSessionCanOpenWindow,
-    state.hasAttentionSession,
-    state.sessionCount,
   ].join("|")
 }
 

@@ -242,7 +242,9 @@ export async function planRun(request: RunPlanRequest): Promise<RunPlanResponse>
   return call("plan_run", { request }, () => previewPlanRun(request));
 }
 
-export async function launchRun(request: LaunchRunRequest): Promise<LaunchRunResponse> {
+export async function launchRun(
+  request: LaunchRunRequest
+): Promise<LaunchRunResponse | null> {
   return call("launch_run", { request }, () => previewLaunchRun(request));
 }
 

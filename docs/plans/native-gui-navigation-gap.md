@@ -2,6 +2,11 @@
 
 Last updated: 2026-07-01 UTC
 
+> Historical implementation tracker, superseded 2026-07-13. It explains the
+> earlier navigation build but is not the current product target. The current
+> simplified surface is documented in `docs/DESKTOP_APP.md` and
+> `current-state.md`.
+
 Correction tracker mapping `docs/design/native-gui-navigation-spec.md` (the
 target) against the app as it exists today. Read-only analysis; no behavior
 changes here. Line references are to the files as of branch

@@ -46,6 +46,7 @@ const handlers = {
   onPickFolder: async () => {},
   onRequestChange: () => {},
   onNetworkChange: () => {},
+  onInstallImage: () => {},
   onCancel: () => {},
   onBack: () => {},
   onContinue: () => {},
@@ -113,13 +114,13 @@ describe("LaunchPlanCard", () => {
     expect(html).not.toContain("Review access");
   });
 
-  it("shows the setup blocker and disables continue while setup is broken", () => {
+  it("leaves the contextual setup explanation to New Session and disables continue", () => {
     const html = renderToStaticMarkup(
       <LaunchPlanCard {...agentProps()} setupOk={false} />
     );
 
-    expect(html).toContain("Setup needs attention");
-    expect(html).toContain("Fix the setup problem on Home before starting a run.");
+    expect(html).not.toContain("Setup needs attention");
+    expect(html).not.toContain("Fix the setup problem on Home before starting a run.");
     expect(html).toContain('disabled=""');
   });
 
@@ -148,7 +149,8 @@ describe("LaunchPlanCard", () => {
       />
     );
 
-    expect(html).toContain("Open Agents to install this agent before continuing.");
+    expect(html).toContain("Install this agent before starting a run.");
+    expect(html).toContain("Install Codex");
     expect(html).not.toContain("runhaven image build codex");
     expect(html).toContain('disabled=""');
   });

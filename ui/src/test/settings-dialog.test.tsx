@@ -2,7 +2,7 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { SettingsForm } from "../app/SettingsDialog"
+import { SettingsForm } from "../app/SettingsForm"
 import { useSettings, type SettingsState } from "../app/useSettings"
 
 import { installLocalStorageStub } from "./local-storage"
@@ -31,7 +31,7 @@ describe("SettingsForm", () => {
         agents={[providerAgent, localAgent]}
       />,
     )
-    expect(markup).toContain("Show a number on the app icon")
+    expect(markup).toContain("App icon count")
     expect(markup).toContain("The number counts sessions that need you.")
     expect(markup).toContain("Start new runs with")
     expect(markup).toContain("You can still change")

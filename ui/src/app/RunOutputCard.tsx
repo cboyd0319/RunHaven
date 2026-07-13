@@ -10,33 +10,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 
 import { Metric } from "./Metric"
 import { displayValue } from "./sessionIdentity"
 
 export function RunOutputCard({
-  logAcknowledged,
   logLoading,
   logError,
   logSnapshot,
-  liveOutputAvailable,
-  liveOutputEnabled,
-  liveOutputRefreshing,
-  onAcknowledgedChange,
   onLoad,
-  onLiveOutputChange,
 }: {
-  logAcknowledged: boolean
   logLoading: boolean
   logError: string
   logSnapshot: LogSnapshotResponse | null
-  liveOutputAvailable: boolean
-  liveOutputEnabled: boolean
-  liveOutputRefreshing?: boolean
-  onAcknowledgedChange: (checked: boolean) => void
   onLoad: () => Promise<void>
-  onLiveOutputChange: (checked: boolean) => void
 }) {
   const warnings = logSnapshot?.warnings ?? []
 
@@ -49,63 +36,15 @@ export function RunOutputCard({
         <CardDescription>Load a bounded output snapshot.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
-          <Checkbox
-            checked={logAcknowledged}
-            aria-label="I understand raw output may include private data."
-            onCheckedChange={(checked) => {
-              const acknowledged = checked === true
-              onAcknowledgedChange(acknowledged)
-              if (!acknowledged) {
-                onLiveOutputChange(false)
-              }
-            }}
-          />
-          <span>I understand raw output may include private data.</span>
-        </label>
-        {liveOutputAvailable ? (
-          <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
-            <Checkbox
-              checked={liveOutputEnabled}
-              disabled={!logAcknowledged}
-              aria-label="Keep output updated"
-              onCheckedChange={(checked) => onLiveOutputChange(checked === true)}
-            />
-            <span className="flex min-w-0 flex-col gap-1">
-              <span>Keep output updated</span>
-              <span className="text-muted-foreground">
-                {!logAcknowledged
-                  ? "Confirm raw output first."
-                  : liveOutputEnabled
-                  ? liveOutputRefreshing
-                    ? "Checking for new lines."
-                    : "Updates every few seconds."
-                  : "Refresh while this view stays open."}
-              </span>
-            </span>
-          </label>
-        ) : null}
         <Button
           type="button"
           variant="outline"
-          disabled={!logAcknowledged || logLoading}
-          aria-label={
-            logLoading
-              ? "Loading latest output"
-              : logAcknowledged
-              ? "Load latest output"
-              : "Load latest output: confirm raw output first"
-          }
-          aria-describedby={logAcknowledged ? undefined : "run-output-ack-hint"}
+          disabled={logLoading}
+          aria-label={logLoading ? "Loading latest output" : "Show latest output"}
           onClick={() => void onLoad()}
         >
-          {logLoading ? "Loading..." : "Load latest output"}
+          {logLoading ? "Loading..." : "Show latest output"}
         </Button>
-        {!logAcknowledged ? (
-          <p id="run-output-ack-hint" className="text-sm text-muted-foreground">
-            To load output, first check the box above to confirm raw output.
-          </p>
-        ) : null}
         {logError ? (
           <Alert variant="destructive">
             <CircleAlert />

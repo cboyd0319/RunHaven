@@ -30,7 +30,11 @@ pub(crate) async fn get_managed_session_log_snapshot(
     if !super::log_snapshot::trusted_sensitive_output_approved(
         app,
         "Confirm raw output view",
-        trusted_session_output_message(&prepared.session, prepared.lines),
+        trusted_session_output_message(
+            &prepared.session.title,
+            &prepared.session.status_label,
+            prepared.lines,
+        ),
     )
     .await?
     {
@@ -181,10 +185,8 @@ fn managed_session_log_snapshot_response(
     ManagedSessionLogSnapshotResponse { session, snapshot }
 }
 
-#[cfg(not(test))]
-fn trusted_session_output_message(session: &ManagedSessionSummaryData, lines: u32) -> String {
+pub(crate) fn trusted_session_output_message(title: &str, status: &str, lines: u32) -> String {
     format!(
-        "Session: {}\nSession ID: {}\nStatus: {}\nLines: {lines}\n\nRaw output may include secrets. Show output?",
-        session.title, session.id, session.status_label
+        "Session: {title}\nStatus: {status}\nLines: {lines}\n\nRaw output may include secrets. Show output?"
     )
 }

@@ -49,7 +49,19 @@ export function SessionView(
       <SessionAttentionBanner
         session={props.selectedSession}
         onNavigate={props.onNavigate}
+        onSignIn={(agent) => {
+          props.launchFlow.changeAgent(agent)
+          props.launchFlow.setLaunchStep("agent")
+          props.onNavigate({ kind: "new-session" })
+        }}
+        onRepair={() => void props.onControl("repair")}
       />
+      {worktreeReviewEligible ? (
+        <SessionWorktreeReview
+          session={props.selectedSession}
+          onResolved={props.onWorktreeResolved}
+        />
+      ) : null}
       {showRunControlCard ? (
         <RunStatusCard
           title="Run actions"
@@ -65,29 +77,29 @@ export function SessionView(
           onControl={props.onControl}
         />
       ) : null}
-      {worktreeReviewEligible ? (
-        <SessionWorktreeReview
-          session={props.selectedSession}
-          onResolved={props.onWorktreeResolved}
-        />
-      ) : null}
       <SessionLabelEditor session={props.selectedSession} />
       <ManagedSessionCard session={props.selectedSession} />
       <OutputView runOutput={props.runOutput} />
-      <SessionInputCard
-        session={props.selectedSession}
-        draft={props.sessionInputDraft}
-        sending={props.sessionInputSending}
-        error={props.sessionInputError}
-        acceptedMessage={props.sessionInputAcceptedMessage}
-        onDraftChange={props.onSessionInputDraftChange}
-        onSend={props.onSendSelectedSessionInput}
-      />
       {runControlsAvailable ? (
-        // Terminal is a secondary action for a live session only: the same
-        // running/starting states that allow run control. Its own card carries
-        // the standing no-filter/no-store disclosure.
-        <TerminalPanel session={props.selectedSession} />
+        <SessionInputCard
+          session={props.selectedSession}
+          draft={props.sessionInputDraft}
+          sending={props.sessionInputSending}
+          error={props.sessionInputError}
+          acceptedMessage={props.sessionInputAcceptedMessage}
+          onDraftChange={props.onSessionInputDraftChange}
+          onSend={props.onSendSelectedSessionInput}
+        />
+      ) : null}
+      {runControlsAvailable ? (
+        <details className="rounded-lg border bg-card p-4">
+          <summary className="cursor-pointer text-sm font-medium">
+            Advanced tools
+          </summary>
+          <div className="mt-4">
+            <TerminalPanel session={props.selectedSession} />
+          </div>
+        </details>
       ) : null}
       <SessionDetails {...props} />
     </div>
@@ -237,16 +249,10 @@ export function OutputView({
 }) {
   return (
     <RunOutputCard
-      logAcknowledged={runOutput.acknowledged}
       logLoading={runOutput.loading}
       logError={runOutput.error}
       logSnapshot={runOutput.visibleSnapshot}
-      liveOutputAvailable={runOutput.liveAvailable}
-      liveOutputEnabled={runOutput.liveEnabled}
-      liveOutputRefreshing={runOutput.liveRefreshing}
-      onAcknowledgedChange={runOutput.setAcknowledged}
       onLoad={runOutput.loadSnapshot}
-      onLiveOutputChange={runOutput.setLiveEnabled}
     />
   )
 }

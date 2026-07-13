@@ -111,7 +111,7 @@ export function SetupCard({
           <p className="text-sm text-muted-foreground">
             {remainingFailures} more setup{" "}
             {remainingFailures === 1 ? "check needs" : "checks need"} attention.
-            Open System Check for full details.
+            Open System details for the rest.
           </p>
         ) : null}
         {recoveryMessage ? (
@@ -146,7 +146,7 @@ export function SetupCard({
                 onClick={onOpenDiagnostics}
               >
                 <ArrowUpRight />
-                Open System Check
+                System details
               </Button>
             ) : null}
             {onCheckAgain ? (

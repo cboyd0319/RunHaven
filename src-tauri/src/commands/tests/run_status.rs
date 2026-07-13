@@ -120,3 +120,11 @@ fn dashboard_status_omits_raw_workspace_paths_and_state_volumes() {
         );
     }
 }
+
+#[test]
+fn debug_dashboard_identifies_itself_as_a_debug_build() {
+    assert_eq!(
+        desktop_app_version(),
+        concat!(env!("CARGO_PKG_VERSION"), " Debug")
+    );
+}

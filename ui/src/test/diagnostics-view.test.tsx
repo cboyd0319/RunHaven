@@ -13,50 +13,45 @@ function viewProps(patch: Partial<Parameters<typeof DiagnosticsView>[0]> = {}) {
   return {
     dashboard: dashboard(true),
     refreshing: false,
-    diagnostics: null,
-    diagnosticsLoading: false,
-    diagnosticsError: "",
-    onLoadDiagnostics: async () => {},
     onRefresh: () => {},
     ...patch,
   }
 }
 
 describe("DiagnosticsView", () => {
-  it("shows full doctor detail: every setup check with its result", () => {
+  it("shows only setup problems with a direct next action", () => {
     const html = renderToStaticMarkup(
       <DiagnosticsView {...viewProps({ dashboard: dashboard(false) })} />,
     )
 
-    expect(html).toContain("Setup checks")
+    expect(html).toContain("Setup problems")
     expect(html).toContain("Container CLI")
-    expect(html).toContain("Needs attention")
     expect(html).toContain("Apple container is not installed.")
     expect(html).toContain("Install Apple container.")
     expect(html).toContain("Check again")
-    expect(html).toContain("Trust checks")
+    expect(html).not.toContain("Trust checks")
   })
 
-  it("shows the read-only system panels: health rollup, versions, images, networks", () => {
+  it("shows health, actionable cleanup, and hides technical detail by default", () => {
     const healthy = renderToStaticMarkup(<DiagnosticsView {...viewProps()} />)
-    expect(healthy).toContain("Your Mac passes every setup check.")
-    expect(healthy).toContain("Versions and pins")
-    expect(healthy).toContain("RunHaven app")
-    expect(healthy).toContain("Agent images")
-    expect(healthy).toContain("Stale networks")
-    expect(healthy).toContain("cleaned up in Cleanup")
-    expect(healthy).not.toContain("cleaned up in Maintenance")
+    expect(healthy).toContain("Your Mac is ready for RunHaven.")
+    expect(healthy).toContain("Advanced system information")
+    expect(healthy).toContain("Leftover networks")
+    expect(healthy).toContain("Remove stale networks")
+    expect(healthy).not.toContain("Auth broker status")
+    expect(healthy).not.toContain("Network trust")
 
     const blocked = renderToStaticMarkup(
       <DiagnosticsView {...viewProps({ dashboard: dashboard(false) })} />,
     )
-    expect(blocked).toContain("1 setup check needs attention.")
+    expect(blocked).toContain("1 setup problem needs your attention.")
   })
 
-  it("marks passing checks and shows no remedy for them", () => {
+  it("hides the setup checklist when the Mac is ready", () => {
     const html = renderToStaticMarkup(<DiagnosticsView {...viewProps()} />)
 
-    expect(html).toContain("Passed")
+    expect(html).not.toContain("Setup problems")
+    expect(html).not.toContain("Container CLI")
     expect(html).not.toContain("Next step")
   })
 
@@ -65,16 +60,13 @@ describe("DiagnosticsView", () => {
       <DiagnosticsView {...viewProps({ dashboard: null })} />,
     )
 
-    expect(html).toContain("No setup checks recorded yet.")
+    expect(html).toContain("Setup status unavailable")
+    expect(html).toContain("RunHaven could not load setup status.")
   })
 
-  it("loads trust data on entry and re-checks everything from Check again", async () => {
-    let loads = 0
+  it("re-checks setup directly without a trust-log step", async () => {
     let refreshes = 0
     const props = viewProps({
-      onLoadDiagnostics: async () => {
-        loads += 1
-      },
       onRefresh: () => {
         refreshes += 1
       },
@@ -85,8 +77,6 @@ describe("DiagnosticsView", () => {
     await act(async () => {
       root.render(createElement(DiagnosticsView, props))
     })
-    // Read-only surface: it loads by itself when opened.
-    expect(loads).toBe(1)
     expect(refreshes).toBe(0)
 
     const checkAgain = Array.from(container.querySelectorAll("button")).find(
@@ -96,7 +86,6 @@ describe("DiagnosticsView", () => {
     await act(async () => {
       checkAgain?.click()
     })
-    expect(loads).toBe(2)
     expect(refreshes).toBe(1)
 
     await act(async () => {

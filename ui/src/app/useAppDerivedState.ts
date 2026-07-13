@@ -10,7 +10,7 @@ import {
   type RunPlanResponse,
 } from "@/commands/runhaven"
 
-import { sessionGroupFor, type NavDestination } from "./navigation"
+import type { NavDestination } from "./navigation"
 import { sessionIdForRun } from "./sessionSelection"
 
 type AppDerivedStateInput = {
@@ -33,7 +33,11 @@ const PAGE_HEADINGS: Record<
 > = {
   home: {
     title: "Home",
-    description: "Start a run or take care of what needs you.",
+    description: "Choose an agent and start a safe session.",
+  },
+  "new-session": {
+    title: "New session",
+    description: "Choose an agent and project. RunHaven uses the safest options first.",
   },
   runs: {
     title: "Run history",
@@ -43,17 +47,9 @@ const PAGE_HEADINGS: Record<
     title: "Run details",
     description: "See what happened, send a message, or stop this run.",
   },
-  agents: {
-    title: "Agents",
-    description: "Sign in and keep each agent ready to run.",
-  },
   diagnostics: {
-    title: "System Check",
-    description: "Check whether this Mac is ready for RunHaven.",
-  },
-  maintenance: {
-    title: "Cleanup",
-    description: "Remove RunHaven items you no longer need.",
+    title: "System details",
+    description: "Fix setup problems and remove leftover RunHaven networks.",
   },
   "run-terminal": {
     title: "Run terminal",
@@ -89,9 +85,6 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
   const { title: pageTitle, description: pageDescription } =
     PAGE_HEADINGS[input.navigation.kind]
   const outputSessionId = selectedSession?.id ?? null
-  const outputSessionActive = selectedSession
-    ? sessionGroupFor(selectedSession) === "active"
-    : false
   const outputRunId = selectedSession ? null : input.lastLaunch?.runId ?? null
   const outputTargetId = outputSessionId
     ? `session:${outputSessionId}`
@@ -122,7 +115,6 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
     pageDescription,
     outputTargetId,
     outputSessionId,
-    outputSessionActive,
     outputRunId,
     controlTargetId,
     lastLaunchSessionId,

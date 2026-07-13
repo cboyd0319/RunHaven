@@ -5,21 +5,19 @@ import type { ManagedSessionSummary } from "@/commands/runhaven"
 // docs/design/native-gui-navigation-spec.md sections 2 and 4.
 export type NavDestination =
   | { kind: "home" }
+  | { kind: "new-session" }
   | { kind: "session"; id: string }
-  | { kind: "runs"; filter?: RunListFilter }
-  | { kind: "agents" }
+  | { kind: "runs" }
   | { kind: "diagnostics" }
-  | { kind: "maintenance" }
   // The interactive-agent run terminal (Claude Code) as a main-content
   // destination, not a modal. A live coding session fills the bounded content
   // area and stays closeable; it is ephemeral, so it is never persisted or
-  // restored (loadLastDestination rejects it and starts on Home instead).
+  // restored. Every app launch starts on Home instead.
   | { kind: "run-terminal" }
 
 export const HOME_NAV: NavDestination = { kind: "home" }
+export const NEW_SESSION_NAV: NavDestination = { kind: "new-session" }
 export const RUN_TERMINAL_NAV: NavDestination = { kind: "run-terminal" }
-
-export type RunListFilter = "needs-you" | "running" | "past" | "all"
 
 // Sidebar lifecycle groups. Active covers runs that are starting, running, or
 // waiting to stop. Everything else (finished, failed, and any unknown state)

@@ -1,7 +1,7 @@
 //! Dock badge command: the count of sessions that need the user, nothing else.
 //!
 //! The WebView computes the needs-you count with the same attention rules the
-//! sidebar badges use (`ui/src/app/sessionAttention.ts`) and reports it here.
+//! Home uses (`ui/src/app/sessionAttention.ts`) and reports it here.
 //! This is deliberately the narrowest possible surface: one validated integer
 //! in, nothing out, and the only effect is the app icon badge. A compromised
 //! WebView could at worst draw a wrong number on the Dock icon; absurd counts

@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-12 UTC
+Last updated: 2026-07-13 UTC
 
 ## Current Direction
 
@@ -189,8 +189,9 @@ Useful GUI design docs:
   Wave 1 (rounded-rect buttons, motion, terminal Cmd-C/V) + high-value P3 state
   bugs shipped. P2 NAT-1 overlay chrome + NAT-2 native vibrancy shipped; P3 nits
   held (TerminalPanel at its line ceiling needs a split first).
-- Home dashboard redesign (variant 06) is shipped with secret-free setup,
-  safety, recent-run, and access panels. Agent readiness now uses the same
+- Superseded 2026-07-13: Home dashboard variant 06 carried setup, recent-run,
+  and access panels. The current launchpad intentionally moves those details to
+  New Session, History, and System details. Agent readiness still uses the same
   secret-free successful sign-in marker for Claude, Codex, Antigravity, and
   Copilot.
 - Native container OAuth is the only ordinary desktop sign-in path as of
@@ -302,141 +303,57 @@ Useful GUI design docs:
 
 Branch: `docs/native-gui-wireframe`.
 
-Navigation correction Wave A (slices A1-A6 of
-`docs/plans/native-gui-navigation-gap.md`) is complete; per-slice detail lives
-in the gap tracker and the `desktop-first-class-v1` evidence entries. In
-short: spec sidebar taxonomy with prioritized symbol-in-dot attention badges
-(`sessionAttention.ts`), the navigation union with the spec removal fallback
-(`navigation.ts`, `useNavigation.ts`), per-destination views under
-`ui/src/app/views/` behind a thin `AppMainContent.tsx` router, the launch
-wizard extracted into the modal New Run sheet (`LaunchSheet.tsx`,
-`useLaunchFlow.ts`; the Rust-owned native confirmation stays the mutation
-boundary), Home as the spec 3.1 destination replacing the `SetupCard`
-takeover, Agents with image readiness and the Claude copy button, System Check
-with auto-loaded doctor detail, and the run detail view reordered behind
-`SessionAttentionBanner.tsx` with runtime detail demoted to Show details.
+The 2026-07-13 whole-surface simplification supersedes the older navigation
+shape recorded below. Current desktop information architecture is Home,
+History, a contextual Run terminal, inline Settings, first-class New Session,
+and contextual System details. Every launch starts on Home. Home is only a
+four-agent launchpad, modeled on the approved Agent Launchpad concept: Claude,
+Codex, Antigravity, and Copilot each have one direct Start action. It contains
+no setup status, logs, failures, run history, or system errors. Setup and agent
+repair appear contextually in New Session after an agent is chosen. History
+owns a non-duplicated Needs attention section and the remaining chronological
+runs. Internal sign-in and shell records are excluded from user history,
+badges, and menu state.
 
-The 2026-07-10 pass added setup recovery, Run filters, progressive disclosure,
-plain vocabulary, system appearance, and small-window coverage. Follow-up fixed
-premature reads, network failures, past-run polling, and cleanup; owned JSONL
-appends now lock, and malformed records warn without content.
+Agents, Cleanup, dedicated run filters, raw whole-app Trust Checks, Recent
+Activity wording, Secure Boundary summary, the launch modal, the Settings
+modal, and placeholder menu commands were deleted because their useful actions
+are now available where the user needs them. Agent sign-in and image repair are
+in New Session. Setup repair and stale-network cleanup are in System details.
+Session-specific allow/deny reasons remain under that session's Show details.
+Output has one Show latest output action; Rust owns the native confirmation and
+the frontend never polls. Finished and failed sessions have no message composer
+or terminal; active-session terminal access is an Advanced tool.
 
-Wave B slices B1 (commit `cb9d5a9`), B2+B5 (commit `1b85d21`), and B3
-(commit `d7a29b3`) are complete; per-slice detail lives in the gap tracker
-sections and the `desktop-first-class-v1` evidence entries. In short: the
-native macOS menu bar and keyboard map emit item ids over a listen-only
-`menu-events` capability with no new mutation path; window frame, the
-sanitized last destination, and the sidebar cookie persist and re-verify on
-relaunch; the Dock badge reports the needs-you count through the narrow
-`attention-badge` capability; and Settings (sidebar or Cmd-,) is a lean in-window
-dialog holding the two real preferences (deviation recorded in the
-tracker's B3 section). Menu, relaunch-restore, badge, and Settings behavior
-share one still-pending `tauri dev` smoke.
+All native confirmations are parented to the trusted main WebviewWindow. A
+cancelled confirmation is a quiet no-op before any mutation; real failures
+remain errors. The custom menu surface is reduced to
+New Session, inline Settings, sidebar/full-screen controls, and contextual Run
+actions, plus standard macOS items.
 
-The in-app terminal is complete and committed
-(`docs/design/native-gui-terminal-design.md`; T1-T4). Host-PTY backend in
-`runhaven-core::runtime::terminal` owns the `container` spawn for both attach
-(`open_gui_attach_pty`) and Claude login (`open_gui_login_pty`, path A running
-`claude auth login` through the real provider launch path so egress stays
-enforced); `src-tauri` keeps the fail-closed `TerminalSessionRegistry` (cap 2),
-the write/resize/close commands, a `TerminalMessage` Channel, and a main-only
-`terminal` capability with `capability_guard` pins and a no-persist reader
-tripwire (registry split into `terminal/registry.rs`). The xterm frontend shows
-the standing no-filter/no-store disclosure and kills the child on unmount. Gates
-A/B/C passed. Live-smoke fixes landed: failed-login container/network teardown
-leak (force-remove before delete), `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`
-in the sandbox, and the sidebar System group pinned to a footer. The live
-terminal + `claude auth login` round-trip is the lead's `tauri dev` smoke.
+Fail-first Home and History regressions now pass. Full `./init.sh` verification
+passes, including 270 Tauri tests with 5 live-only tests ignored, workspace
+Clippy with warnings denied, 362 frontend tests, 13 Playwright and axe flows at
+800x560 and 1080x720, production and Tauri builds, pins, structure,
+documentation, JSON, and diff checks.
 
-Interactive agent runs (task #23, Option A) reuse that machinery: core
-`open_gui_run_pty` (sharing new `run_plan_through_pty` with login) runs a full RUN
-plan under a PTY, and main-only `open_agent_run_terminal` reuses
-`prepare_confirmed_launch` then forces `--interactive --tty` (`make_interactive_tty`)
-so Claude runs its TUI; the New Run flow opens a run-mode `TerminalPanel` for
-interactive agents (shared cap, disclosure, no-persist tripwire; background kept).
-Placement fix (frontend-only): the interactive run terminal no longer renders
-inside the New Run modal (it grew unbounded off-screen there). Confirming an
-interactive launch closes the sheet and navigates to a new `run-terminal`
-main-content destination (`NavDestination`, `RUN_TERMINAL_NAV`; ephemeral, never
-persisted) where `AppMainContent` renders the run-mode `TerminalPanel` with a new
-`fill` prop: the xterm container is `flex-1 min-h-0` in a bounded full-height
-column (replacing the old `min-h-72` no-max), so FitAddon settles and cannot
-drive a growth loop. `Close`/`End run` (and Escape/unmount) tear down via the
-existing close-on-unmount + `closeTerminalSession` and return Home. Backend
-contract, `open_agent_run_terminal`, disclosure, and native confirm unchanged.
+Development, local-signed, and release builds now have distinct identities.
+Development is **RunHaven Debug** with `dev.runhaven.desktop.debug` and a
+visible `Debug` version suffix; local signing remains **RunHaven Local** with
+`dev.runhaven.desktop.local`; release remains **RunHaven** with
+`dev.runhaven.desktop`. This prevents macOS and GUI automation from reopening a
+stale same-version bundle. Desktop setup status also discards raw doctor
+details before WebView serialization and shows only failed checks, so host
+paths, commands, URLs, runtime dumps, and successful technical checks do not
+reach System details.
 
-Terminal viewport QA (2026-07-12) closed the same resize-loop risk for login
-and attach modes: their non-fill xterm container is now fixed at `h-72` instead
-of `min-h-72`, so FitAddon cannot grow its own ResizeObserver target. The
-fail-first component regression was red before the one-class fix and green
-after it. Browser and Playwright matrices cover every primary GUI destination
-at 800x560 and 1080x720, including all four Agent states, both System Check
-tabs, Cleanup, every run filter, Settings, all New Run steps, and run-terminal
-navigation. The pass also corrected stale System Check copy from Maintenance to
-Cleanup. The real Tauri entry surface rendered correctly at both sizes and its
-live log plus secret scan stayed clean. macOS denied assistive click access, so
-the credentialed native terminal interaction remains in the existing live
-provider gate rather than being claimed from browser evidence.
+The old navigation spec and gap tracker are retained below as historical design
+records, not as current product requirements.
 
-Session-display fix: interactive TTY runs exit non-zero when the user closes
-the agent UI, so `write_run_record` records the neutral status `ended` for any
-`AgentRunPlan::is_interactive_tty()` plan (`--tty`) absent an explicit status.
-Background runs keep the exit-code succeeded/failed split. `ended` threads as a
-neutral terminal state through `ui_contracts` and the frontend and never uses
-the red failed styling. `DESKTOP_APP.md` documents the Ended status.
-
-B4 read-only session monitor windows are complete (detail in the gap tracker
-B4 section): Run menu > Open in New Window mints the `session-<n>` label in
-Rust, caps monitors at 6, focuses instead of duplicating, and grants monitors
-exactly three reads over a `session-monitor` (`session-*`) capability pinned to
-their own session; every mutation stays main-only (fail closed). Live
-multi-window behavior is part of the pending `tauri dev` smoke.
-
-Active slice: bring CLI plus native-feeling desktop GUI to 100 percent ready
-for real external user testing. Start by keeping TUI work out of scope, then
-continue hardest-first through live session ownership, real-agent auth/session
-behavior, multi-session isolation, typed status, run control, recovery, and
-fail-closed boundaries before visual polish.
-
-For this CLI+GUI completion goal, local downloads, installs, tool runs, and
-external research are authorized when they directly reduce risk or accelerate
-the work. Multiple subagents are authorized for real bounded implementation,
-review, and test work when their scopes are independent; the lead agent remains
-responsible for architecture, integration, and final verification.
-
-Smallest relevant checks for this slice:
-
-```bash
-scripts/check-repo-structure.sh
-scripts/check-docs-local-paths.sh
-python3 -m json.tool feature_list.json >/dev/null
-git diff --check
-```
-
-Add Rust, Tauri, frontend, or live smoke checks when touched files require
-them. The active workspace is CLI plus desktop only; full workspace test,
-Clippy, and build gates must pass. Archived TUI/Codex source is not a release
-dependency.
-
-The 2026-07-10 hostile review closed the then-reproducible runtime and release
-findings: Internet runs clean their exact container, process-global signal
-handling preserves normal termination after child exit and fails safe on a
-second signal, worktree validation finishes before mutation, and release
-staging is temporary and fail closed. Expanded axe coverage passes across 11
-desktop flows. The later Claude Keychain design was removed on 2026-07-12.
-
-After the `v0.7.0` version bump, `./init.sh` passes with the repository-pinned
-Rust and Cargo 1.97.0 rather than an unrelated Homebrew toolchain. The full gate
-covers Rust tests, warnings-denied Clippy, pin, structure and release tests, 424
-frontend tests, production build, 11 Playwright/axe flows, Tauri debug build,
-workspace build, JSON validation, and diff hygiene. npm audit reports zero vulnerabilities.
-Cargo audit reports zero vulnerabilities and 17 allowed upstream warnings: five
-Tauri/macOS Unicode crates and twelve Linux-only GTK/GLib lockfile entries.
-
-The 2026-07-11 refresh updated every `0.7.0` image, package, lock,
-checksum, and agent pin. On 2026-07-12 the desktop agent set became Claude,
-Codex, Antigravity, and Copilot only. Shell stays CLI-only; legacy Gemini names
-remain cleanup-only.
+Detailed superseded navigation and terminal history lives in
+`feature_list.json` evidence and the historical navigation documents. Keep
+that history out of this restart handoff. Current verification and remaining
+release gates are recorded below.
 
 ## Next Step
 

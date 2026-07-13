@@ -31,7 +31,7 @@ export type RunTerminalLaunch = {
   request: LaunchRunRequest
 }
 
-// Which agents run as an interactive TUI, so the New Run flow opens the in-app
+// Which agents run as an interactive TUI, so New Session opens the in-app
 // run terminal (task #23, Option A) instead of a headless background run. Claude
 // Code is the only one today. Seam to generalize: when core exposes a per-agent
 // "interactive" flag on the profile, read it here instead of hard-coding claude.
@@ -64,22 +64,24 @@ export type LaunchFlowDeps = {
   navigate: (destination: NavDestination) => void
   onLaunched: (launch: LaunchRunResponse) => void
   onError: (message: string) => void
+  // Injection seam for the native confirm result. The command returns null
+  // when the user closes or cancels the trusted dialog.
+  launchRunCommand?: typeof launchRun
 }
 
 export type LaunchFlow = ReturnType<typeof useLaunchFlow>
 
-// The New Run sheet's whole state: the request draft, the step, the reviewed
-// plan, and the in-flight flags. The sheet is intent capture only; the actual
+// The New Session flow's whole state: the request draft, the step, the reviewed
+// plan, and the in-flight flags. The page is intent capture only; the actual
 // mutation boundary stays the Rust-owned native confirmation inside launch_run.
 //
-// Draft retention rule (spec 3.2): Cancel/Escape closes the sheet with no side
-// effects, so the request draft (agent, project folder, advanced options)
-// keeps its values for the rest of the app session. Closing does reset the
+// Draft retention rule: Cancel leaves the page with no side effects, so the
+// request draft (agent, project folder, advanced options) keeps its values for
+// the rest of the app session. Leaving does reset the
 // step to "agent" and clears the reviewed plan, the launch confirmation, and
-// any checked warnings: a warning confirmed inside a closed sheet must never
+// any checked warnings: a warning confirmed on an abandoned review must never
 // stay silently confirmed for a later launch.
 export function useLaunchFlow(deps: LaunchFlowDeps) {
-  const [sheetOpen, setSheetOpen] = useState(false)
   const [request, setRequest] = useState<RunPlanRequest>(() =>
     defaultRunPlanRequest(undefined),
   )
@@ -91,12 +93,12 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
   const [launchMessage, setLaunchMessage] = useState("")
   // The active interactive run terminal, set when startRun routes a reviewed,
   // confirmed interactive launch to the run-terminal main-content destination
-  // instead of a background run. It is independent of the New Run sheet (which
-  // closes on launch); closeRunTerminal clears it and navigates Home, which
+  // instead of a background run. It is independent of the New Session page;
+  // closeRunTerminal clears it and navigates Home, which
   // unmounts the panel and tears down the backend child.
   const [runTerminal, setRunTerminal] = useState<RunTerminalLaunch | null>(null)
-  // Errors from planning or launching render inside the sheet; the app-level
-  // alert would sit behind the modal overlay where nobody can read it.
+  // Errors from planning or launching render inside the flow so they stay next
+  // to the action that failed.
   const [error, setError] = useState("")
   // The agent name the UI currently targets, readable from async refresh
   // completions. Null until the first refresh applies the default selection;
@@ -108,10 +110,8 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
 
   function setOpen(open: boolean) {
     if (open) {
-      setSheetOpen(true)
       return
     }
-    setSheetOpen(false)
     setLaunchStep("agent")
     setPlan(null)
     setConfirmedWarnings([])
@@ -268,10 +268,9 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
       setError("")
       setLaunchMessage("")
       setRunTerminal({ sessionId: newTerminalSessionId(), request: fullRequest })
-      // A live interactive session must not live in a modal that can grow past
-      // the window. Close the sheet and open the run terminal as a bounded
-      // main-content destination. setOpen(false) resets the sheet's own step and
-      // plan but leaves runTerminal intact.
+      // A live interactive session fills the bounded main content area. Reset
+      // the launch review and open the run-terminal destination; setOpen(false)
+      // leaves runTerminal intact.
       setOpen(false)
       deps.navigate(RUN_TERMINAL_NAV)
       return
@@ -279,11 +278,15 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     setLaunching(true)
     setError("")
     setLaunchMessage("")
-    let started: LaunchRunResponse
+    let started: LaunchRunResponse | null
     try {
-      started = await launchRun(fullRequest)
+      started = await (deps.launchRunCommand ?? launchRun)(fullRequest)
     } catch (cause) {
       setError(errorMessage(cause))
+      setLaunching(false)
+      return
+    }
+    if (started === null) {
       setLaunching(false)
       return
     }
@@ -307,7 +310,7 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
         deps.selectSession(sessionId)
       }
     } catch (cause) {
-      // The sheet is already closed, so follow-up failures surface app-wide.
+      // The flow is already closed, so follow-up failures surface app-wide.
       deps.onError(errorMessage(cause))
     } finally {
       setLaunching(false)
@@ -315,7 +318,6 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
   }
 
   return {
-    sheetOpen,
     request,
     launchStep,
     plan,

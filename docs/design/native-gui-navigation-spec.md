@@ -2,6 +2,15 @@
 
 Last updated: 2026-07-01 UTC
 
+> Historical design record, superseded 2026-07-13. The current product uses a
+> smaller information architecture: Home, History, contextual Run terminal,
+> inline Settings, first-class New Session, and contextual System details.
+> Home is a four-agent launchpad only; operational status and run history live
+> one level deeper, and every app launch returns to Home.
+> Agents, Diagnostics, Maintenance, duplicate run filters, launch/settings
+> modals, and placeholder menu commands did not earn permanent surfaces. See
+> `docs/DESKTOP_APP.md` and `current-state.md` for the current contract.
+
 The ideal-state navigation and IA contract for the RunHaven desktop app,
 grounded in Apple HIG guidance fetched 2026-07-01 (see Sources). It is
 deliberately unconstrained by today's implementation; a separate gap-analysis

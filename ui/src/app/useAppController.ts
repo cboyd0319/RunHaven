@@ -2,20 +2,14 @@ import { useEffect, useState } from "react"
 
 import {
   getDashboardStatus,
-  getAuthStatus,
   openSessionWindow,
   type DashboardStatus,
-  type AuthStatusResponse,
   type LaunchRunResponse,
 } from "@/commands/runhaven"
 
 import { sameDashboardStatus } from "./appStatusEquality"
 import { errorMessage } from "./types"
 import { createSessionActions } from "./sessionActions"
-import {
-  sameAuthStatusResponse,
-  useDiagnosticsState,
-} from "./useDiagnosticsState"
 import { useAppDerivedState } from "./useAppDerivedState"
 import { useLaunchFlow } from "./useLaunchFlow"
 import { useManagedSessionsState } from "./useManagedSessionsState"
@@ -30,7 +24,6 @@ import { useStatusLoaders } from "./useStatusLoaders"
 
 export function useAppController() {
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null)
-  const [authStatus, setAuthStatus] = useState<AuthStatusResponse | null>(null)
   const [loading, setLoading] = useState(true)
   // When the last successful status read completed, for the Home "Last check"
   // freshness line. Null until the first read lands.
@@ -46,7 +39,6 @@ export function useAppController() {
     loadManagedSessions,
   } = useManagedSessionsState(lastLaunch?.runId ?? null)
   const statusLoaders = useStatusLoaders()
-  const diagnostics = useDiagnosticsState()
   const [error, setError] = useState("")
   const settingsState = useSettings()
   const launchFlow = useLaunchFlow({
@@ -98,7 +90,6 @@ export function useAppController() {
     targetId: derived.outputTargetId,
     sessionId: derived.outputSessionId,
     runId: derived.outputRunId,
-    sessionActive: derived.outputSessionActive,
   })
 
   useEffect(() => {
@@ -110,16 +101,10 @@ export function useAppController() {
     setError("")
     try {
       const nextDashboard = await getDashboardStatus()
-      const nextAuthStatus = await getAuthStatus()
       setDashboard((current) =>
         current && sameDashboardStatus(current, nextDashboard)
           ? current
           : nextDashboard,
-      )
-      setAuthStatus((current) =>
-        current && sameAuthStatusResponse(current, nextAuthStatus)
-          ? current
-          : nextAuthStatus,
       )
       // The status read succeeded; stamp it for the Home freshness line.
       setLastRefreshedAt(new Date().toISOString())
@@ -161,7 +146,6 @@ export function useAppController() {
 
   return {
     dashboard,
-    authStatus,
     launchFlow,
     settings,
     loading,
@@ -188,9 +172,6 @@ export function useAppController() {
     controlBusy: runControlState.busy,
     controlError: runControlState.error,
     controlMessage: runControlState.message,
-    diagnostics: diagnostics.data,
-    diagnosticsLoading: diagnostics.loading,
-    diagnosticsError: diagnostics.error,
     error,
     selectedAgent: derived.selectedAgent,
     setupKnown: derived.setupKnown,
@@ -218,7 +199,6 @@ export function useAppController() {
     refreshAfterWorktree: sessionActions.refreshAfterWorktree,
     sendSelectedSessionInput: sessionActions.sendSelectedSessionInput,
     loadSelectedSessionDiagnostics: selectedSessionDiagnostics.load,
-    loadDiagnostics: diagnostics.load,
     changeSessionInputDraft,
   }
 }

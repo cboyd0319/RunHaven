@@ -66,7 +66,6 @@ const MAX_TERMINAL_INPUT_BYTES: usize = 8 * 1024;
 /// session-input registry so the command and the registry agree on the maximum.
 const MAX_TERMINAL_SESSION_ID_BYTES: usize = 128;
 
-const TERMINAL_CANCELED: &str = "Terminal canceled before it opened.";
 const TERMINAL_ALREADY_OPEN: &str = "A terminal is already open for this session.";
 /// Fixed, path-free failure for an unresolved/inactive session so a core error
 /// string (which can name containers or template paths) never reaches the
@@ -172,16 +171,17 @@ pub(crate) async fn open_terminal_session(
     on_event: Channel<TerminalMessage>,
     registry: State<'_, TerminalSessionRegistry>,
     session_id: String,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let registry = registry.inner().clone();
     let (plan, reservation) = resolve_and_reserve(&registry, &session_id, |id| {
         gui_attach_plan(id).map_err(|_| TERMINAL_UNRESOLVED.to_string())
     })?;
     if !confirm_terminal_open(app, &plan).await? {
-        return Err(TERMINAL_CANCELED.to_string());
+        return Ok(false);
     }
     let spawned = pty::spawn_pty_terminal(&plan, on_event)?;
-    register_and_stream(&registry, reservation, spawned)
+    register_and_stream(&registry, reservation, spawned)?;
+    Ok(true)
 }
 
 /// Open a live native **sign-in** terminal for one supported product agent.
@@ -201,7 +201,7 @@ pub(crate) async fn open_agent_sign_in_terminal(
     registry: State<'_, TerminalSessionRegistry>,
     agent: String,
     session_id: String,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let registry = registry.inner().clone();
     validate_terminal_session_id(&session_id)?;
     if !runhaven_core::runtime::login::supports_sandbox_login(&agent) {
@@ -209,14 +209,15 @@ pub(crate) async fn open_agent_sign_in_terminal(
     }
     let reservation = registry.reserve(&session_id)?;
     if !confirm_agent_sign_in_open(app, &agent).await? {
-        return Err(TERMINAL_CANCELED.to_string());
+        return Ok(false);
     }
     // The WebView session id is only a terminal-registry key. The login launch
     // writes normal lifecycle metadata, so its persistent run id must be minted
     // in trusted Rust and can never collide with a WebView-selected active run.
     let execution_id = runhaven_core::runtime::launch::new_run_id();
     let spawned = pty::spawn_login_terminal(&agent, &execution_id, on_event)?;
-    register_and_stream(&registry, reservation, spawned)
+    register_and_stream(&registry, reservation, spawned)?;
+    Ok(true)
 }
 
 /// Open a live **interactive agent run** terminal (task #23, Option A).
@@ -236,9 +237,9 @@ pub(crate) async fn open_agent_sign_in_terminal(
 /// run label, so a WebView value cannot steer what runs; the plan content comes
 /// from `request` and Rust-side selection. An explicitly configured API-key
 /// broker stays in the normal launch path and never touches the terminal stream. The
-/// shared terminal cap and the write/resize/close commands apply. Fails closed: on
-/// a launch failure nothing is registered and the caller reports it, so the UI
-/// keeps its background-run fallback.
+/// shared terminal cap and the write/resize/close commands apply. Cancellation
+/// resolves as `false`, so it is a quiet no-op; a launch failure still returns an
+/// error with nothing registered, so the UI keeps its background-run fallback.
 ///
 /// [`prepare_confirmed_launch`]: crate::commands::launch
 #[tauri::command]
@@ -248,13 +249,13 @@ pub(crate) async fn open_agent_run_terminal(
     registry: State<'_, TerminalSessionRegistry>,
     session_id: String,
     request: LaunchRunRequest,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let registry = registry.inner().clone();
     // Validate the id and enforce the shared cap before any dialog, worktree
     // branch, or child.
     let reservation = registry.reserve(&session_id)?;
     let Some(mut plan) = prepare_confirmed_terminal_run(app, request).await? else {
-        return Err(TERMINAL_CANCELED.to_string());
+        return Ok(false);
     };
     // A terminal run is always interactive: force the argv to carry
     // `--interactive --tty` so the agent starts its TUI, not headless `--print`.
@@ -269,7 +270,8 @@ pub(crate) async fn open_agent_run_terminal(
             return Err(error);
         }
     };
-    register_and_stream(&registry, reservation, spawned)
+    register_and_stream(&registry, reservation, spawned)?;
+    Ok(true)
 }
 
 /// The one native confirmation for an agent sign-in terminal, stating what it

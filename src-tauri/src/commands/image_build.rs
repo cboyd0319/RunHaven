@@ -78,7 +78,7 @@ fn start_image_rebuild(
     // The container CLI is the last gate before the mutation, re-checked after
     // confirmation so a denied or canceled rebuild never touches the builder.
     require_supported_runtime().map_err(|_| {
-        "RunHaven setup is not ready for image rebuilds. Open System Check and fix the listed issue."
+        "RunHaven setup is not ready for image rebuilds. Open System details and fix the listed issue."
             .to_string()
     })?;
     let build_id = new_run_id();

@@ -1,5 +1,18 @@
 use super::*;
 
+#[test]
+fn managed_output_confirmation_omits_internal_session_id() {
+    let message = crate::commands::managed_session_output::trusted_session_output_message(
+        "Codex - project",
+        "Failed",
+        200,
+    );
+
+    assert!(!message.contains("Session ID"));
+    assert!(message.contains("Session: Codex - project"));
+    assert!(message.contains("Status: Failed"));
+}
+
 fn write_past_output_session(run_id: &str) {
     write_history_run_record(json!({
         "timestamp": "2026-07-01T05:00:00Z",

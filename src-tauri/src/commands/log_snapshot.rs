@@ -35,7 +35,7 @@ pub(crate) async fn get_log_snapshot(
     if !trusted_sensitive_output_approved(
         app,
         RAW_OUTPUT_CONFIRM_TITLE,
-        trusted_run_output_message(&prepared.run_id, prepared.lines),
+        trusted_run_output_message(prepared.lines),
     )
     .await?
     {
@@ -125,9 +125,8 @@ pub(crate) async fn trusted_sensitive_output_approved(
     .await
 }
 
-#[cfg(not(test))]
-fn trusted_run_output_message(run_id: &str, lines: u32) -> String {
-    format!("Run ID: {run_id}\nLines: {lines}\n\nRaw output may include secrets. Show output?")
+pub(crate) fn trusted_run_output_message(lines: u32) -> String {
+    format!("Lines: {lines}\n\nRaw output may include secrets. Show output?")
 }
 
 pub(crate) fn log_snapshot_response_from_payload(

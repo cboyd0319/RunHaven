@@ -8,13 +8,23 @@ import {
   getManagedSessionStatus,
   getManagedSessions,
   killManagedSession,
-  launchRun,
+  launchRun as launchRunMaybe,
   repairManagedSession,
   stopManagedSession,
-  writeSessionInput
+  writeSessionInput,
+  type LaunchRunRequest,
+  type LaunchRunResponse,
 } from "../commands/runhaven";
 
 import { providerAgent } from "./runhaven-fixtures";
+
+async function launchRun(request: LaunchRunRequest): Promise<LaunchRunResponse> {
+  const started = await launchRunMaybe(request);
+  if (!started) {
+    throw new Error("preview launch was unexpectedly cancelled");
+  }
+  return started;
+}
 
 describe("runhaven managed session helpers", () => {
   it("returns managed session preview data without raw paths", async () => {

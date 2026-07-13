@@ -31,6 +31,8 @@ pub(crate) fn plan_run(request: RunPlanRequest) -> Result<RunPlanResponse, Strin
     build_plan_response(request)
 }
 
+/// Returns `None` when the user cancels the native confirmation. Cancellation
+/// is a successful no-op; preparation, dialog, and launch failures remain errors.
 #[tauri::command]
 pub(crate) async fn launch_run(
     app: AppHandle,
@@ -38,7 +40,7 @@ pub(crate) async fn launch_run(
     input_registry: State<'_, SessionInputRegistry>,
     output_registry: State<'_, SessionOutputRegistry>,
     launch_status: State<'_, LaunchStatusRegistry>,
-) -> Result<LaunchRunResponse, String> {
+) -> Result<Option<LaunchRunResponse>, String> {
     let input_registry = input_registry.inner().clone();
     let output_registry = output_registry.inner().clone();
     let launch_status = launch_status.inner().clone();
@@ -52,11 +54,11 @@ pub(crate) async fn launch_run(
     )
     .await?
     {
-        return Err("Launch canceled before starting the run.".to_string());
+        return Ok(None);
     }
     // The worktree branch is created only here, after the user confirms, so no
     // git mutation happens before approval.
-    launch_confirmed(prepared, launch_status, input_registry, output_registry)
+    launch_confirmed(prepared, launch_status, input_registry, output_registry).map(Some)
 }
 
 /// Start a confirmed launch: finalize the plan (creating the worktree branch for
@@ -172,9 +174,9 @@ pub(crate) fn launch_prepared_with_approval_for_test(
     input_registry: SessionInputRegistry,
     output_registry: SessionOutputRegistry,
     approve: impl FnOnce(&AgentRunPlan, &[PlanWarning]) -> Result<bool, String>,
-) -> Result<LaunchRunResponse, String> {
+) -> Result<Option<LaunchRunResponse>, String> {
     if !approve(&plan, &warnings)? {
-        return Err("Launch canceled before starting the run.".to_string());
+        return Ok(None);
     }
     let launch_status = LaunchStatusRegistry::default();
     launch_status.mark_starting(&run_id, &plan.profile_name, &plan.session)?;
@@ -188,7 +190,7 @@ pub(crate) fn launch_prepared_with_approval_for_test(
         let _ = launch_status.mark_failed(&run_id);
         return Err(error);
     }
-    Ok(response)
+    Ok(Some(response))
 }
 
 fn spawn_launch_thread(

@@ -22,15 +22,10 @@ describe("RunOutputCard", () => {
   it("renders typed snapshot metadata and bounded output", () => {
     const html = renderToStaticMarkup(
       <RunOutputCard
-        logAcknowledged={true}
         logLoading={false}
         logError=""
         logSnapshot={snapshot()}
-        liveOutputAvailable={false}
-        liveOutputEnabled={false}
-        onAcknowledgedChange={() => undefined}
         onLoad={async () => undefined}
-        onLiveOutputChange={() => undefined}
       />
     );
 
@@ -47,7 +42,6 @@ describe("RunOutputCard", () => {
   it("renders every warning, including the managed-session redaction notice", () => {
     const html = renderToStaticMarkup(
       <RunOutputCard
-        logAcknowledged={true}
         logLoading={false}
         logError=""
         logSnapshot={snapshot({
@@ -56,11 +50,7 @@ describe("RunOutputCard", () => {
             "Known secrets and control characters were removed automatically. Review before sharing."
           ]
         })}
-        liveOutputAvailable={true}
-        liveOutputEnabled={false}
-        onAcknowledgedChange={() => undefined}
         onLoad={async () => undefined}
-        onLiveOutputChange={() => undefined}
       />
     );
 
@@ -69,45 +59,31 @@ describe("RunOutputCard", () => {
     expect(html).toContain("entry line one");
   });
 
-  it("gates live output refresh behind raw-output acknowledgement", () => {
+  it("uses one explicit action and leaves the trust warning to the native dialog", () => {
     const unacknowledged = renderToStaticMarkup(
       <RunOutputCard
-        logAcknowledged={false}
         logLoading={false}
         logError=""
         logSnapshot={null}
-        liveOutputAvailable={true}
-        liveOutputEnabled={false}
-        onAcknowledgedChange={() => undefined}
         onLoad={async () => undefined}
-        onLiveOutputChange={() => undefined}
       />
     );
 
-    expect(unacknowledged).toContain("Keep output updated");
-    expect(unacknowledged).toContain('disabled=""');
-    // The disabled load button points at the ack checkbox so the gate reads as
-    // intentional, not broken.
-    expect(unacknowledged).toContain('aria-describedby="run-output-ack-hint"');
-    expect(unacknowledged).toContain(
-      "To load output, first check the box above to confirm raw output."
-    );
+    expect(unacknowledged).toContain("Show latest output");
+    expect(unacknowledged).not.toContain("Keep output updated");
+    expect(unacknowledged).not.toContain("I understand");
+    expect(unacknowledged).not.toContain('disabled=""');
 
     const acknowledged = renderToStaticMarkup(
       <RunOutputCard
-        logAcknowledged={true}
         logLoading={false}
         logError=""
         logSnapshot={snapshot()}
-        liveOutputAvailable={true}
-        liveOutputEnabled={true}
-        onAcknowledgedChange={() => undefined}
         onLoad={async () => undefined}
-        onLiveOutputChange={() => undefined}
       />
     );
 
-    expect(acknowledged).toContain("Updates every few seconds.");
+    expect(acknowledged).not.toContain("Updates every few seconds.");
     expect(acknowledged).not.toContain('disabled=""');
     expect(acknowledged).not.toContain("run-output-ack-hint");
   });

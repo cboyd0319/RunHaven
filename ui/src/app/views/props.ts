@@ -1,6 +1,5 @@
 import type {
   AgentProfile,
-  AuthStatusResponse,
   DashboardStatus,
   ImageStatusResponse,
   LaunchRunResponse,
@@ -12,7 +11,7 @@ import type {
 } from "@/commands/runhaven"
 
 import type { NavDestination } from "../navigation"
-import type { DiagnosticsState, RunControlAction } from "../types"
+import type { RunControlAction } from "../types"
 import type { LaunchFlow } from "../useLaunchFlow"
 import type { useRunOutput } from "../useRunOutput"
 
@@ -26,7 +25,6 @@ export type MainViewProps = {
   // ISO time of the last successful status read, for the Home freshness line.
   lastRefreshedAt: string | null
   dashboard: DashboardStatus | null
-  authStatus: AuthStatusResponse | null
   setupReady: boolean
   selectedSession: ManagedSessionSummary | null
   selectedSessionStatus: ManagedSessionStatusResponse | null
@@ -51,8 +49,8 @@ export type MainViewProps = {
   controlMessage: string
   onControl: (action: RunControlAction) => Promise<void>
   onWorktreeResolved: () => Promise<void>
-  // The New Run sheet's whole state and actions travel as one object; Home
-  // hosts the sheet and the router never unpacks it.
+  // The New Session flow's state and actions travel as one object so the
+  // router never has to unpack its implementation details.
   launchFlow: LaunchFlow
   launchReady: boolean
   launchImageReady: boolean
@@ -70,8 +68,4 @@ export type MainViewProps = {
   runStatus: RunStatusResponse | null
   runStatusLoading: boolean
   runStatusError: string
-  diagnostics: DiagnosticsState | null
-  diagnosticsLoading: boolean
-  diagnosticsError: string
-  onLoadDiagnostics: () => Promise<void>
 }

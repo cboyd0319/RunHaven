@@ -20,6 +20,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+import { authStatusLabel } from "./labels"
+
 export function ManagedSessionDiagnosticsCard({
   diagnostics,
   loading,
@@ -38,7 +40,7 @@ export function ManagedSessionDiagnosticsCard({
           Session diagnostics
         </CardTitle>
         <CardDescription>
-          Auth and network records for the selected session only.
+          Why this session's sign-in and network requests were allowed or denied.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -63,7 +65,7 @@ export function ManagedSessionDiagnosticsCard({
               <ShieldCheck />
               <AlertTitle>{diagnostics.authStatus.name}</AlertTitle>
               <AlertDescription>
-                Auth state: {diagnostics.authStatus.status}
+                Credential access: {authStatusLabel(diagnostics.authStatus.status)}
               </AlertDescription>
             </Alert>
             <SessionLogTable

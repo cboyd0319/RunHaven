@@ -106,13 +106,61 @@ fn check_status(check: runhaven_core::doctor::Check) -> CheckStatus {
     } else {
         None
     };
+    let (detail, remedy) = desktop_check_copy(&check.name, check.ok);
     CheckStatus {
         name: check.name,
         ok: check.ok,
-        detail: check.detail,
-        remedy: check.remedy,
+        detail,
+        remedy,
         action,
     }
+}
+
+/// Doctor output is a developer surface and can contain host paths, exact
+/// commands, URLs, and runtime dumps. The desktop contract needs only a plain
+/// result and next step, so raw detail never crosses into the WebView.
+fn desktop_check_copy(name: &str, ok: bool) -> (String, String) {
+    if ok {
+        return ("Ready.".to_string(), "No action needed.".to_string());
+    }
+    let (detail, remedy) = match name {
+        "operating system" => (
+            "RunHaven runs only on macOS.",
+            "Use a supported Mac, then check again.",
+        ),
+        "macOS" => (
+            "This macOS version is not supported.",
+            "Update to macOS 26 or newer, then check again.",
+        ),
+        "architecture" => (
+            "RunHaven needs a Mac with Apple silicon.",
+            "Use a supported Apple silicon Mac.",
+        ),
+        "Apple container CLI" => (
+            "Apple container is not installed.",
+            "Download Apple container, install it, then check again.",
+        ),
+        "Apple container version" => (
+            "The installed Apple container version is not supported.",
+            "Download the required version, install it, then check again.",
+        ),
+        "container system" => (
+            "Apple container's local service is not running.",
+            "Start the service, then check again.",
+        ),
+        "Apple container runtime commit"
+        | "Apple container builder image"
+        | "Apple container vminit image"
+        | "Apple container kernel" => (
+            "Apple container's runtime files do not match the supported version.",
+            "Reinstall the supported Apple container version, then check again.",
+        ),
+        _ => (
+            "A required setup check did not pass.",
+            "Check the supported setup, then try again.",
+        ),
+    };
+    (detail.to_string(), remedy.to_string())
 }
 
 fn agent_summaries() -> Vec<AgentProfileSummary> {
@@ -173,7 +221,16 @@ fn collect_dashboard_status() -> DashboardStatus {
         active_runs: read_active_run_records().iter().map(run_summary).collect(),
         recent_runs,
         warnings,
-        app_version: env!("CARGO_PKG_VERSION").to_string(),
+        app_version: desktop_app_version(),
+    }
+}
+
+fn desktop_app_version() -> String {
+    let version = env!("CARGO_PKG_VERSION");
+    if cfg!(debug_assertions) {
+        format!("{version} Debug")
+    } else {
+        version.to_string()
     }
 }
 

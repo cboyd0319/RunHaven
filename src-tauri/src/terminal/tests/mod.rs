@@ -88,7 +88,7 @@ fn fake_plan(run_id: &str) -> GuiAttachPlan {
 fn open_fake(
     registry: &TerminalSessionRegistry,
     run_id: &str,
-) -> (Result<(), String>, FakeTerminal) {
+) -> (Result<bool, String>, FakeTerminal) {
     let fake = FakeTerminal::default();
     let spawn_fake = fake.clone();
     let result = open_terminal_session_for_test(
@@ -152,7 +152,7 @@ fn confirm_cancel_spawns_nothing() {
         |_| Ok(false),
         |_| panic!("cancel must spawn nothing"),
     );
-    assert_eq!(result, Err(TERMINAL_CANCELED.to_string()));
+    assert_eq!(result, Ok(false));
     assert!(registry.remove("run-cancel").is_none());
 }
 

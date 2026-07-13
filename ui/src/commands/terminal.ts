@@ -17,12 +17,12 @@ import type { LaunchRunRequest, TerminalMessage } from "./types";
 export async function openTerminalSession(
   sessionId: string,
   onMessage: (message: TerminalMessage) => void
-): Promise<void> {
+): Promise<boolean> {
   if (!hasTauriRuntime()) {
-    return;
+    return false;
   }
   const onEvent = new Channel<TerminalMessage>(onMessage);
-  return call("open_terminal_session", { onEvent, sessionId }, () => undefined);
+  return call("open_terminal_session", { onEvent, sessionId }, () => false);
 }
 
 // Open one supported agent's native sign-in command through a host PTY behind a
@@ -33,15 +33,15 @@ export async function openAgentSignInTerminal(
   agent: string,
   sessionId: string,
   onMessage: (message: TerminalMessage) => void
-): Promise<void> {
+): Promise<boolean> {
   if (!hasTauriRuntime()) {
-    return;
+    return false;
   }
   const onEvent = new Channel<TerminalMessage>(onMessage);
   return call(
     "open_agent_sign_in_terminal",
     { agent, onEvent, sessionId },
-    () => undefined
+    () => false
   );
 }
 
@@ -61,15 +61,15 @@ export async function openAgentRunTerminal(
   sessionId: string,
   request: LaunchRunRequest,
   onMessage: (message: TerminalMessage) => void
-): Promise<void> {
+): Promise<boolean> {
   if (!hasTauriRuntime()) {
-    return;
+    return false;
   }
   const onEvent = new Channel<TerminalMessage>(onMessage);
   return call(
     "open_agent_run_terminal",
     { onEvent, sessionId, request },
-    () => undefined
+    () => false
   );
 }
 

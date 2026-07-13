@@ -33,10 +33,9 @@ export function planRequest(): RunPlanRequest {
   }
 }
 
-// A closed launch flow: static markup renders only the New run trigger.
+// A launch flow fixture with no in-progress review.
 export function launchFlow(): LaunchFlow {
   return {
-    sheetOpen: false,
     request: planRequest(),
     launchStep: "agent",
     plan: null,
@@ -123,11 +122,6 @@ export function mainViewProps(
     loading: false,
     lastRefreshedAt: null,
     dashboard: dashboard(true),
-    authStatus: {
-      status: "ok",
-      runtime: "preview",
-      profiles: [{ name: "codex", status: "ready" }],
-    },
     setupReady: true,
     selectedSession: null,
     selectedSessionStatus: null,
@@ -147,15 +141,9 @@ export function mainViewProps(
     onSessionInputDraftChange: () => {},
     onSendSelectedSessionInput: async () => {},
     runOutput: {
-      acknowledged: false,
       loading: false,
       error: "",
       visibleSnapshot: null,
-      liveAvailable: false,
-      liveEnabled: false,
-      liveRefreshing: false,
-      setAcknowledged: () => {},
-      setLiveEnabled: () => {},
       loadSnapshot: async () => {},
     },
     controlBusy: false,
@@ -180,10 +168,6 @@ export function mainViewProps(
     runStatus: null,
     runStatusLoading: false,
     runStatusError: "",
-    diagnostics: null,
-    diagnosticsLoading: false,
-    diagnosticsError: "",
-    onLoadDiagnostics: async () => {},
     ...patch,
   }
 }

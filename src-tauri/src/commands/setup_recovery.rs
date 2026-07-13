@@ -22,10 +22,10 @@ use crate::contracts::{SetupActionId, SetupRecoveryRequest, SetupRecoveryRespons
 const RECOVERY_BUSY: &str = "Setup recovery is already running.";
 const RECOVERY_CANCELED: &str = "Setup recovery canceled; no changes were made.";
 const START_FAILED: &str =
-    "RunHaven could not start the container service. Open System Check or try again.";
+    "RunHaven could not start the container service. Open System details or try again.";
 const NOT_READY: &str =
-    "The container service did not become ready. Open System Check or try again.";
-const INSTALLER_OPEN_FAILED: &str = "RunHaven could not open Apple's installer download. Check your internet connection or open System Check.";
+    "The container service did not become ready. Open System details or try again.";
+const INSTALLER_OPEN_FAILED: &str = "RunHaven could not open Apple's installer download. Check your internet connection or open System details.";
 const CONFIRM_FAILED: &str =
     "RunHaven could not show the setup confirmation. No changes were made.";
 const INSTALLER_PROGRAM: &str = "/usr/bin/open";
@@ -104,7 +104,9 @@ pub(crate) async fn perform_setup_recovery(
         prepare_recovery(action, inspect_host(), &mut run)
     })
     .await
-    .map_err(|_| "RunHaven could not check setup. Open System Check or try again.".to_string())??;
+    .map_err(|_| {
+        "RunHaven could not check setup. Open System details or try again.".to_string()
+    })??;
 
     if !trusted_setup_recovery_confirmed(app, action).await? {
         return Err(RECOVERY_CANCELED.to_string());
@@ -201,7 +203,7 @@ fn prepare_start_system(
 
     let version = run(&container_program, &["--version"]).map_err(|_| {
         format!(
-            "RunHaven could not verify Apple container {PINNED_APPLE_CONTAINER_VERSION}. Open System Check."
+            "RunHaven could not verify Apple container {PINNED_APPLE_CONTAINER_VERSION}. Open System details."
         )
     })?;
     if !version.success
@@ -214,7 +216,7 @@ fn prepare_start_system(
     }
 
     let status = run(&container_program, &["system", "status"]).map_err(|_| {
-        "RunHaven could not check the container service. Open System Check.".to_string()
+        "RunHaven could not check the container service. Open System details.".to_string()
     })?;
     if status.success {
         return Err("The container service is already running. Check setup again.".to_string());

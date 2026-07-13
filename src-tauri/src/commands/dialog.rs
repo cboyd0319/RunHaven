@@ -1,12 +1,14 @@
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
+use crate::MAIN_WINDOW_LABEL;
+
 /// The single native OK/Cancel confirmation behind every trusted command gate.
-/// Runs the blocking system dialog off the async runtime and returns whether the
-/// user chose the confirm button (`true`) or canceled (`false`). Each caller
-/// keeps its own title, confirm-button label, severity kind, and message
-/// wording; only the dialog plumbing lives here so the confirmation UX cannot be
-/// changed by editing one site.
+/// Parents the sheet to the main control window, runs the blocking system dialog
+/// off the async runtime, and returns whether the user chose the confirm button
+/// (`true`) or canceled (`false`). Each caller keeps its own title, confirm-button
+/// label, severity kind, and message wording; only the dialog plumbing lives here
+/// so the confirmation UX cannot be changed by editing one site.
 pub(crate) async fn confirm_native(
     app: AppHandle,
     title: &str,
@@ -16,17 +18,20 @@ pub(crate) async fn confirm_native(
 ) -> Result<bool, String> {
     let title = title.to_string();
     let confirm_label = confirm_label.to_string();
-    tauri::async_runtime::spawn_blocking(move || {
-        app.dialog()
-            .message(message)
-            .title(title)
-            .kind(kind)
-            .buttons(MessageDialogButtons::OkCancelCustom(
-                confirm_label,
-                "Cancel".to_string(),
-            ))
-            .blocking_show()
-    })
-    .await
-    .map_err(|error| format!("could not show confirmation dialog: {error}"))
+    let parent = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
+        "could not show confirmation dialog: the main window is not available".to_string()
+    })?;
+    let dialog = app
+        .dialog()
+        .message(message)
+        .title(title)
+        .kind(kind)
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            confirm_label,
+            "Cancel".to_string(),
+        ))
+        .parent(&parent);
+    tauri::async_runtime::spawn_blocking(move || dialog.blocking_show())
+        .await
+        .map_err(|error| format!("could not show confirmation dialog: {error}"))
 }

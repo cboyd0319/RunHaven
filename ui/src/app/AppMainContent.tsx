@@ -8,10 +8,9 @@ import type { NavDestination } from "./navigation"
 import { TerminalPanel } from "./TerminalPanel"
 import { useFocusOnChange } from "./useFocusOnChange"
 import { sessionAllowsWorktreeReview } from "./worktreeReview"
-import { AgentsView } from "./views/AgentsView"
 import { DiagnosticsView } from "./views/DiagnosticsView"
 import { HomeView } from "./views/HomeView"
-import { MaintenanceView } from "./views/MaintenanceView"
+import { NewSessionView } from "./views/NewSessionView"
 import type { MainViewProps } from "./views/props"
 import { RunsView } from "./views/RunsView"
 import { SessionView } from "./views/SessionView"
@@ -23,7 +22,7 @@ type AppMainContentProps = MainViewProps & { navigation: NavDestination }
 // covers destination changes, session switches, and worktree resolution so
 // keyboard and AT users land on the new view instead of <body>. A setup
 // blocker renders as Home content, never as a takeover: running sessions and
-// System destinations stay reachable while blocked.
+// System details stays reachable while blocked.
 export function AppMainContent(props: AppMainContentProps) {
   const { navigation, error, launchMessage } = props
   const worktreeReviewEligible = props.selectedSession
@@ -44,7 +43,8 @@ export function AppMainContent(props: AppMainContentProps) {
   useEffect(() => {
     setDismissedError("")
   }, [error])
-  const showError = error !== "" && error !== dismissedError
+  const showError =
+    navigation.kind !== "home" && error !== "" && error !== dismissedError
 
   // A live interactive run terminal stays MOUNTED here for its whole life,
   // shown only on its own destination and hidden (not unmounted) on every other.
@@ -104,7 +104,7 @@ export function AppMainContent(props: AppMainContentProps) {
                   onDismiss={() => setDismissedError(error)}
                 />
               ) : null}
-              {launchMessage ? (
+              {launchMessage && navigation.kind !== "home" ? (
                 <Alert>
                   <CheckCircle2 />
                   <AlertTitle>{launchMessage}</AlertTitle>
@@ -150,40 +150,26 @@ function AppErrorAlert({
 
 function MainView(props: AppMainContentProps) {
   switch (props.navigation.kind) {
-    case "agents":
-      return (
-        <AgentsView
-          agents={props.dashboard?.agents ?? []}
-          agentReadiness={props.dashboard?.agentReadiness ?? []}
-          setupReady={props.setupReady}
-          refreshing={props.loading}
-          onSignedIn={props.onSignedIn}
-          onRefresh={props.onRefresh}
-        />
-      )
+    case "new-session":
+      return <NewSessionView {...props} />
     case "diagnostics":
       return (
         <DiagnosticsView
           dashboard={props.dashboard}
           refreshing={props.loading}
-          diagnostics={props.diagnostics}
-          diagnosticsLoading={props.diagnosticsLoading}
-          diagnosticsError={props.diagnosticsError}
-          onLoadDiagnostics={props.onLoadDiagnostics}
           onRefresh={props.onRefresh}
         />
       )
-    case "maintenance":
-      return <MaintenanceView setupReady={props.setupReady} />
     case "runs":
       return (
         <RunsView
-          filter={props.navigation.filter ?? "all"}
           sessions={props.sessions}
           onSelectSession={props.onSelectSession}
-          onFilterChange={(filter) =>
-            props.onNavigate({ kind: "runs", filter })
-          }
+          onSignIn={(agent) => {
+            props.launchFlow.changeAgent(agent)
+            props.launchFlow.setLaunchStep("agent")
+            props.onNavigate({ kind: "new-session" })
+          }}
         />
       )
     case "session":
@@ -205,8 +191,7 @@ function MainView(props: AppMainContentProps) {
 
 // One focus key for the whole content pane: destination changes, session
 // switches, and worktree-review resolution all move focus; background polls
-// change none of these inputs, so quiet refresh stays quiet. The New Run
-// sheet manages its own focus (dialog trap plus a per-step region).
+// change none of these inputs, so quiet refresh stays quiet.
 function mainViewFocusKey(
   navigation: NavDestination,
   worktreeReviewEligible: boolean,
@@ -214,8 +199,6 @@ function mainViewFocusKey(
   switch (navigation.kind) {
     case "session":
       return `session:${navigation.id}:${worktreeReviewEligible}`
-    case "runs":
-      return `runs:${navigation.filter ?? "all"}`
     default:
       return navigation.kind
   }
@@ -225,14 +208,12 @@ function mainViewLabel(navigation: NavDestination): string {
   switch (navigation.kind) {
     case "home":
       return "Home"
+    case "new-session":
+      return "New session"
     case "session":
       return "Run details"
-    case "agents":
-      return "Agents"
     case "diagnostics":
-      return "System Check"
-    case "maintenance":
-      return "Cleanup"
+      return "System details"
     case "runs":
       return "Run history"
     case "run-terminal":

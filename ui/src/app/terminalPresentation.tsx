@@ -13,6 +13,26 @@ export type TerminalConfig = {
   endedText: string
 }
 
+type TerminalPhase = "idle" | "opening" | "live" | "ended" | "error"
+
+export function terminalStatusText(
+  phase: TerminalPhase,
+  connectedText: string,
+  endedText: string,
+  escapeTarget: string,
+): string {
+  switch (phase) {
+    case "opening":
+      return "Confirm the terminal in the dialog to start."
+    case "live":
+      return `${connectedText} To leave with the keyboard, press Shift+Esc to move to the ${escapeTarget} button.`
+    case "ended":
+      return endedText
+    default:
+      return ""
+  }
+}
+
 export function attachTerminalConfig(
   session: ManagedSessionSummary,
 ): TerminalConfig {

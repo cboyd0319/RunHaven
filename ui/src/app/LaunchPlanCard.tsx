@@ -49,12 +49,14 @@ type LaunchPlanCardProps = {
   imageLoading: boolean
   imageStatus: ImageStatusResponse | null
   imageError: string
+  imageInstalling?: boolean
   planning: boolean
   setupOk: boolean
   onAgentChange: (agentName: string) => void
   onPickFolder: () => Promise<void>
   onRequestChange: (patch: Partial<RunPlanRequest>) => void
   onNetworkChange: (networkMode: RunPlanRequest["networkMode"]) => void
+  onInstallImage?: () => void
   onCancel: () => void
   onBack: () => void
   onContinue: () => void
@@ -71,12 +73,14 @@ export function LaunchPlanCard({
   imageLoading,
   imageStatus,
   imageError,
+  imageInstalling = false,
   planning,
   setupOk,
   onAgentChange,
   onPickFolder,
   onRequestChange,
   onNetworkChange,
+  onInstallImage,
   onCancel,
   onBack,
   onContinue,
@@ -119,16 +123,6 @@ export function LaunchPlanCard({
         >
           <LaunchSteps step={step} />
 
-          {step === "agent" && !setupOk ? (
-            <Alert variant="destructive">
-              <CircleAlert />
-              <AlertTitle>Setup needs attention</AlertTitle>
-              <AlertDescription>
-                Fix the setup problem on Home before starting a run.
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
           {step === "agent" ? (
             <>
               <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -158,6 +152,12 @@ export function LaunchPlanCard({
                 imageLoading={imageLoading}
                 imageStatus={imageStatus}
                 imageError={imageError}
+                installing={imageInstalling}
+                onInstall={
+                  imageStatus && !imageStatus.image.ready
+                    ? onInstallImage
+                    : undefined
+                }
               />
               {selectedReadiness ? (
                 <div className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">

@@ -35,8 +35,8 @@ vi.mock("@xterm/addon-fit", () => ({
 vi.mock("@/commands/runhaven", async (importActual) => ({
   ...(await importActual<typeof import("../commands/runhaven")>()),
   hasTauriRuntime: vi.fn(() => true),
-  openTerminalSession: vi.fn(() => Promise.resolve()),
-  openAgentSignInTerminal: vi.fn(() => Promise.resolve()),
+  openTerminalSession: vi.fn(() => Promise.resolve(true)),
+  openAgentSignInTerminal: vi.fn(() => Promise.resolve(true)),
   resizeTerminal: vi.fn(() => Promise.resolve()),
   writeTerminalInput: vi.fn(() => Promise.resolve()),
   closeTerminalSession: vi.fn(() => Promise.resolve()),
@@ -50,8 +50,8 @@ const closeTerminalSession = vi.mocked(runhaven.closeTerminalSession)
 beforeEach(() => {
   vi.clearAllMocks()
   hasTauriRuntime.mockReturnValue(true)
-  openTerminalSession.mockResolvedValue(undefined)
-  openAgentSignInTerminal.mockResolvedValue(undefined)
+  openTerminalSession.mockResolvedValue(true)
+  openAgentSignInTerminal.mockResolvedValue(true)
   closeTerminalSession.mockResolvedValue(undefined)
 })
 
@@ -105,6 +105,18 @@ describe("TerminalPanel agent login mode", () => {
     panel.container.remove()
   })
 
+  it("returns to the open action without an error when confirmation is canceled", async () => {
+    openAgentSignInTerminal.mockResolvedValue(false)
+    const panel = mountLogin()
+    await act(async () => panel.root.render(<TerminalPanel login={panel.login} />))
+    await openLogin(panel.container)
+
+    expect(panel.container.textContent).toContain("Open sign-in terminal")
+    expect(panel.container.textContent).not.toContain("Terminal did not open")
+    await act(async () => panel.root.unmount())
+    panel.container.remove()
+  })
+
   it("gives the login terminal a fixed viewport so xterm fit cannot grow its observer target", async () => {
     const panel = mountLogin()
     await act(async () => panel.root.render(<TerminalPanel login={panel.login} />))
@@ -123,7 +135,7 @@ describe("TerminalPanel agent login mode", () => {
     let handler: ((message: TerminalMessage) => void) | undefined
     openAgentSignInTerminal.mockImplementation((_agent, _sessionId, onMessage) => {
       handler = onMessage
-      return Promise.resolve()
+      return Promise.resolve(true)
     })
     const first = vi.fn()
     const latest = vi.fn()
@@ -155,7 +167,7 @@ describe("TerminalPanel agent login mode", () => {
     let handler: ((message: TerminalMessage) => void) | undefined
     openAgentSignInTerminal.mockImplementation((_agent, _sessionId, onMessage) => {
       handler = onMessage
-      return Promise.resolve()
+      return Promise.resolve(true)
     })
     const signedIn = vi.fn()
     const panel = mountLogin(signedIn)

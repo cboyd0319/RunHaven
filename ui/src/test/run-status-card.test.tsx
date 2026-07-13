@@ -53,7 +53,7 @@ describe("RunStatusCard", () => {
 
     expect(beforeAttempt).toContain("Stop run");
     expect(beforeAttempt).toContain("Hard stop");
-    expect(beforeAttempt).toContain("Repair run record");
+    expect(beforeAttempt).not.toContain("Repair run record");
     expect(beforeAttempt).toContain("Clean up run");
     expect(beforeAttempt).toContain("More actions");
     expect(beforeAttempt).not.toContain("confirmation required");

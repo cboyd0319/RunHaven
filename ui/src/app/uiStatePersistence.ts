@@ -1,10 +1,7 @@
-import type { NavDestination } from "./navigation"
 import { OPAQUE_TOKEN, isSessionMonitorWindow } from "./windowMode"
 
 // UI state persisted in the WebView (localStorage plus the shadcn sidebar
 // cookie). The allowed set, in full:
-// - the last navigation destination kind
-// - for a session destination, the backend-generated opaque session id
 // - the sidebar open/collapsed state
 // - the Settings choices: the Dock badge on/off boolean and the default
 //   agent's name (an opaque agent identifier from the Rust dashboard)
@@ -14,11 +11,10 @@ import { OPAQUE_TOKEN, isSessionMonitorWindow } from "./windowMode"
 //   stripped, length capped, blank labels dropped) and are shown as display
 //   text only. They never rename the run's real volume identity key.
 // Nothing else may be persisted here: never composer drafts, run output,
-// tokens, project paths, or commands. Session ids are opaque UUIDs minted in
-// Rust (runhaven-core new_run_id), so this store never holds a secret. The
-// stored values also have no authority: a restored session id is re-verified
-// against the live backend session list before the app navigates to it
-// (useNavigation), and a restored default agent is re-verified against the
+// tokens, project paths, commands, or navigation history. Session ids used as
+// label keys are opaque UUIDs minted in Rust (runhaven-core new_run_id), so this
+// store never holds a secret. The stored values also have no authority: a
+// restored default agent is re-verified against the
 // live agent list before it picks anything (useLaunchFlow), so a tampered
 // value can at most select something that already exists.
 //
@@ -26,61 +22,11 @@ import { OPAQUE_TOKEN, isSessionMonitorWindow } from "./windowMode"
 // WebView storage (same origin), so every persist function no-ops in a
 // monitor window; the monitor app also never mounts the components that
 // persist. Two layers, one rule: a monitor can never move the main window's
-// remembered place or settings.
-const LAST_DESTINATION_KEY = "runhaven.lastDestination"
-
-const SYSTEM_KINDS = ["home", "runs", "agents", "diagnostics", "maintenance"] as const
-
-export function persistLastDestination(destination: NavDestination): void {
-  if (isSessionMonitorWindow()) {
-    return
-  }
-  const sanitized =
-    destination.kind === "session"
-      ? { kind: destination.kind, id: destination.id }
-      : { kind: destination.kind }
-  try {
-    window.localStorage.setItem(LAST_DESTINATION_KEY, JSON.stringify(sanitized))
-  } catch {
-    // Persistence is a convenience; a blocked store never breaks navigation.
-  }
-}
-
-// The persisted destination, or null when nothing valid is stored. Garbage,
-// unknown kinds, and malformed session ids all read as null so a bad store
-// can only ever mean "start on Home".
-export function loadLastDestination(): NavDestination | null {
-  try {
-    const raw = window.localStorage.getItem(LAST_DESTINATION_KEY)
-    if (!raw) {
-      return null
-    }
-    const parsed: unknown = JSON.parse(raw)
-    if (typeof parsed !== "object" || parsed === null) {
-      return null
-    }
-    const kind = (parsed as { kind?: unknown }).kind
-    for (const system of SYSTEM_KINDS) {
-      if (kind === system) {
-        return { kind: system }
-      }
-    }
-    if (kind === "session") {
-      const id = (parsed as { id?: unknown }).id
-      if (typeof id === "string" && OPAQUE_TOKEN.test(id)) {
-        return { kind: "session", id }
-      }
-    }
-    return null
-  } catch {
-    return null
-  }
-}
+// remembered settings or labels.
 
 const SETTINGS_KEY = "runhaven.settings"
 
-// The whole Settings surface (spec 3.9, shipped lean as an in-window dialog;
-// see docs/plans/native-gui-navigation-gap.md B3). Only convenience choices
+// The whole inline Settings surface. Only convenience choices
 // live here, never security defaults or confirmation suppression.
 export type AppSettings = {
   // Show the needs-you count on the app's Dock icon.

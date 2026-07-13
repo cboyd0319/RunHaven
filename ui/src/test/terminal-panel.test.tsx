@@ -78,9 +78,9 @@ vi.mock("@xterm/addon-fit", () => ({
 vi.mock("@/commands/runhaven", async (importActual) => ({
   ...(await importActual<typeof import("../commands/runhaven")>()),
   hasTauriRuntime: vi.fn(() => true),
-  openTerminalSession: vi.fn(() => Promise.resolve()),
-  openAgentSignInTerminal: vi.fn(() => Promise.resolve()),
-  openAgentRunTerminal: vi.fn(() => Promise.resolve()),
+  openTerminalSession: vi.fn(() => Promise.resolve(true)),
+  openAgentSignInTerminal: vi.fn(() => Promise.resolve(true)),
+  openAgentRunTerminal: vi.fn(() => Promise.resolve(true)),
   writeTerminalInput: vi.fn(() => Promise.resolve()),
   resizeTerminal: vi.fn(() => Promise.resolve()),
   closeTerminalSession: vi.fn(() => Promise.resolve()),
@@ -103,9 +103,9 @@ beforeEach(() => {
   xtermState.instances.length = 0
   vi.clearAllMocks()
   hasTauriRuntime.mockReturnValue(true)
-  openTerminalSession.mockResolvedValue(undefined)
-  openAgentSignInTerminal.mockResolvedValue(undefined)
-  openAgentRunTerminal.mockResolvedValue(undefined)
+  openTerminalSession.mockResolvedValue(true)
+  openAgentSignInTerminal.mockResolvedValue(true)
+  openAgentRunTerminal.mockResolvedValue(true)
   closeTerminalSession.mockResolvedValue(undefined)
   writeTerminalInput.mockResolvedValue(undefined)
 })
@@ -243,7 +243,7 @@ describe("TerminalPanel message handling", () => {
     let handler: ((message: TerminalMessage) => void) | undefined
     openTerminalSession.mockImplementation((_sessionId, onMessage) => {
       handler = onMessage
-      return Promise.resolve()
+      return Promise.resolve(true)
     })
     const panel = await mountActiveTerminal()
     expect(handler).toBeDefined()

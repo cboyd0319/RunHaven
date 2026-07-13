@@ -73,7 +73,6 @@ describe("useLaunchFlow", () => {
     await act(async () => {
       result.current.setOpen(false)
     })
-    expect(result.current.sheetOpen).toBe(false)
     expect(result.current.launchStep).toBe("agent")
     expect(result.current.plan).toBeNull()
     expect(result.current.confirmedWarnings).toEqual([])
@@ -150,7 +149,6 @@ describe("useLaunchFlow", () => {
     expect(flowDeps.launched).toHaveLength(1)
     expect(flowDeps.selected).toEqual(["session-1"])
     expect(flowDeps.errors).toEqual([])
-    expect(result.current.sheetOpen).toBe(false)
     expect(result.current.launchStep).toBe("agent")
     expect(result.current.plan).toBeNull()
     expect(result.current.request.sessionName).not.toBe(sessionNameBefore)
@@ -265,7 +263,6 @@ describe("useLaunchFlow", () => {
     expect(result.current.runTerminal?.request.confirmLaunch).toBe(true)
     // The session key is a dash-free label so it passes the backend run-id rule.
     expect(result.current.runTerminal?.sessionId).not.toContain("-")
-    expect(result.current.sheetOpen).toBe(false)
     expect(flowDeps.navigated).toEqual([{ kind: "run-terminal" }])
     expect(flowDeps.launched).toHaveLength(0)
     expect(flowDeps.selected).toEqual([])
@@ -302,7 +299,32 @@ describe("useLaunchFlow", () => {
 
     expect(flowDeps.launched).toHaveLength(1)
     expect(flowDeps.launched[0]?.status).toBe("started")
-    expect(result.current.sheetOpen).toBe(false)
     expect(result.current.error).toBe("")
+  })
+
+  it("treats closing the native launch confirmation as quiet cancellation", async () => {
+    const flowDeps = deps({
+      launchRunCommand: async () => null,
+    })
+    const { result } = await renderFlow(flowDeps)
+
+    await act(async () => {
+      result.current.updateRequest({
+        agent: "codex",
+        workspacePath: "/tmp/cancel-project",
+      })
+    })
+    await act(async () => {
+      await result.current.reviewPlan()
+    })
+    expect(result.current.plan).not.toBeNull()
+    await act(async () => {
+      await result.current.startRun()
+    })
+
+    expect(flowDeps.launched).toEqual([])
+    expect(flowDeps.errors).toEqual([])
+    expect(result.current.error).toBe("")
+    expect(result.current.launching).toBe(false)
   })
 })

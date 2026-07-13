@@ -3,60 +3,17 @@ import {
   authScopeHelp,
   supportsApiKeyBroker,
   type AgentProfile,
-  type AuthStatusResponse,
   type ImageStatusResponse,
   type RunPlanRequest,
 } from "@/commands/runhaven"
 import { CircleAlert, ShieldCheck } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 
-import { authStatusBadgeVariant } from "./authDetails"
-import { authScopeLabels, authStatusLabel, safeBackendLabel } from "./labels"
+import { authScopeLabels } from "./labels"
 import { agentLabel } from "./sessionIdentity"
-
-export function AgentAccessSummary({
-  agent,
-  authStatus,
-  authScope,
-}: {
-  agent: AgentProfile | undefined
-  authStatus: AuthStatusResponse | null
-  authScope: RunPlanRequest["authScope"]
-}) {
-  if (!agent) {
-    return null
-  }
-  const profileStatus = authProfileStatus(agent, authStatus)
-  const brokerAvailable = supportsApiKeyBroker(agent)
-  return (
-    <div className="grid gap-3 rounded-lg border p-3 text-sm sm:grid-cols-4">
-      <div>
-        <div className="text-muted-foreground">Sign-in method</div>
-        <div className="font-medium">{authMethodLabel(agent.signIn)}</div>
-      </div>
-      <div>
-        <div className="text-muted-foreground">API key handling</div>
-        <Badge variant={brokerAvailable ? "success" : "secondary"}>
-          {brokerCapabilityLabel(agent)}
-        </Badge>
-      </div>
-      <div>
-        <div className="text-muted-foreground">Sign-in status</div>
-        <Badge variant={authStatusBadgeVariant(profileStatus)}>
-          {authStatusLabel(profileStatus)}
-        </Badge>
-      </div>
-      <div>
-        <div className="text-muted-foreground">Sign-in sharing</div>
-        <div className="font-medium">{authScopeLabels[authScope]}</div>
-      </div>
-    </div>
-  )
-}
 
 export function AuthScopePicker({
   value,
@@ -167,7 +124,7 @@ export function ImageReadiness({
             <span>
               {onInstall
                 ? "Install this agent before starting a run."
-                : "Open Agents to install this agent before continuing."}
+                : "This agent must be installed before continuing."}
             </span>
             {onInstall ? (
               <Button
@@ -185,28 +142,4 @@ export function ImageReadiness({
       </AlertDescription>
     </Alert>
   )
-}
-
-function authMethodLabel(value: string): string {
-  if (value === "n/a") {
-    return "Not needed"
-  }
-  return safeBackendLabel(value, "Unknown")
-}
-
-function brokerCapabilityLabel(agent: AgentProfile): string {
-  if (supportsApiKeyBroker(agent)) {
-    return "Available"
-  }
-  if (agent.broker === "n/a") {
-    return "Not needed"
-  }
-  return "Not available"
-}
-
-function authProfileStatus(
-  agent: AgentProfile,
-  authStatus: AuthStatusResponse | null,
-): string {
-  return authStatus?.profiles.find((profile) => profile.name === agent.name)?.status ?? "-"
 }

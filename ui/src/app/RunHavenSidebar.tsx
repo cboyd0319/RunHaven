@@ -1,13 +1,9 @@
+import { useEffect } from "react"
 import {
-  Activity,
-  Bot,
-  CheckCircle2,
-  CircleAlert,
-  CirclePlay,
+  History,
   House,
   Settings,
   Terminal,
-  Wrench,
   type LucideIcon,
 } from "lucide-react"
 
@@ -18,43 +14,47 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar"
-import type { ManagedSessionSummary } from "@/commands/runhaven"
+import type { AgentProfile } from "@/commands/runhaven"
 
-import { groupSessions, RUN_TERMINAL_NAV, type NavDestination } from "./navigation"
-import { sessionAttention } from "./sessionAttention"
+import { RUN_TERMINAL_NAV, type NavDestination } from "./navigation"
+import { SettingsForm } from "./SettingsForm"
+import type { SettingsState } from "./useSettings"
 
-// Fixed destinations first, then three filtered Run history shortcuts and the
-// app version. Individual runs stay out of the sidebar so it remains stable.
+// Individual runs stay out of the sidebar so navigation remains stable.
 export function RunHavenSidebar({
-  sessions,
   navigation,
   onNavigate,
   onOpenSettings,
+  settings,
+  agents = [],
   runTerminalActive,
   appVersion,
 }: {
-  sessions: ManagedSessionSummary[]
   navigation: NavDestination
   onNavigate: (destination: NavDestination) => void
   onOpenSettings: () => void
+  settings?: SettingsState
+  agents?: AgentProfile[]
   // True while an interactive run terminal is live. It is not a managed session,
   // so it gets its own fixed row: without it, navigating away from a live run
   // would leave no way back (audit RT-1/RT-2).
   runTerminalActive: boolean
   appVersion: string
 }) {
-  const groups = groupSessions(sessions)
-  const needsReview = sessions.filter(
-    (session) => sessionAttention(session) !== null,
-  ).length
+  const { setOpen: setSidebarOpen } = useSidebar()
+
+  useEffect(() => {
+    if (settings?.open) {
+      setSidebarOpen(true)
+    }
+  }, [settings?.open, setSidebarOpen])
 
   return (
     <Sidebar collapsible="icon">
@@ -87,22 +87,10 @@ export function RunHavenSidebar({
                 onSelect={() => onNavigate({ kind: "home" })}
               />
               <DestinationRow
-                label="Agents"
-                Icon={Bot}
-                active={navigation.kind === "agents"}
-                onSelect={() => onNavigate({ kind: "agents" })}
-              />
-              <DestinationRow
-                label="System Check"
-                Icon={Activity}
-                active={navigation.kind === "diagnostics"}
-                onSelect={() => onNavigate({ kind: "diagnostics" })}
-              />
-              <DestinationRow
-                label="Cleanup"
-                Icon={Wrench}
-                active={navigation.kind === "maintenance"}
-                onSelect={() => onNavigate({ kind: "maintenance" })}
+                label="History"
+                Icon={History}
+                active={navigation.kind === "runs"}
+                onSelect={() => onNavigate({ kind: "runs" })}
               />
               {runTerminalActive ? (
                 <DestinationRow
@@ -115,40 +103,6 @@ export function RunHavenSidebar({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        {/* The three counts are independent status flags, not a partition: a
-            finished run that is ready to review is intentionally in both "Needs
-            you" (attention) and "Past" (lifecycle), matching the Home
-            panels, so they can sum to more than the session total. */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="tracking-[0.2em] uppercase">
-            Runs
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <CountRow
-                label="Needs you"
-                Icon={CircleAlert}
-                iconClassName="text-destructive"
-                count={needsReview}
-                onSelect={() => onNavigate({ kind: "runs", filter: "needs-you" })}
-              />
-              <CountRow
-                label="Running"
-                Icon={CirclePlay}
-                iconClassName="text-primary"
-                count={groups.active.length}
-                onSelect={() => onNavigate({ kind: "runs", filter: "running" })}
-              />
-              <CountRow
-                label="Past"
-                Icon={CheckCircle2}
-                iconClassName="text-success"
-                count={groups.finished.length}
-                onSelect={() => onNavigate({ kind: "runs", filter: "past" })}
-              />
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
@@ -156,13 +110,37 @@ export function RunHavenSidebar({
             <SidebarMenuButton
               tooltip="Settings"
               type="button"
-              onClick={onOpenSettings}
+              aria-expanded={settings?.open}
+              onClick={() => {
+                const opening = !settings?.open
+                if (opening) {
+                  setSidebarOpen(true)
+                }
+                if (settings) {
+                  settings.setOpen(opening)
+                } else {
+                  onOpenSettings()
+                }
+              }}
             >
               <Settings />
               <span>Settings</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+        {settings?.open ? (
+          <div className="mx-2 rounded-lg border bg-background p-3 group-data-[collapsible=icon]:hidden">
+            <div className="mb-3 text-sm font-semibold">Settings</div>
+            <SettingsForm settings={settings} agents={agents} compact />
+            <button
+              type="button"
+              className="mt-3 text-sm font-medium text-foreground underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              onClick={() => onNavigate({ kind: "diagnostics" })}
+            >
+              System details
+            </button>
+          </div>
+        ) : null}
         <div className="px-3 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
           {`RunHaven ${appVersion}`.trim()}
         </div>
@@ -195,32 +173,6 @@ function DestinationRow({
         <Icon />
         <span>{label}</span>
       </SidebarMenuButton>
-    </SidebarMenuItem>
-  )
-}
-
-// A run-pipeline summary row: a tone-colored icon, a label, and a fixed count
-// badge. The count is not the only cue; the label names the group in text.
-function CountRow({
-  label,
-  Icon,
-  iconClassName,
-  count,
-  onSelect,
-}: {
-  label: string
-  Icon: LucideIcon
-  iconClassName: string
-  count: number
-  onSelect: () => void
-}) {
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton tooltip={`${label}: ${count}`} type="button" onClick={onSelect}>
-        <Icon className={iconClassName} />
-        <span>{label}</span>
-      </SidebarMenuButton>
-      <SidebarMenuBadge className="tabular-nums">{count}</SidebarMenuBadge>
     </SidebarMenuItem>
   )
 }

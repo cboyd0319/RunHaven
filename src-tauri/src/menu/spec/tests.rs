@@ -9,16 +9,6 @@ use crate::menu::state::is_dynamic_menu_id;
 /// parser (`parse_modifier`).
 const MODIFIER_TOKENS: &[&str] = &["Cmd", "Option", "Shift", "Ctrl"];
 
-/// Placeholders for surfaces that do not exist yet. These stay disabled and
-/// are never touched by `sync_menu_state`; every other disabled item is
-/// selection-scoped and driven by the sync path.
-const PLACEHOLDER_IDS: &[&str] = &[
-    "filter-sessions",
-    "help",
-    "help-agent-reach",
-    "help-report-problem",
-];
-
 /// Key tokens verified against the pinned muda 0.19 accelerator parser:
 /// single letters, digits, and the punctuation keys this menu uses.
 fn is_valid_key_token(token: &str) -> bool {
@@ -34,7 +24,6 @@ fn all_specs() -> Vec<&'static CommandSpec> {
         for entry in entries {
             match entry {
                 Entry::Command(spec) => specs.push(spec),
-                Entry::Submenu { entries, .. } => walk(entries, specs),
                 Entry::Separator | Entry::Predefined(_) => {}
             }
         }
@@ -47,13 +36,11 @@ fn all_specs() -> Vec<&'static CommandSpec> {
 }
 
 #[test]
-fn menu_bar_has_the_eight_spec_menus_in_order() {
+fn menu_bar_has_only_the_standard_and_contextual_menus_in_order() {
     let labels: Vec<&str> = MENU_BAR.iter().map(|(label, _)| *label).collect();
     assert_eq!(
         labels,
-        [
-            "RunHaven", "File", "Edit", "View", "Run", "Agent", "Window", "Help"
-        ]
+        ["RunHaven", "File", "Edit", "View", "Run", "Window", "Help"]
     );
 }
 
@@ -79,38 +66,13 @@ fn command_ids_are_stable_unique_and_kebab_case() {
         [
             "settings",
             "new-run",
-            "filter-sessions",
             "toggle-sidebar",
-            "go-home",
-            "go-agents",
-            "go-diagnostics",
-            "go-maintenance",
-            "select-session-1",
-            "select-session-2",
-            "select-session-3",
-            "select-session-4",
-            "select-session-5",
-            "select-session-6",
-            "select-session-7",
-            "select-session-8",
-            "select-session-9",
-            "next-session",
-            "previous-session",
-            "jump-needs-you",
-            "check-again",
             "send-message",
             "show-output",
             "stop-session",
             "hard-stop-session",
-            "repair-session",
             "cleanup-session",
             "open-session-window",
-            "agent-sign-in",
-            "agent-rebuild-image",
-            "agent-auth-details",
-            "help",
-            "help-agent-reach",
-            "help-report-problem",
         ]
     );
 }
@@ -129,7 +91,6 @@ fn session_scoped_ids_are_exactly_the_session_menu_commands() {
             "show-output",
             "stop-session",
             "hard-stop-session",
-            "repair-session",
             "cleanup-session",
             "open-session-window",
         ]
@@ -145,23 +106,12 @@ fn session_scoped_ids_are_exactly_the_session_menu_commands() {
 
 #[test]
 fn initial_enabled_state_matches_each_items_category() {
-    // "No dead navigation" (spec section 10): an enabled item must do
-    // something user-visible. An item is *built* disabled only when it is a
-    // placeholder for a surface that does not exist yet, or a selection-scoped
-    // item that `sync_menu_state` turns on once it applies. Everything else
-    // (Settings, New Run, destinations, refresh, agent surfaces, sidebar
-    // toggle) is built enabled. The dynamic set is read from the backend
-    // mapping (`is_dynamic_menu_id`), so this pin and the sync path cannot
-    // disagree about which ids start disabled.
+    // Every custom item earns its place now. Contextual Run items start
+    // disabled until `sync_menu_state` says they apply; all global commands are
+    // immediately usable. There are no permanently disabled placeholders.
     for spec in all_specs() {
-        let is_placeholder = PLACEHOLDER_IDS.contains(&spec.id);
         let is_dynamic = is_dynamic_menu_id(spec.id);
-        assert!(
-            !(is_placeholder && is_dynamic),
-            "menu id `{}` cannot be both a placeholder and sync-controlled",
-            spec.id
-        );
-        let expected_enabled = !(is_placeholder || is_dynamic);
+        let expected_enabled = !is_dynamic;
         assert_eq!(
             spec.enabled, expected_enabled,
             "menu item `{}` built enabled={} but its category expects enabled={}",
@@ -171,14 +121,13 @@ fn initial_enabled_state_matches_each_items_category() {
 }
 
 #[test]
-fn every_placeholder_id_is_a_real_menu_item() {
-    let ids = command_ids();
-    for placeholder in PLACEHOLDER_IDS {
-        assert!(
-            ids.contains(placeholder),
-            "placeholder id `{placeholder}` must be a menu id"
-        );
-    }
+fn menu_has_no_disabled_placeholders() {
+    let dead: Vec<&str> = all_specs()
+        .into_iter()
+        .filter(|spec| !spec.enabled && !is_dynamic_menu_id(spec.id))
+        .map(|spec| spec.id)
+        .collect();
+    assert!(dead.is_empty(), "dead menu placeholders remain: {dead:?}");
 }
 
 #[test]

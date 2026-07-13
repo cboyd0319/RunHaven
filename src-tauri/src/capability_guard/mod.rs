@@ -59,6 +59,23 @@ fn tauri_configs_pin_release_and_development_capabilities() {
     );
 }
 
+#[test]
+fn development_bundle_has_an_unambiguous_identity() {
+    let manifest = manifest_dir();
+    let release: serde_json::Value =
+        serde_json::from_str(&read_text(&manifest.join("tauri.conf.json")))
+            .expect("parse release Tauri config");
+    let development: serde_json::Value =
+        serde_json::from_str(&read_text(&manifest.join("tauri.dev.conf.json")))
+            .expect("parse development Tauri config");
+
+    assert_eq!(release["productName"], "RunHaven");
+    assert_eq!(release["identifier"], "dev.runhaven.desktop");
+    assert_eq!(development["productName"], "RunHaven Debug");
+    assert_eq!(development["identifier"], "dev.runhaven.desktop.debug");
+    assert_ne!(release["identifier"], development["identifier"]);
+}
+
 fn config_capabilities(path: &std::path::Path) -> Vec<String> {
     let conf: serde_json::Value =
         serde_json::from_str(&read_text(path)).expect("parse Tauri config");

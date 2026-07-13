@@ -259,15 +259,16 @@ construction, not by convention:
   Rust also checks, on every call, that a monitor window reads only the
   session it was opened for; requests from unknown window labels are denied.
 - Raw output is not viewable from a monitor window. The output confirmation
-  dialog is app-owned today rather than parented to the asking window, and
-  even redacted output can carry sensitive text, so output viewing stays
-  with the main window (fail closed).
+  dialog is parented to the trusted main window, and even redacted output can
+  carry sensitive text, so output viewing stays with the main window (fail
+  closed). It names the session, status, and line count but omits internal run
+  and session identifiers.
 - Only the main window can open monitor windows, through one validated Rust
   command: the session must exist in RunHaven's own records, at most six
   monitor windows can be open at once, and the window's label is minted by
   Rust from a counter, never from user input. Monitor windows cannot open
   further windows, listen to menu events, or write the app's remembered
-  place and settings.
+  settings and run labels.
 - Monitor windows are never restored across relaunch, and closing the main
   window closes them too, so no watching window outlives its controls.
 
@@ -297,16 +298,16 @@ most powerful interactive surface, so it is fenced carefully.
   probe before translating that one code to success. Other exit and
   cancellation codes are preserved. RunHaven never reads credential bytes.
 - A force-quit can leave an unused RunHaven internal network while the detached
-  cleanup thread is finishing. The Cleanup screen safely removes that network.
+  cleanup thread is finishing. System details safely removes that network.
 
 The provider CLI may write its own configuration, credential, or support-log
 files inside its isolated volume. The no-store statement applies to RunHaven's
 terminal relay, not to the provider's own behavior.
 
-The interactive agent run terminal started from **New run** shares that same
+The interactive agent run terminal started from **New session** shares that same
 boundary and adds a few facts of its own:
 
-- It is Rust-owned and native-confirmed. The New Run flow hands the reviewed
+- It is Rust-owned and native-confirmed. The New session flow hands the reviewed
   request to Rust, which reuses the exact normal-launch path: it builds the same
   plan and shows the same native launch confirmation a background run shows.
   Nothing runs, and no worktree branch is created, until you confirm. The

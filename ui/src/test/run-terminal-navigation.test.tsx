@@ -35,7 +35,7 @@ vi.mock("@xterm/addon-fit", () => ({
 vi.mock("@/commands/runhaven", async (importActual) => ({
   ...(await importActual<typeof import("../commands/runhaven")>()),
   hasTauriRuntime: vi.fn(() => true),
-  openAgentRunTerminal: vi.fn(() => Promise.resolve()),
+  openAgentRunTerminal: vi.fn(() => Promise.resolve(true)),
   resizeTerminal: vi.fn(() => Promise.resolve()),
   closeTerminalSession: vi.fn(() => Promise.resolve()),
 }))
@@ -45,7 +45,7 @@ const closeTerminalSession = vi.mocked(runhaven.closeTerminalSession)
 
 beforeEach(() => {
   vi.clearAllMocks()
-  openAgentRunTerminal.mockResolvedValue(undefined)
+  openAgentRunTerminal.mockResolvedValue(true)
   closeTerminalSession.mockResolvedValue(undefined)
 })
 

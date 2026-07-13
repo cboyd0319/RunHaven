@@ -17,7 +17,7 @@ use runhaven_core::support::paths::override_cache_root_for_tests;
 
 use super::{FakeTerminal, open_fake};
 use crate::terminal::{
-    MAX_TERMINAL_SESSIONS, SpawnedTerminal, TERMINAL_CANCELED, TerminalSessionRegistry,
+    MAX_TERMINAL_SESSIONS, SpawnedTerminal, TerminalSessionRegistry,
     open_agent_run_terminal_for_test,
 };
 
@@ -85,7 +85,7 @@ fn run_terminal_confirm_cancel_spawns_nothing() {
         || Ok(None),
         |_| panic!("cancel must spawn nothing"),
     );
-    assert_eq!(result, Err(TERMINAL_CANCELED.to_string()));
+    assert_eq!(result, Ok(false));
     assert!(registry.remove("run-cancel").is_none());
 }
 
@@ -105,7 +105,7 @@ fn run_terminal_forces_interactive_tty_then_registers_and_routes_input() {
             Ok(SpawnedTerminal::without_reader(spawn_fake.handle()))
         },
     );
-    result.expect("run open");
+    assert!(result.expect("run open"));
 
     // The command forced the argv to an interactive TTY run before spawn, so the
     // agent starts its TUI instead of headless --print, and it stays non-root.

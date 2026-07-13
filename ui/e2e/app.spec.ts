@@ -18,23 +18,19 @@ test("meets automated WCAG checks on the primary workflow", async ({ page }) => 
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "New run" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "New run" })).toHaveCSS("opacity", "1");
+  await expect(page.getByRole("heading", { name: "Choose an agent" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start with Codex" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Start with Codex" })).toHaveCSS("opacity", "1");
   await expectNoAccessibilityViolations(page);
 
-  await page.getByRole("button", { name: "New run" }).click();
-  const newRunDialog = page.getByRole("dialog", { name: "New run" });
-  await expect(newRunDialog).toBeVisible();
-  await expect(newRunDialog).toHaveCSS("opacity", "1");
+  await page.getByRole("button", { name: "Start with Codex" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "New session" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
   await expectNoAccessibilityViolations(page);
-  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Cancel" }).click();
 
-  await page.getByRole("button", { name: "Agents", exact: true }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Agents" })).toBeVisible();
-  await expectNoAccessibilityViolations(page);
-
-  await page.getByRole("button", { name: "System Check", exact: true }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "System Check" })).toBeVisible();
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Run history" })).toBeVisible();
   await expectNoAccessibilityViolations(page);
 
   await page.emulateMedia({ colorScheme: "dark" });
@@ -42,9 +38,11 @@ test("meets automated WCAG checks on the primary workflow", async ({ page }) => 
   await expectNoAccessibilityViolations(page);
 
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
-  await expect(settingsDialog).toBeVisible();
-  await expect(settingsDialog).toHaveCSS("opacity", "1");
+  await expect(page.getByText("App icon count", { exact: true })).toBeVisible();
+  await expectNoAccessibilityViolations(page);
+  await page.getByRole("button", { name: "System details", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "System details" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remove stale networks" })).toBeEnabled();
   await expectNoAccessibilityViolations(page);
 });
 
@@ -59,37 +57,36 @@ test("renders the dashboard without runtime errors", async ({ page }) => {
 
   await page.goto("/");
 
-  // Home is the welcome surface: setup health, agent readiness, and the one
-  // prominent New run action. The wizard is not inline anymore.
+  // Home is only the agent launchpad. Operational status and run history live
+  // on their own destinations instead of competing with the common path.
   await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
-  await expect(page.getByText("Ready to run", { exact: true })).toBeVisible();
-  await expect(page.locator("header").getByText("Ready", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Setup ready" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Choose agent" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Choose an agent" })).toBeVisible();
+  for (const name of ["Claude", "Codex", "Antigravity", "Copilot"]) {
+    await expect(page.getByRole("button", { name: `Start with ${name}` })).toBeEnabled();
+  }
+  await expect(page.getByText("System ready", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Recent work", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Needs attention", { exact: true })).toHaveCount(0);
 
-  // The launch flow lives in a modal sheet.
-  await page.getByRole("button", { name: "New run" }).click();
-  const sheet = page.getByRole("dialog", { name: "New run" });
-  await expect(sheet).toBeVisible();
-  await expect(sheet.getByRole("heading", { name: "Choose agent" })).toBeVisible();
-  await expect(sheet.getByText("Sign-in method")).toHaveCount(0);
-  await expect(sheet.getByText("API key handling")).toHaveCount(0);
-
-  // Escape cancels with no side effects: the sheet closes, focus returns to
-  // the New run button, and entered values survive for the next open.
+  // New Session is a page, not a modal. Draft values survive ordinary
+  // navigation so a user can check Home without losing work.
+  await page.getByRole("button", { name: "Start with Codex" }).click();
+  await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
+  await expect(page.getByText("Sign-in method")).toHaveCount(0);
+  await expect(page.getByText("API key handling")).toHaveCount(0);
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByText("Advanced options", { exact: true }).click();
   await page.getByLabel("Project folder path").fill("/tmp/runhaven-draft");
-  await page.keyboard.press("Escape");
-  await expect(sheet).toBeHidden();
-  await expect(page.getByRole("button", { name: "New run" })).toBeFocused();
-  await page.getByRole("button", { name: "New run" }).click();
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("button", { name: "Start with Codex" }).click();
+  await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByRole("heading", { name: "Choose project" })).toBeVisible();
   await page.getByText("Advanced options", { exact: true }).click();
   await expect(page.getByLabel("Project folder path")).toHaveValue("/tmp/runhaven-draft");
   await page.getByRole("button", { name: "Back" }).click();
   await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(sheet).toBeHidden();
+  await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
 
   expect(runtimeErrors).toEqual([]);
 });
@@ -103,21 +100,18 @@ test("fits the minimum desktop window and follows system appearance", async ({ p
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
   ).toBe(true);
-  await expect(page.getByRole("button", { name: "New run" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start with Codex" })).toBeVisible();
 
   await page.emulateMedia({ colorScheme: "dark" });
   await expect(page.locator("html")).toHaveClass(/dark/);
-  await page.getByRole("button", { name: "New run" }).click();
+  await page.getByRole("button", { name: "Start with Codex" }).click();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
   ).toBe(true);
-  const dialogBox = await page.getByRole("dialog", { name: "New run" }).boundingBox();
   const continueBox = await page.getByRole("button", { name: "Continue" }).boundingBox();
-  expect(dialogBox).not.toBeNull();
   expect(continueBox).not.toBeNull();
-  expect(continueBox!.y + continueBox!.height).toBeLessThanOrEqual(
-    dialogBox!.y + dialogBox!.height,
-  );
+  expect(continueBox!.y).toBeGreaterThanOrEqual(0);
+  await expectNoHorizontalOverflow(page);
 });
 
 for (const viewport of [
@@ -136,37 +130,21 @@ for (const viewport of [
     await page.goto("/");
     await expectNoHorizontalOverflow(page);
 
-    await page.getByRole("button", { name: "Agents", exact: true }).click();
-    for (const name of [
-      "Claude Signed in",
-      "Codex Needs sign-in",
-      "Antigravity Needs sign-in",
-      "Copilot Needs sign-in",
-    ]) {
-      await page.getByRole("button", { name, exact: true }).click();
-      await expectNoHorizontalOverflow(page);
-    }
-
-    await page.getByRole("button", { name: "System Check", exact: true }).click();
-    await page.getByRole("tab", { name: "Network", exact: true }).click();
-    await expectNoHorizontalOverflow(page);
-    await page.getByRole("button", { name: "Cleanup", exact: true }).click();
-    await expectNoHorizontalOverflow(page);
-
-    await page.getByRole("button", { name: "Needs you", exact: true }).click();
-    const filters = page.getByRole("group", { name: "Filter run history" });
-    for (const name of ["Running", "Past", "All"]) {
-      await filters.getByRole("button", { name, exact: true }).click();
-    }
+    await page.getByRole("button", { name: "History", exact: true }).click();
     await expectNoHorizontalOverflow(page);
 
     await page.getByRole("button", { name: "Settings", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Settings" })).toBeVisible();
+    await expect(page.getByText("App icon count", { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
-    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page.getByRole("button", { name: "System details", exact: true }).click();
+    await expectNoHorizontalOverflow(page);
 
     await page.getByRole("button", { name: "Home", exact: true }).click();
-    await page.getByRole("button", { name: "New run", exact: true }).click();
+    await page.getByRole("button", { name: "Start with Claude", exact: true }).click();
+    for (const name of ["Claude", "Codex", "Antigravity", "Copilot"]) {
+      await selectAgent(page, name);
+      await expectNoHorizontalOverflow(page);
+    }
     await selectAgent(page, "Claude");
     await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page.getByText("Advanced options", { exact: true }).click();
@@ -185,8 +163,7 @@ for (const viewport of [
 test("reviews and starts a preview run", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "New run" }).click();
-  await selectAgent(page, "Codex");
+  await page.getByRole("button", { name: "Start with Codex" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "Agent ready" })).toBeVisible();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByRole("heading", { name: "Choose project" })).toBeVisible();
@@ -224,11 +201,11 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Runtime status" })).toBeVisible();
   await expectNoAccessibilityViolations(page);
   await page.getByRole("button", { name: "Load run diagnostics" }).click();
-  await expect(page.getByText("Auth state: api-key-broker")).toBeVisible();
+  await expect(page.getByText("Credential access: API key broker")).toBeVisible();
   await expect(page.getByText("api.openai.com")).toBeVisible();
   await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
   await page.getByLabel("Message").fill("draft for selected session");
-  await page.getByRole("button", { name: "Home" }).click();
+  await page.getByRole("button", { name: "History", exact: true }).click();
   await page.getByText("Codex - runhaven-preview").click();
   await expect(page.getByLabel("Message")).toHaveValue("draft for selected session");
   await page.getByLabel("Message").fill("hello session");
@@ -236,50 +213,45 @@ test("reviews and starts a preview run", async ({ page }) => {
   await expect(page.getByText("Message sent")).toBeVisible();
   await expect(page.getByText(/Sent \d+ bytes\./)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Latest output" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Load latest output" })).toBeDisabled();
-  await expect(page.getByLabel("Keep output updated")).toBeDisabled();
-  await page.getByLabel("I understand raw output may include private data.").check();
-  await page.getByRole("button", { name: "Load latest output" }).click();
+  await expect(page.getByRole("button", { name: "Show latest output" })).toBeEnabled();
+  await expect(page.getByText("Keep output updated")).toHaveCount(0);
+  await page.getByRole("button", { name: "Show latest output" }).click();
   await expect(page.getByText("Preview log line")).toBeVisible();
-  await page.getByLabel("Keep output updated").check();
-  await expect(page.getByText("Updates every few seconds.")).toBeVisible();
-  await expect(page.getByText("Preview log line 2")).toBeVisible();
   await expect(page.getByText("/tmp/runhaven-preview")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Run actions" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Stop run" })).toBeEnabled();
   await expect(page.getByText("More actions", { exact: true })).toBeVisible();
   await page.getByText("More actions", { exact: true }).click();
   await expect(page.getByRole("button", { name: "Hard stop" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Repair run record" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Repair run record" })).toHaveCount(0);
   await page.getByRole("button", { name: "Stop run" }).click();
   await expect(page.getByText(/Stop requested for preview-/)).toBeVisible();
   await page.getByRole("button", { name: "Home" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
 
-  // Once the launched run is a managed session, the Start screen must not offer
-  // a second control surface for it: only the one-line notice remains, and the
-  // run's controls live in the per-session view.
-  await expect(page.getByText("Run started. Find it in Recent activity.")).toBeVisible();
+  // Home remains a launchpad after a run. Existing runs and their controls live
+  // only in History and the per-session view.
+  await expect(page.getByRole("heading", { name: "Choose an agent" })).toBeVisible();
+  await expect(page.getByText("Run started. Find it in Recent work.")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Stop run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Hard stop" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Open session" }).click();
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await page.getByText("Codex - runhaven-preview").click();
   await expect(page.getByRole("heading", { level: 1, name: "Run details" })).toBeVisible();
 });
 
-test("loads secret-free diagnostics on entry", async ({ page }) => {
+test("shows actionable system details without raw trust logs", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "System Check", exact: true }).click();
-  // The destination is read-only, so it loads by itself: full doctor detail
-  // plus the trust checks, with no manual load button.
-  await expect(page.getByRole("heading", { name: "Setup checks" })).toBeVisible();
-  await expect(page.getByText("Preview mode")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Trust checks" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Load diagnostics" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Auth broker status" })).toBeVisible();
-  await expect(page.getByText("codex: api-key-broker")).toBeVisible();
-  await page.getByRole("tab", { name: "Network" }).click();
-  await expect(page.getByText("No provider egress decisions recorded.")).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "System details", exact: true }).click();
+  await expect(page.getByText("Your Mac is ready for RunHaven.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Setup problems" })).toHaveCount(0);
+  await expect(page.getByText("Preview mode")).toHaveCount(0);
+  await expect(page.getByText("Trust checks")).toHaveCount(0);
+  await expect(page.getByText("Auth broker status")).toHaveCount(0);
+  await expect(page.getByText("Network trust")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Leftover networks" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Check again" })).toBeVisible();
 });
 
@@ -301,31 +273,27 @@ test("keeps selected-session message drafts isolated", async ({ page }) => {
   await page.getByRole("button", { name: "Send" }).click();
   await expect(page.getByText("Message sent")).toBeVisible();
 
-  // Variant 06 lists sessions in Home's Recent activity, not the sidebar, so
-  // switching sessions routes through Home.
-  await page.getByRole("button", { name: "Home" }).click();
+  // Sessions live in History, not Home or the sidebar.
+  await page.getByRole("button", { name: "History", exact: true }).click();
   await page.getByText("Codex - runhaven-alpha").click();
   await expect(page.getByLabel("Message")).toHaveValue("alpha draft");
   await expect(page.getByText("beta message")).toHaveCount(0);
 });
 
-test("keeps ready-agent launch choices compact", async ({ page }) => {
+test("keeps agent launch choices compact", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "New run" }).click();
+  await page.getByRole("button", { name: "Start with Codex" }).click();
   await expect(page.getByRole("heading", { name: "Choose agent" })).toBeVisible();
   await expect(page.getByText("Sign-in details")).toHaveCount(0);
   await expect(page.getByText("API key handling")).toHaveCount(0);
-  await expect(
-    page.getByRole("dialog").getByText("Signed in", { exact: true }),
-  ).toBeVisible();
+  await expect(page.getByText("Sign-in", { exact: true })).toBeVisible();
+  await expect(page.getByText("Needs sign-in", { exact: true })).toBeVisible();
 });
 
 test("keeps the interactive run terminal accessible", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "New run" }).click();
-  await page.getByLabel("Agent").click();
-  await page.getByRole("option", { name: /Claude/ }).click();
+  await page.getByRole("button", { name: "Start with Claude" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByText("Advanced options", { exact: true }).click();
   await page.getByLabel("Project folder path").fill("/tmp/runhaven-terminal");
@@ -338,34 +306,18 @@ test("keeps the interactive run terminal accessible", async ({ page }) => {
   await expectNoAccessibilityViolations(page);
 });
 
-test("runs repair and cleanup through native-confirmed actions", async ({ page }) => {
+test("cleans stale networks from System details in one click", async ({ page }) => {
   await page.goto("/");
 
-  // Agents uses a compact list with one detail panel. Repair stays behind a
-  // disclosure and Rust owns the confirmation.
-  await page.getByRole("button", { name: "Agents", exact: true }).click();
-  await expect(
-    page.getByRole("alert").filter({ hasText: "Agent ready" }).first(),
-  ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Available agents" })).toBeVisible();
-  await page.getByText("Repair agent installation", { exact: true }).click();
-  const rebuildButton = page.getByRole("button", { name: "Reinstall agent" });
-  await expect(rebuildButton).toBeEnabled();
-  await rebuildButton.click();
-  await expect(page.getByText("Succeeded (preview)")).toBeVisible();
-  await expect(page.getByText("Preview build output.")).toBeVisible();
-
-  // Network cleanup previews a count, then the action uses native confirmation.
-  await page.getByRole("button", { name: "Cleanup" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Cleanup" })).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "System details", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "System details" })).toBeVisible();
   await expectNoAccessibilityViolations(page);
-  await page.getByRole("button", { name: "Check for stale networks" }).click();
-  await expect(page.getByText(/Stale RunHaven networks found:/)).toBeVisible();
   const removeButton = page.getByRole("button", { name: "Remove stale networks" });
   await expect(removeButton).toBeEnabled();
   await removeButton.click();
-  await expect(page.getByText("Cleanup finished")).toBeVisible();
-  await expect(page.getByText("Removed 1.")).toBeVisible();
+  await expect(page.getByText("Cleanup complete")).toBeVisible();
+  await expect(page.getByText("Removed 1 RunHaven networks.")).toBeVisible();
 });
 
 test("reviews a finished worktree session with native-confirmed actions", async ({ page }) => {
@@ -407,9 +359,7 @@ test("reaches a run from the full Run history view", async ({ page }) => {
   await page.goto("/");
 
   await startPreviewRun(page, "/tmp/runhaven-history");
-  // The sidebar lists no individual sessions, so the run is reached through the
-  // Run history view opened from the Runs counts. A running run sits under Running.
-  await page.getByRole("button", { name: "Running" }).click();
+  await page.getByRole("button", { name: "History" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Run history" })).toBeVisible();
   await expectNoAccessibilityViolations(page);
   await page.getByText("Codex - runhaven-history").click();
@@ -422,8 +372,7 @@ async function startPreviewRun(
   { worktree = false } = {},
 ) {
   await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
-  await page.getByRole("button", { name: "New run" }).click();
-  await selectAgent(page, "Codex");
+  await page.getByRole("button", { name: "Start with Codex" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByText("Advanced options", { exact: true }).click();
   await page.getByLabel("Project folder path").fill(workspacePath);

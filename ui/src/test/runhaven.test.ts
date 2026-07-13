@@ -273,6 +273,8 @@ describe("runhaven command helpers", () => {
       confirmedWarnings: []
     });
 
+    expect(started).not.toBeNull();
+    if (!started) throw new Error("preview launch was unexpectedly cancelled");
     expect(started.runId).toMatch(/^preview-/);
     expect(started.status).toBe("started");
     expect(started.containerName).toBe("preview");

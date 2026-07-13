@@ -4,8 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppHeader } from "./AppHeader"
 import { AppMainContent } from "./AppMainContent"
 import { RunHavenSidebar } from "./RunHavenSidebar"
+import { userSessions } from "./sessionList"
 import { SessionLabelsProvider } from "./sessionLabels"
-import { SettingsDialog } from "./SettingsDialog"
 import { sidebarDefaultOpen } from "./uiStatePersistence"
 import { useAppController } from "./useAppController"
 import { useAttentionBadge } from "./useAttentionBadge"
@@ -14,19 +14,21 @@ import { useMenuStateSync } from "./useMenuStateSync"
 
 export default function App() {
   const app = useAppController()
+  const sessions = userSessions(app.managedSessions.sessions)
   useMenuEvents(app)
-  useMenuStateSync(app.managedSessions.sessions, app.navigation)
-  useAttentionBadge(app.managedSessions.sessions, app.settings.dockBadge)
+  useMenuStateSync(sessions, app.navigation)
+  useAttentionBadge(sessions, app.settings.dockBadge)
 
   return (
     <TooltipProvider>
       <SessionLabelsProvider>
         <SidebarProvider defaultOpen={sidebarDefaultOpen()}>
           <RunHavenSidebar
-            sessions={app.managedSessions.sessions}
             navigation={app.navigation}
             onNavigate={app.navigate}
             onOpenSettings={() => app.settings.setOpen(true)}
+            settings={app.settings}
+            agents={app.dashboard?.agents ?? []}
             runTerminalActive={app.launchFlow.runTerminal !== null}
             appVersion={app.dashboard?.appVersion ?? ""}
           />
@@ -44,7 +46,6 @@ export default function App() {
               loading={app.loading}
               lastRefreshedAt={app.lastRefreshedAt}
               dashboard={app.dashboard}
-              authStatus={app.authStatus}
               setupReady={app.setupReady}
               selectedSession={app.selectedSession}
               selectedSessionStatus={app.selectedSessionStatus}
@@ -77,7 +78,7 @@ export default function App() {
               imageStatus={app.imageStatus}
               imageError={app.imageError}
               onSignedIn={() => void app.refresh()}
-              sessions={app.managedSessions.sessions}
+              sessions={sessions}
               onNavigate={app.navigate}
               onRefresh={() => void app.refresh()}
               lastLaunch={app.lastLaunch}
@@ -86,16 +87,8 @@ export default function App() {
               runStatus={app.runStatus}
               runStatusLoading={app.runStatusLoading}
               runStatusError={app.runStatusError}
-              diagnostics={app.diagnostics}
-              diagnosticsLoading={app.diagnosticsLoading}
-              diagnosticsError={app.diagnosticsError}
-              onLoadDiagnostics={app.loadDiagnostics}
             />
           </SidebarInset>
-          <SettingsDialog
-            settings={app.settings}
-            agents={app.dashboard?.agents ?? []}
-          />
         </SidebarProvider>
       </SessionLabelsProvider>
     </TooltipProvider>

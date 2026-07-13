@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client"
 import { renderToStaticMarkup } from "react-dom/server"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { RecentActivityPanel } from "../app/dashboard/RecentActivityPanel"
+import { RunTable } from "../app/dashboard/RunTable"
 import { SessionLabelsProvider } from "../app/sessionLabels"
 import { sessionDisplayTitle } from "../app/sessionIdentity"
 import { SessionView } from "../app/views/SessionView"
@@ -64,10 +64,9 @@ describe("session labels in the run tables", () => {
     ]
     const html = renderToStaticMarkup(
       <SessionLabelsProvider>
-        <RecentActivityPanel
+        <RunTable
           sessions={sessions}
           onSelectSession={() => undefined}
-          onOpenHistory={() => undefined}
         />
       </SessionLabelsProvider>,
     )

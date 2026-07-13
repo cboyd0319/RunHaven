@@ -1,85 +1,55 @@
 import type { ManagedSessionSummary } from "@/commands/runhaven"
-import { Button } from "@/components/ui/button"
 
 import { DashboardPanel } from "../dashboard/DashboardPanel"
+import { NeedsReviewPanel } from "../dashboard/NeedsReviewPanel"
 import { RunTable } from "../dashboard/RunTable"
-import {
-  sessionGroupFor,
-  type RunListFilter,
-} from "../navigation"
 import { sessionAttention } from "../sessionAttention"
+import { userSessions } from "../sessionList"
 
-const FILTERS: Array<{ id: RunListFilter; label: string }> = [
-  { id: "needs-you", label: "Needs you" },
-  { id: "running", label: "Running" },
-  { id: "past", label: "Past" },
-  { id: "all", label: "All" },
-]
-
-// The full run history: every managed session, newest first, reached from the
-// sidebar Runs counts and Home's "Open full run history". Restores the
-// all-sessions reachability the variant-06 sidebar dropped (a keyboard user, and
-// anyone looking for a run past the six shown on Home, has a real destination).
-// A read-only summary of backend-owned state; opening a row is the only action.
+// History owns all run state so Home can remain a launchpad. Runs that need a
+// user action lead with their exact reason and next step; every other run stays
+// in the chronological table below. A run appears in exactly one section.
 export function RunsView({
-  filter,
   sessions,
   onSelectSession,
-  onFilterChange,
+  onSignIn,
 }: {
-  filter: RunListFilter
   sessions: ManagedSessionSummary[]
   onSelectSession: (sessionId: string) => void
-  onFilterChange: (filter: RunListFilter) => void
+  onSignIn: (agent: string) => void
 }) {
-  const ordered = filterRuns(sessions, filter).slice().sort(
+  const ordered = userSessions(sessions).slice().sort(
     (left, right) =>
       right.startedAt.localeCompare(left.startedAt) ||
       right.id.localeCompare(left.id, undefined, { numeric: true }),
   )
+  const attention = ordered.filter(
+    (session) => sessionAttention(session) !== null,
+  )
+  const other = ordered.filter((session) => sessionAttention(session) === null)
+
   return (
     <div className="flex flex-col gap-3">
-      <div
-        role="group"
-        aria-label="Filter run history"
-        className="flex flex-wrap gap-2"
-      >
-        {FILTERS.map((item) => (
-          <Button
-            key={item.id}
-            type="button"
-            size="sm"
-            variant={filter === item.id ? "secondary" : "ghost"}
-            aria-pressed={filter === item.id}
-            onClick={() => onFilterChange(item.id)}
-          >
-            {item.label}
-          </Button>
-        ))}
-      </div>
-      <DashboardPanel title="Run history" count={ordered.length}>
-        {ordered.length === 0 ? (
+      {attention.length > 0 ? (
+        <NeedsReviewPanel
+          sessions={attention}
+          onSelectSession={onSelectSession}
+          onSignIn={onSignIn}
+        />
+      ) : null}
+
+      {other.length > 0 || attention.length === 0 ? (
+        <DashboardPanel
+          title={attention.length > 0 ? "Other runs" : "Run history"}
+          count={other.length}
+        >
+          {other.length === 0 ? (
           <p className="py-2 text-sm text-muted-foreground">No runs yet.</p>
-        ) : (
-          <RunTable sessions={ordered} onSelectSession={onSelectSession} />
-        )}
-      </DashboardPanel>
+          ) : (
+            <RunTable sessions={other} onSelectSession={onSelectSession} />
+          )}
+        </DashboardPanel>
+      ) : null}
     </div>
   )
-}
-
-export function filterRuns(
-  sessions: ManagedSessionSummary[],
-  filter: RunListFilter,
-): ManagedSessionSummary[] {
-  switch (filter) {
-    case "needs-you":
-      return sessions.filter((session) => sessionAttention(session) !== null)
-    case "running":
-      return sessions.filter((session) => sessionGroupFor(session) === "active")
-    case "past":
-      return sessions.filter((session) => sessionGroupFor(session) === "finished")
-    case "all":
-      return sessions
-  }
 }

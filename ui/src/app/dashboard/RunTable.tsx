@@ -7,8 +7,8 @@ import { AgentCell } from "./AgentCell"
 import { StatusDot, runStatusTone } from "./status"
 import { timeAgo } from "./timeAgo"
 
-// The shared run table (Run | Agent | Status | Updated), used by Home's Recent
-// activity and the full Run history view. Columns are table-fixed so they
+// The shared History table (Run | Agent | Status | Updated). Columns are
+// table-fixed so they
 // distribute; the Run title is a real keyboard-operable button (the row onClick
 // is a mouse convenience on top). Renders only sanitized fields (title via
 // sessionDisplayTitle, status via safeBackendLabel), never a raw path/container.

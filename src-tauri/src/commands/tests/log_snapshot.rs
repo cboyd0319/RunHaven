@@ -1,6 +1,17 @@
 use super::*;
 
 #[test]
+fn raw_output_confirmation_omits_internal_run_id() {
+    let message = crate::commands::log_snapshot::trusted_run_output_message(200);
+
+    assert!(!message.contains("Run ID"));
+    assert_eq!(
+        message,
+        "Lines: 200\n\nRaw output may include secrets. Show output?"
+    );
+}
+
+#[test]
 fn log_snapshot_requires_sensitive_output_confirmation() {
     let request = LogSnapshotRequest {
         run_id: "runhaven-log-test".to_string(),

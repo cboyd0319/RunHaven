@@ -8,9 +8,8 @@ import {
 
 export type SettingsState = ReturnType<typeof useSettings>
 
-// State for the in-app Settings dialog (spec 3.9, shipped lean inside the
-// main window; see docs/plans/native-gui-navigation-gap.md B3). The dialog
-// opens from the sidebar or RunHaven > Settings... (Cmd-,);
+// State for the small inline Settings panel. It opens from the sidebar or
+// RunHaven > Settings... (Cmd-,);
 // choices persist through the sanitized uiStatePersistence allowed set and
 // hold only convenience preferences, never security defaults or confirmation
 // suppression.

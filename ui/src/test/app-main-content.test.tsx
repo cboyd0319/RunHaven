@@ -7,7 +7,12 @@ import { describe, expect, it } from "vitest"
 import { AppMainContent } from "../app/AppMainContent"
 import type { RunTerminalLaunch } from "../app/useLaunchFlow"
 
-import { launchFlow, mainViewProps, planRequest } from "./main-view-props"
+import {
+  dashboard,
+  launchFlow,
+  mainViewProps,
+  planRequest,
+} from "./main-view-props"
 import { act } from "./render-hook"
 
 // A reviewed, confirmed interactive launch as it reaches the run-terminal
@@ -24,7 +29,7 @@ function runTerminal(): RunTerminalLaunch {
 }
 
 describe("AppMainContent run-terminal destination", () => {
-  it("renders the interactive run terminal in main content, not the New Run modal", () => {
+  it("renders the interactive run terminal in the bounded main content", () => {
     const html = renderToStaticMarkup(
       <AppMainContent
         {...mainViewProps({
@@ -64,8 +69,8 @@ describe("AppMainContent run-terminal destination", () => {
     // The terminal is still in the tree (its standing disclosure renders)...
     expect(html).toContain("RunHaven does not filter, read, store, or log it")
     expect(html).toContain("hidden")
-    // ...and the Home destination renders alongside it (New run action present).
-    expect(html).toContain("New run")
+    // ...and the Home launchpad renders alongside it.
+    expect(html).toContain("Choose an agent")
   })
 
   it("offers a Dismiss action on the top-level error and hides it when used", async () => {
@@ -75,7 +80,7 @@ describe("AppMainContent run-terminal destination", () => {
       root.render(
         createElement(AppMainContent, {
           ...mainViewProps({ error: "Something went wrong." }),
-          navigation: { kind: "home" },
+          navigation: { kind: "runs" },
         }),
       )
     })
@@ -108,7 +113,7 @@ describe("AppMainContent run-terminal destination", () => {
         root.render(
           createElement(AppMainContent, {
             ...mainViewProps({ error: message }),
-            navigation: { kind: "home" },
+            navigation: { kind: "runs" },
           }),
         )
       })
@@ -145,7 +150,38 @@ describe("AppMainContent run-terminal destination", () => {
       />,
     )
 
-    // Never a dead view: the New Run action returns so the user is not stranded.
-    expect(html).toContain("New run")
+    // Never a dead view: the launchpad returns so the user is not stranded.
+    expect(html).toContain("Choose an agent")
+  })
+
+  it("keeps operational errors and launch status off Home", () => {
+    const html = renderToStaticMarkup(
+      <AppMainContent
+        {...mainViewProps({
+          error: "Background refresh failed.",
+          launchMessage: "Run accepted.",
+        })}
+        navigation={{ kind: "home" }}
+      />,
+    )
+
+    expect(html).toContain("Choose an agent")
+    expect(html).not.toContain("Action failed")
+    expect(html).not.toContain("Background refresh failed.")
+    expect(html).not.toContain("Run accepted.")
+  })
+
+  it("shows a setup problem only after the user starts a new session", () => {
+    const html = renderToStaticMarkup(
+      <AppMainContent
+        {...mainViewProps({ dashboard: dashboard(false), setupReady: false })}
+        navigation={{ kind: "new-session" }}
+      />,
+    )
+
+    expect(html).toContain("Setup needs attention")
+    expect(html).toContain("Apple container is not installed.")
+    expect(html).toContain("System details")
+    expect(html).not.toContain("Fix the setup problem on Home")
   })
 })

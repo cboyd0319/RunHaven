@@ -244,7 +244,7 @@ fn launch_run_requires_trusted_approval_before_spawning() {
         build_agent_run_plan(&plan_request, Some(run_id.clone())).expect("launch plan");
     let response = build_launch_response(plan_request, run_id.clone()).expect("launch response");
 
-    let error = launch_prepared_with_approval_for_test(
+    let outcome = launch_prepared_with_approval_for_test(
         run_id,
         launch_plan,
         response,
@@ -257,9 +257,9 @@ fn launch_run_requires_trusted_approval_before_spawning() {
             Ok(false)
         },
     )
-    .expect_err("trusted approval denial should stop launch");
+    .expect("trusted approval cancellation is not a launch failure");
 
-    assert!(error.contains("Launch canceled"));
+    assert!(outcome.is_none());
     assert!(read_active_run_records().is_empty());
 }
 

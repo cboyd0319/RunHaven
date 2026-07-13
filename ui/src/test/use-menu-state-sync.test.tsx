@@ -53,21 +53,17 @@ describe("computeMenuState", () => {
     const sessions = [session({ id: "a1" }), session({ id: "a2" })]
     const state = computeMenuState(sessions, HOME)
     expect(state).toEqual<MenuState>({
-      hasSelectedSession: false,
       selectedSessionCanRunControl: false,
       selectedSessionCanSendInput: false,
       selectedSessionCanViewOutput: false,
       selectedSessionHasCleanup: false,
       selectedSessionCanOpenWindow: false,
-      hasAttentionSession: false,
-      sessionCount: 2,
     })
   })
 
   it("enables run control, composer, output, and window for a running session", () => {
     const running = session({ id: "a1", lifecycle: "running" })
     const state = computeMenuState([running], selection("a1"))
-    expect(state.hasSelectedSession).toBe(true)
     expect(state.selectedSessionCanRunControl).toBe(true)
     expect(state.selectedSessionCanSendInput).toBe(true)
     expect(state.selectedSessionCanViewOutput).toBe(true)
@@ -111,16 +107,6 @@ describe("computeMenuState", () => {
     ).toBe(false)
   })
 
-  it("reports an attention session and the count for Jump and Cmd-1..9", () => {
-    const calm = session({ id: "a1" })
-    const failed = session({ id: "f1", lifecycle: "failed" })
-    const state = computeMenuState([calm, failed], HOME)
-    expect(state.hasAttentionSession).toBe(true)
-    expect(state.sessionCount).toBe(2)
-
-    const quiet = computeMenuState([calm], HOME)
-    expect(quiet.hasAttentionSession).toBe(false)
-  })
 })
 
 describe("useMenuStateSync", () => {
@@ -142,7 +128,7 @@ describe("useMenuStateSync", () => {
     )
     expect(syncMenuState).toHaveBeenCalledTimes(1)
     expect(syncMenuState).toHaveBeenLastCalledWith(
-      expect.objectContaining({ sessionCount: 1, hasSelectedSession: false }),
+      expect.objectContaining({ selectedSessionCanRunControl: false }),
     )
 
     // A new array with the same derived state must not re-invoke.
@@ -153,7 +139,7 @@ describe("useMenuStateSync", () => {
     await hook.rerender({ sessions, navigation: selection("a1") })
     expect(syncMenuState).toHaveBeenCalledTimes(2)
     expect(syncMenuState).toHaveBeenLastCalledWith(
-      expect.objectContaining({ hasSelectedSession: true }),
+      expect.objectContaining({ selectedSessionCanRunControl: true }),
     )
 
     await hook.unmount()
