@@ -104,8 +104,8 @@ export function previewDashboardStatus(): DashboardStatus {
     },
     agents: mockAgents,
     agentReadiness: [
-      { name: "claude", category: "signed-in", label: "Signed in" },
-      { name: "codex", category: "signed-in", label: "Signed in" },
+      { name: "claude", category: "sign-in-saved", label: "Sign-in saved" },
+      { name: "codex", category: "sign-in-saved", label: "Sign-in saved" },
       { name: "antigravity", category: "needs-sign-in", label: "Needs sign-in" },
       { name: "copilot", category: "needs-sign-in", label: "Needs sign-in" }
     ],

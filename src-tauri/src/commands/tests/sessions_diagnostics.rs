@@ -185,6 +185,7 @@ fn managed_session_summary_with_auth_status(auth_status: &str) -> ManagedSession
         },
         cleanup: ManagedSessionCleanupData {
             available: false,
+            review_state: "none".to_string(),
             target: String::new(),
             label: String::new(),
             detail: String::new(),

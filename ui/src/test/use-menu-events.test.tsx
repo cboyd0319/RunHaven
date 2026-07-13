@@ -2,8 +2,11 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
+import { createElement } from "react"
+import { createRoot } from "react-dom/client"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SessionInputCard } from "../app/SessionInputCard"
 import {
   handleMenuCommand,
   MENU_CONTROL_ACTIONS,
@@ -12,7 +15,11 @@ import {
   type MenuActions,
 } from "../app/useMenuEvents"
 
-import { renderHook } from "./render-hook"
+import { managedSession } from "./main-view-props"
+import { act, renderHook } from "./render-hook"
+import { installLocalStorageStub } from "./local-storage"
+
+installLocalStorageStub()
 
 // vi.mock factories are hoisted above module-level const declarations, so the
 // shared spies must be hoisted with them.
@@ -31,9 +38,8 @@ vi.mock("@/commands/menu_events", () => ({
 
 function actions(patch: Partial<MenuActions> = {}): MenuActions {
   return {
-    navigation: { kind: "home" },
+    navigation: { kind: "new-session" },
     launchFlow: { setOpen: vi.fn() },
-    settings: { dockBadge: true, setDockBadge: vi.fn() },
     navigate: vi.fn(),
     runControl: vi.fn().mockResolvedValue(undefined),
     ...patch,
@@ -44,6 +50,8 @@ beforeEach(() => {
   capturedHandlers.length = 0
   unlisten.mockClear()
   document.body.innerHTML = ""
+  document.documentElement.style.fontSize = ""
+  window.localStorage.clear()
 })
 
 describe("handleMenuCommand", () => {
@@ -59,7 +67,7 @@ describe("handleMenuCommand", () => {
     handleMenuCommand("show-help", app)
     expect(app.navigate).toHaveBeenCalledWith({
       kind: "help",
-      returnTo: { kind: "home" },
+      returnTo: { kind: "new-session" },
     })
   })
 
@@ -70,14 +78,6 @@ describe("handleMenuCommand", () => {
       kind: "help",
       returnTo: { kind: "new-session" },
     })
-  })
-
-  it("toggles the app icon count from the View menu", () => {
-    const app = actions()
-    handleMenuCommand("show-attention-badge", app)
-    expect(app.settings.setDockBadge).toHaveBeenCalledWith(false)
-    expect(app.launchFlow.setOpen).not.toHaveBeenCalled()
-    expect(app.navigate).not.toHaveBeenCalled()
   })
 
   it("runs selected-session menu controls through the trusted command path", () => {
@@ -91,13 +91,28 @@ describe("handleMenuCommand", () => {
     expect(app.navigate).not.toHaveBeenCalled()
   })
 
-  it("focuses the composer for Send Message without sending an empty draft", () => {
-    const composer = document.createElement("textarea")
-    composer.placeholder = "Type a message for this session."
-    document.body.append(composer)
+  it("focuses the rendered composer for Send Message without sending", async () => {
+    const container = document.createElement("div")
+    document.body.append(container)
+    const root = createRoot(container)
+    const onSend = vi.fn()
+    await act(async () => {
+      root.render(createElement(SessionInputCard, {
+        session: managedSession(),
+        draft: "draft stays put",
+        sending: false,
+        error: "",
+        acceptedMessage: "",
+        onDraftChange: vi.fn(),
+        onSend,
+      }))
+    })
+    const composer = container.querySelector("textarea")
 
     handleMenuCommand("send-message", actions())
     expect(document.activeElement).toBe(composer)
+    expect(onSend).not.toHaveBeenCalled()
+    await act(async () => root.unmount())
   })
 
   it("no-ops session actions when the control is not on screen", () => {
@@ -123,6 +138,28 @@ describe("handleMenuCommand", () => {
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
+  it("supports standard text sizing through the View menu", () => {
+    handleMenuCommand("increase-text-size", actions())
+    expect(document.documentElement.style.fontSize).toBe("125%")
+    expect(window.localStorage.getItem("runhaven.text-size")).toBe("125")
+    handleMenuCommand("increase-text-size", actions())
+    expect(document.documentElement.style.fontSize).toBe("150%")
+    handleMenuCommand("decrease-text-size", actions())
+    expect(document.documentElement.style.fontSize).toBe("125%")
+    handleMenuCommand("actual-text-size", actions())
+    expect(document.documentElement.style.fontSize).toBe("100%")
+  })
+
+  it("moves one step from the lower text-size bound", () => {
+    document.documentElement.style.fontSize = "80%"
+    handleMenuCommand("increase-text-size", actions())
+    expect(document.documentElement.style.fontSize).toBe("100%")
+
+    document.documentElement.style.fontSize = "80%"
+    handleMenuCommand("decrease-text-size", actions())
+    expect(document.documentElement.style.fontSize).toBe("80%")
+  })
+
   it("ignores unknown and placeholder ids", () => {
     const app = actions()
     for (const id of ["filter-sessions", "help", "not-a-real-id"]) {
@@ -130,7 +167,6 @@ describe("handleMenuCommand", () => {
     }
     expect(app.navigate).not.toHaveBeenCalled()
     expect(app.launchFlow.setOpen).not.toHaveBeenCalled()
-    expect(app.settings.setDockBadge).not.toHaveBeenCalled()
   })
 })
 
@@ -146,8 +182,11 @@ describe("useMenuEvents", () => {
     const next = actions()
     await hook.rerender(next)
     expect(capturedHandlers).toHaveLength(1)
-    capturedHandlers[0]("show-attention-badge")
-    expect(next.settings.setDockBadge).toHaveBeenCalledWith(false)
+    capturedHandlers[0]("show-help")
+    expect(next.navigate).toHaveBeenCalledWith({
+      kind: "help",
+      returnTo: { kind: "new-session" },
+    })
 
     await hook.unmount()
     expect(unlisten).toHaveBeenCalledTimes(1)
@@ -177,8 +216,10 @@ describe("menu contract tripwires", () => {
     const handledIds = [
       "new-run",
       "show-help",
-      "show-attention-badge",
       "toggle-sidebar",
+      "increase-text-size",
+      "decrease-text-size",
+      "actual-text-size",
       ...Object.keys(MENU_FOCUS_SELECTORS),
       ...Object.keys(MENU_CONTROL_ACTIONS),
     ]

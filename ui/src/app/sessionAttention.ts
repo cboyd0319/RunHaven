@@ -1,6 +1,9 @@
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 
-import { sessionAllowsWorktreeReview } from "./worktreeReview"
+import {
+  sessionHasWorktreeChanges,
+  sessionWorktreeReviewUnavailable,
+} from "./worktreeReview"
 
 // The one needs-you signal per session row. Priority order comes from
 // docs/design/native-gui-navigation-spec.md section 4: Failed (red) beats
@@ -13,6 +16,7 @@ export type SessionAttentionKind =
   | "failed"
   | "needs-sign-in"
   | "not-responding"
+  | "review-unavailable"
   | "ready-to-review"
 
 // Tone drives the badge color: "failed" is destructive red, "needs-you" is
@@ -42,7 +46,14 @@ export function sessionAttention(
       tone: "needs-you",
     }
   }
-  if (sessionAllowsWorktreeReview(session)) {
+  if (sessionWorktreeReviewUnavailable(session)) {
+    return {
+      kind: "review-unavailable",
+      label: "Couldn’t check protected copy",
+      tone: "needs-you",
+    }
+  }
+  if (sessionHasWorktreeChanges(session)) {
     return {
       kind: "ready-to-review",
       label: "Ready to review",

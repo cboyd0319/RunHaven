@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react"
 import type { ManagedSessionList } from "@/commands/runhaven"
 
 import {
-  HOME_NAV,
+  NEW_SESSION_NAV,
   navigationAfterSessionRemoval,
   type NavDestination,
 } from "./navigation"
@@ -12,11 +12,11 @@ import {
 // selected session's record is removed, where selection moves to the nearest
 // row per navigationAfterSessionRemoval (spec section 4). Status flaps,
 // polls, and list changes never move the selection otherwise.
-// Every app launch starts on Home. A desktop app remembering a deep diagnostic
+// Every app launch starts on New session. A desktop app remembering a deep diagnostic
 // or failed run made operational detail the user's first experience, which is
-// the opposite of Home's launchpad purpose.
+// the opposite of the app's start-new-work purpose.
 export function useNavigation(managedSessions: ManagedSessionList) {
-  const [navigation, setNavigation] = useState<NavDestination>(HOME_NAV)
+  const [navigation, setNavigation] = useState<NavDestination>(NEW_SESSION_NAV)
   const selectedSessionId =
     navigation.kind === "session" ? navigation.id : null
   const selectedSessionIdRef = useRef<string | null>(null)

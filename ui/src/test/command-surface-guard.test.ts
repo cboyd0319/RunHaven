@@ -79,13 +79,13 @@ const EXPECTED_INVOKED_COMMANDS = [
   "get_why_state",
   "get_why_host",
   "get_why_workspace",
-  "set_attention_badge",
   "sync_menu_state",
   "open_terminal_session",
   "open_agent_sign_in_terminal",
   "open_agent_run_terminal",
   "write_terminal_input",
   "resize_terminal",
+  "end_terminal_session",
   "close_terminal_session"
 ];
 

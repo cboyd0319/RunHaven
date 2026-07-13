@@ -14,15 +14,16 @@ import type { NavDestination } from "../navigation"
 import type { RunControlAction } from "../types"
 import type { LaunchFlow } from "../useLaunchFlow"
 import type { useRunOutput } from "../useRunOutput"
+import type { SavedSetupsState } from "../useSavedSetups"
 
-// The prop bag the app controller feeds the main content router. Home and
+// The prop bag the app controller feeds the main content router. New session and
 // Session take the whole bag (they own most of the app's state surface); the
 // System views take narrow slices of it.
 export type MainViewProps = {
   error: string
   launchMessage: string
   loading: boolean
-  // ISO time of the last successful status read, for the Home freshness line.
+  // ISO time of the last successful status read, for the setup freshness line.
   lastRefreshedAt: string | null
   dashboard: DashboardStatus | null
   setupReady: boolean
@@ -52,6 +53,7 @@ export type MainViewProps = {
   // The New Session flow's state and actions travel as one object so the
   // router never has to unpack its implementation details.
   launchFlow: LaunchFlow
+  savedSetups: SavedSetupsState
   selectedAgent: AgentProfile | undefined
   imageLoading: boolean
   imageStatus: ImageStatusResponse | null

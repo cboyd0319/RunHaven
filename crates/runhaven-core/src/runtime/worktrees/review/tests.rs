@@ -124,6 +124,13 @@ fn worktree_change_display_hides_unsafe_paths_and_caps_at_one_hundred() {
 }
 
 #[test]
+fn worktree_change_probe_reports_a_clean_copy() {
+    let (_temp, lifecycle) = seeded_lifecycle("worktree-change-clean");
+
+    assert!(!worktree_has_changes(&lifecycle).expect("clean probe"));
+}
+
+#[test]
 fn worktree_change_summary_combines_committed_dirty_removed_and_untracked_files() {
     let (_temp, lifecycle) = seeded_lifecycle("worktree-change-summary");
     fs::write(
@@ -147,6 +154,7 @@ fn worktree_change_summary_combines_committed_dirty_removed_and_untracked_files(
 
     let summary = worktree_change_summary(&lifecycle).expect("change summary");
 
+    assert!(worktree_has_changes(&lifecycle).expect("changed probe"));
     assert_eq!(summary.total_count, 4);
     assert!(!summary.file_changes_truncated);
     assert_eq!(summary.review_id.len(), 64);

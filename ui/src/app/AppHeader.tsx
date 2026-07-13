@@ -36,7 +36,7 @@ export function AppHeader({
     <header
       data-tauri-drag-region
       className={cn(
-        "flex h-14 shrink-0 items-center gap-3 border-b px-4",
+        "flex min-h-14 shrink-0 flex-wrap items-center gap-3 border-b px-4 py-2",
         // Collapsed icon rail (~48px) is narrower than the macOS traffic
         // lights (~70px), which then spill over the header's leading edge;
         // inset the sidebar toggle so it stays visible right of the lights.
@@ -49,8 +49,8 @@ export function AppHeader({
         title={sidebarAction}
       />
       {title ? (
-        <div className="flex min-w-0 items-center gap-2">
-          <h1 className="truncate text-lg font-semibold">{title}</h1>
+        <div className="flex min-w-32 flex-1 items-center gap-2">
+          <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">{title}</h1>
           {session ? (
             <Badge variant={sessionBadgeVariant(session)}>
               {sessionNeedsAttention(session) ? "Needs you" : session.statusLabel}
@@ -64,11 +64,11 @@ export function AppHeader({
           variant="outline"
           size="sm"
           className="ml-auto"
-          aria-label="Stop session"
+          aria-label="Stop session…"
           disabled={controlBusy}
           onClick={() => void onControl("stop")}
         >
-          Stop
+          Stop…
         </Button>
       ) : null}
     </header>

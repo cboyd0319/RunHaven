@@ -20,6 +20,16 @@ import type { useRunControlState } from "./useRunControlState"
 import type { useSessionInputState } from "./useSessionInputState"
 import type { useStatusLoaders } from "./useStatusLoaders"
 
+const CLEANUP_CANCELED = "Cleanup canceled. Nothing was deleted."
+
+export function sessionActionFailureMessage(
+  action: RunControlAction,
+  cause: unknown,
+): string {
+  const message = errorMessage(cause)
+  return action === "cleanup" && message === CLEANUP_CANCELED ? "" : message
+}
+
 type SessionActionsInput = {
   selectedSession: ManagedSessionSummary | null
   lastLaunch: LaunchRunResponse | null
@@ -70,7 +80,7 @@ export function createSessionActions({
           )
         } else {
           await cleanupManagedSession(sessionId)
-          runControlState.setMessage("Deleted the protected copy")
+          runControlState.setMessage("Protected copy deleted")
         }
         await selectedSessionStatus.loadStatus()
         await loadManagedSessions()
@@ -99,7 +109,7 @@ export function createSessionActions({
         await loadManagedSessions()
       }
     } catch (cause) {
-      runControlState.setError(errorMessage(cause))
+      runControlState.setError(sessionActionFailureMessage(action, cause))
     } finally {
       runControlState.setBusy(false)
     }

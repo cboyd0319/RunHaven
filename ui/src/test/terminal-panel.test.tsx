@@ -80,7 +80,9 @@ vi.mock("@/commands/runhaven", async (importActual) => ({
   hasTauriRuntime: vi.fn(() => true),
   openTerminalSession: vi.fn(() => Promise.resolve(true)),
   openAgentSignInTerminal: vi.fn(() => Promise.resolve(true)),
-  openAgentRunTerminal: vi.fn(() => Promise.resolve(true)),
+  openAgentRunTerminal: vi.fn(() =>
+    Promise.resolve({ runId: "run-live", label: "Claude · project" }),
+  ),
   writeTerminalInput: vi.fn(() => Promise.resolve()),
   resizeTerminal: vi.fn(() => Promise.resolve()),
   closeTerminalSession: vi.fn(() => Promise.resolve()),
@@ -107,7 +109,10 @@ beforeEach(() => {
   hasTauriRuntime.mockReturnValue(true)
   openTerminalSession.mockResolvedValue(true)
   openAgentSignInTerminal.mockResolvedValue(true)
-  openAgentRunTerminal.mockResolvedValue(true)
+  openAgentRunTerminal.mockResolvedValue({
+    runId: "run-live",
+    label: "Claude · project",
+  })
   closeTerminalSession.mockResolvedValue(undefined)
   writeTerminalInput.mockResolvedValue(undefined)
 })
@@ -117,6 +122,18 @@ afterEach(() => {
 })
 
 describe("TerminalPanel run mode", () => {
+  it("applies persisted and live text sizing to the terminal canvas", async () => {
+    const mounted = await mountActiveTerminal()
+    expect(xtermState.instances[0]?.options.fontSize).toBe(13)
+
+    window.dispatchEvent(
+      new CustomEvent("runhaven:text-size", { detail: 200 }),
+    )
+    expect(xtermState.instances[0]?.options.fontSize).toBe(26)
+
+    await mounted.unmount()
+  })
+
   it("shows the desktop-only placeholder and never launches during preview", () => {
     hasTauriRuntime.mockReturnValue(false)
     const html = renderToStaticMarkup(<TerminalPanel run={runLaunch()} />)
@@ -154,7 +171,7 @@ describe("TerminalPanel run mode", () => {
   })
 
   it("leaves the temporary terminal when the native launch is canceled", async () => {
-    openAgentRunTerminal.mockResolvedValue(false)
+    openAgentRunTerminal.mockResolvedValue(null)
     const launch = runLaunch()
     const onOpenCancelled = vi.fn()
     const container = document.createElement("div")
@@ -176,41 +193,6 @@ describe("TerminalPanel run mode", () => {
     container.remove()
   })
 
-  it("in the fill destination keeps an End session escape hatch while starting", async () => {
-    const launch = runLaunch()
-    let closed = 0
-    const onClose = () => {
-      closed += 1
-    }
-    const container = document.createElement("div")
-    document.body.appendChild(container)
-    const root = createRoot(container)
-    await act(async () => {
-      root.render(
-        createElement(TerminalPanel, { run: launch, fill: true, onClose }),
-      )
-    })
-    // The session starts automatically, while the disclosure and an End session escape
-    // hatch stay reachable so the user is never stranded on the destination.
-    expect(container.textContent).toContain(RUN_DISCLOSURE)
-    await act(async () => {})
-    const endButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("End session"),
-    )
-    expect(endButton).toBeDefined()
-    await act(async () => {
-      endButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-    })
-    expect(closed).toBe(1)
-
-    // Unmounting (what the parent navigation does on close) tears down the child.
-    closeTerminalSession.mockClear()
-    await act(async () => {
-      root.unmount()
-    })
-    expect(closeTerminalSession).toHaveBeenCalledWith(launch.sessionId)
-    container.remove()
-  })
 })
 
 describe("TerminalPanel disclosure", () => {
@@ -238,7 +220,7 @@ describe("TerminalPanel disclosure", () => {
       <TerminalPanel session={managedSession()} />,
     )
     expect(html).toContain(DISCLOSURE)
-    expect(html).toContain("Open terminal")
+    expect(html).toContain("Open terminal…")
     expect(html).not.toContain("Terminal needs the desktop app")
   })
 

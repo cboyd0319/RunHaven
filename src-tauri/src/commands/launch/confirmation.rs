@@ -78,6 +78,10 @@ fn trusted_launch_message(
         "The assistant can change files in this folder."
     };
     let mut message = format!("Project: {project}\nInternet: {network}\n{file_access}");
+    if let Some(disclosure) = generative_ai_disclosure(plan) {
+        message.push_str("\n\n");
+        message.push_str(&disclosure);
+    }
     if offline_agent_warning_applies(plan) {
         message.push_str("\n\n");
         message.push_str(OFFLINE_ASSISTANT_CONSEQUENCE);
@@ -126,6 +130,25 @@ fn trusted_launch_message(
         }
     }
     message
+}
+
+fn generative_ai_disclosure(plan: &AgentRunPlan) -> Option<String> {
+    let (assistant, provider) = match plan.profile_name.as_str() {
+        "claude" => ("Claude", "Anthropic"),
+        "codex" => ("Codex", "OpenAI"),
+        "antigravity" => ("Antigravity", "Google"),
+        "copilot" => ("Copilot", "GitHub"),
+        _ => return None,
+    };
+    let mut disclosure = format!(
+        "{assistant} uses generative AI and can make mistakes. Review its output and file changes."
+    );
+    if plan.network_mode != NetworkMode::Internal {
+        disclosure.push_str(&format!(
+            "\n{assistant} can send your messages and project content it reads to {provider} services. {provider} handles that data under the terms for your account. RunHaven does not control whether {provider} stores this content or uses it for training. That depends on your account settings and {provider}’s terms."
+        ));
+    }
+    Some(disclosure)
 }
 
 fn trusted_dialog_list(values: &[String]) -> String {

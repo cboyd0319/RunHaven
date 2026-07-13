@@ -10,6 +10,7 @@ import {
   type WorktreeReviewResponse,
 } from "../commands/runhaven";
 import { WorktreeReviewCard } from "../app/WorktreeReviewCard";
+import { sessionAllowsCleanup } from "../app/ManagedSessionCard";
 import { worktreeActionClients } from "../app/useWorktreeReview";
 import {
   sessionAllowsWorktreeReview,
@@ -72,6 +73,7 @@ function renderCard(patch: Partial<Parameters<typeof WorktreeReviewCard>[0]> = {
       message=""
       nextSteps={[]}
       actionError=""
+      onRetry={() => undefined}
       onAction={() => undefined}
       {...patch}
     />,
@@ -83,6 +85,7 @@ describe("worktree review gating", () => {
     const eligible = session({
       cleanup: {
         available: true,
+        reviewState: "changes",
         target: "worktree",
         label: "Review worktree",
         detail: "Choose what to do with the isolated copy.",
@@ -98,6 +101,7 @@ describe("worktree review gating", () => {
         session({
           cleanup: {
             available: false,
+            reviewState: "none",
             target: "worktree",
             label: "Review worktree",
             detail: "Not available yet.",
@@ -110,6 +114,7 @@ describe("worktree review gating", () => {
         session({
           cleanup: {
             available: true,
+            reviewState: "none",
             target: "container",
             label: "Clean up",
             detail: "Not a worktree.",
@@ -117,6 +122,28 @@ describe("worktree review gating", () => {
         }),
       ),
     ).toBe(false);
+  });
+
+  it("keeps clean protected copies cleanup-eligible without making them review-eligible", () => {
+    const cleanup = {
+      available: true,
+      target: "worktree",
+      label: "Delete protected copy",
+      detail: "Delete this protected copy.",
+    };
+    const changedCleanup = { ...cleanup, reviewState: "changes" as const };
+    const cleanCleanup = { ...cleanup, reviewState: "clean" as const };
+    const unknownCleanup = { ...cleanup, reviewState: "unknown" as const };
+    const changed = session({ cleanup: changedCleanup });
+    const clean = session({ cleanup: cleanCleanup });
+    const unknown = session({ cleanup: unknownCleanup });
+
+    expect(sessionAllowsCleanup(changed)).toBe(true);
+    expect(sessionAllowsCleanup(clean)).toBe(true);
+    expect(sessionAllowsCleanup(unknown)).toBe(true);
+    expect(sessionAllowsWorktreeReview(changed)).toBe(true);
+    expect(sessionAllowsWorktreeReview(clean)).toBe(false);
+    expect(sessionAllowsWorktreeReview(unknown)).toBe(true);
   });
 
   it("marks only merge and discard as removing the copy", () => {
@@ -250,6 +277,7 @@ describe("WorktreeReviewCard", () => {
   it("reports a load error and a failed action clearly", () => {
     const loadFailed = renderCard({ review: null, loadError: "Copy details unavailable." });
     expect(loadFailed).toContain("Copy details unavailable");
+    expect(loadFailed).toContain("Check again");
     expect(loadFailed).not.toContain("Branch:");
 
     const actionFailed = renderCard({ actionError: "The repo was not clean." });

@@ -10,7 +10,7 @@ import type {
 // Sign-in helpers and the CLI-only shell use managed run records internally,
 // but they are not work the user asked RunHaven to remember. Keeping this one
 // filter at the presentation boundary prevents those implementation details
-// from polluting Home, History, badges, or menu state without changing the
+// from polluting New session, History, badges, or menu state without changing the
 // backend record or weakening its audit trail.
 export function userSessions(
   sessions: ManagedSessionSummary[],
@@ -40,6 +40,7 @@ const managedSessionSummaryChecked = {
   containerName: true,
   detailCommand: true,
   lifecycle: true,
+  outputAvailable: true,
   input: true,
   cleanup: true,
   nextAction: true,
@@ -56,6 +57,7 @@ void managedSessionInputChecked
 
 const managedSessionCleanupChecked = {
   available: true,
+  reviewState: true,
   target: true,
   label: true,
   detail: true,
@@ -129,6 +131,7 @@ function sameSessionCleanup(
   const nextCleanup = next.cleanup ?? emptyCleanup
   return (
     currentCleanup.available === nextCleanup.available &&
+    currentCleanup.reviewState === nextCleanup.reviewState &&
     currentCleanup.target === nextCleanup.target &&
     currentCleanup.label === nextCleanup.label &&
     currentCleanup.detail === nextCleanup.detail
@@ -137,6 +140,7 @@ function sameSessionCleanup(
 
 const emptyCleanup = {
   available: false,
+  reviewState: "none" as const,
   target: "",
   label: "",
   detail: "",

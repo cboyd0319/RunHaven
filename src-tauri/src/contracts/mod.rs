@@ -1,4 +1,3 @@
-mod attention;
 mod dashboard;
 mod diagnostics;
 mod diagnostics_why;
@@ -8,10 +7,10 @@ mod logs;
 mod network;
 mod run_control;
 mod run_status;
+mod sessions;
 mod setup_recovery;
 mod worktree;
 
-pub(crate) use attention::*;
 pub(crate) use dashboard::*;
 pub(crate) use diagnostics::*;
 pub(crate) use diagnostics_why::*;
@@ -21,5 +20,6 @@ pub(crate) use logs::*;
 pub(crate) use network::*;
 pub(crate) use run_control::*;
 pub(crate) use run_status::*;
+pub(crate) use sessions::*;
 pub(crate) use setup_recovery::*;
 pub(crate) use worktree::*;

@@ -7,4 +7,5 @@ export * from "./maintenance_types";
 export * from "./client";
 export * from "./plan";
 export * from "./terminal";
+export * from "./saved_setups";
 export * from "./worktree";

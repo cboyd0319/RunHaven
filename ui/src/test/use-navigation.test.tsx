@@ -56,9 +56,9 @@ describe("useNavigation", () => {
     window.localStorage.clear()
   })
 
-  it("starts on Home and navigates to destinations and sessions", async () => {
+  it("starts on New session and navigates to destinations and sessions", async () => {
     const hook = await renderHook(useNavigation, list(session("alpha")))
-    expect(hook.result.current.navigation).toEqual({ kind: "home" })
+    expect(hook.result.current.navigation).toEqual({ kind: "new-session" })
     expect(hook.result.current.selectedSessionId).toBeNull()
 
     await act(async () => {
@@ -128,23 +128,23 @@ describe("useNavigation", () => {
     expect(hook.result.current.selectedSessionIdRef.current).toBe("bottom")
   })
 
-  it("falls back to Home only when no session remains", async () => {
+  it("falls back to New session only when no session remains", async () => {
     const only = session("only")
     const hook = await renderHook(useNavigation, list(only))
     await act(async () => {
       hook.result.current.selectSession("only")
     })
     await hook.rerender(list())
-    expect(hook.result.current.navigation).toEqual({ kind: "home" })
+    expect(hook.result.current.navigation).toEqual({ kind: "new-session" })
     expect(hook.result.current.selectedSessionIdRef.current).toBeNull()
   })
 
-  it("always starts on Home even when an older build stored a destination", async () => {
+  it("always starts on New session even when an older build stored a destination", async () => {
     window.localStorage.setItem(
       "runhaven.lastDestination",
       JSON.stringify({ kind: "diagnostics" }),
     )
     const hook = await renderHook(useNavigation, list())
-    expect(hook.result.current.navigation).toEqual({ kind: "home" })
+    expect(hook.result.current.navigation).toEqual({ kind: "new-session" })
   })
 })

@@ -78,7 +78,7 @@ describe("RunOutputCard", () => {
       />
     );
 
-    expect(unacknowledged).toContain("Show latest output");
+    expect(unacknowledged).toContain("Show output…");
     expect(unacknowledged).not.toContain("Keep output updated");
     expect(unacknowledged).not.toContain("I understand");
     expect(unacknowledged).not.toContain('disabled=""');
@@ -93,6 +93,9 @@ describe("RunOutputCard", () => {
     );
 
     expect(acknowledged).not.toContain("Updates every few seconds.");
+    expect(acknowledged).toContain("Refresh output");
+    expect(acknowledged).not.toContain("Refresh output…");
+    expect(acknowledged).not.toContain('aria-label="Show latest output…"');
     expect(acknowledged).not.toContain('disabled=""');
     expect(acknowledged).not.toContain("run-output-ack-hint");
   });

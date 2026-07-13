@@ -7,7 +7,7 @@ import { RunTable } from "../dashboard/RunTable"
 import { sessionAttention } from "../sessionAttention"
 import { userSessions } from "../sessionList"
 
-// History owns all run state so Home can remain a launchpad. Runs that need a
+// History owns all run state. Runs that need a
 // user action lead with their exact reason and next step; every other run stays
 // in the chronological table below. A run appears in exactly one section.
 export function RunsView({
@@ -39,7 +39,7 @@ export function RunsView({
           Sessions you start will appear here.
         </p>
         <Button type="button" onClick={onStart}>
-          Start a session
+          Start a session…
         </Button>
       </section>
     )

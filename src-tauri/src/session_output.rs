@@ -53,6 +53,14 @@ impl SessionOutputRegistry {
         Ok(())
     }
 
+    pub(crate) fn has_output(&self, run_id: &str) -> Result<bool, String> {
+        validate_registry_id(run_id)?;
+        let state = lock_or(self.state.lock(), REGISTRY_UNAVAILABLE)?;
+        Ok(state
+            .get(run_id)
+            .is_some_and(|buffer| !buffer.bytes.is_empty()))
+    }
+
     pub(crate) fn snapshot(
         &self,
         run_id: &str,

@@ -10,14 +10,15 @@ import { agentLabel, displayValue } from "./sessionIdentity"
 import { isPastOutputUnavailable } from "./useRunOutput"
 
 // The session view's needs-you banner: first in reading order, one state at a
-// time (the same priority helper Home and the Dock badge use), always leading
-// with the one fix. Sign-in and repair expose one direct action; worktree review
-// points at the full review immediately below. Rust keeps the one trusted native
-// confirmation surface for mutations.
+// time, always leading with the reason and the shortest available recovery.
+// Sign-in and repair expose one direct action; worktree review points at the
+// full review immediately below. Rust keeps the one trusted native confirmation
+// surface for mutations.
 export function SessionAttentionBanner({
   session,
   onNavigate,
   onShowOutput,
+  onStartNew,
   onSignIn,
   onRepair,
   outputError = "",
@@ -25,6 +26,7 @@ export function SessionAttentionBanner({
   session: ManagedSessionSummary
   onNavigate: (destination: NavDestination) => void
   onShowOutput: () => void
+  onStartNew: (agent: string) => void
   onSignIn?: (agent: string) => void
   onRepair?: () => void
   outputError?: string
@@ -36,19 +38,24 @@ export function SessionAttentionBanner({
 
   switch (attention.kind) {
     case "failed": {
-      const outputUnavailable = isPastOutputUnavailable(outputError)
+      const outputUnavailable =
+        session.outputAvailable === false || isPastOutputUnavailable(outputError)
       return (
         <Alert variant="destructive" role="alert">
           <CircleAlert />
           <AlertTitle>Session ended</AlertTitle>
           <AlertDescription className="flex flex-col items-start gap-2">
             <span>
-              {outputUnavailable
-                ? "RunHaven kept this session’s output only while the app was open. Open System to check setup, then try a new session."
-                : session.nextAction.detail.trim()
-                  ? displayValue(session.nextAction.detail)
-                  : "RunHaven couldn’t determine why this session ended."}
+              {session.nextAction.detail.trim()
+                ? displayValue(session.nextAction.detail)
+                : "RunHaven couldn’t determine why this session ended."}
             </span>
+            {outputUnavailable ? (
+              <span>
+                Output was not kept. RunHaven keeps session output only until you
+                quit.
+              </span>
+            ) : null}
             <div className="flex flex-wrap gap-2">
               {!outputUnavailable ? (
                 <Button
@@ -57,16 +64,16 @@ export function SessionAttentionBanner({
                   size="sm"
                   onClick={onShowOutput}
                 >
-                  Show output
+                  Show output…
                 </Button>
               ) : null}
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => onNavigate({ kind: "diagnostics" })}
+                onClick={() => onStartNew(session.agent)}
               >
-                Check System
+                Start new session…
               </Button>
             </div>
           </AlertDescription>
@@ -92,7 +99,7 @@ export function SessionAttentionBanner({
                   : onNavigate({ kind: "new-session" })
               }
             >
-              Sign in
+              Sign in…
             </Button>
           </AlertDescription>
         </Alert>
@@ -109,9 +116,20 @@ export function SessionAttentionBanner({
             </span>
             {onRepair ? (
               <Button type="button" variant="outline" size="sm" onClick={onRepair}>
-                Remove from active list
+                Remove from active list…
               </Button>
             ) : null}
+          </AlertDescription>
+        </Alert>
+      )
+    case "review-unavailable":
+      return (
+        <Alert variant="warning" role="alert">
+          <CircleAlert />
+          <AlertTitle>Couldn’t check the protected copy</AlertTitle>
+          <AlertDescription>
+            RunHaven kept the protected copy. Check again below before you
+            decide what to do with it.
           </AlertDescription>
         </Alert>
       )
@@ -119,9 +137,9 @@ export function SessionAttentionBanner({
       return (
         <Alert role="status">
           <Files aria-hidden />
-          <AlertTitle>Ready to review</AlertTitle>
+          <AlertTitle>Changes ready to review</AlertTitle>
           <AlertDescription>
-            Review the assistant&apos;s changes below and choose what happens next.
+            Review the files below. Then choose Apply changes or Discard changes.
           </AlertDescription>
         </Alert>
       )

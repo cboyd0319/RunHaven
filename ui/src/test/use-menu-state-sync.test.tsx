@@ -45,7 +45,7 @@ function session(patch: Partial<ManagedSessionSummary>): ManagedSessionSummary {
   }
 }
 
-const HOME: NavDestination = { kind: "home" }
+const HOME: NavDestination = { kind: "new-session" }
 const selection = (id: string): NavDestination => ({ kind: "session", id })
 
 describe("computeMenuState", () => {
@@ -53,7 +53,6 @@ describe("computeMenuState", () => {
     const sessions = [session({ id: "a1" }), session({ id: "a2" })]
     const state = computeMenuState(sessions, HOME)
     expect(state).toEqual<MenuState>({
-      showAttentionBadge: true,
       sidebarOpen: true,
       selectedSessionCanRunControl: false,
       selectedSessionCanSendInput: false,
@@ -70,6 +69,21 @@ describe("computeMenuState", () => {
     expect(state.selectedSessionHasCleanup).toBe(false)
   })
 
+  it("disables the composer when the running session input is detached", () => {
+    const detached = session({
+      id: "a1",
+      input: {
+        attached: false,
+        status: "detached",
+        detail: "Use the session terminal.",
+      },
+    })
+    const state = computeMenuState([detached], selection("a1"))
+
+    expect(state.selectedSessionCanRunControl).toBe(true)
+    expect(state.selectedSessionCanSendInput).toBe(false)
+  })
+
   it("disables run control and composer for a finished session", () => {
     const finished = session({
       id: "f1",
@@ -81,11 +95,24 @@ describe("computeMenuState", () => {
     expect(state.selectedSessionCanSendInput).toBe(false)
   })
 
+  it("does not enable Send Message when the composer gate rejects the session", () => {
+    const endedMonitor = session({ id: "f1", lifecycle: "finished" })
+    expect(
+      computeMenuState([endedMonitor], selection("f1")).selectedSessionCanSendInput,
+    ).toBe(false)
+  })
+
   it("offers clean-up only when it is not a worktree review", () => {
     const plain = session({
       id: "f1",
       lifecycle: "finished",
-      cleanup: { available: true, target: "session", label: "Clean up", detail: "" },
+      cleanup: {
+        available: true,
+        reviewState: "none",
+        target: "session",
+        label: "Clean up",
+        detail: "",
+      },
     })
     expect(
       computeMenuState([plain], selection("f1")).selectedSessionHasCleanup,
@@ -95,7 +122,13 @@ describe("computeMenuState", () => {
     const worktree = session({
       id: "f2",
       lifecycle: "finished",
-      cleanup: { available: true, target: "worktree", label: "Review", detail: "" },
+      cleanup: {
+        available: true,
+        reviewState: "changes",
+        target: "worktree",
+        label: "Review",
+        detail: "",
+      },
     })
     expect(
       computeMenuState([worktree], selection("f2")).selectedSessionHasCleanup,
@@ -115,25 +148,21 @@ describe("useMenuStateSync", () => {
     const props: {
       sessions: ManagedSessionSummary[]
       navigation: NavDestination
-      showAttentionBadge: boolean
       sidebarOpen: boolean
     } = {
       sessions,
       navigation: HOME,
-      showAttentionBadge: true,
       sidebarOpen: true,
     }
     const hook = await renderHook(
       (p: {
         sessions: ManagedSessionSummary[]
         navigation: NavDestination
-        showAttentionBadge: boolean
         sidebarOpen: boolean
       }) =>
         useMenuStateSync(
           p.sessions,
           p.navigation,
-          p.showAttentionBadge,
           p.sidebarOpen,
         ),
       props,
@@ -147,7 +176,6 @@ describe("useMenuStateSync", () => {
     await hook.rerender({
       sessions: [session({ id: "a1" })],
       navigation: HOME,
-      showAttentionBadge: true,
       sidebarOpen: true,
     })
     expect(syncMenuState).toHaveBeenCalledTimes(1)
@@ -156,7 +184,6 @@ describe("useMenuStateSync", () => {
     await hook.rerender({
       sessions,
       navigation: selection("a1"),
-      showAttentionBadge: true,
       sidebarOpen: true,
     })
     expect(syncMenuState).toHaveBeenCalledTimes(2)
@@ -167,21 +194,9 @@ describe("useMenuStateSync", () => {
     await hook.unmount()
   })
 
-  it("syncs the saved app icon count choice", async () => {
-    const hook = await renderHook(
-      (showAttentionBadge: boolean) =>
-        useMenuStateSync([], HOME, showAttentionBadge),
-      false,
-    )
-    expect(syncMenuState).toHaveBeenLastCalledWith(
-      expect.objectContaining({ showAttentionBadge: false }),
-    )
-    await hook.unmount()
-  })
-
   it("syncs whether the View menu should say Show or Hide Sidebar", async () => {
     const hook = await renderHook(
-      (sidebarOpen: boolean) => useMenuStateSync([], HOME, true, sidebarOpen),
+      (sidebarOpen: boolean) => useMenuStateSync([], HOME, sidebarOpen),
       false,
     )
     expect(syncMenuState).toHaveBeenLastCalledWith(

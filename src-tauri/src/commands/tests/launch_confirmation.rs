@@ -232,6 +232,15 @@ fn trusted_launch_prompt_keeps_defaults_plain_and_lists_advanced_access() {
     assert!(message.contains("Project: "));
     assert!(message.contains("Assistant services only"));
     assert!(message.contains("The assistant can change files in this folder."));
+    assert!(message.contains(
+        "Codex uses generative AI and can make mistakes. Review its output and file changes."
+    ));
+    assert!(message.contains(
+        "Codex can send your messages and project content it reads to OpenAI services. OpenAI handles that data under the terms for your account."
+    ));
+    assert!(message.contains(
+        "RunHaven does not control whether OpenAI stores this content or uses it for training."
+    ));
     assert!(!message.contains(&format!("Workspace: {}", plan.workspace.display())));
     assert!(!message.contains("Session:"));
     assert!(!message.contains("Sign-in:"));

@@ -47,7 +47,7 @@ const fn active_by_default() -> bool {
 #[serde(rename_all = "camelCase")]
 pub struct AgentReadiness {
     pub name: String,
-    /// One of "ready", "signed-in", or "needs-sign-in".
+    /// One of "ready", "sign-in-saved", or "needs-sign-in".
     pub category: String,
     pub label: String,
 }
@@ -115,7 +115,7 @@ pub fn agent_signed_in(agent: &str) -> bool {
 ///
 /// Rules:
 /// - A profile with no sign-in (the generic shell) is always "ready".
-/// - Every supported agent is "signed-in" once its marker and volume exist.
+/// - Every supported agent has "sign-in-saved" once its marker and volume exist.
 ///
 /// A marker means RunHaven witnessed a successful sign-in, not that a token is
 /// still valid. RunHaven does not inspect the isolated credential.
@@ -133,7 +133,7 @@ pub fn agent_setup_readiness(
                     .iter()
                     .any(|volume| volume == &shared_state_volume_name(name))
             {
-                ("signed-in", "Signed in")
+                ("sign-in-saved", "Sign-in saved")
             } else {
                 ("needs-sign-in", "Needs sign-in")
             };
@@ -231,7 +231,7 @@ mod tests {
     }
 
     #[test]
-    fn readiness_follows_each_agents_own_marker() {
+    fn readiness_describes_saved_sign_in_without_claiming_current_validity() {
         let cache = seed_cache();
         let _override = override_cache_root_for_tests(cache.path());
         for agent in ["claude", "codex", "antigravity", "copilot"] {
@@ -242,8 +242,10 @@ mod tests {
             record_agent_sign_in(agent, AGENT_SIGN_IN_SCOPE).expect("record");
 
             let after = agent_setup_readiness(&[agent], &volumes);
-            assert_eq!(after[0].category, "signed-in");
-            assert_eq!(after[0].label, "Signed in");
+            assert_eq!(
+                (after[0].category.as_str(), after[0].label.as_str()),
+                ("sign-in-saved", "Sign-in saved")
+            );
         }
     }
 

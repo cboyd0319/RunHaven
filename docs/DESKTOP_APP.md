@@ -19,8 +19,8 @@ line, and this guide says which ones.
 
 ## Open the app
 
-Coworkers open RunHaven from Applications. On first launch, Home checks the Mac
-and guides each required setup action. If macOS says the app cannot be verified,
+Coworkers open RunHaven from Applications. On first launch, **New session**
+guides each required setup action. If macOS says the app cannot be verified,
 stop and ask the release owner for a new artifact. Do not bypass Gatekeeper.
 
 ## Run a development build
@@ -94,15 +94,13 @@ produces checksums, CycloneDX SBOMs, notarization receipts, and provenance under
 `target/release-artifacts/v<version>/`. It publishes nothing if any check fails.
 The finished DMG still needs a clean supported-Mac install test before sharing.
 
-## First look: Home
+## First look: New session
 
-The app always opens on **Home**. Home is a launchpad with four choices:
-Claude, Codex, Antigravity, and Copilot. Choose the assistant account you
-already use. You can go back without starting anything. If you are not sure,
-choose **Not sure?** or **Help > RunHaven Help**. Home does not show run
-history, logs, failures, or system checks. Those
-details live in **History** and **System details**, where they have room to
-explain what happened and what to do next.
+The app always opens on **New session**. Choose Claude, Codex, Antigravity, or
+Copilot, then choose the project folder for that session. You can leave without
+starting anything. Open **Help > RunHaven Help** if you are not sure which
+assistant to choose. Run history and setup details live in **History** and
+**System**, where there is room to explain what happened and what to do next.
 
 Help returns you to the screen you were using. For example, if you open Help
 while choosing a project, choose **Back to New session** to continue with the
@@ -110,9 +108,8 @@ same choices.
 
 After you choose an assistant, **New session** checks whether your Mac and that
 assistant are ready. If something needs work, it shows one problem, a plain
-explanation, and the safest available fix. You can also open **System details**
-for every setup check. This keeps Home calm without hiding a problem that would
-stop the session.
+explanation, and the safest available fix. You can also open **System** for
+every setup check.
 
 RunHaven repeats the supported macOS and Apple `container` checks immediately
 before every real run. If the service stopped or a reviewed runtime changed,
@@ -140,7 +137,8 @@ action.
 
 ## Sign in to an assistant
 
-On Home, choose **Claude**, **Codex**, **Antigravity**, or **Copilot**. If that
+On **New session**, choose **Claude**, **Codex**, **Antigravity**, or
+**Copilot**. If that
 assistant needs sign-in, choose
 **Open sign-in terminal** beside it in New session.
 RunHaven shows a native confirmation before it starts anything.
@@ -172,9 +170,11 @@ Closing the terminal stops the sign-in container. A force-quit may leave a
 RunHaven container or network. If it still holds the assistant's saved
 state, the next sign-in fails before launch with a safe message. Stop the other
 run or open **System details** and remove leftover networks, then try again.
-Refreshing RunHaven rechecks assistant status. “Signed in” means RunHaven witnessed a
-successful provider command and any required provider-owned readiness check. It
-never reads the provider credential.
+Refreshing RunHaven rechecks assistant status. **Sign-in saved** means RunHaven
+witnessed a successful provider command and any required provider-owned
+readiness check. It does not promise that the provider's session is still
+valid. The assistant may ask you to sign in again if its session expired.
+RunHaven never reads the provider credential.
 
 The optional API-key broker remains under **Advanced options** for explicitly
 configured Claude or Codex API keys. It is not selected automatically and is not
@@ -182,10 +182,10 @@ the ordinary sign-in path. See [Authentication and API-key brokers](AUTH_BROKER.
 
 ## Start a session
 
-Choose an assistant on Home. The main area opens **Choose project** with that
-assistant already selected. Opening **File > New Session** starts with **Choose
-assistant**, then continues to **Choose project**. The project page uses the
-normal Mac folder picker; there is no path to type by hand.
+Choose an assistant on **New session**, then continue to **Choose project**.
+Opening **File > New Session** or pressing Cmd-N starts the same flow. The
+project page uses the normal Mac folder picker; there is no path to type by
+hand.
 Sign-in sharing, network access, resource limits, and direct-folder access stay
 under **Advanced options**. The safer protected copy is automatic. Advanced
 users can explicitly choose to work in the original folder after reading its
@@ -199,12 +199,15 @@ internet access, its specific warning still requires explicit acknowledgement.
 The normal confirmation stays short. If you chose advanced host access, it
 lists the exact extra sites, Mac environment names, API-key source name, or
 custom image so the trusted Mac dialog cannot hide what the session requested.
-It never shows an environment value.
+It never shows an environment value. The dialog also says that the selected
+assistant uses generative AI and can make mistakes. It explains that the
+assistant may send your messages and project content it reads to its provider,
+and that storage or training depends on your account settings and the
+provider's terms.
 
-Choose **Back** to return to assistant selection. Choose **Cancel** there to
-leave without starting anything. RunHaven keeps the values you entered, so
-returning to **New session** picks up where you left off. When you start and
-confirm, the app takes you straight to the new session.
+Choose **Back** to return to assistant selection. Nothing starts until you
+choose **Start session** and confirm the Mac dialog. When you confirm, the app
+takes you straight to the new session.
 
 Some assistants are interactive: they work as a chat in their own terminal, so there
 is no separate box to type your task into. When you start one of these (Claude
@@ -219,11 +222,19 @@ run's requests, never inside the sandbox. The same standing terminal warning
 applies (see [Open a terminal](#open-a-terminal)): what the run prints is shown
 live. A bounded copy is filtered before History displays it and stays only in
 this app process. It is never written to disk or the debug log, and it is gone
-after RunHaven closes. **End run** stays visible while the terminal starts
-and runs. It ends the run and takes you back Home, so the terminal cannot leave
-you stuck. Closing the window also ends the run cleanly. Afterward the run shows as
-**Ended** under Past, not Failed: you close an interactive run
-yourself, so ending it is normal and never marked as an error.
+after RunHaven closes. Once the terminal is live, **End session** opens a native
+Mac confirmation. Cancel keeps the terminal open; confirming ends that exact
+live session and takes you to History. If the terminal fails to open, **Close**
+leaves the failed destination without pretending a live session was ended.
+Closing the main window hides it and preserves every live terminal.
+Choose the RunHaven Dock icon to return. Quitting RunHaven ends live terminals.
+Afterward History shows an explicitly ended run as **Ended**, not Failed. You close an interactive run yourself, so
+ending it is normal and never marked as an error.
+
+Starting another interactive assistant does not end an existing terminal.
+Each live terminal stays mounted while you use another page or terminal. The
+sidebar lists every live terminal under **Running** with its assistant, project,
+and start time. Choose that row to return to the exact terminal.
 
 Under **Advanced options** on the Project step, people can change project access,
 sign-in sharing, network access, CPU, memory, and supported API-key behavior.
@@ -265,17 +276,19 @@ clears and RunHaven opens the run. You can find it again in History.
 
 ## Find your way around
 
-The sidebar is how you move around the app. It has **Home**, **History**,
-**System**, and, while an interactive terminal is open, **Run terminal**.
-Individual runs, duplicate status filters, and a separate Settings screen stay
-out of it. Open a run from History. If the run you are
-viewing is removed, the app moves to the nearest available run or Home. It
-never switches views on its own for any other reason.
+The sidebar is how you move around the app. It always has **New session**,
+**History**, and **System**. A **Running** group appears while interactive
+terminals are live. A **Saved setups** group appears after you save a setup.
+Open other runs from History. If the run you are viewing is removed, the app
+moves to the nearest available run or New session. It never switches views on
+its own for any other reason.
 
-The app icon in your Dock shows the same signal as one number: how many
-sessions need you right now, and nothing else. The number goes down as you
-take care of each session, and the badge disappears when nothing needs you.
-You can turn the number off with **View > Show Count on App Icon**.
+After choosing an assistant and project, choose **Save setup** to pin that
+combination in the sidebar. A saved setup remembers only the assistant and
+project folder. Selecting it starts a fresh New session with safe defaults. It
+does not restore network, folder-access, sign-in-sharing, resource, or API-key
+choices. If the folder was moved or removed, RunHaven marks the setup
+unavailable. Choose the folder again or choose **Unpin setup**.
 
 ## Menu bar and keyboard shortcuts
 
@@ -284,9 +297,10 @@ and Help. Choose **Help > RunHaven Help** for the built-in guide. Standard items
 like About, Quit, Undo, Copy, Paste, Close,
 Minimize, Zoom, and Full Screen behave the way they do in every Mac app.
 Quitting the app does not stop background runs; they keep working in the
-sandbox and show up again when you reopen the app. A live **Run terminal** or
-sign-in terminal is different: closing its window or quitting ends that live
-terminal. Use **End run** when you are finished.
+sandbox and show up again when you reopen the app. A live interactive session
+terminal or sign-in terminal is different: quitting ends that live terminal.
+Cmd-W only hides the main window, and the Dock icon restores the same live
+window. Use **End session** and confirm the Mac dialog when you are finished.
 
 Menu items never skip a safety step. A menu action does exactly what the same
 click in the window would do. **Stop** and **Force Stop** take you to that
@@ -298,6 +312,7 @@ take that action.
 | Shortcut | What it does |
 | --- | --- |
 | Cmd-N | Open New session |
+| Cmd-Plus, Cmd-Minus, Cmd-0 | Increase, decrease, or reset text size |
 | Cmd-. | Go to the selected session's Stop control |
 | Opt-Cmd-. | Go to the selected session's Force Stop control |
 | Ctrl-Cmd-S | Show or hide the sidebar |
@@ -318,22 +333,24 @@ turned off.
 
 ## What the app remembers
 
-When you reopen the app, it always lands on Home, ready to start. The window
-keeps its size and position, the sidebar stays shown or hidden, and the app-icon
-count choice remains. RunHaven does not save the last screen you viewed.
-It also does not save drafts, output, project paths, or sign-in data this way.
+When you reopen the app, it always lands on New session, ready to start. The window
+keeps its size and position, the sidebar stays shown or hidden, and the text
+size remains between 80 and 200 percent. Pinned saved setups remain in the sidebar in RunHaven's
+private app data. RunHaven does not save the last screen you viewed. It does
+not save drafts, output, or sign-in data in interface settings. Saved setup
+project paths are kept only in the private saved-setup store.
 
 ## Watch your sessions
 
 Every run appears in **History** with its assistant, project, and one short status.
-Runs that need action lead in **Needs attention**, with the exact reason and
-one next step. Other runs stay in chronological order below. Open a run to see
-one reading order. A failed run explains the failure, a run that needs sign-in
-offers contextual **Sign in**, a run that stopped responding offers **Repair
-run record**, and a finished worktree run points at its review. **Run actions**
-sits near the top. Normal stopping is
-immediate to find; **Force Stop** stays under **More actions**. Repair appears only
-after RunHaven confirms that a stale record needs it.
+Runs that need action use **Needs you**, with the exact reason and one next
+step. Other runs stay in chronological order below. Open a run to see one
+reading order. A failed run preserves the saved failure reason, separately
+states when output was not kept, opens issue details and diagnostics on the
+same page, and offers **Start new session**. A run that needs sign-in offers
+contextual **Sign in**. A run that stopped responding offers **Remove from
+active list**. A finished worktree run points at its real review only when
+saved changes are available.
 Rust asks for native confirmation before any of these changes. Below that are a
 compact overview, output, and the message box. Events and technical status stay
 behind disclosures. Canceling a native confirmation is a quiet no-op, not an
@@ -347,11 +364,14 @@ name is just a label for you: it shows only in this app on this Mac, it does
 not rename the saved run itself, and nothing sensitive is saved with it.
 
 The output is trimmed so it will not flood the window, but raw output can still
-include private data. **Show latest output** asks once in a native Mac dialog,
-then loads one bounded snapshot. The page does not poll or stream it. It is
-never revealed automatically. If older output is unavailable, the app says so
-without showing an internal run ID or command error. If a session is ready for
-input, you can type a message and send it. A native Mac sheet shows the target,
+include private data. **Show output** asks once in a native Mac dialog, then
+loads one bounded snapshot. The page does not poll or stream it. It is never
+revealed automatically. Interactive terminal output stays only until RunHaven
+closes. After a relaunch, History says **Output was not kept** and does not show
+an output button. The app offers **Review changes** only when a saved working
+copy is available for that session. If a live session can receive input, you
+can type a message and send it. If input belongs to a live terminal, the page
+offers **Return to terminal** instead. A native Mac sheet shows the target,
 byte count, and a short preview. You must confirm each exact message.
 
 Deeper runtime detail (container state, resources, networks) and the
@@ -416,11 +436,17 @@ above; any code you paste is visible on screen and is not saved by RunHaven.
 
 ## Review changes
 
-When an assistant finishes in a protected copy, the session shows the files it
-added, changed, or removed. These are project-relative names, never full paths.
-RunHaven shows at most 100 names and says when more are present. If your project
-also has local changes, those files appear in a separate list and **Apply
-changes** stays unavailable until you finish or undo them.
+History puts a protected-copy session under **Needs attention** when RunHaven
+verifies that the assistant changed files or when it cannot read the copy and
+needs you to choose **Check again**. Only verified changes say they are ready to
+review. A clean protected copy stays under **Other sessions** with its normal
+Finished or Ended status.
+
+When files changed, the session shows the files the assistant added, changed,
+or removed. These are project-relative names, never full paths. RunHaven shows
+at most 100 names and says when more are present. If your project also has local
+changes, those files appear in a separate list and **Apply changes** stays
+unavailable until you finish or undo them.
 
 There are two routine choices:
 
@@ -432,6 +458,12 @@ There are two routine choices:
 Leaving the page keeps the protected copy for later. Recovery steps appear only
 when Apply cannot finish safely. Each routine choice uses a native Mac
 confirmation.
+
+If no files changed, the session says **No changes to review**. Your original
+project is unchanged. You can leave the protected copy or choose **Delete
+protected copy…**. Canceling the native confirmation changes nothing and shows
+no error. If RunHaven cannot read the protected copy, it does not call the
+session ready. It keeps the copy and offers **Check again**.
 
 Before and after confirmation, RunHaven checks the exact reviewed state again.
 If a file changed after the list loaded, nothing is applied or deleted. Refresh

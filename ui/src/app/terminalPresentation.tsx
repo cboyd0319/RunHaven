@@ -40,7 +40,7 @@ export function attachTerminalConfig(
     sessionId: session.id,
     title: "Terminal",
     description: "Type directly in this protected session.",
-    openLabel: "Open terminal",
+    openLabel: "Open terminal…",
     previewText:
       "Terminal needs the desktop app. Open RunHaven on your Mac to type live with this session.",
     connectedText: "Connected. What you type goes directly to this session.",
@@ -57,7 +57,7 @@ export function loginTerminalConfig(
     title: `${agentLabel} sign-in terminal`,
     description:
       `Sign in to ${agentLabel} here. Follow the instructions in the terminal and finish in your browser.`,
-    openLabel: "Open sign-in terminal",
+    openLabel: "Open sign-in terminal…",
     previewText:
       `The sign-in terminal needs the desktop app. Open RunHaven on your Mac to sign in to ${agentLabel}.`,
     connectedText:
@@ -72,7 +72,7 @@ export function runTerminalConfig(sessionId: string): TerminalConfig {
     title: "Session terminal",
     description:
       "Type your task here. RunHaven starts the assistant in a protected session and connects you to it.",
-    openLabel: "Start session",
+    openLabel: "Start session…",
     previewText:
       "The session terminal needs the desktop app. Open RunHaven on your Mac to start this assistant and type here.",
     connectedText: "Connected. Type your task for the assistant here.",

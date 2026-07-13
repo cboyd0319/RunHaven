@@ -39,9 +39,15 @@ function session(
 
 const worktreeCleanup = {
   available: true,
+  reviewState: "changes" as const,
   target: "worktree",
   label: "Discard saved copy",
   detail: "This session saved an isolated copy.",
+}
+
+const cleanWorktreeCleanup = {
+  ...worktreeCleanup,
+  reviewState: "clean" as const,
 }
 
 describe("sessionAttention", () => {
@@ -104,6 +110,29 @@ describe("sessionAttention", () => {
       kind: "ready-to-review",
       label: "Ready to review",
       tone: "ready",
+    })
+  })
+
+  it("does not flag a clean protected copy as ready to review or needing attention", () => {
+    expect(
+      sessionAttention(
+        session({ lifecycle: "finished", cleanup: cleanWorktreeCleanup }),
+      ),
+    ).toBeNull()
+  })
+
+  it("reports an unreadable protected copy without claiming changes exist", () => {
+    expect(
+      sessionAttention(
+        session({
+          lifecycle: "finished",
+          cleanup: { ...worktreeCleanup, reviewState: "unknown" },
+        }),
+      ),
+    ).toEqual({
+      kind: "review-unavailable",
+      label: "Couldn’t check protected copy",
+      tone: "needs-you",
     })
   })
 

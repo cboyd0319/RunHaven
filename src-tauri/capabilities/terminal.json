@@ -9,6 +9,7 @@
     "allow-open-agent-run-terminal",
     "allow-write-terminal-input",
     "allow-resize-terminal",
+    "allow-end-terminal-session",
     "allow-close-terminal-session"
   ]
 }

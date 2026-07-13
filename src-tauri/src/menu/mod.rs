@@ -4,7 +4,7 @@
 //! only emits its own id string to the main window WebView over the
 //! [`MENU_COMMAND_EVENT`] event. The frontend listener
 //! (`ui/src/app/useMenuEvents.ts`) translates ids into the same UI affordances
-//! a click would use: open New Session or Help, toggle the app-icon count, or
+//! a click would use: open New Session or Help, or
 //! focus an existing confirm control. Mutations keep flowing through the existing
 //! invoke commands and their Rust-owned native dialogs; in particular the
 //! Stop and Hard Stop items never call `stop_managed_session` or
@@ -31,19 +31,16 @@ mod state;
 
 use std::collections::HashMap;
 
-use tauri::menu::{
-    AboutMetadata, CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu,
-};
-use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri::menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::{AppHandle, Manager, Runtime};
 
 use spec::{Entry, MENU_BAR, Predef, command_ids};
-use state::{menu_item_checked, menu_item_enabled, sidebar_menu_label};
+use state::{menu_item_enabled, sidebar_menu_label};
 
 pub(crate) use state::MenuState;
 
-// Menu events target only the main window (crate::MAIN_WINDOW_LABEL); future
+// Menu events target only the main window; future
 // auxiliary windows must opt in deliberately instead of inheriting dispatch.
-use crate::MAIN_WINDOW_LABEL;
 
 /// The single Rust-to-WebView menu channel. Payload is the menu item id.
 pub const MENU_COMMAND_EVENT: &str = "menu://command";
@@ -53,7 +50,6 @@ pub const MENU_COMMAND_EVENT: &str = "menu://command";
 /// looking them up after build; each handle is an `Arc` clone, so this is cheap.
 struct DynamicMenuItems<R: Runtime> {
     command_items: HashMap<&'static str, MenuItem<R>>,
-    checked_items: HashMap<&'static str, CheckMenuItem<R>>,
 }
 
 /// Build the full menu bar. Passed to `tauri::Builder::menu`. Retains the
@@ -62,11 +58,10 @@ struct DynamicMenuItems<R: Runtime> {
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let menu = Menu::new(app)?;
     let mut command_items = HashMap::new();
-    let mut checked_items = HashMap::new();
     for (label, entries) in MENU_BAR {
         let submenu = Submenu::new(app, *label, true)?;
         for entry in *entries {
-            append_entry(app, &submenu, entry, &mut command_items, &mut checked_items)?;
+            append_entry(app, &submenu, entry, &mut command_items)?;
         }
         #[cfg(target_os = "macos")]
         {
@@ -79,17 +74,13 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         }
         menu.append(&submenu)?;
     }
-    app.manage(DynamicMenuItems {
-        command_items,
-        checked_items,
-    });
+    app.manage(DynamicMenuItems { command_items });
     Ok(menu)
 }
 
 /// Apply the WebView's reported [`MenuState`] to the retained dynamic items:
-/// enable exactly the contextual Run items that apply right now and check the
-/// app-icon count item when that persisted preference is on. Called only by the
-/// `sync_menu_state` command. Menu presentation is not a mutation of session
+/// enable exactly the contextual Session items that apply right now. Called
+/// only by the `sync_menu_state` command. Menu presentation is not a mutation of session
 /// state; the frontend handler and Rust-owned dialogs still gate actions.
 pub(crate) fn apply_menu_state<R: Runtime>(
     app: &AppHandle<R>,
@@ -108,12 +99,6 @@ pub(crate) fn apply_menu_state<R: Runtime>(
         item.set_text(sidebar_menu_label(state))
             .map_err(|_| "RunHaven could not update the menu.".to_string())?;
     }
-    for (id, item) in &handles.checked_items {
-        if let Some(checked) = menu_item_checked(id, state) {
-            item.set_checked(checked)
-                .map_err(|_| "RunHaven could not update the menu.".to_string())?;
-        }
-    }
     Ok(())
 }
 
@@ -124,8 +109,9 @@ pub fn on_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
     if !command_ids().contains(&id) {
         return;
     }
-    // Emission fails only when the main window is gone; nothing to do then.
-    let _ = app.emit_to(MAIN_WINDOW_LABEL, MENU_COMMAND_EVENT, id);
+    if let Err(error) = crate::main_window_lifecycle::dispatch_main_menu_command(app, id) {
+        log::warn!("could not dispatch main-window menu command: {error}");
+    }
 }
 
 fn append_entry<R: Runtime>(
@@ -133,7 +119,6 @@ fn append_entry<R: Runtime>(
     submenu: &Submenu<R>,
     entry: &'static Entry,
     enabled_items: &mut HashMap<&'static str, MenuItem<R>>,
-    checked_items: &mut HashMap<&'static str, CheckMenuItem<R>>,
 ) -> tauri::Result<()> {
     match entry {
         Entry::Command(spec) => {
@@ -141,20 +126,6 @@ fn append_entry<R: Runtime>(
             // Retain every command handle. Contextual items use it for enable
             // state and the sidebar toggle uses it for its action label.
             enabled_items.insert(spec.id, item.clone());
-            submenu.append(&item)
-        }
-        Entry::Check(spec, checked) => {
-            let item = CheckMenuItem::with_id(
-                app,
-                spec.id,
-                spec.label,
-                spec.enabled,
-                *checked,
-                spec.accelerator,
-            )?;
-            if menu_item_checked(spec.id, &MenuState::default()).is_some() {
-                checked_items.insert(spec.id, item.clone());
-            }
             submenu.append(&item)
         }
         Entry::Separator => submenu.append(&PredefinedMenuItem::separator(app)?),

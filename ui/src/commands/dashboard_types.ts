@@ -1,5 +1,5 @@
 // Dashboard read-model types: setup health, per-agent profiles and sign-in
-// readiness, and the run summaries the Home dashboard renders. Split out of
+// readiness, and the run summaries the main desktop views render. Split out of
 // types.ts by ownership. All fields are the sanitized, secret-free backend
 // contract; no token, key, or raw host path is present.
 
@@ -59,7 +59,7 @@ export type RunSummary = {
 // credential.
 export type AgentReadiness = {
   name: string;
-  category: "ready" | "signed-in" | "needs-sign-in";
+  category: "ready" | "sign-in-saved" | "needs-sign-in";
   label: string;
 };
 

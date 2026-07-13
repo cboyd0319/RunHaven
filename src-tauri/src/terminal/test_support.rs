@@ -6,9 +6,9 @@ use std::sync::Arc;
 use runhaven_core::runtime::plans::AgentRunPlan;
 
 use super::{
-    GuiAttachPlan, SpawnedTerminal, TerminalHandle, TerminalSessionRegistry, pty,
-    register_and_stream, resolve_and_reserve, spawn_confirmed_run_terminal,
-    validate_terminal_session_id,
+    GuiAttachPlan, RunTerminalOpenResponse, SpawnedTerminal, TerminalHandle,
+    TerminalSessionRegistry, pty, register_and_stream, resolve_and_reserve,
+    spawn_confirmed_run_terminal, validate_terminal_session_id,
 };
 use crate::session_output::SessionOutputRegistry;
 
@@ -69,12 +69,13 @@ pub(crate) fn open_agent_run_terminal_for_test(
     session_id: &str,
     prepare_confirm: impl FnOnce() -> Result<Option<AgentRunPlan>, String>,
     spawn: impl FnOnce(AgentRunPlan, &str, pty::RetainedRunOutput) -> Result<SpawnedTerminal, String>,
-) -> Result<bool, String> {
+) -> Result<Option<RunTerminalOpenResponse>, String> {
     let reservation = registry.reserve(session_id)?;
     let Some(plan) = prepare_confirm()? else {
-        return Ok(false);
+        return Ok(None);
     };
-    spawn_confirmed_run_terminal(
+    let label = super::run_terminal_sidebar_label(&plan);
+    let run_id = spawn_confirmed_run_terminal(
         registry,
         reservation,
         output_registry,
@@ -82,7 +83,7 @@ pub(crate) fn open_agent_run_terminal_for_test(
         plan,
         spawn,
     )?;
-    Ok(true)
+    Ok(Some(RunTerminalOpenResponse { run_id, label }))
 }
 
 pub(crate) fn open_agent_run_terminal_with_chunks_for_test(
@@ -91,7 +92,7 @@ pub(crate) fn open_agent_run_terminal_with_chunks_for_test(
     session_id: &str,
     plan: AgentRunPlan,
     chunks: &[&[u8]],
-) -> Result<bool, String> {
+) -> Result<Option<RunTerminalOpenResponse>, String> {
     open_agent_run_terminal_for_test(
         registry,
         output_registry,
@@ -102,4 +103,12 @@ pub(crate) fn open_agent_run_terminal_with_chunks_for_test(
             Ok(SpawnedTerminal::without_reader(Arc::new(NoopTerminal)))
         },
     )
+}
+
+pub(crate) fn end_terminal_session_with_approval_for_test(
+    registry: &TerminalSessionRegistry,
+    session_id: &str,
+    approve: impl FnOnce(&str) -> Result<bool, String>,
+) -> Result<bool, String> {
+    super::user_end::end_terminal_session_with_approval_for_test(registry, session_id, approve)
 }

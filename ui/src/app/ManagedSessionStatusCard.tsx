@@ -1,7 +1,8 @@
-import { CircleAlert, RefreshCw } from "lucide-react"
+import { CircleAlert } from "lucide-react"
 
 import type { ManagedSessionStatusResponse } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ActivityIndicator } from "@/components/ui/activity-indicator"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -34,7 +35,7 @@ export function ManagedSessionStatusCard({
   const container = status?.container ?? null
 
   return (
-    <Card aria-live="polite">
+    <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
           Runtime status
@@ -43,13 +44,13 @@ export function ManagedSessionStatusCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {loading ? (
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <RefreshCw className="size-4" />
+          <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+            <ActivityIndicator />
             Checking status…
           </p>
         ) : null}
         {error ? (
-          <Alert variant="destructive">
+          <Alert variant="destructive" role="alert">
             <CircleAlert />
             <AlertTitle>Status unavailable</AlertTitle>
             <AlertDescription>{error}</AlertDescription>

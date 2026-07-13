@@ -67,7 +67,7 @@ describe("RunsView", () => {
     expect(html).not.toContain("Session history")
   })
 
-  it("moves attention-needed runs here instead of Home", () => {
+  it("keeps attention-needed runs in History", () => {
     const html = renderToStaticMarkup(
       <RunsView
           sessions={[
@@ -83,6 +83,19 @@ describe("RunsView", () => {
             }),
             managedSession({ id: "active", title: "Claude - active" }),
             managedSession({
+              id: "clean-copy",
+              title: "Codex - no file changes",
+              lifecycle: "finished",
+              statusLabel: "Finished",
+              cleanup: {
+                available: true,
+                reviewState: "clean",
+                target: "worktree",
+                label: "Delete protected copy",
+                detail: "A protected copy exists.",
+              },
+            }),
+            managedSession({
               id: "review",
               title: "Claude - review a very long project title without clipping",
               nextAction: {
@@ -92,6 +105,7 @@ describe("RunsView", () => {
               },
               cleanup: {
                 available: true,
+                reviewState: "changes",
                 target: "worktree",
                 label: "Review saved copy",
                 detail: "A protected copy is ready.",
@@ -110,7 +124,7 @@ describe("RunsView", () => {
     expect(html).toContain(
       "Claude - review a very long project title without clipping",
     )
-    expect(html).toContain("The assistant’s changes are ready to review.")
+    expect(html).toContain("The assistant changed files in the protected copy.")
     expect(html).not.toContain("RunHaven is tracking status for this session.")
     expect(html).toContain("Review changes")
     expect(html).toContain("shrink-0 self-start")
@@ -120,10 +134,12 @@ describe("RunsView", () => {
     )
     expect(attentionPanel).not.toContain("table-fixed")
     expect(attentionPanel).toContain("min-w-0 break-words")
+    expect(attentionPanel).not.toContain("Codex - no file changes")
     expect(attentionPanel).not.toContain(
       'class="truncate">Claude - review a very long project title',
     )
     expect(html).toContain("Other sessions")
     expect(html).toContain("Claude - active")
+    expect(html).toContain("Codex - no file changes")
   })
 })

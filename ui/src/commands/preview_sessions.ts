@@ -166,6 +166,7 @@ function finishPreviewWorktreeSession(sessionId: string) {
           ...session,
           cleanup: {
             available: true,
+            reviewState: "changes",
             target: "worktree",
             label: "Discard saved copy",
             detail: "This session saved an isolated copy of your project."
@@ -283,6 +284,7 @@ export function rememberPreviewManagedSession(
     containerName: started.containerName,
     detailCommand: `runhaven runs show ${started.runId}`,
     lifecycle: "running",
+    outputAvailable: true,
     input: {
       attached: true,
       status: "attached",

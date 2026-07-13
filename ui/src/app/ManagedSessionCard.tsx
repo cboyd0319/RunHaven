@@ -22,7 +22,7 @@ export function ManagedSessionCard({
   const needsAttention = sessionNeedsAttention(session)
 
   return (
-    <Card aria-live="polite">
+    <Card>
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">

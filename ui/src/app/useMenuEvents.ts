@@ -7,10 +7,17 @@ import {
   NEW_SESSION_NAV,
   type NavDestination,
 } from "./navigation"
+import {
+  persistTextSize,
+  TEXT_SIZE_EVENT,
+  TEXT_SIZES,
+  type TextSize,
+} from "./uiStatePersistence"
 import type { RunControlAction } from "./types"
+import { SESSION_MESSAGE_MENU_TARGET } from "./SessionInputCard"
 
 // Translates native menu activations into the same UI actions a click takes.
-// New Session and Help open their pages, the View preference toggles, and Run
+// New Session and Help open their pages, and Session
 // actions activate the same on-screen buttons, so the Rust-owned dialog still
 // gates mutations.
 // Send Message focuses the composer instead of sending a draft. Ids that do not
@@ -19,7 +26,6 @@ import type { RunControlAction } from "./types"
 export type MenuActions = {
   navigation: NavDestination
   launchFlow: { setOpen: (open: boolean) => void }
-  settings: { dockBadge: boolean; setDockBadge: (enabled: boolean) => void }
   navigate: (destination: NavDestination) => void
   runControl: (action: RunControlAction) => Promise<void>
 }
@@ -34,7 +40,7 @@ export const MENU_CONTROL_ACTIONS: Record<string, RunControlAction> = {
 }
 
 export const MENU_FOCUS_SELECTORS: Record<string, string> = {
-  "send-message": 'textarea[placeholder="Type a message for this session."]',
+  "send-message": `[data-menu-target="${SESSION_MESSAGE_MENU_TARGET}"]`,
 }
 
 // The shadcn sidebar trigger; clicking it is the exact toggle a user clicks.
@@ -42,6 +48,20 @@ const SIDEBAR_TRIGGER_SELECTOR = '[data-sidebar="trigger"]'
 
 function focusMenuTarget(selector: string) {
   document.querySelector<HTMLElement>(selector)?.focus()
+}
+
+function changeTextSize(direction: -1 | 0 | 1) {
+  const current = Number.parseInt(document.documentElement.style.fontSize, 10) || 100
+  const defaultIndex = TEXT_SIZES.indexOf(100)
+  const foundIndex = TEXT_SIZES.findIndex((value) => value === current)
+  const currentIndex = foundIndex < 0 ? defaultIndex : foundIndex
+  const nextIndex = direction === 0
+    ? defaultIndex
+    : Math.min(Math.max(currentIndex + direction, 0), TEXT_SIZES.length - 1)
+  const next = TEXT_SIZES[nextIndex] as TextSize
+  document.documentElement.style.fontSize = `${next}%`
+  persistTextSize(next)
+  window.dispatchEvent(new CustomEvent<TextSize>(TEXT_SIZE_EVENT, { detail: next }))
 }
 
 export function handleMenuCommand(id: string, app: MenuActions): void {
@@ -65,13 +85,19 @@ export function handleMenuCommand(id: string, app: MenuActions): void {
     case "show-help":
       app.navigate(helpNavigation(app.navigation))
       return
-    case "show-attention-badge":
-      app.settings.setDockBadge(!app.settings.dockBadge)
-      return
     case "toggle-sidebar":
       document
         .querySelector<HTMLElement>(SIDEBAR_TRIGGER_SELECTOR)
         ?.click()
+      return
+    case "increase-text-size":
+      changeTextSize(1)
+      return
+    case "decrease-text-size":
+      changeTextSize(-1)
+      return
+    case "actual-text-size":
+      changeTextSize(0)
       return
     default:
       // Placeholder and future ids fall through harmlessly.

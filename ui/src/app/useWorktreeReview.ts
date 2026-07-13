@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import {
   discardManagedSessionWorktree,
@@ -38,6 +38,12 @@ export function useWorktreeReview(
   const [message, setMessage] = useState("")
   const [nextSteps, setNextSteps] = useState<string[]>([])
   const [actionError, setActionError] = useState("")
+  const [loadAttempt, setLoadAttempt] = useState(0)
+  const onResolvedRef = useRef(onResolved)
+
+  useEffect(() => {
+    onResolvedRef.current = onResolved
+  }, [onResolved])
 
   useEffect(() => {
     let active = true
@@ -48,7 +54,13 @@ export function useWorktreeReview(
     setActionError("")
     setLoading(true)
     void getManagedSessionWorktree(sessionId)
-      .then((next) => {
+      .then(async (next) => {
+        if (!active) {
+          return
+        }
+        if (loadAttempt > 0) {
+          await onResolvedRef.current()
+        }
         if (active) {
           setReview(next)
         }
@@ -66,7 +78,7 @@ export function useWorktreeReview(
     return () => {
       active = false
     }
-  }, [sessionId])
+  }, [sessionId, loadAttempt])
 
   async function runAction(action: WorktreeAction) {
     if (busy || review === null) {
@@ -104,6 +116,7 @@ export function useWorktreeReview(
     message,
     nextSteps,
     actionError,
+    retry: () => setLoadAttempt((attempt) => attempt + 1),
     runAction,
   }
 }

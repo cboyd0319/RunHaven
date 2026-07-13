@@ -14,13 +14,16 @@ async function expectNoHorizontalOverflow(page: Page) {
   ).toBe(true)
 }
 
-async function openHome(page: Page, project?: string, terminal = false) {
+async function openNewSession(page: Page, project?: string, terminal = false) {
   const params = new URLSearchParams()
   if (project) params.set("project", project)
   if (terminal) params.set("preview", "terminal")
   await page.goto(`/${params.size > 0 ? `?${params}` : ""}`)
   await expect(
-    page.getByRole("heading", { level: 1, name: "Start a session" }),
+    page.getByRole("heading", { level: 1, name: "New session" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Choose assistant" }),
   ).toBeVisible()
 }
 
@@ -30,8 +33,10 @@ async function openProjectStep(
   project: string,
   terminal = false,
 ) {
-  await openHome(page, project, terminal)
-  await page.getByRole("button", { name: assistant, exact: true }).click()
+  await openNewSession(page, project, terminal)
+  await page.getByRole("combobox", { name: "Assistant" }).click()
+  await page.getByRole("option", { name: assistant, exact: true }).click()
+  await page.getByRole("button", { name: "Continue" }).click()
   await expect(
     page.getByRole("heading", { level: 2, name: "Choose project" }),
   ).toBeVisible()
@@ -57,7 +62,7 @@ async function startManagedSession(
   ).toBeVisible()
 }
 
-test("Home is a focused one-click launchpad at minimum and normal sizes", async ({
+test("New session is focused at minimum and normal sizes", async ({
   page,
 }) => {
   for (const viewport of [
@@ -65,20 +70,9 @@ test("Home is a focused one-click launchpad at minimum and normal sizes", async 
     { width: 1080, height: 720 },
   ]) {
     await page.setViewportSize(viewport)
-    await openHome(page)
-    for (const assistant of ["Claude", "Codex", "Antigravity", "Copilot"]) {
-      await expect(
-        page.getByRole("button", { name: assistant, exact: true }),
-      ).toBeVisible()
-    }
-    await expect(
-      page.getByText("Choose the assistant account you already use."),
-    ).toBeVisible()
-    await page.getByRole("button", { name: "Not sure?" }).click()
-    await expect(
-      page.getByRole("heading", { level: 1, name: "RunHaven Help" }),
-    ).toBeVisible()
-    await expect(page.getByRole("heading", { name: "Start safely" })).toBeVisible()
+    await openNewSession(page)
+    await expect(page.getByRole("combobox", { name: "Assistant" })).toBeVisible()
+    await expect(page.getByText("Pick the coding assistant you want to use.")).toBeVisible()
     await expect(page.getByText("Needs attention", { exact: true })).toHaveCount(0)
     await expect(page.getByText("Recent activity", { exact: true })).toHaveCount(0)
     await expect(page.getByText("Run history", { exact: true })).toHaveCount(0)
@@ -87,7 +81,35 @@ test("Home is a focused one-click launchpad at minimum and normal sizes", async 
   }
 })
 
-test("every Home choice opens its project step without asking again", async ({
+test("200% text remains usable at the minimum window size", async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 560 })
+  await openNewSession(page)
+  await page.evaluate(() => localStorage.setItem("runhaven.text-size", "200"))
+  await page.reload()
+
+  await expect(page.locator("html")).toHaveCSS("font-size", "32px")
+  await expect(page.getByRole("button", { name: "Continue" })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  await page.getByRole("button", { name: "History", exact: true }).click()
+  await expect(page.getByRole("heading", { level: 1, name: "History" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Start a session" })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  await page.getByRole("button", { name: "System", exact: true }).click()
+  await expect(page.getByRole("heading", { level: 1, name: "System" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Check again" })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  await startManagedSession(page, "/tmp/runhaven-large-text", {
+    protectedCopy: false,
+  })
+  await expect(page.getByLabel("Message")).toBeVisible()
+  await expect(page.getByRole("button", { name: "Show details" })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
+test("every assistant choice opens its project step", async ({
   page,
 }) => {
   for (const assistant of [
@@ -107,13 +129,13 @@ test("sidebar, appearance, and keyboard paths behave like Mac controls", async (
   page,
 }) => {
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" })
-  await openHome(page)
+  await openNewSession(page)
   await expect(page.locator("html")).toHaveClass(/dark/)
 
   const sidebarToggle = page.locator('[data-sidebar="trigger"]')
   const desktopSidebar = page.locator('[data-slot="sidebar"]')
   const sidebarContainer = page.locator('[data-slot="sidebar-container"]')
-  await page.getByRole("button", { name: "Home", exact: true }).focus()
+  await page.getByRole("button", { name: "New session", exact: true }).focus()
   await expect(sidebarToggle).toHaveAccessibleName("Hide Sidebar")
   await sidebarToggle.evaluate((button: HTMLElement) => button.click())
   await expect(desktopSidebar).toHaveAttribute("data-state", "collapsed")
@@ -125,8 +147,9 @@ test("sidebar, appearance, and keyboard paths behave like Mac controls", async (
   await sidebarToggle.click()
   await expect(desktopSidebar).toHaveAttribute("data-state", "expanded")
 
-  const codex = page.getByRole("button", { name: "Codex", exact: true })
-  await codex.focus()
+  await page.getByRole("combobox", { name: "Assistant" }).click()
+  await page.getByRole("option", { name: "Codex", exact: true }).click()
+  await page.getByRole("button", { name: "Continue" }).focus()
   await page.keyboard.press("Enter")
   await expect(page.getByRole("heading", { name: "Choose project" })).toBeVisible()
   await expectNoAccessibilityViolations(page)
@@ -179,11 +202,11 @@ test("a managed session supports message, output, diagnostics, and controls", as
   await startManagedSession(page, "/tmp/runhaven-managed", { protectedCopy: false })
 
   await page.getByLabel("Message").fill("hello session")
-  await page.getByRole("button", { name: "Send", exact: true }).click()
+  await page.getByRole("button", { name: "Send…", exact: true }).click()
   await expect(page.getByText("Message sent", { exact: true })).toBeVisible()
 
   await page.getByRole("button", { name: "Show details" }).click()
-  await page.getByRole("button", { name: "Show latest output" }).click()
+  await page.getByRole("button", { name: "Show output…", exact: true }).click()
   await expect(page.getByText("Preview log line")).toBeVisible()
   await expect(page.getByText("/tmp/runhaven-managed")).toHaveCount(0)
 
@@ -252,7 +275,7 @@ test("History owns session state and opens a session with the keyboard", async (
 test("System keeps direct fixes visible and technical maintenance disclosed", async ({
   page,
 }) => {
-  await openHome(page)
+  await openNewSession(page)
   await page.getByRole("button", { name: "System", exact: true }).click()
   await expect(page.getByRole("heading", { level: 1, name: "System" })).toBeVisible()
   await expect(page.getByText("Your Mac is ready for RunHaven.")).toBeVisible()

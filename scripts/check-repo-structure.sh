@@ -36,7 +36,7 @@ append_violation() {
 
 is_binary_asset() {
   case "$1" in
-    *.png|*.gif|*.webp|*.zip|*.z3|*.pdf)
+    *.png|*.gif|*.webp|*.icns|*.ico|*.zip|*.z3|*.pdf)
       return 0
       ;;
     *)
@@ -158,6 +158,11 @@ byte_limit_for() {
       echo "$SOURCE_IMAGE_BYTES"
       ;;
     docs/assets/**/*.png|docs/assets/**/*.gif|docs/assets/**/*.webp|docs/assets/*.png|docs/assets/*.gif|docs/assets/*.webp)
+      echo "$BINARY_ASSET_BYTES"
+      ;;
+    # Tauri generates multi-resolution desktop icon containers from the
+    # repo-owned 1024 px source image.
+    src-tauri/icons/*.icns|src-tauri/icons/*.ico)
       echo "$BINARY_ASSET_BYTES"
       ;;
     *.pdf|*.pdf\")

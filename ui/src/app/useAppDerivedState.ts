@@ -22,7 +22,6 @@ type AppDerivedStateInput = {
 // Header title and description per destination, in the shared plain-language
 // vocabulary.
 const PAGE_TITLES: Record<NavDestination["kind"], string> = {
-  home: "Home",
   "new-session": "New session",
   runs: "History",
   session: "Session",

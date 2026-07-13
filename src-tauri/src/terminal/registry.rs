@@ -185,6 +185,48 @@ impl TerminalSessionRegistry {
         self.handle(session_id)?.resize(cols, rows)
     }
 
+    /// Snapshot the identity of one live terminal before a trusted user
+    /// confirmation. Pending and absent sessions are not valid end targets.
+    pub(super) fn live_generation(&self, session_id: &str) -> Result<u64, String> {
+        validate_terminal_session_id(session_id)?;
+        let state = lock_or(self.state.lock(), REGISTRY_UNAVAILABLE)?;
+        match state.sessions.get(session_id) {
+            Some(TerminalEntry::Live { generation, .. }) => Ok(*generation),
+            Some(TerminalEntry::Pending { .. }) | None => {
+                Err("No live terminal for this session.".to_string())
+            }
+        }
+    }
+
+    /// Remove and stop a live terminal only when it is still the generation
+    /// approved by the user. Shutdown runs after releasing the registry lock.
+    pub(super) fn close_live_generation(
+        &self,
+        session_id: &str,
+        generation: u64,
+    ) -> Result<(), String> {
+        validate_terminal_session_id(session_id)?;
+        let handle = {
+            let mut state = lock_or(self.state.lock(), REGISTRY_UNAVAILABLE)?;
+            let matches = matches!(
+                state.sessions.get(session_id),
+                Some(TerminalEntry::Live {
+                    generation: current,
+                    ..
+                }) if *current == generation
+            );
+            if !matches {
+                return Err("The terminal changed before it could be ended.".to_string());
+            }
+            match state.sessions.remove(session_id) {
+                Some(TerminalEntry::Live { handle, .. }) => handle,
+                _ => return Err(REGISTRY_UNAVAILABLE.to_string()),
+            }
+        };
+        handle.shutdown();
+        Ok(())
+    }
+
     /// Remove and return the handle for `session_id`, if present. Used by the
     /// reader thread on EOF; dropping the returned handle drops the master.
     pub(super) fn remove(&self, session_id: &str) -> Option<Arc<dyn TerminalHandle>> {
@@ -243,8 +285,8 @@ impl TerminalSessionRegistry {
         Ok(())
     }
 
-    /// Tear down every live session. Called when the main window is destroyed so
-    /// no `container exec` child outlives the app (terminal design section 9).
+    /// Tear down every live session. Called only when the app exits so no
+    /// `container exec` child outlives the process (terminal design section 9).
     pub(crate) fn close_all(&self) {
         // Recover a poisoned lock instead of returning: on app quit every child
         // must be killed even if a writer panicked, so a poisoned registry can

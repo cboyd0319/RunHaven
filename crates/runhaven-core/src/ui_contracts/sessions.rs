@@ -1,5 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 
 use super::helpers::{
@@ -16,7 +17,7 @@ pub struct ManagedSessionListData {
     pub sessions: Vec<ManagedSessionSummaryData>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ManagedSessionSummaryData {
     pub id: String,
@@ -40,6 +41,39 @@ pub struct ManagedSessionSummaryData {
     pub events: Vec<ManagedSessionEventData>,
 }
 
+impl Serialize for ManagedSessionSummaryData {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Core owns persisted/active metadata but never retains terminal
+        // output. The Tauri list response replaces this false value from its
+        // bounded process-memory output registry.
+        let mut state = serializer.serialize_struct("ManagedSessionSummaryData", 20)?;
+        state.serialize_field("id", &self.id)?;
+        state.serialize_field("runId", &self.run_id)?;
+        state.serialize_field("agent", &self.agent)?;
+        state.serialize_field("session", &self.session)?;
+        state.serialize_field("title", &self.title)?;
+        state.serialize_field("project", &self.project)?;
+        state.serialize_field("status", &self.status)?;
+        state.serialize_field("statusLabel", &self.status_label)?;
+        state.serialize_field("authStatus", &self.auth_status)?;
+        state.serialize_field("authScope", &self.auth_scope)?;
+        state.serialize_field("network", &self.network)?;
+        state.serialize_field("startedAt", &self.started_at)?;
+        state.serialize_field("containerName", &self.container_name)?;
+        state.serialize_field("detailCommand", &self.detail_command)?;
+        state.serialize_field("lifecycle", &self.lifecycle)?;
+        state.serialize_field("input", &self.input)?;
+        state.serialize_field("cleanup", &self.cleanup)?;
+        state.serialize_field("nextAction", &self.next_action)?;
+        state.serialize_field("events", &self.events)?;
+        state.serialize_field("outputAvailable", &false)?;
+        state.end()
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ManagedSessionNextActionData {
@@ -60,15 +94,22 @@ pub struct ManagedSessionInputData {
 #[serde(rename_all = "camelCase")]
 pub struct ManagedSessionCleanupData {
     pub available: bool,
+    #[serde(default = "default_cleanup_review_state")]
+    pub review_state: String,
     pub target: String,
     pub label: String,
     pub detail: String,
+}
+
+fn default_cleanup_review_state() -> String {
+    "none".to_string()
 }
 
 impl ManagedSessionCleanupData {
     pub(super) fn unavailable() -> Self {
         Self {
             available: false,
+            review_state: "none".to_string(),
             target: String::new(),
             label: String::new(),
             detail: String::new(),

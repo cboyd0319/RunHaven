@@ -18,28 +18,8 @@ pub(super) struct CommandSpec {
 /// Declarative menu entry.
 pub(super) enum Entry {
     Command(CommandSpec),
-    Check(CommandSpec, bool),
     Separator,
     Predefined(Predef),
-}
-
-/// A standard checked command. The initial value matches RunHaven's default;
-/// `sync_menu_state` replaces it with the persisted preference after startup.
-const fn checked_command(
-    id: &'static str,
-    label: &'static str,
-    accelerator: Option<&'static str>,
-    checked: bool,
-) -> Entry {
-    Entry::Check(
-        CommandSpec {
-            id,
-            label,
-            accelerator,
-            enabled: true,
-        },
-        checked,
-    )
 }
 
 /// The predefined (system-behavior) items this menu uses.
@@ -94,7 +74,6 @@ const fn initially_disabled(
 
 const APP_MENU: &[Entry] = &[
     Entry::Predefined(Predef::About),
-    Entry::Separator,
     Entry::Predefined(Predef::Services),
     Entry::Separator,
     Entry::Predefined(Predef::Hide),
@@ -125,7 +104,9 @@ const EDIT_MENU: &[Entry] = &[
 const VIEW_MENU: &[Entry] = &[
     command("toggle-sidebar", "Hide Sidebar", Some("Ctrl+Cmd+S")),
     Entry::Separator,
-    checked_command("show-attention-badge", "Show Count on App Icon", None, true),
+    command("increase-text-size", "Increase Text Size", Some("Cmd++")),
+    command("decrease-text-size", "Decrease Text Size", Some("Cmd+-")),
+    command("actual-text-size", "Actual Text Size", Some("Cmd+0")),
     Entry::Separator,
     Entry::Predefined(Predef::Fullscreen),
 ];
@@ -169,7 +150,7 @@ pub(super) const MENU_BAR: &[(&str, &[Entry])] = &[
 fn collect_command_ids(entries: &'static [Entry], ids: &mut Vec<&'static str>) {
     for entry in entries {
         match entry {
-            Entry::Command(spec) | Entry::Check(spec, _) => ids.push(spec.id),
+            Entry::Command(spec) => ids.push(spec.id),
             Entry::Separator | Entry::Predefined(_) => {}
         }
     }

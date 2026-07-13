@@ -1,56 +1,34 @@
-// UI state persisted in the WebView (localStorage plus the shadcn sidebar
-// cookie). The allowed set, in full:
-// - the sidebar open/collapsed state
-// - the View-menu choice: the Dock badge on/off boolean
-// Nothing else may be persisted here: never composer drafts, session output,
-// tokens, project paths, commands, or navigation history.
-//
+// The sidebar open/collapsed state and the bounded accessibility text scale are
+// the only WebView UI preferences RunHaven persists. Never add composer drafts,
+// session output, tokens, project paths, commands, or navigation history here.
+export const TEXT_SIZES = [80, 100, 125, 150, 175, 200] as const
+export type TextSize = (typeof TEXT_SIZES)[number]
+export const TEXT_SIZE_EVENT = "runhaven:text-size"
 
-const SETTINGS_KEY = "runhaven.settings"
+const TEXT_SIZE_KEY = "runhaven.text-size"
 
-// The one persisted View-menu preference. Only convenience choices
-// live here, never security defaults or confirmation suppression.
-export type AppSettings = {
-  // Show the needs-you count on the app's Dock icon.
-  dockBadge: boolean
-}
-
-export const DEFAULT_SETTINGS: AppSettings = {
-  dockBadge: true,
-}
-
-export function persistSettings(settings: AppSettings): void {
-  const sanitized: AppSettings = {
-    dockBadge: settings.dockBadge !== false,
+export function persistTextSize(value: TextSize): void {
+  if (!TEXT_SIZES.includes(value)) {
+    return
   }
   try {
-    window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(sanitized))
+    window.localStorage.setItem(TEXT_SIZE_KEY, String(value))
   } catch {
     // Persistence is a convenience; a blocked store never breaks the app.
   }
 }
 
-// The persisted settings, with every missing, malformed, or non-token field
-// reading as its safe default, so a bad store can only mean default behavior.
-export function loadSettings(): AppSettings {
+export function loadTextSize(): TextSize {
   try {
-    const raw = window.localStorage.getItem(SETTINGS_KEY)
-    if (!raw) {
-      return DEFAULT_SETTINGS
-    }
-    const parsed: unknown = JSON.parse(raw)
-    if (typeof parsed !== "object" || parsed === null) {
-      return DEFAULT_SETTINGS
-    }
-    const { dockBadge } = parsed as {
-      dockBadge?: unknown
-    }
-    return {
-      dockBadge: dockBadge !== false,
-    }
+    const value = Number(window.localStorage.getItem(TEXT_SIZE_KEY))
+    return TEXT_SIZES.includes(value as TextSize) ? (value as TextSize) : 100
   } catch {
-    return DEFAULT_SETTINGS
+    return 100
   }
+}
+
+export function applyStoredTextSize(): void {
+  document.documentElement.style.fontSize = `${loadTextSize()}%`
 }
 
 const SIDEBAR_STATE_COOKIE = "sidebar_state"

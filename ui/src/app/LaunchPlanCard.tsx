@@ -7,6 +7,7 @@ import {
 } from "@/commands/runhaven"
 import { CircleAlert, FolderOpen } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ActivityIndicator } from "@/components/ui/activity-indicator"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -54,7 +55,6 @@ type LaunchPlanCardProps = {
   onRequestChange: (patch: Partial<RunPlanRequest>) => void
   onNetworkChange: (networkMode: RunPlanRequest["networkMode"]) => void
   onInstallImage?: () => void
-  onCancel: () => void
   onBack: () => void
   onContinue: () => void
   onStartSession: () => Promise<void>
@@ -78,7 +78,6 @@ export function LaunchPlanCard({
   onRequestChange,
   onNetworkChange,
   onInstallImage,
-  onCancel,
   onBack,
   onContinue,
   onStartSession,
@@ -100,12 +99,14 @@ export function LaunchPlanCard({
     (selectedAgent?.providerHosts.length ?? 0) > 0
       ? `${agentLabel(selectedAgent!.name)} can’t connect while Local only is selected. Choose Assistant services only to let it connect safely, or continue if you want it offline.`
       : null
-  const selectedImageReady = imageStatus?.image.ready === true
+  const selectedImageStatus =
+    imageStatus?.agent === selectedAgent?.name ? imageStatus : null
+  const selectedImageReady = selectedImageStatus?.image.ready === true
   const selectedAgentNeedsSignIn = needsSignIn(selectedReadiness)
   const selectedAgentNeedsPreparation =
     imageLoading ||
     Boolean(imageError) ||
-    (imageStatus !== null && !selectedImageReady) ||
+    (selectedImageStatus !== null && !selectedImageReady) ||
     selectedAgentNeedsSignIn
   const projectAccess = request.worktree
     ? "protected"
@@ -162,21 +163,28 @@ export function LaunchPlanCard({
 
               <ImageReadiness
                 imageLoading={imageLoading}
-                imageStatus={imageStatus}
+                imageStatus={selectedImageStatus}
                 imageError={imageError}
                 installing={imageInstalling}
                 onInstall={
-                  imageStatus && !imageStatus.image.ready
+                  selectedImageStatus && !selectedImageStatus.image.ready
                     ? onInstallImage
                     : undefined
                 }
               />
               {selectedReadiness ? (
-                <div className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
-                  <span>Sign-in</span>
-                  <Badge variant={needsSignIn(selectedReadiness) ? "warning" : "success"}>
-                    {selectedReadiness.label}
-                  </Badge>
+                <div className="flex flex-col gap-2 rounded-lg border p-3 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Sign-in</span>
+                    <Badge variant={needsSignIn(selectedReadiness) ? "warning" : "success"}>
+                      {selectedReadiness.label}
+                    </Badge>
+                  </div>
+                  {selectedReadiness.category === "sign-in-saved" ? (
+                    <p className="text-muted-foreground">
+                      The assistant may ask you to sign in again if it expired.
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
               {needsSignIn(selectedReadiness) ? (
@@ -191,11 +199,11 @@ export function LaunchPlanCard({
                 <div className="flex flex-col gap-3">
                   <ImageReadiness
                     imageLoading={imageLoading}
-                    imageStatus={imageStatus}
+                    imageStatus={selectedImageStatus}
                     imageError={imageError}
                     installing={imageInstalling}
                     onInstall={
-                      imageStatus && !imageStatus.image.ready
+                      selectedImageStatus && !selectedImageStatus.image.ready
                         ? onInstallImage
                         : undefined
                     }
@@ -226,7 +234,7 @@ export function LaunchPlanCard({
                     onClick={() => void onPickFolder()}
                   >
                     <FolderOpen />
-                    Choose folder
+                    Choose folder…
                   </Button>
                 </div>
               </div>
@@ -343,18 +351,14 @@ export function LaunchPlanCard({
             </>
           ) : null}
 
-          {/* Cancel leads the first step, Back leads later steps, and the
-              primary action trails. */}
-          <div className="flex justify-between gap-3">
-            {step === "agent" ? (
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancel
-              </Button>
-            ) : (
+          <div
+            className={`flex gap-3 ${step === "agent" ? "justify-end" : "justify-between"}`}
+          >
+            {step === "project" ? (
               <Button type="button" variant="outline" onClick={onBack}>
                 Back
               </Button>
-            )}
+            ) : null}
             <Button
               type="submit"
               disabled={
@@ -362,16 +366,17 @@ export function LaunchPlanCard({
                   ? !request.workspacePath ||
                     planning ||
                     imageLoading ||
-                    (imageStatus !== null && !selectedImageReady) ||
+                    (selectedImageStatus !== null && !selectedImageReady) ||
                     selectedAgentNeedsSignIn
                   : !request.agent || !setupOk || imageLoading || !selectedImageReady
               }
             >
+              {step === "project" && planning ? <ActivityIndicator /> : null}
               {step === "agent"
                 ? "Continue"
                 : planning
                   ? "Preparing…"
-                  : "Start session"}
+                  : "Start session…"}
             </Button>
           </div>
         </form>

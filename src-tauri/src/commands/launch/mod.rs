@@ -71,7 +71,8 @@ pub(crate) async fn launch_run(
     }
     // The worktree branch is created only here, after the user confirms, so no
     // git mutation happens before approval.
-    launch_confirmed(prepared, launch_status, input_registry, output_registry).map(Some)
+    let response = launch_confirmed(prepared, launch_status, input_registry, output_registry)?;
+    Ok(Some(response))
 }
 
 /// Start a confirmed launch: finalize the plan (creating the worktree branch for

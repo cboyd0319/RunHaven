@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it, vi } from "vitest"
 
-import { AppMainContent } from "../app/AppMainContent"
+import { AppMainContent, mainViewFocusKey } from "../app/AppMainContent"
 import type { RunTerminalLaunch } from "../app/useLaunchFlow"
 
 import {
@@ -20,6 +20,7 @@ import { act } from "./render-hook"
 function runTerminal(): RunTerminalLaunch {
   return {
     sessionId: "runabc123",
+    startedAt: "2026-07-01T01:00:00Z",
     request: {
       plan: { ...planRequest(), agent: "claude" },
     },
@@ -27,11 +28,19 @@ function runTerminal(): RunTerminalLaunch {
 }
 
 describe("AppMainContent", () => {
+  it("moves focus for explicit session refreshes, not background review state", () => {
+    const session = { kind: "session", id: "run-1" } as const
+
+    expect(mainViewFocusKey(session, 0)).toBe("session:run-1:0")
+    expect(mainViewFocusKey(session, 0)).toBe(mainViewFocusKey(session, 0))
+    expect(mainViewFocusKey(session, 1)).not.toBe(mainViewFocusKey(session, 0))
+  })
+
   it("renders a concise in-app guide at the Help destination", () => {
     const html = renderToStaticMarkup(
       <AppMainContent
         {...mainViewProps()}
-        navigation={{ kind: "help", returnTo: { kind: "home" } }}
+        navigation={{ kind: "help", returnTo: { kind: "new-session" } }}
       />,
     )
 
@@ -39,7 +48,7 @@ describe("AppMainContent", () => {
     expect(html).toContain("Start safely")
     expect(html).toContain("Find a previous session")
     expect(html).toContain("Fix a setup problem")
-    expect(html).toContain("Back to Home")
+    expect(html).toContain("Back to New session")
   })
 
   it("returns from Help to the destination the user was using", async () => {
@@ -68,7 +77,11 @@ describe("AppMainContent", () => {
     const html = renderToStaticMarkup(
       <AppMainContent
         {...mainViewProps({
-          launchFlow: { ...launchFlow(), runTerminal: runTerminal() },
+          launchFlow: {
+            ...launchFlow(),
+            runTerminal: runTerminal(),
+            runTerminals: [runTerminal()],
+          },
         })}
         navigation={{ kind: "run-terminal" }}
       />,
@@ -76,7 +89,7 @@ describe("AppMainContent", () => {
 
     // The run terminal renders as a main-content view: its title and the
     // standing no-filter/no-store disclosure are present, and there is no New
-    // Run dialog around it (that lives on Home).
+    // Run dialog around it (that lives on New session).
     expect(html).toContain("<main")
     expect(html).toContain("Session terminal")
     expect(html).toContain("RunHaven keeps a filtered copy in memory until you quit")
@@ -95,17 +108,21 @@ describe("AppMainContent", () => {
     const html = renderToStaticMarkup(
       <AppMainContent
         {...mainViewProps({
-          launchFlow: { ...launchFlow(), runTerminal: runTerminal() },
+          launchFlow: {
+            ...launchFlow(),
+            runTerminal: runTerminal(),
+            runTerminals: [runTerminal()],
+          },
         })}
-        navigation={{ kind: "home" }}
+        navigation={{ kind: "new-session" }}
       />,
     )
 
     // The terminal is still in the tree (its standing disclosure renders)...
     expect(html).toContain("RunHaven keeps a filtered copy in memory until you quit")
     expect(html).toContain("hidden")
-    // ...and the Home launchpad renders alongside it.
-    expect(html).toContain("Start a session")
+    // ...and the New session flow renders alongside it.
+    expect(html).toContain("Choose assistant")
   })
 
   it("offers a Dismiss action on the top-level error and hides it when used", async () => {
@@ -177,7 +194,7 @@ describe("AppMainContent", () => {
     })
   })
 
-  it("falls back to Home when the destination has no live run terminal", () => {
+  it("falls back to New session when the destination has no live terminal", () => {
     const html = renderToStaticMarkup(
       <AppMainContent
         {...mainViewProps()}
@@ -186,10 +203,10 @@ describe("AppMainContent", () => {
     )
 
     // Never a dead view: the launchpad returns so the user is not stranded.
-    expect(html).toContain("Start a session")
+    expect(html).toContain("Choose assistant")
   })
 
-  it("falls back to Home while a removed session selection is reconciling", () => {
+  it("falls back to New session while a removed session selection is reconciling", () => {
     const html = renderToStaticMarkup(
       <AppMainContent
         {...mainViewProps({ selectedSession: null })}
@@ -197,25 +214,25 @@ describe("AppMainContent", () => {
       />,
     )
 
-    expect(html).toContain("Start a session")
+    expect(html).toContain("Choose assistant")
     expect(html).not.toBe("")
   })
 
-  it("keeps operational errors and launch status off Home", () => {
+  it("keeps operational errors visible on New session", () => {
     const html = renderToStaticMarkup(
       <AppMainContent
         {...mainViewProps({
           error: "Background refresh failed.",
           launchMessage: "Run accepted.",
         })}
-        navigation={{ kind: "home" }}
+        navigation={{ kind: "new-session" }}
       />,
     )
 
-    expect(html).toContain("Start a session")
-    expect(html).not.toContain("Action failed")
-    expect(html).not.toContain("Background refresh failed.")
-    expect(html).not.toContain("Run accepted.")
+    expect(html).toContain("Choose assistant")
+    expect(html).toContain("Action failed")
+    expect(html).toContain("Background refresh failed.")
+    expect(html).toContain("Run accepted.")
   })
 
   it("shows a setup problem only after the user starts a new session", () => {

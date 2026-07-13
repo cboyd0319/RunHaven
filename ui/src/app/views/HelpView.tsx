@@ -11,10 +11,7 @@ export function HelpView({
 }) {
   return (
     <article className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-1 sm:py-3">
-      <header className="flex flex-col gap-1.5">
-        <h1 className="font-heading text-3xl leading-none font-semibold tracking-[-0.025em]">
-          RunHaven Help
-        </h1>
+      <div className="flex flex-col gap-1.5">
         <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
           Run coding assistants without giving them unrestricted access to your
           Mac.
@@ -27,11 +24,11 @@ export function HelpView({
         >
           Back to {backLabel}
         </Button>
-      </header>
+      </div>
 
       <HelpSection title="Start safely">
         <ol className="list-decimal space-y-2 pl-5">
-          <li>Open Home and choose the assistant account you already use.</li>
+          <li>Open New session and choose the assistant account you already use.</li>
           <li>Choose the folder that contains your project.</li>
           <li>Keep the recommended protected copy and network settings.</li>
           <li>Choose Start session, review the Mac dialog, then confirm.</li>
@@ -39,10 +36,25 @@ export function HelpView({
       </HelpSection>
 
       <HelpSection title="Choose an assistant">
-        <p>
-          Choose Claude, Codex, Antigravity, or Copilot based on the account you
-          already have. You can go back or cancel before anything starts.
-        </p>
+        <div className="space-y-2">
+          <p>
+            Claude, Codex, Antigravity, and Copilot use generative AI. They can
+            make mistakes. Review their output and file changes before you use
+            them.
+          </p>
+          <p>
+            When an assistant can use the internet, it can send your messages and
+            project content it reads to the provider’s services. The provider
+            handles that data under your account and the provider’s terms.
+            RunHaven does not control whether the provider stores this content
+            or uses it for training. That depends on your account settings and
+            the provider’s terms.
+          </p>
+          <p>
+            Choose an assistant based on the account you already have. You can go
+            back before anything starts.
+          </p>
+        </div>
       </HelpSection>
 
       <HelpSection title="Find a previous session">

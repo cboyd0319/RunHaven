@@ -9,6 +9,7 @@ import {
 import { CircleAlert, ShieldCheck } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ActivityIndicator } from "@/components/ui/activity-indicator"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -97,14 +98,15 @@ export function ImageReadiness({
 }) {
   if (imageLoading) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+        <ActivityIndicator />
         Checking assistant setup…
       </p>
     )
   }
   if (imageError) {
     return (
-      <Alert variant="destructive">
+      <Alert variant="destructive" role="alert">
         <CircleAlert />
         <AlertTitle>Couldn’t check assistant setup</AlertTitle>
         <AlertDescription>{imageError}</AlertDescription>
@@ -136,9 +138,10 @@ export function ImageReadiness({
                 disabled={installing}
                 onClick={onInstall}
               >
+                {installing ? <ActivityIndicator /> : null}
                 {installing
                   ? `Installing ${agentLabel(imageStatus.agent)}…`
-                  : `Install ${agentLabel(imageStatus.agent)}`}
+                  : `Install ${agentLabel(imageStatus.agent)}…`}
               </Button>
             ) : null}
           </span>

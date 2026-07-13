@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { createRoot } from "react-dom/client"
+import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
@@ -28,15 +29,16 @@ function renderSidebar(
 }
 
 describe("RunHavenSidebar", () => {
-  it("keeps primary navigation to Home, History, and System", () => {
-    const html = renderSidebar({ kind: "home" })
+  it("keeps primary navigation to New session, History, and System", () => {
+    const html = renderSidebar({ kind: "new-session" })
 
-    const home = html.indexOf(">Home<")
+    const start = html.indexOf(">New session<")
     const history = html.indexOf(">History<")
     const system = html.indexOf(">System<")
-    expect(home).toBeGreaterThanOrEqual(0)
-    expect(history).toBeGreaterThan(home)
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(history).toBeGreaterThan(start)
     expect(system).toBeGreaterThan(history)
+    expect(html).not.toContain(">Home<")
     expect(html).not.toContain(">Agents<")
     expect(html).not.toContain(">System Check<")
     expect(html).not.toContain(">Cleanup<")
@@ -45,21 +47,121 @@ describe("RunHavenSidebar", () => {
     expect(html).not.toContain(">Past<")
     expect(html).not.toContain(">Settings<")
     expect(html).toContain("RunHaven 9.9.9")
+    expect(html).toContain('<nav aria-label="RunHaven navigation"')
 
-    // Home is the one selected destination.
+    // New session is the one selected destination.
     expect(html.match(/aria-current="page"/g) ?? []).toHaveLength(1)
     expect(html.match(/data-active="true"/g) ?? []).toHaveLength(1)
   })
 
-  it("shows a Session terminal handle only while a session terminal is live", () => {
-    // A live interactive run is not a managed session, so without this fixed row
-    // navigating away would leave no way back to it (audit RT-1/RT-2).
-    expect(renderSidebar({ kind: "home" }, false)).not.toContain(">Session terminal<")
+  it("does not use one ambiguous generic terminal row", () => {
+    expect(renderSidebar({ kind: "new-session" }, false)).not.toContain(">Session terminal<")
+    expect(renderSidebar({ kind: "run-terminal" }, true)).not.toContain(
+      ">Session terminal<",
+    )
+  })
 
-    const live = renderSidebar({ kind: "run-terminal" }, true)
-    expect(live).toContain(">Session terminal<")
-    expect(live.indexOf(">Session terminal<")).toBeGreaterThan(live.indexOf(">Home<"))
-    expect(live.match(/aria-current="page"/g) ?? []).toHaveLength(1)
+  it("uses the spare sidebar space for distinct running sessions and saved setups", () => {
+    const html = renderToStaticMarkup(
+      <TooltipProvider>
+        <SidebarProvider>
+          {createElement(RunHavenSidebar, {
+            navigation: { kind: "new-session" },
+            onNavigate: () => undefined,
+            runTerminalActive: true,
+            runTerminals: [
+              {
+                sessionId: "terminal-a",
+                runId: "run-a",
+                label: "Copilot · RunHaven",
+              },
+              {
+                sessionId: "terminal-b",
+                runId: "run-b",
+                label: "Antigravity · website",
+              },
+            ],
+            savedSetups: [
+              { id: "setup-a", name: "Codex · RunHaven" },
+            ],
+            appVersion: "9.9.9",
+          } as never)}
+        </SidebarProvider>
+      </TooltipProvider>,
+    )
+
+    expect(html).toContain(">Running<")
+    expect(html).toContain("Copilot · RunHaven")
+    expect(html).toContain("Antigravity · website")
+    expect(html).toContain(">Saved setups<")
+    expect(html).toContain("Codex · RunHaven")
+    expect(html).not.toContain(">Session terminal<")
+  })
+
+  it("keeps starting terminal labels distinct without rendering a raw path", () => {
+    const html = renderToStaticMarkup(
+      <TooltipProvider>
+        <SidebarProvider>
+          <RunHavenSidebar
+            navigation={{ kind: "new-session" }}
+            onNavigate={() => undefined}
+            runTerminals={[
+              {
+                sessionId: "terminal-a",
+                request: {
+                  plan: {
+                    agent: "claude",
+                    workspacePath: "/tmp/secret-project\u202ebad",
+                  },
+                },
+              },
+              {
+                sessionId: "terminal-b",
+                request: {
+                  plan: {
+                    agent: "claude",
+                    workspacePath: "/tmp/secret-project\u202ebad",
+                  },
+                },
+              },
+            ]}
+            appVersion="9.9.9"
+          />
+        </SidebarProvider>
+      </TooltipProvider>,
+    )
+
+    expect(html).toContain("Claude · Starting")
+    expect(html).toContain("Claude · Starting (2)")
+    expect(html).not.toContain("secret-project")
+  })
+
+  it("announces unavailable setups and shows sidebar errors beside the action", () => {
+    const html = renderToStaticMarkup(
+      <TooltipProvider>
+        <SidebarProvider>
+          <RunHavenSidebar
+            navigation={{ kind: "runs" }}
+            onNavigate={() => undefined}
+            savedSetups={[
+              {
+                id: "setup-a",
+                name: "Codex · RunHaven",
+                available: false,
+              },
+            ]}
+            savedSetupsError="RunHaven could not update this saved setup."
+            onUnpinSavedSetup={() => undefined}
+            appVersion="9.9.9"
+          />
+        </SidebarProvider>
+      </TooltipProvider>,
+    )
+
+    expect(html).toContain('aria-describedby="saved-setup-setup-a-status"')
+    expect(html).toContain('aria-label="Unpin Codex · RunHaven"')
+    expect(html).toContain('role="alert"')
+    expect(html).toContain("RunHaven could not update this saved setup.")
   })
 
   it("marks History with exactly one current destination", () => {
@@ -70,13 +172,13 @@ describe("RunHavenSidebar", () => {
   })
 
   it("hides the sidebar completely instead of leaving a clipped icon rail", () => {
-    const html = renderSidebar({ kind: "home" }, false, false)
+    const html = renderSidebar({ kind: "new-session" }, false, false)
     expect(html).toContain('data-collapsible="offcanvas"')
     expect(html).not.toContain('data-collapsible="icon"')
   })
 
   it("does not add a hidden pointer rail", () => {
-    const html = renderSidebar({ kind: "home" })
+    const html = renderSidebar({ kind: "new-session" })
 
     expect(html).not.toContain("Toggle Sidebar")
     expect(html).not.toContain('data-sidebar="rail"')
@@ -91,7 +193,7 @@ describe("RunHavenSidebar", () => {
         <TooltipProvider>
           <SidebarProvider>
             <RunHavenSidebar
-              navigation={{ kind: "home" }}
+              navigation={{ kind: "new-session" }}
               onNavigate={() => undefined}
               runTerminalActive={false}
               appVersion="9.9.9"

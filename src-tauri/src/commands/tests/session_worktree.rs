@@ -20,6 +20,16 @@ pub(super) fn seed_worktree_run(
     tempfile::TempDir,
     runhaven_core::runtime::plans::WorktreeRun,
 ) {
+    seed_worktree_run_with_status(run_id, "succeeded")
+}
+
+pub(super) fn seed_worktree_run_with_status(
+    run_id: &str,
+    status: &str,
+) -> (
+    tempfile::TempDir,
+    runhaven_core::runtime::plans::WorktreeRun,
+) {
     let repo = tempfile::tempdir().expect("repo tempdir");
     init_git_repo(repo.path());
     let worktree =
@@ -33,7 +43,7 @@ pub(super) fn seed_worktree_run(
         "profile": "codex",
         "workspace": repo.path().join("project").display().to_string(),
         "network": "provider",
-        "status": "succeeded",
+        "status": status,
         "auth_scope": "project",
         "session": "worktree-review",
         "state_volume": "runhaven-codex-hidden-home",

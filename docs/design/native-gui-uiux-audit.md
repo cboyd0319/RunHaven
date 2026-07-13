@@ -1,131 +1,135 @@
-# Native GUI UI/UX audit (2026-07-03)
+# Native GUI Apple HIG audit
 
-> Historical audit, superseded 2026-07-13. Home, navigation, settings, menus,
-> session review, and system recovery were simplified after this snapshot. See
-> `docs/DESKTOP_APP.md` and `current-state.md` for the current contract.
+Last reviewed: 2026-07-13
 
-A comprehensive read-only "fine-toothed comb" audit of the RunHaven desktop app,
-run as five parallel expert lenses (visual system, accessibility, copy/tone,
-macOS-native/HIG, states/flows) over every destination and the Rust user-facing
-strings. Measured against the Apple HIG and the app's own stated visual system
-(dark navy, glass panels, blue primary, teal/green ready, amber warning, red only
-for blocked/destructive; 8th-grade copy; restrained native feel). Every finding
-below cites a real `file:line`.
+This is the current design contract for the shipped RunHaven desktop GUI. It
+replaces the historical 2026-07-03 audit. Every GUI change must update the
+relevant row below after checking the current official Apple Human Interface
+Guidelines (HIG).
 
-This is a triage list, not a set of applied changes. Fix order: P0, then P1, then
-decide on the P2 native-shell pass, then a P3 cleanup sweep.
+Status meanings:
 
-## Foundation (verified strong, preserve)
+- **Aligned**: source and focused automated checks match the cited guidance.
+- **Fixed**: corrected in the 2026-07-13 pass.
+- **Intentional exception**: RunHaven keeps a documented security or Tauri
+  constraint instead of the default HIG pattern.
+- **Open medium finding / user decision required**: source proves a current
+  mismatch, but the required brand asset needs explicit user direction.
+- **Live gap**: source checks are not enough. A packaged macOS check remains.
 
-- No-blink polling: id-paired data, equality short-circuits, request-seq guards;
-  2-4s polls never re-render or flash (`useManagedSessionStatus.ts`, `sessionList`).
-- Native menu bar is HIG-correct: full submenu order, About/Settings(Cmd-,)/Quit,
-  Cmd-N/W/R/1-9, selection-scoped disabling (`src-tauri/src/menu/`).
-- Dialog/Sheet a11y: titles + descriptions, focus trap, Escape, focus return,
-  `aria-describedby` on confirmations.
-- Tokenized badges/alerts/buttons; red used only for failed/blocked.
-- Copy contract clean: no emoji, no AI-tells, no em-dashes; disclosure, sign-in,
-  and settings copy is honest and calm.
-- Draft retention and confirm-then-act gating across every mutation.
-- Real semantics (buttons not divs), `aria-current`, focus rings on all
-  primitives, non-color-only status. Muted-text contrast computed ~5-5.7:1 (passes
-  WCAG AA), reconciling the visual lens's "unverified" note.
+## Sources
 
-## P0 - broken core flow (fix now)
+Official Apple sources reviewed for this pass:
 
-- **RT-1 Navigating away from a live run kills the agent and strands the user.**
-  `AppMainContent.tsx:39` renders the run terminal only under `run-terminal` nav;
-  `TerminalPanel.tsx:254` kills the backend child on unmount; the sidebar has no
-  run-terminal row, so there is no way back. Regression from the #24 main-content
-  move. Fix: keep the run mounted until an explicit End run, or add a navigable
-  "Active" handle, or confirm before navigating away while a run is live.
-- **RT-2 The interactive run has no durable session handle.** The interactive
-  `startRun` branch (`useLaunchFlow.ts:251`) never calls `onLaunched` /
-  `loadManagedSessions` / `selectSession`, so the run has no last-launch card and
-  no sidebar row. Fix: register the interactive run as a managed session on start
-  (also resolves RT-1's "no way back").
+- [Designing for macOS](https://developer.apple.com/design/human-interface-guidelines/designing-for-macos)
+- [Windows](https://developer.apple.com/design/human-interface-guidelines/windows),
+  [sidebars](https://developer.apple.com/design/human-interface-guidelines/sidebars),
+  [menus](https://developer.apple.com/design/human-interface-guidelines/menus),
+  [toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars),
+  and [settings](https://developer.apple.com/design/human-interface-guidelines/settings)
+- [Buttons](https://developer.apple.com/design/human-interface-guidelines/buttons),
+  [alerts](https://developer.apple.com/design/human-interface-guidelines/alerts),
+  [feedback](https://developer.apple.com/design/human-interface-guidelines/feedback),
+  [progress indicators](https://developer.apple.com/design/human-interface-guidelines/progress-indicators),
+  and [disclosure controls](https://developer.apple.com/design/human-interface-guidelines/disclosure-controls)
+- [Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility),
+  [typography](https://developer.apple.com/design/human-interface-guidelines/typography),
+  [color](https://developer.apple.com/design/human-interface-guidelines/color),
+  [materials](https://developer.apple.com/design/human-interface-guidelines/materials),
+  [motion](https://developer.apple.com/design/human-interface-guidelines/motion),
+  and [focus and selection](https://developer.apple.com/design/human-interface-guidelines/focus-and-selection)
+- [Notifications](https://developer.apple.com/design/human-interface-guidelines/notifications),
+  [offering help](https://developer.apple.com/design/human-interface-guidelines/offering-help),
+  [generative AI](https://developer.apple.com/design/human-interface-guidelines/generative-ai),
+  [privacy](https://developer.apple.com/design/human-interface-guidelines/privacy),
+  [file management](https://developer.apple.com/design/human-interface-guidelines/file-management),
+  and [app icons](https://developer.apple.com/design/human-interface-guidelines/app-icons)
 
-## P1 - high value, bounded
+Nontechnical-user sources were used as supporting guidance, not as a
+replacement for the HIG:
 
-- **A11Y-1 Terminals are a keyboard trap** (`TerminalPanel.tsx:204`, WCAG 2.1.2):
-  no non-pointer escape from xterm. Fix: `attachCustomKeyEventHandler` that on
-  Escape blurs and moves focus to End run.
-- **FLOW-1 Sign-in has no cancel or timeout** (`useClaudeOAuthSignIn.ts:62`,
-  `useMaintenance.ts:194`): stuck in "signing" forever if the browser step is
-  abandoned. Fix: visible Cancel + elapsed-time message; do not block restart on
-  `busy` once stalled.
-- **COPY-1 Launch confirmation shows raw codes** (`launch/mod.rs:298`): the
-  consent dialog reads `Auth: agent` / `Network: provider` instead of the friendly
-  labels the WebView already has. Fix via COPY-2's shared source.
-- **COPY-2 One vocabulary, one label source**: sign in / login / auth used
-  interchangeably; "Login state" names three concepts; Stop says "run" vs
-  "session" (`labels.ts:49`, `LaunchAccess.tsx:52`, `RunStatusCard.tsx:121`). Fix:
-  one vocabulary decision + one shared label module reused by the WebView and the
-  Rust dialog builders (collapses COPY-1 too).
-- **VIS-1 Status icons bypass the tokens, inconsistently**
-  (`HomeView.tsx:117`, `DiagnosticsSystemPanels.tsx:62,64`, `ClaudeSignIn.tsx:156`):
-  `green-600`/`emerald-500`/`amber-500` hardcoded; success green drawn three ways.
-  Fix: `text-success` / `text-warning` tokens everywhere.
-- **VIS-2 "Ready to review" renders in warning amber** (`sessionAttention.ts:44`,
-  `RunHavenSidebar.tsx:264`): a positive/ready state in amber, conflicting with the
-  teal/green = ready rule (and a nav-spec comment). Fix: decide the rule, document,
-  drive from a token.
+- [WowTo user-guide guidance](https://wowto.ai/blog/how-to-design-user-friendly-software-user-guides-for-non-technical-users)
+- The user-supplied WebSiteMatics excerpt on minimal fields, logical flow,
+  clear labels, visual error cues, responsive layout, large controls,
+  whitespace, immediate validation, and progress indicators
+- [LinkedIn collection on interfaces for nondevelopers](https://www.linkedin.com/top-content/user-experience/user-experience-for-non-technical-users/creating-user-friendly-interfaces-for-non-developers/)
+- [Lightweight Solutions on digital literacy](https://lightweightsolutions.co/building-ui-ux-for-non-tech-savvy-users-designing-for-digital-literacy/)
+- [IIC Lab on nontechnical users](https://iiclab.com/blogs/designing-tech-interfaces-for-non-tech-users/)
+- [AlterSquare on domain-heavy users](https://altersquare.io/blog/designing-software-non-technical-domain-heavy-users)
 
-## P2 - macOS-native shell (larger, phased)
+The WebSiteMatics page itself was not retrievable during the audit. Do not
+describe its full page as independently reviewed.
 
-This is the deferred native visual pass the design-resources doc anticipates. Best
-done as one coordinated pass with a real bundle build; several items need
-Tauri/Rust window/menu work, not just CSS.
+## Complete shipped-surface audit
 
-- **NAT-1 (done)** Double chrome: default OS title bar + a separate web header.
-  Shipped `titleBarStyle: Overlay` + `hiddenTitle`, full-height sidebar,
-  drag-region header.
-- **NAT-2 (done)** Native vibrancy. Tauri's built-in `Effect::Sidebar` is
-  applied to the transparent main window in
-  `lib.rs` setup; `body` is transparent so the frosted material shows, the
-  sidebar paints a 72%-alpha tint over it (glass), and the main content
-  (`SidebarInset`, `bg-background`) stays opaque. Requires `transparent: true`
-  on the main window plus `macOSPrivateApi: true` and the `macos-private-api`
-  Tauri feature. Tradeoff: apps using the private API cannot ship through the
-  Mac App Store; RunHaven distributes directly (notarized), so this does not
-  constrain its distribution model. Main window only; the read-only session
-  monitors stay opaque. Vibrancy failure is non-fatal (logs a warning, keeps
-  the per-region backgrounds).
-- **NAT-3** Full-pill buttons, not macOS rounded-rects (`button.tsx:8`).
-- **NAT-4** New Run is a center-zoom modal, not a top-attached sheet
-  (`LaunchSheet.tsx:49`, `dialog.tsx:62`).
-- **NAT-5** Icons are lucide, not SF Symbols (design-resources intent).
-- **NAT-6** Header is a web bar, not a toolbar; window title never updates
-  (`AppHeader.tsx:28`, `tauri.conf.json:15`).
-- **NAT-7** Web-y overlay motion + no `prefers-reduced-motion` (`dialog.tsx:62`,
-  `sheet.tsx:65`, `index.css`).
-- **NAT-8** Cmd-C does nothing in the terminals (xterm canvas selection not wired
-  to the clipboard) (`TerminalPanel.tsx:204`).
+| Surface | HIG topics checked | Current result |
+| --- | --- | --- |
+| Main window close, Dock reopen, and app exit | macOS, windows | **Fixed.** Close hides and preserves the existing WebView and live terminal channels. Dock reopen and custom menu commands show and focus it. Only app exit ends app-owned terminals and jobs. |
+| Window frame and sidebar material | windows, sidebars, materials | **Intentional exception.** Tauri uses overlay chrome and a WebView toolbar with native traffic lights and sidebar vibrancy. The fallback is opaque. Native AppKit toolbar behavior remains preferable if the shell becomes native. |
+| App menu | menus, settings | **Fixed.** Standard app, File, Edit, View, Session, Window, and Help order remains. Settings and Cmd-, were removed because RunHaven has no valid user preference that needs a Settings surface. |
+| View menu text size | accessibility, typography, menus | **Fixed.** Increase, Decrease, and Actual Text Size support 80 to 200 percent, persist as a bounded enum, and update terminal canvas text. |
+| Dock icon | notifications | **Fixed.** The session-attention count was removed. Apple reserves a numeric app badge for unread notifications, not arbitrary problem counts. Attention remains visible in the app. |
+| Sidebar destinations | sidebars, navigation, labels | **Aligned.** New session, History, and System are stable. Running terminals and Saved setups appear only when present. Selection has text and `aria-current`, and the sidebar has a named navigation landmark. |
+| Running terminal rows | sidebars, status, accessibility | **Aligned.** Concurrent terminals have distinct assistant, project, time, and duplicate labels. Selecting another destination hides rather than unmounts a terminal. |
+| Saved setups | sidebars, file management, feedback | **Fixed.** Missing folders show a plain problem and Choose folder again action. Repair preserves the assistant, replaces the folder, removes the stale pin, applies the replacement, and reports success. |
+| New session, assistant step | buttons, pop-up buttons, labels, progressive disclosure | **Fixed.** The dead first-step Cancel was removed. One Continue action advances the task. Readiness and sign-in state stay beside the assistant choice. |
+| New session, project step | file management, buttons, forms | **Aligned.** A native folder picker replaces path entry. The protected copy and provider-only network are easiest. Advanced exceptions remain disclosed in context. |
+| Launch preparation and image install | progress indicators, feedback, buttons | **Fixed.** Long checks and mutations have a visible activity indicator and specific changing text. Button ellipses identify native confirmation or additional-input steps. |
+| Final launch confirmation | alerts, privacy, generative AI | **Fixed and intentional exception.** A Rust-owned native confirmation names file and network access. It now identifies generative AI, possible errors, provider content sharing, and the unknown provider storage/training policy. The per-launch alert is retained because it is the trusted security boundary. |
+| History | lists and tables, status, focus | **Fixed.** A semantic table names state and next action without color alone. Verified changes and an unreadable copy with a Check again recovery appear under Needs attention, but only verified changes are called ready. A clean copy stays under Other sessions with its normal status. Rows open with pointer or keyboard. Unsupported output and review actions are absent. |
+| Session attention banner | alerts, feedback, offering help | **Fixed.** A failed session keeps the sanitized backend reason, separately states when output was not kept, opens same-page diagnostics, and offers Start new session. Verified changes say Changes ready to review. An unreadable copy says RunHaven could not check it and points to Check again. Clean copies have no alert. |
+| Session message | text fields, buttons, feedback | **Aligned.** Message is enabled only for an attached live session. Send uses a native confirmation, activity feedback, error alert, and short success status. |
+| Session output | disclosure, privacy, feedback | **Fixed.** Output is offered only when process-memory output exists. The UI distinguishes a load error from the documented no-persistence policy. Show and Refresh expose their real action names to sighted and screen-reader users. |
+| Session diagnostics and runtime status | disclosure, progress, alerts | **Fixed.** A session that needs attention opens issue details and loads its diagnostics once. Static details are not urgent live regions. Loading, error, recovery, and success states use appropriate status or alert semantics. |
+| Worktree review | file management, destructive actions, alerts | **Fixed.** Rust separately reports whether a verified protected copy has changes, is clean, or could not be read. Changed filenames and conflicts appear before Apply or Discard. A clean copy uses neutral No changes to review text and a secondary Delete protected copy action. An unreadable copy offers Check again without claiming changes. Rust revalidates before and after native confirmation. |
+| Terminal | accessibility, keyboards, typography, privacy, alerts | **Fixed.** xterm screen-reader mode is on, Shift-Escape leaves the terminal, Cmd-C and Cmd-V are handled, text follows the 80 to 200 percent scale, and the no-filter/no-store boundary is visible. End session uses a Rust-owned native confirmation and revalidates the exact live terminal before ending it. Cancel keeps the terminal open. |
+| System | progressive disclosure, feedback, alerts | **Aligned.** Actionable setup problems lead. Technical checks, restart, and old-network cleanup are under Advanced system tools. Lengthy actions show motion plus specific status text. |
+| Help | offering help, generative AI, privacy | **Fixed.** Help is task-based and plain. It explains that assistants use generative AI, can make mistakes, need human review, may send read content to providers, and may be stored or trained on according to provider account settings and terms. |
+| Shared alerts | alerts, accessibility | **Fixed.** Static callouts have no assertive role. Async success and progress use `status`. Action failures and urgent recovery use `alert`. |
+| Shared buttons | buttons, accessibility | **Fixed.** Labels use result verbs. Idle labels use an ellipsis when they open another view, picker, confirmation, or request more input. Busy labels keep progress ellipses. |
+| Appearance and contrast | dark mode, color, materials, accessibility | **Aligned in automation.** RunHaven follows the system light or dark appearance, increased contrast, reduced transparency, and reduced motion. Information never relies on color alone. |
+| App icon | app icons | **Partially fixed; production-layer review remains.** The user selected a distinct 1024 by 1024 unmasked bundle-icon master at `docs/assets/app-icon.png`. Tauri no longer uses the pre-rounded transparent logo as the bundle source, and its generated desktop PNG, ICNS, and ICO assets live in `src-tauri/icons/`. The current master is still a flattened raster, so layered Icon Composer appearances remain a release-polish decision rather than a completed claim. |
 
-## P3 - polish and nits
+## Verification and remaining live gaps
 
-Grouped, lower severity; cleanup sweep after P0-P2. Full list with `file:line` in
-the published audit Artifact and the finder transcripts.
+Automated coverage includes typed frontend checks, alert-role regressions,
+clean, changed, and unreadable protected-copy states, menu contracts,
+main-window lifecycle tests, and Playwright at 800 by 560 with 200 percent text
+on New session, History, System, and Session. The terminal has a focused test
+proving its canvas font changes from 13 to 26 pixels at 200 percent.
 
-- Visual (5): subsection heading inconsistency; destructive-dot contrast/token;
-  no backdrop-blur on main panels; arbitrary values duplicating tokens; dead
-  light theme.
-- Accessibility (5): header status pill not announced; whole-card `aria-live`;
-  unlabeled first Settings select; `aria-expanded` without `aria-controls`; focus
-  on an `outline-none` landing region.
-- Copy (9): networkHelp effect-vs-flow; authScopeHelp points at a CLI command;
-  sandbox vs container; "Skipped N still in use" possibly wrong; "Input is not
-  attached" jargon; spaced hyphen; "Claude subscription (Keychain)" badge clip;
-  `break-all` on label cells; mixed loading verbs.
-- States (10): polling stops at zero sessions; failed-load "Checking…" forever;
-  stale Agents image status; sign-in nav-away drops the device code; "Message
-  sent" never clears / shown twice; Diagnostics reload blanks on a transient
-  error; top error no dismiss; manual refresh disables New run; ended-run button
-  still says "End run"; status-read failure mislabeled as sign-in failure.
+The exact unsigned **RunHaven Debug** app built from this tree was also checked
+in its packaged WKWebView. New session, History, Help, sidebar collapse and
+restore, fullscreen, the View text-size commands through 200 percent, Cmd-N,
+idle Cmd-W plus app activation restore, and idle Cmd-Q behaved as designed. A
+fresh rebuild also proved that the four formerly false Ready-to-review sessions
+now stay in ordinary Ended history and open to the neutral No changes to review
+state with optional protected-copy deletion.
 
-## Method and limits
+The exact unsigned **RunHaven 0.7.0** app also bundles the user-selected icon.
+Its packaged ICNS matches the repository ICNS byte for byte and contains
+all ten 1x and 2x renditions from 16 through 1024 pixels. macOS 26 NSWorkspace
+applies one clean system mask, and light and dark background checks show no
+clipping, fringe, hard square, or double mask. Direct Dock, Finder, Spotlight,
+and About inspection remains release QA rather than verified evidence.
 
-Five parallel read-only expert lenses, results deduped/reconciled/ranked by user
-impact and fix cost. Static audit: a live desktop smoke on macOS 26+ would confirm
-the rendered-only items (vibrancy, motion, real contrast). The two P0 items were
-verified against the live tree.
+The following still require a packaged macOS review before release:
+
+- VoiceOver speech order and rotor landmarks on every destination, including
+  native confirmations and the terminal.
+- Cmd-W, Dock reopen, and Cmd-Q while a real terminal is live.
+- Active, inactive, fullscreen, increased-contrast, and reduced-transparency
+  appearance for the custom overlay toolbar and traffic lights.
+- The drag region and a live terminal at 200 percent in the packaged WKWebView.
+- Direct Dock, Finder, Spotlight, and About rendering of the selected app icon.
+- A task-based review with people who do not use Git, containers, or terminals.
+
+## Required gate for every future GUI change
+
+Before implementation, enumerate every changed window, destination, control,
+state, and interaction. Check the current official HIG page for each item. Add
+fail-first coverage for a behavior change, implement the smallest native or
+existing-component solution, and update this audit. Document any security or
+Tauri exception with its consequence. A macOS design specialist must review
+the source and the live packaged result when rendering or native behavior
+changes.

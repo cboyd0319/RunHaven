@@ -4,6 +4,7 @@ import "@xterm/xterm/css/xterm.css"
 
 import {
   closeTerminalSession,
+  endTerminalSession,
   hasTauriRuntime,
   openAgentRunTerminal,
   openAgentSignInTerminal,
@@ -11,12 +12,17 @@ import {
   resizeTerminal,
   writeTerminalInput,
   type LaunchRunRequest,
-  type ManagedSessionSummary,
-  type TerminalMessage,
 } from "@/commands/runhaven"
 
 import { errorMessage } from "./types"
 import { cn } from "@/lib/utils"
+
+import {
+  loadTextSize,
+  TEXT_SIZE_EVENT,
+  TEXT_SIZES,
+  type TextSize,
+} from "./uiStatePersistence"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,51 +39,14 @@ import {
   TerminalDisclosure,
   terminalStatusText,
 } from "./terminalPresentation"
-
-// Bounded in-WebView scrollback (design F5). The raw stream lives only here, in
-// memory, for the life of the view; it is never written to disk or logged.
-const SCROLLBACK_LINES = 1000
-
-type TerminalPhase = "idle" | "opening" | "live" | "ended" | "error"
-
-type TerminalInteractionError = {
-  title: string
-  detail: string
-}
-
-// The three panel modes share every mechanic (host PTY over a Channel, xterm,
-// close-on-unmount) and differ only in the open command, the fixed session key,
-// and the surrounding copy. `attach` types live inside a running session's
-// sandbox; `login` runs a supported agent's native sign-in terminal; `run`
-// launches an interactive agent and lets the user type their task in its TUI
-// (task #23, Option A).
-type TerminalOpen = (
-  sessionId: string,
-  onMessage: (message: TerminalMessage) => void,
-) => Promise<boolean>
-
-export type TerminalPanelProps =
-  | { session: ManagedSessionSummary; login?: undefined; run?: undefined }
-  | {
-      login: { agent: string; agentLabel: string; sessionId: string; onSignedIn?: () => void }
-      session?: undefined
-      run?: undefined
-    }
-  | {
-      run: { sessionId: string; request: LaunchRunRequest }
-      session?: undefined
-      login?: undefined
-      // The run terminal in its main-content destination. `fill` makes the card
-      // and the xterm container flex-fill a bounded parent (no min-height growth
-      // loop); `onClose` ends the run and leaves the destination. `visible` is
-      // false while the run is live but its destination is not shown (the panel
-      // stays mounted to keep the PTY alive); it drives a re-fit when the
-      // terminal comes back into view.
-      fill?: boolean
-      onClose?: () => void
-      onOpenCancelled?: () => void
-      visible?: boolean
-    }
+import { installTerminalKeyHandler } from "./terminalInteraction"
+import type {
+  TerminalInteractionError,
+  TerminalOpen,
+  TerminalPanelProps,
+  TerminalPhase,
+} from "./terminalPanelTypes"
+import { SCROLLBACK_LINES } from "./terminalPanelTypes"
 
 export function TerminalPanel(props: TerminalPanelProps) {
   const config = props.session
@@ -97,11 +66,19 @@ export function TerminalPanel(props: TerminalPanelProps) {
   const fill = runProps?.fill ?? false
   const onClose = runProps?.onClose
   const onOpenCancelled = runProps?.onOpenCancelled
+  const onOpened = runProps?.onOpened
+  const onEnded = runProps?.onEnded
   const visible = runProps?.visible ?? true
   const onOpenCancelledRef = useRef(onOpenCancelled)
   useEffect(() => {
     onOpenCancelledRef.current = onOpenCancelled
   }, [onOpenCancelled])
+  const onOpenedRef = useRef(onOpened)
+  const onEndedRef = useRef(onEnded)
+  useEffect(() => {
+    onOpenedRef.current = onOpened
+    onEndedRef.current = onEnded
+  }, [onEnded, onOpened])
   // A stable open per mode, so the streaming effect can depend on it without
   // re-running mid-session. `run` binds the captured launch request (fixed for
   // this terminal's life) into the uniform (sessionId, onMessage) open shape, so
@@ -134,12 +111,17 @@ export function TerminalPanel(props: TerminalPanelProps) {
   // cannot Tab back out (WCAG 2.1.2, audit A11Y-1). The key handler moves DOM
   // focus here so there is always a keyboard way out.
   const primaryControlRef = useRef<HTMLButtonElement | null>(null)
-  // "End run" on the run destination, "Close terminal" for attach/login. Names
-  // both the visible button and the discoverable escape hint from one source.
-  const primaryControlLabel = onClose ? "End session" : "Close terminal"
   const autoStart = mode === "run" && hasTauriRuntime()
   const [active, setActive] = useState(autoStart)
   const [phase, setPhase] = useState<TerminalPhase>(autoStart ? "opening" : "idle")
+  const runTerminalHasNoLiveChild = phase === "error" || phase === "ended"
+  // A live run requires confirmation to end. A failed or already-ended run has
+  // no child to destroy, so Close only leaves its destination.
+  const primaryControlLabel = onClose
+    ? runTerminalHasNoLiveChild
+      ? "Close"
+      : "End session…"
+    : "Close terminal"
   const [errorText, setErrorText] = useState("")
   const [interactionError, setInteractionError] =
     useState<TerminalInteractionError | null>(null)
@@ -172,6 +154,22 @@ export function TerminalPanel(props: TerminalPanelProps) {
     let disposed = false
     let term: import("@xterm/xterm").Terminal | undefined
     let observer: ResizeObserver | undefined
+    let handleTextSize: ((event: Event) => void) | undefined
+    let runOpenComplete = false
+    let runEndedDuringOpen = false
+    let runEndReported = false
+
+    function reportRunEnded() {
+      if (mode !== "run" || runEndReported) {
+        return
+      }
+      if (!runOpenComplete) {
+        runEndedDuringOpen = true
+        return
+      }
+      runEndReported = true
+      onEndedRef.current?.()
+    }
 
     function reportInteractionError(title: string, cause: unknown) {
       if (!disposed) {
@@ -191,56 +189,30 @@ export function TerminalPanel(props: TerminalPanelProps) {
         scrollback: SCROLLBACK_LINES,
         screenReaderMode: true,
         cursorBlink: false,
+        fontSize: terminalFontSize(loadTextSize()),
       })
       const fitAddon = new FitAddon()
       fitRef.current = fitAddon
       term.loadAddon(fitAddon)
       term.open(container)
-      // Keyboard escape from the terminal trap (WCAG 2.1.2). Shift+Esc blurs the
-      // terminal and moves focus to the primary control, so a keyboard-only user
-      // is never stuck behind xterm's key capture. A bare Esc and a double-Esc
-      // are both meaningful to guest TUIs (Claude Code uses both), so the chord
-      // adds Shift to keep the "escape" mnemonic without swallowing them. The
-      // chord is kept out of the PTY (returns false); every other key still
-      // reaches the terminal (returns true).
-      term.attachCustomKeyEventHandler((event) => {
-        if (event.key === "Escape" && event.shiftKey) {
-          if (event.type === "keydown") {
-            term?.blur()
-            primaryControlRef.current?.focus()
-          }
-          return false
+      handleTextSize = (event: Event) => {
+        const value = (event as CustomEvent<unknown>).detail
+        if (!TEXT_SIZES.includes(value as TextSize) || !term) {
+          return
         }
-        // Mac clipboard on the xterm canvas (audit NAT-8): the native Edit menu
-        // targets NSText, not this canvas selection. Only Cmd(meta) is caught, so
-        // Ctrl+C still interrupts the guest; a no-selection Cmd-C passes through.
-        if (event.metaKey && event.key === "c") {
-          const selection = term?.getSelection() ?? ""
-          if (selection && event.type === "keydown") {
-            void navigator.clipboard
-              .writeText(selection)
-              .catch((cause) => reportInteractionError("Copy failed", cause))
-          }
-          return !selection
-        }
-        if (event.metaKey && event.key === "v") {
-          if (event.type === "keydown") {
-            void navigator.clipboard
-              .readText()
-              .then((text) => {
-                const bytes = [...new TextEncoder().encode(text)]
-                if (bytes.length > 0) {
-                  void writeTerminalInput(sessionId, bytes).catch((cause) =>
-                    reportInteractionError("Terminal input failed", cause),
-                  )
-                }
-              })
-              .catch((cause) => reportInteractionError("Paste failed", cause))
-          }
-          return false
-        }
-        return true
-      })
+        term.options.fontSize = terminalFontSize(value as TextSize)
+        fitAddon.fit()
+      }
+      window.addEventListener(TEXT_SIZE_EVENT, handleTextSize)
+      installTerminalKeyHandler(
+        term,
+        sessionId,
+        () => {
+          term?.blur()
+          primaryControlRef.current?.focus()
+        },
+        reportInteractionError,
+      )
       fitAddon.fit()
       term.onData((data) => {
         void writeTerminalInput(sessionId, [...new TextEncoder().encode(data)]).catch(
@@ -273,6 +245,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
             term.writeln(config.endedText)
             term.options.disableStdin = true
             setPhase("ended")
+            reportRunEnded()
             if (mode === "login" && message.code === 0) {
               if (message.completionRecorded === false) {
                 reportInteractionError(
@@ -297,6 +270,13 @@ export function TerminalPanel(props: TerminalPanelProps) {
           }
           return
         }
+        if (mode === "run" && typeof opened === "object") {
+          onOpenedRef.current?.(opened)
+          runOpenComplete = true
+          if (runEndedDuringOpen) {
+            reportRunEnded()
+          }
+        }
         // Make sure the guest starts at the current viewport size.
         void resizeTerminal(sessionId, term.cols, term.rows).catch(() => undefined)
         term.focus()
@@ -314,10 +294,13 @@ export function TerminalPanel(props: TerminalPanelProps) {
     return () => {
       disposed = true
       observer?.disconnect()
+      if (handleTextSize) {
+        window.removeEventListener(TEXT_SIZE_EVENT, handleTextSize)
+      }
       fitRef.current = null
       // Teardown contract: killing the backend child on unmount is required,
       // not optional. The backend send-error kill is only a backstop. The run
-      // terminal reaches here only when the panel truly unmounts (End run
+      // terminal reaches here only when the panel truly unmounts (End session
       // clears it); navigating away keeps it mounted, so the run is not killed.
       void closeTerminalSession(sessionId).catch(() => undefined)
       term?.dispose()
@@ -343,11 +326,26 @@ export function TerminalPanel(props: TerminalPanelProps) {
     setActive(true)
   }
 
-  function closeTerminal() {
-    // Run-terminal destination: closing ends the run and leaves the view; the
-    // parent navigates Home, unmounting this panel so close-on-unmount kills the
-    // child. Attach/login keep returning to their idle "open" button.
+  async function closeTerminal() {
+    // A visible run-terminal end is irreversible, so Rust confirms and
+    // revalidates it. Lifecycle teardown remains on the separate noninteractive
+    // close command. Attach/login return to their idle "open" button.
     if (onClose) {
+      if (runTerminalHasNoLiveChild) {
+        onClose()
+        return
+      }
+      try {
+        if (!await endTerminalSession(sessionId)) {
+          return
+        }
+      } catch (cause) {
+        setInteractionError({
+          title: "Session did not end",
+          detail: errorMessage(cause),
+        })
+        return
+      }
       onClose()
       return
     }
@@ -405,7 +403,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
               )}
             />
             {phase === "error" ? (
-              <Alert variant="destructive">
+              <Alert variant="destructive" role="alert">
                 <TriangleAlert />
                 <AlertTitle>Terminal did not open</AlertTitle>
                 <AlertDescription>{errorText}</AlertDescription>
@@ -419,14 +417,16 @@ export function TerminalPanel(props: TerminalPanelProps) {
               </Alert>
             ) : null}
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                ref={primaryControlRef}
-                type="button"
-                variant="outline"
-                onClick={closeTerminal}
-              >
-                {primaryControlLabel}
-              </Button>
+              {phase !== "opening" ? (
+                <Button
+                  ref={primaryControlRef}
+                  type="button"
+                  variant="outline"
+                  onClick={() => void closeTerminal()}
+                >
+                  {primaryControlLabel}
+                </Button>
+              ) : null}
               <span className="text-sm text-muted-foreground" aria-live="polite">
                 {terminalStatusText(
                   phase,
@@ -441,4 +441,8 @@ export function TerminalPanel(props: TerminalPanelProps) {
       </CardContent>
     </Card>
   )
+}
+
+function terminalFontSize(scale: TextSize): number {
+  return Math.round((13 * scale) / 100)
 }

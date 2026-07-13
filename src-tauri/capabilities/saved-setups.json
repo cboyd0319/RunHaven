@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "saved-setups",
+  "description": "Path-redacted saved setup summaries, secure-default selection by opaque id, and reversible pin state for the main window.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-get-saved-setups",
+    "allow-pin-saved-setup",
+    "allow-select-saved-setup",
+    "allow-set-saved-setup-pinned"
+  ]
+}

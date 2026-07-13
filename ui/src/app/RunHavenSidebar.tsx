@@ -1,30 +1,48 @@
 import {
   CircleGauge,
   History,
-  House,
+  Pin,
+  SquarePlus,
   Terminal,
   type LucideIcon,
 } from "lucide-react"
 
 import logo from "@/assets/logo.png"
+import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { RUN_TERMINAL_NAV, type NavDestination } from "./navigation"
+import { type NavDestination } from "./navigation"
+import { agentLabel } from "./sessionIdentity"
+
+type RunningTerminalRow = {
+  sessionId: string
+  runId?: string
+  label?: string
+  request?: { plan: { agent: string; workspacePath: string } }
+  startedAt?: string
+}
+
+type SavedSetupRow = { id: string; name: string; available?: boolean }
 
 // Individual runs stay out of the sidebar so navigation remains stable.
 export function RunHavenSidebar({
   navigation,
   onNavigate,
-  runTerminalActive,
+  runTerminals = [],
+  savedSetups = [],
+  savedSetupsError = "",
+  onSelectSavedSetup,
+  onUnpinSavedSetup,
   appVersion,
 }: {
   navigation: NavDestination
@@ -32,7 +50,12 @@ export function RunHavenSidebar({
   // True while an interactive run terminal is live. It is not a managed session,
   // so it gets its own fixed row: without it, navigating away from a live run
   // would leave no way back (audit RT-1/RT-2).
-  runTerminalActive: boolean
+  runTerminalActive?: boolean
+  runTerminals?: RunningTerminalRow[]
+  savedSetups?: SavedSetupRow[]
+  savedSetupsError?: string
+  onSelectSavedSetup?: (id: string) => void
+  onUnpinSavedSetup?: (id: string) => void
   appVersion: string
 }) {
   function navigate(destination: NavDestination) {
@@ -59,15 +82,19 @@ export function RunHavenSidebar({
           </div>
         </div>
       </SidebarHeader>
-      <SidebarContent>
+      <nav
+        aria-label="RunHaven navigation"
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
               <DestinationRow
-                label="Home"
-                Icon={House}
-                active={navigation.kind === "home"}
-                onSelect={() => navigate({ kind: "home" })}
+                label="New session"
+                Icon={SquarePlus}
+                active={navigation.kind === "new-session"}
+                onSelect={() => navigate({ kind: "new-session" })}
               />
               <DestinationRow
                 label="History"
@@ -81,18 +108,91 @@ export function RunHavenSidebar({
                 active={navigation.kind === "diagnostics"}
                 onSelect={() => navigate({ kind: "diagnostics" })}
               />
-              {runTerminalActive ? (
-                <DestinationRow
-                  label="Session terminal"
-                  Icon={Terminal}
-                  active={navigation.kind === "run-terminal"}
-                  onSelect={() => navigate(RUN_TERMINAL_NAV)}
-                />
-              ) : null}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-      </SidebarContent>
+        {runTerminals.length > 0 ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Running</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {runTerminals.map((terminal, index) => {
+                  const id = terminal.runId ?? terminal.sessionId
+                  const label = terminalLabel(terminal, index, runTerminals)
+                  return (
+                    <DestinationRow
+                      key={terminal.sessionId}
+                      label={label}
+                      Icon={Terminal}
+                      active={
+                        navigation.kind === "run-terminal" &&
+                        navigation.id === id
+                      }
+                      onSelect={() => navigate({ kind: "run-terminal", id })}
+                    />
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+        {savedSetups.length > 0 ? (
+          <SidebarGroup>
+            <SidebarGroupLabel>Saved setups</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {savedSetups.map((setup) => (
+                  <SidebarMenuItem key={setup.id} className="flex flex-col gap-1">
+                    <SidebarMenuButton
+                      type="button"
+                      tooltip={setup.name}
+                      aria-describedby={
+                        setup.available === false
+                          ? `saved-setup-${setup.id}-status`
+                          : undefined
+                      }
+                      onClick={() =>
+                        onSelectSavedSetup
+                          ? onSelectSavedSetup(setup.id)
+                          : navigate({ kind: "new-session" })
+                      }
+                    >
+                      <Pin />
+                      <span>{setup.name}</span>
+                    </SidebarMenuButton>
+                    {setup.available === false ? (
+                      <span
+                        id={`saved-setup-${setup.id}-status`}
+                        className="px-2 text-xs text-warning group-data-[collapsible=icon]:hidden"
+                      >
+                        Project folder can’t be found
+                      </span>
+                    ) : null}
+                    {onUnpinSavedSetup ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Unpin ${setup.name}`}
+                        className="min-h-8 self-start px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden"
+                        onClick={() => onUnpinSavedSetup(setup.id)}
+                      >
+                        Unpin setup
+                      </Button>
+                    ) : null}
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+              {savedSetupsError ? (
+                <p role="alert" className="px-2 py-1 text-xs text-destructive">
+                  {savedSetupsError}
+                </p>
+              ) : null}
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : null}
+        </SidebarContent>
+      </nav>
       <SidebarFooter>
         <div className="px-3 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
           {`RunHaven ${appVersion}`.trim()}
@@ -100,6 +200,33 @@ export function RunHavenSidebar({
       </SidebarFooter>
     </Sidebar>
   )
+}
+
+function terminalLabel(
+  terminal: RunningTerminalRow,
+  index: number,
+  terminals: RunningTerminalRow[],
+): string {
+  const label = terminalLabelCandidate(terminal)
+  const occurrence =
+    terminals
+      .slice(0, index)
+      .filter((candidate) => terminalLabelCandidate(candidate) === label).length + 1
+  return occurrence > 1 ? `${label} (${occurrence})` : label
+}
+
+function terminalLabelCandidate(terminal: RunningTerminalRow): string {
+  const plan = terminal.request?.plan
+  const base =
+    terminal.label ?? (plan ? `${agentLabel(plan.agent)} · Starting` : "Session starting")
+  const started = terminal.startedAt
+    ? ` · ${new Intl.DateTimeFormat(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+      }).format(new Date(terminal.startedAt))}`
+    : ""
+  return `${base}${started}`
 }
 
 function DestinationRow({

@@ -26,6 +26,10 @@ use crate::terminal::{
 /// `--interactive` but not `--tty`, non-root `agent` user. The command rewrites it
 /// to a TTY run before spawning. Built through the normal seam; no container.
 fn interactive_run_plan() -> AgentRunPlan {
+    interactive_run_plan_for("term-run")
+}
+
+fn interactive_run_plan_for(run_id: &str) -> AgentRunPlan {
     let workspace = tempfile::tempdir().expect("workspace");
     let plan = build_run_plan(RunOptions {
         profile: get_profile("shell").expect("profile"),
@@ -53,7 +57,7 @@ fn interactive_run_plan() -> AgentRunPlan {
         provider_hosts: Vec::new(),
         claude_auth_source: None,
         worktree: None,
-        run_id: Some("term-run".to_string()),
+        run_id: Some(run_id.to_string()),
     })
     .expect("plan");
     // Precondition the command relies on: the launch path emits --interactive
@@ -90,7 +94,7 @@ fn run_terminal_confirm_cancel_spawns_nothing() {
         || Ok(None),
         |_, _, _| panic!("cancel must spawn nothing"),
     );
-    assert_eq!(result, Ok(false));
+    assert_eq!(result, Ok(None));
     assert!(registry.remove("run-cancel").is_none());
 }
 
@@ -112,7 +116,7 @@ fn run_terminal_forces_interactive_tty_then_registers_and_routes_input() {
             Ok(SpawnedTerminal::without_reader(spawn_fake.handle()))
         },
     );
-    assert!(result.expect("run open"));
+    assert!(result.expect("run open").is_some());
 
     // The command forced the argv to an interactive TTY run before spawn, so the
     // agent starts its TUI instead of headless --print, and it stays non-root.
@@ -138,6 +142,84 @@ fn run_terminal_forces_interactive_tty_then_registers_and_routes_input() {
         .expect("prompt input routes to the run terminal");
     registry.close("run-io").expect("close");
     assert!(registry.remove("run-io").is_none());
+}
+
+#[test]
+fn run_terminal_open_response_exposes_the_authoritative_managed_run_id() {
+    let registry = TerminalSessionRegistry::default();
+    let output_registry = SessionOutputRegistry::default();
+    let fake = FakeTerminal::default();
+    let spawn_fake = fake.clone();
+    let opened = open_agent_run_terminal_for_test(
+        &registry,
+        &output_registry,
+        "webview-terminal-label",
+        || {
+            let mut plan = interactive_run_plan();
+            plan.workspace = "/tmp/run-generated-id".into();
+            plan.worktree = Some(WorktreeRun {
+                source_workspace: "/tmp/original\u{202e}-project".into(),
+                source_repo_root: "/tmp/original\u{202e}-project".into(),
+                worktree_root: "/tmp/worktrees/run-generated-id".into(),
+                mounted_workspace: "/tmp/run-generated-id".into(),
+                branch: "runhaven/run-generated-id".to_string(),
+                base_head: None,
+                recovery_commands: Vec::new(),
+            });
+            Ok(Some(plan))
+        },
+        move |_, _, _| Ok(SpawnedTerminal::without_reader(spawn_fake.handle())),
+    )
+    .expect("run terminal opens");
+
+    let response = serde_json::to_value(opened).expect("serialize open response");
+    assert_eq!(
+        response.get("runId").and_then(serde_json::Value::as_str),
+        Some("term-run"),
+        "the response must identify the Rust-owned managed run"
+    );
+    assert_eq!(
+        response.get("label").and_then(serde_json::Value::as_str),
+        Some("Shell · original-project"),
+        "the sidebar label must use the original project and be sanitized in Rust"
+    );
+}
+
+#[test]
+fn two_run_terminals_remain_independently_owned() {
+    let registry = TerminalSessionRegistry::default();
+    let output_registry = SessionOutputRegistry::default();
+    let first = FakeTerminal::default();
+    let first_spawn = first.clone();
+    let second = FakeTerminal::default();
+    let second_spawn = second.clone();
+
+    open_agent_run_terminal_for_test(
+        &registry,
+        &output_registry,
+        "terminal-a",
+        || Ok(Some(interactive_run_plan_for("managed-run-a"))),
+        move |_, _, _| Ok(SpawnedTerminal::without_reader(first_spawn.handle())),
+    )
+    .expect("open first run terminal");
+    open_agent_run_terminal_for_test(
+        &registry,
+        &output_registry,
+        "terminal-b",
+        || Ok(Some(interactive_run_plan_for("managed-run-b"))),
+        move |_, _, _| Ok(SpawnedTerminal::without_reader(second_spawn.handle())),
+    )
+    .expect("open second run terminal");
+
+    registry.close("terminal-a").expect("close first terminal");
+    registry
+        .write_input("terminal-b", b"still here\n")
+        .expect("second terminal remains independently writable");
+
+    assert_eq!(first.shutdowns(), 1);
+    assert_eq!(second.shutdowns(), 0);
+    registry.close("terminal-b").expect("close second terminal");
+    assert_eq!(second.shutdowns(), 1);
 }
 
 #[test]

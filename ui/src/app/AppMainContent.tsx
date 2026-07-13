@@ -7,9 +7,7 @@ import { Button } from "@/components/ui/button"
 import { helpReturnLabel, type NavDestination } from "./navigation"
 import { TerminalPanel } from "./TerminalPanel"
 import { useFocusOnChange } from "./useFocusOnChange"
-import { sessionAllowsWorktreeReview } from "./worktreeReview"
 import { DiagnosticsView } from "./views/DiagnosticsView"
-import { HomeView } from "./views/HomeView"
 import { HelpView } from "./views/HelpView"
 import { NewSessionView } from "./views/NewSessionView"
 import type { MainViewProps } from "./views/props"
@@ -20,18 +18,20 @@ type AppMainContentProps = MainViewProps & { navigation: NavDestination }
 
 // Routes the selected sidebar destination to its full view. Every destination
 // always renders something real (no dead navigation), and the focus region key
-// covers destination changes, session switches, and worktree resolution so
+// covers destination changes, session switches, and explicit worktree actions so
 // keyboard and AT users land on the new view instead of <body>. A setup
-// blocker renders as Home content, never as a takeover: running sessions and
+// blocker renders in New session, never as a takeover: running sessions and
 // System details stays reachable while blocked.
 export function AppMainContent(props: AppMainContentProps) {
   const { navigation, error, launchMessage } = props
-  const worktreeReviewEligible = props.selectedSession
-    ? sessionAllowsWorktreeReview(props.selectedSession)
-    : false
+  const [sessionContentRevision, setSessionContentRevision] = useState(0)
   const focusRef = useFocusOnChange<HTMLDivElement>(
-    mainViewFocusKey(navigation, worktreeReviewEligible),
+    mainViewFocusKey(navigation, sessionContentRevision),
   )
+  const refreshWorktreeAndFocus = async () => {
+    await props.onWorktreeResolved()
+    setSessionContentRevision((revision) => revision + 1)
+  }
 
   // The top-level action error clears on the next refresh, but a user should be
   // able to dismiss it right away once they have read it. The error lives in the
@@ -45,37 +45,48 @@ export function AppMainContent(props: AppMainContentProps) {
     setDismissedError("")
   }, [error])
   const showError =
-    navigation.kind !== "home" && error !== "" && error !== dismissedError
+    error !== "" && error !== dismissedError
 
   // A live interactive run terminal stays MOUNTED here for its whole life,
   // shown only on its own destination and hidden (not unmounted) on every other.
   // This is load-bearing: the run's sandbox uses this terminal's host PTY as its
   // controlling TTY, so unmounting the panel would close the PTY and kill the
   // running agent (audit RT-1). Navigating away therefore hides it; it is torn
-  // down only when the run terminal is cleared (End run), which unmounts the
+  // down only when the run terminal is cleared (End session), which unmounts the
   // panel and fires its teardown. The impossible null case (run-terminal
   // destination with no terminal in state) falls through to the normal views.
-  const runTerminal = props.launchFlow.runTerminal
-  const showTerminal = navigation.kind === "run-terminal" && runTerminal !== null
+  const runTerminals = props.launchFlow.runTerminals
+  const selectedRunTerminal =
+    navigation.kind === "run-terminal"
+      ? (runTerminals.find(
+          (terminal) =>
+            terminal.runId === navigation.id ||
+            terminal.sessionId === navigation.id,
+        ) ?? (navigation.id ? null : runTerminals.at(-1) ?? null))
+      : null
+  const showTerminal = selectedRunTerminal !== null
 
   return (
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {runTerminal ? (
+      {runTerminals.map((runTerminal) => {
+        const terminalVisible = runTerminal === selectedRunTerminal
+        return (
         <div
+          key={runTerminal.sessionId}
           // The bounded full-height layout the xterm needs: the container must
           // flex-fill a definite parent so FitAddon settles and never grows the
           // layout past the window. `hidden` keeps it mounted but out of view.
-          hidden={!showTerminal}
+          hidden={!terminalVisible}
           className="flex min-h-0 flex-1 flex-col gap-3 p-4"
         >
-          {showTerminal && showError ? (
+          {terminalVisible && showError ? (
             <AppErrorAlert
               message={error}
               onDismiss={() => setDismissedError(error)}
             />
           ) : null}
           <div
-            ref={showTerminal ? focusRef : undefined}
+            ref={terminalVisible ? focusRef : undefined}
             tabIndex={-1}
             aria-label="Session terminal"
             className="flex min-h-0 flex-1 flex-col outline-none"
@@ -83,13 +94,33 @@ export function AppMainContent(props: AppMainContentProps) {
             <TerminalPanel
               run={runTerminal}
               fill
-              visible={showTerminal}
-              onClose={props.launchFlow.closeRunTerminal}
-              onOpenCancelled={props.launchFlow.cancelRunTerminal}
+              visible={terminalVisible}
+              onOpened={(opened) => {
+                props.launchFlow.markRunTerminalOpened(
+                  runTerminal.sessionId,
+                  opened,
+                )
+                if (terminalVisible) {
+                  props.onNavigate({ kind: "run-terminal", id: opened.runId })
+                }
+              }}
+              onEnded={() =>
+                void props.launchFlow.closeRunTerminal(
+                  runTerminal.sessionId,
+                  terminalVisible,
+                )
+              }
+              onClose={() =>
+                void props.launchFlow.closeRunTerminal(runTerminal.sessionId)
+              }
+              onOpenCancelled={() =>
+                props.launchFlow.cancelRunTerminal(runTerminal.sessionId)
+              }
             />
           </div>
         </div>
-      ) : null}
+        )
+      })}
 
       {!showTerminal ? (
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
@@ -106,14 +137,17 @@ export function AppMainContent(props: AppMainContentProps) {
                   onDismiss={() => setDismissedError(error)}
                 />
               ) : null}
-              {launchMessage && navigation.kind !== "home" ? (
-                <Alert>
+              {launchMessage ? (
+                <Alert role="status">
                   <CheckCircle2 />
                   <AlertTitle>{launchMessage}</AlertTitle>
                   <AlertDescription>You can follow it below.</AlertDescription>
                 </Alert>
               ) : null}
-              <MainView {...props} />
+              <MainView
+                {...props}
+                onWorktreeResolved={refreshWorktreeAndFocus}
+              />
             </div>
           </section>
         </div>
@@ -132,7 +166,7 @@ function AppErrorAlert({
   onDismiss: () => void
 }) {
   return (
-    <Alert variant="destructive">
+    <Alert variant="destructive" role="alert">
       <CircleAlert />
       <AlertTitle>Action failed</AlertTitle>
       <AlertDescription className="flex flex-col items-start gap-2">
@@ -172,7 +206,7 @@ function MainView(props: AppMainContentProps) {
             props.launchFlow.setLaunchStep("agent")
             props.onNavigate({ kind: "new-session" })
           }}
-          onStart={() => props.onNavigate({ kind: "home" })}
+          onStart={() => props.onNavigate({ kind: "new-session" })}
         />
       )
     case "help": {
@@ -185,35 +219,33 @@ function MainView(props: AppMainContentProps) {
       )
     }
     case "session":
-      // A removed record renavigates via the selection fallback. Home is a safe,
+      // A removed record renavigates via the selection fallback. New Session is a safe,
       // useful frame while that reconciliation happens; an empty main area looks
       // like the app crashed and can strand the user after a fast run exit.
       return props.selectedSession ? (
         <SessionView {...props} selectedSession={props.selectedSession} />
       ) : (
-        <HomeView {...props} />
+        <NewSessionView {...props} />
       )
     case "run-terminal":
       // Reached only in the impossible case of a run-terminal destination with
       // no run terminal in state (AppMainContent renders the real terminal
-      // before MainView otherwise). Fall back to Home so navigation is never
+      // before MainView otherwise). Fall back to New Session so navigation is never
       // dead and the user is never stranded on a blank view.
-      return <HomeView {...props} />
-    case "home":
-      return <HomeView {...props} />
+      return <NewSessionView {...props} />
   }
 }
 
 // One focus key for the whole content pane: destination changes, session
-// switches, and worktree-review resolution all move focus; background polls
-// change none of these inputs, so quiet refresh stays quiet.
-function mainViewFocusKey(
+// switches, and explicit worktree actions move focus. Background review-state
+// polls do not change the revision, so a quiet refresh never steals focus.
+export function mainViewFocusKey(
   navigation: NavDestination,
-  worktreeReviewEligible: boolean,
+  sessionContentRevision: number,
 ): string {
   switch (navigation.kind) {
     case "session":
-      return `session:${navigation.id}:${worktreeReviewEligible}`
+      return `session:${navigation.id}:${sessionContentRevision}`
     default:
       return navigation.kind
   }
@@ -221,8 +253,6 @@ function mainViewFocusKey(
 
 function mainViewLabel(navigation: NavDestination): string {
   switch (navigation.kind) {
-    case "home":
-      return "Home"
     case "new-session":
       return "New session"
     case "session":

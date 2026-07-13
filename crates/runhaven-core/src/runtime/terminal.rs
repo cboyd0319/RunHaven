@@ -171,6 +171,7 @@ fn run_plan_through_pty(
             let mut runner = PtyHandoffRunner {
                 session_tx,
                 cleanup: thread_cleanup,
+                terminal_status: None,
             };
             let result = launch_run_plan_with_runner_and_completion(&plan, &mut runner, on_success);
             let succeeded = result.is_ok();
@@ -206,6 +207,7 @@ fn terminal_open_error(error: &anyhow::Error) -> &'static str {
 struct PtyHandoffRunner {
     session_tx: SyncSender<TerminalOpenResult>,
     cleanup: Arc<CleanupSignal>,
+    terminal_status: Option<&'static str>,
 }
 
 impl AgentCommandRunner for PtyHandoffRunner {
@@ -228,7 +230,15 @@ impl AgentCommandRunner for PtyHandoffRunner {
         // (or an explicit close kills it); either way the exit latch fires and
         // this returns. Staying blocked here keeps the egress proxy alive for
         // the whole login.
-        Ok(session.wait_for_exit())
+        let code = session.wait_for_exit();
+        if session.exit_was_forced() {
+            self.terminal_status = Some("ended");
+        }
+        Ok(code)
+    }
+
+    fn terminal_status(&self) -> Option<&'static str> {
+        self.terminal_status
     }
 }
 
@@ -298,7 +308,7 @@ impl GuiPtySession {
                 .ok()
                 .and_then(|status| status.code())
                 .unwrap_or(1);
-            self.exit.signal(code);
+            self.exit.signal(code, true);
         }
         let _ = self.wait_for_launch_completion_bounded();
     }
@@ -315,7 +325,7 @@ impl GuiPtySession {
                     .ok()
                     .and_then(|status| status.code())
                     .unwrap_or(1);
-                self.exit.signal(code);
+                self.exit.signal(code, false);
                 code
             }
             None => self.exit.wait(),
@@ -335,7 +345,7 @@ impl GuiPtySession {
                     .ok()
                     .and_then(|status| status.code())
                     .unwrap_or(1);
-                self.exit.signal(code);
+                self.exit.signal(code, true);
                 code
             }
             None => self.exit.wait(),
@@ -348,6 +358,10 @@ impl GuiPtySession {
     /// this.
     pub fn wait_for_exit(&self) -> i32 {
         self.exit.wait()
+    }
+
+    fn exit_was_forced(&self) -> bool {
+        self.exit.forced()
     }
 
     /// Wait for the detached provider launch to finish cleanup, record its run,

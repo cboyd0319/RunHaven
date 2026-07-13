@@ -262,11 +262,11 @@ fn failed_session_reason_uses_only_sanitized_saved_evidence() {
     );
     assert_eq!(
         detail("failed-process"),
-        "The assistant stopped before it finished. Open System to check setup, then try again."
+        "The assistant exited with code 17 before it finished. Review this session's details below, then start a new session."
     );
     assert_eq!(
         detail("failed-unknown"),
-        "RunHaven couldn’t determine why this session ended. Open System to check setup, then try again."
+        "RunHaven couldn’t determine why this session ended. Review this session's details below, then start a new session."
     );
 
     let encoded = serde_json::to_string(&data).expect("serialize sessions");

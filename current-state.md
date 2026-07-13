@@ -96,7 +96,10 @@ paths without a designed and tested RunHaven boundary.
 
 Design direction: follow system appearance; stay restrained and native-feeling;
 use blue actions, green ready states, amber warnings, and red only for blocked
-or destructive states. The canonical logo is `docs/assets/logo.png`.
+or destructive states. The canonical in-app and public logo remains
+`docs/assets/logo.png`. The user-selected, unmasked 1024 by 1024 bundle-icon
+master is `docs/assets/app-icon.png`; Tauri's generated desktop assets are in
+`src-tauri/icons/`.
 
 Refresh, polling, and status updates must keep the current workspace stable.
 Session views should update panels in place without full-page blink/remounts,
@@ -117,8 +120,9 @@ Useful GUI design docs:
 - `docs/plans/native-gui-managed-sessions.md`
 - `docs/plans/native-gui-session-input-contract.md`
 - `docs/plans/native-gui-microsandbox-reference.md`
-- `docs/design/native-gui-design-resources.md` (Apple HIG + macOS design
-  references for the deferred comprehensive visual redesign)
+- `docs/design/native-gui-design-resources.md` (Apple HIG and macOS design
+  references)
+- `docs/design/native-gui-uiux-audit.md` (current per-surface HIG contract)
 
 ## Latest State
 
@@ -178,7 +182,7 @@ Useful GUI design docs:
   sheet, SF Symbols). Foundation verified strong. The P0 (#28) is fixed and gated
   SOUND: the interactive run terminal now stays mounted (hidden) across navigation
   instead of unmounting and killing the run, with a sidebar "Run terminal" handle
-  to return; End run and app-quit still tear down. P1 shipped (gated CONCERNS ->
+  to return; End session and app-quit still tear down. P1 shipped (gated CONCERNS ->
   fixed): the native launch confirm shows friendly labels instead of raw enum
   codes (COPY-1), status icons use success/warning
   tokens + ready-to-review is teal not amber (VIS-1/2), and a Shift+Esc terminal
@@ -303,40 +307,82 @@ Useful GUI design docs:
 
 Branch: `docs/native-gui-wireframe`.
 
-The 2026-07-13 whole-surface simplification supersedes the older navigation
-shape recorded below. Current desktop information architecture is Home,
-History, System, a contextual Session terminal, and first-class New Session.
-Every launch starts on Home. Home is only a
-four-agent launchpad, modeled on the approved Agent Launchpad concept: Claude,
-Codex, Antigravity, and Copilot each have one selectable card. It contains
-no setup status, logs, failures, run history, or system errors. Setup and agent
-repair appear contextually in New Session after an agent is chosen. History
-owns a non-duplicated Needs attention section and the remaining chronological
-runs. Internal sign-in and shell records are excluded from user history,
-badges, and menu state.
+The latest 2026-07-13 desktop pass supersedes the older navigation shape
+recorded below. Current desktop information architecture is New session,
+History, System, a dynamic Running group, and Saved setups. Every launch opens
+New session. Setup and assistant repair appear after an assistant is chosen.
+History owns Needs attention and the remaining chronological runs. Internal
+sign-in and shell records are excluded from user history and menu state.
 
 Agents, Cleanup, dedicated run filters, raw whole-app Trust Checks, Recent
-Activity wording, Secure Boundary summary, the launch modal, the Settings
-surface, auxiliary session windows, and placeholder menu commands were deleted
-because their useful actions are now available where the user needs them.
-Assistant sign-in and image repair are
-in New Session. Setup repair and stale-network cleanup are in System details.
-Session-specific allow/deny reasons remain under that session's Show details.
-Output has one Show output action; Rust owns the native confirmation and
-the frontend never polls. Finished and failed sessions have no message composer
-or terminal; active-session terminal access is an Advanced tool.
+Activity wording, Secure Boundary summary, auxiliary session windows, and
+placeholder menu commands remain deleted. Assistant sign-in and image repair
+are in New session. Setup repair and stale-network cleanup are in System.
+Session-specific allow/deny reasons remain under Show details. Output has one
+Show output action only while Rust reports process-memory output available.
+Finished and failed sessions have no message composer or terminal.
+
+Multiple interactive terminals remain mounted independently. Rust returns the
+managed run ID plus a sanitized, path-free sidebar label. Starting one terminal
+does not stop another. The sidebar shows every live terminal under Running, and
+History offers Return to terminal only when that exact terminal is still live.
+Natural nonzero exits are Failed; an explicit RunHaven close is Ended.
+
+Saved setups persist assistant plus canonical project folder in a private,
+owner-only, atomic app-data file. Sidebar summaries omit full paths. Selecting
+a setup restores secure defaults instead of advanced launch choices. Missing
+folders are marked unavailable and pinning is reversible.
+
+Needs attention is now a recovery workflow, not a count. A failed session shows
+the sanitized backend reason, distinguishes missing retained output from the
+failure, opens same-page issue details and diagnostics, and offers a new session
+with the same assistant. Review and output actions appear only when the backing
+data exists. The numeric Dock badge was removed because Apple reserves app-icon
+badges for unread notifications. Its removal left no valid app preference, so
+the empty Settings surface and Cmd-, were removed too.
+
+Protected-copy existence and review attention are now separate backend-owned
+states. Rust uses a bounded, name-only Git probe to report changed, clean, or
+unreadable without exposing paths or hashing file contents during session-list
+polling. Verified changes and unreadable copies with a Check again recovery enter
+History's Needs attention section, but only verified changes are called ready.
+Clean copies stay under Other sessions and show neutral No changes to review
+copy plus optional confirmed deletion. Poll equality includes this state, so a
+later clean-to-changed transition is not suppressed. An explicit Check again
+refreshes the summary before updating the review, while background state polls
+never move keyboard or assistive-technology focus.
+
+Closing the main window now hides the same WebView and preserves live terminal
+channels. Dock reopen and menu navigation restore and focus that window. Only
+actual app exit ends app-owned terminals and background jobs. The View menu now
+supports 80 to 200 percent text, including terminal canvas text, with Increase
+Text Size, Decrease Text Size, and Actual Text Size commands. The bounded choice
+persists locally.
+
+The selected app icon is separate from the public and in-app logo. Its unmasked
+1024 by 1024 RGBA master is `docs/assets/app-icon.png`; the pinned Tauri CLI owns
+`src-tauri/icons/`. The 0.7.0 bundle, NSWorkspace mask, and light/dark rendering
+passed. Direct Dock, Finder, Spotlight, and About inspection remains release QA.
 
 All native confirmations are parented to the trusted main WebviewWindow. A
 cancelled confirmation is a quiet no-op before any mutation; real failures
-remain errors. The custom menu surface is reduced to
-New Session, sidebar/full-screen controls, the app-icon count toggle, and
-contextual Session actions, plus standard macOS items.
+remain errors. The custom menu surface is reduced to New Session, text-size,
+sidebar/full-screen, and contextual Session actions, plus standard macOS items.
 
-Fail-first Home and History regressions now pass. Full `./init.sh` verification
-passes, including 270 Tauri tests with 5 live-only tests ignored, workspace
-Clippy with warnings denied, 362 frontend tests, 13 Playwright and axe flows at
-800x560 and 1080x720, production and Tauri builds, pins, structure,
-documentation, JSON, and diff checks.
+Fail-first regressions cover concurrent terminal identity and lifetime,
+process-only output availability, ended worktree review, input/composer truth,
+saved setup privacy and defaults, main-window lifecycle, text scaling,
+attention recovery, confirmed generation-safe terminal end, and
+assistant-status refresh. They also cover clean, changed, and unreadable
+protected-copy attention, optional clean-copy cleanup, quiet cleanup cancel,
+and clean-to-changed polling transitions.
+
+`docs/design/native-gui-uiux-audit.md` now records the current official Apple
+HIG topic checked for every shipped GUI surface. Source changes also add one
+main landmark, a named sidebar navigation landmark, truthful progress and alert
+semantics, ellipses for actions that request more input, and explicit
+generative-AI and provider-data disclosures. Future GUI changes must update the
+relevant audit row and receive macOS design source and live packaged review.
 
 Development, local-signed, and release builds now have distinct identities.
 Development is **RunHaven Debug** with `dev.runhaven.desktop.debug` and a
@@ -356,23 +402,6 @@ app, every alternate GUI target root, all obsolete RunHaven and earlier mca
 package and lock, Tauri config, pins, preview fixtures, and local product images
 now resolve to 0.7.0. Sign-in and state volumes were not changed.
 
-The follow-up whole-surface repair keeps Home at one choice per assistant and
-sends that choice directly to Project selection, followed by the trusted native
-review. Project selection uses the Mac folder picker. A protected copy remains
-automatic; if it cannot be
-made, the page gives one plain explanation and one warned original-folder
-fallback instead of exposing version-control terms. The default native
-confirmation shows only plain assistant, project, network, and file-access
-facts. Exact additional hosts, host environment names, API-key source names,
-and custom images appear only when those advanced overrides are requested.
-
-Interactive run output now has one bounded, process-local retention path so
-same-app History can explain an ended terminal run. It is filtered before
-display, never logged or written to disk, and disappears when RunHaven closes.
-A real native Claude PTY run was ended and its setup output was then opened from
-History, proving the PTY-to-History path. The live debug-log secret scan was
-clean and no RunHaven run container remained active after QA.
-
 System now keeps passing Apple Container readiness checks collapsed under
 **Advanced system tools**. It still shows only actionable failures by
 default. The container-service internet repair uses one typed Rust action with
@@ -382,20 +411,6 @@ Apple Container workloads stop. Network cleanup remains RunHaven-owned and
 count-only. Machine management, registry login, arbitrary exec/copy/export, and
 foreign-resource deletion remain CLI-only because they do not earn a safe
 one-click product surface.
-
-Full `./init.sh` verification passes for this repair: 277 Tauri tests with 5
-live-only tests ignored, 367 frontend tests, 13 Playwright and axe flows across
-800x560 and 1080x720, warnings-denied workspace Clippy, locked workspace tests
-and builds, pin and structure guards, release-script tests, production UI and
-native Tauri builds, documentation paths, JSON validation, and diff hygiene.
-The final specialist closure then made interactive-run retention mandatory under
-the Rust-owned plan run ID, made the launch sheet describe only effective
-advanced overrides, expanded no-file tripwires, covered nonzero restart exits,
-and stripped every reviewed Unicode direction control from trusted labels. The
-complete Tauri target passed afterward with 279 tests and 5 live-only tests
-ignored, warnings-denied Tauri Clippy passed, and the final U+061C change passed
-focused core and Tauri regressions plus structure and diff checks. No frontend
-code changed after the full frontend and Playwright pass.
 
 The final plain-language and security review removed the remaining technical
 labels from the ordinary path. Network choices are **Assistant services only**
@@ -418,22 +433,7 @@ the same loopback server first and passes its live URL to Tauri, while manual
 Vite development and preview also request an operating-system-assigned port.
 Only address-in-use bind failures are retried. No existing local service is
 reused, stopped, or treated as RunHaven. Browser Import and bookmarklets do not
-exist in this repository, so no unrelated Settings surface was added.
-
-The source-backed macOS design closure added a standard registered Help menu
-and a plain-language guide through the existing dispatch-only path. Home gives
-account-choice and safe-exit guidance. Help retains the prior screen, including
-an in-progress New session. Advanced resource fields show format guidance and
-immediate errors while keeping exact accessible names. The sidebar announces
-its next action. No command, capability, dependency, setting, mutation path, or
-safety boundary changed.
-
-The macOS specialist fully reviewed the supplied sources, implementation, and
-exact 0.7.0 debug app, then approved it with no medium-or-higher issue. Full
-`./init.sh` and the focused GUI checks pass. A live macOS accessibility-tree
-check covered Home, New session, Help return paths, focus order, disabled-action
-skipping, field names, and validation. Test values were restored and the app
-was closed. One bundle remains; its plist and the CLI report 0.7.0.
+exist in this repository. They do not justify a Settings surface.
 
 Release preflight and staging tests pass under Xcode 27.0 beta build 27A5218g.
 Distribution remains fail-closed without an exact `v0.7.0` tag, Developer ID

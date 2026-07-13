@@ -37,13 +37,13 @@ RunHaven checks the Mac and leads with the first item that needs attention.
 2. If the local container service is stopped, choose **Start container
    service** and confirm. The first start may download Apple's reviewed kernel
    and base file system. RunHaven checks the service again before continuing.
-3. Open **Agents**, choose the agent you want, then choose **Install** followed
-   by that agent's name, such as **Install Codex**.
+3. Open **New session** and choose the assistant you want. If it is not
+   installed, choose its install button, such as **Install Codex**.
    Wait for installation to finish. The first image build can take several
    minutes and needs an internet connection.
 4. Complete the sign-in shown for that agent.
-5. Return to **Home**, choose **New run**, select the smallest project folder
-   the agent needs, review access, and start the run.
+5. Return to **New session**, select the smallest project folder the assistant
+   needs, review access, and start the session.
 
 RunHaven intentionally requires Apple `container` 1.1.0. If a different
 version is installed, choose **Download required version**, confirm the macOS
@@ -167,11 +167,11 @@ networking, or install flow.
 
 ## Troubleshooting
 
-In the desktop app, start on **Home** and choose **Check again**. Open **System
-Check** to see every check and its next step. If an agent is missing or sign-in
-is incomplete, open **Agents**. Copy only the plain error message when asking
-for help. Do not share raw logs unless the release owner asks for a specific,
-bounded diagnostic.
+In the desktop app, open **System** and choose **Check again** to see every
+check and its next step. If an assistant is missing or sign-in is incomplete,
+open **New session** and choose that assistant. Copy only the plain error
+message when asking for help. Do not share raw logs unless the release owner
+asks for a specific, bounded diagnostic.
 
 Contributors using the CLI can start with the guided setup:
 

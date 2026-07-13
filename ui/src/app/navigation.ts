@@ -4,7 +4,6 @@ import type { ManagedSessionSummary } from "@/commands/runhaven"
 // selected at all times, including menu-only destinations such as Help. See
 // docs/design/native-gui-navigation-spec.md sections 2 and 4.
 export type HelpReturnDestination =
-  | { kind: "home" }
   | { kind: "new-session" }
   | { kind: "session"; id: string }
   | { kind: "runs" }
@@ -12,16 +11,14 @@ export type HelpReturnDestination =
   // The interactive-agent run terminal (Claude Code) as a main-content
   // destination, not a modal. A live coding session fills the bounded content
   // area and stays closeable; it is ephemeral, so it is never persisted or
-  // restored. Every app launch starts on Home instead.
-  | { kind: "run-terminal" }
+  // restored. Every app launch starts on New session instead.
+  | { kind: "run-terminal"; id?: string }
 
 export type NavDestination =
   | HelpReturnDestination
   | { kind: "help"; returnTo: HelpReturnDestination }
 
-export const HOME_NAV: HelpReturnDestination = { kind: "home" }
 export const NEW_SESSION_NAV: HelpReturnDestination = { kind: "new-session" }
-export const RUN_TERMINAL_NAV: HelpReturnDestination = { kind: "run-terminal" }
 
 export function helpNavigation(returnTo: NavDestination): NavDestination {
   return {
@@ -32,8 +29,6 @@ export function helpNavigation(returnTo: NavDestination): NavDestination {
 
 export function helpReturnLabel(destination: HelpReturnDestination): string {
   switch (destination.kind) {
-    case "home":
-      return "Home"
     case "new-session":
       return "New session"
     case "session":
@@ -97,7 +92,7 @@ function newestFirst(
 
 // Where selection goes when the selected session's record is removed, per spec
 // section 4: the adjacent row in the same group (next below, else above), else
-// the first row of the other session group, else Home. This replaces the old
+// the first row of the other session group, else New session. This replaces the old
 // reset-to-wizard behavior; it is the only navigation the app makes on its own.
 export function navigationAfterSessionRemoval(
   removedId: string,
@@ -113,11 +108,11 @@ export function navigationAfterSessionRemoval(
       : null
 
   // The removed session was never in the list we knew about, so there is no
-  // neighbor the user was actually looking at. Go Home instead of selecting a
+  // neighbor the user was actually looking at. Go to New session instead of selecting a
   // remaining session the user never chose (spec invariant 10: the app never
   // self-navigates onto a destination the user did not pick).
   if (removedGroup === null) {
-    return HOME_NAV
+    return NEW_SESSION_NAV
   }
 
   const rows = previousGroups[removedGroup]
@@ -139,5 +134,5 @@ export function navigationAfterSessionRemoval(
       ? [...nextGroups.finished, ...nextGroups.active]
       : [...nextGroups.active, ...nextGroups.finished]
   const fallback = fallbackRows[0]
-  return fallback ? { kind: "session", id: fallback.id } : HOME_NAV
+  return fallback ? { kind: "session", id: fallback.id } : NEW_SESSION_NAV
 }

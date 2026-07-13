@@ -64,7 +64,7 @@ pub(super) fn resolve_worktree_lifecycle(
 ) -> Result<(ManagedSessionSummaryData, WorktreeLifecycle), String> {
     let (session, run_id) = super::sessions::managed_session_for_id(session_id)?;
     match session.lifecycle.trim().to_lowercase().as_str() {
-        "finished" | "failed" | "stopped" => {}
+        "finished" | "failed" | "stopped" | "ended" => {}
         "running" | "starting" | "stop-requested" | "kill-requested" => {
             return Err(ACTIVE_WORKTREE_ERROR.to_string());
         }
@@ -202,6 +202,7 @@ fn available_action_keys() -> Vec<String> {
 pub(super) fn clear_session_worktree_review(session: &mut ManagedSessionSummaryData) {
     session.cleanup = ManagedSessionCleanupData {
         available: false,
+        review_state: "none".to_string(),
         target: String::new(),
         label: String::new(),
         detail: String::new(),

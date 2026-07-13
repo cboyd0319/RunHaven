@@ -3,35 +3,43 @@ use std::time::Duration;
 
 /// One-shot child exit latch shared by every reap path.
 pub(super) struct ExitSignal {
-    code: Mutex<Option<i32>>,
+    outcome: Mutex<Option<(i32, bool)>>,
     ready: Condvar,
 }
 
 impl ExitSignal {
     pub(super) fn new() -> Self {
         Self {
-            code: Mutex::new(None),
+            outcome: Mutex::new(None),
             ready: Condvar::new(),
         }
     }
 
-    pub(super) fn signal(&self, code: i32) {
-        let mut guard = self.code.lock().unwrap_or_else(PoisonError::into_inner);
+    pub(super) fn signal(&self, code: i32, forced: bool) {
+        let mut guard = self.outcome.lock().unwrap_or_else(PoisonError::into_inner);
         if guard.is_none() {
-            *guard = Some(code);
+            *guard = Some((code, forced));
             self.ready.notify_all();
         }
     }
 
     pub(super) fn wait(&self) -> i32 {
-        let mut guard = self.code.lock().unwrap_or_else(PoisonError::into_inner);
+        self.wait_outcome().0
+    }
+
+    pub(super) fn forced(&self) -> bool {
+        self.wait_outcome().1
+    }
+
+    fn wait_outcome(&self) -> (i32, bool) {
+        let mut guard = self.outcome.lock().unwrap_or_else(PoisonError::into_inner);
         while guard.is_none() {
             guard = self
                 .ready
                 .wait(guard)
                 .unwrap_or_else(PoisonError::into_inner);
         }
-        guard.expect("exit code recorded before wake")
+        guard.expect("exit outcome recorded before wake")
     }
 }
 

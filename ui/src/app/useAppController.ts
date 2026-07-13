@@ -14,11 +14,11 @@ import { createSessionActions } from "./sessionActions"
 import { useAppDerivedState } from "./useAppDerivedState"
 import { useLaunchFlow } from "./useLaunchFlow"
 import { useManagedSessionsState } from "./useManagedSessionsState"
-import { useSettings } from "./useSettings"
 import { useManagedSessionDiagnostics } from "./useManagedSessionDiagnostics"
 import { useManagedSessionStatus } from "./useManagedSessionStatus"
 import { useLaunchStatus } from "./useLaunchStatus"
 import { useRunOutput } from "./useRunOutput"
+import { useSavedSetups } from "./useSavedSetups"
 import { useRunControlState } from "./useRunControlState"
 import { useSessionInputState } from "./useSessionInputState"
 import { useStatusLoaders } from "./useStatusLoaders"
@@ -26,7 +26,7 @@ import { useStatusLoaders } from "./useStatusLoaders"
 export function useAppController() {
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null)
   const [loading, setLoading] = useState(true)
-  // When the last successful status read completed, for the Home "Last check"
+  // When the last successful status read completed, for the setup freshness
   // freshness line. Null until the first read lands.
   const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null)
   const [lastLaunch, setLastLaunch] = useState<LaunchRunResponse | null>(null)
@@ -41,7 +41,6 @@ export function useAppController() {
   } = useManagedSessionsState(lastLaunch?.runId ?? null)
   const statusLoaders = useStatusLoaders()
   const [error, setError] = useState("")
-  const settingsState = useSettings()
   const launchFlow = useLaunchFlow({
     dashboard,
     managedBrowserPreview:
@@ -55,8 +54,10 @@ export function useAppController() {
     onLaunched: setLastLaunch,
     onError: setError,
   })
-
-  const settings = settingsState
+  const savedSetups = useSavedSetups({
+    applyRequest: launchFlow.applySavedSetup,
+    navigate,
+  })
 
   const derived = useAppDerivedState({
     dashboard,
@@ -99,7 +100,7 @@ export function useAppController() {
           ? current
           : nextDashboard,
       )
-      // The status read succeeded; stamp it for the Home freshness line.
+      // The status read succeeded; stamp it for the setup freshness line.
       setLastRefreshedAt(new Date().toISOString())
       await loadManagedSessions()
       await launchFlow.applyDashboard(nextDashboard)
@@ -131,14 +132,14 @@ export function useAppController() {
   return {
     dashboard,
     launchFlow,
-    settings,
+    savedSetups,
     loading,
     lastRefreshedAt,
     imageLoading: statusLoaders.imageLoading,
     imageStatus: statusLoaders.imageStatus,
     imageError: statusLoaders.imageError,
     // The "Run accepted" alert lives only until the launched run shows up as a
-    // managed session; after that the one-line Home notice is the durable
+    // managed session; after that the one-line launch notice is the durable
     // affordance, so the alert clears instead of persisting forever.
     launchMessage: derived.lastLaunchSessionId ? "" : launchFlow.launchMessage,
     lastLaunch,

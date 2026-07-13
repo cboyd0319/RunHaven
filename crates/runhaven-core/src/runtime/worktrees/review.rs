@@ -80,6 +80,15 @@ pub fn worktree_change_summary(lifecycle: &WorktreeLifecycle) -> Result<Worktree
     })
 }
 
+/// Check whether a protected copy has file changes without hashing file
+/// contents for a review id. Session-list polling needs only this boolean; the
+/// full review command computes the digest immediately before showing actions.
+pub fn worktree_has_changes(lifecycle: &WorktreeLifecycle) -> Result<bool> {
+    validate_base_head(&lifecycle.base_head)?;
+    let (changes, _) = collect_changes(&lifecycle.worktree_root, &lifecycle.base_head)?;
+    Ok(!changes.is_empty())
+}
+
 pub fn source_worktree_change_summary(
     lifecycle: &WorktreeLifecycle,
 ) -> Result<WorktreeFileSummary> {

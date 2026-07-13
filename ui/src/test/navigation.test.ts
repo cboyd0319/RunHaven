@@ -134,21 +134,21 @@ describe("navigationAfterSessionRemoval", () => {
     ).toEqual({ kind: "session", id: "done" })
   })
 
-  it("falls back to Home when no sessions remain", () => {
+  it("falls back to New session when no sessions remain", () => {
     expect(navigationAfterSessionRemoval("top", [active[0]], [])).toEqual({
-      kind: "home",
+      kind: "new-session",
     })
   })
 
-  it("goes Home when the removed row was never in the previous list", () => {
+  it("goes to New session when the removed row was never in the previous list", () => {
     // With no neighbor the user was actually looking at, selecting a remaining
     // session would be the app choosing a destination on its own (invariant
-    // 10). Home is the honest fallback, whether or not sessions remain.
+    // 10). New session is the honest fallback, whether or not sessions remain.
     expect(
       navigationAfterSessionRemoval("ghost", [], [active[1]]),
-    ).toEqual({ kind: "home" })
+    ).toEqual({ kind: "new-session" })
     expect(navigationAfterSessionRemoval("ghost", [], [])).toEqual({
-      kind: "home",
+      kind: "new-session",
     })
   })
 })

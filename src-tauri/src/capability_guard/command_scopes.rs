@@ -6,10 +6,10 @@ use std::fs;
 use std::path::Path;
 
 use super::support::{
-    ATTENTION_BADGE_PERMISSION, MAIN_READ_FORBIDDEN_PERMISSIONS, MENU_STATE_PERMISSION,
-    RUN_CONTROL_PERMISSIONS, assert_generated_permission_allows_only,
-    assert_lacks_forbidden_host_markers, assert_same_permission_set, capability_permissions,
-    capability_windows, manifest_dir, normalize, read_text,
+    MAIN_READ_FORBIDDEN_PERMISSIONS, MENU_STATE_PERMISSION, RUN_CONTROL_PERMISSIONS,
+    assert_generated_permission_allows_only, assert_lacks_forbidden_host_markers,
+    assert_same_permission_set, capability_permissions, capability_windows, manifest_dir,
+    normalize, read_text,
 };
 
 #[test]
@@ -120,41 +120,11 @@ fn window_chrome_capability_stays_drag_only() {
 }
 
 #[test]
-fn attention_badge_capability_stays_narrow() {
-    // The Dock badge command is benign UI state, but it is still a mutation
-    // the WebView can trigger, so it lives in its own one-permission
-    // capability instead of widening main-read (read-only) or run-control
-    // (session-sensitive).
-    let permissions = capability_permissions("attention-badge.json");
-    assert_same_permission_set(
-        "attention-badge",
-        &permissions,
-        &[ATTENTION_BADGE_PERMISSION],
-    );
-    assert_generated_permission_allows_only("set_attention_badge");
-
-    let main_read = capability_permissions("main-read.json");
-    assert!(
-        !main_read
-            .iter()
-            .any(|permission| permission == ATTENTION_BADGE_PERMISSION),
-        "main-read must stay read-only and cannot grant the Dock badge command"
-    );
-    let run_control = capability_permissions("run-control.json");
-    assert!(
-        !run_control
-            .iter()
-            .any(|permission| permission == ATTENTION_BADGE_PERMISSION),
-        "run-control must not own the isolated Dock badge command"
-    );
-}
-
-#[test]
 fn menu_state_capability_stays_narrow() {
     // The menu enable-state sync is benign (booleans and a count in, only menu
     // gray-out out), but it is still a command the WebView can call, so it
     // lives in its own one-permission capability instead of widening main-read
-    // (read-only) or run-control (session-sensitive), mirroring the Dock badge.
+    // (read-only) or run-control (session-sensitive).
     let permissions = capability_permissions("menu-state.json");
     assert_same_permission_set("menu-state", &permissions, &[MENU_STATE_PERMISSION]);
     assert_generated_permission_allows_only("sync_menu_state");

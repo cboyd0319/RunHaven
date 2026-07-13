@@ -51,7 +51,7 @@ function dashboard(patch: Partial<DashboardStatus> = {}): DashboardStatus {
       ],
     },
     agents: [agent()],
-    agentReadiness: [{ name: "codex", category: "signed-in", label: "Signed in" }],
+    agentReadiness: [{ name: "codex", category: "sign-in-saved", label: "Sign-in saved" }],
     activeRuns: [runSummary()],
     recentRuns: [runSummary({ runId: "run-0", status: "finished" })],
     warnings: ["one warning"],

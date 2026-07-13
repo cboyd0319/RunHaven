@@ -363,12 +363,6 @@ export async function getWhyWorkspace(
   );
 }
 
-export async function setAttentionBadge(count: number): Promise<void> {
-  // Dock badge only: the count of sessions needing you. The browser preview
-  // has no Dock, so the fallback is a no-op.
-  return call("set_attention_badge", { request: { count } }, () => undefined);
-}
-
 export async function syncMenuState(state: MenuState): Promise<void> {
   // Menu enable-state only: booleans and one count in, native menu gray-out
   // out. The browser preview has no menu bar, so the fallback is a no-op.

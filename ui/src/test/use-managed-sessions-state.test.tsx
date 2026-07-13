@@ -120,10 +120,10 @@ describe("useManagedSessionsState polling", () => {
     )
 
     await act(async () => {
-      hook.result.current.navigate({ kind: "home" })
+      hook.result.current.navigate({ kind: "new-session" })
       await vi.advanceTimersByTimeAsync(4_000)
     })
-    expect(hook.result.current.navigation).toEqual({ kind: "home" })
+    expect(hook.result.current.navigation).toEqual({ kind: "new-session" })
 
     await act(async () => {
       hook.result.current.navigate({ kind: "runs" })

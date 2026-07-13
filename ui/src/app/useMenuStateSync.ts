@@ -14,13 +14,12 @@ import { sessionAllowsWorktreeReview } from "./worktreeReview"
 // same helpers the session view uses, so the
 // grayed-out menu always matches what the window actually offers:
 // - run control (Stop/Hard Stop/Repair) shares the run-control card's gate
-// - the message composer shows only for a monitor session
+// - the message composer shows only when a monitor session has input attached
 // - clean up mirrors the session view, which hides it while the worktree
 //   review owns removal
 export function computeMenuState(
   sessions: ManagedSessionSummary[],
   navigation: NavDestination,
-  showAttentionBadge = true,
   sidebarOpen = true,
 ): MenuState {
   const selected =
@@ -28,13 +27,14 @@ export function computeMenuState(
       ? (sessions.find((session) => session.id === navigation.id) ?? null)
       : null
   return {
-    showAttentionBadge,
     sidebarOpen,
     selectedSessionCanRunControl: selected
       ? sessionAllowsRunControl(selected)
       : false,
     selectedSessionCanSendInput: selected
-      ? selected.nextAction.kind === "monitor"
+      ? sessionAllowsRunControl(selected) &&
+        selected.nextAction.kind === "monitor" &&
+        selected.input.attached
       : false,
     selectedSessionHasCleanup: selected
       ? sessionAllowsCleanup(selected) && !sessionAllowsWorktreeReview(selected)
@@ -46,7 +46,6 @@ export function computeMenuState(
 // join is enough and never re-invokes on an unchanged state.
 function menuStateKey(state: MenuState): string {
   return [
-    state.showAttentionBadge,
     state.sidebarOpen,
     state.selectedSessionCanRunControl,
     state.selectedSessionCanSendInput,
@@ -61,12 +60,11 @@ function menuStateKey(state: MenuState): string {
 export function useMenuStateSync(
   sessions: ManagedSessionSummary[],
   navigation: NavDestination,
-  showAttentionBadge: boolean,
   sidebarOpen = true,
 ) {
   const state = useMemo(
-    () => computeMenuState(sessions, navigation, showAttentionBadge, sidebarOpen),
-    [sessions, navigation, showAttentionBadge, sidebarOpen],
+    () => computeMenuState(sessions, navigation, sidebarOpen),
+    [sessions, navigation, sidebarOpen],
   )
   const lastSent = useRef<string | null>(null)
   useEffect(() => {

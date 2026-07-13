@@ -8,6 +8,7 @@ import {
 } from "@/commands/runhaven"
 import { CircleAlert, CheckCircle2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ActivityIndicator } from "@/components/ui/activity-indicator"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -61,6 +62,7 @@ export function DiagnosticsView({
             }
           }}
         >
+          {busy ? <ActivityIndicator /> : null}
           {busy ? "Checking…" : "Check again"}
         </Button>
       </div>
@@ -130,7 +132,7 @@ function ContainerServiceCard({
   }
 
   return (
-    <Card aria-live="polite">
+    <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>Fix session internet</CardTitle>
         <CardDescription>
@@ -145,7 +147,8 @@ function ContainerServiceCard({
           disabled={!setupReady || busy}
           onClick={() => void restart()}
         >
-          {busy ? "Restarting…" : "Restart container service"}
+          {busy ? <ActivityIndicator /> : null}
+          {busy ? "Restarting…" : "Restart container service…"}
         </Button>
         {result ? (
           <Alert role="status">
@@ -210,7 +213,7 @@ function SetupChecksCard({
   }
 
   return (
-    <Card aria-live="polite">
+    <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
           {dashboard ? "Setup problems" : "Setup status unavailable"}
@@ -223,7 +226,11 @@ function SetupChecksCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {!dashboard ? (
-          <p className="text-sm text-muted-foreground">
+          <p
+            role={refreshing ? "status" : undefined}
+            className="flex items-center gap-2 text-sm text-muted-foreground"
+          >
+            {refreshing ? <ActivityIndicator /> : null}
             {refreshing
               ? "Checking your Mac's setup…"
               : "RunHaven could not load setup status."}
@@ -246,9 +253,10 @@ function SetupChecksCard({
                       disabled={busyAction !== null}
                       onClick={() => void recover(check.action!.id)}
                     >
+                      {busyAction === check.action.id ? <ActivityIndicator /> : null}
                       {busyAction === check.action.id
                         ? "Working…"
-                        : check.action.label}
+                        : `${check.action.label}…`}
                     </Button>
                   ) : null}
                 </div>
@@ -281,7 +289,7 @@ function SystemHealth({ dashboard }: { dashboard: DashboardStatus | null }) {
   }
   const blockers = dashboard.setup.blockerCount
   return (
-    <Card aria-live="polite">
+    <Card>
       <CardContent>
         <p className="text-sm">
           {dashboard.setup.ok
@@ -304,7 +312,7 @@ function NetworkCleanupCard({
 }) {
   const count = cleanup.count
   return (
-    <Card aria-live="polite">
+    <Card>
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>Old session networks</CardTitle>
         <CardDescription>
@@ -312,7 +320,11 @@ function NetworkCleanupCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-start gap-3">
-        <p className="text-sm text-muted-foreground">
+        <p
+          role={cleanup.loading ? "status" : undefined}
+          className="flex items-center gap-2 text-sm text-muted-foreground"
+        >
+          {cleanup.loading ? <ActivityIndicator /> : null}
           {!setupReady
             ? "Finish setup before checking networks."
             : cleanup.loading
@@ -330,7 +342,8 @@ function NetworkCleanupCard({
           disabled={!setupReady || count === null || count === 0 || cleanup.busy}
           onClick={() => void cleanup.prune()}
         >
-          {cleanup.busy ? "Removing old networks…" : "Remove old networks"}
+          {cleanup.busy ? <ActivityIndicator /> : null}
+          {cleanup.busy ? "Removing old networks…" : "Remove old networks…"}
         </Button>
         {cleanup.result && cleanup.result.failed > 0 ? (
           <Alert variant="destructive" role="alert">

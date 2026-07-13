@@ -17,6 +17,7 @@ export type WorktreeReviewCardProps = {
   message: string
   nextSteps: string[]
   actionError: string
+  onRetry: () => void
   onAction: (action: WorktreeAction) => void
 }
 
@@ -28,6 +29,7 @@ export function WorktreeReviewCard({
   message,
   nextSteps,
   actionError,
+  onRetry,
   onAction,
 }: WorktreeReviewCardProps) {
   return (
@@ -46,10 +48,15 @@ export function WorktreeReviewCard({
         </p>
       ) : null}
       {loadError ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" role="alert">
           <CircleAlert />
           <AlertTitle>Changes unavailable</AlertTitle>
-          <AlertDescription>{loadError}</AlertDescription>
+          <AlertDescription className="flex flex-col items-start gap-2">
+            <span>{loadError}</span>
+            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+              Check again
+            </Button>
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -67,7 +74,7 @@ export function WorktreeReviewCard({
 
             {review.sourceChanges > 0 ? (
               <>
-                <Alert variant="destructive">
+                <Alert variant="destructive" role="alert">
                   <CircleAlert />
                   <AlertTitle>Your project also changed</AlertTitle>
                   <AlertDescription>
@@ -125,7 +132,7 @@ export function WorktreeReviewCard({
       ) : null}
 
       {actionError ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" role="alert">
           <CircleAlert />
           <AlertTitle>Couldn’t update these changes</AlertTitle>
           <AlertDescription className="flex flex-col items-start gap-2">
@@ -138,7 +145,7 @@ export function WorktreeReviewCard({
                 disabled={busy}
                 onClick={() => onAction("recover")}
               >
-                Show recovery steps
+                Show recovery steps…
               </Button>
             ) : null}
           </AlertDescription>

@@ -8,10 +8,10 @@
         "setup-recovery",
         "folder-pick",
         "launch-run",
+        "saved-setups",
         "run-control",
         "menu-events",
         "menu-state",
-        "attention-badge",
         "terminal",
         "window-chrome",
         "logging"

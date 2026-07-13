@@ -18,9 +18,7 @@ import {
 } from "@/commands/runhaven"
 
 import {
-  HOME_NAV,
   NEW_SESSION_NAV,
-  RUN_TERMINAL_NAV,
   type NavDestination,
 } from "./navigation"
 import { agentLabel } from "./sessionIdentity"
@@ -31,6 +29,9 @@ import { errorMessage, type LaunchStep } from "./types"
 export type RunTerminalLaunch = {
   sessionId: string
   request: LaunchRunRequest
+  runId?: string
+  label?: string
+  startedAt: string
 }
 
 // Each bundled coding agent starts an interactive terminal UI when invoked with
@@ -70,7 +71,7 @@ export type LaunchFlowDeps = {
   loadManagedSessions: () => Promise<ManagedSessionList>
   selectSession: (sessionId: string) => void
   // Move the main window to a destination. Used to open the interactive run
-  // terminal as a main-content view and to return Home when it closes.
+  // terminal as a main-content view and to return to History when it closes.
   navigate: (destination: NavDestination) => void
   onLaunched: (launch: LaunchRunResponse) => void
   onError: (message: string) => void
@@ -100,9 +101,10 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
   // The active interactive run terminal, set when launch routes an interactive
   // assistant to the run-terminal main-content destination
   // instead of a background run. It is independent of the New Session page;
-  // closeRunTerminal clears it and navigates Home, which
+  // closeRunTerminal clears it and navigates to its History record, which
   // unmounts the panel and tears down the backend child.
-  const [runTerminal, setRunTerminal] = useState<RunTerminalLaunch | null>(null)
+  const [runTerminals, setRunTerminals] = useState<RunTerminalLaunch[]>([])
+  const runTerminal = runTerminals.at(-1) ?? null
   // Errors from planning or launching render inside the flow so they stay next
   // to the action that failed.
   const [error, setError] = useState("")
@@ -122,7 +124,7 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     setError("")
     // The run terminal is a main-content destination, so leaving New Session
     // must not tear it down. It is cleared only by
-    // closeRunTerminal (navigating Home unmounts the panel and kills the child).
+    // closeRunTerminal (removing the terminal unmounts the panel and kills the child).
   }
 
   // Reconcile the request draft with a fresh dashboard: make the built-in pick
@@ -197,6 +199,17 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     invalidatePlan()
   }
 
+  function applySavedSetup(next: RunPlanRequest) {
+    agentNameRef.current = next.agent
+    setRequest(next)
+    setLaunchStep("project")
+    setError("")
+    setLaunchMessage("")
+    if (deps.dashboard?.setup.ok) {
+      void deps.loadImageStatus(next.agent)
+    }
+  }
+
   function invalidatePlan() {
     setLaunchMessage("")
   }
@@ -251,23 +264,76 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     }
   }
 
-  // Leave the interactive run terminal: clearing state and navigating Home
+  // Leave the interactive run terminal: clear its state and open its History
   // unmounts the panel, whose close-on-unmount tears down the backend child.
-  // Home (or the sessions list) is where the user lands, never stranded.
-  function closeRunTerminal() {
-    setRunTerminal(null)
-    deps.navigate(HOME_NAV)
+  // record when available, so the user is never stranded.
+  async function closeRunTerminal(
+    sessionId?: string,
+    openHistory = true,
+  ) {
+    const target = sessionId
+      ? runTerminals.find(
+          (terminal) =>
+            terminal.sessionId === sessionId || terminal.runId === sessionId,
+        )
+      : runTerminal
+    if (!target) {
+      return
+    }
+    setRunTerminals((current) =>
+      current.filter((terminal) => terminal.sessionId !== target.sessionId),
+    )
+    if (!openHistory) {
+      return
+    }
+    if (!target.runId) {
+      deps.navigate(NEW_SESSION_NAV)
+      return
+    }
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      try {
+        const sessions = await deps.loadManagedSessions()
+        const session = sessions.sessions.find(
+          (candidate) => candidate.runId === target.runId,
+        )
+        if (session) {
+          deps.selectSession(session.id)
+          return
+        }
+      } catch {
+        break
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 100))
+    }
+    deps.navigate({ kind: "runs" })
   }
 
   // The trusted native sheet appears after the terminal host is mounted so its
   // output channel is ready before a child can write. If the user cancels that
   // sheet, remove the temporary terminal destination and return to the retained
   // project choices. A canceled launch must never look like an empty session.
-  function cancelRunTerminal() {
-    setRunTerminal(null)
+  function cancelRunTerminal(sessionId?: string) {
+    setRunTerminals((current) =>
+      sessionId
+        ? current.filter((terminal) => terminal.sessionId !== sessionId)
+        : current.slice(0, -1),
+    )
     setLaunchStep("project")
     setError("")
     deps.navigate(NEW_SESSION_NAV)
+  }
+
+  function markRunTerminalOpened(
+    sessionId: string,
+    opened: { runId: string; label: string },
+  ) {
+    setRunTerminals((current) =>
+      current.map((terminal) =>
+        terminal.sessionId === sessionId
+          ? { ...terminal, runId: opened.runId, label: opened.label }
+          : terminal,
+      ),
+    )
   }
 
   async function startPlannedRun(requestDraft: RunPlanRequest) {
@@ -286,12 +352,20 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     ) {
       setError("")
       setLaunchMessage("")
-      setRunTerminal({ sessionId: newTerminalSessionId(), request: fullRequest })
+      const sessionId = newTerminalSessionId()
+      setRunTerminals((current) => [
+        ...current,
+        { sessionId, request: fullRequest, startedAt: new Date().toISOString() },
+      ])
       // A live interactive session fills the bounded main content area. Reset
       // the launch flow and open the run-terminal destination; setOpen(false)
       // leaves runTerminal intact.
       setOpen(false)
-      deps.navigate(RUN_TERMINAL_NAV)
+      deps.navigate({ kind: "run-terminal", id: sessionId })
+      setRequest((current) => ({
+        ...current,
+        sessionName: nextLaunchSessionName(),
+      }))
       return
     }
     setError("")
@@ -336,16 +410,19 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     launchMessage,
     error,
     runTerminal,
+    runTerminals,
     setOpen,
     applyDashboard,
     changeAgent,
     updateNetworkMode,
     updateRequest,
+    applySavedSetup,
     pickFolder,
     startSession,
     retryWithoutProtectedCopy,
     closeRunTerminal,
     cancelRunTerminal,
+    markRunTerminalOpened,
     setLaunchStep,
   }
 }

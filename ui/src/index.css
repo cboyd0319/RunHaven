@@ -9,14 +9,14 @@
     --font-sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
     --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
     /* macOS type scale: 11 Subheadline, 13 Body, 15 Title 3, 17 Title 2. */
-    --text-xs: 11px;
-    --text-xs--line-height: 14px;
-    --text-sm: 13px;
-    --text-sm--line-height: 16px;
-    --text-base: 15px;
-    --text-base--line-height: 20px;
-    --text-lg: 17px;
-    --text-lg--line-height: 22px;
+    --text-xs: 0.6875rem;
+    --text-xs--line-height: 0.875rem;
+    --text-sm: 0.8125rem;
+    --text-sm--line-height: 1rem;
+    --text-base: 0.9375rem;
+    --text-base--line-height: 1.25rem;
+    --text-lg: 1.0625rem;
+    --text-lg--line-height: 1.375rem;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -186,6 +186,9 @@
   ::before,
   ::after {
     transition-duration: 1ms !important;
+  }
+  .animate-spin {
+    animation: none !important;
   }
 }
 

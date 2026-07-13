@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 
 import type { ManagedSessionDiagnosticsResponse } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ActivityIndicator } from "@/components/ui/activity-indicator"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -45,8 +46,13 @@ export function ManagedSessionDiagnosticsCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <Button type="button" variant="outline" onClick={() => void onLoad()}>
-          <ShieldCheck className="size-4" />
+        <Button
+          type="button"
+          variant="outline"
+          disabled={loading}
+          onClick={() => void onLoad()}
+        >
+          {loading ? <ActivityIndicator /> : <ShieldCheck className="size-4" />}
           {loading
             ? "Loading diagnostics…"
             : diagnostics
@@ -54,7 +60,7 @@ export function ManagedSessionDiagnosticsCard({
               : "Load session diagnostics"}
         </Button>
         {error ? (
-          <Alert variant="destructive">
+          <Alert variant="destructive" role="alert">
             <CircleAlert />
             <AlertTitle>Diagnostics unavailable</AlertTitle>
             <AlertDescription>{error}</AlertDescription>

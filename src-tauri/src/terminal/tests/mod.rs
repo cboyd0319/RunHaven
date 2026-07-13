@@ -20,6 +20,7 @@ use super::*;
 // stays under its size ceiling; they reuse the fakes here.
 mod login;
 mod run;
+mod user_end;
 
 #[derive(Default)]
 struct FakeCalls {

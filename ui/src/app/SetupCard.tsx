@@ -6,6 +6,7 @@ import {
 } from "@/commands/runhaven"
 import { ArrowUpRight, CheckCircle2, CircleAlert } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ActivityIndicator } from "@/components/ui/activity-indicator"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -80,7 +81,10 @@ export function SetupCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading setup…</p>
+          <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+            <ActivityIndicator />
+            Loading setup…
+          </p>
         ) : null}
         {!loading && !setupKnown ? (
           <p className="text-sm text-muted-foreground">
@@ -136,7 +140,8 @@ export function SetupCard({
                 disabled={loading || recoveryBusy}
                 onClick={() => void recover(firstFailedCheck.action!.id)}
               >
-                {recoveryBusy ? "Starting…" : firstFailedCheck.action.label}
+                {recoveryBusy ? <ActivityIndicator /> : null}
+                {recoveryBusy ? "Starting…" : `${firstFailedCheck.action.label}…`}
               </Button>
             ) : null}
             {onOpenDiagnostics ? (
@@ -156,6 +161,7 @@ export function SetupCard({
                 disabled={loading || recoveryBusy}
                 onClick={onCheckAgain}
               >
+                {loading ? <ActivityIndicator /> : null}
                 {loading ? "Checking…" : "Check again"}
               </Button>
             ) : null}

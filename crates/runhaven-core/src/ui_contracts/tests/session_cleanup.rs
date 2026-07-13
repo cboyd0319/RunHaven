@@ -78,6 +78,24 @@ fn managed_session_cleanup_fails_closed_after_recorded_worktree_is_discarded() {
     assert_eq!(session.lifecycle, "finished");
     assert!(session.cleanup.available);
     assert_eq!(session.cleanup.target, "worktree");
+    assert_eq!(session.cleanup.review_state, "clean");
+
+    std::fs::write(worktree_root.join("assistant-change.txt"), "changed")
+        .expect("write assistant change");
+    let changed = ManagedSessionListData::from_active_and_recent_runs(
+        [],
+        [record.clone()],
+        serde_json::json!({"profiles": [{"name": "codex", "status": "api-key-broker"}]}),
+    );
+    assert_eq!(
+        changed
+            .sessions
+            .first()
+            .expect("managed session with changes")
+            .cleanup
+            .review_state,
+        "changes"
+    );
 
     let active_stopped = ManagedSessionListData::from_active_and_recent_runs(
         [record.clone()],
@@ -122,4 +140,17 @@ fn managed_session_cleanup_fails_closed_after_recorded_worktree_is_discarded() {
             "managed session cleanup contract leaked forbidden value {forbidden:?}"
         );
     }
+}
+
+#[test]
+fn managed_session_cleanup_missing_review_state_is_neutral() {
+    let cleanup: ManagedSessionCleanupData = serde_json::from_value(serde_json::json!({
+        "available": true,
+        "target": "worktree",
+        "label": "Delete protected copy",
+        "detail": "A protected copy exists."
+    }))
+    .expect("decode older cleanup payload");
+
+    assert_eq!(cleanup.review_state, "none");
 }

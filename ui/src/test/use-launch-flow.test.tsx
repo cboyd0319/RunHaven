@@ -229,10 +229,51 @@ describe("useLaunchFlow", () => {
         plan: expect.objectContaining({ agent }),
       })
       expect(result.current.runTerminal?.sessionId).not.toContain("-")
-      expect(flowDeps.navigated).toEqual([{ kind: "run-terminal" }])
+      expect(flowDeps.navigated).toEqual([
+        expect.objectContaining({ kind: "run-terminal" }),
+      ])
       expect(flowDeps.launched).toEqual([])
       await unmount()
     }
+  })
+
+  it("keeps two interactive sessions instead of replacing the first", async () => {
+    const flowDeps = deps()
+    const { result } = await renderFlow(flowDeps)
+
+    for (const agent of ["copilot", "antigravity"] as const) {
+      await act(async () => {
+        result.current.updateRequest({
+          agent,
+          workspacePath: `/tmp/${agent}-concurrent`,
+        })
+      })
+      await act(async () => {
+        await result.current.startSession()
+      })
+    }
+
+    const terminals = (
+      result.current as typeof result.current & {
+        runTerminals: Array<{
+          sessionId: string
+          request: { plan: { agent: string; sessionName: string | null } }
+        }>
+      }
+    ).runTerminals
+    expect(terminals).toHaveLength(2)
+    expect(terminals.map((terminal) => terminal.request.plan.agent)).toEqual([
+      "copilot",
+      "antigravity",
+    ])
+    expect(new Set(terminals.map((terminal) => terminal.sessionId)).size).toBe(2)
+    expect(
+      new Set(terminals.map((terminal) => terminal.request.plan.sessionName)).size,
+    ).toBe(2)
+    expect(flowDeps.navigated).toEqual([
+      expect.objectContaining({ kind: "run-terminal" }),
+      expect.objectContaining({ kind: "run-terminal" }),
+    ])
   })
 
   it("uses managed preview sessions instead of a terminal in the browser", async () => {
@@ -286,6 +327,27 @@ describe("useLaunchFlow", () => {
 
     expect(result.current.request.agent).toBe("codex")
     expect(imageChecks).toBe(0)
+  })
+
+  it("checks the selected assistant after applying a saved setup", async () => {
+    const checked: string[] = []
+    const { result } = await renderFlow(
+      deps({
+        dashboard: dashboard(true),
+        loadImageStatus: async (agentName) => void checked.push(agentName),
+      }),
+    )
+
+    await act(async () => {
+      result.current.applySavedSetup({
+        ...result.current.request,
+        agent: "claude",
+        workspacePath: "/tmp/saved-project",
+      })
+    })
+
+    expect(checked).toEqual(["claude"])
+    expect(result.current.launchStep).toBe("project")
   })
 
   it("turns off the host API key broker for alternate network modes", async () => {

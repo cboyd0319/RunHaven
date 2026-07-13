@@ -35,8 +35,11 @@ vi.mock("@xterm/addon-fit", () => ({
 vi.mock("@/commands/runhaven", async (importActual) => ({
   ...(await importActual<typeof import("../commands/runhaven")>()),
   hasTauriRuntime: vi.fn(() => true),
-  openAgentRunTerminal: vi.fn(() => Promise.resolve(true)),
+  openAgentRunTerminal: vi.fn(() =>
+    Promise.resolve({ runId: "run-live", label: "Claude · project" }),
+  ),
   resizeTerminal: vi.fn(() => Promise.resolve()),
+  endTerminalSession: vi.fn(() => Promise.resolve(true)),
   closeTerminalSession: vi.fn(() => Promise.resolve()),
 }))
 
@@ -45,7 +48,10 @@ const closeTerminalSession = vi.mocked(runhaven.closeTerminalSession)
 
 beforeEach(() => {
   vi.clearAllMocks()
-  openAgentRunTerminal.mockResolvedValue(true)
+  openAgentRunTerminal.mockResolvedValue({
+    runId: "run-live",
+    label: "Claude · project",
+  })
   closeTerminalSession.mockResolvedValue(undefined)
 })
 
@@ -55,12 +61,16 @@ it("keeps a live run mounted across navigation and ends it only on unmount", asy
   document.body.appendChild(container)
   const root = createRoot(container)
 
-  async function show(kind: "run-terminal" | "home") {
+  async function show(kind: "run-terminal" | "new-session") {
     await act(async () => {
       root.render(
         createElement(AppMainContent, {
           ...mainViewProps({
-            launchFlow: { ...launchFlow(), runTerminal: launch },
+            launchFlow: {
+              ...launchFlow(),
+              runTerminal: launch,
+              runTerminals: [launch],
+            },
           }),
           navigation: { kind },
         }),
@@ -75,7 +85,7 @@ it("keeps a live run mounted across navigation and ends it only on unmount", asy
   expect(node).not.toBeNull()
 
   closeTerminalSession.mockClear()
-  await show("home")
+  await show("new-session")
   expect(closeTerminalSession).not.toHaveBeenCalled()
   expect(container.querySelector('[aria-label="Session terminal"]')).toBe(node)
 

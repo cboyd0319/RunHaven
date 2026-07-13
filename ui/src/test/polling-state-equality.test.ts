@@ -139,6 +139,26 @@ describe("polling state equality", () => {
     ).toBe(false)
   })
 
+  it("detects when a protected copy gains changes", () => {
+    const cleanup = {
+      available: true,
+      target: "worktree",
+      label: "Delete protected copy",
+      detail: "A protected copy exists.",
+    }
+    const current = {
+      sessions: [session({ cleanup: { ...cleanup, reviewState: "clean" } })],
+    }
+
+    expect(
+      sameManagedSessionList(current, {
+        sessions: [
+          session({ cleanup: { ...cleanup, reviewState: "changes" } }),
+        ],
+      }),
+    ).toBe(false)
+  })
+
   it("suppresses no-op launch status updates", () => {
     const current: LaunchStatusResponse = {
       runId: "launch-card-run",

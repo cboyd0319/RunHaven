@@ -40,7 +40,7 @@ describe("DiagnosticsView container-service recovery", () => {
       )
     })
     const restart = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Restart container service",
+      (button) => button.textContent === "Restart container service…",
     )
     await act(async () => {
       restart?.click()
@@ -77,7 +77,7 @@ describe("DiagnosticsView container-service recovery", () => {
     })
 
     const restart = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Restart container service",
+      (button) => button.textContent === "Restart container service…",
     )
     expect(restart).toBeDefined()
     await act(async () => {

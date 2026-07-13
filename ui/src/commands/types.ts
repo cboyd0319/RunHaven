@@ -184,6 +184,9 @@ export type ManagedSessionSummary = {
   containerName: string;
   detailCommand: string;
   lifecycle: string;
+  // Raw terminal output is process-memory only. Rust owns this truth so
+  // History never offers an action that cannot succeed after relaunch.
+  outputAvailable?: boolean;
   input: ManagedSessionInput;
   cleanup?: ManagedSessionCleanup;
   nextAction: ManagedSessionNextAction;
@@ -198,6 +201,7 @@ export type ManagedSessionInput = {
 
 export type ManagedSessionCleanup = {
   available: boolean;
+  reviewState: "none" | "changes" | "clean" | "unknown";
   target: string;
   label: string;
   detail: string;
@@ -220,6 +224,15 @@ export type ManagedSessionList = {
   sessions: ManagedSessionSummary[];
 };
 
+export type SavedSetupSummary = {
+  id: string;
+  assistant: string;
+  project: string;
+  name: string;
+  available: boolean;
+  pinned: boolean;
+};
+
 // Messages streamed from the host over the terminal Channel. Mirrors the Rust
 // TerminalMessage enum (serde tag "event", snake_case): raw PTY bytes as a
 // number array, or a final exit code. This is the only terminal payload the
@@ -234,7 +247,6 @@ export type TerminalMessage =
 // Booleans only: no session ids, paths, counts, or secrets cross this boundary.
 // Mirrors MenuState in src-tauri/src/menu/state.rs.
 export type MenuState = {
-  showAttentionBadge: boolean;
   sidebarOpen: boolean;
   selectedSessionCanRunControl: boolean;
   selectedSessionCanSendInput: boolean;

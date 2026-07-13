@@ -1,4 +1,4 @@
-// Freshness label for the Home readiness line ("Last check 12s ago"). Uses
+// Freshness label for the setup readiness line ("Last check 12s ago"). Uses
 // second granularity while recent so it visibly counts up and surfaces a stalled
 // poll, then falls back to minutes/hours. Empty string for a bad/missing value.
 export function lastCheckLabel(iso: string, now: number = Date.now()): string {

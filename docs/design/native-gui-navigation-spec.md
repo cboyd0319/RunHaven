@@ -2,11 +2,10 @@
 
 Last updated: 2026-07-01 UTC
 
-> Historical design record, superseded 2026-07-13. The current product uses a
-> smaller information architecture: Home, History, System, a contextual Session
-> terminal, and first-class New Session.
-> Home is a four-agent launchpad only; operational status and run history live
-> one level deeper, and every app launch returns to Home.
+> Historical design record, superseded 2026-07-13 and updated again on
+> 2026-07-13 after live multi-session testing. The current product uses a
+> smaller information architecture: New session, History, System, a dynamic
+> Running group, and Saved setups. Every app launch opens New session.
 > Agents, Diagnostics, Maintenance, duplicate run filters, launch/settings
 > modals, and placeholder menu commands did not earn permanent surfaces. See
 > `docs/DESKTOP_APP.md` and `current-state.md` for the current contract.

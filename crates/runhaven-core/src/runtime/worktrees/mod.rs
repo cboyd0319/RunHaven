@@ -18,7 +18,7 @@ pub use lifecycle::{WorktreeLifecycle, load_worktree_lifecycle, verify_lifecycle
 pub use merge::ensure_source_ready_for_merge;
 pub use review::{
     WorktreeChangeKind, WorktreeChangeSummary, WorktreeFileChange, WorktreeFileSummary,
-    source_worktree_change_summary, worktree_change_summary,
+    source_worktree_change_summary, worktree_change_summary, worktree_has_changes,
 };
 
 use lifecycle::{git_bytes, git_checked, git_status_lines, git_stdout};

@@ -9,7 +9,6 @@ import { RunHavenSidebar } from "./RunHavenSidebar"
 import { userSessions } from "./sessionList"
 import { sidebarDefaultOpen } from "./uiStatePersistence"
 import { useAppController } from "./useAppController"
-import { useAttentionBadge } from "./useAttentionBadge"
 import { useMenuEvents } from "./useMenuEvents"
 import { useMenuStateSync } from "./useMenuStateSync"
 
@@ -29,11 +28,8 @@ export default function App() {
   useMenuStateSync(
     sessions,
     app.navigation,
-    app.settings.dockBadge,
     sidebarOpen,
   )
-  useAttentionBadge(sessions, app.settings.dockBadge)
-
   return (
     <TooltipProvider>
       <SidebarProvider
@@ -51,15 +47,17 @@ export default function App() {
         <RunHavenSidebar
           navigation={app.navigation}
           onNavigate={app.navigate}
-          runTerminalActive={app.launchFlow.runTerminal !== null}
+          runTerminals={app.launchFlow.runTerminals}
+          savedSetups={app.savedSetups.pinnedSetups}
+          savedSetupsError={app.savedSetups.error}
+          onSelectSavedSetup={(id) => void app.savedSetups.selectSetup(id)}
+          onUnpinSavedSetup={(id) => void app.savedSetups.unpin(id)}
           appVersion={app.dashboard?.appVersion ?? ""}
         />
         <SidebarInset className="h-screen overflow-hidden">
           <AppHeader
             title={
-              app.navigation.kind === "home"
-                ? undefined
-                : app.navigation.kind === "session"
+              app.navigation.kind === "session"
                   ? (app.selectedSession?.title ?? app.pageTitle)
                   : app.pageTitle
             }
@@ -101,6 +99,7 @@ export default function App() {
               onControl={app.runControl}
               onWorktreeResolved={app.refreshAfterWorktree}
               launchFlow={app.launchFlow}
+              savedSetups={app.savedSetups}
               selectedAgent={app.selectedAgent}
               imageLoading={app.imageLoading}
               imageStatus={app.imageStatus}

@@ -16,14 +16,14 @@ fn is_valid_key_token(token: &str) -> bool {
     let (Some(first), None) = (chars.next(), chars.next()) else {
         return false;
     };
-    first.is_ascii_alphanumeric() || matches!(first, '.' | '[' | ']' | ',')
+    first.is_ascii_alphanumeric() || matches!(first, '.' | '[' | ']' | ',' | '-')
 }
 
 fn all_specs() -> Vec<&'static CommandSpec> {
     fn walk(entries: &'static [Entry], specs: &mut Vec<&'static CommandSpec>) {
         for entry in entries {
             match entry {
-                Entry::Command(spec) | Entry::Check(spec, _) => specs.push(spec),
+                Entry::Command(spec) => specs.push(spec),
                 Entry::Separator | Entry::Predefined(_) => {}
             }
         }
@@ -33,18 +33,6 @@ fn all_specs() -> Vec<&'static CommandSpec> {
         walk(entries, &mut specs);
     }
     specs
-}
-
-fn check_specs() -> Vec<(&'static CommandSpec, bool)> {
-    let mut checks = Vec::new();
-    for (_, entries) in MENU_BAR {
-        for entry in *entries {
-            if let Entry::Check(spec, checked) = entry {
-                checks.push((spec, *checked));
-            }
-        }
-    }
-    checks
 }
 
 #[test]
@@ -96,7 +84,9 @@ fn command_ids_are_stable_unique_and_kebab_case() {
         [
             "new-run",
             "toggle-sidebar",
-            "show-attention-badge",
+            "increase-text-size",
+            "decrease-text-size",
+            "actual-text-size",
             "send-message",
             "stop-session",
             "hard-stop-session",
@@ -107,23 +97,16 @@ fn command_ids_are_stable_unique_and_kebab_case() {
 }
 
 #[test]
-fn attention_badge_is_one_standard_checked_view_command() {
-    let checks = check_specs();
-    assert_eq!(checks.len(), 1);
-    let (spec, checked) = checks[0];
-    assert_eq!(spec.id, "show-attention-badge");
-    assert_eq!(spec.label, "Show Count on App Icon");
-    assert!(spec.enabled);
-    assert!(checked, "the default persisted preference is on");
-    assert!(!command_ids().contains(&"settings"));
-    let view_entries = MENU_BAR
+fn app_menu_omits_settings_when_the_app_has_no_preferences() {
+    let app_entries = MENU_BAR
         .iter()
-        .find_map(|(label, entries)| (*label == "View").then_some(*entries))
-        .expect("View menu");
+        .find_map(|(label, entries)| (*label == "RunHaven").then_some(*entries))
+        .expect("RunHaven menu");
     assert!(
-        view_entries.iter().any(
-            |entry| matches!(entry, Entry::Check(item, _) if item.id == "show-attention-badge")
-        )
+        !app_entries
+            .iter()
+            .any(|entry| matches!(entry, Entry::Command(item) if item.id == "settings")),
+        "an empty Settings window must not remain as menu chrome"
     );
 }
 
@@ -159,7 +142,8 @@ fn accelerators_use_only_verified_muda_tokens() {
         let Some(accelerator) = spec.accelerator else {
             continue;
         };
-        let tokens: Vec<&str> = accelerator.split('+').collect();
+        let normalized = accelerator.replace("++", "+PLUS");
+        let tokens: Vec<&str> = normalized.split('+').collect();
         assert!(
             tokens.len() >= 2,
             "accelerator `{accelerator}` on `{}` needs at least one modifier",
@@ -174,7 +158,7 @@ fn accelerators_use_only_verified_muda_tokens() {
             );
         }
         assert!(
-            is_valid_key_token(key),
+            *key == "PLUS" || is_valid_key_token(key),
             "accelerator `{accelerator}` on `{}` uses unverified key token `{key}`",
             spec.id
         );

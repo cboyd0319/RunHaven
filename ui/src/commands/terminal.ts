@@ -3,6 +3,8 @@ import { Channel } from "@tauri-apps/api/core";
 import { call, hasTauriRuntime } from "./client";
 import type { LaunchRunRequest, TerminalMessage } from "./types";
 
+export type RunTerminalOpenResponse = { runId: string; label: string };
+
 // The WebView terminal command surface. These wrappers route through the shared
 // `call` helper in client.ts, so `invoke` stays centralized and the browser
 // preview no-ops. The raw PTY stream they carry is rendered in xterm's in-memory
@@ -61,15 +63,15 @@ export async function openAgentRunTerminal(
   sessionId: string,
   request: LaunchRunRequest,
   onMessage: (message: TerminalMessage) => void
-): Promise<boolean> {
+): Promise<RunTerminalOpenResponse | null> {
   if (!hasTauriRuntime()) {
-    return false;
+    return null;
   }
   const onEvent = new Channel<TerminalMessage>(onMessage);
   return call(
     "open_agent_run_terminal",
     { onEvent, sessionId, request },
-    () => false
+    () => null
   );
 }
 
@@ -86,6 +88,13 @@ export async function resizeTerminal(
   rows: number
 ): Promise<void> {
   return call("resize_terminal", { sessionId, cols, rows }, () => undefined);
+}
+
+// Explicit user intent to end a live run terminal. Rust revalidates the exact
+// terminal generation around its native confirmation; false means the user
+// canceled and the terminal remains live.
+export async function endTerminalSession(sessionId: string): Promise<boolean> {
+  return call("end_terminal_session", { sessionId }, () => false);
 }
 
 // Tear down the host PTY and container child for this terminal. Called on view

@@ -2,6 +2,7 @@ import { CircleAlert } from "lucide-react"
 
 import type { LogSnapshotResponse } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ActivityIndicator } from "@/components/ui/activity-indicator"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -36,7 +37,7 @@ export function RunOutputCard({
           Latest output
         </CardTitle>
         <CardDescription>
-          View the latest saved text from this session.
+          View the latest filtered session output kept in memory.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -45,18 +46,21 @@ export function RunOutputCard({
             type="button"
             variant="outline"
             disabled={logLoading}
-            aria-label={logLoading ? "Loading latest output" : "Show latest output"}
             onClick={() => void onLoad()}
           >
+            {logLoading ? <ActivityIndicator /> : null}
             {logLoading
               ? "Loading…"
               : logSnapshot
                 ? "Refresh output"
-                : "Show output"}
+                : "Show output…"}
           </Button>
         ) : null}
         {logError ? (
-          <Alert variant={outputUnavailable ? "default" : "destructive"}>
+          <Alert
+            role={outputUnavailable ? "status" : "alert"}
+            variant={outputUnavailable ? "default" : "destructive"}
+          >
             <CircleAlert />
             <AlertTitle>Output unavailable</AlertTitle>
             <AlertDescription>{logError}</AlertDescription>

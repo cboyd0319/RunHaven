@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::provider::auth_profiles::agent_sign_in_mode;
-use crate::runtime::worktrees::{load_worktree_lifecycle, verify_lifecycle};
+use crate::runtime::worktrees::{load_worktree_lifecycle, verify_lifecycle, worktree_has_changes};
 
 use super::helpers::{display_agent_name, i32_field, string_field, u64_pointer_field};
 use super::sessions::{
@@ -70,11 +70,12 @@ fn managed_session_failure_reason(record: &serde_json::Value) -> String {
     if u64_pointer_field(record, "/provider_policy/denied") > 0 {
         return "A network request was blocked. Review this session's Network details, then try again.".to_string();
     }
-    if i32_field(record, "return_code").is_some_and(|code| code != 0) {
-        return "The assistant stopped before it finished. Open System to check setup, then try again."
-            .to_string();
+    if let Some(code) = i32_field(record, "return_code").filter(|code| *code != 0) {
+        return format!(
+            "The assistant exited with code {code} before it finished. Review this session's details below, then start a new session."
+        );
     }
-    "RunHaven couldn’t determine why this session ended. Open System to check setup, then try again."
+    "RunHaven couldn’t determine why this session ended. Review this session's details below, then start a new session."
         .to_string()
 }
 
@@ -83,10 +84,17 @@ pub(super) fn managed_session_cleanup(
     lifecycle: &str,
 ) -> ManagedSessionCleanupData {
     if matches!(lifecycle, "finished" | "failed" | "stopped" | "ended")
-        && managed_session_worktree_cleanup_available(record)
+        && let Some(worktree) = managed_session_worktree(record)
     {
         return ManagedSessionCleanupData {
             available: true,
+            review_state: match worktree_has_changes(&worktree) {
+                Ok(false) => "clean".to_string(),
+                Ok(true) => "changes".to_string(),
+                // Never claim that changes exist when the review probe fails.
+                // The GUI keeps the copy and offers a retry instead.
+                Err(_) => "unknown".to_string(),
+            },
             target: "worktree".to_string(),
             label: "Delete protected copy".to_string(),
             detail:
@@ -97,22 +105,19 @@ pub(super) fn managed_session_cleanup(
     ManagedSessionCleanupData::unavailable()
 }
 
-fn managed_session_worktree_cleanup_available(record: &serde_json::Value) -> bool {
-    if record
+fn managed_session_worktree(
+    record: &serde_json::Value,
+) -> Option<crate::runtime::worktrees::WorktreeLifecycle> {
+    record
         .get("worktree")
-        .and_then(serde_json::Value::as_object)
-        .is_none()
-    {
-        return false;
-    }
+        .and_then(serde_json::Value::as_object)?;
     let run_id = string_field(record, "run_id");
     if run_id.is_empty() {
-        return false;
+        return None;
     }
-    let Ok(lifecycle) = load_worktree_lifecycle(&run_id) else {
-        return false;
-    };
-    verify_lifecycle(&lifecycle).is_ok()
+    let lifecycle = load_worktree_lifecycle(&run_id).ok()?;
+    verify_lifecycle(&lifecycle).ok()?;
+    Some(lifecycle)
 }
 
 pub(super) fn first_non_empty(primary: String, fallback: String) -> String {

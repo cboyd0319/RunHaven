@@ -32,6 +32,12 @@ pub trait AgentCommandRunner {
         env: Option<(&str, &str)>,
         context: AgentCommandContext<'_>,
     ) -> Result<i32>;
+
+    /// Optional lifecycle status supplied by runners that can distinguish a
+    /// user-ended interactive session from a natural process failure.
+    fn terminal_status(&self) -> Option<&'static str> {
+        None
+    }
 }
 
 pub(crate) struct AgentCommandExecution {
@@ -392,7 +398,8 @@ pub(crate) fn run_agent_command_lifecycle(
             started_at: &started_at,
         },
     );
-    let terminal_status = active_run_terminal_status(run_id);
+    let terminal_status =
+        active_run_terminal_status(run_id).or_else(|| runner.terminal_status().map(str::to_string));
     let marker_removal = remove_active_run_record(run_id);
     let finished_at = utc_timestamp();
     let mut command_error = None;

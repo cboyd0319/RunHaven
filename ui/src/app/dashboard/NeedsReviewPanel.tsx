@@ -83,7 +83,10 @@ function attentionDetail(
   kind: SessionAttentionKind | undefined,
 ): string {
   if (kind === "ready-to-review") {
-    return "The assistant’s changes are ready to review."
+    return "The assistant changed files in the protected copy."
+  }
+  if (kind === "review-unavailable") {
+    return "RunHaven couldn’t read the saved changes. Open this session and check again."
   }
   if (session.nextAction.detail.trim()) {
     return displayValue(session.nextAction.detail)
@@ -110,6 +113,8 @@ function attentionAction(kind: SessionAttentionKind | undefined): string {
       return "Open repair"
     case "ready-to-review":
       return "Review changes"
+    case "review-unavailable":
+      return "Open session"
     default:
       return "Open"
   }

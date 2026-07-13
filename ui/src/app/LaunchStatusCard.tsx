@@ -1,7 +1,8 @@
-import { CircleAlert, LoaderCircle, PlayCircle } from "lucide-react"
+import { CircleAlert, PlayCircle } from "lucide-react"
 
 import type { LaunchStatusResponse } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ActivityIndicator } from "@/components/ui/activity-indicator"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -21,7 +22,7 @@ export function LaunchStatusCard({
   error: string
 }) {
   return (
-    <Card aria-live="polite">
+    <Card>
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -39,20 +40,23 @@ export function LaunchStatusCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {loading ? (
-          <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <LoaderCircle className="size-4" />
+          <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+            <ActivityIndicator />
             Checking launch…
           </p>
         ) : null}
         {error ? (
-          <Alert variant="destructive">
+          <Alert variant="destructive" role="alert">
             <CircleAlert />
             <AlertTitle>Launch status not available</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
         {status ? (
-          <Alert variant={status.state === "failed" ? "destructive" : undefined}>
+          <Alert
+            role={status.state === "failed" ? "alert" : "status"}
+            variant={status.state === "failed" ? "destructive" : undefined}
+          >
             <PlayCircle />
             <AlertTitle>{status.label}</AlertTitle>
             <AlertDescription>{status.detail}</AlertDescription>

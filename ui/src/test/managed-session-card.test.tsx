@@ -158,6 +158,7 @@ describe("ManagedSessionCard", () => {
           lifecycle: "finished",
           cleanup: {
             available: false,
+            reviewState: "none",
             target: "worktree",
             label: "Clean up worktree",
             detail: "Delete the recorded worktree and branch for this session."
@@ -171,6 +172,7 @@ describe("ManagedSessionCard", () => {
           lifecycle: "finished",
           cleanup: {
             available: true,
+            reviewState: "clean",
             target: "worktree",
             label: "Clean up worktree",
             detail: "Delete the recorded worktree and branch for this session."

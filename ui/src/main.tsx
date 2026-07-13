@@ -2,9 +2,11 @@ import { createRoot } from "react-dom/client"
 
 import App from "@/app/App"
 import { installSystemAppearance } from "@/app/systemAppearance"
+import { applyStoredTextSize } from "@/app/uiStatePersistence"
 import { installDiagnosticLogging } from "@/commands/logging"
 import "./index.css"
 
+applyStoredTextSize()
 installSystemAppearance()
 
 // Dev/test log trail: forward console output, window errors, and stray promise

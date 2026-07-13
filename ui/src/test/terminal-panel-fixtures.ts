@@ -44,6 +44,7 @@ export type FakeTerminalLike = {
 export function runLaunch() {
   return {
     sessionId: "runabc123",
+    startedAt: "2026-07-01T01:00:00Z",
     request: {
       plan: { ...planRequest(), agent: "claude" },
     },

@@ -48,7 +48,6 @@ const handlers = {
   onRequestChange: () => {},
   onNetworkChange: () => {},
   onInstallImage: () => {},
-  onCancel: () => {},
   onBack: () => {},
   onContinue: () => {},
   onStartSession: async () => {},
@@ -101,7 +100,7 @@ function projectProps() {
 }
 
 describe("LaunchPlanCard", () => {
-  it("renders the agent step with cancel leading, continue trailing, no back", () => {
+  it("renders the permanent first step with one clear Continue action", () => {
     const html = renderToStaticMarkup(<LaunchPlanCard {...agentProps()} />);
 
     expect(html).toContain("Choose assistant");
@@ -110,12 +109,12 @@ describe("LaunchPlanCard", () => {
     expect(html).not.toContain("API key handling");
     expect(html).not.toContain("Sign-in details");
     expect(html).toContain("Continue");
-    expect(html).toContain(">Cancel</");
+    expect(html).not.toContain(">Cancel</");
     expect(html).not.toContain(">Back</");
     expect(html).not.toContain("Review access");
   });
 
-  it("uses the same assistant order as Home", () => {
+  it("uses the product assistant order", () => {
     const ordered = orderProductAgents([
       agent({ name: "copilot" }),
       agent({ name: "antigravity" }),
@@ -194,8 +193,8 @@ describe("LaunchPlanCard", () => {
     expect(html).toContain("Choose project");
     expect(html).toContain("Pick the project folder Codex can use.");
     expect(html).toContain(">Back</");
-    expect(html).toContain("Start session");
-    expect(html).toContain("Choose folder");
+    expect(html).toContain("Start session…");
+    expect(html).toContain("Choose folder…");
     expect(html).toContain("project");
     expect(html).toContain("Protected copy (recommended)");
     expect(html).toContain("Read-only original folder");
@@ -260,6 +259,21 @@ describe("LaunchPlanCard", () => {
     expect(html).not.toContain("Select agent")
     expect(html).not.toContain("Pick the agent you want to run")
   });
+
+  it("explains that a saved sign-in is not a live credential check", () => {
+    const html = renderToStaticMarkup(
+      <LaunchPlanCard
+        {...agentProps()}
+        agentReadiness={[
+          { name: "codex", category: "sign-in-saved", label: "Sign-in saved" },
+        ]}
+      />,
+    )
+
+    expect(html).toContain("Sign-in saved")
+    expect(html).toContain("The assistant may ask you to sign in again if it expired")
+    expect(html).not.toContain(">Signed in<")
+  })
 
   it("warns that full internet access is only allowed after a warning", () => {
     const html = renderToStaticMarkup(<LaunchPlanCard {...projectProps()} />);
@@ -365,5 +379,27 @@ describe("LaunchPlanCard", () => {
     )
 
     expect(html).toContain("Couldn’t check assistant setup")
+  })
+
+  it("does not show setup state for a different assistant", () => {
+    const stale = agentProps().imageStatus!
+    const html = renderToStaticMarkup(
+      <LaunchPlanCard
+        {...agentProps()}
+        imageStatus={{
+          ...stale,
+          agent: "claude",
+          image: {
+            ...stale.image,
+            agent: "claude",
+            ready: false,
+            status: "missing",
+          },
+        }}
+      />,
+    )
+
+    expect(html).not.toContain("Install Claude")
+    expect(html).not.toContain("Assistant setup needed")
   })
 });

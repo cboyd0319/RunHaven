@@ -15,11 +15,11 @@ export type WorktreeActionDefinition = {
 export const WORKTREE_ACTIONS: WorktreeActionDefinition[] = [
   {
     action: "merge",
-    button: "Apply changes",
+    button: "Apply changes…",
   },
   {
     action: "discard",
-    button: "Discard changes",
+    button: "Discard changes…",
   },
 ]
 
@@ -29,8 +29,38 @@ export function sessionAllowsWorktreeReview(
 ): boolean {
   return (
     session.cleanup?.available === true &&
-    session.cleanup.target === "worktree"
+    session.cleanup.target === "worktree" &&
+    (session.cleanup.reviewState === "changes" ||
+      session.cleanup.reviewState === "unknown")
   )
+}
+
+export type WorktreeReviewState = NonNullable<
+  ManagedSessionSummary["cleanup"]
+>["reviewState"]
+
+export function sessionWorktreeReviewState(
+  session: ManagedSessionSummary,
+): WorktreeReviewState {
+  if (
+    session.cleanup?.available !== true ||
+    session.cleanup.target !== "worktree"
+  ) {
+    return "none"
+  }
+  return session.cleanup.reviewState
+}
+
+export function sessionHasWorktreeChanges(
+  session: ManagedSessionSummary,
+): boolean {
+  return sessionWorktreeReviewState(session) === "changes"
+}
+
+export function sessionWorktreeReviewUnavailable(
+  session: ManagedSessionSummary,
+): boolean {
+  return sessionWorktreeReviewState(session) === "unknown"
 }
 
 // Merge and discard remove the copy, so the review should disappear after them.

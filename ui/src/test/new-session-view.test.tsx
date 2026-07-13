@@ -8,9 +8,30 @@ import { launchFlow, mainViewProps } from "./main-view-props"
 import { act } from "./render-hook"
 
 describe("NewSessionView", () => {
-  it("returns Home from Project instead of reopening an agent picker", async () => {
+  it("marks the folder picker as requiring more input", () => {
+    const flow = launchFlow()
+    const html = renderToStaticMarkup(
+      <NewSessionView
+        {...mainViewProps({
+          launchFlow: {
+            ...flow,
+            launchStep: "project",
+          },
+          savedSetups: {
+            ...mainViewProps().savedSetups,
+            error: "Project folder can’t be found. Choose it again.",
+          },
+        })}
+      />,
+    )
+
+    expect(html).toContain("Choose folder again…")
+  })
+
+  it("returns to the assistant step without leaving New session", async () => {
     const flow = launchFlow()
     const setLaunchStep = vi.fn()
+    const setOpen = vi.fn()
     const onNavigate = vi.fn()
     const container = document.createElement("div")
     const root = createRoot(container)
@@ -23,6 +44,7 @@ describe("NewSessionView", () => {
               ...flow,
               launchStep: "project",
               setLaunchStep,
+              setOpen,
             },
             onNavigate,
           })}
@@ -36,8 +58,8 @@ describe("NewSessionView", () => {
     expect(back).toBeDefined()
     await act(async () => back?.click())
 
-    expect(onNavigate).toHaveBeenCalledWith({ kind: "home" })
-    expect(setLaunchStep).not.toHaveBeenCalledWith("agent")
+    expect(setOpen).toHaveBeenCalledWith(false)
+    expect(onNavigate).not.toHaveBeenCalled()
     await act(async () => root.unmount())
   })
 

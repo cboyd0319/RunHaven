@@ -24,7 +24,6 @@ pub(crate) use crate::contracts::{LaunchRunRequest, RunPlanRequest};
 
 mod access;
 mod active_marker;
-pub(crate) mod attention_badge;
 pub(crate) mod diagnostics;
 pub(crate) mod diagnostics_why;
 pub(crate) mod dialog;
@@ -41,6 +40,7 @@ pub(crate) mod menu_sync;
 pub(crate) mod network;
 pub(crate) mod run_control;
 pub(crate) mod run_status;
+pub(crate) mod saved_setups;
 pub(crate) mod session_cleanup;
 pub(crate) mod session_diagnostics;
 pub(crate) mod session_worktree;

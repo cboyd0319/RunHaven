@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { CheckCircle2, CircleAlert } from "lucide-react"
 
 import type { ManagedSessionSummary } from "@/commands/runhaven"
@@ -14,23 +14,63 @@ import { ManagedSessionDiagnosticsCard } from "../ManagedSessionDiagnosticsCard"
 import { ManagedSessionStatusCard } from "../ManagedSessionStatusCard"
 import { RunOutputCard } from "../RunOutputCard"
 import { SessionInputCard } from "../SessionInputCard"
+import { sessionAttention } from "../sessionAttention"
 import { TerminalPanel } from "../TerminalPanel"
 import type { useRunOutput } from "../useRunOutput"
 import { useWorktreeReview } from "../useWorktreeReview"
-import { sessionAllowsWorktreeReview } from "../worktreeReview"
+import {
+  sessionAllowsWorktreeReview,
+  sessionWorktreeReviewState,
+} from "../worktreeReview"
 import { WorktreeReviewCard } from "../WorktreeReviewCard"
 import type { MainViewProps } from "./props"
 
 export function SessionView(
   props: MainViewProps & { selectedSession: ManagedSessionSummary },
 ) {
-  const [detailsOpen, setDetailsOpen] = useState(false)
+  const attention = sessionAttention(props.selectedSession)
+  const issueDetails = Boolean(
+    attention && attention.kind !== "ready-to-review",
+  )
+  const [detailsOpen, setDetailsOpen] = useState(issueDetails)
+  const loadedIssueDetails = useRef("")
+  const issueDetailsKey = issueDetails
+    ? `${props.selectedSession.id}:${attention?.kind}`
+    : ""
+
+  useEffect(() => {
+    if (!issueDetailsKey) {
+      return
+    }
+    setDetailsOpen(true)
+    if (loadedIssueDetails.current === issueDetailsKey) {
+      return
+    }
+    loadedIssueDetails.current = issueDetailsKey
+    void props.onLoadSelectedSessionDiagnostics()
+  }, [issueDetailsKey, props.onLoadSelectedSessionDiagnostics])
   const runControlsAvailable = sessionAllowsRunControl(props.selectedSession)
+  const inputAvailable =
+    runControlsAvailable &&
+    props.selectedSession.input.attached &&
+    props.selectedSession.nextAction.kind === "monitor"
+  const hasLiveTerminal = props.launchFlow.runTerminals.some(
+    (terminal) => terminal.runId === props.selectedSession.runId,
+  )
+  const returnToTerminal =
+    runControlsAvailable &&
+    hasLiveTerminal &&
+    !props.selectedSession.input.attached &&
+    props.selectedSession.nextAction.kind === "monitor"
   const worktreeReviewEligible = sessionAllowsWorktreeReview(props.selectedSession)
+  const cleanWorktree =
+    sessionWorktreeReviewState(props.selectedSession) === "clean"
   // The worktree review card owns discard, so hide the standalone delete control
   // when it is showing to avoid two ways to remove the same copy.
   const cleanupAvailable =
-    sessionAllowsCleanup(props.selectedSession) && !worktreeReviewEligible
+    sessionAllowsCleanup(props.selectedSession) &&
+    !worktreeReviewEligible &&
+    !cleanWorktree
   // The native-style toolbar owns the selected-session title, status, and
   // normal Stop action. The body keeps the user's work primary and puts
   // output, terminal, maintenance, and diagnostics behind one disclosure.
@@ -42,6 +82,11 @@ export function SessionView(
         onShowOutput={() => {
           setDetailsOpen(true)
           void props.runOutput.loadSnapshot()
+        }}
+        onStartNew={(agent) => {
+          props.launchFlow.changeAgent(agent)
+          props.launchFlow.setLaunchStep("agent")
+          props.onNavigate({ kind: "new-session" })
         }}
         onSignIn={(agent) => {
           props.launchFlow.changeAgent(agent)
@@ -57,11 +102,33 @@ export function SessionView(
           onResolved={props.onWorktreeResolved}
         />
       ) : null}
+      {cleanWorktree ? (
+        <CleanWorktreeCard
+          busy={props.controlBusy}
+          onDelete={() => void props.onControl("cleanup")}
+        />
+      ) : null}
       <SessionControlFeedback
         message={props.controlMessage}
         error={props.controlError}
       />
-      {runControlsAvailable ? (
+      {returnToTerminal ? (
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              props.onNavigate({
+                kind: "run-terminal",
+                id: props.selectedSession.runId,
+              })
+            }
+          >
+            Return to terminal
+          </Button>
+        </div>
+      ) : null}
+      {inputAvailable ? (
         <SessionInputCard
           session={props.selectedSession}
           draft={props.sessionInputDraft}
@@ -77,9 +144,42 @@ export function SessionView(
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
         runControlsAvailable={runControlsAvailable}
+        hasLiveTerminal={hasLiveTerminal}
         cleanupAvailable={cleanupAvailable}
+        issue={issueDetails}
       />
     </div>
+  )
+}
+
+function CleanWorktreeCard({
+  busy,
+  onDelete,
+}: {
+  busy: boolean
+  onDelete: () => void
+}) {
+  return (
+    <section className="flex flex-col items-start gap-3 border-t pt-5">
+      <div className="grid gap-1">
+        <h2 className="text-base font-semibold">No changes to review</h2>
+        <p className="text-sm text-muted-foreground">
+          The assistant did not change any files. Your original project is
+          unchanged.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          RunHaven kept the protected copy. You can leave it or delete it now.
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={busy}
+        onClick={onDelete}
+      >
+        Delete protected copy…
+      </Button>
+    </section>
   )
 }
 
@@ -92,7 +192,7 @@ function SessionControlFeedback({
 }) {
   if (error) {
     return (
-      <Alert variant="destructive">
+      <Alert variant="destructive" role="alert">
         <CircleAlert />
         <AlertTitle>Couldn’t update this session</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
@@ -116,7 +216,9 @@ function SessionDetails(
     open: boolean
     onOpenChange: (open: boolean) => void
     runControlsAvailable: boolean
+    hasLiveTerminal: boolean
     cleanupAvailable: boolean
+    issue: boolean
   },
 ) {
   return (
@@ -128,13 +230,29 @@ function SessionDetails(
           aria-expanded={props.open}
           onClick={() => props.onOpenChange(!props.open)}
         >
-          {props.open ? "Hide details" : "Show details"}
+          {props.issue
+            ? props.open
+              ? "Hide issue details"
+              : "Show issue details"
+            : props.open
+              ? "Hide details"
+              : "Show details"}
         </Button>
       </div>
       {props.open ? (
         <>
-          <OutputView runOutput={props.runOutput} />
-          {props.runControlsAvailable ? (
+          {props.selectedSession.outputAvailable === false ? (
+            <Alert>
+              <CircleAlert />
+              <AlertTitle>Output was not kept</AlertTitle>
+              <AlertDescription>
+                RunHaven keeps session output only until you quit.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <OutputView runOutput={props.runOutput} />
+          )}
+          {props.runControlsAvailable && !props.hasLiveTerminal ? (
             <TerminalPanel session={props.selectedSession} />
           ) : null}
           {props.runControlsAvailable ? (
@@ -158,7 +276,7 @@ function SessionDetails(
                 disabled={props.controlBusy}
                 onClick={() => void props.onControl("cleanup")}
               >
-                Delete protected copy
+                Delete protected copy…
               </Button>
             </div>
           ) : null}
@@ -185,12 +303,13 @@ function SessionWorktreeReview({
       message={review.message}
       nextSteps={review.nextSteps}
       actionError={review.actionError}
+      onRetry={review.retry}
       onAction={review.runAction}
     />
   )
 }
 
-// Shared by the session view and the Home failed-launch fallback: the same
+// Shared by the session view and failed-launch fallback: the same
 // acknowledgment-gated output surface for both.
 export function OutputView({
   runOutput,

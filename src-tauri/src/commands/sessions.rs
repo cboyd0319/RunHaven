@@ -8,8 +8,10 @@ use runhaven_core::ui_contracts::{
 };
 
 use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
+use crate::contracts::ManagedSessionListResponse;
 use crate::read_guard::ReadGuards;
 use crate::session_input::SessionInputRegistry;
+use crate::session_output::SessionOutputRegistry;
 
 #[cfg(test)]
 pub(crate) use super::managed_session_input::{
@@ -31,17 +33,21 @@ const MANAGED_SESSION_HISTORY_TAIL_BYTES: u64 = 256 * 1024;
 #[tauri::command]
 pub(crate) fn get_managed_sessions(
     input_registry: tauri::State<'_, SessionInputRegistry>,
+    output_registry: tauri::State<'_, SessionOutputRegistry>,
     read_guards: tauri::State<'_, ReadGuards>,
-) -> Result<ManagedSessionListData, String> {
+) -> Result<ManagedSessionListResponse, String> {
     // Single-flight plus a 2s TTL cache (see `read_guard`): the whole
     // collection step, including the per-session `container inspect` reconcile
     // below, is one guarded probe, so concurrent WebView polls cannot fork
     // extra `container` subprocesses. After a mutating command (stop, kill,
     // repair, cleanup, launch) the next poll may serve a list up to 2s stale,
     // which is at worst one extra poll cycle.
-    read_guards.managed_sessions.run("sessions", || {
+    let sessions = read_guards.managed_sessions.run("sessions", || {
         get_managed_sessions_with_input(Some(input_registry.inner()))
-    })
+    })?;
+    // Output retention is process-local and changes on every streamed chunk,
+    // so overlay it after the subprocess-backed session-list cache.
+    ManagedSessionListResponse::from_data(sessions, |run_id| output_registry.has_output(run_id))
 }
 
 fn get_managed_sessions_with_input(

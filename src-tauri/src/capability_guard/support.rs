@@ -61,13 +61,13 @@ pub(super) const MAIN_READ_FORBIDDEN_PERMISSIONS: &[&str] = &[
     "allow-rebuild-agent-image",
     "allow-prune-managed-networks",
     "allow-perform-setup-recovery",
-    "allow-set-attention-badge",
     "allow-sync-menu-state",
     "allow-open-terminal-session",
     "allow-open-agent-sign-in-terminal",
     "allow-open-agent-run-terminal",
     "allow-write-terminal-input",
     "allow-resize-terminal",
+    "allow-end-terminal-session",
     "allow-close-terminal-session",
 ];
 pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
@@ -116,10 +116,9 @@ pub(super) const TERMINAL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-open-agent-run-terminal", "open_agent_run_terminal"),
     ("allow-write-terminal-input", "write_terminal_input"),
     ("allow-resize-terminal", "resize_terminal"),
+    ("allow-end-terminal-session", "end_terminal_session"),
     ("allow-close-terminal-session", "close_terminal_session"),
 ];
-
-pub(super) const ATTENTION_BADGE_PERMISSION: &str = "allow-set-attention-badge";
 
 pub(super) const MENU_STATE_PERMISSION: &str = "allow-sync-menu-state";
 

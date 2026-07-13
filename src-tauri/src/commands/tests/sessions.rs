@@ -222,6 +222,13 @@ fn managed_sessions_include_recent_finished_records() {
     assert_eq!(session.next_action.kind, "none");
     assert!(!session.input.attached);
 
+    let session_value = serde_json::to_value(session).expect("serialize managed session");
+    assert_eq!(
+        session_value.get("outputAvailable"),
+        Some(&json!(false)),
+        "a summary must state whether this process still retains terminal output"
+    );
+
     let encoded = serde_json::to_string(&response).expect("serialize managed sessions");
     for forbidden in [
         "/sensitive/workspaces",

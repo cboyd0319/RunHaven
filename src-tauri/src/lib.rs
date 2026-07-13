@@ -7,6 +7,7 @@ mod image_build_runner;
 mod launch_runner;
 mod launch_status;
 mod log_format;
+mod main_window_lifecycle;
 mod menu;
 mod read_guard;
 mod registry_support;
@@ -16,7 +17,6 @@ mod tail_status;
 pub(crate) mod terminal;
 
 use tauri::Manager;
-use tauri::window::{Effect, EffectsBuilder};
 use tauri_plugin_window_state::StateFlags;
 
 /// The main window: the one control surface. Every mutating capability and
@@ -124,7 +124,6 @@ pub fn run() {
                     app.package_info().version
                 ),
             }
-            commands::attention_badge::clear_badge_on_start(app.handle());
             // Native macOS sidebar vibrancy (NAT-2): the transparent main
             // window's backdrop becomes a frosted NSVisualEffectView. The
             // sidebar paints a translucent tint over it (glass); the main
@@ -132,31 +131,10 @@ pub fn run() {
             // if the effect cannot apply, the transparent window falls back to
             // the per-region backgrounds and the app runs normally. Main window
             // only.
-            if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL)
-                && let Err(error) =
-                    window.set_effects(EffectsBuilder::new().effect(Effect::Sidebar).build())
-            {
-                log::warn!("macOS vibrancy unavailable, using solid background: {error}");
-            }
+            main_window_lifecycle::apply_main_window_effects(app.handle());
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if window.label() == MAIN_WINDOW_LABEL && matches!(event, tauri::WindowEvent::Destroyed)
-            {
-                log::info!("main window destroyed; closing terminal sessions");
-                // Terminal sessions are live PTY children; kill them all so no
-                // `container exec` process outlives the app (terminal design
-                // section 9). They are never persisted or restored.
-                window
-                    .app_handle()
-                    .state::<terminal::TerminalSessionRegistry>()
-                    .close_all();
-                window
-                    .app_handle()
-                    .state::<background_jobs::BackgroundJobRegistry>()
-                    .shutdown();
-            }
-        })
+        .on_window_event(main_window_lifecycle::on_window_event)
         .manage(session_input::SessionInputRegistry::default())
         .manage(terminal::TerminalSessionRegistry::default())
         .manage(session_output::SessionOutputRegistry::default())
@@ -203,23 +181,22 @@ pub fn run() {
             commands::network::prune_managed_networks,
             commands::launch::plan_run,
             commands::launch::launch_run,
-            commands::attention_badge::set_attention_badge,
+            commands::saved_setups::get_saved_setups,
+            commands::saved_setups::pin_saved_setup,
+            commands::saved_setups::select_saved_setup,
+            commands::saved_setups::set_saved_setup_pinned,
             commands::menu_sync::sync_menu_state,
             terminal::open_terminal_session,
             terminal::open_agent_sign_in_terminal,
             terminal::open_agent_run_terminal,
             terminal::write_terminal_input,
             terminal::resize_terminal,
+            terminal::user_end::end_terminal_session,
             terminal::close_terminal_session,
         ])
         .build(tauri::generate_context!())
         .expect("error while building RunHaven desktop app")
-        .run(|app, event| {
-            if matches!(event, tauri::RunEvent::Exit) {
-                app.state::<background_jobs::BackgroundJobRegistry>()
-                    .shutdown();
-            }
-        });
+        .run(main_window_lifecycle::on_run_event);
 }
 
 /// Route Rust panics into the diagnostic log before the process unwinds, then

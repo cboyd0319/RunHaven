@@ -6,6 +6,7 @@ import {
   type ManagedSessionSummary,
 } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ActivityIndicator } from "@/components/ui/activity-indicator"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -15,6 +16,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+
+export const SESSION_MESSAGE_MENU_TARGET = "session-message"
 
 export function SessionInputCard({
   session,
@@ -69,6 +72,7 @@ export function SessionInputCard({
             <Label htmlFor={`session-input-${session.id}`}>Message</Label>
             <textarea
               id={`session-input-${session.id}`}
+              data-menu-target={SESSION_MESSAGE_MENU_TARGET}
               className="min-h-24 w-full min-w-0 resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80"
               maxLength={MAX_SESSION_INPUT_BYTES}
               value={draft}
@@ -107,26 +111,26 @@ export function SessionInputCard({
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button type="submit" disabled={!canSend}>
-              <Send />
-              {sending ? "Sending…" : "Send"}
+              {sending ? <ActivityIndicator /> : <Send />}
+              {sending ? "Sending…" : "Send…"}
             </Button>
           </div>
           {error ? (
-            <Alert variant="destructive">
+            <Alert variant="destructive" role="alert">
               <CircleAlert />
               <AlertTitle>Message not sent</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           ) : null}
           {!inputAttached ? (
-            <Alert>
+            <Alert role="status">
               <CircleAlert />
               <AlertTitle>Messages unavailable</AlertTitle>
               <AlertDescription>{session.input.detail}</AlertDescription>
             </Alert>
           ) : null}
           {acceptedMessage ? (
-            <Alert>
+            <Alert role="status">
               <CheckCircle2 />
               <AlertTitle>Message sent</AlertTitle>
               <AlertDescription>

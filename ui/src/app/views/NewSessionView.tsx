@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react"
-import { CircleAlert } from "lucide-react"
+import { CheckCircle2, CircleAlert, Pin } from "lucide-react"
 
 import { isTerminalState } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -10,7 +10,7 @@ import { SetupCard } from "../SetupCard"
 import { useImageRebuild } from "../useMaintenance"
 import type { MainViewProps } from "./props"
 
-// New Session is a first-class page. Home starts at Project, while opening New
+// New session is a first-class page. Saved setups start at Project, while opening New
 // Session directly adds the optional Agent step. The trusted Rust dialog still
 // owns the final launch decision.
 export function NewSessionView(props: MainViewProps) {
@@ -36,7 +36,7 @@ export function NewSessionView(props: MainViewProps) {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       {flow.error && !protectedCopyError ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" role="alert">
           <CircleAlert />
           <AlertTitle>Could not continue</AlertTitle>
           <AlertDescription>
@@ -45,7 +45,7 @@ export function NewSessionView(props: MainViewProps) {
         </Alert>
       ) : null}
       {protectedCopyError ? (
-        <Alert variant="warning">
+        <Alert variant="warning" role="alert">
           <CircleAlert />
           <AlertTitle>Choose how to continue</AlertTitle>
           <AlertDescription className="flex flex-col items-start gap-3">
@@ -60,7 +60,7 @@ export function NewSessionView(props: MainViewProps) {
                 disabled={flow.planning}
                 onClick={() => void flow.retryWithoutProtectedCopy(true)}
               >
-                Start without changing files
+                Start without changing files…
               </Button>
               <Button
                 type="button"
@@ -69,14 +69,14 @@ export function NewSessionView(props: MainViewProps) {
                 disabled={flow.planning}
                 onClick={() => void flow.retryWithoutProtectedCopy(false)}
               >
-                Let assistant change original files (less safe)
+                Let assistant change original files (less safe)…
               </Button>
             </div>
           </AlertDescription>
         </Alert>
       ) : null}
       {imageBuild.error ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" role="alert">
           <CircleAlert />
           <AlertTitle>Could not prepare this assistant</AlertTitle>
           <AlertDescription>{imageBuild.error}</AlertDescription>
@@ -86,6 +86,31 @@ export function NewSessionView(props: MainViewProps) {
         <Alert role="status">
           <AlertTitle>{imageBuild.status.label}</AlertTitle>
           <AlertDescription>{imageBuild.status.detail}</AlertDescription>
+        </Alert>
+      ) : null}
+      {props.savedSetups.error ? (
+        <Alert variant="destructive" role="alert">
+          <CircleAlert />
+          <AlertTitle>Could not update saved setups</AlertTitle>
+          <AlertDescription className="flex flex-col items-start gap-2">
+            <span>{props.savedSetups.error}</span>
+            {props.savedSetups.error.startsWith("Project folder can’t be found") ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void props.savedSetups.repairUnavailable()}
+              >
+                Choose folder again…
+              </Button>
+            ) : null}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {props.savedSetups.message ? (
+        <Alert role="status">
+          <CheckCircle2 />
+          <AlertTitle>{props.savedSetups.message}</AlertTitle>
         </Alert>
       ) : null}
       {!props.setupReady ? (
@@ -119,18 +144,31 @@ export function NewSessionView(props: MainViewProps) {
             void imageBuild.rebuild(props.selectedAgent.name)
           }
         }}
-        onCancel={() => {
-          flow.setOpen(false)
-          props.onNavigate({ kind: "home" })
-        }}
         onBack={() => {
           flow.setOpen(false)
-          props.onNavigate({ kind: "home" })
         }}
         onContinue={() => flow.setLaunchStep("project")}
         onStartSession={flow.startSession}
         onSignedIn={props.onSignedIn}
       />
+      {flow.request.workspacePath ? (
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={flow.planning}
+            onClick={() =>
+              void props.savedSetups.pinDraft(
+                flow.request.agent,
+                flow.request.workspacePath,
+              )
+            }
+          >
+            <Pin />
+            Save setup
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }

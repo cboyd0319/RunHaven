@@ -7,6 +7,7 @@ import { managedSession } from "./main-view-props"
 
 const onNavigate = () => undefined
 const onShowOutput = () => undefined
+const onStartNew = () => undefined
 
 describe("SessionAttentionBanner", () => {
   it("renders nothing for a quiet session", () => {
@@ -15,6 +16,7 @@ describe("SessionAttentionBanner", () => {
         session={managedSession()}
         onNavigate={onNavigate}
         onShowOutput={onShowOutput}
+        onStartNew={onStartNew}
       />,
     )
     expect(html).toBe("")
@@ -26,13 +28,14 @@ describe("SessionAttentionBanner", () => {
         session={managedSession({ lifecycle: "failed" })}
         onNavigate={onNavigate}
         onShowOutput={onShowOutput}
+        onStartNew={onStartNew}
       />,
     )
     expect(html).toContain("Session ended")
     expect(html).toContain("RunHaven couldn’t determine why this session ended.")
     expect(html).toContain("Show output")
-    expect(html).toContain("Check System")
-    expect(html).not.toContain("Start a new session")
+    expect(html).toContain("Start new session…")
+    expect(html).not.toContain("Check System")
     expect(html).not.toContain("Show error details")
   })
 
@@ -49,6 +52,7 @@ describe("SessionAttentionBanner", () => {
         })}
         onNavigate={onNavigate}
         onShowOutput={onShowOutput}
+        onStartNew={onStartNew}
       />,
     )
     // Failed outranks not-responding: one banner, highest state wins.
@@ -63,13 +67,35 @@ describe("SessionAttentionBanner", () => {
         session={managedSession({ lifecycle: "failed" })}
         onNavigate={onNavigate}
         onShowOutput={onShowOutput}
+        onStartNew={onStartNew}
         outputError="RunHaven keeps session output only until the app closes. Output for this run is no longer available."
       />,
     )
 
     expect(html).not.toContain("Show output")
-    expect(html).toContain("Open System")
-    expect(html).toContain("Check System")
+    expect(html).toContain("RunHaven couldn’t determine why this session ended.")
+    expect(html).toContain("Output was not kept")
+    expect(html).toContain("Start new session…")
+  })
+
+  it("does not offer output when the session summary says none is retained", () => {
+    const session = {
+      ...managedSession({ lifecycle: "failed" }),
+      outputAvailable: false,
+    }
+    const html = renderToStaticMarkup(
+      <SessionAttentionBanner
+        session={session}
+        onNavigate={onNavigate}
+        onShowOutput={onShowOutput}
+        onStartNew={onStartNew}
+      />,
+    )
+
+    expect(html).not.toContain("Show output")
+    expect(html).toContain("RunHaven couldn’t determine why this session ended.")
+    expect(html).toContain("Output was not kept")
+    expect(html).toContain("Start new session…")
   })
 
   it("offers one contextual sign-in fix", () => {
@@ -78,12 +104,13 @@ describe("SessionAttentionBanner", () => {
         session={managedSession({ authStatus: "needs-sign-in" })}
         onNavigate={onNavigate}
         onShowOutput={onShowOutput}
+        onStartNew={onStartNew}
       />,
     )
     expect(html).toContain("Sign in to continue")
     expect(html).toContain("Sign in to Codex")
     expect(html).not.toContain("Agents")
-    expect(html).toContain(">Sign in<")
+    expect(html).toContain(">Sign in…<")
   })
 
   it("names the repair control for a not-responding session", () => {
@@ -94,6 +121,7 @@ describe("SessionAttentionBanner", () => {
         })}
         onNavigate={onNavigate}
         onShowOutput={onShowOutput}
+        onStartNew={onStartNew}
         onRepair={() => undefined}
       />,
     )
@@ -110,6 +138,7 @@ describe("SessionAttentionBanner", () => {
           lifecycle: "finished",
           cleanup: {
             available: true,
+            reviewState: "changes",
             target: "worktree",
             label: "Delete worktree",
             detail: "Removes the saved isolated copy.",
@@ -117,9 +146,10 @@ describe("SessionAttentionBanner", () => {
         })}
         onNavigate={onNavigate}
         onShowOutput={onShowOutput}
+        onStartNew={onStartNew}
       />,
     )
-    expect(html).toContain("Ready to review")
-    expect(html).toContain("Review the assistant&#x27;s changes below")
+    expect(html).toContain("Changes ready to review")
+    expect(html).toContain("Review the files below")
   })
 })

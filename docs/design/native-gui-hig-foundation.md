@@ -1,15 +1,18 @@
 # Native GUI HIG Foundation
 
-Last updated: 2026-07-01 UTC
+Last updated: 2026-07-13
+
+This foundation records design rationale. The complete current surface audit
+and future-change gate live in `native-gui-uiux-audit.md`.
 
 Distilled Apple Human Interface Guidelines (HIG) foundation for the RunHaven
 desktop redesign. Scope: what the HIG says, why it matters for this app, and
 what to implement in CSS/React inside the Tauri WKWebView. Native window
 options are Tauri-level choices and are marked as such.
 
-Grounding facts observed in this repo: dark navy token set in
-`ui/src/index.css`, shadcn/ui components, `lucide-react` icons in about two
-dozen app files, a left sidebar plus 3-step launch wizard layout per
+Grounding facts observed in this repo: system-following light and dark tokens
+in `ui/src/index.css`, shadcn/ui components, `lucide-react` icons, and a left
+sidebar plus two-step launch layout per
 `docs/plans/native-gui-wireframe.md`, and Rust-owned native confirmation
 dialogs (a security boundary that stays).
 
@@ -141,13 +144,11 @@ Sources:
 <https://developer.apple.com/design/human-interface-guidelines/dark-mode>,
 <https://developer.apple.com/design/human-interface-guidelines/materials>.
 
-**Dark-only is defensible here, with eyes open.** The HIG says "avoid
-offering an app-specific appearance setting" and allows dark-only interfaces
-"in rare cases." RunHaven ships dark-by-default as a brand decision; the
-honest HIG-aligned posture is: dark is the supported appearance, there is no
-in-app toggle, and the existing light token block in `ui/src/index.css` is
-either finished to the same quality bar someday or left unused. Do not ship a
-half-supported light mode.
+**Follow the system appearance.** The HIG says to avoid an app-specific
+appearance setting unless it provides clear value. RunHaven uses the system
+light or dark choice and has no duplicate theme preference. Both token sets in
+`ui/src/index.css` are supported and covered by the automated accessibility
+matrix.
 
 **Elevation model.** In dark mode the system uses "base and elevated"
 background sets: "the base colors are dimmer... and the elevated colors are
@@ -337,21 +338,25 @@ Source:
 
 Executable brief:
 
-1. Rebuild the `docs/assets/logo.png` glass-cube mark as vector layers:
-   background plus one or two foreground layers (cube faces, layer stack).
-   "Prefer vector graphics when bringing layers into Icon Composer."
-2. Background: navy-to-teal gradient defined in Icon Composer itself
+1. The user-selected baseline is `docs/assets/app-icon.png`, a 1024 by 1024
+   unmasked, fully opaque RGBA rendering of the glass-cube mark. Keep
+   `docs/assets/logo.png` as the transparent public and in-app logo.
+2. If the release toolchain adopts Icon Composer, rebuild the app icon as
+   vector layers: background plus one or two foreground layers (cube faces,
+   layer stack). "Prefer vector graphics when bringing layers into Icon
+   Composer."
+3. Background: navy-to-teal gradient defined in Icon Composer itself
    ("supports solid colors and gradients for background layers").
-3. Foreground: crisp, hard-edged shapes; "avoid soft and feathered edges";
+4. Foreground: crisp, hard-edged shapes; "avoid soft and feathered edges";
    vary layer opacity for depth. Do not bake in highlights, bevels, or
    shadows; the system applies specular/Liquid Glass effects.
-4. Canvas 1024x1024 square, unmasked; the system applies the rounded-corner
+5. Canvas 1024x1024 square, unmasked; the system applies the rounded-corner
    mask. Keep the cube centered with generous margins.
-5. In Icon Composer (ships with Xcode 26): place layers, annotate default,
+6. In Icon Composer (ships with Xcode 26): place layers, annotate default,
    dark, and mono/tinted appearance variants, preview, export.
-6. No text, no photo, no screenshot, no Apple hardware, and no SF Symbols
+7. No text, no photo, no screenshot, no Apple hardware, and no SF Symbols
    glyphs in the icon (license prohibition above).
-7. Wire the exported icon through Tauri's bundle config (`.icns`/icon set)
+8. Wire the exported icon through Tauri's bundle config (`.icns`/icon set)
    and verify at 16, 32, 128, 256, 512 px; the small sizes decide whether the
    cube needs simplification.
 
@@ -383,8 +388,8 @@ context above and the wireframe doc.
     or determinate progress with Cancel.
 13. Warning dialogs on expected outcomes (e.g., confirming a stop the user
     just clicked) while real irreversible cases ride on inline text.
-14. An in-app light/dark toggle. Dark-only is the deliberate exception; do
-    not add an appearance setting.
+14. An in-app light/dark toggle that duplicates the system choice. Follow the
+    system appearance unless a future workflow demonstrates a real need.
 
 ## Tauri-Level Native Options (Separate Track)
 

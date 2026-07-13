@@ -1,5 +1,6 @@
 mod io;
 pub mod run_history;
+pub mod saved_setups;
 
 pub(crate) use io::append_private_jsonl;
 pub use io::{read_jsonl, read_jsonl_tail_bounded};

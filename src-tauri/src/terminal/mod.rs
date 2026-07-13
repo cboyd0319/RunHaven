@@ -25,13 +25,17 @@
 //! open terminal instead). Sessions are never persisted or restored across
 //! relaunch.
 //!
-//! On main-window destroy [`close_all`] kills every terminal child. Plan-under-
-//! PTY sign-in and interactive runs also wait up to five seconds for their
-//! detached launch thread to finish run-record, container, proxy, and network
-//! cleanup, so normal app quit does not race those owned resources indefinitely.
+//! On app exit [`close_all`] kills every terminal child. Closing the main window
+//! only hides and preserves its WebView so active Channels remain connected.
+//! Plan-under-PTY sign-in and interactive runs also wait up to five seconds for
+//! their detached launch thread to finish run-record, container, proxy, and
+//! network cleanup, so normal app quit does not race those owned resources
+//! indefinitely.
 
 mod pty;
 mod registry;
+mod run_identity;
+pub(crate) mod user_end;
 
 use runhaven_core::runtime::active::{GuiAttachPlan, gui_attach_plan};
 use runhaven_core::runtime::plans::AgentRunPlan;
@@ -53,6 +57,7 @@ use crate::session_output::SessionOutputRegistry;
 // layer and the behavior tests.
 pub(crate) use registry::TerminalSessionRegistry;
 use registry::{SpawnedTerminal, TerminalReservation};
+use run_identity::{RunTerminalOpenResponse, run_terminal_sidebar_label};
 
 /// Concurrent terminal sessions allowed at once (terminal design section 9).
 /// Each session is a live host PTY plus a `container exec` child, so the cap
@@ -170,7 +175,7 @@ fn spawn_confirmed_run_terminal(
     session_id: &str,
     mut plan: AgentRunPlan,
     spawn: impl FnOnce(AgentRunPlan, &str, pty::RetainedRunOutput) -> Result<SpawnedTerminal, String>,
-) -> Result<(), String> {
+) -> Result<String, String> {
     plan.make_interactive_tty();
     let run_id = plan
         .run_id
@@ -183,7 +188,7 @@ fn spawn_confirmed_run_terminal(
         }
         return Err(error);
     }
-    let retained_run_output = pty::RetainedRunOutput::new(run_id, output_registry.clone());
+    let retained_run_output = pty::RetainedRunOutput::new(run_id.clone(), output_registry.clone());
     let spawned = match spawn(plan, session_id, retained_run_output) {
         Ok(spawned) => spawned,
         Err(error) => {
@@ -193,7 +198,8 @@ fn spawn_confirmed_run_terminal(
             return Err(error);
         }
     };
-    register_and_stream(registry, reservation, spawned)
+    register_and_stream(registry, reservation, spawned)?;
+    Ok(run_id)
 }
 
 /// Open a live terminal into one active run (terminal design sections 1, 4).
@@ -291,15 +297,16 @@ pub(crate) async fn open_agent_run_terminal(
     output_registry: State<'_, SessionOutputRegistry>,
     session_id: String,
     request: LaunchRunRequest,
-) -> Result<bool, String> {
+) -> Result<Option<RunTerminalOpenResponse>, String> {
     let registry = registry.inner().clone();
     // Validate the id and enforce the shared cap before any dialog, worktree
     // branch, or child.
     let reservation = registry.reserve(&session_id)?;
     let Some(plan) = prepare_confirmed_terminal_run(app, request).await? else {
-        return Ok(false);
+        return Ok(None);
     };
-    spawn_confirmed_run_terminal(
+    let label = run_terminal_sidebar_label(&plan);
+    let run_id = spawn_confirmed_run_terminal(
         &registry,
         reservation,
         output_registry.inner(),
@@ -309,7 +316,7 @@ pub(crate) async fn open_agent_run_terminal(
             pty::spawn_run_terminal(plan, run_label, on_event, retained_run_output)
         },
     )?;
-    Ok(true)
+    Ok(Some(RunTerminalOpenResponse { run_id, label }))
 }
 
 /// The one native confirmation for an agent sign-in terminal, stating what it
@@ -414,8 +421,9 @@ mod source_tripwire_tests;
 mod test_support;
 #[cfg(test)]
 pub(crate) use test_support::{
-    open_agent_run_terminal_for_test, open_agent_run_terminal_with_chunks_for_test,
-    open_agent_sign_in_terminal_for_test, open_terminal_session_for_test,
+    end_terminal_session_with_approval_for_test, open_agent_run_terminal_for_test,
+    open_agent_run_terminal_with_chunks_for_test, open_agent_sign_in_terminal_for_test,
+    open_terminal_session_for_test,
 };
 #[cfg(test)]
 mod tests;

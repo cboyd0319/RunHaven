@@ -25,12 +25,8 @@ exposure, require explicit intent, and preserve focused verification.
 
 ## Startup
 
-1. Confirm the working directory and inspect git state:
-
-```bash
-pwd
-git status --short --branch
-```
+1. Confirm the working directory with `pwd` and inspect git state with
+   `git status --short --branch`.
 
 2. Read these startup files only:
 
@@ -90,11 +86,7 @@ scripts/check-repo-structure.sh
 git diff --check
 ```
 
-Full local verification on macOS 26+:
-
-```bash
-./init.sh
-```
+Full local verification on macOS 26+: `./init.sh`.
 
 Use `runhaven doctor` and Apple `container` smokes only when changes affect the
 actual runtime boundary, image templates, provider behavior, install flow, or
@@ -131,6 +123,10 @@ Tauri launch/run-control behavior.
   Give each screen one task, disclose advanced choices in context, use a folder
   browser instead of path entry, show changed filenames, name actions by result,
   keep secure defaults easiest, show feedback, and provide recovery without dead ends.
+- Before every GUI change, enumerate each touched window, destination, control,
+  state, and interaction, then check its current official Apple HIG topic and
+  update `docs/design/native-gui-uiux-audit.md`. Document security or Tauri
+  deviations. Require macOS design source and packaged live review.
 - TUI backlog rule: during the current CLI plus native GUI push, do not spend
   implementation time on `crates/runhaven-tui` or Codex TUI surfaces except to
   revert accidental edits, preserve workspace compilation after CLI/GUI
@@ -221,4 +217,6 @@ Tauri launch/run-control behavior.
 - File size, modularity, duplication, dependency use, and crate/component
   organization were considered for touched surfaces.
 - `feature_list.json` and `current-state.md` reflect any changed active state.
+- The current Apple HIG was checked for every changed GUI surface, the audit was
+  updated, and any packaged macOS verification gap is named.
 - The next session can restart from the three startup files above.

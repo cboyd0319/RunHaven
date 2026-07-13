@@ -9,7 +9,7 @@ import type {
 import { providerAgent } from "./runhaven-fixtures"
 
 // Shared factories for view tests that take the full MainViewProps bag
-// (Home, Session). Each returns a fresh object; patch what the case needs.
+// (New session, Session). Each returns a fresh object; patch what the case needs.
 
 export function planRequest(): RunPlanRequest {
   return {
@@ -42,6 +42,7 @@ export function launchFlow(): LaunchFlow {
     launchMessage: "",
     error: "",
     runTerminal: null,
+    runTerminals: [],
     setOpen: () => {},
     applyDashboard: async () => {},
     changeAgent: () => {},
@@ -50,8 +51,10 @@ export function launchFlow(): LaunchFlow {
     pickFolder: async () => {},
     startSession: async () => {},
     retryWithoutProtectedCopy: async () => {},
-    closeRunTerminal: () => {},
+    closeRunTerminal: async () => {},
     cancelRunTerminal: () => {},
+    markRunTerminalOpened: () => {},
+    applySavedSetup: () => {},
     setLaunchStep: () => {},
   }
 }
@@ -75,7 +78,7 @@ export function dashboard(setupOk: boolean): DashboardStatus {
     },
     agents: [providerAgent],
     agentReadiness: [
-      { name: "codex", category: "signed-in", label: "Signed in" },
+      { name: "codex", category: "sign-in-saved", label: "Sign-in saved" },
     ],
     activeRuns: [],
     recentRuns: [],
@@ -149,6 +152,16 @@ export function mainViewProps(
     onControl: async () => {},
     onWorktreeResolved: async () => {},
     launchFlow: launchFlow(),
+    savedSetups: {
+      pinnedSetups: [],
+      error: "",
+      message: "",
+      refresh: async () => {},
+      selectSetup: async () => {},
+      repairUnavailable: async () => {},
+      pinDraft: async () => {},
+      unpin: async () => {},
+    },
     selectedAgent: providerAgent,
     imageLoading: false,
     imageStatus: null,
