@@ -7,8 +7,9 @@ fn raw_output_confirmation_omits_internal_run_id() {
     assert!(!message.contains("Run ID"));
     assert_eq!(
         message,
-        "Lines: 200\n\nRaw output may include secrets. Show output?"
+        "Session output may include private information, such as passwords or API keys. Review it before sharing."
     );
+    assert!(!message.contains("Lines:"));
 }
 
 #[test]

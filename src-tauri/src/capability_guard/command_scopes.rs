@@ -7,7 +7,7 @@ use std::path::Path;
 
 use super::support::{
     ATTENTION_BADGE_PERMISSION, MAIN_READ_FORBIDDEN_PERMISSIONS, MENU_STATE_PERMISSION,
-    RUN_CONTROL_PERMISSIONS, SESSION_MONITOR_PERMISSIONS, assert_generated_permission_allows_only,
+    RUN_CONTROL_PERMISSIONS, assert_generated_permission_allows_only,
     assert_lacks_forbidden_host_markers, assert_same_permission_set, capability_permissions,
     capability_windows, manifest_dir, normalize, read_text,
 };
@@ -206,13 +206,13 @@ fn session_input_contract_doc_tracks_write_bridge() {
     for required in [
         "A narrow `write_session_input` Tauri command is exposed under the `run-control`",
         "backend-owned session ID",
-        "explicit user intent",
+        "Explicit user intent",
         "bounded input",
         "cancellation",
         "stale target",
         "multi-session",
         "auth",
-        "resize remains out of scope",
+        "Resize remains out of scope",
     ] {
         assert!(
             raw.contains(required),
@@ -254,12 +254,11 @@ fn session_input_registry_stays_off_dormant_codex_transports() {
     }
 }
 
-/// The window-scope pin for the whole capability set: every capability except
-/// the monitor read grant targets exactly the main window. Adding a
-/// capability that reaches any other window label, or widening an existing
-/// one, fails here and needs a security review first.
+/// The window-scope pin for the whole capability set. Adding a capability that
+/// reaches any other window label, or widening an existing one, fails here and
+/// needs a security review first.
 #[test]
-fn every_capability_except_session_monitor_stays_main_window_only() {
+fn every_capability_stays_main_window_only() {
     let dir = manifest_dir().join("capabilities");
     let mut checked = 0usize;
     for entry in fs::read_dir(&dir).expect("read capabilities directory") {
@@ -273,103 +272,15 @@ fn every_capability_except_session_monitor_stays_main_window_only() {
             .expect("capability file name")
             .to_owned();
         let windows = capability_windows(&file_name);
-        let expected: &[&str] = if file_name == "session-monitor.json" {
-            &["session-*"]
-        } else {
-            &["main"]
-        };
         assert_eq!(
-            windows, expected,
-            "capability {file_name} must target exactly {expected:?}; \
+            windows,
+            ["main"],
+            "capability {file_name} must target exactly the main window; \
              changing a capability's window scope is a trust-boundary change"
         );
         checked += 1;
     }
     assert!(checked >= 9, "expected all capability files to be checked");
-}
-
-/// Monitor windows are read-only viewers. This pins their exact grant and
-/// proves no mutating, output, input, launch, sign-in, badge, event, or
-/// dialog permission ever reaches a `session-*` window.
-#[test]
-fn session_monitor_capability_grants_exactly_the_monitor_reads() {
-    let permissions = capability_permissions("session-monitor.json");
-    let expected = SESSION_MONITOR_PERMISSIONS
-        .iter()
-        .map(|(permission, _)| *permission)
-        .collect::<Vec<_>>();
-    assert_same_permission_set("session-monitor", &permissions, &expected);
-    for (_, command) in SESSION_MONITOR_PERMISSIONS {
-        assert_generated_permission_allows_only(command);
-    }
-
-    // Belt and suspenders over the exact-set assertion: name the grants that
-    // must never appear so a future edit fails with the reason attached.
-    for forbidden in RUN_CONTROL_PERMISSIONS
-        .iter()
-        .map(|(permission, _)| *permission)
-        .chain([
-            "allow-launch-run",
-            "allow-set-attention-badge",
-            "allow-sync-menu-state",
-            "allow-open-session-window",
-            "allow-write-session-input",
-            "allow-get-managed-session-log-snapshot",
-            "allow-get-log-snapshot",
-            "allow-open-terminal-session",
-            "allow-open-agent-sign-in-terminal",
-            "allow-write-terminal-input",
-            "allow-resize-terminal",
-            "allow-close-terminal-session",
-        ])
-    {
-        assert!(
-            !permissions.iter().any(|granted| granted == forbidden),
-            "session-monitor must stay a read-only viewer and cannot grant {forbidden}"
-        );
-    }
-    // No plugin or core permissions at all: no dialog, no events, no window
-    // control. Every grant is one of RunHaven's own typed commands.
-    assert!(
-        permissions
-            .iter()
-            .all(|permission| permission.starts_with("allow-")),
-        "session-monitor must grant only RunHaven command permissions, never plugin or core scopes"
-    );
-}
-
-/// The window-spawn command is benign (read-only window creation) but still a
-/// deliberate surface: only the main window may call it, and it grants
-/// nothing else.
-#[test]
-fn session_window_open_capability_stays_narrow_and_main_only() {
-    let permissions = capability_permissions("session-window-open.json");
-    assert_same_permission_set(
-        "session-window-open",
-        &permissions,
-        &["allow-open-session-window"],
-    );
-    assert_generated_permission_allows_only("open_session_window");
-
-    // The spawn permission lives nowhere else: monitor windows cannot chain
-    // new windows, and the read-only and sensitive capabilities stay closed.
-    for other in [
-        "main-read.json",
-        "run-control.json",
-        "session-monitor.json",
-        "launch-run.json",
-        "menu-events.json",
-        "menu-state.json",
-        "attention-badge.json",
-        "folder-pick.json",
-    ] {
-        assert!(
-            !capability_permissions(other)
-                .iter()
-                .any(|permission| permission == "allow-open-session-window"),
-            "{other} must not grant the session window spawn command"
-        );
-    }
 }
 
 #[test]

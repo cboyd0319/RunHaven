@@ -12,7 +12,7 @@ mod sessions;
 pub use active_runs::*;
 pub use agent_catalog::*;
 pub use diagnostics::*;
-pub use helpers::project_label;
+pub use helpers::{project_label, strip_terminal_controls};
 pub use launch::*;
 pub use payload::*;
 pub use review::*;

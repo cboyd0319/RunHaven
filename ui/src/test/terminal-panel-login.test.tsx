@@ -87,7 +87,9 @@ describe("TerminalPanel agent login mode", () => {
         login={{ agent: "claude", agentLabel: "Claude", sessionId: "loginabc" }}
       />,
     )
-    expect(html).toContain("RunHaven does not filter, read, store, or log it")
+    expect(html).toContain(
+      "RunHaven shows this live session without reading, filtering, saving, or logging it.",
+    )
     expect(html).toContain("The sign-in terminal needs the desktop app")
     expect(html).not.toContain("Open sign-in terminal")
     expect(openAgentSignInTerminal).not.toHaveBeenCalled()
@@ -122,7 +124,7 @@ describe("TerminalPanel agent login mode", () => {
     await act(async () => panel.root.render(<TerminalPanel login={panel.login} />))
     await openLogin(panel.container)
 
-    const viewport = panel.container.querySelector('[aria-label="Sandbox terminal"]')
+    const viewport = panel.container.querySelector('[aria-label="Session terminal"]')
     expect(viewport).not.toBeNull()
     expect(viewport?.classList.contains("h-72")).toBe(true)
     expect(viewport?.classList.contains("min-h-72")).toBe(false)
@@ -179,7 +181,12 @@ describe("TerminalPanel agent login mode", () => {
       handler?.({ event: "exit", code: 0, completionRecorded: false })
     })
     expect(panel.container.textContent).toContain("Sign-in status was not saved")
-    expect(panel.container.textContent).toContain("agent may still be signed in")
+    expect(panel.container.textContent).toContain(
+      "The assistant may still be signed in, but RunHaven couldn’t update its status.",
+    )
+    expect(panel.container.textContent).toContain(
+      "make sure your Mac has free space",
+    )
     expect(signedIn).not.toHaveBeenCalled()
     await act(async () => panel.root.unmount())
     panel.container.remove()

@@ -6,6 +6,7 @@ import {
 } from "@/commands/runhaven"
 
 import { sameManagedSessionList } from "./sessionList"
+import { sessionIdForRun } from "./sessionSelection"
 import { useNavigation } from "./useNavigation"
 
 const MANAGED_SESSION_POLL_MS = 4_000
@@ -20,6 +21,7 @@ export function useManagedSessionsState(lastLaunchRunId: string | null) {
   })
   const managedSessionsRef = useRef(managedSessions)
   const requestSeq = useRef(0)
+  const pendingLaunchRunIdRef = useRef<string | null>(lastLaunchRunId)
   const {
     navigation,
     selectedSessionId,
@@ -31,6 +33,30 @@ export function useManagedSessionsState(lastLaunchRunId: string | null) {
   useEffect(() => {
     managedSessionsRef.current = managedSessions
   }, [managedSessions])
+
+  useEffect(() => {
+    pendingLaunchRunIdRef.current = lastLaunchRunId
+  }, [lastLaunchRunId])
+
+  // A native launch is accepted before its managed-session record necessarily
+  // exists. Open that exact session once polling discovers it, but only if the
+  // user is still on the History waiting surface chosen by the launch flow.
+  // Clear the pending intent either way so later visits to History never steal
+  // focus back to an old launch.
+  useEffect(() => {
+    const pendingRunId = pendingLaunchRunIdRef.current
+    if (!pendingRunId) {
+      return
+    }
+    const sessionId = sessionIdForRun(managedSessions, pendingRunId)
+    if (!sessionId) {
+      return
+    }
+    pendingLaunchRunIdRef.current = null
+    if (navigation.kind === "runs") {
+      selectSession(sessionId)
+    }
+  }, [managedSessions, navigation.kind, selectSession])
 
   useEffect(() => {
     const hasSessionContext =

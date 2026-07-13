@@ -17,7 +17,7 @@ use super::validation::{MAX_RUN_ID_LEN, validate_text_len};
 use crate::contracts::{LogSnapshotRequest, LogSnapshotResponse};
 
 #[cfg(not(test))]
-const RAW_OUTPUT_CONFIRM_TITLE: &str = "Confirm raw output view";
+pub(crate) const RAW_OUTPUT_CONFIRM_TITLE: &str = "Show session output?";
 const RAW_OUTPUT_CANCELED: &str = "Raw output view canceled.";
 
 struct PreparedLogSnapshot {
@@ -125,8 +125,9 @@ pub(crate) async fn trusted_sensitive_output_approved(
     .await
 }
 
-pub(crate) fn trusted_run_output_message(lines: u32) -> String {
-    format!("Lines: {lines}\n\nRaw output may include secrets. Show output?")
+pub(crate) fn trusted_run_output_message(_lines: u32) -> String {
+    "Session output may include private information, such as passwords or API keys. Review it before sharing."
+        .to_string()
 }
 
 pub(crate) fn log_snapshot_response_from_payload(

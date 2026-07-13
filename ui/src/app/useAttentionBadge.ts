@@ -20,7 +20,7 @@ export function attentionBadgeCount(
     .length
 }
 
-// `enabled` is the Settings toggle: turning the badge off reports 0 once,
+// `enabled` is the View-menu toggle: turning the badge off reports 0 once,
 // which clears the Dock number, and stays quiet until it is turned back on.
 export function useAttentionBadge(
   sessions: ManagedSessionSummary[],

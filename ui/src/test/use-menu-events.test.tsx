@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   handleMenuCommand,
-  MENU_ACTION_SELECTORS,
+  MENU_CONTROL_ACTIONS,
   MENU_FOCUS_SELECTORS,
   useMenuEvents,
   type MenuActions,
@@ -33,9 +33,9 @@ function actions(patch: Partial<MenuActions> = {}): MenuActions {
   return {
     navigation: { kind: "home" },
     launchFlow: { setOpen: vi.fn() },
-    settings: { setOpen: vi.fn() },
+    settings: { dockBadge: true, setDockBadge: vi.fn() },
     navigate: vi.fn(),
-    openSessionInNewWindow: vi.fn(),
+    runControl: vi.fn().mockResolvedValue(undefined),
     ...patch,
   }
 }
@@ -54,50 +54,28 @@ describe("handleMenuCommand", () => {
     expect(app.navigate).toHaveBeenCalledWith({ kind: "new-session" })
   })
 
-  it("opens inline settings", () => {
+  it("toggles the app icon count from the View menu", () => {
     const app = actions()
-    handleMenuCommand("settings", app)
-    expect(app.settings.setOpen).toHaveBeenCalledWith(true)
+    handleMenuCommand("show-attention-badge", app)
+    expect(app.settings.setDockBadge).toHaveBeenCalledWith(false)
     expect(app.launchFlow.setOpen).not.toHaveBeenCalled()
     expect(app.navigate).not.toHaveBeenCalled()
   })
 
-  it("opens the monitor window only for the selected session", () => {
-    const selected = actions({ navigation: { kind: "session", id: "a1" } })
-    handleMenuCommand("open-session-window", selected)
-    expect(selected.openSessionInNewWindow).toHaveBeenCalledWith("a1")
-    // Read-only window creation only: nothing else moves.
-    expect(selected.navigate).not.toHaveBeenCalled()
-
-    // Without a selected session there is nothing to open; never guess one.
-    for (const nav of [
-      { kind: "home" } as const,
-      { kind: "runs" } as const,
-    ]) {
-      const app = actions({ navigation: nav })
-      handleMenuCommand("open-session-window", app)
-      expect(app.openSessionInNewWindow).not.toHaveBeenCalled()
-    }
-  })
-
-  it("activates an existing session action so its native confirmation opens", () => {
-    const button = document.createElement("button")
-    const onClick = vi.fn()
-    button.setAttribute("aria-label", "Stop run")
-    button.addEventListener("click", onClick)
-    document.body.append(button)
-
+  it("runs selected-session menu controls through the trusted command path", () => {
     const app = actions({ navigation: { kind: "session", id: "a1" } })
     handleMenuCommand("stop-session", app)
-    expect(onClick).toHaveBeenCalledTimes(1)
-    // The button calls the normal command, whose Rust-owned native dialog is
-    // still the mutation boundary.
+    handleMenuCommand("hard-stop-session", app)
+    handleMenuCommand("cleanup-session", app)
+    expect(app.runControl).toHaveBeenNthCalledWith(1, "stop")
+    expect(app.runControl).toHaveBeenNthCalledWith(2, "kill")
+    expect(app.runControl).toHaveBeenNthCalledWith(3, "cleanup")
     expect(app.navigate).not.toHaveBeenCalled()
   })
 
   it("focuses the composer for Send Message without sending an empty draft", () => {
     const composer = document.createElement("textarea")
-    composer.placeholder = "Type a message for this run."
+    composer.placeholder = "Type a message for this session."
     document.body.append(composer)
 
     handleMenuCommand("send-message", actions())
@@ -108,11 +86,12 @@ describe("handleMenuCommand", () => {
     const app = actions()
     for (const id of [
       ...Object.keys(MENU_FOCUS_SELECTORS),
-      ...Object.keys(MENU_ACTION_SELECTORS),
+      ...Object.keys(MENU_CONTROL_ACTIONS),
     ]) {
       expect(() => handleMenuCommand(id, app)).not.toThrow()
     }
     expect(app.navigate).not.toHaveBeenCalled()
+    expect(app.runControl).not.toHaveBeenCalled()
   })
 
   it("clicks the existing sidebar trigger for toggle-sidebar", () => {
@@ -133,7 +112,7 @@ describe("handleMenuCommand", () => {
     }
     expect(app.navigate).not.toHaveBeenCalled()
     expect(app.launchFlow.setOpen).not.toHaveBeenCalled()
-    expect(app.settings.setOpen).not.toHaveBeenCalled()
+    expect(app.settings.setDockBadge).not.toHaveBeenCalled()
   })
 })
 
@@ -149,8 +128,8 @@ describe("useMenuEvents", () => {
     const next = actions()
     await hook.rerender(next)
     expect(capturedHandlers).toHaveLength(1)
-    capturedHandlers[0]("settings")
-    expect(next.settings.setOpen).toHaveBeenCalledWith(true)
+    capturedHandlers[0]("show-attention-badge")
+    expect(next.settings.setDockBadge).toHaveBeenCalledWith(false)
 
     await hook.unmount()
     expect(unlisten).toHaveBeenCalledTimes(1)
@@ -165,18 +144,8 @@ describe("menu contract tripwires", () => {
   }
 
   it("session menu selectors match labels the session view components render", () => {
-    const sources = [
-      appSource("RunStatusCard.tsx"),
-      appSource("SessionInputCard.tsx"),
-      appSource("RunOutputCard.tsx"),
-    ].join("\n")
-    const labels = [
-      'aria-label="Stop run"',
-      'aria-label="Hard stop"',
-      'aria-label="Clean up run"',
-      "Type a message for this run.",
-      "Show latest output",
-    ]
+    const sources = appSource("SessionInputCard.tsx")
+    const labels = ["Type a message."]
     for (const label of labels) {
       expect(sources, label).toContain(label)
     }
@@ -189,11 +158,10 @@ describe("menu contract tripwires", () => {
       readFileSync(join(rustMenuDir, "mod.rs"), "utf8")
     const handledIds = [
       "new-run",
-      "settings",
+      "show-attention-badge",
       "toggle-sidebar",
-      "open-session-window",
       ...Object.keys(MENU_FOCUS_SELECTORS),
-      ...Object.keys(MENU_ACTION_SELECTORS),
+      ...Object.keys(MENU_CONTROL_ACTIONS),
     ]
     for (const id of handledIds) {
       expect(rustMenu, id).toContain(`"${id}"`)

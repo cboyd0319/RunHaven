@@ -1,6 +1,24 @@
 use super::*;
 
 #[test]
+fn run_control_confirmations_explain_the_effect_without_internal_ids() {
+    let messages = crate::commands::run_control::trusted_run_control_messages_for_test();
+
+    assert_eq!(messages.len(), 3);
+    assert!(messages[0].contains("ask the assistant to finish and stop"));
+    assert!(messages[1].contains("end this session immediately"));
+    assert!(messages[1].contains("assistant may lose unsaved work"));
+    assert!(messages[2].contains("remove this session from the active list"));
+    assert!(messages[2].contains("won’t delete project files"));
+    for message in messages {
+        assert!(!message.contains("Run ID:"));
+        assert!(!message.contains("Action:"));
+        assert!(!message.contains("Status:"));
+        assert!(!message.contains("container"));
+    }
+}
+
+#[test]
 fn managed_session_run_control_resolves_session_id_and_stays_confirmed() {
     let (_cache, _cache_home) = isolated_cache();
     write_active_run_payload(
@@ -29,7 +47,10 @@ fn managed_session_run_control_resolves_session_id_and_stays_confirmed() {
         |_| unreachable!("unknown sessions must fail before stop"),
     )
     .expect_err("unknown session rejected");
-    assert!(missing.contains("managed session not found"));
+    assert_eq!(
+        missing,
+        "RunHaven couldn’t stop this session. Check its status, then try again."
+    );
 
     let unconfirmed = crate::commands::run_control::stop_managed_session_for_test(
         StopManagedSessionRequest {
@@ -184,7 +205,10 @@ fn managed_session_run_control_rejects_history_sessions_before_mutation() {
         |_| unreachable!("history session must fail before stop"),
     )
     .expect_err("history session rejected");
-    assert!(stop.contains("no longer active"));
+    assert_eq!(
+        stop,
+        "RunHaven couldn’t stop this session. Check its status, then try again."
+    );
 
     let kill = crate::commands::run_control::kill_managed_session_for_test(
         KillManagedSessionRequest {
@@ -195,7 +219,10 @@ fn managed_session_run_control_rejects_history_sessions_before_mutation() {
         |_| unreachable!("history session must fail before kill"),
     )
     .expect_err("history session rejected");
-    assert!(kill.contains("no longer active"));
+    assert_eq!(
+        kill,
+        "RunHaven couldn’t force stop this session. Check its status, then try again."
+    );
 
     let repair = crate::commands::run_control::repair_managed_session_for_test(
         RepairManagedSessionRequest {
@@ -206,5 +233,8 @@ fn managed_session_run_control_rejects_history_sessions_before_mutation() {
         |_| unreachable!("history session must fail before repair"),
     )
     .expect_err("history session rejected");
-    assert!(repair.contains("no longer active"));
+    assert_eq!(
+        repair,
+        "RunHaven couldn’t remove this session from the active list. Check its status, then try again."
+    );
 }

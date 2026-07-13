@@ -5,18 +5,14 @@ import {
   sessionAttention,
   type SessionAttentionKind,
 } from "../sessionAttention"
-import { useSessionLabels } from "../sessionLabels"
 import { displayValue, sessionDisplayTitle } from "../sessionIdentity"
 import { AgentCell } from "./AgentCell"
 import { DashboardPanel } from "./DashboardPanel"
 import { timeAgo } from "./timeAgo"
 
-// History "Needs attention": the runs waiting on the user. Each row names the
-// run, its agent, the issue, when it last changed, and
-// a Review action that opens the session. The whole row is also clickable so the
-// hit area is large; the Review button is the labelled affordance for keyboard
-// and screen-reader users. Empty state hides the panel (the caller checks the
-// count), never an empty grid.
+// History "Needs attention": the sessions waiting on the user. Stacked rows
+// keep the session, reason, and primary action readable at the minimum window
+// width. Empty state hides the panel (the caller checks the count).
 export function NeedsReviewPanel({
   sessions,
   onSelectSession,
@@ -26,89 +22,88 @@ export function NeedsReviewPanel({
   onSelectSession: (sessionId: string) => void
   onSignIn: (agent: string) => void
 }) {
-  const { labels } = useSessionLabels()
   return (
     <DashboardPanel title="Needs attention" count={sessions.length}>
-      <table className="w-full table-fixed border-collapse text-sm">
-        <thead>
-          <tr className="text-left text-xs text-muted-foreground">
-            <th className="pb-2 pl-2 font-medium">Run</th>
-            <th className="w-[16%] pb-2 font-medium">Agent</th>
-            <th className="w-[28%] pb-2 font-medium">What happened</th>
-            <th className="w-[15%] pb-2 font-medium">Updated</th>
-            <th className="w-[13%] pb-2 pr-2 text-right font-medium">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sessions.map((session) => {
-            const attention = sessionAttention(session)
-            return (
-              <tr
-                key={session.id}
-                className="cursor-pointer border-t transition-colors hover:bg-muted/50"
-                onClick={() => onSelectSession(session.id)}
-              >
-                <td className="py-2.5 pl-2">
-                  <span className="flex items-center gap-2 font-medium">
-                    <span
-                      aria-hidden
-                      className={`size-2 shrink-0 rounded-full ${attentionDotClass(
-                        attention?.tone,
-                      )}`}
-                    />
-                    <span className="truncate">
-                      {sessionDisplayTitle(session, labels)}
-                    </span>
-                  </span>
-                </td>
-                <td className="py-2.5">
-                  <AgentCell agent={session.agent} />
-                </td>
-                <td className="py-2.5 pr-2 text-muted-foreground">
-                  <span className="block font-medium text-foreground">
-                    {attention?.label ?? "Needs review"}
-                  </span>
-                  <span className="line-clamp-2">
-                    {displayValue(session.nextAction.detail) || "Open this run for the next step."}
-                  </span>
-                </td>
-                <td className="py-2.5 text-muted-foreground tabular-nums">
-                  {timeAgo(session.startedAt)}
-                </td>
-                <td className="py-2.5 pr-2 text-right">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    aria-label={`${attentionAction(attention?.kind)} ${sessionDisplayTitle(
-                      session,
-                      labels,
+      <ul className="divide-y text-sm">
+        {sessions.map((session) => {
+          const attention = sessionAttention(session)
+          const title = sessionDisplayTitle(session)
+          return (
+            <li
+              key={session.id}
+              className="flex flex-col gap-3 py-3 sm:flex-row sm:items-start"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2 font-medium">
+                  <span
+                    aria-hidden
+                    className={`size-2 shrink-0 rounded-full ${attentionDotClass(
+                      attention?.tone,
                     )}`}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      if (attention?.kind === "needs-sign-in") {
-                        onSignIn(session.agent)
-                      } else {
-                        onSelectSession(session.id)
-                      }
-                    }}
-                  >
-                    {attentionAction(attention?.kind)}
-                  </Button>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+                  />
+                  <span className="min-w-0 break-words">{title}</span>
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <AgentCell agent={session.agent} />
+                  <span className="tabular-nums">{timeAgo(session.startedAt)}</span>
+                </div>
+                <p className="mt-2 font-medium text-foreground">
+                  {attention?.label ?? "Needs review"}
+                </p>
+                <p className="text-muted-foreground">
+                  {attentionDetail(session, attention?.kind)}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 self-start"
+                aria-label={`${attentionAction(attention?.kind)} ${title}`}
+                onClick={() => {
+                  if (attention?.kind === "needs-sign-in") {
+                    onSignIn(session.agent)
+                  } else {
+                    onSelectSession(session.id)
+                  }
+                }}
+              >
+                {attentionAction(attention?.kind)}
+              </Button>
+            </li>
+          )
+        })}
+      </ul>
     </DashboardPanel>
   )
+}
+
+function attentionDetail(
+  session: ManagedSessionSummary,
+  kind: SessionAttentionKind | undefined,
+): string {
+  if (kind === "ready-to-review") {
+    return "The assistant’s changes are ready to review."
+  }
+  if (session.nextAction.detail.trim()) {
+    return displayValue(session.nextAction.detail)
+  }
+  switch (kind) {
+    case "failed":
+      return "RunHaven couldn’t determine why this session ended."
+    case "not-responding":
+      return "RunHaven can no longer find this session."
+    case "needs-sign-in":
+      return "Sign in to continue."
+    default:
+      return "Open this session for the next step."
+  }
 }
 
 function attentionAction(kind: SessionAttentionKind | undefined): string {
   switch (kind) {
     case "failed":
-      return "Open run"
+      return "Open session"
     case "needs-sign-in":
       return "Sign in"
     case "not-responding":

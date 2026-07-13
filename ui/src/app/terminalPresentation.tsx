@@ -39,11 +39,11 @@ export function attachTerminalConfig(
   return {
     sessionId: session.id,
     title: "Terminal",
-    description: "Type live inside this run's sandbox.",
+    description: "Type directly in this protected session.",
     openLabel: "Open terminal",
     previewText:
-      "Terminal needs the desktop app. Open RunHaven on your Mac to type live with this run.",
-    connectedText: "Connected. What you type goes straight to the sandbox.",
+      "Terminal needs the desktop app. Open RunHaven on your Mac to type live with this session.",
+    connectedText: "Connected. What you type goes directly to this session.",
     endedText: "This terminal ended.",
   }
 }
@@ -69,26 +69,43 @@ export function loginTerminalConfig(
 export function runTerminalConfig(sessionId: string): TerminalConfig {
   return {
     sessionId,
-    title: "Run terminal",
+    title: "Session terminal",
     description:
-      "This agent is interactive, so you type your task right here in its terminal. RunHaven starts the run in a sandbox and connects it to this terminal.",
-    openLabel: "Start run",
+      "Type your task here. RunHaven starts the assistant in a protected session and connects you to it.",
+    openLabel: "Start session",
     previewText:
-      "The run terminal needs the desktop app. Open RunHaven on your Mac to start this agent and type here.",
-    connectedText: "Connected. Type your task for the agent here.",
-    endedText: "This run ended.",
+      "The session terminal needs the desktop app. Open RunHaven on your Mac to start this assistant and type here.",
+    connectedText: "Connected. Type your task for the assistant here.",
+    endedText: "This session ended.",
   }
 }
 
-export function TerminalDisclosure() {
+export function TerminalDisclosure({
+  retainForHistory = false,
+}: {
+  retainForHistory?: boolean
+}) {
+  if (retainForHistory) {
+    return (
+      <Alert variant="warning">
+        <TriangleAlert />
+        <AlertTitle>Live terminal</AlertTitle>
+        <AlertDescription>
+          RunHaven keeps a filtered copy in memory until you quit, then deletes
+          it. It never saves the copy to disk. The assistant can show private
+          project information, so review the text before you share it.
+        </AlertDescription>
+      </Alert>
+    )
+  }
   return (
     <Alert variant="warning">
       <TriangleAlert />
       <AlertTitle>Live terminal, shown but not saved</AlertTitle>
       <AlertDescription>
-        This is a live terminal inside the sandbox. RunHaven does not filter,
-        read, store, or log it. It just shows what the sandbox prints. So
-        anything here, including passwords or codes, is visible on this screen.
+        RunHaven shows this live session without reading, filtering, saving, or
+        logging it. Anything the assistant displays, including passwords or
+        codes, appears in this window.
       </AlertDescription>
     </Alert>
   )

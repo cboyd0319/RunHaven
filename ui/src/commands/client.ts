@@ -53,8 +53,6 @@ import type {
   ManagedSessionLogSnapshotResponse,
   ManagedSessionStatusResponse,
   MenuState,
-  OpenSessionWindowResponse,
-  SessionWindowTargetResponse,
   RunPlanRequest,
   RunPlanResponse,
   KillRunResponse,
@@ -218,26 +216,6 @@ export async function getManagedSessionDiagnostics(
   );
 }
 
-// Open (or focus) the read-only monitor window for a session. Benign window
-// creation, fully validated in Rust; the browser preview has no windows, so
-// the fallback reports nothing opened.
-export async function openSessionWindow(
-  sessionId: string
-): Promise<OpenSessionWindowResponse> {
-  return call(
-    "open_session_window",
-    { request: { sessionId } },
-    () => ({ windowLabel: "", focusedExisting: false })
-  );
-}
-
-// Which session this monitor window shows, answered by Rust from the calling
-// window's label (the WebView sends nothing). Monitor windows only; in the
-// browser preview the caller falls back to the ?session= URL parameter.
-export async function getSessionWindowTarget(): Promise<SessionWindowTargetResponse> {
-  return call("get_session_window_target", {}, () => ({ sessionId: "" }));
-}
-
 export async function planRun(request: RunPlanRequest): Promise<RunPlanResponse> {
   return call("plan_run", { request }, () => previewPlanRun(request));
 }
@@ -325,15 +303,12 @@ export async function writeSessionInput(
   sessionId: string,
   input: string
 ): Promise<WriteSessionInputResponse> {
-  const clientTarget = `session:${sessionId}`;
   return call(
     "write_session_input",
     {
       request: {
         sessionId,
-        input,
-        confirmSend: true,
-        clientTarget
+        input
       }
     },
     () => previewSessionInput(sessionId, input)
@@ -402,7 +377,8 @@ export async function syncMenuState(state: MenuState): Promise<void> {
 
 export async function chooseProjectFolder(): Promise<string | null> {
   if (!hasTauriRuntime()) {
-    return null;
+    const previewPath = new URLSearchParams(window.location.search).get("project");
+    return previewPath || "/tmp/runhaven-preview";
   }
   const selected = await open({ directory: true, multiple: false });
   return typeof selected === "string" ? selected : null;

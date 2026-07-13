@@ -26,7 +26,7 @@ fn build_plan_response_uses_existing_runhaven_planner() {
     assert_eq!(response.auth_scope, "agent");
     assert_eq!(response.network_mode, "provider");
     assert!(response.egress_summary.contains("provider allowlist"));
-    assert_eq!(response.access.label, "Shared agent sign-in");
+    assert_eq!(response.access.label, "Use saved sign-in");
     assert!(
         response
             .access
@@ -154,68 +154,6 @@ fn build_plan_response_rejects_oversized_ipc_fields() {
 }
 
 #[test]
-fn launch_run_rejects_oversized_warning_confirmations() {
-    let workspace = tempfile::tempdir().expect("workspace");
-    let request = LaunchRunRequest {
-        plan: request(workspace.path().to_path_buf()),
-        confirm_launch: true,
-        confirmed_warnings: vec!["full-internet".to_string(); 17],
-    };
-
-    let error = validate_launch_confirmation(&request).expect_err("warning count cap");
-
-    assert!(error.contains("confirmed warning codes"));
-}
-
-#[test]
-fn launch_run_requires_explicit_confirmation() {
-    let (_cache, _cache_home) = isolated_cache();
-    let workspace = tempfile::tempdir().expect("workspace");
-    let request = LaunchRunRequest {
-        plan: request(workspace.path().to_path_buf()),
-        confirm_launch: false,
-        confirmed_warnings: Vec::new(),
-    };
-
-    let error = validate_launch_confirmation(&request).expect_err("confirmation required");
-
-    assert!(error.contains("Confirm the launch"));
-}
-
-#[test]
-fn launch_run_requires_each_warning_confirmation() {
-    let (_cache, _cache_home) = isolated_cache();
-    let workspace = tempfile::tempdir().expect("workspace");
-    let mut plan = request(workspace.path().to_path_buf());
-    plan.network_mode = "internet".to_string();
-    let request = LaunchRunRequest {
-        plan,
-        confirm_launch: true,
-        confirmed_warnings: Vec::new(),
-    };
-
-    let error = validate_launch_confirmation(&request).expect_err("warning required");
-
-    assert!(error.contains("full-internet"));
-}
-
-#[test]
-fn launch_run_requires_active_run_warning_confirmation() {
-    let (_cache, _cache_home) = isolated_cache();
-    write_active_run("active-launch-run");
-    let workspace = tempfile::tempdir().expect("workspace");
-    let request = LaunchRunRequest {
-        plan: request(workspace.path().to_path_buf()),
-        confirm_launch: true,
-        confirmed_warnings: Vec::new(),
-    };
-
-    let error = validate_launch_confirmation(&request).expect_err("active warning required");
-
-    assert!(error.contains("active-runs"));
-}
-
-#[test]
 fn launch_run_response_uses_reserved_run_id_without_starting() {
     let (_cache, _cache_home) = isolated_cache();
     let workspace = tempfile::tempdir().expect("workspace");
@@ -261,47 +199,6 @@ fn launch_run_requires_trusted_approval_before_spawning() {
 
     assert!(outcome.is_none());
     assert!(read_active_run_records().is_empty());
-}
-
-#[test]
-fn trusted_launch_prompt_contains_reviewable_launch_facts() {
-    let (_cache, _cache_home) = isolated_cache();
-    let workspace = tempfile::tempdir().expect("workspace");
-    let mut plan_request = request(workspace.path().to_path_buf());
-    plan_request.api_key_broker_env = Some("OPENAI_API_KEY".to_string());
-    plan_request.env_names = vec![
-        "OPENAI_API_KEY".to_string(),
-        "RUNHAVEN_TEST_TOKEN".to_string(),
-    ];
-    let plan = build_agent_run_plan(&plan_request, Some("prompt-review-run".to_string()))
-        .expect("launch plan");
-
-    let message = trusted_launch_message_for_test(&plan, &[], false, &plan_request.env_names);
-
-    assert!(message.contains("Agent: codex"));
-    assert!(message.contains(&format!("Workspace: {}", plan.workspace.display())));
-    // COPY-1: the consent dialog shows the plain shared labels, never the raw
-    // enum codes a non-technical user cannot read.
-    assert!(message.contains("Sign-in: Shared agent sign-in"));
-    assert!(message.contains("Image: runhaven/codex"));
-    assert!(message.contains("Network: Provider only"));
-    assert!(!message.contains("Auth: agent"));
-    assert!(!message.contains("Network: provider"));
-    assert!(message.contains("Provider hosts: "));
-    assert!(message.contains("API key broker: OPENAI_API_KEY"));
-    assert!(
-        message
-            .lines()
-            .any(|line| { line == "Extra host variables: OPENAI_API_KEY, RUNHAVEN_TEST_TOKEN" })
-    );
-    assert!(!message.contains("OPENAI_API_KEY="));
-    assert!(!message.contains("RUNHAVEN_TEST_TOKEN="));
-    assert!(message.contains("Worktree: no"));
-
-    let worktree_message =
-        trusted_launch_message_for_test(&plan, &[], true, &plan_request.env_names);
-    assert!(worktree_message.contains("Worktree: yes"));
-    assert!(worktree_message.contains("isolated git branch"));
 }
 
 #[test]
@@ -376,40 +273,6 @@ fn build_plan_response_rejects_invalid_auth_scope() {
     let error = build_plan_response(plan_request).expect_err("invalid auth scope");
 
     assert!(error.contains("invalid auth scope"));
-}
-
-#[test]
-fn launch_request_with_omitted_confirm_flag_fails_closed_with_friendly_error() {
-    let workspace = tempfile::tempdir().expect("workspace");
-    // No `confirmLaunch` key at all: the flag must default to false instead of
-    // failing deserialization with a raw serde error.
-    let launch_request: LaunchRunRequest = serde_json::from_value(json!({
-        "plan": {
-            "agent": "codex",
-            "workspacePath": workspace.path().display().to_string(),
-            "networkMode": "provider",
-            "workspaceScope": "current",
-            "sessionName": null,
-            "readOnlyWorkspace": false,
-            "cpus": "4",
-            "memory": "4g",
-            "providerHosts": [],
-            "envNames": [],
-            "apiKeyBrokerEnv": null,
-            "image": null,
-            "allowSensitiveWorkspace": false,
-            "allowRootUser": false,
-            "user": "agent"
-        }
-    }))
-    .expect("deserialize launch request without confirm flag");
-
-    assert!(!launch_request.confirm_launch);
-
-    let error =
-        validate_launch_confirmation(&launch_request).expect_err("unconfirmed launch rejected");
-
-    assert_eq!(error, "Confirm the launch before starting a run.");
 }
 
 #[test]

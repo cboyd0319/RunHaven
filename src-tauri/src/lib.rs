@@ -12,7 +12,6 @@ mod read_guard;
 mod registry_support;
 pub(crate) mod session_input;
 mod session_output;
-pub(crate) mod session_windows;
 mod tail_status;
 pub(crate) mod terminal;
 
@@ -20,12 +19,8 @@ use tauri::Manager;
 use tauri::window::{Effect, EffectsBuilder};
 use tauri_plugin_window_state::StateFlags;
 
-use session_windows::SESSION_WINDOW_LABEL_PREFIX;
-
 /// The main window: the one control surface. Every mutating capability and
-/// menu dispatch targets this label. The only other windows are the read-only
-/// per-session monitors (`session-*`, see `session_windows.rs`), which carry
-/// their own narrow read capability and never gain controls.
+/// menu dispatch targets this label.
 pub(crate) const MAIN_WINDOW_LABEL: &str = "main";
 
 pub fn run() {
@@ -105,13 +100,10 @@ pub fn run() {
         // entering full screen stays a per-launch choice through the standard
         // controls (navigation spec section 7). The plugin exposes commands,
         // but no capability grants them, so the WebView cannot save, restore,
-        // or read window state. Per-session monitor windows are filtered out
-        // entirely: they are never persisted or restored across relaunch, not
-        // even their geometry.
+        // or read window state.
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
-                .with_filter(|label| !label.starts_with(SESSION_WINDOW_LABEL_PREFIX))
                 .build(),
         )
         // The menu bar is dispatch-only: items emit ids to the main window
@@ -139,7 +131,7 @@ pub fn run() {
             // content stays opaque (SidebarInset is bg-background). Non-fatal --
             // if the effect cannot apply, the transparent window falls back to
             // the per-region backgrounds and the app runs normally. Main window
-            // only; the read-only session monitors stay opaque.
+            // only.
             if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL)
                 && let Err(error) =
                     window.set_effects(EffectsBuilder::new().effect(Effect::Sidebar).build())
@@ -148,21 +140,10 @@ pub fn run() {
             }
             Ok(())
         })
-        // Monitor windows exist to watch sessions while the main window is
-        // the control surface. When the main window goes away, close them
-        // too, so closing the main window keeps meaning "quit" (Tauri exits
-        // when the last window closes) and no orphan monitors outlive their
-        // controls.
         .on_window_event(|window, event| {
             if window.label() == MAIN_WINDOW_LABEL && matches!(event, tauri::WindowEvent::Destroyed)
             {
-                log::info!("main window destroyed; closing monitor windows and terminal sessions");
-                for (label, monitor) in window.app_handle().webview_windows() {
-                    if label.starts_with(SESSION_WINDOW_LABEL_PREFIX) {
-                        log::debug!("closing monitor window {label}");
-                        let _ = monitor.close();
-                    }
-                }
+                log::info!("main window destroyed; closing terminal sessions");
                 // Terminal sessions are live PTY children; kill them all so no
                 // `container exec` process outlives the app (terminal design
                 // section 9). They are never persisted or restored.
@@ -178,7 +159,6 @@ pub fn run() {
         })
         .manage(session_input::SessionInputRegistry::default())
         .manage(terminal::TerminalSessionRegistry::default())
-        .manage(session_windows::SessionWindowRegistry::default())
         .manage(session_output::SessionOutputRegistry::default())
         .manage(launch_status::LaunchStatusRegistry::default())
         .manage(tail_status::ImageBuildStatusRegistry::default())
@@ -225,8 +205,6 @@ pub fn run() {
             commands::launch::launch_run,
             commands::attention_badge::set_attention_badge,
             commands::menu_sync::sync_menu_state,
-            commands::session_window::open_session_window,
-            commands::session_window::get_session_window_target,
             terminal::open_terminal_session,
             terminal::open_agent_sign_in_terminal,
             terminal::open_agent_run_terminal,

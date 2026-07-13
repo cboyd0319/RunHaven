@@ -73,7 +73,7 @@ export function defaultRunPlanRequest(agent: AgentProfile | undefined): RunPlanR
 
 export function authScopeHelp(scope: RunPlanRequest["authScope"]): string {
   if (scope === "agent") {
-    return "Use the sign-in you did in RunHaven for this agent across your projects on this Mac.";
+    return "Use the sign-in you did in RunHaven for this assistant across your projects on this Mac.";
   }
   return "Keep the sign-in separate, just for this project.";
 }
@@ -115,19 +115,19 @@ export function warningPreview(request: RunPlanRequest, context: WarningPreviewC
   if (request.networkMode === "internet") {
     warnings.push({
       code: "full-internet",
-      message: "Full internet lets the agent reach unrestricted network destinations from inside the container."
+      message: "Full internet lets the assistant reach any site from inside the protected session."
     });
   }
   if (request.allowSensitiveWorkspace) {
     warnings.push({
       code: "sensitive-workspace",
-      message: "The selected folder may contain private files. The agent can read files inside that folder."
+      message: "The selected folder may contain private files. The assistant can read files inside that folder."
     });
   }
   if (request.allowRootUser || request.user === "root" || request.user === "0") {
     warnings.push({
       code: "root-user",
-      message: "The agent will run as root inside the container, weakening normal container guardrails."
+      message: "The assistant will run as root inside the container, weakening normal container guardrails."
     });
   }
   if (request.envNames.length > 0) {
@@ -151,7 +151,7 @@ export function warningPreview(request: RunPlanRequest, context: WarningPreviewC
   if (!request.worktree && !request.readOnlyWorkspace) {
     warnings.push({
       code: "direct-workspace",
-      message: "Direct mode lets the agent change files in your original project folder. Use the recommended isolated copy unless you need direct access."
+      message: "The assistant can change files in your original project folder. The safer choice is a protected copy."
     });
   }
   return warnings;
@@ -186,16 +186,4 @@ function memoryBytes(memory: string): number | null {
     return null;
   }
   return Number(digits) * multiplier;
-}
-
-export function isLaunchReady(
-  plan: Pick<RunPlanResponse, "warnings" | "access"> | null,
-  confirmLaunch: boolean,
-  confirmedWarnings: Set<string>,
-  imageReady = true
-): boolean {
-  if (!plan || !confirmLaunch || !imageReady || plan.access.blocking) {
-    return false;
-  }
-  return plan.warnings.every((warning) => confirmedWarnings.has(warning.code));
 }

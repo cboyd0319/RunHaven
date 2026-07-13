@@ -1,4 +1,3 @@
-use runhaven_core::ui_contracts::ManagedSessionSummaryData;
 use tauri::AppHandle;
 use tauri_plugin_dialog::MessageDialogKind;
 
@@ -44,48 +43,39 @@ impl WorktreeReviewAction {
 
     pub(super) fn confirm_error(self) -> &'static str {
         match self {
-            Self::Keep => {
-                "Confirm keeping this worktree before RunHaven leaves the branch in place."
+            Self::Keep => "Confirm Save before RunHaven keeps the protected copy.",
+            Self::Merge => "Confirm Apply changes before RunHaven changes your project.",
+            Self::Recover => "Confirm Show recovery steps before RunHaven opens them.",
+            Self::Discard => {
+                "Confirm Discard changes before RunHaven permanently deletes the protected copy."
             }
-            Self::Merge => "Confirm the merge before RunHaven merges this worktree branch.",
-            Self::Recover => "Confirm the review before RunHaven shows recovery steps.",
-            Self::Discard => "Confirm the discard before RunHaven deletes this worktree branch.",
         }
     }
 
     pub(super) fn canceled_error(self) -> &'static str {
         match self {
-            Self::Keep => "Keep canceled; the worktree was left unchanged.",
-            Self::Merge => "Merge canceled before changing this worktree.",
-            Self::Recover => "Recovery review canceled.",
-            Self::Discard => "Discard canceled; the worktree was left in place.",
+            Self::Keep => "Save canceled. Nothing changed.",
+            Self::Merge => "Apply changes canceled. Nothing changed.",
+            Self::Recover => "Recovery steps canceled. Nothing changed.",
+            Self::Discard => "Discard changes canceled. Nothing changed.",
         }
     }
 
     fn dialog_title(self) -> &'static str {
         match self {
-            Self::Keep => "Confirm RunHaven keep",
-            Self::Merge => "Confirm RunHaven merge",
-            Self::Recover => "Confirm RunHaven recovery review",
-            Self::Discard => "Confirm RunHaven discard",
+            Self::Keep => "Save changes for later?",
+            Self::Merge => "Apply changes to your project?",
+            Self::Recover => "Show recovery steps?",
+            Self::Discard => "Discard assistant changes?",
         }
     }
 
     fn dialog_button(self) -> &'static str {
         match self {
-            Self::Keep => "Keep",
-            Self::Merge => "Merge",
+            Self::Keep => "Save",
+            Self::Merge => "Apply",
             Self::Recover => "Show steps",
             Self::Discard => "Discard",
-        }
-    }
-
-    fn dialog_label(self) -> &'static str {
-        match self {
-            Self::Keep => "Keep worktree",
-            Self::Merge => "Merge worktree",
-            Self::Recover => "Recovery review",
-            Self::Discard => "Discard worktree",
         }
     }
 
@@ -97,14 +87,20 @@ impl WorktreeReviewAction {
         }
     }
 
-    fn dialog_effect(self) -> &'static str {
+    fn dialog_message(self) -> &'static str {
         match self {
-            Self::Keep => "leave this worktree and branch in place for manual review",
-            Self::Merge => {
-                "merge this worktree branch into the source branch, then remove the worktree"
+            Self::Keep => {
+                "RunHaven will keep the assistant’s protected copy for later. Your project will not change."
             }
-            Self::Recover => "show the safe manual recovery steps for this worktree",
-            Self::Discard => "delete the recorded worktree and branch for this finished session",
+            Self::Merge => {
+                "RunHaven will add the assistant’s changes to your project, then delete the protected copy. If RunHaven finds a conflict, it will keep the copy so you can view recovery steps."
+            }
+            Self::Recover => {
+                "RunHaven will show how to open the saved changes yourself. It won’t change or delete files."
+            }
+            Self::Discard => {
+                "RunHaven will permanently delete the assistant’s changes and the protected copy. Your project will not change."
+            }
         }
     }
 }
@@ -112,26 +108,26 @@ impl WorktreeReviewAction {
 pub(super) async fn trusted_worktree_action_confirmed(
     app: AppHandle,
     action: WorktreeReviewAction,
-    session: &ManagedSessionSummaryData,
-    run_id: &str,
-    branch: &str,
 ) -> Result<bool, String> {
-    let message = format!(
-        "Action: {}\nSession: {}\nRun ID: {}\nAgent: {}\nProject: {}\nBranch: {}\n\nRunHaven will {} after you confirm.",
-        action.dialog_label(),
-        session.title,
-        run_id,
-        session.agent,
-        session.project,
-        branch,
-        action.dialog_effect(),
-    );
     confirm_native(
         app,
         action.dialog_title(),
         action.dialog_button(),
         action.dialog_kind(),
-        message,
+        action.dialog_message().to_string(),
     )
     .await
+}
+
+#[cfg(test)]
+pub(crate) fn worktree_confirmation_messages_for_test() -> Vec<&'static str> {
+    [
+        WorktreeReviewAction::Keep,
+        WorktreeReviewAction::Merge,
+        WorktreeReviewAction::Recover,
+        WorktreeReviewAction::Discard,
+    ]
+    .into_iter()
+    .map(WorktreeReviewAction::dialog_message)
+    .collect()
 }

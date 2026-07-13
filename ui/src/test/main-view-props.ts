@@ -33,15 +33,12 @@ export function planRequest(): RunPlanRequest {
   }
 }
 
-// A launch flow fixture with no in-progress review.
+// A launch flow fixture with no launch in progress.
 export function launchFlow(): LaunchFlow {
   return {
     request: planRequest(),
     launchStep: "agent",
-    plan: null,
     planning: false,
-    launching: false,
-    confirmedWarnings: [],
     launchMessage: "",
     error: "",
     runTerminal: null,
@@ -51,10 +48,10 @@ export function launchFlow(): LaunchFlow {
     updateNetworkMode: () => {},
     updateRequest: () => {},
     pickFolder: async () => {},
-    reviewPlan: async () => {},
-    setWarningConfirmation: () => {},
-    startRun: async () => {},
+    startSession: async () => {},
+    retryWithoutProtectedCopy: async () => {},
     closeRunTerminal: () => {},
+    cancelRunTerminal: () => {},
     setLaunchStep: () => {},
   }
 }
@@ -152,8 +149,6 @@ export function mainViewProps(
     onControl: async () => {},
     onWorktreeResolved: async () => {},
     launchFlow: launchFlow(),
-    launchReady: false,
-    launchImageReady: true,
     selectedAgent: providerAgent,
     imageLoading: false,
     imageStatus: null,

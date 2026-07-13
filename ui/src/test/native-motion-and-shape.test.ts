@@ -38,16 +38,31 @@ describe("NAT-7 native overlay motion", () => {
     expect(css).toMatch(/transition-duration:\s*1ms\s*!important/);
   });
 
-  it("uses ease-out timing on the overlay primitives", () => {
+  it("uses ease-out timing on the remaining overlay primitives", () => {
     for (const file of [
-      "../components/ui/dialog.tsx",
       "../components/ui/sheet.tsx",
-      "../components/ui/alert-dialog.tsx",
       "../components/ui/select.tsx",
     ]) {
       expect(read(file)).toContain("ease-out");
     }
     // The sheet's generic web easing is gone.
     expect(read("../components/ui/sheet.tsx")).not.toContain("ease-in-out");
+  });
+});
+
+describe("macOS visual accessibility preferences", () => {
+  const css = read("../index.css");
+
+  it("uses opaque surfaces when reduced transparency is requested", () => {
+    expect(css).toContain("@media (prefers-reduced-transparency: reduce)");
+    expect(css).toMatch(
+      /prefers-reduced-transparency:[\s\S]*background-color:\s*var\(--background\)/,
+    );
+  });
+
+  it("strengthens separators and secondary labels for increased contrast", () => {
+    expect(css).toContain("@media (prefers-contrast: more)");
+    expect(css).toMatch(/prefers-contrast:[\s\S]*--sidebar-border:/);
+    expect(css).toMatch(/prefers-contrast:[\s\S]*--muted-foreground:/);
   });
 });

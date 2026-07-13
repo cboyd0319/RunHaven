@@ -28,9 +28,9 @@ function prettyBackendLabel(value: string): string {
 }
 
 export const networkLabels: Record<RunPlanRequest["networkMode"], string> = {
-  provider: "Provider only",
+  provider: "Assistant services only",
   internal: "Local only",
-  internet: "Internet",
+  internet: "Full internet",
 }
 
 export function networkLabel(network: string): string {
@@ -47,7 +47,7 @@ export function networkLabel(network: string): string {
 }
 
 export const authScopeLabels: Record<RunPlanRequest["authScope"], string> = {
-  agent: "Shared agent sign-in",
+  agent: "Shared assistant sign-in",
   project: "This project only",
 }
 
@@ -68,11 +68,11 @@ export function authStatusLabel(status: string): string {
   switch (status.trim().toLowerCase()) {
     case "api-key-broker":
     case "brokered":
-      return "API key broker"
+      return "API key from this Mac"
     case "keychain-oauth":
-      return "Legacy Claude Keychain auth"
+      return "Legacy Claude Keychain sign-in"
     case "login-state":
-      return "Isolated login"
+      return "Session sign-in"
     case "needs-sign-in":
       return "Needs sign-in"
     case "no-auth-needed":

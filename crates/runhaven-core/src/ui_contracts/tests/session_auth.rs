@@ -79,7 +79,7 @@ fn ordinary_isolated_login_runs_never_request_another_sign_in() {
             assert_eq!(session.auth_status, "login-state", "{agent}/{scope}");
             assert_eq!(session.next_action.kind, "monitor", "{agent}/{scope}");
             assert_eq!(
-                session.events[1].detail, "Isolated login",
+                session.events[1].detail, "Session sign-in",
                 "{agent}/{scope}"
             );
         }
@@ -122,7 +122,7 @@ fn managed_session_finished_run_proves_broker_from_history_auth_broker_channel()
         .find(|session| session.run_id == "run-history-keychain")
         .expect("keychain finished session");
     assert_eq!(keychain.auth_status, "keychain-oauth");
-    assert_eq!(keychain.events[1].detail, "Legacy Claude Keychain auth");
+    assert_eq!(keychain.events[1].detail, "Legacy Claude Keychain sign-in");
     assert_eq!(keychain.next_action.kind, "none");
     let sign_in = data
         .sessions

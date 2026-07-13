@@ -1,4 +1,4 @@
-import { CircleAlert, GitBranch, LogIn } from "lucide-react"
+import { CircleAlert, Files, LogIn } from "lucide-react"
 
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import type { NavDestination } from "./navigation"
 import { sessionAttention } from "./sessionAttention"
 import { agentLabel, displayValue } from "./sessionIdentity"
+import { isPastOutputUnavailable } from "./useRunOutput"
 
 // The session view's needs-you banner: first in reading order, one state at a
 // time (the same priority helper Home and the Dock badge use), always leading
@@ -16,13 +17,17 @@ import { agentLabel, displayValue } from "./sessionIdentity"
 export function SessionAttentionBanner({
   session,
   onNavigate,
+  onShowOutput,
   onSignIn,
   onRepair,
+  outputError = "",
 }: {
   session: ManagedSessionSummary
   onNavigate: (destination: NavDestination) => void
+  onShowOutput: () => void
   onSignIn?: (agent: string) => void
   onRepair?: () => void
+  outputError?: string
 }) {
   const attention = sessionAttention(session)
   if (!attention) {
@@ -30,26 +35,52 @@ export function SessionAttentionBanner({
   }
 
   switch (attention.kind) {
-    case "failed":
+    case "failed": {
+      const outputUnavailable = isPastOutputUnavailable(outputError)
       return (
         <Alert variant="destructive" role="alert">
           <CircleAlert />
-          <AlertTitle>This run failed</AlertTitle>
-          <AlertDescription>
-            {session.nextAction.detail.trim()
-              ? displayValue(session.nextAction.detail)
-              : "Check the latest output below, then clean up the run."}
+          <AlertTitle>Session ended</AlertTitle>
+          <AlertDescription className="flex flex-col items-start gap-2">
+            <span>
+              {outputUnavailable
+                ? "RunHaven kept this session’s output only while the app was open. Open System to check setup, then try a new session."
+                : session.nextAction.detail.trim()
+                  ? displayValue(session.nextAction.detail)
+                  : "RunHaven couldn’t determine why this session ended."}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {!outputUnavailable ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onShowOutput}
+                >
+                  Show output
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onNavigate({ kind: "diagnostics" })}
+              >
+                Check System
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )
+    }
     case "needs-sign-in":
       return (
         <Alert variant="warning" role="alert">
           <LogIn />
-          <AlertTitle>Needs sign-in</AlertTitle>
+          <AlertTitle>Sign in to continue</AlertTitle>
           <AlertDescription className="flex flex-col items-start gap-2">
             <span>
-              Sign in to {agentLabel(session.agent)}, then return to this run.
+              Sign in to {agentLabel(session.agent)}, then return to this session.
             </span>
             <Button
               type="button"
@@ -70,15 +101,15 @@ export function SessionAttentionBanner({
       return (
         <Alert variant="warning" role="alert">
           <CircleAlert />
-          <AlertTitle>Not responding</AlertTitle>
+          <AlertTitle>Session ended unexpectedly</AlertTitle>
           <AlertDescription className="flex flex-col items-start gap-2">
             <span>
-              The sandbox for this run is gone. Clear its stale run record to
-              remove it from active work.
+              RunHaven can no longer find this session. Remove it from the active
+              list.
             </span>
             {onRepair ? (
               <Button type="button" variant="outline" size="sm" onClick={onRepair}>
-                Repair run record
+                Remove from active list
               </Button>
             ) : null}
           </AlertDescription>
@@ -87,11 +118,10 @@ export function SessionAttentionBanner({
     case "ready-to-review":
       return (
         <Alert role="status">
-          <GitBranch />
+          <Files aria-hidden />
           <AlertTitle>Ready to review</AlertTitle>
           <AlertDescription>
-            Review the isolated copy below to merge, keep, or discard its
-            changes.
+            Review the assistant&apos;s changes below and choose what happens next.
           </AlertDescription>
         </Alert>
       )

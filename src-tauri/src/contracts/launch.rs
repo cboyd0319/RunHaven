@@ -34,7 +34,7 @@ fn default_auth_scope() -> String {
     "agent".to_string()
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct PlanWarning {
     pub code: String,
@@ -81,13 +81,6 @@ pub(crate) struct RunPlanResponse {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct LaunchRunRequest {
     pub plan: RunPlanRequest,
-    /// Fail closed: an omitted confirm flag deserializes to `false`, so the
-    /// command returns its friendly "Confirm ..." error instead of a raw
-    /// serde error.
-    #[serde(default)]
-    pub confirm_launch: bool,
-    #[serde(default)]
-    pub confirmed_warnings: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]

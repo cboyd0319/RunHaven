@@ -24,7 +24,7 @@ fn rebuild_agent_image_fails_closed_without_confirmation() {
         })
         .expect_err("unconfirmed rebuild must fail closed");
 
-    assert!(error.contains("Confirm before RunHaven installs"));
+    assert!(error.contains("Confirm before RunHaven prepares this assistant"));
     assert!(
         get_image_build_status_for_test(
             ImageBuildStatusRequest {
@@ -51,7 +51,7 @@ fn rebuild_agent_image_rejects_unknown_agent() {
     )
     .expect_err("unknown agent must be rejected");
 
-    assert!(error.contains("known agent"));
+    assert_eq!(error, "Choose a supported assistant.");
 }
 
 #[test]

@@ -32,12 +32,27 @@ describe("DiagnosticsView", () => {
     expect(html).not.toContain("Trust checks")
   })
 
-  it("shows health, actionable cleanup, and hides technical detail by default", () => {
+  it("keeps maintenance and readiness under one advanced disclosure", () => {
     const healthy = renderToStaticMarkup(<DiagnosticsView {...viewProps()} />)
     expect(healthy).toContain("Your Mac is ready for RunHaven.")
-    expect(healthy).toContain("Advanced system information")
-    expect(healthy).toContain("Leftover networks")
-    expect(healthy).toContain("Remove stale networks")
+    expect(healthy).toContain("Advanced system tools")
+    expect(healthy).toContain("Restart container service")
+    expect(healthy).toContain("Fix session internet")
+    expect(healthy).toContain(
+      "Restart Apple container when new sessions can’t connect to the internet. This ends current sessions.",
+    )
+    expect(healthy).toContain("Old session networks")
+    expect(healthy).toContain("Remove old networks")
+    expect(healthy).not.toContain("Leftover networks")
+    expect(healthy).not.toContain("Remove stale networks")
+    expect(healthy).toContain("Readiness checks")
+    expect(healthy).toContain("System readiness checks")
+    expect(healthy).toContain("Container CLI")
+    expect(healthy.indexOf("Advanced system tools")).toBeLessThan(
+      healthy.indexOf("Restart container service"),
+    )
+    expect(healthy).not.toContain("Machine workflows")
+    expect(healthy).not.toContain("registry sign-in")
     expect(healthy).not.toContain("Auth broker status")
     expect(healthy).not.toContain("Network trust")
 
@@ -47,12 +62,13 @@ describe("DiagnosticsView", () => {
     expect(blocked).toContain("1 setup problem needs your attention.")
   })
 
-  it("hides the setup checklist when the Mac is ready", () => {
+  it("hides setup actions but keeps readiness detail under Advanced", () => {
     const html = renderToStaticMarkup(<DiagnosticsView {...viewProps()} />)
 
     expect(html).not.toContain("Setup problems")
-    expect(html).not.toContain("Container CLI")
     expect(html).not.toContain("Next step")
+    expect(html).toContain("Container CLI")
+    expect(html).toContain("Ready")
   })
 
   it("shows a real empty state when no checks are known yet", () => {

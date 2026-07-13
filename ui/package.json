@@ -11,7 +11,7 @@
     "test": "vitest run src/test",
     "test:e2e": "playwright test",
     "tauri": "tauri",
-    "tauri:dev": "cd .. && CARGO_TARGET_DIR=\"$PWD/target\" ./ui/node_modules/.bin/tauri dev --config src-tauri/tauri.conf.json --config src-tauri/tauri.dev.conf.json",
+    "tauri:dev": "cd .. && ./scripts/dev-with-logs.sh",
     "tauri:dev:log": "cd .. && ./scripts/dev-with-logs.sh",
     "tauri:build": "cd .. && CARGO_TARGET_DIR=\"$PWD/target\" ./ui/node_modules/.bin/tauri build --config src-tauri/tauri.conf.json --debug --no-bundle",
     "tauri:local-signed": "cd .. && ./scripts/local-sign-desktop.sh",

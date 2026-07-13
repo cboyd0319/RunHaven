@@ -44,14 +44,10 @@ pub(crate) struct ManagedSessionLogSnapshotResponse {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct WriteSessionInputRequest {
     pub session_id: String,
     pub input: String,
-    /// Fail closed: omitted means `false`, yielding the friendly confirm error.
-    #[serde(default)]
-    pub confirm_send: bool,
-    pub client_target: String,
 }
 
 #[derive(Clone, Debug, Serialize)]

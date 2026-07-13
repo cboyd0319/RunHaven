@@ -27,7 +27,7 @@ fn managed_session_cleanup_rejects_unknown_unconfirmed_and_ineligible_targets() 
         |_, _| unreachable!("unconfirmed cleanup must fail before approval"),
     )
     .expect_err("confirmation required");
-    assert!(unconfirmed.contains("Confirm the cleanup"));
+    assert!(unconfirmed.contains("Confirm before deleting this protected copy"));
 
     write_history_run_record(json!({
         "timestamp": "2026-07-01T06:00:00Z",
@@ -50,7 +50,10 @@ fn managed_session_cleanup_rejects_unknown_unconfirmed_and_ineligible_targets() 
         |_, _| unreachable!("ineligible history must fail before approval"),
     )
     .expect_err("ineligible history rejected");
-    assert!(ineligible.contains("not eligible for worktree review"));
+    assert_eq!(
+        ineligible,
+        "Saved changes are not available for this session."
+    );
 
     write_history_run_record(json!({
         "timestamp": "2026-07-01T06:30:00Z",
@@ -73,7 +76,10 @@ fn managed_session_cleanup_rejects_unknown_unconfirmed_and_ineligible_targets() 
         |_, _| unreachable!("unsupported cleanup must fail before approval"),
     )
     .expect_err("unsupported target rejected");
-    assert!(unsupported.contains("only available for RunHaven-owned worktree sessions"));
+    assert_eq!(
+        unsupported,
+        "Saved changes are not available for this session."
+    );
 }
 
 #[test]
@@ -129,7 +135,10 @@ fn managed_session_cleanup_rejects_active_marker_before_approval() {
     )
     .expect_err("active marker rejected");
 
-    assert!(rejected.contains("only available after this session stops running"));
+    assert_eq!(
+        rejected,
+        "Wait for this session to end before you review its changes."
+    );
     assert!(
         worktree_root.exists(),
         "active worktree must not be removed"
@@ -189,7 +198,10 @@ fn managed_session_cleanup_rejects_stale_worktree_before_approval_without_leakin
     )
     .expect_err("stale worktree rejected");
 
-    assert!(rejected.contains("could not verify a safe worktree target"));
+    assert_eq!(
+        rejected,
+        "RunHaven couldn’t verify the protected copy. It will not change or delete any files."
+    );
     for forbidden in [
         repo.path().display().to_string(),
         worktree_root.display().to_string(),

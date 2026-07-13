@@ -51,8 +51,8 @@ export function SessionInputCard({
         </CardTitle>
         <CardDescription>
           {inputAttached
-            ? "Send text to this run."
-            : "Input is not attached for this run."}
+            ? "Send a message to this session."
+            : "This session can’t receive messages."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -97,7 +97,7 @@ export function SessionInputCard({
                   onSend()
                 }
               }}
-              placeholder="Type a message for this run."
+              placeholder="Type a message."
             />
             {showByteCount ? (
               <p className="text-sm text-muted-foreground">
@@ -108,7 +108,7 @@ export function SessionInputCard({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button type="submit" disabled={!canSend}>
               <Send />
-              {sending ? "Sending..." : "Send"}
+              {sending ? "Sending…" : "Send"}
             </Button>
           </div>
           {error ? (
@@ -121,7 +121,7 @@ export function SessionInputCard({
           {!inputAttached ? (
             <Alert>
               <CircleAlert />
-              <AlertTitle>Input unavailable</AlertTitle>
+              <AlertTitle>Messages unavailable</AlertTitle>
               <AlertDescription>{session.input.detail}</AlertDescription>
             </Alert>
           ) : null}
@@ -129,9 +129,8 @@ export function SessionInputCard({
             <Alert>
               <CheckCircle2 />
               <AlertTitle>Message sent</AlertTitle>
-              <AlertDescription className="flex flex-col gap-1">
-                <span>RunHaven sent the message to {session.title}.</span>
-                <span>{acceptedMessage}</span>
+              <AlertDescription>
+                RunHaven sent your message to {session.title}.
               </AlertDescription>
             </Alert>
           ) : null}

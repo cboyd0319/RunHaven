@@ -29,9 +29,9 @@ impl NetworkMode {
     /// into two different words for the same value. Change both sides together.
     pub fn friendly_label(&self) -> &'static str {
         match self {
-            Self::Internet => "Internet",
+            Self::Internet => "Full internet",
             Self::Internal => "Local only",
-            Self::Provider => "Provider only",
+            Self::Provider => "Assistant services only",
         }
     }
 }
@@ -105,7 +105,7 @@ impl AuthScope {
     /// one voice. Change both sides together.
     pub fn friendly_label(&self) -> &'static str {
         match self {
-            Self::Agent => "Shared agent sign-in",
+            Self::Agent => "Shared assistant sign-in",
             Self::Project => "This project only",
         }
     }
@@ -134,11 +134,17 @@ mod tests {
     /// consent dialog from the in-app screen.
     #[test]
     fn friendly_label_matches_the_shared_webview_vocabulary() {
-        assert_eq!(NetworkMode::Provider.friendly_label(), "Provider only");
+        assert_eq!(
+            NetworkMode::Provider.friendly_label(),
+            "Assistant services only"
+        );
         assert_eq!(NetworkMode::Internal.friendly_label(), "Local only");
-        assert_eq!(NetworkMode::Internet.friendly_label(), "Internet");
+        assert_eq!(NetworkMode::Internet.friendly_label(), "Full internet");
 
-        assert_eq!(AuthScope::Agent.friendly_label(), "Shared agent sign-in");
+        assert_eq!(
+            AuthScope::Agent.friendly_label(),
+            "Shared assistant sign-in"
+        );
         assert_eq!(AuthScope::Project.friendly_label(), "This project only");
 
         // The friendly label is never the raw enum code: that is the whole point

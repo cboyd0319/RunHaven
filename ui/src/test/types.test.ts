@@ -8,7 +8,13 @@ describe("errorMessage", () => {
       "Raw output view canceled.",
       "Network cleanup canceled; no networks were removed.",
       "Stop canceled before changing this session.",
-      "Discard canceled; the worktree was left in place.",
+      "Force Stop canceled; the session is still running.",
+      "Message send canceled; nothing was sent.",
+      "Apply changes canceled; the protected copy was left in place.",
+      "Discard changes canceled; the protected copy was left in place.",
+      "Save canceled; the protected copy was left in place.",
+      "Recovery steps canceled; the protected copy was left in place.",
+      "Remove canceled. This session was not changed.",
     ]) {
       expect(errorMessage(new Error(message))).toBe("")
     }
@@ -17,6 +23,15 @@ describe("errorMessage", () => {
   it("preserves real failures", () => {
     expect(errorMessage(new Error("Container service failed."))).toBe(
       "Container service failed.",
+    )
+    expect(errorMessage(new Error("Hard-stop canceled unexpectedly."))).toBe(
+      "Hard-stop canceled unexpectedly.",
+    )
+    expect(errorMessage(new Error("Merge canceled unexpectedly."))).toBe(
+      "Merge canceled unexpectedly.",
+    )
+    expect(errorMessage(new Error("Repair canceled unexpectedly."))).toBe(
+      "Repair canceled unexpectedly.",
     )
   })
 })

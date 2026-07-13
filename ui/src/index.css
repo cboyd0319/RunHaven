@@ -129,7 +129,7 @@
     --accent-foreground: oklch(0.97 0.01 210);
     --warning: oklch(0.762 0.167 57);
     --warning-foreground: oklch(0.16 0.047 222);
-    --destructive: oklch(0.76 0.16 25);
+    --destructive: #ff453a;
     --border: oklch(1 0 0 / 8%);
     --input: oklch(1 0 0 / 16%);
     --ring: oklch(0.651 0.192 251.5);
@@ -186,5 +186,41 @@
   ::before,
   ::after {
     transition-duration: 1ms !important;
+  }
+}
+
+/* Respect the macOS Reduce transparency preference. Keep the same hierarchy,
+ * but replace material-dependent alpha surfaces with opaque colors. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --sidebar: oklch(0.985 0 0);
+  }
+  .dark {
+    --card: oklch(0.28 0.042 222);
+    --secondary: oklch(0.3 0.042 222);
+    --muted: oklch(0.3 0.042 222);
+    --accent: oklch(0.33 0.042 222);
+    --sidebar: oklch(0.155 0.044 224);
+    --sidebar-accent: oklch(0.24 0.044 224);
+  }
+  body {
+    background-color: var(--background);
+  }
+}
+
+/* Increase separation without changing the layout when macOS requests more
+ * contrast. Secondary labels remain visually subordinate but easier to read. */
+@media (prefers-contrast: more) {
+  :root {
+    --border: oklch(0.72 0 0);
+    --input: oklch(0.66 0 0);
+    --muted-foreground: oklch(0.36 0 0);
+    --sidebar-border: oklch(0.62 0 0);
+  }
+  .dark {
+    --border: oklch(1 0 0 / 38%);
+    --input: oklch(1 0 0 / 48%);
+    --muted-foreground: oklch(1 0 0 / 90%);
+    --sidebar-border: oklch(1 0 0 / 42%);
   }
 }

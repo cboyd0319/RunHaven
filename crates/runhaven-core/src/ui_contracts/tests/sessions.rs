@@ -52,7 +52,7 @@ fn managed_session_list_contract_uses_run_auth_without_leaking_static_payload() 
     assert_eq!(first.auth_status, "login-state");
     assert_eq!(first.auth_scope, "agent");
     assert_eq!(first.next_action.kind, "monitor");
-    assert_eq!(first.events[1].detail, "Isolated login");
+    assert_eq!(first.events[1].detail, "Session sign-in");
     assert_eq!(first.detail_command, "runhaven runs show run-newer");
 
     let encoded = serde_json::to_string(&data).expect("serialize managed sessions");
@@ -204,6 +204,83 @@ fn managed_session_ended_run_is_neutral_terminal_not_a_failure() {
 }
 
 #[test]
+fn failed_session_reason_uses_only_sanitized_saved_evidence() {
+    let failed_record = |run_id: &str, return_code: Option<i32>, provider_denied, auth_denied| {
+        let mut record = serde_json::json!({
+            "timestamp": "2026-07-01T05:00:00Z",
+            "started_at": "2026-07-01T04:00:00Z",
+            "finished_at": "2026-07-01T05:00:00Z",
+            "run_id": run_id,
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/failed-project",
+            "network": "provider",
+            "status": "failed",
+            "auth_scope": "project",
+            "session": "failed-project",
+            "provider_policy": {
+                "denied": provider_denied,
+                "reason": "secret provider detail from /Users/person/private"
+            },
+            "auth_broker": {
+                "denied": auth_denied,
+                "reason": "secret auth detail sk-test-should-not-leak"
+            },
+            "error": "raw agent output should-not-leak"
+        });
+        if let Some(code) = return_code {
+            record["return_code"] = serde_json::json!(code);
+        }
+        record
+    };
+    let data = ManagedSessionListData::from_active_and_recent_runs(
+        [],
+        [
+            failed_record("failed-auth", Some(1), 3, 1),
+            failed_record("failed-network", Some(1), 2, 0),
+            failed_record("failed-process", Some(17), 0, 0),
+            failed_record("failed-unknown", None, 0, 0),
+        ],
+        serde_json::json!({"profiles": []}),
+    );
+    let detail = |run_id: &str| {
+        data.sessions
+            .iter()
+            .find(|session| session.run_id == run_id)
+            .expect("failed session")
+            .next_action
+            .detail
+            .as_str()
+    };
+
+    assert_eq!(
+        detail("failed-auth"),
+        "An authentication request was blocked. Review this session's Sign-in details, then try again."
+    );
+    assert_eq!(
+        detail("failed-network"),
+        "A network request was blocked. Review this session's Network details, then try again."
+    );
+    assert_eq!(
+        detail("failed-process"),
+        "The assistant stopped before it finished. Open System to check setup, then try again."
+    );
+    assert_eq!(
+        detail("failed-unknown"),
+        "RunHaven couldn’t determine why this session ended. Open System to check setup, then try again."
+    );
+
+    let encoded = serde_json::to_string(&data).expect("serialize sessions");
+    for forbidden in [
+        "/sensitive/workspaces",
+        "/Users/person/private",
+        "sk-test-should-not-leak",
+        "raw agent output",
+    ] {
+        assert!(!encoded.contains(forbidden), "leaked {forbidden:?}");
+    }
+}
+
+#[test]
 fn managed_session_component_payload_round_trips_json() {
     let data = ManagedSessionListData::from_active_runs_and_auth_status(
         [run_record(
@@ -252,13 +329,13 @@ fn managed_session_contract_derives_lifecycle_action_and_events() {
     let auth = &data.sessions[0];
     assert_eq!(auth.lifecycle, "running");
     assert_eq!(auth.next_action.kind, "monitor");
-    assert_eq!(auth.next_action.label, "Monitor session");
-    assert_eq!(auth.events[1].detail, "Isolated login");
+    assert_eq!(auth.next_action.label, "Session running");
+    assert_eq!(auth.events[1].detail, "Session sign-in");
 
     let ready = &data.sessions[1];
     assert_eq!(ready.lifecycle, "running");
     assert_eq!(ready.next_action.kind, "monitor");
-    assert_eq!(ready.next_action.label, "Monitor session");
+    assert_eq!(ready.next_action.label, "Session running");
     assert_eq!(
         ready
             .events
@@ -270,8 +347,8 @@ fn managed_session_contract_derives_lifecycle_action_and_events() {
     assert_eq!(ready.events[0].label, "Run record");
     assert_eq!(ready.events[0].detail, "Running");
     assert_eq!(ready.events[1].label, "Sign-in");
-    assert_eq!(ready.events[1].detail, "API key broker");
-    assert_eq!(ready.events[2].detail, "Provider only");
+    assert_eq!(ready.events[1].detail, "API key from this Mac");
+    assert_eq!(ready.events[2].detail, "Assistant services only");
 
     let encoded = serde_json::to_string(&data).expect("serialize managed sessions");
     for forbidden in [

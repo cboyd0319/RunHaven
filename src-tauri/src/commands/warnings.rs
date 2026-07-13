@@ -13,31 +13,31 @@ pub(super) fn plan_warnings(request: &RunPlanRequest, active_run_count: usize) -
     if active_run_count > 0 && material_memory_request(&defaulted(&request.memory, "4g")) {
         warnings.push(warning(
             "resource-memory",
-            "This memory limit plus active runs may be material on the host. macOS memory pressure is not measured yet.",
+            "This session may use a large amount of memory while other sessions are running.",
         ));
     }
     if request.network_mode == "internet" {
         warnings.push(warning(
             "full-internet",
-            "Full internet lets the agent reach unrestricted network destinations from inside the container.",
+            "Full internet lets the assistant connect to any internet service.",
         ));
     }
     if request.allow_sensitive_workspace {
         warnings.push(warning(
             "sensitive-workspace",
-            "The selected folder may contain private files. The agent can read files inside that folder.",
+            "The selected folder may contain private files. The assistant can read them.",
         ));
     }
     if request.allow_root_user || matches!(request.user.as_str(), "root" | "0") {
         warnings.push(warning(
             "root-user",
-            "The agent will run as root inside the container, weakening normal container guardrails.",
+            "The assistant will have full control inside its protected environment. This removes a normal safety limit.",
         ));
     }
     if !request.env_names.is_empty() {
         warnings.push(warning(
             "environment",
-            "Environment variable names are passed into the run. Values are never shown in the UI.",
+            "RunHaven will share the selected Mac settings with this session. Their values stay hidden.",
         ));
     }
     if request
@@ -47,33 +47,37 @@ pub(super) fn plan_warnings(request: &RunPlanRequest, active_run_count: usize) -
     {
         warnings.push(warning(
             "custom-image",
-            "Custom images are outside the bundled RunHaven image set.",
+            "You chose a custom assistant environment that RunHaven has not reviewed.",
         ));
     }
     if !request.provider_hosts.is_empty() {
         warnings.push(warning(
             "provider-host",
-            "Additional provider hosts allow that host and its subdomains in provider-only mode.",
+            "The assistant can connect to the additional services you entered and their subdomains.",
         ));
     }
     if !request.worktree && !request.read_only_workspace {
         warnings.push(warning(
             "direct-workspace",
-            "Direct mode lets the agent change files in your original project folder. Use the recommended isolated copy unless you need direct access.",
+            "The assistant can change files in your original project folder. The safer choice is a protected copy.",
         ));
     }
     warnings
 }
 
 fn active_runs_warning_message(active_run_count: usize) -> String {
-    let noun = if active_run_count == 1 { "run" } else { "runs" };
+    let noun = if active_run_count == 1 {
+        "session"
+    } else {
+        "sessions"
+    };
     let verb = if active_run_count == 1 {
         "exists"
     } else {
         "exist"
     };
     format!(
-        "{active_run_count} active RunHaven {noun} already {verb}. Starting another run starts another Apple container VM."
+        "{active_run_count} RunHaven {noun} already {verb}. Starting another may use more memory and battery."
     )
 }
 

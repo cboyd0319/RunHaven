@@ -118,12 +118,19 @@ Tauri launch/run-control behavior.
   artifacts. Use repo-relative paths or public URLs; cite upstream source as a
   public repo plus pinned commit. If a local external document is needed, import
   or summarize it into `docs/` first, then cite the repo copy.
-- User-facing writing is part of the product boundary. Write UI text, menus,
-  prompts, warnings, README/usage docs, and setup instructions for
-  non-technical users at roughly an 8th grade reading level. Prefer short
-  sentences, plain verbs, concrete nouns, and clear next actions. Keep exact
-  commands, paths, hosts, and security facts when they matter; explain them in
-  plain language instead of hiding them.
+- Write UI and public docs for non-technical users at roughly an 8th grade
+  reading level. Follow the [Apple Style Guide](https://support.apple.com/guide/applestyleguide/welcome/web)
+  first, then [Google style](https://developers.google.com/style) and
+  [inclusive guidance](https://developers.google.com/style/inclusive-documentation).
+  Use active voice, exact control names, sentence-style capitalization, plain
+  verbs, and short sentences. Alerts state the problem, consequence, and next
+  action. Avoid idioms, ableist language, violent metaphors, and technical
+  filler. Keep exact commands and security facts when needed. Apply Google's
+  [release guidance](https://opensource.google/documentation/reference/releasing/preparing#inclusive) before release.
+- Assume desktop users do not know container, Git, terminal, or network terms.
+  Give each screen one task, disclose advanced choices in context, use a folder
+  browser instead of path entry, show changed filenames, name actions by result,
+  keep secure defaults easiest, show feedback, and provide recovery without dead ends.
 - TUI backlog rule: during the current CLI plus native GUI push, do not spend
   implementation time on `crates/runhaven-tui` or Codex TUI surfaces except to
   revert accidental edits, preserve workspace compilation after CLI/GUI
@@ -178,6 +185,8 @@ Tauri launch/run-control behavior.
 
 ## Specialist Routing
 
+- For desktop design, UI, UX, or GUI work, use the installed macOS design skill
+  and `macos-design-expert`; require its live and implementation review.
 - For Rust work in this repo, use the installed `rust` skill.
 - For non-trivial Rust implementation, review, debugging, or test-gate work,
   use the `rust-expert` and `rust-test-debug-architect` agents with bounded

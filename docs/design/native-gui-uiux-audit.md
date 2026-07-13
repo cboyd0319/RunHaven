@@ -1,5 +1,9 @@
 # Native GUI UI/UX audit (2026-07-03)
 
+> Historical audit, superseded 2026-07-13. Home, navigation, settings, menus,
+> session review, and system recovery were simplified after this snapshot. See
+> `docs/DESKTOP_APP.md` and `current-state.md` for the current contract.
+
 A comprehensive read-only "fine-toothed comb" audit of the RunHaven desktop app,
 run as five parallel expert lenses (visual system, accessibility, copy/tone,
 macOS-native/HIG, states/flows) over every destination and the Rust user-facing

@@ -8,7 +8,6 @@ import {
   sessionNeedsAttention
 } from "../app/ManagedSessionCard";
 import { sameManagedSessionList } from "../app/sessionList";
-import { authStatusLabel } from "../app/labels";
 import type { ManagedSessionSummary } from "../commands/runhaven";
 
 function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSummary {
@@ -70,12 +69,13 @@ describe("ManagedSessionCard", () => {
 
     expect(html).toContain("Codex - project");
     expect(html).toContain("secret-project");
-    expect(html).toContain("Provider only");
-    expect(html).toContain("Sign-in sharing");
     expect(html).toContain("Project");
-    expect(html).toContain("Selected run overview.");
+    expect(html).not.toContain("Selected run overview.");
+    expect(html).not.toContain("2026-06-30T02:00:00Z");
     expect(html).not.toContain("RunHaven is tracking status for this session.");
-    expect(html).toContain("Run record");
+    expect(html).not.toContain("Run record");
+    expect(html).not.toContain("Sign-in sharing");
+    expect(html).not.toContain("Recent events");
     expect(html).not.toContain("/Users/");
     expect(html).not.toContain("/sensitive/");
     expect(html).not.toContain("state_volume");
@@ -126,27 +126,19 @@ describe("ManagedSessionCard", () => {
     const html = renderToStaticMarkup(<ManagedSessionCard session={stale} />);
 
     expect(html).not.toContain("Repair session");
-    expect(html).toContain("Not responding");
+    expect(html).not.toContain("stale marker");
     expect(html).toContain("Needs you");
   });
 
-  it("renders explicit auth labels for managed-session statuses", () => {
-    const cases: Array<[authStatus: string, label: string]> = [
-      ["api-key-broker", "API key broker"],
-      ["login-state", "Isolated login"],
-      ["needs-sign-in", "Needs sign-in"],
-      ["no-auth-needed", "No sign-in needed"],
-      ["unknown", "Unknown"]
-    ];
+  it("keeps sign-in internals out of the compact summary", () => {
+    const html = renderToStaticMarkup(
+      <ManagedSessionCard
+        session={session({ authStatus: "api-key-broker", events: [] })}
+      />
+    );
 
-    for (const [authStatus, label] of cases) {
-      const html = renderToStaticMarkup(
-        <ManagedSessionCard session={session({ authStatus, events: [] })} />
-      );
-
-      expect(authStatusLabel(authStatus)).toBe(label);
-      expect(html).toContain(label);
-    }
+    expect(html).not.toContain("API key broker");
+    expect(html).not.toContain("Sign-in sharing");
   });
 
   it("allows run controls only while a session is active", () => {

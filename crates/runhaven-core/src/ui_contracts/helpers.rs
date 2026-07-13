@@ -53,6 +53,7 @@ pub(super) fn status_label(status: &str) -> String {
     match status {
         "running" => "Running".to_string(),
         "started" => "Starting".to_string(),
+        "stop-requested" | "kill-requested" => "Stopping".to_string(),
         "finished" | "succeeded" => "Finished".to_string(),
         "failed" => "Failed".to_string(),
         "stopped" => "Stopped".to_string(),
@@ -100,7 +101,7 @@ pub(super) fn count_field(record: &serde_json::Value) -> u64 {
 
 /// True for the invisible Unicode format characters (general category Cf)
 /// that can reorder, hide, or spoof neighboring display text: the bidi
-/// controls (U+200E/U+200F, U+202A-U+202E, U+2066-U+2069), the zero-width
+/// controls (U+061C, U+200E/U+200F, U+202A-U+202E, U+2066-U+2069), the zero-width
 /// characters (U+200B-U+200D, U+2060), the soft hyphen (U+00AD), and the BOM
 /// (U+FEFF). `char::is_control` covers only category Cc, so these survive it
 /// and could otherwise reach native window titles (a repo basename with a
@@ -110,7 +111,8 @@ pub(super) fn count_field(record: &serde_json::Value) -> u64 {
 fn is_invisible_format_char(ch: char) -> bool {
     matches!(
         ch,
-        '\u{00AD}'
+        '\u{061C}'
+            | '\u{00AD}'
             | '\u{200B}'..='\u{200F}'
             | '\u{202A}'..='\u{202E}'
             | '\u{2060}'
@@ -123,7 +125,7 @@ fn is_invisible_format_char(ch: char) -> bool {
 /// ([`is_invisible_format_char`]) from single-line display text. This is the
 /// shared sanitizer for titles and labels that reach the WebView and native
 /// surfaces such as monitor window titles.
-pub(super) fn strip_terminal_controls(text: &str) -> String {
+pub fn strip_terminal_controls(text: &str) -> String {
     text.chars()
         .filter(|ch| !ch.is_control() && !is_invisible_format_char(*ch))
         .collect()

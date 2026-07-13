@@ -16,6 +16,8 @@ export function previewLogSnapshot(
     returnedLines: lineCount,
     truncated: false,
     source: "container-stdio",
-    warnings: ["Raw container output can contain secrets or workspace content."]
+    warnings: [
+      "The assistant can show private project information. Review this text before you share it."
+    ]
   };
 }

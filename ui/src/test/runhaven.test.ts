@@ -7,7 +7,6 @@ import {
   getImageStatus,
   performSetupRecovery,
   getRunStatus,
-  isLaunchReady,
   launchRun,
   planRun,
   reconcileRunPlanRequest,
@@ -58,7 +57,9 @@ describe("runhaven command helpers", () => {
 
     const plan = await planRun(request);
 
-    expect(plan.egressSummary).toContain("your API key stays on this Mac");
+    expect(plan.egressSummary).toBe(
+      "The assistant can reach only the services it needs.",
+    );
     expect(plan.access.apiKeyBrokerEnv).toBe("OPENAI_API_KEY");
     expect(plan.access.apiKeyBrokerEnvPresent).toBe(true);
     expect(plan.access.blocking).toBe(false);
@@ -191,8 +192,25 @@ describe("runhaven command helpers", () => {
     expect(plan.networkMode).toBe("internet");
     expect(plan.authScope).toBe("agent");
     expect(plan.access.detail).toContain("across projects on this Mac");
+    expect(plan.access.label).toBe("Shared assistant sign-in")
+    expect(plan.access.remedy).toContain("If the assistant asks you to sign in")
+    expect(plan.egressSummary).toBe("This session can reach any site.")
     expect(plan.warnings.map((warning) => warning.code)).toEqual(["full-internet"]);
   });
+
+  it("uses plain protected-copy and constrained-network preview text", async () => {
+    const plan = await planRun({
+      ...defaultRunPlanRequest(providerAgent),
+      workspacePath: "/tmp/runhaven-preview",
+    })
+
+    expect(plan.worktreeNote).toBe(
+      "RunHaven will work in a protected copy. Your original folder changes only if you choose Apply changes later.",
+    )
+    expect(plan.egressSummary).toBe(
+      "The assistant can reach only the services it needs.",
+    )
+  })
 
   it("returns image readiness preview data outside the Tauri runtime", async () => {
     const status = await getImageStatus("codex");
@@ -211,56 +229,6 @@ describe("runhaven command helpers", () => {
     expect(status.container.resources.memoryBytes).toBe(4 * 1024 ** 3);
   });
 
-  it("requires explicit confirmation before launch is available", async () => {
-    const request = {
-      ...defaultRunPlanRequest(providerAgent),
-      workspacePath: "/tmp/runhaven-preview"
-    };
-    const plan = await planRun(request);
-
-    expect(isLaunchReady(plan, false, new Set())).toBe(false);
-    expect(isLaunchReady(plan, true, new Set())).toBe(true);
-  });
-
-  it("blocks launch when the bundled image is not ready", async () => {
-    const request = {
-      ...defaultRunPlanRequest(providerAgent),
-      workspacePath: "/tmp/runhaven-preview"
-    };
-    const plan = await planRun(request);
-
-    expect(isLaunchReady(plan, true, new Set(), false)).toBe(false);
-  });
-
-  it("requires every warning to be acknowledged before launch is available", async () => {
-    const request = {
-      ...defaultRunPlanRequest(providerAgent),
-      workspacePath: "/tmp/runhaven-preview",
-      networkMode: "internet" as const
-    };
-    const plan = await planRun(request);
-
-    expect(isLaunchReady(plan, true, new Set())).toBe(false);
-    expect(isLaunchReady(plan, true, new Set(["full-internet"]))).toBe(true);
-  });
-
-  it("requires active-run warnings to be acknowledged before launch is available", async () => {
-    const request = {
-      ...defaultRunPlanRequest(providerAgent),
-      workspacePath: "/tmp/runhaven-preview"
-    };
-    const warnings = warningPreview(request, { activeRunCount: 1 });
-
-    expect(isLaunchReady(planWithWarnings(warnings), true, new Set())).toBe(false);
-    expect(isLaunchReady(planWithWarnings(warnings), true, new Set(["active-runs", "resource-memory"]))).toBe(true);
-  });
-
-  it("blocks launch when plan access is blocked", () => {
-    const warnings: Array<{ code: string; message: string }> = [];
-
-    expect(isLaunchReady(planWithWarnings(warnings, true), true, new Set())).toBe(false);
-  });
-
   it("returns a launch preview outside the Tauri runtime", async () => {
     const request = {
       ...defaultRunPlanRequest(providerAgent),
@@ -269,8 +237,6 @@ describe("runhaven command helpers", () => {
 
     const started = await launchRun({
       plan: request,
-      confirmLaunch: true,
-      confirmedWarnings: []
     });
 
     expect(started).not.toBeNull();
@@ -280,18 +246,3 @@ describe("runhaven command helpers", () => {
     expect(started.containerName).toBe("preview");
   });
 });
-
-function planWithWarnings(warnings: Array<{ code: string; message: string }>, blocking = false) {
-  return {
-    warnings,
-    access: {
-      status: blocking ? "blocked" : "setup",
-      label: blocking ? "API key variable missing" : "Shared agent sign-in",
-      detail: "",
-      remedy: "",
-      blocking,
-      apiKeyBrokerEnv: null,
-      apiKeyBrokerEnvPresent: null
-    }
-  };
-}

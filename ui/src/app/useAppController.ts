@@ -2,12 +2,13 @@ import { useEffect, useState } from "react"
 
 import {
   getDashboardStatus,
-  openSessionWindow,
+  hasTauriRuntime,
   type DashboardStatus,
   type LaunchRunResponse,
 } from "@/commands/runhaven"
 
 import { sameDashboardStatus } from "./appStatusEquality"
+import { sessionAllowsRunControl } from "./ManagedSessionCard"
 import { errorMessage } from "./types"
 import { createSessionActions } from "./sessionActions"
 import { useAppDerivedState } from "./useAppDerivedState"
@@ -43,7 +44,9 @@ export function useAppController() {
   const settingsState = useSettings()
   const launchFlow = useLaunchFlow({
     dashboard,
-    defaultAgent: settingsState.defaultAgent,
+    managedBrowserPreview:
+      !hasTauriRuntime() &&
+      new URLSearchParams(window.location.search).get("preview") !== "terminal",
     loadImageStatus: statusLoaders.loadImageStatus,
     loadRunStatus: statusLoaders.loadRunStatus,
     loadManagedSessions,
@@ -53,31 +56,21 @@ export function useAppController() {
     onError: setError,
   })
 
-  // Choosing a default agent in Settings is agent intent right now, not only
-  // for the next app start: point the launch draft at it too, through the same
-  // path a click in the sheet's own picker would take.
-  const settings = {
-    ...settingsState,
-    setDefaultAgent(defaultAgent: string | null) {
-      settingsState.setDefaultAgent(defaultAgent)
-      if (defaultAgent) {
-        launchFlow.changeAgent(defaultAgent)
-      }
-    },
-  }
+  const settings = settingsState
 
   const derived = useAppDerivedState({
     dashboard,
     request: launchFlow.request,
-    imageStatus: statusLoaders.imageStatus,
-    plan: launchFlow.plan,
-    confirmedWarnings: launchFlow.confirmedWarnings,
     managedSessions,
     navigation,
     selectedSessionId,
     lastLaunch,
   })
-  const selectedSessionStatus = useManagedSessionStatus(selectedSessionId)
+  const statusSessionId =
+    derived.selectedSession && sessionAllowsRunControl(derived.selectedSession)
+      ? selectedSessionId
+      : null
+  const selectedSessionStatus = useManagedSessionStatus(statusSessionId)
   const selectedSessionDiagnostics = useManagedSessionDiagnostics(selectedSessionId)
   const selectedSession =
     selectedSessionStatus.data?.session ?? derived.selectedSession
@@ -135,15 +128,6 @@ export function useAppController() {
     sessionInput.changeDraft(value)
   }
 
-  // Open (or focus) the read-only monitor window for a session. Rust
-  // validates the id, caps open monitors, and owns the window label; a
-  // rejection (for example the window cap) surfaces in the main error alert.
-  function openSessionInNewWindow(sessionId: string) {
-    void openSessionWindow(sessionId).catch((cause: unknown) =>
-      setError(errorMessage(cause)),
-    )
-  }
-
   return {
     dashboard,
     launchFlow,
@@ -176,8 +160,6 @@ export function useAppController() {
     selectedAgent: derived.selectedAgent,
     setupKnown: derived.setupKnown,
     setupReady: derived.setupReady,
-    launchImageReady: derived.launchImageReady,
-    launchReady: derived.launchReady,
     selectedSession,
     selectedSessionStatus: selectedSessionStatus.data,
     selectedSessionStatusLoading: selectedSessionStatus.loading,
@@ -189,12 +171,10 @@ export function useAppController() {
     launchStatusLoading: launchStatus.loading,
     launchStatusError: launchStatus.error,
     pageTitle: derived.pageTitle,
-    pageDescription: derived.pageDescription,
     runOutput,
     refresh,
     navigate,
     selectSession,
-    openSessionInNewWindow,
     runControl: sessionActions.runControl,
     refreshAfterWorktree: sessionActions.refreshAfterWorktree,
     sendSelectedSessionInput: sessionActions.sendSelectedSessionInput,

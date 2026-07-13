@@ -3,9 +3,9 @@
 //! Rebuilding is recovery for a stale or missing agent image. It reuses the
 //! tested core `ImageBuildPlan` (no docker/container build logic lives here),
 //! fails closed on unconfirmed or invalid input, and requires a Rust-owned
-//! native confirmation naming the exact agent image and tag before any build
-//! runs. The build itself runs on a background thread; the command returns a
-//! build id the WebView polls through the read-only `get_image_build_status`.
+//! native confirmation naming the agent and effect before any build runs. The
+//! build itself runs on a background thread; the command returns a build id the
+//! WebView polls through the read-only `get_image_build_status`.
 
 use runhaven_core::doctor::require_supported_runtime;
 use runhaven_core::image::build::{ImageBuildPlan, build_image_plan};
@@ -55,15 +55,15 @@ struct PreparedRebuild {
 /// downstream so arbitrary WebView input is never reflected back.
 fn authorize_image_rebuild(request: &ImageBuildRequest) -> Result<PreparedRebuild, String> {
     if !request.confirm {
-        return Err("Confirm before RunHaven installs this agent image.".to_string());
+        return Err("Confirm before RunHaven prepares this assistant.".to_string());
     }
     validate_text_len("agent", &request.agent, MAX_AGENT_NAME_LEN)?;
     let profile =
-        get_profile(&request.agent).map_err(|_| "Choose a known agent to rebuild.".to_string())?;
+        get_profile(&request.agent).map_err(|_| "Choose a supported assistant.".to_string())?;
     // build_image_plan surfaces host paths and template names on error, so it is
     // collapsed to a fixed, path-free message.
     let plan = build_image_plan(&profile, None)
-        .map_err(|_| "RunHaven has no bundled image template for this agent.".to_string())?;
+        .map_err(|_| "RunHaven can’t prepare this assistant automatically.".to_string())?;
     Ok(PreparedRebuild {
         agent: profile.name.to_string(),
         plan,
@@ -102,7 +102,7 @@ fn start_image_rebuild(
         tag,
         state: "building".to_string(),
         label: "Installing".to_string(),
-        detail: "RunHaven started installing this agent image.".to_string(),
+        detail: "RunHaven started preparing this assistant.".to_string(),
     })
 }
 
@@ -127,26 +127,42 @@ fn image_build_response(
         tag: status.tag,
         state: status.state,
         label: status.label,
-        detail: "This agent image is already installing. Showing its current progress.".to_string(),
+        detail: "RunHaven is already preparing this assistant. Showing its current progress."
+            .to_string(),
     })
 }
 
 async fn trusted_image_rebuild_confirmed(
     app: AppHandle,
     agent: &str,
-    tag: &str,
+    _tag: &str,
 ) -> Result<bool, String> {
-    let message = format!(
-        "Agent: {agent}\nImage tag: {tag}\n\nRunHaven will install a fresh agent image from its bundled template after you confirm. If a copy already exists, it will be replaced. Existing containers keep running until you launch a new session."
-    );
+    let label = match agent {
+        "claude" => "Claude",
+        "codex" => "Codex",
+        "antigravity" => "Antigravity",
+        "copilot" => "Copilot",
+        other => other,
+    };
     confirm_native(
         app,
-        "Install this agent?",
+        &format!("Install {label}?"),
         "Install",
         MessageDialogKind::Warning,
-        message,
+        image_install_confirmation_message(label),
     )
     .await
+}
+
+fn image_install_confirmation_message(agent: &str) -> String {
+    format!(
+        "RunHaven will prepare a fresh {agent} environment. Existing sessions will keep running. New sessions will use the new copy."
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn image_install_confirmation_message_for_test(agent: &str) -> String {
+    image_install_confirmation_message(agent)
 }
 
 #[cfg(test)]

@@ -165,6 +165,30 @@ pub(crate) fn managed_session_for_id_with_input(
     Ok((session, run_id))
 }
 
+pub(crate) fn managed_active_session_for_id_with_input(
+    session_id: &str,
+    input_registry: &SessionInputRegistry,
+) -> Result<(ManagedSessionSummaryData, String), String> {
+    validate_text_len("session id", session_id, MAX_RUN_ID_LEN)?;
+    if session_id.is_empty() {
+        return Err("managed session id is required".to_string());
+    }
+    let mut sessions = ManagedSessionListData::from_active_runs_and_auth_status(
+        read_active_run_records(),
+        auth_status_payload(),
+    );
+    mark_session_input_transports(&mut sessions, input_registry)?;
+    let session = sessions
+        .sessions
+        .into_iter()
+        .find(|session| session.id == session_id)
+        .ok_or_else(|| {
+            "This session is no longer active. Refresh the session, then try again.".to_string()
+        })?;
+    let run_id = session.run_id.clone();
+    Ok((session, run_id))
+}
+
 pub(crate) fn managed_session_allows_run_control(lifecycle: &str) -> bool {
     matches!(
         lifecycle.trim().to_lowercase().as_str(),

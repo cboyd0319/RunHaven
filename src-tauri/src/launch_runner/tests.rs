@@ -189,11 +189,16 @@ fn tauri_launch_runner_registers_stdin_until_child_exits() {
         );
         thread::sleep(Duration::from_millis(10));
     }
-    registry
-        .approve_input("tauri-runner-seam", "tauri-runner-seam")
-        .expect("approve session input");
+    let writer_id = registry
+        .writer_identity("tauri-runner-seam", "tauri-runner-seam")
+        .expect("writer identity");
     let accepted = registry
-        .write("tauri-runner-seam", "tauri-runner-seam", "hello\n")
+        .write_exact(
+            "tauri-runner-seam",
+            "tauri-runner-seam",
+            writer_id,
+            "hello\n",
+        )
         .unwrap_or_else(|error| panic!("write session input: {error}"));
 
     assert_eq!(accepted, "hello\n".len());
@@ -209,7 +214,12 @@ fn tauri_launch_runner_registers_stdin_until_child_exits() {
         "running"
     );
     let missing = registry
-        .write("tauri-runner-seam", "tauri-runner-seam", "again\n")
+        .write_exact(
+            "tauri-runner-seam",
+            "tauri-runner-seam",
+            writer_id,
+            "again\n",
+        )
         .expect_err("writer unregistered after child exit");
     assert!(missing.contains("session input transport not found"));
 }

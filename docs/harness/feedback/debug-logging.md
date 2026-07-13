@@ -11,6 +11,9 @@ Run the app with `npm --prefix ui run tauri:dev:log`
 (`scripts/dev-with-logs.sh`): it tees the whole session to a rotated
 `~/Library/Logs/RunHaven/dev.log`, and secret-scans every log on exit (Ctrl-C
 included) via `scripts/scan-dev-log.sh`, so no session ends unscanned.
+The launcher binds the UI to an operating-system-assigned `127.0.0.1` port,
+prints that exact address, and passes the already-running server to Tauri. It
+never reuses or stops another service merely because a familiar port is busy.
 
 ## What gets logged
 
@@ -51,7 +54,10 @@ included) via `scripts/scan-dev-log.sh`, so no session ends unscanned.
   pipeline. Per-keystroke commands (`write_terminal_input`, `resize_terminal`)
   are excluded from invoke tracing so even typing cadence stays out of the
   file. xterm.js at its default `logLevel` ("info") never sends buffer content
-  through console; do not lower that option.
+  through console; do not lower that option. Interactive agent runs also append
+  a bounded copy to the process-local output registry so History can display it
+  until the app closes. That registry has no file or log sink. Attach and
+  sign-in terminals remain channel-only.
 - The broker's HTTP request bytes. The broker's HTTP client runs IN the app
   process, and the http/tls crates (`ureq`, `ureq_proto`, `rustls`, ...)
   hexdump the raw request -- including the injected `Authorization: Bearer`

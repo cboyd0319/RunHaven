@@ -80,9 +80,18 @@ describe("ManagedSessionDiagnosticsCard", () => {
     );
 
     expect(html).toContain("Session diagnostics");
-    expect(html).toContain("codex");
+    expect(html).toContain("Sign-in method: API key from this Mac");
+    expect(html).toContain("Sign-in records");
+    expect(html).toContain(">Result<");
+    expect(html).not.toContain("Auth records");
+    expect(html).not.toContain(">Decision<");
+    expect(html).toContain(">Codex<");
+    expect(html).not.toContain(">codex<");
     expect(html).toContain("/v1/responses");
     expect(html).toContain("api.openai.com");
+    expect(html).toContain("Allowed because this is a service Codex needs.");
+    expect(html).not.toContain(">allowed<");
+    expect(html).not.toContain(">provider-host<");
     expect(html).not.toContain("/Users/");
     expect(html).not.toContain("/tmp/");
     expect(html).not.toContain("token=");

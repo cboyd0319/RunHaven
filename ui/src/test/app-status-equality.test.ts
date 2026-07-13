@@ -75,7 +75,7 @@ function imageStatus(patch: Partial<ImageStatusResponse> = {}): ImageStatusRespo
     builder: {
       status: "running",
       detail: "builder ready",
-      image: "runhaven/builder:0.1.0",
+      image: "runhaven/builder:0.7.0",
       cpus: "2",
       memory: "2048 MiB",
       rosetta: false,

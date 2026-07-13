@@ -12,8 +12,6 @@
         "menu-events",
         "menu-state",
         "attention-badge",
-        "session-window-open",
-        "session-monitor",
         "terminal",
         "window-chrome",
         "logging"

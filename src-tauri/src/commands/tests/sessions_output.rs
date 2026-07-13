@@ -9,8 +9,9 @@ fn managed_output_confirmation_omits_internal_session_id() {
     );
 
     assert!(!message.contains("Session ID"));
-    assert!(message.contains("Session: Codex - project"));
-    assert!(message.contains("Status: Failed"));
+    assert!(message.contains("private information"));
+    assert!(!message.contains("Status:"));
+    assert!(!message.contains("Lines:"));
 }
 
 fn write_past_output_session(run_id: &str) {
@@ -265,28 +266,56 @@ fn managed_session_log_snapshot_redacts_tokens_served_from_the_registry() {
 #[test]
 fn past_session_log_snapshot_still_serves_retained_registry_output() {
     let (_cache, _cache_home) = isolated_cache();
-    write_past_output_session("managed-session-past-retained");
+    let run_id = "managed-session-past-retained";
+    write_past_output_session(run_id);
+    let workspace = tempfile::tempdir().expect("workspace");
+    let plan = build_agent_run_plan(
+        &request(workspace.path().to_path_buf()),
+        Some(run_id.to_string()),
+    )
+    .expect("run plan");
+    let terminal_registry = crate::terminal::TerminalSessionRegistry::default();
     let output_registry = SessionOutputRegistry::default();
-    output_registry
-        .register("managed-session-past-retained")
-        .expect("register past output");
-    output_registry
-        .append("managed-session-past-retained", b"retained past output\n")
-        .expect("append past output");
+    crate::terminal::open_agent_run_terminal_with_chunks_for_test(
+        &terminal_registry,
+        &output_registry,
+        "webview-terminal-id",
+        plan,
+        &[b"retained ", b"past output\n"],
+    )
+    .expect("open terminal through production retention glue");
+    terminal_registry.close_all();
 
-    let response =
-        crate::commands::sessions::get_managed_session_log_snapshot_with_output_for_test(
-            ManagedSessionLogSnapshotRequest {
-                session_id: "managed-session-past-retained".to_string(),
-                lines: Some(20),
-                confirm_sensitive_output: true,
-            },
-            &output_registry,
-        )
-        .expect("retained past output");
+    let mut approval_count = 0;
+    for _ in 0..2 {
+        let response =
+            crate::commands::sessions::get_managed_session_log_snapshot_with_approval_for_test(
+                ManagedSessionLogSnapshotRequest {
+                    session_id: "managed-session-past-retained".to_string(),
+                    lines: Some(20),
+                    confirm_sensitive_output: true,
+                },
+                Some(&output_registry),
+                |session, lines| {
+                    approval_count += 1;
+                    assert_eq!(session.lifecycle, "finished");
+                    assert_eq!(lines, 20);
+                    Ok(true)
+                },
+            )
+            .expect("retained past output");
 
-    assert_eq!(response.session.lifecycle, "finished");
-    assert_eq!(response.snapshot.text, "retained past output\n");
+        assert_eq!(response.session.lifecycle, "finished");
+        assert_eq!(response.snapshot.text, "retained past output\n");
+    }
+    assert_eq!(approval_count, 2, "each output request needs fresh consent");
+    assert!(
+        output_registry
+            .snapshot("webview-terminal-id", 20)
+            .expect("wrong-id lookup")
+            .is_none(),
+        "the PTY reader must retain bytes only under the Rust-owned plan run id"
+    );
 }
 
 #[test]
@@ -294,17 +323,31 @@ fn past_session_without_retained_output_returns_a_fixed_id_free_error() {
     let (_cache, _cache_home) = isolated_cache();
     let run_id = "managed-session-past-missing-output";
     write_past_output_session(run_id);
+    let output_registry = SessionOutputRegistry::default();
+    let mut approval_requested = false;
 
-    let error = crate::commands::sessions::get_managed_session_log_snapshot_for_test(
+    let error = crate::commands::sessions::get_managed_session_log_snapshot_with_approval_for_test(
         ManagedSessionLogSnapshotRequest {
             session_id: run_id.to_string(),
             lines: Some(20),
             confirm_sensitive_output: true,
         },
+        Some(&output_registry),
+        |_, _| {
+            approval_requested = true;
+            Ok(true)
+        },
     )
     .expect_err("past output was not retained");
 
-    assert_eq!(error, "Output is no longer available for this past run.");
+    assert!(
+        !approval_requested,
+        "unavailable output must not ask for consent"
+    );
+    assert_eq!(
+        error,
+        "RunHaven keeps session output only until the app closes. Output for this run is no longer available."
+    );
     assert!(!error.contains(run_id));
     assert!(!error.contains("active run"));
 }
@@ -329,36 +372,38 @@ fn active_session_without_retained_output_uses_the_active_fallback() {
     )
     .expect("active run payload");
     let registry = SessionOutputRegistry::default();
-    let mut approved = false;
-    let mut fallback_called = false;
+    let mut approval_count = 0;
+    let mut fallback_count = 0;
 
-    let response = crate::commands::managed_session_output::get_managed_session_log_snapshot_with_fallback_for_test(
-        ManagedSessionLogSnapshotRequest {
-            session_id: run_id.to_string(),
-            lines: Some(20),
-            confirm_sensitive_output: true,
-        },
-        Some(&registry),
-        |session, lines| {
-            approved = true;
-            assert_eq!(session.lifecycle, "running");
-            assert_eq!(lines, 20);
-            Ok(true)
-        },
-        |fallback_run_id, lines| {
-            fallback_called = true;
-            assert_eq!(fallback_run_id, run_id);
-            crate::commands::log_snapshot::log_snapshot_response(
-                fallback_run_id,
-                lines,
-                b"active fallback output\n",
-                1024,
-            )
-        },
-    )
-    .expect("active fallback output");
+    for _ in 0..2 {
+        let response = crate::commands::managed_session_output::get_managed_session_log_snapshot_with_fallback_for_test(
+            ManagedSessionLogSnapshotRequest {
+                session_id: run_id.to_string(),
+                lines: Some(20),
+                confirm_sensitive_output: true,
+            },
+            Some(&registry),
+            |session, lines| {
+                approval_count += 1;
+                assert_eq!(session.lifecycle, "running");
+                assert_eq!(lines, 20);
+                Ok(true)
+            },
+            |fallback_run_id, lines| {
+                fallback_count += 1;
+                assert_eq!(fallback_run_id, run_id);
+                crate::commands::log_snapshot::log_snapshot_response(
+                    fallback_run_id,
+                    lines,
+                    b"active fallback output\n",
+                    1024,
+                )
+            },
+        )
+        .expect("active fallback output");
 
-    assert!(approved);
-    assert!(fallback_called);
-    assert_eq!(response.snapshot.text, "active fallback output\n");
+        assert_eq!(response.snapshot.text, "active fallback output\n");
+    }
+    assert_eq!(approval_count, 2, "each output request needs fresh consent");
+    assert_eq!(fallback_count, 2);
 }

@@ -9,9 +9,9 @@ import {
 
 describe("networkLabel", () => {
   it("maps known network modes case-insensitively", () => {
-    expect(networkLabel("provider")).toBe("Provider only")
+    expect(networkLabel("provider")).toBe("Assistant services only")
     expect(networkLabel("  INTERNAL ")).toBe("Local only")
-    expect(networkLabel("Internet")).toBe("Internet")
+    expect(networkLabel("Internet")).toBe("Full internet")
   })
 
   it("falls back to a display value for unknown modes", () => {
@@ -22,7 +22,7 @@ describe("networkLabel", () => {
 
 describe("authScopeLabel", () => {
   it("maps known scopes to the canonical sign-in wording", () => {
-    expect(authScopeLabel("agent")).toBe("Shared agent sign-in")
+    expect(authScopeLabel("agent")).toBe("Shared assistant sign-in")
     expect(authScopeLabel(" Project ")).toBe("This project only")
   })
 
@@ -34,14 +34,18 @@ describe("authScopeLabel", () => {
 
 describe("authStatusLabel", () => {
   it("maps broker aliases to a single label", () => {
-    expect(authStatusLabel("api-key-broker")).toBe("API key broker")
-    expect(authStatusLabel("brokered")).toBe("API key broker")
+    expect(authStatusLabel("api-key-broker")).toBe("API key from this Mac")
+    expect(authStatusLabel("brokered")).toBe("API key from this Mac")
   })
 
   it("names the Claude Keychain OAuth broker distinctly", () => {
     expect(authStatusLabel("keychain-oauth")).toBe(
-      "Legacy Claude Keychain auth",
+      "Legacy Claude Keychain sign-in",
     )
+  })
+
+  it("names session sign-in without exposing the backend status code", () => {
+    expect(authStatusLabel("login-state")).toBe("Session sign-in")
   })
 
   it("maps no-auth, ready, and design-only states", () => {

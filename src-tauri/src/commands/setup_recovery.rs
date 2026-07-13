@@ -3,7 +3,7 @@
 //! The WebView supplies one opaque enum value. Rust revalidates the supported
 //! macOS host and pinned Apple container CLI, owns the exact argument lists,
 //! rejects duplicate requests, and requires native confirmation before the
-//! local service is started.
+//! local service is started or restarted.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -14,15 +14,23 @@ use runhaven_core::doctor::{
     PINNED_APPLE_CONTAINER_VERSION, parse_container_cli_version, parse_major_version,
 };
 use tauri::{AppHandle, State};
-use tauri_plugin_dialog::MessageDialogKind;
 
-use super::dialog::confirm_native;
 use crate::contracts::{SetupActionId, SetupRecoveryRequest, SetupRecoveryResponse};
+
+mod confirmation;
+
+#[cfg(test)]
+pub(crate) use confirmation::restart_system_confirmation_message_for_test;
+use confirmation::trusted_setup_recovery_confirmed;
 
 const RECOVERY_BUSY: &str = "Setup recovery is already running.";
 const RECOVERY_CANCELED: &str = "Setup recovery canceled; no changes were made.";
 const START_FAILED: &str =
     "RunHaven could not start the container service. Open System details or try again.";
+const RESTART_STOP_FAILED: &str = "RunHaven could not stop the container service, so nothing was restarted. Check that no other container work is running, then try again.";
+const RESTART_START_FAILED: &str = "The container service stopped, but RunHaven could not start it again. Choose Check again, then Start container service.";
+const RESTART_NOT_READY: &str =
+    "The container service restarted but is not ready. Choose Check again to see the next fix.";
 const NOT_READY: &str =
     "The container service did not become ready. Open System details or try again.";
 const INSTALLER_OPEN_FAILED: &str = "RunHaven could not open Apple's installer download. Check your internet connection or open System details.";
@@ -48,6 +56,7 @@ pub(crate) struct RecoveryHost {
 enum PreparedRecovery {
     OpenInstaller,
     StartSystem { container_program: PathBuf },
+    RestartSystem { container_program: PathBuf },
 }
 
 impl PreparedRecovery {
@@ -55,6 +64,7 @@ impl PreparedRecovery {
         match self {
             Self::OpenInstaller => SetupActionId::OpenAppleContainerInstaller,
             Self::StartSystem { .. } => SetupActionId::StartContainerSystem,
+            Self::RestartSystem { .. } => SetupActionId::RestartContainerSystem,
         }
     }
 }
@@ -170,6 +180,7 @@ fn prepare_recovery(
     match action {
         SetupActionId::OpenAppleContainerInstaller => prepare_installer(host, run),
         SetupActionId::StartContainerSystem => prepare_start_system(host, run),
+        SetupActionId::RestartContainerSystem => prepare_restart_system(host, run),
     }
 }
 
@@ -225,29 +236,113 @@ fn prepare_start_system(
     Ok(PreparedRecovery::StartSystem { container_program })
 }
 
+fn prepare_restart_system(
+    host: RecoveryHost,
+    run: &mut impl FnMut(&Path, &[&str]) -> Result<RecoveryCommandOutput, String>,
+) -> Result<PreparedRecovery, String> {
+    let container_program = host.container_program.ok_or_else(|| {
+        format!(
+            "Apple container {PINNED_APPLE_CONTAINER_VERSION} is not installed. Choose Download Apple container."
+        )
+    })?;
+    let version = run(&container_program, &["--version"]).map_err(|_| {
+        format!(
+            "RunHaven could not verify Apple container {PINNED_APPLE_CONTAINER_VERSION}. Open System details."
+        )
+    })?;
+    if !version.success
+        || parse_container_cli_version(&version.text).as_deref()
+            != Some(PINNED_APPLE_CONTAINER_VERSION)
+    {
+        return Err(format!(
+            "RunHaven requires Apple container {PINNED_APPLE_CONTAINER_VERSION} before it can repair setup."
+        ));
+    }
+    let status = run(&container_program, &["system", "status"]).map_err(|_| {
+        "RunHaven could not check the container service. Open System details.".to_string()
+    })?;
+    if !status.success {
+        return Err(
+            "The container service is not running. Choose Start container service.".to_string(),
+        );
+    }
+    Ok(PreparedRecovery::RestartSystem { container_program })
+}
+
 fn complete_recovery(
     prepared: PreparedRecovery,
     current_host: RecoveryHost,
     run: &mut impl FnMut(&Path, &[&str]) -> Result<RecoveryCommandOutput, String>,
 ) -> Result<SetupRecoveryResponse, String> {
     let action = prepared.action();
-    let PreparedRecovery::StartSystem { container_program } = prepared else {
-        prepare_installer(current_host, run)?;
-        let opened = run(Path::new(INSTALLER_PROGRAM), &["-u", INSTALLER_URL])
-            .map_err(|_| INSTALLER_OPEN_FAILED.to_string())?;
-        if !opened.success {
-            return Err(INSTALLER_OPEN_FAILED.to_string());
+    match prepared {
+        PreparedRecovery::OpenInstaller => {
+            prepare_installer(current_host, run)?;
+            let opened = run(Path::new(INSTALLER_PROGRAM), &["-u", INSTALLER_URL])
+                .map_err(|_| INSTALLER_OPEN_FAILED.to_string())?;
+            if !opened.success {
+                return Err(INSTALLER_OPEN_FAILED.to_string());
+            }
+            Ok(SetupRecoveryResponse {
+                action_id: action,
+                status: "succeeded".to_string(),
+                label: "Apple installer download opened".to_string(),
+                detail: format!(
+                    "Your browser is downloading Apple's signed Apple container {PINNED_APPLE_CONTAINER_VERSION} installer. Open the .pkg, finish the steps, then return to RunHaven and choose Check again."
+                ),
+            })
         }
-        return Ok(SetupRecoveryResponse {
-            action_id: action,
-            status: "succeeded".to_string(),
-            label: "Apple installer download opened".to_string(),
-            detail: format!(
-                "Your browser is downloading Apple's signed Apple container {PINNED_APPLE_CONTAINER_VERSION} installer. Open the .pkg, finish the steps, then return to RunHaven and choose Check again."
-            ),
-        });
-    };
+        PreparedRecovery::RestartSystem { container_program } => {
+            let PreparedRecovery::RestartSystem {
+                container_program: current_program,
+            } = prepare_restart_system(current_host, run)?
+            else {
+                unreachable!("restart preparation returns a restart action")
+            };
+            if current_program != container_program {
+                return Err(
+                    "Apple container changed while RunHaven was waiting. Choose Check again."
+                        .to_string(),
+                );
+            }
+            let stopped = run(&container_program, &["system", "stop"])
+                .map_err(|_| RESTART_STOP_FAILED.to_string())?;
+            if !stopped.success {
+                return Err(RESTART_STOP_FAILED.to_string());
+            }
+            let started = run(
+                &container_program,
+                &["system", "start", "--enable-kernel-install"],
+            )
+            .map_err(|_| RESTART_START_FAILED.to_string())?;
+            if !started.success {
+                return Err(RESTART_START_FAILED.to_string());
+            }
+            let ready = run(&container_program, &["system", "status"])
+                .map_err(|_| RESTART_NOT_READY.to_string())?;
+            if !ready.success {
+                return Err(RESTART_NOT_READY.to_string());
+            }
+            Ok(SetupRecoveryResponse {
+                action_id: action,
+                status: "succeeded".to_string(),
+                label: "Container service restarted".to_string(),
+                detail: "RunHaven restarted the local container service and refreshed its network."
+                    .to_string(),
+            })
+        }
+        PreparedRecovery::StartSystem { container_program } => {
+            complete_start_system(action, container_program, current_host, run)
+        }
+    }
+}
 
+fn complete_start_system(
+    action: SetupActionId,
+    container_program: PathBuf,
+    current_host: RecoveryHost,
+    run: &mut impl FnMut(&Path, &[&str]) -> Result<RecoveryCommandOutput, String>,
+) -> Result<SetupRecoveryResponse, String> {
     let PreparedRecovery::StartSystem {
         container_program: current_program,
     } = prepare_start_system(current_host, run)?
@@ -280,37 +375,6 @@ fn complete_recovery(
         label: "Container service started".to_string(),
         detail: "RunHaven started the local container service.".to_string(),
     })
-}
-
-async fn trusted_setup_recovery_confirmed(
-    app: AppHandle,
-    action: SetupActionId,
-) -> Result<bool, String> {
-    match action {
-        SetupActionId::OpenAppleContainerInstaller => confirm_native(
-            app,
-            "Download Apple container?",
-            "Download",
-            MessageDialogKind::Info,
-            format!(
-                "RunHaven will open Apple's signed Apple container {PINNED_APPLE_CONTAINER_VERSION} installer download in your browser. If another version is installed, review Apple's installer before replacing it. After it downloads, open the .pkg and follow Apple's steps. The installer will ask for your Mac administrator password."
-            ),
-        )
-        .await
-        .map_err(|_| CONFIRM_FAILED.to_string()),
-        SetupActionId::StartContainerSystem => {
-            confirm_native(
-                app,
-                "Start the container service?",
-                "Start",
-                MessageDialogKind::Info,
-                "RunHaven will start Apple container's local service on this Mac. The first start may download and install Apple's runtime components, including its reviewed kernel and base file system. This does not change RunHaven's sandbox settings."
-                    .to_string(),
-            )
-            .await
-            .map_err(|_| CONFIRM_FAILED.to_string())
-        }
-    }
 }
 
 #[cfg(test)]

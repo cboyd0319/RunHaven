@@ -45,7 +45,7 @@ describe("System details network cleanup", () => {
     })
 
     const remove = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent?.includes("Remove stale networks"),
+      (button) => button.textContent?.includes("Remove old networks"),
     )
     expect(remove).toBeDefined()
     expect(remove?.disabled).toBe(false)

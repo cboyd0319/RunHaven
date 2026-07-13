@@ -13,7 +13,9 @@ function snapshot(patch: Partial<LogSnapshotResponse> = {}): LogSnapshotResponse
     returnedLines: 2,
     truncated: false,
     source: "container-stdio",
-    warnings: ["Raw container output can contain secrets or workspace content."],
+    warnings: [
+      "The assistant can show private project information. Review this text before you share it.",
+    ],
     ...patch
   };
 }
@@ -30,12 +32,17 @@ describe("RunOutputCard", () => {
     );
 
     expect(html).toContain("Source");
-    expect(html).toContain("Container output");
+    expect(html).toContain("Session output");
     expect(html).toContain("Captured");
     expect(html).toContain("capture-timestamp");
-    expect(html).toContain("Returned lines");
-    expect(html).toContain("Raw container output can contain secrets");
+    expect(html).toContain("Lines shown");
+    expect(html).toContain("The assistant can show private project information");
     expect(html).toContain("entry line one");
+    expect(html).toContain("Technical details");
+    expect(html).toContain('aria-label="Session output"')
+    expect(html.indexOf("entry line one")).toBeLessThan(
+      html.indexOf("Technical details")
+    );
     expect(html).not.toContain("/Users/");
   });
 
@@ -46,7 +53,7 @@ describe("RunOutputCard", () => {
         logError=""
         logSnapshot={snapshot({
           warnings: [
-            "Raw container output can contain secrets or workspace content.",
+            "The assistant can show private project information. Review this text before you share it.",
             "Known secrets and control characters were removed automatically. Review before sharing."
           ]
         })}
@@ -54,7 +61,9 @@ describe("RunOutputCard", () => {
       />
     );
 
-    expect(html).toContain("Raw container output can contain secrets");
+    expect(html).toContain(
+      "The assistant can show private project information. Review this text before you share it.",
+    );
     expect(html).toContain("removed automatically");
     expect(html).toContain("entry line one");
   });
@@ -86,5 +95,20 @@ describe("RunOutputCard", () => {
     expect(acknowledged).not.toContain("Updates every few seconds.");
     expect(acknowledged).not.toContain('disabled=""');
     expect(acknowledged).not.toContain("run-output-ack-hint");
+  });
+
+  it("removes the inert action when past output is no longer available", () => {
+    const html = renderToStaticMarkup(
+      <RunOutputCard
+        logLoading={false}
+        logError="RunHaven keeps session output only until the app closes. Output for this run is no longer available."
+        logSnapshot={null}
+        onLoad={async () => undefined}
+      />
+    );
+
+    expect(html).toContain("Output unavailable");
+    expect(html).not.toContain("Show output");
+    expect(html).not.toContain("Show latest output");
   });
 });

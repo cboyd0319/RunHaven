@@ -8,7 +8,6 @@ mod logs;
 mod network;
 mod run_control;
 mod run_status;
-mod session_window;
 mod setup_recovery;
 mod worktree;
 
@@ -22,6 +21,5 @@ pub(crate) use logs::*;
 pub(crate) use network::*;
 pub(crate) use run_control::*;
 pub(crate) use run_status::*;
-pub(crate) use session_window::*;
 pub(crate) use setup_recovery::*;
 pub(crate) use worktree::*;

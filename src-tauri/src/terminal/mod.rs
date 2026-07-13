@@ -11,15 +11,14 @@
 //!    always runs as the non-root `agent` user (`--allow-root-user` is never
 //!    exposed to the GUI).
 //! 2. Consent happens once, before anything is spawned. [`open_terminal_session`]
-//!    shows the native OK/Cancel dialog naming the run and container and stating
-//!    the no-filter/no-store facts; on Cancel nothing is spawned.
-//! 3. The live stream is relayed, never stored. The reader thread
-//!    (`terminal::pty`) forwards each PTY chunk straight to the Tauri
-//!    [`Channel`] and nowhere else: it never appends terminal bytes to the
-//!    captured-output registry, run records, logs, or files. A failed worktree
-//!    launch can still write non-stream recovery metadata. A source
-//!    tripwire test (`terminal::source_tripwire_tests`) enforces this,
-//!    mirroring the menu dispatch-only tripwire.
+//!    shows the native OK/Cancel dialog with the no-filter/no-store facts; on
+//!    Cancel nothing is spawned.
+//! 3. Attach and sign-in streams are relayed directly to the Tauri [`Channel`].
+//!    Interactive run output is also kept in the same bounded, process-local
+//!    output registry as non-TTY runs so History remains useful until the app
+//!    closes. The registry redacts before display and never writes to disk.
+//!    No terminal path writes stream bytes to run records, logs, or files; a
+//!    source tripwire test (`terminal::source_tripwire_tests`) enforces that.
 //!
 //! Concurrent sessions are capped at [`MAX_TERMINAL_SESSIONS`]; opening past the
 //! cap fails closed with a fixed error (a later frontend slice reuses/focuses an
@@ -35,6 +34,7 @@ mod pty;
 mod registry;
 
 use runhaven_core::runtime::active::{GuiAttachPlan, gui_attach_plan};
+use runhaven_core::runtime::plans::AgentRunPlan;
 use runhaven_core::support::validators::validate_run_id;
 use serde::Serialize;
 use tauri::ipc::Channel;
@@ -43,7 +43,10 @@ use tauri_plugin_dialog::MessageDialogKind;
 
 use crate::commands::dialog::confirm_native;
 use crate::commands::launch::{prepare_confirmed_terminal_run, record_unstarted_worktree_failure};
+
+const TERMINAL_CONFIRMATION_MESSAGE: &str = "This advanced terminal connects directly to the session. What you type and see is not filtered or saved. Passwords or codes can be visible on screen.";
 use crate::contracts::LaunchRunRequest;
+use crate::session_output::SessionOutputRegistry;
 // The session-registry ownership boundary lives in `registry`; re-export the
 // registry state so `terminal::TerminalSessionRegistry` stays the crate-facing
 // path (`lib.rs` manages it) and `SpawnedTerminal` is in scope for the flow
@@ -156,6 +159,43 @@ fn register_and_stream(
     Ok(())
 }
 
+/// Register the plan's Rust-owned run id for bounded History output, make that
+/// exact sink mandatory for the PTY spawn, then register the live terminal.
+/// The command and no-container behavior tests share this glue so a missing or
+/// WebView-substituted retention id cannot hide behind a test-only append path.
+fn spawn_confirmed_run_terminal(
+    registry: &TerminalSessionRegistry,
+    reservation: TerminalReservation,
+    output_registry: &SessionOutputRegistry,
+    session_id: &str,
+    mut plan: AgentRunPlan,
+    spawn: impl FnOnce(AgentRunPlan, &str, pty::RetainedRunOutput) -> Result<SpawnedTerminal, String>,
+) -> Result<(), String> {
+    plan.make_interactive_tty();
+    let run_id = plan
+        .run_id
+        .clone()
+        .ok_or_else(|| "RunHaven could not open the run terminal.".to_string())?;
+    let recovery_plan = plan.worktree.as_ref().map(|_| plan.clone());
+    if let Err(error) = output_registry.register(&run_id) {
+        if let Some(plan) = recovery_plan.as_ref() {
+            record_unstarted_worktree_failure(plan)?;
+        }
+        return Err(error);
+    }
+    let retained_run_output = pty::RetainedRunOutput::new(run_id, output_registry.clone());
+    let spawned = match spawn(plan, session_id, retained_run_output) {
+        Ok(spawned) => spawned,
+        Err(error) => {
+            if let Some(plan) = recovery_plan.as_ref() {
+                record_unstarted_worktree_failure(plan)?;
+            }
+            return Err(error);
+        }
+    };
+    register_and_stream(registry, reservation, spawned)
+}
+
 /// Open a live terminal into one active run (terminal design sections 1, 4).
 ///
 /// The target is resolved in Rust from the active-run record (never from
@@ -176,7 +216,7 @@ pub(crate) async fn open_terminal_session(
     let (plan, reservation) = resolve_and_reserve(&registry, &session_id, |id| {
         gui_attach_plan(id).map_err(|_| TERMINAL_UNRESOLVED.to_string())
     })?;
-    if !confirm_terminal_open(app, &plan).await? {
+    if !confirm_terminal_open(app).await? {
         return Ok(false);
     }
     let spawned = pty::spawn_pty_terminal(&plan, on_event)?;
@@ -232,8 +272,9 @@ pub(crate) async fn open_agent_sign_in_terminal(
 /// nothing runs and no worktree branch is created), and `open_gui_run_pty` runs
 /// the finalized plan under the same provider egress proxy, non-root `agent`
 /// user, read-only rootfs, cap-drop, and workspace mount as a background run. Only
-/// the EXECUTION differs: the child's stdio is a host PTY streamed over `on_event`
-/// and nowhere else (no store, no log). `session_id` is only the registry key /
+/// the EXECUTION differs: the child's stdio is a host PTY streamed over `on_event`.
+/// A bounded copy is also kept in process memory for same-app History views; it
+/// is never logged or written to disk. `session_id` is only the registry key /
 /// run label, so a WebView value cannot steer what runs; the plan content comes
 /// from `request` and Rust-side selection. An explicitly configured API-key
 /// broker stays in the normal launch path and never touches the terminal stream. The
@@ -247,6 +288,7 @@ pub(crate) async fn open_agent_run_terminal(
     app: AppHandle,
     on_event: Channel<TerminalMessage>,
     registry: State<'_, TerminalSessionRegistry>,
+    output_registry: State<'_, SessionOutputRegistry>,
     session_id: String,
     request: LaunchRunRequest,
 ) -> Result<bool, String> {
@@ -254,23 +296,19 @@ pub(crate) async fn open_agent_run_terminal(
     // Validate the id and enforce the shared cap before any dialog, worktree
     // branch, or child.
     let reservation = registry.reserve(&session_id)?;
-    let Some(mut plan) = prepare_confirmed_terminal_run(app, request).await? else {
+    let Some(plan) = prepare_confirmed_terminal_run(app, request).await? else {
         return Ok(false);
     };
-    // A terminal run is always interactive: force the argv to carry
-    // `--interactive --tty` so the agent starts its TUI, not headless `--print`.
-    plan.make_interactive_tty();
-    let recovery_plan = plan.worktree.as_ref().map(|_| plan.clone());
-    let spawned = match pty::spawn_run_terminal(plan, &session_id, on_event) {
-        Ok(spawned) => spawned,
-        Err(error) => {
-            if let Some(plan) = recovery_plan.as_ref() {
-                record_unstarted_worktree_failure(plan)?;
-            }
-            return Err(error);
-        }
-    };
-    register_and_stream(&registry, reservation, spawned)?;
+    spawn_confirmed_run_terminal(
+        &registry,
+        reservation,
+        output_registry.inner(),
+        &session_id,
+        plan,
+        |plan, run_label, retained_run_output| {
+            pty::spawn_run_terminal(plan, run_label, on_event, retained_run_output)
+        },
+    )?;
     Ok(true)
 }
 
@@ -285,21 +323,20 @@ async fn confirm_agent_sign_in_open(app: AppHandle, agent: &str) -> Result<bool,
         "copilot" => "Copilot",
         _ => return Err("Choose a supported agent before opening sign-in.".to_string()),
     };
-    let message = format!(
-        "You are opening a {label} sign-in terminal in a fresh sandbox.\n\n\
-         Follow the instructions it prints to finish in your browser. What you type \
-         goes straight to the sandbox. What it prints is shown here but not filtered \
-         or saved. Your login is kept only in {label}'s isolated container volume; \
-         RunHaven never reads or stores the credential."
-    );
     confirm_native(
         app,
-        &format!("Open {label} sign-in terminal"),
-        "Open terminal",
+        &format!("Sign in to {label}?"),
+        "Open",
         MessageDialogKind::Warning,
-        message,
+        sign_in_confirmation_message(label),
     )
     .await
+}
+
+fn sign_in_confirmation_message(agent: &str) -> String {
+    format!(
+        "RunHaven will open a private sign-in terminal for {agent}. Follow its steps in your browser. What you type and see is not filtered or saved. Passwords or codes can be visible on screen. Your sign-in stays in {agent}'s separate agent storage."
+    )
 }
 
 /// Write keystrokes/paste bytes to a live terminal's PTY master.
@@ -348,25 +385,27 @@ pub(crate) fn close_terminal_session(
     registry.close(&session_id)
 }
 
-/// The one native confirmation, naming the exact run and container and stating
-/// the no-filter/no-store facts in plain language (terminal design section 4).
-async fn confirm_terminal_open(app: AppHandle, plan: &GuiAttachPlan) -> Result<bool, String> {
-    let message = format!(
-        "You are opening a live shell inside sandbox {container} (run {run}).\n\n\
-         What you type goes straight to it. What it prints is shown here but not \
-         filtered and not saved. Passwords or codes you type, or that print, are \
-         visible on this screen.",
-        container = plan.container_name,
-        run = plan.run_id,
-    );
+/// The one native confirmation for the advanced direct terminal, stating the
+/// no-filter/no-store facts in plain language (terminal design section 4).
+async fn confirm_terminal_open(app: AppHandle) -> Result<bool, String> {
     confirm_native(
         app,
-        "Open terminal in sandbox",
-        "Open terminal",
+        "Open advanced terminal?",
+        "Open",
         MessageDialogKind::Warning,
-        message,
+        TERMINAL_CONFIRMATION_MESSAGE.to_string(),
     )
     .await
+}
+
+#[cfg(test)]
+pub(crate) fn sign_in_confirmation_message_for_test(agent: &str) -> String {
+    sign_in_confirmation_message(agent)
+}
+
+#[cfg(test)]
+pub(crate) fn terminal_confirmation_message_for_test() -> &'static str {
+    TERMINAL_CONFIRMATION_MESSAGE
 }
 
 #[cfg(test)]
@@ -375,8 +414,8 @@ mod source_tripwire_tests;
 mod test_support;
 #[cfg(test)]
 pub(crate) use test_support::{
-    open_agent_run_terminal_for_test, open_agent_sign_in_terminal_for_test,
-    open_terminal_session_for_test,
+    open_agent_run_terminal_for_test, open_agent_run_terminal_with_chunks_for_test,
+    open_agent_sign_in_terminal_for_test, open_terminal_session_for_test,
 };
 #[cfg(test)]
 mod tests;

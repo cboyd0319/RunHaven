@@ -68,14 +68,14 @@ export function ApiKeyBrokerField({
         onCheckedChange={(checked) =>
           onChange(checked === true ? envName : null)
         }
-        aria-label={`Use API key broker with ${envName}`}
+        aria-label={`Use ${envName} from this Mac`}
       />
       <span className="flex flex-col gap-1">
-        <span className="font-medium">Use API key broker</span>
+        <span className="font-medium">Use an API key from this Mac</span>
         <span className="text-muted-foreground">
-          Fixed host variable: <code className="font-mono">{envName}</code>.
-          RunHaven keeps the key on this Mac and gives the session a
-          placeholder value. Turning this on uses Provider only.
+          RunHaven keeps <code className="font-mono">{envName}</code> on this Mac
+          and gives the assistant temporary access for this session. This option
+          uses Assistant services only.
         </span>
       </span>
     </label>
@@ -96,13 +96,17 @@ export function ImageReadiness({
   onInstall?: () => void
 }) {
   if (imageLoading) {
-    return <p className="text-sm text-muted-foreground">Checking image...</p>
+    return (
+      <p className="text-sm text-muted-foreground">
+        Checking assistant setup…
+      </p>
+    )
   }
   if (imageError) {
     return (
       <Alert variant="destructive">
         <CircleAlert />
-        <AlertTitle>Image status unavailable</AlertTitle>
+        <AlertTitle>Couldn’t check assistant setup</AlertTitle>
         <AlertDescription>{imageError}</AlertDescription>
       </Alert>
     )
@@ -114,17 +118,17 @@ export function ImageReadiness({
     <Alert>
       <ShieldCheck />
       <AlertTitle>
-        {imageStatus.image.ready ? "Agent ready" : "Agent setup needed"}
+        {imageStatus.image.ready ? "Assistant ready" : "Assistant setup needed"}
       </AlertTitle>
       <AlertDescription>
         {imageStatus.image.ready ? (
-          "This agent is installed."
+          "This assistant is installed."
         ) : (
           <span className="flex flex-col items-start gap-2">
             <span>
               {onInstall
-                ? "Install this agent before starting a run."
-                : "This agent must be installed before continuing."}
+                ? "Install this assistant before starting a session."
+                : "This assistant must be installed before continuing."}
             </span>
             {onInstall ? (
               <Button
@@ -133,7 +137,7 @@ export function ImageReadiness({
                 onClick={onInstall}
               >
                 {installing
-                  ? `Installing ${agentLabel(imageStatus.agent)}...`
+                  ? `Installing ${agentLabel(imageStatus.agent)}…`
                   : `Install ${agentLabel(imageStatus.agent)}`}
               </Button>
             ) : null}

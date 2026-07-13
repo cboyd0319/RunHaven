@@ -5,7 +5,8 @@
 
 export type SetupActionId =
   | "open-apple-container-installer"
-  | "start-container-system";
+  | "start-container-system"
+  | "restart-container-system";
 
 export type SetupAction = {
   id: SetupActionId;

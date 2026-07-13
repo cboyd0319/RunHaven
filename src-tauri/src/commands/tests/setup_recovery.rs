@@ -25,7 +25,36 @@ fn desktop_setup_hides_the_source_build_rust_check() {
     ]);
 
     assert_eq!(checks.len(), 1);
-    assert_eq!(checks[0].name, "macOS");
+    assert_eq!(checks[0].name, "macOS version");
+}
+
+#[test]
+fn desktop_setup_merges_mac_checks_and_renames_the_processor() {
+    let checks = desktop_setup_checks(vec![
+        Check {
+            name: "operating system".to_string(),
+            ok: true,
+            detail: "Darwin".to_string(),
+            remedy: "Use macOS.".to_string(),
+        },
+        Check {
+            name: "macOS".to_string(),
+            ok: true,
+            detail: "26.0".to_string(),
+            remedy: "Use macOS 26 or newer.".to_string(),
+        },
+        Check {
+            name: "architecture".to_string(),
+            ok: true,
+            detail: "arm64".to_string(),
+            remedy: "Use Apple silicon.".to_string(),
+        },
+    ]);
+
+    assert_eq!(checks.len(), 2);
+    assert_eq!(checks[0].name, "macOS version");
+    assert_eq!(checks[1].name, "Mac processor");
+    assert!(checks.iter().all(|check| check.detail == "Ready."));
 }
 
 #[test]
@@ -38,6 +67,7 @@ fn failed_container_system_check_offers_only_the_fixed_start_action() {
     });
 
     let action = status.action.expect("failed service check needs recovery");
+    assert_eq!(status.name, "Container service");
     assert_eq!(action.id, SetupActionId::StartContainerSystem);
     assert_eq!(action.label, "Start container service");
 
@@ -48,6 +78,50 @@ fn failed_container_system_check_offers_only_the_fixed_start_action() {
         remedy: "Use macOS 26 or newer.".to_string(),
     });
     assert!(unrelated.action.is_none());
+}
+
+#[test]
+fn desktop_setup_collapses_runtime_file_checks_into_one_reinstall_action() {
+    let checks = desktop_setup_checks(vec![
+        Check {
+            name: "Apple container runtime commit".to_string(),
+            ok: false,
+            detail: "raw commit mismatch".to_string(),
+            remedy: "developer remedy".to_string(),
+        },
+        Check {
+            name: "Apple container builder image".to_string(),
+            ok: false,
+            detail: "raw builder mismatch".to_string(),
+            remedy: "developer remedy".to_string(),
+        },
+        Check {
+            name: "Apple container vminit image".to_string(),
+            ok: true,
+            detail: "raw vminit id".to_string(),
+            remedy: "developer remedy".to_string(),
+        },
+        Check {
+            name: "Apple container kernel".to_string(),
+            ok: false,
+            detail: "raw kernel mismatch".to_string(),
+            remedy: "developer remedy".to_string(),
+        },
+    ]);
+
+    assert_eq!(checks.len(), 1);
+    assert_eq!(checks[0].name, "Apple container files");
+    assert_eq!(
+        checks[0].detail,
+        "Apple container's files do not match the supported version."
+    );
+    let action = checks[0].action.as_ref().expect("reinstall action");
+    assert_eq!(action.id, SetupActionId::OpenAppleContainerInstaller);
+    assert_eq!(action.label, "Reinstall Apple container");
+    let serialized = serde_json::to_string(&checks).expect("serialize checks");
+    for technical_name in ["runtime commit", "builder image", "vminit", "kernel"] {
+        assert!(!serialized.contains(technical_name));
+    }
 }
 
 #[test]
@@ -93,6 +167,15 @@ fn setup_recovery_request_accepts_only_an_opaque_supported_action_id() {
         }))
         .is_err(),
         "the WebView contract must reject executable and argument fields"
+    );
+
+    let restart: SetupRecoveryRequest = serde_json::from_value(serde_json::json!({
+        "actionId": "restart-container-system"
+    }))
+    .expect("supported restart action id");
+    assert_eq!(
+        serde_json::to_string(&restart.action_id).expect("serialize restart action"),
+        r#""restart-container-system""#
     );
 }
 

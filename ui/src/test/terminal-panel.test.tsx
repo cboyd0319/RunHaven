@@ -90,7 +90,9 @@ import { TerminalPanel } from "../app/TerminalPanel"
 import * as runhaven from "../commands/runhaven"
 
 const DISCLOSURE =
-  "RunHaven does not filter, read, store, or log it"
+  "RunHaven shows this live session without reading, filtering, saving, or logging it."
+const RUN_DISCLOSURE =
+  "RunHaven keeps a filtered copy in memory until you quit, then deletes it."
 
 const hasTauriRuntime = vi.mocked(runhaven.hasTauriRuntime)
 const openTerminalSession = vi.mocked(runhaven.openTerminalSession)
@@ -119,8 +121,8 @@ describe("TerminalPanel run mode", () => {
     hasTauriRuntime.mockReturnValue(false)
     const html = renderToStaticMarkup(<TerminalPanel run={runLaunch()} />)
     // The standing no-filter/no-store disclosure still shows for a run terminal.
-    expect(html).toContain(DISCLOSURE)
-    expect(html).toContain("The run terminal needs the desktop app")
+    expect(html).toContain(RUN_DISCLOSURE)
+    expect(html).toContain("The session terminal needs the desktop app")
     expect(html).not.toContain("Start run")
     expect(openAgentRunTerminal).not.toHaveBeenCalled()
   })
@@ -151,7 +153,30 @@ describe("TerminalPanel run mode", () => {
     container.remove()
   })
 
-  it("in the fill destination keeps an End run escape hatch while starting", async () => {
+  it("leaves the temporary terminal when the native launch is canceled", async () => {
+    openAgentRunTerminal.mockResolvedValue(false)
+    const launch = runLaunch()
+    const onOpenCancelled = vi.fn()
+    const container = document.createElement("div")
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(async () => {
+      root.render(
+        createElement(TerminalPanel, {
+          run: launch,
+          onOpenCancelled,
+        }),
+      )
+    })
+    await act(async () => {})
+
+    expect(onOpenCancelled).toHaveBeenCalledTimes(1)
+    await act(async () => root.unmount())
+    container.remove()
+  })
+
+  it("in the fill destination keeps an End session escape hatch while starting", async () => {
     const launch = runLaunch()
     let closed = 0
     const onClose = () => {
@@ -165,12 +190,12 @@ describe("TerminalPanel run mode", () => {
         createElement(TerminalPanel, { run: launch, fill: true, onClose }),
       )
     })
-    // The run starts automatically, while the disclosure and an End run escape
+    // The session starts automatically, while the disclosure and an End session escape
     // hatch stay reachable so the user is never stranded on the destination.
-    expect(container.textContent).toContain(DISCLOSURE)
+    expect(container.textContent).toContain(RUN_DISCLOSURE)
     await act(async () => {})
     const endButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("End run"),
+      button.textContent?.includes("End session"),
     )
     expect(endButton).toBeDefined()
     await act(async () => {
@@ -195,7 +220,7 @@ describe("TerminalPanel disclosure", () => {
       <TerminalPanel session={managedSession()} />,
     )
     expect(html).toContain(DISCLOSURE)
-    expect(html).toContain("visible on this screen")
+    expect(html).toContain("appears in this window")
   })
 
   it("shows the desktop-only placeholder and never opens a session in preview", () => {
@@ -215,6 +240,20 @@ describe("TerminalPanel disclosure", () => {
     expect(html).toContain(DISCLOSURE)
     expect(html).toContain("Open terminal")
     expect(html).not.toContain("Terminal needs the desktop app")
+  })
+
+  it("uses plain session wording and an accessible terminal name", async () => {
+    const panel = await mountActiveTerminal()
+    expect(panel.container.textContent).toContain(
+      "Type directly in this protected session.",
+    )
+    expect(panel.container.textContent).toContain(
+      "Connected. What you type goes directly to this session.",
+    )
+    expect(
+      panel.container.querySelector('[aria-label="Session terminal"]'),
+    ).not.toBeNull()
+    await panel.unmount()
   })
 })
 

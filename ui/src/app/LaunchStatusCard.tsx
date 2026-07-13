@@ -41,7 +41,7 @@ export function LaunchStatusCard({
         {loading ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <LoaderCircle className="size-4" />
-            Checking launch...
+            Checking launch…
           </p>
         ) : null}
         {error ? (

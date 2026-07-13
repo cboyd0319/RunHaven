@@ -75,6 +75,7 @@ export type TerminalPanelProps =
       // terminal comes back into view.
       fill?: boolean
       onClose?: () => void
+      onOpenCancelled?: () => void
       visible?: boolean
     }
 
@@ -95,7 +96,12 @@ export function TerminalPanel(props: TerminalPanelProps) {
   const runProps = props.run ? props : null
   const fill = runProps?.fill ?? false
   const onClose = runProps?.onClose
+  const onOpenCancelled = runProps?.onOpenCancelled
   const visible = runProps?.visible ?? true
+  const onOpenCancelledRef = useRef(onOpenCancelled)
+  useEffect(() => {
+    onOpenCancelledRef.current = onOpenCancelled
+  }, [onOpenCancelled])
   // A stable open per mode, so the streaming effect can depend on it without
   // re-running mid-session. `run` binds the captured launch request (fixed for
   // this terminal's life) into the uniform (sessionId, onMessage) open shape, so
@@ -130,7 +136,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
   const primaryControlRef = useRef<HTMLButtonElement | null>(null)
   // "End run" on the run destination, "Close terminal" for attach/login. Names
   // both the visible button and the discoverable escape hint from one source.
-  const primaryControlLabel = onClose ? "End run" : "Close terminal"
+  const primaryControlLabel = onClose ? "End session" : "Close terminal"
   const autoStart = mode === "run" && hasTauriRuntime()
   const [active, setActive] = useState(autoStart)
   const [phase, setPhase] = useState<TerminalPhase>(autoStart ? "opening" : "idle")
@@ -271,7 +277,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
               if (message.completionRecorded === false) {
                 reportInteractionError(
                   "Sign-in status was not saved",
-                  "The agent may still be signed in, but RunHaven could not update its status. Close this terminal, check your Mac has free space, then try again.",
+                  "The assistant may still be signed in, but RunHaven couldn’t update its status. Close this terminal, make sure your Mac has free space, then try again.",
                 )
               } else {
                 onSignedInRef.current?.()
@@ -286,6 +292,9 @@ export function TerminalPanel(props: TerminalPanelProps) {
           setErrorText("")
           setPhase("idle")
           setActive(false)
+          if (mode === "run") {
+            onOpenCancelledRef.current?.()
+          }
           return
         }
         // Make sure the guest starts at the current viewport size.
@@ -357,7 +366,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
         <CardDescription>{config.description}</CardDescription>
       </CardHeader>
       <CardContent className={cn("flex flex-col gap-4", fill && "min-h-0 flex-1")}>
-        <TerminalDisclosure />
+        <TerminalDisclosure retainForHistory={mode === "run"} />
         {!hasTauriRuntime() ? (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">{config.previewText}</p>
@@ -389,7 +398,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
             <div
               ref={containerRef}
               role="group"
-              aria-label="Sandbox terminal"
+              aria-label="Session terminal"
               className={cn(
                 "overflow-hidden rounded-lg border bg-black p-2",
                 fill ? "min-h-0 flex-1" : "h-72",

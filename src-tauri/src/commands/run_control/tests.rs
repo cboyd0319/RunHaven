@@ -15,7 +15,10 @@ fn stop_run_rejects_oversized_run_id() {
         true,
     )
     .expect_err("oversized run id should fail");
-    assert!(error.contains("run id is too long"));
+    assert_eq!(
+        error,
+        "RunHaven couldn’t stop this session. Check its status, then try again."
+    );
 }
 
 #[test]
@@ -59,14 +62,17 @@ fn stop_run_payload_reports_nonzero_stop() {
     });
     let error =
         map_run_control_payload(RunControlAction::Stop, &payload).expect_err("nonzero stop fails");
-    assert!(error.contains("container stop exited 1"));
+    assert_eq!(
+        error,
+        "RunHaven couldn’t stop this session. Check its status, then try again."
+    );
 }
 
 #[test]
 fn kill_run_requires_explicit_confirmation() {
     let error = validate_direct_run_control_request(RunControlAction::Kill, &"a".repeat(32), false)
         .expect_err("kill without confirmation should fail");
-    assert!(error.contains("Confirm the hard-stop"));
+    assert!(error.contains("Confirm Force Stop"));
 }
 
 #[test]
@@ -83,7 +89,7 @@ fn kill_run_with_trusted_approval_denial_skips_mutation() {
         },
     )
     .expect_err("trusted denial should stop mutation");
-    assert!(error.contains("Hard-stop canceled"));
+    assert!(error.contains("Force Stop canceled"));
     assert!(!mutated);
 }
 
@@ -104,7 +110,7 @@ fn repair_run_requires_explicit_confirmation() {
     let error =
         validate_direct_run_control_request(RunControlAction::Repair, &"a".repeat(32), false)
             .expect_err("repair without confirmation should fail");
-    assert!(error.contains("Confirm the repair"));
+    assert!(error.contains("Confirm before removing this session"));
 }
 
 #[test]
@@ -121,7 +127,7 @@ fn repair_run_with_trusted_approval_denial_skips_mutation() {
         },
     )
     .expect_err("trusted denial should stop mutation");
-    assert!(error.contains("Repair canceled"));
+    assert!(error.contains("Remove canceled"));
     assert!(!mutated);
 }
 

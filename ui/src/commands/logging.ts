@@ -108,8 +108,8 @@ function forwardConsole(level: keyof typeof CONSOLE_SINKS): void {
 
 // Route console output, window errors, and stray promise rejections into the
 // app log file so every run leaves a reviewable trail without screenshots.
-// Called once in development from main.tsx, main window only (the logging
-// capability does not reach monitor windows or release builds).
+// Called once in development from main.tsx. The logging capability does not
+// reach release builds.
 export function installDiagnosticLogging(): void {
   if (!hasTauriRuntime()) {
     return;

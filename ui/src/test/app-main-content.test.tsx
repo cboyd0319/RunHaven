@@ -22,8 +22,6 @@ function runTerminal(): RunTerminalLaunch {
     sessionId: "runabc123",
     request: {
       plan: { ...planRequest(), agent: "claude" },
-      confirmLaunch: true,
-      confirmedWarnings: [],
     },
   }
 }
@@ -43,12 +41,12 @@ describe("AppMainContent run-terminal destination", () => {
     // standing no-filter/no-store disclosure are present, and there is no New
     // Run dialog around it (that lives on Home).
     expect(html).toContain("<main")
-    expect(html).toContain("Run terminal")
-    expect(html).toContain("RunHaven does not filter, read, store, or log it")
+    expect(html).toContain("Session terminal")
+    expect(html).toContain("RunHaven keeps a filtered copy in memory until you quit")
     expect(html).not.toContain("New run")
     // Browser preview (no Tauri runtime in tests) shows the placeholder and a
     // reachable Close, and never invokes the backend.
-    expect(html).toContain("The run terminal needs the desktop app")
+    expect(html).toContain("The session terminal needs the desktop app")
     expect(html).toContain("Close")
   })
 
@@ -67,10 +65,10 @@ describe("AppMainContent run-terminal destination", () => {
     )
 
     // The terminal is still in the tree (its standing disclosure renders)...
-    expect(html).toContain("RunHaven does not filter, read, store, or log it")
+    expect(html).toContain("RunHaven keeps a filtered copy in memory until you quit")
     expect(html).toContain("hidden")
     // ...and the Home launchpad renders alongside it.
-    expect(html).toContain("Choose an agent")
+    expect(html).toContain("Start a session")
   })
 
   it("offers a Dismiss action on the top-level error and hides it when used", async () => {
@@ -151,7 +149,19 @@ describe("AppMainContent run-terminal destination", () => {
     )
 
     // Never a dead view: the launchpad returns so the user is not stranded.
-    expect(html).toContain("Choose an agent")
+    expect(html).toContain("Start a session")
+  })
+
+  it("falls back to Home while a removed session selection is reconciling", () => {
+    const html = renderToStaticMarkup(
+      <AppMainContent
+        {...mainViewProps({ selectedSession: null })}
+        navigation={{ kind: "session", id: "removed-session" }}
+      />,
+    )
+
+    expect(html).toContain("Start a session")
+    expect(html).not.toBe("")
   })
 
   it("keeps operational errors and launch status off Home", () => {
@@ -165,7 +175,7 @@ describe("AppMainContent run-terminal destination", () => {
       />,
     )
 
-    expect(html).toContain("Choose an agent")
+    expect(html).toContain("Start a session")
     expect(html).not.toContain("Action failed")
     expect(html).not.toContain("Background refresh failed.")
     expect(html).not.toContain("Run accepted.")

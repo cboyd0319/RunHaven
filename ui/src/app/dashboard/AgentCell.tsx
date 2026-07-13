@@ -1,13 +1,12 @@
+import { AgentMonogram } from "../AgentMonogram"
 import { agentLabel } from "../sessionIdentity"
-import { agentVisual } from "./agentVisuals"
 
-// The agent identity cell shared by History tables: a product-safe tinted
-// glyph plus the agent's display name.
+// The assistant identity shared by History surfaces. The product name is the
+// accessible label; the compact monogram is decorative.
 export function AgentCell({ agent }: { agent: string }) {
-  const { Icon, tint } = agentVisual(agent)
   return (
-    <span className="inline-flex items-center gap-2">
-      <Icon aria-hidden className={`size-4 ${tint}`} />
+    <span className="inline-flex min-w-0 items-center gap-2">
+      <AgentMonogram agent={agent} className="size-5 rounded text-[0.5rem]" />
       <span className="truncate">{agentLabel(agent)}</span>
     </span>
   )

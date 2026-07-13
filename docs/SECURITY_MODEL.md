@@ -101,10 +101,12 @@ Supported advanced choices warn but do not hide or block. Lower-security run
 configuration (a sensitive workspace, a custom or root `--user`, a custom image,
 `--env` passthrough, or an additional provider host) requires an explicit flag
 and prints plain-language `Security notices` at plan and run time so the tradeoff
-is visible. The desktop's native launch confirmation lists every requested host
-environment variable name, but never reads or shows its value. Destructive
+is visible. The desktop's native launch confirmation lists each explicit
+advanced override: additional provider hosts, requested host environment
+variable names, API-key source name, and custom image. It never reads or shows
+an environment value. Destructive
 resource operations (state deletion, network pruning,
-worktree merge or discard, hard-stop recovery) require explicit confirmation such
+worktree merge or discard, Force Stop recovery) require explicit confirmation such
 as `--yes`. Apple `container machine` use is warned and explicit rather than
 blocked.
 
@@ -130,27 +132,32 @@ runtime correctness and safety failure.
 
 ### Desktop setup recovery
 
-The desktop app can start Apple container's local service when that setup check
-fails. This is a narrow host mutation:
+The desktop app can open Apple's signed installer download, start Apple
+container's local service, or restart that service when a setup check offers
+the matching fix. These are narrow host mutations:
 
-- The untrusted WebView supplies only the opaque action ID
-  `start-container-system`. Unknown IDs and extra executable or argument fields
-  are rejected during deserialization.
+- The untrusted WebView supplies only one opaque action ID:
+  `open-apple-container-installer`, `start-container-system`, or
+  `restart-container-system`. Unknown IDs and extra executable or argument
+  fields are rejected during deserialization.
 - Rust uses Apple's fixed `/usr/local/bin/container` path, verifies that same
-  executable is the pinned 1.1.0 release, and maps the ID to the fixed argument
-  list `system start --enable-kernel-install`. The flag prevents an unattended
-  app process from waiting on a terminal prompt. No shell string or
-  frontend-supplied path reaches process creation.
+  executable is the pinned 1.1.0 release, and maps each service action to fixed
+  argument lists. Start runs `system start --enable-kernel-install` followed by
+  `system status`. Restart runs `system stop`, that same fixed start command,
+  then `system status`. The flag prevents an unattended app process from
+  waiting on a terminal prompt. No shell string or frontend-supplied path
+  reaches process creation.
 - The command has its own one-permission Tauri capability, scoped only to the
-  main window. Read-only and session monitor windows cannot call it.
+  main window.
 - Rust rechecks macOS 26+, Apple silicon, the exact CLI version, and that the
-  service is still stopped before showing the native confirmation. Canceling
-  leaves the host unchanged. A single-flight gate rejects duplicate repair
-  requests while one is active.
-- After the start command exits successfully, Rust checks the service again and
-  reports success only when it is running. The WebView receives only a fixed
-  success status or a fixed path-free error. Raw process output is discarded
-  and never returned.
+  service state matches the requested action before showing the native
+  confirmation, then rechecks them after confirmation. Restart warns that it
+  ends current RunHaven sessions and stops Apple containers running outside
+  RunHaven. Canceling leaves the host unchanged. A single-flight gate rejects
+  duplicate repair requests while one is active.
+- Rust reports service success only after the final readiness check passes. The
+  WebView receives only a fixed success status or a fixed, path-free error for
+  the phase that failed. Raw process output is discarded and never returned.
 
 ## Container Machine Is Not Default
 
@@ -218,59 +225,28 @@ must follow [`EXTENSION_MCP_BOUNDARY.md`](EXTENSION_MCP_BOUNDARY.md): no host
 socket, credential helper, extension, or MCP server is exposed unless the user
 explicitly enables it and the plan can show the exact access before launch.
 
-## Session Input Grant
+## Session Input Approval
 
 The desktop app can send typed messages to a running managed session. Sending
-input is a mutating action, so it is gated the same careful way as stop, kill,
-and cleanup: RunHaven shows a native macOS confirmation dialog that names the
-session and its run before any message reaches the agent. The WebView cannot
-approve on its own.
+input changes a live agent, so RunHaven asks for native macOS confirmation for
+every exact message before any bytes reach the agent. There is no reusable or
+time-limited approval. The WebView sends only a session ID and message. It
+cannot assert approval or name the trusted target.
 
-Each message is bounded before it is sent. RunHaven rejects an empty message, a
-message over 8 KB, a message with a NUL byte, and a message that carries a
-terminal escape sequence. It also checks that the selected session still matches
-the one the message was typed for. Any of these checks failing stops the send
-(fail closed).
+The native sheet shows a backend-derived target, the exact byte count, and a
+bounded head-and-tail preview. The target is one control-safe line, limited to
+120 Unicode characters. The preview is limited to 240 Unicode characters and
+six lines. RunHaven allows ordinary line feeds, but rejects empty messages,
+messages over 8 KB, terminal controls, bidirectional controls, and invisible
+separators. Rejected input is not altered and is not included in an error.
 
-One confirmation does not last forever. The approval is a grant tied to the
-exact run id, and it only applies while the session is in its normal
-"monitor" state. The grant is metered: RunHaven asks for a fresh native
-confirmation once the messages sent under it add up to 256 KB, or once 30
-minutes have passed, whichever comes first. This keeps a normal back-and-forth
-smooth while making sure a long-lived session cannot be driven indefinitely
-after a single click. The grant is cleared as soon as the session's input
-transport is unregistered (for example when the run ends), so a later run that
-happens to reuse a session name never inherits an old approval.
-
-## Session Monitor Windows
-
-The desktop app can open a small extra window that watches one managed
-session (`Open in New Window`). These monitor windows are read-only by
-construction, not by convention:
-
-- Every mutating desktop command (stop, kill, repair, cleanup, worktree
-  actions, launch, image rebuild, sign-in, network prune, input send, Dock
-  badge) is granted only to the main window. A build-time test gate
-  (`capability_guard` in `src-tauri`) fails if any capability ever widens
-  past the main window or if a monitor window gains anything beyond its
-  fixed read set.
-- A monitor window's whole grant is three read commands: which session it
-  shows, that session's status, and that session's secret-free diagnostics.
-  Rust also checks, on every call, that a monitor window reads only the
-  session it was opened for; requests from unknown window labels are denied.
-- Raw output is not viewable from a monitor window. The output confirmation
-  dialog is parented to the trusted main window, and even redacted output can
-  carry sensitive text, so output viewing stays with the main window (fail
-  closed). It names the session, status, and line count but omits internal run
-  and session identifiers.
-- Only the main window can open monitor windows, through one validated Rust
-  command: the session must exist in RunHaven's own records, at most six
-  monitor windows can be open at once, and the window's label is minted by
-  Rust from a counter, never from user input. Monitor windows cannot open
-  further windows, listen to menu events, or write the app's remembered
-  settings and run labels.
-- Monitor windows are never restored across relaunch, and closing the main
-  window closes them too, so no watching window outlives its controls.
+Only one message confirmation can be open across the app. RunHaven resolves an
+active-run marker and its exact Rust-owned input writer before confirmation.
+After approval it resolves the active session, run ID, sign-in state, normal
+running state, and writer identity again. A missing marker, stopped run,
+replaced writer, failed check, or canceled sheet writes zero bytes. Writer
+errors are replaced with fixed text so message contents and backend details do
+not enter logs or renderer-visible errors.
 
 ## Terminal Sessions
 
@@ -281,8 +257,11 @@ most powerful interactive surface, so it is fenced carefully.
 - Rust validates the session id and resolves or builds the exact target. Agent
   sign-in accepts only Claude, Codex, Antigravity, or Copilot.
 - A native confirmation appears before any terminal child starts.
-- Terminal bytes go directly between the PTY and the WebView. RunHaven does not
-  append them to captured output, run records, status registries, or logs.
+- Sign-in and attach terminal bytes go directly between the PTY and the WebView.
+  RunHaven does not append them to captured output, run records, status
+  registries, or logs. Interactive agent runs additionally keep a bounded copy
+  in process memory so History can show output until the app closes. That copy
+  is not written to a run record, file, or log and is filtered before display.
 - The terminal changes only stdio. The container keeps its non-root user,
   read-only root filesystem, dropped capabilities, reviewed mounts, and selected
   network policy.
@@ -301,8 +280,8 @@ most powerful interactive surface, so it is fenced carefully.
   cleanup thread is finishing. System details safely removes that network.
 
 The provider CLI may write its own configuration, credential, or support-log
-files inside its isolated volume. The no-store statement applies to RunHaven's
-terminal relay, not to the provider's own behavior.
+files inside its isolated volume. RunHaven's no-disk-store statement applies to
+its terminal relay, not to the provider's own behavior.
 
 The interactive agent run terminal started from **New session** shares that same
 boundary and adds a few facts of its own:
@@ -322,11 +301,11 @@ boundary and adds a few facts of its own:
   prompt). Ordinary OAuth state stays in the selected agent's isolated volume.
   If an advanced API-key broker was explicitly configured, its key remains in
   the host broker and never enters the terminal stream.
-- The run byte stream follows the same shown-not-stored rule as any terminal: the
-  reader relays each chunk to the WebView `Channel` and nowhere else, and the same
-  build-time source test covers the run spawn, so it cannot gain a storage or
-  logging sink. The run metadata the launch path writes (a run record) is not the
-  stream.
+- The run byte stream is relayed to the WebView `Channel` and appended to the
+  bounded process-local output registry. That allows History to show a filtered
+  copy during the current app session. The registry has no file or logging sink,
+  is discarded when RunHaven closes, and remains separate from the run record.
+  Build-time source tests guard those boundaries.
 - It shares the terminal capability and the two-terminal cap, main window only,
   and fails closed: if the run terminal cannot open, nothing is registered and the
   app keeps its background-run behavior for non-interactive agents.
@@ -416,6 +395,15 @@ creation and print safe next choices. `runs recover` and `runs recover --json`
 are read-only. Suggested project checks are advisory commands and are not run
 automatically. RunHaven does not automatically merge or delete that worktree
 after the run.
+The desktop review computes the net tracked changes from the recorded base
+commit with fixed Git argument lists and NUL-delimited output, then adds
+untracked leaf files. It returns at most 100 control-safe, project-relative
+paths, while keeping the full count. Git output is capped at 1 MiB. A SHA-256
+review ID binds the run, base commit, tracked binary diff, and streamed
+untracked file or symbolic-link content. Apply and Discard require that ID and
+recompute it before and after native confirmation. A stale ID, unsafe path,
+special file, over-limit result, read race, or verification failure stops the
+action without applying or deleting the protected copy.
 The run ledger and active-run markers do not record diffs, file contents,
 prompts, command lines, agent arguments, attach commands, environment variable
 names, environment values, request bodies, or token values. Live container logs

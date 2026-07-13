@@ -6,7 +6,7 @@ import { SessionView } from "../app/views/SessionView"
 import { mainViewProps, managedSession } from "./main-view-props"
 
 describe("SessionView", () => {
-  it("orders a running session: controls near the top, output, then composer", () => {
+  it("keeps the live composer primary and removes the duplicate actions card", () => {
     const session = managedSession()
     const html = renderToStaticMarkup(
       <SessionView
@@ -15,16 +15,13 @@ describe("SessionView", () => {
       />,
     )
 
-    // No banner for a quiet session; controls, status header, output, and
-    // composer all render, with controls before the output region.
-    expect(html).toContain("Run actions")
-    expect(html).toContain("Selected run overview.")
-    expect(html).toContain("Latest output")
+    expect(html).not.toContain("Session actions")
+    expect(html).not.toContain("RunHaven asks for confirmation")
+    expect(html).not.toContain("Selected run overview.")
     expect(html).toContain("Message")
-    expect(html.indexOf("Run actions")).toBeLessThan(
-      html.indexOf("Latest output"),
-    )
-    expect(html.indexOf("Latest output")).toBeLessThan(html.indexOf("Message"))
+    expect(html).toContain("Show details")
+    expect(html).not.toContain("Latest output")
+    expect(html.indexOf("Message")).toBeLessThan(html.indexOf("Show details"))
   })
 
   it("leads with the attention banner when the session needs you", () => {
@@ -36,14 +33,16 @@ describe("SessionView", () => {
       />,
     )
 
-    expect(html).toContain("This run failed")
-    expect(html.indexOf("This run failed")).toBeLessThan(
-      html.indexOf("Selected run overview."),
+    expect(html).toContain("Session ended")
+    expect(html).toContain("Show output")
+    expect(html).toContain("Check System")
+    expect(html.indexOf("Session ended")).toBeLessThan(
+      html.indexOf("Show details"),
     )
   })
 
-  it("keeps the terminal in Advanced tools and only while running", () => {
-    const disclosure = "RunHaven does not filter, read, store, or log it"
+  it("keeps the terminal inside the single Details disclosure", () => {
+    const disclosure = "RunHaven shows this live session without reading"
 
     const running = managedSession()
     const runningHtml = renderToStaticMarkup(
@@ -52,8 +51,9 @@ describe("SessionView", () => {
         selectedSession={running}
       />,
     )
-    expect(runningHtml).toContain("Advanced tools")
-    expect(runningHtml).toContain(disclosure)
+    expect(runningHtml).toContain("Show details")
+    expect(runningHtml).not.toContain("Advanced tools")
+    expect(runningHtml).not.toContain(disclosure)
 
     const finished = managedSession({ lifecycle: "finished" })
     const finishedHtml = renderToStaticMarkup(
@@ -79,6 +79,22 @@ describe("SessionView", () => {
     }
   })
 
+  it("names a session action failure without control jargon", () => {
+    const session = managedSession()
+    const html = renderToStaticMarkup(
+      <SessionView
+        {...mainViewProps({
+          selectedSession: session,
+          controlError: "Nothing changed.",
+        })}
+        selectedSession={session}
+      />,
+    )
+
+    expect(html).toContain("Couldn’t update this session")
+    expect(html).not.toContain("Session control failed")
+  })
+
   it("keeps runtime and diagnostics detail behind a closed Details disclosure", () => {
     const session = managedSession()
     const html = renderToStaticMarkup(
@@ -89,6 +105,7 @@ describe("SessionView", () => {
     )
 
     expect(html).toContain("Show details")
+    expect(html).not.toContain("Latest output")
     expect(html).not.toContain("Runtime status")
     expect(html).not.toContain("Session diagnostics")
   })

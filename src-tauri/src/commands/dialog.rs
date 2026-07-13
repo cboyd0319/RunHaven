@@ -19,7 +19,8 @@ pub(crate) async fn confirm_native(
     let title = title.to_string();
     let confirm_label = confirm_label.to_string();
     let parent = app.get_webview_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
-        "could not show confirmation dialog: the main window is not available".to_string()
+        "RunHaven couldn’t show the confirmation. Quit and reopen RunHaven, then try again."
+            .to_string()
     })?;
     let dialog = app
         .dialog()
@@ -33,5 +34,8 @@ pub(crate) async fn confirm_native(
         .parent(&parent);
     tauri::async_runtime::spawn_blocking(move || dialog.blocking_show())
         .await
-        .map_err(|error| format!("could not show confirmation dialog: {error}"))
+        .map_err(|_| {
+            "RunHaven couldn’t show the confirmation. Quit and reopen RunHaven, then try again."
+                .to_string()
+        })
 }

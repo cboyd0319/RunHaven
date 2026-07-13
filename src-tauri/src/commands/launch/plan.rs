@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use runhaven_core::image::doctor::collect_image_status;
@@ -14,13 +13,11 @@ use runhaven_core::runtime::plans::{
 use runhaven_core::runtime::profiles::get_profile;
 use runhaven_core::runtime::worktrees::{create_worktree_for_run, preview_worktree};
 
-use crate::contracts::{
-    LaunchRunRequest, LaunchRunResponse, PlanWarning, RunPlanRequest, RunPlanResponse,
-};
+use crate::contracts::{LaunchRunResponse, PlanWarning, RunPlanRequest, RunPlanResponse};
 
 use super::super::access::plan_access;
 use super::super::defaulted;
-use super::super::validation::{validate_launch_request_bounds, validate_plan_request_bounds};
+use super::super::validation::validate_plan_request_bounds;
 use super::super::warnings::plan_warnings;
 
 pub(crate) fn build_plan_response(request: RunPlanRequest) -> Result<RunPlanResponse, String> {
@@ -108,7 +105,7 @@ fn build_worktree_run_plan_with_builder(
 ) -> Result<AgentRunPlan, String> {
     validate_plan_request_bounds(request)?;
     if confirmed_plan.run_id.as_deref() != Some(run_id) {
-        return Err("Confirmed launch no longer matches its reserved run id.".to_string());
+        return Err(super::LAUNCH_STATE_CHANGED.to_string());
     }
     let workspace_scope = WorkspaceScope::try_from(request.workspace_scope.as_str())
         .map_err(|error| error.to_string())?;
@@ -119,7 +116,7 @@ fn build_worktree_run_plan_with_builder(
         &request.agent,
         run_id,
     )
-    .map_err(sanitize_worktree_creation_error)?;
+    .map_err(|_| super::LAUNCH_STATE_CHANGED.to_string())?;
     let mounted_workspace = worktree.mounted_workspace.clone();
     let final_plan = (|| {
         let options = agent_run_options_with_auth_source(
@@ -135,11 +132,11 @@ fn build_worktree_run_plan_with_builder(
         Ok(plan) => Ok(plan),
         Err(_) => {
             write_worktree_setup_failure_record(confirmed_plan, &worktree).map_err(|_| {
-                "RunHaven created an isolated worktree but could not save its recovery information."
+                "RunHaven created a protected copy but couldn’t save its recovery information."
                     .to_string()
             })?;
             Err(
-                "RunHaven could not finish this launch. The isolated worktree was kept in Past runs so you can review or remove it."
+                "RunHaven couldn’t start this session. The protected copy is in History, where you can review or delete it."
                     .to_string(),
             )
         }
@@ -160,18 +157,27 @@ pub(crate) fn build_worktree_run_plan_with_failure_for_test(
 /// Map worktree creation failures to fixed, path-free, beginner-friendly guidance.
 /// The raw core error can name the source repo or internal worktree path, so it
 /// never reaches the WebView.
-fn sanitize_worktree_creation_error(error: impl ToString) -> String {
+pub(super) fn sanitize_worktree_creation_error(error: impl ToString) -> String {
     let message = error.to_string();
     if message.contains("clean source git worktree") {
-        "Worktree mode needs a clean git workspace. Commit or stash your changes, then try again."
+        "RunHaven can't make a protected copy while this project has unfinished changes."
             .to_string()
     } else if message.contains("committed HEAD") {
-        "Worktree mode needs a git repository with at least one commit.".to_string()
+        "RunHaven can't make a protected copy because this project does not have saved version history yet."
+            .to_string()
     } else if message.contains("requires a git worktree") {
-        "Worktree mode needs the workspace to be a git repository.".to_string()
+        "RunHaven can't make a protected copy of this folder yet.".to_string()
+    } else if message.contains("not in the committed git snapshot") {
+        "RunHaven can protect the whole project, but not this subfolder by itself. Choose the main project folder and try again."
+            .to_string()
     } else {
-        "RunHaven could not create an isolated worktree for this run.".to_string()
+        "RunHaven can't make a protected copy for this session.".to_string()
     }
+}
+
+#[cfg(test)]
+pub(crate) fn sanitize_worktree_creation_error_for_test(error: &str) -> String {
+    sanitize_worktree_creation_error(error)
 }
 
 fn agent_run_options(
@@ -257,28 +263,8 @@ pub(crate) fn build_launch_response(
     prepare_launch(request, run_id).map(|(_, response)| response)
 }
 
-pub(crate) fn validate_launch_confirmation(
-    request: &LaunchRunRequest,
-) -> Result<Vec<PlanWarning>, String> {
-    validate_launch_request_bounds(request)?;
-    if !request.confirm_launch {
-        return Err("Confirm the launch before starting a run.".to_string());
-    }
-    let confirmed = request
-        .confirmed_warnings
-        .iter()
-        .map(String::as_str)
-        .collect::<HashSet<_>>();
-    let warnings = plan_warnings(&request.plan, active_run_count());
-    for warning in &warnings {
-        if !confirmed.contains(warning.code.as_str()) {
-            return Err(format!(
-                "Confirm warning {} before starting a run: {}",
-                warning.code, warning.message
-            ));
-        }
-    }
-    Ok(warnings)
+pub(super) fn current_launch_warnings(request: &RunPlanRequest) -> Vec<PlanWarning> {
+    plan_warnings(request, active_run_count())
 }
 
 pub(super) fn validate_bundled_image_ready(request: &RunPlanRequest) -> Result<(), String> {
@@ -306,9 +292,9 @@ pub(super) fn validate_bundled_image_ready(request: &RunPlanRequest) -> Result<(
 pub(crate) fn image_readiness_error(
     request: &RunPlanRequest,
     ready: bool,
-    status: &str,
-    agent: &str,
-    image: &str,
+    _status: &str,
+    _agent: &str,
+    _image: &str,
     _fix_command: Option<&str>,
 ) -> Option<String> {
     if ready
@@ -319,9 +305,7 @@ pub(crate) fn image_readiness_error(
     {
         return None;
     }
-    Some(format!(
-        "Image for {agent} is {status}: {image}. Open New Session and install this agent before launching."
-    ))
+    Some("This assistant isn’t ready yet. Return to New Session and install it.".to_string())
 }
 
 fn active_run_count() -> usize {

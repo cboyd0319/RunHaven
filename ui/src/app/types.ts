@@ -2,20 +2,18 @@ import type { RunPlanRequest } from "@/commands/runhaven"
 
 export type RunControlAction = "stop" | "kill" | "repair" | "cleanup"
 
-// The New Session page's three intent-capture steps. An interactive agent
-// (Claude Code) confirmed at "review" does not add a fourth step: it opens the run
-// terminal as the run-terminal main-content destination (a live coding session
-// belongs in the bounded content area).
-export type LaunchStep = "agent" | "project" | "review"
+// New Session asks for an assistant only when opened directly, then asks for a
+// project. The trusted native sheet owns the one final review.
+export type LaunchStep = "agent" | "project"
 
 export function networkHelp(mode: RunPlanRequest["networkMode"]): string {
   if (mode === "provider") {
-    return "Only reviewed provider hosts."
+    return "The assistant can reach only the services it needs."
   }
   if (mode === "internal") {
-    return "No internet from the run."
+    return "No internet access."
   }
-  return "Allowed only after warning."
+  return "The assistant can reach any site. This is less safe."
 }
 
 export function formatMemory(bytes: number | null): string {
@@ -32,16 +30,17 @@ export function errorMessage(cause: unknown): string {
 
 const cancellationPrefixes = [
   "Agent installation canceled",
+  "Apply changes canceled",
   "Cleanup canceled",
-  "Discard canceled",
-  "Hard-stop canceled",
-  "Keep canceled",
+  "Discard changes canceled",
+  "Force Stop canceled",
   "Launch canceled",
-  "Merge canceled",
+  "Message send canceled",
   "Network cleanup canceled",
   "Raw output view canceled",
-  "Recovery review canceled",
-  "Repair canceled",
+  "Remove canceled",
+  "Recovery steps canceled",
+  "Save canceled",
   "Setup recovery canceled",
   "Stop canceled",
   "Terminal canceled",

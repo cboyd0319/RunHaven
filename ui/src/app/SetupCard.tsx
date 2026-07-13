@@ -65,22 +65,22 @@ export function SetupCard({
             : !setupKnown
               ? "Setup unavailable"
               : setupReady
-                ? "Ready to run"
+                ? "Ready"
                 : "Setup needs attention"}
         </CardTitle>
         <CardDescription>
           {loading
-            ? "Checking setup..."
+            ? "Checking setup…"
             : !setupKnown
               ? "RunHaven could not read setup status."
               : setupReady
                 ? "Everything RunHaven needs is ready."
-                : "Fix this one issue first, then RunHaven can start an agent."}
+                : "Fix this one issue first, then RunHaven can start a session."}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading setup...</p>
+          <p className="text-sm text-muted-foreground">Loading setup…</p>
         ) : null}
         {!loading && !setupKnown ? (
           <p className="text-sm text-muted-foreground">
@@ -136,7 +136,7 @@ export function SetupCard({
                 disabled={loading || recoveryBusy}
                 onClick={() => void recover(firstFailedCheck.action!.id)}
               >
-                {recoveryBusy ? "Starting..." : firstFailedCheck.action.label}
+                {recoveryBusy ? "Starting…" : firstFailedCheck.action.label}
               </Button>
             ) : null}
             {onOpenDiagnostics ? (
@@ -156,7 +156,7 @@ export function SetupCard({
                 disabled={loading || recoveryBusy}
                 onClick={onCheckAgain}
               >
-                {loading ? "Checking..." : "Check again"}
+                {loading ? "Checking…" : "Check again"}
               </Button>
             ) : null}
           </div>

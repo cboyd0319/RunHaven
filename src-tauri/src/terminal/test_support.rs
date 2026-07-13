@@ -1,12 +1,30 @@
 //! Injected test seams for terminal commands. Keeping these outside the command
 //! module preserves its production ownership boundary and file-size headroom.
 
+use std::sync::Arc;
+
 use runhaven_core::runtime::plans::AgentRunPlan;
 
 use super::{
-    GuiAttachPlan, SpawnedTerminal, TerminalSessionRegistry, record_unstarted_worktree_failure,
-    register_and_stream, resolve_and_reserve, validate_terminal_session_id,
+    GuiAttachPlan, SpawnedTerminal, TerminalHandle, TerminalSessionRegistry, pty,
+    register_and_stream, resolve_and_reserve, spawn_confirmed_run_terminal,
+    validate_terminal_session_id,
 };
+use crate::session_output::SessionOutputRegistry;
+
+struct NoopTerminal;
+
+impl TerminalHandle for NoopTerminal {
+    fn write_input(&self, data: &[u8]) -> Result<usize, String> {
+        Ok(data.len())
+    }
+
+    fn resize(&self, _cols: u16, _rows: u16) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn shutdown(&self) {}
+}
 
 pub(crate) fn open_terminal_session_for_test(
     registry: &TerminalSessionRegistry,
@@ -47,25 +65,41 @@ pub(crate) fn open_agent_sign_in_terminal_for_test(
 
 pub(crate) fn open_agent_run_terminal_for_test(
     registry: &TerminalSessionRegistry,
+    output_registry: &SessionOutputRegistry,
     session_id: &str,
     prepare_confirm: impl FnOnce() -> Result<Option<AgentRunPlan>, String>,
-    spawn: impl FnOnce(AgentRunPlan) -> Result<SpawnedTerminal, String>,
+    spawn: impl FnOnce(AgentRunPlan, &str, pty::RetainedRunOutput) -> Result<SpawnedTerminal, String>,
 ) -> Result<bool, String> {
     let reservation = registry.reserve(session_id)?;
-    let Some(mut plan) = prepare_confirm()? else {
+    let Some(plan) = prepare_confirm()? else {
         return Ok(false);
     };
-    plan.make_interactive_tty();
-    let recovery_plan = plan.worktree.as_ref().map(|_| plan.clone());
-    let spawned = match spawn(plan) {
-        Ok(spawned) => spawned,
-        Err(error) => {
-            if let Some(plan) = recovery_plan.as_ref() {
-                record_unstarted_worktree_failure(plan)?;
-            }
-            return Err(error);
-        }
-    };
-    register_and_stream(registry, reservation, spawned)?;
+    spawn_confirmed_run_terminal(
+        registry,
+        reservation,
+        output_registry,
+        session_id,
+        plan,
+        spawn,
+    )?;
     Ok(true)
+}
+
+pub(crate) fn open_agent_run_terminal_with_chunks_for_test(
+    registry: &TerminalSessionRegistry,
+    output_registry: &SessionOutputRegistry,
+    session_id: &str,
+    plan: AgentRunPlan,
+    chunks: &[&[u8]],
+) -> Result<bool, String> {
+    open_agent_run_terminal_for_test(
+        registry,
+        output_registry,
+        session_id,
+        || Ok(Some(plan)),
+        |_, _, retained_run_output| {
+            pty::retain_terminal_chunks_for_test(&retained_run_output, chunks);
+            Ok(SpawnedTerminal::without_reader(Arc::new(NoopTerminal)))
+        },
+    )
 }

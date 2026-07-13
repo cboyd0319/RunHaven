@@ -39,13 +39,13 @@ export function ManagedSessionStatusCard({
         <CardTitle role="heading" aria-level={2}>
           Runtime status
         </CardTitle>
-        <CardDescription>Current state for this run.</CardDescription>
+        <CardDescription>Current state for this session.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {loading ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <RefreshCw className="size-4" />
-            Checking status...
+            Checking status…
           </p>
         ) : null}
         {error ? (

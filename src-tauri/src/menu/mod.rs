@@ -4,8 +4,8 @@
 //! only emits its own id string to the main window WebView over the
 //! [`MENU_COMMAND_EVENT`] event. The frontend listener
 //! (`ui/src/app/useMenuEvents.ts`) translates ids into the same UI affordances
-//! a click would use: open New Session, open inline Settings, or focus
-//! an existing confirm control. Mutations keep flowing through the existing
+//! a click would use: open New Session, toggle the app-icon count, or focus an
+//! existing confirm control. Mutations keep flowing through the existing
 //! invoke commands and their Rust-owned native dialogs; in particular the
 //! Stop and Hard Stop items never call `stop_managed_session` or
 //! `kill_managed_session` themselves, they only surface the existing stop
@@ -20,14 +20,6 @@
 //! the frontend handler plus the Rust-owned native dialog still gate every
 //! action.
 //!
-//! Focus rule: session-scoped items ([`spec::session_scoped_ids`], the Run
-//! menu) act on the main window's selected session, so they dispatch
-//! only while no monitor window is focused. A user watching session A in a
-//! monitor window must not trigger a shortcut that silently targets the main
-//! window's selection (possibly session B); the event is dropped instead.
-//! Global items (Settings, New Session, and the sidebar toggle) are unambiguous and
-//! dispatch from any window.
-//!
 //! Standard system items (About, Services, Hide, Quit, Undo/Redo, clipboard,
 //! Close Window, Minimize, Zoom, Full Screen) use [`PredefinedMenuItem`] so
 //! the native behavior and reserved shortcuts stay the system's own.
@@ -39,28 +31,29 @@ mod state;
 
 use std::collections::HashMap;
 
-use tauri::menu::{AboutMetadata, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::menu::{
+    AboutMetadata, CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu,
+};
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
-use spec::{Entry, MENU_BAR, Predef, command_ids, session_scoped_ids};
-use state::{is_dynamic_menu_id, menu_item_enabled};
+use spec::{Entry, MENU_BAR, Predef, command_ids};
+use state::{menu_item_checked, menu_item_enabled, sidebar_menu_label};
 
 pub(crate) use state::MenuState;
 
 // Menu events target only the main window (crate::MAIN_WINDOW_LABEL); future
 // auxiliary windows must opt in deliberately instead of inheriting dispatch.
 use crate::MAIN_WINDOW_LABEL;
-use crate::session_windows::SESSION_WINDOW_LABEL_PREFIX;
 
 /// The single Rust-to-WebView menu channel. Payload is the menu item id.
 pub const MENU_COMMAND_EVENT: &str = "menu://command";
 
-/// Retained handles for the menu items `sync_menu_state` toggles. muda's
-/// Keeping the `MenuItem` handles the builder already created is more reliable
-/// than looking them up after build; each handle is an `Arc` clone, so this is
-/// cheap.
+/// Retained handles for the menu items `sync_menu_state` updates. muda's
+/// Keeping the handles the builder already created is more reliable than
+/// looking them up after build; each handle is an `Arc` clone, so this is cheap.
 struct DynamicMenuItems<R: Runtime> {
-    items: HashMap<&'static str, MenuItem<R>>,
+    command_items: HashMap<&'static str, MenuItem<R>>,
+    checked_items: HashMap<&'static str, CheckMenuItem<R>>,
 }
 
 /// Build the full menu bar. Passed to `tauri::Builder::menu`. Retains the
@@ -68,36 +61,34 @@ struct DynamicMenuItems<R: Runtime> {
 /// them later.
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let menu = Menu::new(app)?;
-    let mut dynamic_items = HashMap::new();
+    let mut command_items = HashMap::new();
+    let mut checked_items = HashMap::new();
     for (label, entries) in MENU_BAR {
         let submenu = Submenu::new(app, *label, true)?;
         for entry in *entries {
-            append_entry(app, &submenu, entry, &mut dynamic_items)?;
+            append_entry(app, &submenu, entry, &mut command_items, &mut checked_items)?;
         }
         #[cfg(target_os = "macos")]
         {
-            // Gives the Window menu its native open-window list and lets the
-            // system add its search field to Help.
+            // Give the Window menu its native open-window list.
             if *label == "Window" {
                 submenu.set_as_windows_menu_for_nsapp()?;
-            }
-            if *label == "Help" {
-                submenu.set_as_help_menu_for_nsapp()?;
             }
         }
         menu.append(&submenu)?;
     }
     app.manage(DynamicMenuItems {
-        items: dynamic_items,
+        command_items,
+        checked_items,
     });
     Ok(menu)
 }
 
 /// Apply the WebView's reported [`MenuState`] to the retained dynamic items:
-/// enable exactly the contextual Run items that apply right now, and disable
-/// the rest. Called only by the `sync_menu_state` command. Toggling
-/// enable state is not a mutation of session state; the frontend handler and
-/// the Rust-owned native dialog still gate every action behind these items.
+/// enable exactly the contextual Run items that apply right now and check the
+/// app-icon count item when that persisted preference is on. Called only by the
+/// `sync_menu_state` command. Menu presentation is not a mutation of session
+/// state; the frontend handler and Rust-owned dialogs still gate actions.
 pub(crate) fn apply_menu_state<R: Runtime>(
     app: &AppHandle<R>,
     state: &MenuState,
@@ -105,9 +96,19 @@ pub(crate) fn apply_menu_state<R: Runtime>(
     let Some(handles) = app.try_state::<DynamicMenuItems<R>>() else {
         return Err("The menu is not ready yet.".to_string());
     };
-    for (id, item) in &handles.items {
+    for (id, item) in &handles.command_items {
         if let Some(enabled) = menu_item_enabled(id, state) {
             item.set_enabled(enabled)
+                .map_err(|_| "RunHaven could not update the menu.".to_string())?;
+        }
+    }
+    if let Some(item) = handles.command_items.get("toggle-sidebar") {
+        item.set_text(sidebar_menu_label(state))
+            .map_err(|_| "RunHaven could not update the menu.".to_string())?;
+    }
+    for (id, item) in &handles.checked_items {
+        if let Some(checked) = menu_item_checked(id, state) {
+            item.set_checked(checked)
                 .map_err(|_| "RunHaven could not update the menu.".to_string())?;
         }
     }
@@ -121,40 +122,36 @@ pub fn on_menu_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
     if !command_ids().contains(&id) {
         return;
     }
-    // Focus rule (module docs): session-scoped shortcuts pressed while a
-    // monitor window is focused would act on the main window's hidden
-    // selection, not the session the user is watching, so they drop here.
-    if session_scoped_ids().contains(&id) && monitor_window_is_focused(app) {
-        return;
-    }
     // Emission fails only when the main window is gone; nothing to do then.
     let _ = app.emit_to(MAIN_WINDOW_LABEL, MENU_COMMAND_EVENT, id);
-}
-
-/// True when a per-session monitor window (`session-*`) is the focused
-/// window. An unreadable focus state counts as not focused, which preserves
-/// dispatch to the main window; the actions behind session-scoped ids stay
-/// confirm-gated there either way.
-fn monitor_window_is_focused<R: Runtime>(app: &AppHandle<R>) -> bool {
-    app.webview_windows().into_iter().any(|(label, window)| {
-        label.starts_with(SESSION_WINDOW_LABEL_PREFIX) && window.is_focused().unwrap_or(false)
-    })
 }
 
 fn append_entry<R: Runtime>(
     app: &AppHandle<R>,
     submenu: &Submenu<R>,
     entry: &'static Entry,
-    dynamic_items: &mut HashMap<&'static str, MenuItem<R>>,
+    enabled_items: &mut HashMap<&'static str, MenuItem<R>>,
+    checked_items: &mut HashMap<&'static str, CheckMenuItem<R>>,
 ) -> tauri::Result<()> {
     match entry {
         Entry::Command(spec) => {
             let item = MenuItem::with_id(app, spec.id, spec.label, spec.enabled, spec.accelerator)?;
-            // Retain a handle for items the sync path drives so their enabled
-            // state can be updated after build; global items keep their built
-            // state and need no handle.
-            if is_dynamic_menu_id(spec.id) {
-                dynamic_items.insert(spec.id, item.clone());
+            // Retain every command handle. Contextual items use it for enable
+            // state and the sidebar toggle uses it for its action label.
+            enabled_items.insert(spec.id, item.clone());
+            submenu.append(&item)
+        }
+        Entry::Check(spec, checked) => {
+            let item = CheckMenuItem::with_id(
+                app,
+                spec.id,
+                spec.label,
+                spec.enabled,
+                *checked,
+                spec.accelerator,
+            )?;
+            if menu_item_checked(spec.id, &MenuState::default()).is_some() {
+                checked_items.insert(spec.id, item.clone());
             }
             submenu.append(&item)
         }

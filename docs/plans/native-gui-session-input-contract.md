@@ -1,6 +1,6 @@
 # Native GUI Session Input Contract
 
-Last updated: 2026-06-30 UTC
+Last updated: 2026-07-13 UTC
 
 ## Status
 
@@ -33,8 +33,9 @@ Tauri launch path requests `container run --interactive` without `--tty`,
 retains a backend-owned child stdin handle, and registers it with
 `SessionInputRegistry`.
 
-Contract checklist: backend-owned session ID, explicit user intent, bounded input,
-cancellation, stale target, multi-session, auth, and resize remains out of scope.
+Contract checklist: active backend-owned session ID, native approval for every
+exact message, bounded input and confirmation copy, cancellation, stale target,
+multi-session, sign-in state, and app-wide single flight. Resize remains out of scope.
 
 ## Goal
 
@@ -99,8 +100,6 @@ Request fields:
 ```text
 session_id: string
 input: string
-confirm_send: bool
-client_target: string
 ```
 
 Response fields:
@@ -113,19 +112,19 @@ cursor: string
 status: string
 ```
 
-The `client_target` is a stale target guard, for example
-`session:<session_id>`. Rust still resolves and authorizes `session_id`; the
-target guard only prevents confused frontend state from accidentally sending to
-an older selected session.
+Unknown request fields are rejected. The WebView cannot send an approval flag
+or a trusted target label. Rust derives the target from current active-session
+state.
 
 ## Required Guards
 
 Ownership:
 
-- Unknown session IDs fail closed.
-- The session ID must resolve to a backend-owned active RunHaven session.
-- The resolved run ID must match the active-run marker at the time of write.
-- The resolved container must still be a RunHaven-owned container.
+- Unknown or history-only session IDs fail closed.
+- The session ID must resolve from an active RunHaven marker, never from a past
+  run record.
+- The resolved run ID and Rust-owned writer generation must match before and
+  after native approval.
 
 Auth:
 
@@ -136,7 +135,13 @@ Auth:
 
 Explicit user intent:
 
-- `confirm_send` is required.
+- Rust opens a native macOS confirmation sheet for every exact message. An
+  earlier approval cannot be reused.
+- The sheet shows a control-safe backend target of at most 120 Unicode
+  characters, the exact byte count, and a head-and-tail preview of at most 240
+  Unicode characters and six lines.
+- Only one message approval can be in flight across the app. A second attempt
+  fails before another sheet or write can start.
 - The UI must use a real button or keyboard submit action.
 - The app must not auto-forward clipboard contents, drafts, or background text.
 - Drafts are component state only and are cleared when the selected target
@@ -147,23 +152,28 @@ Bounded input:
 - Input must be UTF-8 text.
 - Empty input is rejected.
 - Maximum size for the first slice is 8 KiB per send.
-- NUL bytes and terminal escape sequences are rejected.
+- All controls except ordinary line feeds are rejected. Bidirectional controls,
+  invisible separators, terminal escapes, and other unsafe formatting are also
+  rejected instead of being altered.
 - Multi-line input is allowed only if the UI presents it as a message composer,
   not as an unbounded terminal paste.
 
 Cancellation:
 
-- A frontend request can be abandoned when the user changes target.
+- Canceling the native sheet writes zero bytes.
 - A backend write that has already been accepted is not promised to be
   reversible.
 - The UI must show clear pending, accepted, and failed states.
-- In-flight writes are per selected session; changing sessions cannot reuse the
-  old pending state.
+- The Rust-owned app-wide single-flight guard is released on every exit path.
 
 Stale target:
 
-- The UI sends a `client_target` derived from the selected session.
-- Rust rejects mismatched target/session pairs.
+- Rust derives the target from the active marker and never trusts a renderer
+  target label.
+- After native approval, Rust re-resolves the active marker, run ID, sign-in
+  state, normal running state, and exact writer generation before writing.
+- A removed marker, stopped run, replaced writer, or changed sign-in state
+  writes zero bytes.
 - The UI ignores late responses if the selected target changed.
 - Tests must prove stale responses cannot update the wrong selected session.
 
@@ -203,9 +213,9 @@ Current coverage:
   `write_session_input` are narrow typed Tauri contracts.
 - The test seam resolves the backend-owned session ID before a write can be
   accepted.
-- It rejects unknown sessions, oversized session IDs, missing confirmation,
-  empty input, input above 8 KiB, NUL bytes, terminal escape sequences, stale
-  frontend targets, and auth-attention sessions before any write callback runs.
+- It rejects unknown or history-only sessions, oversized session IDs, empty
+  input, input above 8 KiB, unsafe controls or invisible formatting, and
+  auth-attention sessions before any write callback runs.
 - It accepts only a ready managed session whose backend-owned next action is
   `monitor`.
 - The test seam now routes accepted input through `SessionInputRegistry`, not a
@@ -219,14 +229,21 @@ Current coverage:
 
 Rust/Tauri:
 
-- unknown session ID is rejected before any write attempt;
+- unknown or history-only session ID is rejected before any write attempt;
 - oversized session ID is rejected before any backend lookup;
-- `confirm_send: false` is rejected;
+- renderer approval and target fields are rejected as unknown fields;
 - empty input is rejected;
 - input above 8 KiB is rejected;
-- NUL bytes and escape sequences are rejected;
+- NUL bytes, escape sequences, bidirectional controls, and invisible separators
+  are rejected without echoing the input;
 - auth-attention sessions are rejected;
-- stale `client_target` is rejected;
+- every exact message requires a new native approval;
+- cancellation writes zero bytes;
+- a removed active marker, changed running state, or replaced writer after
+  approval writes zero bytes;
+- a second concurrent approval is rejected by one app-wide RAII guard;
+- writer errors are replaced with fixed text that contains no message or
+  backend detail;
 - resolved run ID and session ID stay in the typed response;
 - a registered Rust-owned writer is required before bytes can be accepted;
 - a writer registered for an older run ID is rejected before input is sent;

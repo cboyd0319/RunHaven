@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub(crate) enum SetupActionId {
     OpenAppleContainerInstaller,
     StartContainerSystem,
+    RestartContainerSystem,
 }
 
 #[derive(Clone, Debug, Deserialize)]

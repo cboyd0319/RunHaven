@@ -1,7 +1,0 @@
-{
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "session-window-open",
-  "description": "Lets the main window open a read-only monitor window for one existing managed session. Rust validates the session id against the backend read model, mints the window label itself, caps concurrent monitor windows, and focuses an already-open monitor instead of duplicating it. Monitor windows never receive this permission, so they cannot spawn further windows.",
-  "windows": ["main"],
-  "permissions": ["allow-open-session-window"]
-}

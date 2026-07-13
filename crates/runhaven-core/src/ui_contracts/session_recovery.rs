@@ -22,7 +22,7 @@ impl ManagedSessionListData {
             if matches!(session.lifecycle.as_str(), "running" | "starting")
                 && stale_run_ids.contains(&session.run_id)
             {
-                session.status_label = "Not responding".to_string();
+                session.status_label = "Session ended unexpectedly".to_string();
                 session.next_action = recover_next_action();
             }
         }
@@ -32,9 +32,8 @@ impl ManagedSessionListData {
 fn recover_next_action() -> ManagedSessionNextActionData {
     ManagedSessionNextActionData {
         kind: "recover".to_string(),
-        label: "Repair session".to_string(),
-        detail:
-            "This session's container is no longer running. Repair the stale marker to clear it."
-                .to_string(),
+        label: "Remove from active list".to_string(),
+        detail: "RunHaven can no longer find this session. Remove it from the active list."
+            .to_string(),
     }
 }

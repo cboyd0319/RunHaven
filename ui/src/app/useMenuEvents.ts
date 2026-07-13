@@ -3,9 +3,10 @@ import { useEffect, useRef } from "react"
 import { listenForMenuCommands } from "@/commands/menu_events"
 
 import { NEW_SESSION_NAV, type NavDestination } from "./navigation"
+import type { RunControlAction } from "./types"
 
 // Translates native menu activations into the same UI actions a click takes.
-// New Session opens its page, Settings expands inline, and Run actions activate
+// New Session opens its page, the View preference toggles, and Run actions activate
 // the same on-screen buttons, so the Rust-owned dialog still gates mutations.
 // Send Message focuses the composer instead of sending a draft. Ids that do not
 // apply right now (no selection or control not on screen) no-op; unknown ids are
@@ -13,27 +14,22 @@ import { NEW_SESSION_NAV, type NavDestination } from "./navigation"
 export type MenuActions = {
   navigation: NavDestination
   launchFlow: { setOpen: (open: boolean) => void }
-  settings: { setOpen: (open: boolean) => void }
+  settings: { dockBadge: boolean; setDockBadge: (enabled: boolean) => void }
   navigate: (destination: NavDestination) => void
-  // Opens the read-only monitor window for a session through the validated
-  // open_session_window command. The one menu id that invokes a command:
-  // window creation mutates nothing, so it carries no confirm step.
-  openSessionInNewWindow: (sessionId: string) => void
+  runControl: (action: RunControlAction) => Promise<void>
 }
 
-// Session-menu ids focus the matching on-screen control instead of acting.
-// The selectors mirror labels owned by the session view components
-// (RunStatusCard, SessionInputCard, RunOutputCard); the menu-events test
-// reads those sources and fails if a label drifts away from this map.
-export const MENU_ACTION_SELECTORS: Record<string, string> = {
-  "stop-session": '[aria-label="Stop run"]',
-  "hard-stop-session": '[aria-label="Hard stop"]',
-  "cleanup-session": '[aria-label="Clean up run"]',
-  "show-output": '[aria-label="Show latest output"]',
+// Stop and cleanup commands use the selected session directly. The trusted
+// Rust command still owns approval and revalidation, so the menu does not need
+// a duplicate hidden button in the WebView.
+export const MENU_CONTROL_ACTIONS: Record<string, RunControlAction> = {
+  "stop-session": "stop",
+  "hard-stop-session": "kill",
+  "cleanup-session": "cleanup",
 }
 
 export const MENU_FOCUS_SELECTORS: Record<string, string> = {
-  "send-message": 'textarea[placeholder="Type a message for this run."]',
+  "send-message": 'textarea[placeholder="Type a message for this session."]',
 }
 
 // The shadcn sidebar trigger; clicking it is the exact toggle a user clicks.
@@ -44,9 +40,11 @@ function focusMenuTarget(selector: string) {
 }
 
 export function handleMenuCommand(id: string, app: MenuActions): void {
-  const actionSelector = MENU_ACTION_SELECTORS[id]
-  if (actionSelector) {
-    document.querySelector<HTMLElement>(actionSelector)?.click()
+  const controlAction = MENU_CONTROL_ACTIONS[id]
+  if (controlAction) {
+    if (app.navigation.kind === "session") {
+      void app.runControl(controlAction)
+    }
     return
   }
   const focusSelector = MENU_FOCUS_SELECTORS[id]
@@ -59,15 +57,8 @@ export function handleMenuCommand(id: string, app: MenuActions): void {
       app.launchFlow.setOpen(false)
       app.navigate(NEW_SESSION_NAV)
       return
-    case "settings":
-      app.settings.setOpen(true)
-      return
-    case "open-session-window":
-      // Acts on the selected session only; a monitor window is read-only,
-      // so this needs a real selection, never a guess.
-      if (app.navigation.kind === "session") {
-        app.openSessionInNewWindow(app.navigation.id)
-      }
+    case "show-attention-badge":
+      app.settings.setDockBadge(!app.settings.dockBadge)
       return
     case "toggle-sidebar":
       document

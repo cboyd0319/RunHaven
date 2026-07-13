@@ -5,16 +5,10 @@ use serde_json::Value;
 use crate::contracts::{
     AuthProfileStatus, ManagedSessionDiagnosticsRequest, ManagedSessionDiagnosticsResponse,
 };
-use crate::session_windows::{SessionWindowRegistry, authorize_session_read};
-
 #[tauri::command]
 pub(crate) fn get_managed_session_diagnostics(
-    window: tauri::Window,
     request: ManagedSessionDiagnosticsRequest,
-    window_registry: tauri::State<'_, SessionWindowRegistry>,
 ) -> Result<ManagedSessionDiagnosticsResponse, String> {
-    // Main window: any session. Monitor window: only its own session.
-    authorize_session_read(&window_registry, window.label(), &request.session_id)?;
     get_managed_session_diagnostics_with_input(request)
 }
 

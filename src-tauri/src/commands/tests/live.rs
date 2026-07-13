@@ -102,11 +102,7 @@ fn managed_session_live_smoke_writes_input_and_reads_output() {
     let output_registry = SessionOutputRegistry::default();
 
     let launched = launch_run_with_registries(
-        LaunchRunRequest {
-            plan: plan_request,
-            confirm_launch: true,
-            confirmed_warnings: Vec::new(),
-        },
+        LaunchRunRequest { plan: plan_request },
         registry.clone(),
         output_registry.clone(),
     )
@@ -182,8 +178,6 @@ fn managed_session_live_smoke_isolates_two_sessions() {
     let alpha = launch_run_with_registries(
         LaunchRunRequest {
             plan: alpha_request,
-            confirm_launch: true,
-            confirmed_warnings: Vec::new(),
         },
         registry.clone(),
         output_registry.clone(),
@@ -191,11 +185,7 @@ fn managed_session_live_smoke_isolates_two_sessions() {
     .expect("launch alpha live shell through Tauri runner");
     alpha_cleanup.run_id = Some(alpha.run_id.clone());
     let beta = launch_run_with_registries(
-        LaunchRunRequest {
-            plan: beta_request,
-            confirm_launch: true,
-            confirmed_warnings: Vec::new(),
-        },
+        LaunchRunRequest { plan: beta_request },
         registry.clone(),
         output_registry.clone(),
     )

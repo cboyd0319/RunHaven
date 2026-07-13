@@ -15,28 +15,37 @@ import {
   type LaunchRunResponse,
   type ManagedSessionList,
   type RunPlanRequest,
-  type RunPlanResponse,
 } from "@/commands/runhaven"
 
-import { HOME_NAV, RUN_TERMINAL_NAV, type NavDestination } from "./navigation"
-import { loadSessionsUntilRunPresent } from "./sessionSelection"
+import {
+  HOME_NAV,
+  NEW_SESSION_NAV,
+  RUN_TERMINAL_NAV,
+  type NavDestination,
+} from "./navigation"
+import { agentLabel } from "./sessionIdentity"
 import { errorMessage, type LaunchStep } from "./types"
 
-// The captured, reviewed launch for an interactive agent's run terminal: the
-// full LaunchRunRequest (with launch intent and confirmed warnings) plus the
-// terminal session key. The backend fires the native launch confirmation before
-// anything runs, so this is intent capture, not the mutation boundary.
+// The captured launch for an interactive assistant's terminal. Rust recomputes
+// the exact plan and owns the native confirmation before anything starts.
 export type RunTerminalLaunch = {
   sessionId: string
   request: LaunchRunRequest
 }
 
-// Which agents run as an interactive TUI, so New Session opens the in-app
-// run terminal (task #23, Option A) instead of a headless background run. Claude
-// Code is the only one today. Seam to generalize: when core exposes a per-agent
-// "interactive" flag on the profile, read it here instead of hard-coding claude.
+// Each bundled coding agent starts an interactive terminal UI when invoked with
+// its profile's default command. Running one through the headless captured path
+// leaves it waiting on a TTY with no usable prompt. Shell remains the one
+// background-capable profile.
+const INTERACTIVE_AGENTS = new Set([
+  "antigravity",
+  "claude",
+  "codex",
+  "copilot",
+])
+
 function agentRunsInteractively(agent: string): boolean {
-  return agent === "claude"
+  return INTERACTIVE_AGENTS.has(agent)
 }
 
 // A fresh terminal session key for a run terminal. Like the sign-in terminal, it
@@ -52,9 +61,10 @@ function newTerminalSessionId(): string {
 
 export type LaunchFlowDeps = {
   dashboard: DashboardStatus | null
-  // The user's saved default agent (Settings), or null for the built-in pick.
-  // Applied only if that agent still exists in the live dashboard.
-  defaultAgent: string | null
+  // Browser preview normally simulates a managed session so History, output,
+  // diagnostics, and worktree review remain directly testable. The real Tauri
+  // app and the explicit terminal preview use the live interactive terminal.
+  managedBrowserPreview: boolean
   loadImageStatus: (agentName: string) => Promise<void>
   loadRunStatus: (runId: string) => Promise<void>
   loadManagedSessions: () => Promise<ManagedSessionList>
@@ -67,32 +77,28 @@ export type LaunchFlowDeps = {
   // Injection seam for the native confirm result. The command returns null
   // when the user closes or cancels the trusted dialog.
   launchRunCommand?: typeof launchRun
+  planRunCommand?: typeof planRun
 }
 
 export type LaunchFlow = ReturnType<typeof useLaunchFlow>
 
-// The New Session flow's whole state: the request draft, the step, the reviewed
-// plan, and the in-flight flags. The page is intent capture only; the actual
+// The New Session flow's whole state: the request draft, step, and in-flight
+// flags. The page is intent capture only; the actual
 // mutation boundary stays the Rust-owned native confirmation inside launch_run.
 //
 // Draft retention rule: Cancel leaves the page with no side effects, so the
 // request draft (agent, project folder, advanced options) keeps its values for
 // the rest of the app session. Leaving does reset the
-// step to "agent" and clears the reviewed plan, the launch confirmation, and
-// any checked warnings: a warning confirmed on an abandoned review must never
-// stay silently confirmed for a later launch.
+// step to "agent" and clears local errors.
 export function useLaunchFlow(deps: LaunchFlowDeps) {
   const [request, setRequest] = useState<RunPlanRequest>(() =>
     defaultRunPlanRequest(undefined),
   )
   const [launchStep, setLaunchStep] = useState<LaunchStep>("agent")
-  const [plan, setPlan] = useState<RunPlanResponse | null>(null)
   const [planning, setPlanning] = useState(false)
-  const [launching, setLaunching] = useState(false)
-  const [confirmedWarnings, setConfirmedWarnings] = useState<string[]>([])
   const [launchMessage, setLaunchMessage] = useState("")
-  // The active interactive run terminal, set when startRun routes a reviewed,
-  // confirmed interactive launch to the run-terminal main-content destination
+  // The active interactive run terminal, set when launch routes an interactive
+  // assistant to the run-terminal main-content destination
   // instead of a background run. It is independent of the New Session page;
   // closeRunTerminal clears it and navigates Home, which
   // unmounts the panel and tears down the backend child.
@@ -113,21 +119,18 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
       return
     }
     setLaunchStep("agent")
-    setPlan(null)
-    setConfirmedWarnings([])
     setError("")
-    // The run terminal is a main-content destination now, not sheet content, so
-    // closing the sheet must not tear it down. It is cleared only by
+    // The run terminal is a main-content destination, so leaving New Session
+    // must not tear it down. It is cleared only by
     // closeRunTerminal (navigating Home unmounts the panel and kills the child).
   }
 
-  // Reconcile the request draft with a fresh dashboard: pick the default agent
-  // exactly once, then keep following the user's chosen agent across refreshes.
+  // Reconcile the request draft with a fresh dashboard: make the built-in pick
+  // exactly once, then keep following the user's explicit agent choice.
   async function applyDashboard(dashboard: DashboardStatus) {
     const initializing = agentNameRef.current === null
     const agent = initializing
-      ? (dashboard.agents.find((item) => item.name === deps.defaultAgent) ??
-        preferredDefaultAgent(dashboard.agents))
+      ? preferredDefaultAgent(dashboard.agents)
       : (dashboard.agents.find((item) => item.name === agentNameRef.current) ??
         dashboard.agents[0])
     if (!agent) {
@@ -184,6 +187,7 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
   }
 
   function updateRequest(patch: Partial<RunPlanRequest>) {
+    setError("")
     setRequest((current) => {
       const next = { ...current, ...patch }
       return patch.apiKeyBrokerEnv
@@ -194,8 +198,6 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
   }
 
   function invalidatePlan() {
-    setPlan(null)
-    setConfirmedWarnings([])
     setLaunchMessage("")
   }
 
@@ -206,35 +208,47 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     }
   }
 
-  async function reviewPlan() {
+  async function startSession() {
+    await planAndContinue(withLaunchSessionName(request))
+  }
+
+  async function retryWithoutProtectedCopy(readOnlyWorkspace: boolean) {
+    await planAndContinue(
+      withLaunchSessionName({
+        ...request,
+        worktree: false,
+        readOnlyWorkspace,
+      }),
+    )
+  }
+
+  async function planAndContinue(planRequest: RunPlanRequest) {
     setPlanning(true)
     setError("")
     invalidatePlan()
     try {
-      const planRequest = withLaunchSessionName(request)
       if (planRequest !== request) {
         setRequest(planRequest)
       }
-      const nextPlan = await planRun(planRequest)
-      setPlan(nextPlan)
-      setLaunchStep("review")
+      const nextPlan = await (deps.planRunCommand ?? planRun)(planRequest)
+      if (nextPlan.access.blocking) {
+        setError(
+          [
+            nextPlan.access.label,
+            nextPlan.access.detail,
+            nextPlan.access.remedy,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        )
+        return
+      }
+      await startPlannedRun(planRequest)
     } catch (cause) {
       setError(errorMessage(cause))
     } finally {
       setPlanning(false)
     }
-  }
-
-  function setWarningConfirmation(code: string, checked: boolean) {
-    setConfirmedWarnings((current) => {
-      const next = new Set(current)
-      if (checked) {
-        next.add(code)
-      } else {
-        next.delete(code)
-      }
-      return Array.from(next)
-    })
   }
 
   // Leave the interactive run terminal: clearing state and navigating Home
@@ -245,37 +259,41 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     deps.navigate(HOME_NAV)
   }
 
-  async function startRun() {
-    if (!plan) {
-      return
-    }
-    const launchRequest = request.sessionName
-      ? request
-      : { ...request, sessionName: plan.session || nextLaunchSessionName() }
+  // The trusted native sheet appears after the terminal host is mounted so its
+  // output channel is ready before a child can write. If the user cancels that
+  // sheet, remove the temporary terminal destination and return to the retained
+  // project choices. A canceled launch must never look like an empty session.
+  function cancelRunTerminal() {
+    setRunTerminal(null)
+    setLaunchStep("project")
+    setError("")
+    deps.navigate(NEW_SESSION_NAV)
+  }
+
+  async function startPlannedRun(requestDraft: RunPlanRequest) {
+    const launchRequest = requestDraft.sessionName
+      ? requestDraft
+      : { ...requestDraft, sessionName: nextLaunchSessionName() }
     const fullRequest: LaunchRunRequest = {
       plan: launchRequest,
-      // Clicking Start run expresses WebView intent. The trusted mutation
-      // boundary remains the Rust-owned native confirmation dialog.
-      confirmLaunch: true,
-      confirmedWarnings,
     }
     // Interactive agent (Claude Code): its prompt lives in its own TUI and a
-    // RunHaven run carries no prompt, so open the in-app run terminal instead of
-    // a headless background run. The reviewed request (confirmLaunch + confirmed
-    // warnings) is handed straight to the backend, which fires the Rust-owned
-    // native launch confirmation before anything runs.
-    if (agentRunsInteractively(launchRequest.agent)) {
+    // RunHaven session carries no prompt, so open the in-app terminal instead
+    // of a headless background session. Rust still owns final confirmation.
+    if (
+      agentRunsInteractively(launchRequest.agent) &&
+      !deps.managedBrowserPreview
+    ) {
       setError("")
       setLaunchMessage("")
       setRunTerminal({ sessionId: newTerminalSessionId(), request: fullRequest })
       // A live interactive session fills the bounded main content area. Reset
-      // the launch review and open the run-terminal destination; setOpen(false)
+      // the launch flow and open the run-terminal destination; setOpen(false)
       // leaves runTerminal intact.
       setOpen(false)
       deps.navigate(RUN_TERMINAL_NAV)
       return
     }
-    setLaunching(true)
     setError("")
     setLaunchMessage("")
     let started: LaunchRunResponse | null
@@ -283,47 +301,38 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
       started = await (deps.launchRunCommand ?? launchRun)(fullRequest)
     } catch (cause) {
       setError(errorMessage(cause))
-      setLaunching(false)
       return
     }
     if (started === null) {
-      setLaunching(false)
       return
     }
-    // Accepted: close the sheet first (spec 3.2), keep the draft values, and
+    // Accepted: leave New Session, keep the draft values, and
     // arm the next launch with a fresh session name.
     deps.onLaunched(started)
-    setLaunchMessage(`Run accepted: ${started.runId}`)
+    setLaunchMessage(`Starting ${agentLabel(launchRequest.agent)}…`)
     setOpen(false)
+    // The native command has accepted the launch, but its managed-session
+    // record may take several seconds to appear while the sandbox starts.
+    // History is a useful, stable waiting surface; useManagedSessionsState
+    // opens the exact session as soon as polling finds its backend-owned run id.
+    deps.navigate({ kind: "runs" })
     setRequest((current) => ({
       ...current,
       sessionName: nextLaunchSessionName(),
     }))
     try {
       await deps.loadRunStatus(started.runId)
-      const { sessionId } = await loadSessionsUntilRunPresent(
-        deps.loadManagedSessions,
-        started.runId,
-      )
-      if (sessionId) {
-        // User-initiated navigation: launching is the action that asked for it.
-        deps.selectSession(sessionId)
-      }
+      await deps.loadManagedSessions()
     } catch (cause) {
       // The flow is already closed, so follow-up failures surface app-wide.
       deps.onError(errorMessage(cause))
-    } finally {
-      setLaunching(false)
     }
   }
 
   return {
     request,
     launchStep,
-    plan,
     planning,
-    launching,
-    confirmedWarnings,
     launchMessage,
     error,
     runTerminal,
@@ -333,10 +342,10 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     updateNetworkMode,
     updateRequest,
     pickFolder,
-    reviewPlan,
-    setWarningConfirmation,
-    startRun,
+    startSession,
+    retryWithoutProtectedCopy,
     closeRunTerminal,
+    cancelRunTerminal,
     setLaunchStep,
   }
 }

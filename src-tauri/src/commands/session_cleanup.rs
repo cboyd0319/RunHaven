@@ -23,10 +23,11 @@ use crate::contracts::{
     CleanupManagedSessionRequest, CleanupManagedSessionResponse, CleanupManagedSessionResult,
 };
 
-const CONFIRM_CLEANUP_ERROR: &str = "Confirm the cleanup before discarding this session worktree.";
-const CANCEL_CLEANUP_ERROR: &str = "Cleanup canceled before discarding this session worktree.";
+const CONFIRM_CLEANUP_ERROR: &str = "Confirm before deleting this protected copy.";
+const CANCEL_CLEANUP_ERROR: &str = "Cleanup canceled. Nothing was deleted.";
 const CLEANUP_TARGET_WORKTREE: &str = "worktree";
 const CLEANUP_STATUS_DISCARDED: &str = "discarded";
+const CLEANUP_CONFIRMATION_MESSAGE: &str = "RunHaven will permanently delete the assistant’s saved, protected copy. Your original project folder won’t be deleted.";
 
 #[tauri::command]
 pub(crate) async fn cleanup_managed_session(
@@ -34,7 +35,7 @@ pub(crate) async fn cleanup_managed_session(
     request: CleanupManagedSessionRequest,
 ) -> Result<CleanupManagedSessionResponse, String> {
     let (session, lifecycle) = authorize_cleanup(&request)?;
-    if !trusted_session_cleanup_confirmed(app, &session, &lifecycle.run_id).await? {
+    if !trusted_session_cleanup_confirmed(app).await? {
         return Err(CANCEL_CLEANUP_ERROR.to_string());
     }
     execute_cleanup(session, lifecycle)
@@ -84,21 +85,18 @@ fn execute_cleanup(
     })
 }
 
-async fn trusted_session_cleanup_confirmed(
-    app: AppHandle,
-    session: &ManagedSessionSummaryData,
-    run_id: &str,
-) -> Result<bool, String> {
-    let message = format!(
-        "Action: Clean up\nSession: {}\nRun ID: {}\nAgent: {}\nProject: {}\nStatus: {}\nTarget: RunHaven worktree\n\nRunHaven will delete the recorded worktree and branch for this finished session after you confirm.",
-        session.title, run_id, session.agent, session.project, session.status_label,
-    );
+async fn trusted_session_cleanup_confirmed(app: AppHandle) -> Result<bool, String> {
     confirm_native(
         app,
-        "Confirm RunHaven cleanup",
-        "Clean up",
+        "Delete this protected copy?",
+        "Delete",
         MessageDialogKind::Warning,
-        message,
+        CLEANUP_CONFIRMATION_MESSAGE.to_string(),
     )
     .await
+}
+
+#[cfg(test)]
+pub(crate) fn cleanup_confirmation_message_for_test() -> &'static str {
+    CLEANUP_CONFIRMATION_MESSAGE
 }

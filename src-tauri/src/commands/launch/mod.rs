@@ -3,11 +3,10 @@ use std::thread;
 use runhaven_core::runtime::launch::{
     launch_run_plan_with_runner, new_run_id, write_worktree_setup_failure_record,
 };
-use runhaven_core::runtime::plans::{AgentRunPlan, ClaudeAuthSource};
+use runhaven_core::runtime::plans::AgentRunPlan;
+use runhaven_core::runtime::worktrees::preview_worktree;
 use tauri::{AppHandle, State};
-use tauri_plugin_dialog::MessageDialogKind;
 
-use crate::commands::dialog::confirm_native;
 use crate::contracts::{
     LaunchRunRequest, LaunchRunResponse, PlanWarning, RunPlanRequest, RunPlanResponse,
 };
@@ -17,14 +16,28 @@ use crate::session_input::SessionInputRegistry;
 use crate::session_output::SessionOutputRegistry;
 
 use super::collect_setup_status;
+use super::validation::validate_plan_request_bounds;
 
+pub(super) const LAUNCH_STATE_CHANGED: &str = "The project or session settings changed before RunHaven could start. Check your folder and options, then try again.";
+
+mod confirmation;
 mod plan;
 
+use confirmation::trusted_launch_confirmed;
+
+#[cfg(test)]
+pub(crate) use confirmation::{
+    trusted_launch_kind_for_test, trusted_launch_message_for_test, trusted_launch_title_for_test,
+};
+
+pub(crate) use plan::build_plan_response;
 #[cfg(test)]
 pub(crate) use plan::{build_agent_run_plan, build_launch_response, image_readiness_error};
-pub(crate) use plan::{build_plan_response, validate_launch_confirmation};
 
-use plan::{build_worktree_run_plan, prepare_launch, validate_bundled_image_ready};
+use plan::{
+    build_worktree_run_plan, current_launch_warnings, prepare_launch,
+    sanitize_worktree_creation_error, validate_bundled_image_ready,
+};
 
 #[tauri::command]
 pub(crate) fn plan_run(request: RunPlanRequest) -> Result<RunPlanResponse, String> {
@@ -50,7 +63,7 @@ pub(crate) async fn launch_run(
         &prepared.preview_plan,
         &prepared.warnings,
         prepared.worktree(),
-        &prepared.request.env_names,
+        &prepared.request,
     )
     .await?
     {
@@ -73,7 +86,7 @@ fn launch_confirmed(
 ) -> Result<LaunchRunResponse, String> {
     let run_id = prepared.run_id.clone();
     let response = prepared.response.clone();
-    let plan = finalize_launch_plan(prepared)?;
+    let plan = finalize_confirmed_launch_plan(prepared)?;
     if let Err(error) = launch_status.mark_starting(&run_id, &plan.profile_name, &plan.session) {
         record_unstarted_worktree_failure(&plan)?;
         return Err(error);
@@ -114,6 +127,7 @@ struct PreparedLaunch {
     preview_plan: AgentRunPlan,
     response: LaunchRunResponse,
     warnings: Vec<PlanWarning>,
+    worktree_preview: Option<(std::path::PathBuf, std::path::PathBuf, String)>,
 }
 
 impl PreparedLaunch {
@@ -132,8 +146,28 @@ fn finalize_launch_plan(prepared: PreparedLaunch) -> Result<AgentRunPlan, String
     build_worktree_run_plan(&prepared.request, &prepared.run_id, &prepared.preview_plan)
 }
 
+fn finalize_confirmed_launch_plan(prepared: PreparedLaunch) -> Result<AgentRunPlan, String> {
+    if current_launch_warnings(&prepared.request) != prepared.warnings {
+        return Err(LAUNCH_STATE_CHANGED.to_string());
+    }
+    if let Some(expected) = &prepared.worktree_preview {
+        let current = preview_worktree(
+            std::path::Path::new(&prepared.request.workspace_path),
+            prepared.preview_plan.workspace_scope,
+            prepared.request.allow_sensitive_workspace,
+        )
+        .map_err(|_| LAUNCH_STATE_CHANGED.to_string())?;
+        if &current != expected {
+            return Err(LAUNCH_STATE_CHANGED.to_string());
+        }
+    }
+    finalize_launch_plan(prepared)
+}
+
 #[cfg(test)]
-pub(crate) use plan::build_worktree_run_plan_with_failure_for_test;
+pub(crate) use plan::{
+    build_worktree_run_plan_with_failure_for_test, sanitize_worktree_creation_error_for_test,
+};
 
 #[cfg(test)]
 pub(crate) fn launch_run_with_registries(
@@ -163,6 +197,18 @@ pub(crate) fn launch_run_with_registries_status_and_approval(
         return Err("Launch canceled before starting the run.".to_string());
     }
     launch_confirmed(prepared, launch_status, input_registry, output_registry)
+}
+
+#[cfg(test)]
+pub(crate) fn finalize_launch_with_approval_for_test(
+    request: LaunchRunRequest,
+    approve: impl FnOnce(&AgentRunPlan, &[PlanWarning]) -> Result<bool, String>,
+) -> Result<Option<AgentRunPlan>, String> {
+    let prepared = prepare_launch_for_confirmation(request, |_| Ok(()))?;
+    if !approve(&prepared.preview_plan, &prepared.warnings)? {
+        return Ok(None);
+    }
+    finalize_confirmed_launch_plan(prepared).map(Some)
 }
 
 #[cfg(test)]
@@ -242,114 +288,56 @@ pub(crate) async fn prepare_confirmed_terminal_run(
         &prepared.preview_plan,
         &prepared.warnings,
         prepared.worktree(),
-        &prepared.request.env_names,
+        &prepared.request,
     )
     .await?
     {
         return Ok(None);
     }
-    let plan = finalize_launch_plan(prepared)?;
+    let plan = finalize_confirmed_launch_plan(prepared)?;
     Ok(Some(plan))
 }
 
 fn prepare_confirmed_launch(request: LaunchRunRequest) -> Result<PreparedLaunch, String> {
-    let warnings = validate_launch_confirmation(&request)?;
-    let setup = collect_setup_status();
-    if !setup.ok {
-        return Err(
-            "RunHaven setup is not ready. Fix setup checks before launching a run.".to_string(),
-        );
-    }
-    validate_bundled_image_ready(&request.plan)?;
+    prepare_launch_for_confirmation(request, |request| {
+        let setup = collect_setup_status();
+        if !setup.ok {
+            return Err(
+                "RunHaven setup is not ready. Fix setup checks before launching a run.".to_string(),
+            );
+        }
+        validate_bundled_image_ready(request)
+    })
+}
+
+fn prepare_launch_for_confirmation(
+    request: LaunchRunRequest,
+    validate_readiness: impl FnOnce(&RunPlanRequest) -> Result<(), String>,
+) -> Result<PreparedLaunch, String> {
+    validate_plan_request_bounds(&request.plan)?;
+    validate_readiness(&request.plan)?;
     let run_id = new_run_id();
     let plan_request = request.plan.clone();
     let (preview_plan, response) = prepare_launch(request.plan, run_id.clone())?;
+    let worktree_preview = if plan_request.worktree {
+        Some(
+            preview_worktree(
+                std::path::Path::new(&plan_request.workspace_path),
+                preview_plan.workspace_scope,
+                plan_request.allow_sensitive_workspace,
+            )
+            .map_err(sanitize_worktree_creation_error)?,
+        )
+    } else {
+        None
+    };
+    let warnings = current_launch_warnings(&plan_request);
     Ok(PreparedLaunch {
         run_id,
         request: plan_request,
         preview_plan,
         response,
         warnings,
+        worktree_preview,
     })
-}
-
-async fn trusted_launch_confirmed(
-    app: AppHandle,
-    plan: &AgentRunPlan,
-    warnings: &[PlanWarning],
-    worktree: bool,
-    env_names: &[String],
-) -> Result<bool, String> {
-    let message = trusted_launch_message(plan, warnings, worktree, env_names);
-    let kind = if warnings.is_empty() {
-        MessageDialogKind::Info
-    } else {
-        MessageDialogKind::Warning
-    };
-    confirm_native(app, "Confirm RunHaven launch", "Launch", kind, message).await
-}
-
-/// The auth-broker line in the launch confirmation. Ordinary in-container OAuth
-/// uses no host broker. An explicitly configured advanced API-key broker names
-/// only its environment variable, never its value.
-fn auth_broker_line(plan: &AgentRunPlan) -> String {
-    match &plan.claude_auth_source {
-        Some(ClaudeAuthSource::ApiKeyBrokerEnv(name)) => format!("API key broker: {name}"),
-        None => "API key broker: none".to_string(),
-    }
-}
-
-fn trusted_launch_message(
-    plan: &AgentRunPlan,
-    warnings: &[PlanWarning],
-    worktree: bool,
-    env_names: &[String],
-) -> String {
-    let provider_hosts = if plan.provider_allowed_hosts.is_empty() {
-        "none".to_string()
-    } else {
-        plan.provider_allowed_hosts.join(", ")
-    };
-    let auth_broker_line = auth_broker_line(plan);
-    let host_environment = if env_names.is_empty() {
-        "none".to_string()
-    } else {
-        env_names.join(", ")
-    };
-    let worktree_line = if worktree {
-        "yes (RunHaven creates a new isolated git branch; your files change only if you merge)"
-    } else {
-        "no (runs directly in your workspace)"
-    };
-    let mut message = format!(
-        "Agent: {}\nWorkspace: {}\nSession: {}\nImage: {}\nSign-in: {}\nNetwork: {}\nProvider hosts: {}\n{}\nExtra host variables: {}\nWorktree: {}\n\nRunHaven will start this session after you confirm.",
-        plan.profile_name,
-        plan.workspace.display(),
-        plan.session,
-        plan.image,
-        plan.auth_scope.friendly_label(),
-        plan.network_mode.friendly_label(),
-        provider_hosts,
-        auth_broker_line,
-        host_environment,
-        worktree_line,
-    );
-    if !warnings.is_empty() {
-        message.push_str("\n\nWarnings:");
-        for warning in warnings {
-            message.push_str("\n- ");
-            message.push_str(&warning.message);
-        }
-    }
-    message
-}
-
-#[cfg(test)]
-pub(crate) fn trusted_launch_message_for_test(
-    plan: &AgentRunPlan,
-    warnings: &[PlanWarning],
-    worktree: bool,
-    env_names: &[String],
-) -> String {
-    trusted_launch_message(plan, warnings, worktree, env_names)
 }

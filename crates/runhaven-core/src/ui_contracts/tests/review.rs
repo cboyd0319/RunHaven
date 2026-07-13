@@ -72,6 +72,15 @@ fn run_control_result_contract_maps_core_payloads_to_ui_shape() {
     assert_eq!(stop.marker_removed, None);
     assert!(stop.message.contains("Stop requested"));
 
+    let force_stop = RunControlResultData::from_kill_payload(serde_json::json!({
+        "run_id": "run-124",
+        "container_name": "runhaven-codex-project-run",
+        "return_code": 0
+    }))
+    .expect("force stop result data");
+    assert!(force_stop.message.contains("Force stop requested"));
+    assert!(!force_stop.message.contains("Hard stop"));
+
     let repair = RunControlResultData::from_repair_payload(serde_json::json!({
         "run_id": "run-456",
         "container_name": "runhaven-codex-stale-run",

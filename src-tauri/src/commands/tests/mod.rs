@@ -21,8 +21,10 @@ use std::process::Command;
 
 mod auth;
 mod claude_auth_source;
+mod dialog_copy;
 mod image;
 mod image_build;
+mod launch_confirmation;
 mod launch_status;
 mod live;
 mod live_agent;
@@ -34,14 +36,16 @@ mod run_control;
 mod run_status;
 mod session_cleanup;
 mod session_input;
-mod session_window;
+mod session_input_security;
 mod session_worktree;
+mod session_worktree_review_security;
 mod sessions;
 mod sessions_diagnostics;
 mod sessions_output;
 mod sessions_status;
 mod setup_installer_recovery;
 mod setup_recovery;
+mod setup_restart_recovery;
 mod validation;
 mod worktree_launch_recovery;
 

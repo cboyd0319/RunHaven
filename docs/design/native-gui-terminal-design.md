@@ -305,7 +305,7 @@ windows (`session-*`) MUST NOT receive it — they are read-only by design. [J]
 - Underlying session dies mid-stream: the master read returns EOF, the reader
   sends `{ "event": "exit", code }`, xterm shows a plain "This session ended"
   line, and the registry entry is cleared. No dangling child.
-- Not persisted or restored across relaunch (matches session monitor windows).
+- Not persisted or restored across relaunch.
 
 ## 10. Slice plan
 

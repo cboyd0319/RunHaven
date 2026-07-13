@@ -214,7 +214,7 @@ fn stop_or_kill_message(
     return_code: i32,
 ) -> String {
     let label = if action == "kill" {
-        "Hard stop"
+        "Force stop"
     } else {
         "Stop"
     };

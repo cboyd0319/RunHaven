@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use crate::provider::auth_profiles::agent_sign_in_mode;
 use crate::runtime::worktrees::{load_worktree_lifecycle, verify_lifecycle};
 
-use super::helpers::{display_agent_name, string_field};
+use super::helpers::{display_agent_name, i32_field, string_field, u64_pointer_field};
 use super::sessions::{
     ManagedSessionCleanupData, ManagedSessionEventData, ManagedSessionNextActionData,
 };
@@ -24,6 +24,7 @@ pub(super) fn managed_session_lifecycle(status: &str) -> String {
 }
 
 pub(super) fn managed_session_next_action(
+    record: &serde_json::Value,
     agent: &str,
     auth_status: &str,
     lifecycle: &str,
@@ -41,8 +42,8 @@ pub(super) fn managed_session_next_action(
     match lifecycle {
         "running" | "starting" => ManagedSessionNextActionData {
             kind: "monitor".to_string(),
-            label: "Monitor session".to_string(),
-            detail: "RunHaven is tracking status for this session.".to_string(),
+            label: "Session running".to_string(),
+            detail: "The assistant is working.".to_string(),
         },
         "finished" | "stopped" | "ended" => ManagedSessionNextActionData {
             kind: "none".to_string(),
@@ -52,7 +53,7 @@ pub(super) fn managed_session_next_action(
         "failed" => ManagedSessionNextActionData {
             kind: "review".to_string(),
             label: "Review session".to_string(),
-            detail: "The session reported a failure.".to_string(),
+            detail: managed_session_failure_reason(record),
         },
         _ => ManagedSessionNextActionData {
             kind: "review".to_string(),
@@ -60,6 +61,21 @@ pub(super) fn managed_session_next_action(
             detail: "RunHaven does not recognize this session state.".to_string(),
         },
     }
+}
+
+fn managed_session_failure_reason(record: &serde_json::Value) -> String {
+    if u64_pointer_field(record, "/auth_broker/denied") > 0 {
+        return "An authentication request was blocked. Review this session's Sign-in details, then try again.".to_string();
+    }
+    if u64_pointer_field(record, "/provider_policy/denied") > 0 {
+        return "A network request was blocked. Review this session's Network details, then try again.".to_string();
+    }
+    if i32_field(record, "return_code").is_some_and(|code| code != 0) {
+        return "The assistant stopped before it finished. Open System to check setup, then try again."
+            .to_string();
+    }
+    "RunHaven couldn’t determine why this session ended. Open System to check setup, then try again."
+        .to_string()
 }
 
 pub(super) fn managed_session_cleanup(
@@ -72,8 +88,10 @@ pub(super) fn managed_session_cleanup(
         return ManagedSessionCleanupData {
             available: true,
             target: "worktree".to_string(),
-            label: "Clean up worktree".to_string(),
-            detail: "Delete the recorded worktree and branch for this session.".to_string(),
+            label: "Delete protected copy".to_string(),
+            detail:
+                "Permanently delete the assistant’s saved copy. Your original project won’t change."
+                    .to_string(),
         };
     }
     ManagedSessionCleanupData::unavailable()
@@ -218,7 +236,7 @@ pub(super) fn managed_session_events(
 
 fn network_label(network: &str) -> String {
     match network.trim().to_lowercase().as_str() {
-        "provider" => "Provider only".to_string(),
+        "provider" => "Assistant services only".to_string(),
         "internal" => "Local only".to_string(),
         "internet" => "Internet".to_string(),
         "" | "-" => "Unknown".to_string(),
@@ -228,9 +246,9 @@ fn network_label(network: &str) -> String {
 
 fn auth_status_label(status: &str) -> String {
     match status.trim().to_lowercase().as_str() {
-        "api-key-broker" => "API key broker".to_string(),
-        "keychain-oauth" => "Legacy Claude Keychain auth".to_string(),
-        "login-state" => "Isolated login".to_string(),
+        "api-key-broker" => "API key from this Mac".to_string(),
+        "keychain-oauth" => "Legacy Claude Keychain sign-in".to_string(),
+        "login-state" => "Session sign-in".to_string(),
         "no-auth-needed" => "No sign-in needed".to_string(),
         "n/a" => "N/A".to_string(),
         "" | "-" => "Unknown".to_string(),

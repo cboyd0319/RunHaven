@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table"
 
 import { authStatusLabel } from "./labels"
+import { agentLabel, displayValue } from "./sessionIdentity"
 
 export function ManagedSessionDiagnosticsCard({
   diagnostics,
@@ -47,10 +48,10 @@ export function ManagedSessionDiagnosticsCard({
         <Button type="button" variant="outline" onClick={() => void onLoad()}>
           <ShieldCheck className="size-4" />
           {loading
-            ? "Loading diagnostics..."
+            ? "Loading diagnostics…"
             : diagnostics
               ? "Refresh diagnostics"
-              : "Load run diagnostics"}
+              : "Load session diagnostics"}
         </Button>
         {error ? (
           <Alert variant="destructive">
@@ -63,31 +64,31 @@ export function ManagedSessionDiagnosticsCard({
           <>
             <Alert>
               <ShieldCheck />
-              <AlertTitle>{diagnostics.authStatus.name}</AlertTitle>
+              <AlertTitle>{agentLabel(diagnostics.authStatus.name)}</AlertTitle>
               <AlertDescription>
-                Credential access: {authStatusLabel(diagnostics.authStatus.status)}
+                Sign-in method: {authStatusLabel(diagnostics.authStatus.status)}
               </AlertDescription>
             </Alert>
             <SessionLogTable
-              title="Auth records"
-              empty="No auth broker records for this run."
+              title="Sign-in records"
+              empty="No sign-in records for this session."
               rows={diagnostics.authLogEntries.map((entry, index) => ({
                 // Index first: the log writer stamps one timestamp per batch,
                 // so timestamp-path-decision alone can collide within a batch.
                 key: `${index}-${entry.timestamp}-${entry.path}-${entry.decision}`,
                 first: entry.path,
-                second: entry.decision,
-                third: entry.reason,
+                second: decisionLabel(entry.decision),
+                third: usefulRecordedReason(entry.reason, entry.decision),
               }))}
             />
             <SessionLogTable
               title="Network records"
-              empty="No provider network records for this run."
+              empty="No network records for this session."
               rows={diagnostics.egressLogEntries.map((entry, index) => ({
                 key: `${index}-${entry.timestamp}-${entry.host}-${entry.decision}`,
                 first: entry.host,
-                second: entry.decision,
-                third: entry.reason,
+                second: decisionLabel(entry.decision),
+                third: networkReason(entry.decision, entry.profile),
               }))}
               icon={<Network className="size-4" />}
             />
@@ -109,6 +110,7 @@ function SessionLogTable({
   rows: Array<{ key: string; first: string; second: string; third: string }>
   icon?: ReactNode
 }) {
+  const showReason = rows.some((row) => row.third !== "")
   return (
     <section>
       <h3 className="mb-2 flex items-center gap-2 text-sm font-medium">
@@ -122,8 +124,8 @@ function SessionLogTable({
           <TableHeader>
             <TableRow>
               <TableHead>Target</TableHead>
-              <TableHead>Decision</TableHead>
-              <TableHead>Reason</TableHead>
+              <TableHead>Result</TableHead>
+              {showReason ? <TableHead>Reason</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -131,7 +133,7 @@ function SessionLogTable({
               <TableRow key={row.key}>
                 <TableCell>{row.first}</TableCell>
                 <TableCell>{row.second}</TableCell>
-                <TableCell>{row.third}</TableCell>
+                {showReason ? <TableCell>{row.third}</TableCell> : null}
               </TableRow>
             ))}
           </TableBody>
@@ -139,4 +141,34 @@ function SessionLogTable({
       )}
     </section>
   )
+}
+
+function decisionLabel(decision: string): string {
+  switch (decision.trim().toLowerCase()) {
+    case "allowed":
+      return "Allowed"
+    case "denied":
+    case "blocked":
+      return "Blocked"
+    default:
+      return displayValue(decision)
+  }
+}
+
+function usefulRecordedReason(reason: string, decision: string): string {
+  const normalized = reason.trim().toLowerCase()
+  if (["", "ok", "allowed", "denied", "blocked"].includes(normalized)) {
+    return ""
+  }
+  if (normalized === decision.trim().toLowerCase()) {
+    return ""
+  }
+  return displayValue(reason)
+}
+
+function networkReason(decision: string, agent: string): string {
+  if (decision.trim().toLowerCase() === "allowed") {
+    return `Allowed because this is a service ${agentLabel(agent)} needs.`
+  }
+  return "Blocked because it is outside the network access chosen for this session."
 }

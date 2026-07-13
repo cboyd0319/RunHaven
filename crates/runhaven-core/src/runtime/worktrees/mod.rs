@@ -8,6 +8,7 @@ use serde_json::{Value, json};
 mod commands;
 mod lifecycle;
 mod merge;
+mod review;
 
 pub use commands::{
     discard_worktree_for_run, runs_worktree_discard, runs_worktree_keep, runs_worktree_merge,
@@ -15,6 +16,10 @@ pub use commands::{
 };
 pub use lifecycle::{WorktreeLifecycle, load_worktree_lifecycle, verify_lifecycle};
 pub use merge::ensure_source_ready_for_merge;
+pub use review::{
+    WorktreeChangeKind, WorktreeChangeSummary, WorktreeFileChange, WorktreeFileSummary,
+    source_worktree_change_summary, worktree_change_summary,
+};
 
 use lifecycle::{git_bytes, git_checked, git_status_lines, git_stdout};
 
@@ -35,6 +40,7 @@ pub fn preview_worktree(
     let repo_root = require_git_repo_root(&source_workspace)?;
     let base_head = require_git_head(&repo_root)?;
     ensure_clean_source_repo(&repo_root)?;
+    ensure_selected_workspace_committed(&source_workspace, &repo_root, &base_head)?;
     Ok((source_workspace, repo_root, base_head))
 }
 
@@ -55,19 +61,6 @@ pub fn create_worktree_for_run(
     let workspace_relative = source_workspace
         .strip_prefix(&repo_root)
         .with_context(|| "could not place the selected project folder inside its git repository")?;
-    if !workspace_relative.as_os_str().is_empty() {
-        let workspace_object = format!("{base_head}:{}", workspace_relative.display());
-        let tracked = Command::new("git")
-            .args(["-C"])
-            .arg(&repo_root)
-            .args(["cat-file", "-e", &workspace_object])
-            .output()?;
-        if !tracked.status.success() {
-            bail!(
-                "the selected project folder is not in the committed git snapshot; commit the folder or choose the repository root before using an isolated copy"
-            );
-        }
-    }
     let output = Command::new("git")
         .args(["-C"])
         .arg(&repo_root)
@@ -109,6 +102,31 @@ pub fn create_worktree_for_run(
         base_head: Some(base_head),
         recovery_commands: recovery_commands(&repo_root, &worktree_root, &branch),
     })
+}
+
+fn ensure_selected_workspace_committed(
+    source_workspace: &Path,
+    repo_root: &Path,
+    base_head: &str,
+) -> Result<()> {
+    let relative = source_workspace
+        .strip_prefix(repo_root)
+        .with_context(|| "could not place the selected project folder inside its git repository")?;
+    if relative.as_os_str().is_empty() {
+        return Ok(());
+    }
+    let workspace_object = format!("{base_head}:{}", relative.display());
+    let tracked = Command::new("git")
+        .args(["-C"])
+        .arg(repo_root)
+        .args(["cat-file", "-e", &workspace_object])
+        .output()?;
+    if !tracked.status.success() {
+        bail!(
+            "the selected project folder is not in the committed git snapshot; commit the folder or choose the repository root before using an isolated copy"
+        );
+    }
+    Ok(())
 }
 
 pub fn resolve_worktree_source(
@@ -270,5 +288,28 @@ mod tests {
             .output()
             .expect("list branches");
         assert!(branches.stdout.is_empty());
+    }
+
+    #[test]
+    fn preview_rejects_an_untracked_selected_subfolder() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let repo = dir.path();
+        git(repo, &["init", "-q"]);
+        git(repo, &["config", "user.email", "test@example.com"]);
+        git(repo, &["config", "user.name", "test"]);
+        std::fs::write(repo.join("seed.txt"), "base").expect("write seed");
+        git(repo, &["add", "seed.txt"]);
+        git(repo, &["commit", "-qm", "seed"]);
+        let empty = repo.join("empty-project");
+        std::fs::create_dir(&empty).expect("empty folder");
+
+        let error = preview_worktree(&empty, WorkspaceScope::Current, false)
+            .expect_err("preview must reject an untracked selected folder");
+
+        assert!(
+            error
+                .to_string()
+                .contains("not in the committed git snapshot")
+        );
     }
 }

@@ -53,11 +53,6 @@ and export that broker env on the host to opt in"
         ("broker secret", config.broker_secret.clone()),
     ];
 
-    let confirmed_warnings = plan
-        .warnings
-        .iter()
-        .map(|warning| warning.code.clone())
-        .collect::<Vec<_>>();
     let mut cleanup = LiveTauriRunCleanup {
         run_id: None,
         state_volume: Some(plan.state_volume.clone()),
@@ -68,11 +63,7 @@ and export that broker env on the host to opt in"
     let output_registry = SessionOutputRegistry::default();
 
     let launched = crate::commands::launch_run_with_registries_status_and_approval(
-        LaunchRunRequest {
-            plan: plan_request,
-            confirm_launch: true,
-            confirmed_warnings,
-        },
+        LaunchRunRequest { plan: plan_request },
         input_registry.clone(),
         output_registry.clone(),
         launch_status.clone(),

@@ -7,6 +7,8 @@ set -u
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 teelog="$HOME/Library/Logs/RunHaven/dev.log"
+commit="$(git -C "$root" rev-parse --short=8 HEAD 2>/dev/null || printf 'unknown')"
+build_id="${RUNHAVEN_BUILD_ID:-${commit}-$(date -u +%Y%m%dT%H%M%SZ)}"
 mkdir -p "$(dirname "$teelog")"
 
 # Bound the tee log: keep one rotated backup, cap the live file at ~5 MiB
@@ -31,11 +33,10 @@ trap scan_on_exit EXIT INT TERM
 
 {
   echo "===== tauri:dev session $(date -u +%Y-%m-%dT%H:%M:%SZ) ====="
+  echo "===== build $build_id from $root/target ====="
   (
     cd "$root" &&
-      CARGO_TARGET_DIR="$root/target" \
-        ./ui/node_modules/.bin/tauri dev \
-          --config src-tauri/tauri.conf.json \
-          --config src-tauri/tauri.dev.conf.json
+      RUNHAVEN_BUILD_ID="$build_id" CARGO_TARGET_DIR="$root/target" \
+        node "$root/ui/scripts/tauri-dev.mjs"
   ) 2>&1
 } | tee -a "$teelog"

@@ -23,7 +23,7 @@ fn all_specs() -> Vec<&'static CommandSpec> {
     fn walk(entries: &'static [Entry], specs: &mut Vec<&'static CommandSpec>) {
         for entry in entries {
             match entry {
-                Entry::Command(spec) => specs.push(spec),
+                Entry::Command(spec) | Entry::Check(spec, _) => specs.push(spec),
                 Entry::Separator | Entry::Predefined(_) => {}
             }
         }
@@ -35,12 +35,24 @@ fn all_specs() -> Vec<&'static CommandSpec> {
     specs
 }
 
+fn check_specs() -> Vec<(&'static CommandSpec, bool)> {
+    let mut checks = Vec::new();
+    for (_, entries) in MENU_BAR {
+        for entry in *entries {
+            if let Entry::Check(spec, checked) = entry {
+                checks.push((spec, *checked));
+            }
+        }
+    }
+    checks
+}
+
 #[test]
 fn menu_bar_has_only_the_standard_and_contextual_menus_in_order() {
     let labels: Vec<&str> = MENU_BAR.iter().map(|(label, _)| *label).collect();
     assert_eq!(
         labels,
-        ["RunHaven", "File", "Edit", "View", "Run", "Window", "Help"]
+        ["RunHaven", "File", "Edit", "View", "Session", "Window"]
     );
 }
 
@@ -64,44 +76,36 @@ fn command_ids_are_stable_unique_and_kebab_case() {
     assert_eq!(
         ids,
         [
-            "settings",
             "new-run",
             "toggle-sidebar",
+            "show-attention-badge",
             "send-message",
-            "show-output",
             "stop-session",
             "hard-stop-session",
             "cleanup-session",
-            "open-session-window",
         ]
     );
 }
 
 #[test]
-fn session_scoped_ids_are_exactly_the_session_menu_commands() {
-    // These ids act on the main window's selected session and are
-    // dropped while a monitor window is focused; every id not listed
-    // here keeps working from any window. Changing this set changes
-    // which shortcuts a monitor window swallows.
-    let scoped = session_scoped_ids();
-    assert_eq!(
-        scoped,
-        [
-            "send-message",
-            "show-output",
-            "stop-session",
-            "hard-stop-session",
-            "cleanup-session",
-            "open-session-window",
-        ]
+fn attention_badge_is_one_standard_checked_view_command() {
+    let checks = check_specs();
+    assert_eq!(checks.len(), 1);
+    let (spec, checked) = checks[0];
+    assert_eq!(spec.id, "show-attention-badge");
+    assert_eq!(spec.label, "Show Count on App Icon");
+    assert!(spec.enabled);
+    assert!(checked, "the default persisted preference is on");
+    assert!(!command_ids().contains(&"settings"));
+    let view_entries = MENU_BAR
+        .iter()
+        .find_map(|(label, entries)| (*label == "View").then_some(*entries))
+        .expect("View menu");
+    assert!(
+        view_entries.iter().any(
+            |entry| matches!(entry, Entry::Check(item, _) if item.id == "show-attention-badge")
+        )
     );
-    let all = command_ids();
-    for id in &scoped {
-        assert!(
-            all.contains(id),
-            "session-scoped id `{id}` must be a menu id"
-        );
-    }
 }
 
 #[test]

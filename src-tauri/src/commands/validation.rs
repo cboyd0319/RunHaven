@@ -1,4 +1,4 @@
-use crate::contracts::{LaunchRunRequest, RunPlanRequest};
+use crate::contracts::RunPlanRequest;
 
 pub(crate) const MAX_AGENT_NAME_LEN: usize = 64;
 pub(crate) const MAX_RUN_ID_LEN: usize = 128;
@@ -8,20 +8,8 @@ const MAX_SESSION_NAME_LEN: usize = 128;
 const MAX_IMAGE_REF_LEN: usize = 512;
 pub(crate) const MAX_PROVIDER_HOST_LEN: usize = 253;
 const MAX_ENV_NAME_LEN: usize = 128;
-const MAX_WARNING_CODE_LEN: usize = 64;
 const MAX_PROVIDER_HOSTS: usize = 50;
 const MAX_ENV_NAMES: usize = 50;
-const MAX_CONFIRMED_WARNINGS: usize = 16;
-
-pub(super) fn validate_launch_request_bounds(request: &LaunchRunRequest) -> Result<(), String> {
-    validate_plan_request_bounds(&request.plan)?;
-    validate_string_list(
-        "confirmed warning codes",
-        &request.confirmed_warnings,
-        MAX_CONFIRMED_WARNINGS,
-        MAX_WARNING_CODE_LEN,
-    )
-}
 
 pub(super) fn validate_plan_request_bounds(request: &RunPlanRequest) -> Result<(), String> {
     validate_text_len("agent", &request.agent, MAX_AGENT_NAME_LEN)?;

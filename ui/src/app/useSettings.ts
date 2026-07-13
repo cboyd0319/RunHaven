@@ -8,13 +8,10 @@ import {
 
 export type SettingsState = ReturnType<typeof useSettings>
 
-// State for the small inline Settings panel. It opens from the sidebar or
-// RunHaven > Settings... (Cmd-,);
-// choices persist through the sanitized uiStatePersistence allowed set and
-// hold only convenience preferences, never security defaults or confirmation
-// suppression.
+// State for the one native View-menu preference. The choice persists through
+// the sanitized uiStatePersistence allowed set and never changes a security
+// default or suppresses a confirmation.
 export function useSettings() {
-  const [open, setOpen] = useState(false)
   const [settings, setSettings] = useState<AppSettings>(loadSettings)
 
   function update(patch: Partial<AppSettings>) {
@@ -24,11 +21,7 @@ export function useSettings() {
   }
 
   return {
-    open,
-    setOpen,
     dockBadge: settings.dockBadge,
-    defaultAgent: settings.defaultAgent,
     setDockBadge: (dockBadge: boolean) => update({ dockBadge }),
-    setDefaultAgent: (defaultAgent: string | null) => update({ defaultAgent }),
   }
 }

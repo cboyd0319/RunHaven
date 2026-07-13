@@ -19,11 +19,10 @@
 //! capability scoping constrains the WebView.
 
 use runhaven_core::runtime::worktrees::{
-    WorktreeLifecycle, discard_worktree_for_run, load_worktree_lifecycle, verify_lifecycle,
-    worktree_recovery_payload,
+    WorktreeLifecycle, discard_worktree_for_run, load_worktree_lifecycle,
+    source_worktree_change_summary, verify_lifecycle, worktree_change_summary,
 };
 use runhaven_core::ui_contracts::{ManagedSessionCleanupData, ManagedSessionSummaryData};
-use serde_json::Value;
 
 use crate::contracts::{WorktreeReviewRequest, WorktreeReviewResponse};
 
@@ -35,14 +34,15 @@ pub(crate) use actions::{
     discard_managed_session_worktree_for_test, keep_managed_session_worktree_for_test,
     merge_managed_session_worktree_for_test, recover_managed_session_worktree_for_test,
 };
+#[cfg(test)]
+pub(crate) use approval::worktree_confirmation_messages_for_test;
 
-const ACTIVE_WORKTREE_ERROR: &str =
-    "Worktree review is only available after this session stops running.";
-const HISTORY_WORKTREE_ERROR: &str = "This session is not eligible for worktree review yet.";
-const UNSUPPORTED_WORKTREE_ERROR: &str =
-    "Worktree review is only available for RunHaven-owned worktree sessions.";
+const ACTIVE_WORKTREE_ERROR: &str = "Wait for this session to end before you review its changes.";
+const HISTORY_WORKTREE_ERROR: &str = "Saved changes are not available for this session.";
+const UNSUPPORTED_WORKTREE_ERROR: &str = "Saved changes are not available for this session.";
 const FAILED_WORKTREE_ERROR: &str =
-    "RunHaven could not verify a safe worktree target for this session.";
+    "RunHaven couldn’t verify the protected copy. It will not change or delete any files.";
+const STALE_WORKTREE_REVIEW_ERROR: &str = "The protected copy changed since you reviewed it. Review the changes again before you continue.";
 
 #[tauri::command]
 pub(crate) fn get_managed_session_worktree(
@@ -115,54 +115,65 @@ pub(super) fn discard_owned_worktree(lifecycle: &WorktreeLifecycle) -> Result<()
     discard_worktree_for_run(&lifecycle.run_id).map_err(worktree_target_error)
 }
 
-/// The recovery payload, with paths and command lines still present. Used only
-/// to derive path-free counts and static next-step labels; the payload itself
-/// is never returned to the frontend.
-fn worktree_review_payload(lifecycle: &WorktreeLifecycle) -> Result<Value, String> {
-    worktree_recovery_payload(lifecycle).map_err(worktree_target_error)
-}
-
 fn build_review_response(lifecycle: &WorktreeLifecycle) -> Result<WorktreeReviewResponse, String> {
-    let payload = worktree_review_payload(lifecycle)?;
-    let worktree_changes = status_len(&payload, "worktree_status");
-    let source_changes = status_len(&payload, "source_status");
+    let summary = current_worktree_change_summary(lifecycle)?;
+    let source_summary =
+        source_worktree_change_summary(lifecycle).map_err(|_| FAILED_WORKTREE_ERROR.to_string())?;
     Ok(WorktreeReviewResponse {
         run_id: lifecycle.run_id.clone(),
         branch: lifecycle.branch.clone(),
-        status_summary: review_status_summary(worktree_changes, source_changes),
-        worktree_changes,
-        source_changes,
-        clean: worktree_changes == 0,
+        status_summary: review_status_summary(summary.total_count, source_summary.total_count),
+        worktree_changes: summary.total_count,
+        source_changes: source_summary.total_count,
+        clean: summary.total_count == 0,
+        file_changes: summary.file_changes,
+        file_changes_truncated: summary.file_changes_truncated,
+        source_file_changes: source_summary.file_changes,
+        source_file_changes_truncated: source_summary.file_changes_truncated,
+        review_id: summary.review_id,
         available_actions: available_action_keys(),
     })
 }
 
-fn status_len(payload: &Value, key: &str) -> usize {
-    payload
-        .get(key)
-        .and_then(Value::as_array)
-        .map(Vec::len)
-        .unwrap_or(0)
+fn current_worktree_change_summary(
+    lifecycle: &WorktreeLifecycle,
+) -> Result<runhaven_core::runtime::worktrees::WorktreeChangeSummary, String> {
+    worktree_change_summary(lifecycle).map_err(|_| FAILED_WORKTREE_ERROR.to_string())
 }
 
-/// Safe, path-free manual next-step labels from the core recovery payload.
-fn review_next_steps(payload: &Value) -> Vec<String> {
-    payload
-        .get("next_steps")
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(Value::as_str)
-                .map(str::to_string)
-                .collect()
-        })
-        .unwrap_or_default()
+pub(super) fn require_current_review(
+    lifecycle: &WorktreeLifecycle,
+    expected_review_id: &str,
+) -> Result<(), String> {
+    if expected_review_id.len() != 64
+        || !expected_review_id
+            .bytes()
+            .all(|byte| byte.is_ascii_hexdigit())
+    {
+        return Err(STALE_WORKTREE_REVIEW_ERROR.to_string());
+    }
+    let current = current_worktree_change_summary(lifecycle)?;
+    if current.review_id != expected_review_id {
+        return Err(STALE_WORKTREE_REVIEW_ERROR.to_string());
+    }
+    Ok(())
+}
+
+/// Fixed, path-free recovery steps shown only after an action fails.
+fn review_next_steps() -> Vec<String> {
+    [
+        "Keep the protected copy so nothing is lost.",
+        "Finish or undo other changes in your project.",
+        "Return to this review and choose Apply changes again.",
+    ]
+    .into_iter()
+    .map(str::to_string)
+    .collect()
 }
 
 fn review_status_summary(worktree_changes: usize, source_changes: usize) -> String {
     let mut summary = if worktree_changes == 0 {
-        "No changes recorded in this worktree yet.".to_string()
+        "The assistant didn’t change any files.".to_string()
     } else {
         format!(
             "{worktree_changes} file change{} ready to review.",
@@ -170,7 +181,7 @@ fn review_status_summary(worktree_changes: usize, source_changes: usize) -> Stri
         )
     };
     if source_changes > 0 {
-        summary.push_str(" The source branch also has uncommitted changes.");
+        summary.push_str(" Your project also has changes that must be finished or undone first.");
     }
     summary
 }
@@ -180,7 +191,7 @@ fn plural(count: usize) -> &'static str {
 }
 
 fn available_action_keys() -> Vec<String> {
-    ["merge", "keep", "recover", "discard"]
+    ["merge", "recover", "discard"]
         .into_iter()
         .map(str::to_string)
         .collect()

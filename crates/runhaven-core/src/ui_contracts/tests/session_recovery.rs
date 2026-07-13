@@ -38,7 +38,7 @@ fn mark_stale_sessions_flags_only_running_sessions_in_the_stale_set() {
         .find(|session| session.run_id == "run-stale")
         .expect("stale session");
     assert_eq!(stale_session.next_action.kind, "recover");
-    assert_eq!(stale_session.status_label, "Not responding");
+    assert_eq!(stale_session.status_label, "Session ended unexpectedly");
 
     let live = data
         .sessions

@@ -1,4 +1,4 @@
-import { isLaunchReady, warningPreview } from "./plan";
+import { warningPreview } from "./plan";
 import { rememberPreviewManagedSession } from "./preview_sessions";
 import type {
   AgentProfile,
@@ -105,7 +105,7 @@ export function previewDashboardStatus(): DashboardStatus {
     agents: mockAgents,
     agentReadiness: [
       { name: "claude", category: "signed-in", label: "Signed in" },
-      { name: "codex", category: "needs-sign-in", label: "Needs sign-in" },
+      { name: "codex", category: "signed-in", label: "Signed in" },
       { name: "antigravity", category: "needs-sign-in", label: "Needs sign-in" },
       { name: "copilot", category: "needs-sign-in", label: "Needs sign-in" }
     ],
@@ -121,7 +121,7 @@ export function previewImageStatus(agent: string): ImageStatusResponse {
     agent,
     image: {
       agent,
-      image: `runhaven/${agent}:0.1.0`,
+      image: `runhaven/${agent}:0.7.0`,
       status: "ok",
       ready: true,
       expectedSourceDigest: "preview",
@@ -157,7 +157,7 @@ export function previewRunStatus(runId: string): RunStatusResponse {
     },
     container: {
       state: "running",
-      image: "runhaven/preview:0.1.0",
+      image: "runhaven/preview:0.7.0",
       startedAt: "preview",
       resources: {
         cpus: "4",
@@ -189,13 +189,13 @@ export function previewPlanRun(request: RunPlanRequest): RunPlanResponse {
     networkMode: request.networkMode,
     networkName: request.networkMode === "internet" ? null : "preview-network",
     egressSummary: previewEgressSummary(request),
-    image: request.image || "runhaven/preview:0.1.0",
+    image: request.image || "runhaven/preview:0.7.0",
     providerAllowedHosts: request.providerHosts,
     access: previewAccess(request),
     warnings: warningPreview(request),
     worktree: request.worktree,
     worktreeNote: request.worktree
-      ? "Recommended protection is on. RunHaven will make an isolated copy of your project on a new git branch. Your original files change only if you merge later."
+      ? "RunHaven will work in a protected copy. Your original folder changes only if you choose Apply changes later."
       : null
   };
 }
@@ -225,15 +225,15 @@ function previewAccess(request: RunPlanRequest): RunPlanAccess {
   }
   return {
     status: "setup",
-    label: request.authScope === "agent" ? "Shared agent sign-in" : "This project only",
+    label: request.authScope === "agent" ? "Shared assistant sign-in" : "This project only",
     detail:
       request.authScope === "agent"
         ? `RunHaven will use the shared ${request.agent} sign-in across projects on this Mac.`
         : "RunHaven will keep the sign-in separate, just for this project.",
     remedy:
       request.authScope === "agent"
-        ? `If the agent asks for sign-in, finish it in the session or run runhaven login ${request.agent}.`
-        : "If the agent asks for sign-in, finish it inside this session.",
+        ? "If the assistant asks you to sign in, finish it in the session."
+        : "If the assistant asks for sign-in, finish it inside this session.",
     blocking: false,
     apiKeyBrokerEnv: null,
     apiKeyBrokerEnvPresent: null
@@ -242,12 +242,9 @@ function previewAccess(request: RunPlanRequest): RunPlanAccess {
 
 function previewEgressSummary(request: RunPlanRequest): string {
   if (request.networkMode === "internet") {
-    return "This run can reach the whole internet."
+    return "This session can reach any site."
   }
-  if (request.apiKeyBrokerEnv?.trim()) {
-    return "Only reviewed provider hosts are reachable; your API key stays on this Mac."
-  }
-  return "Only reviewed provider hosts are reachable."
+  return "The assistant can reach only the services it needs."
 }
 
 export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {
@@ -256,8 +253,8 @@ export function previewLaunchRun(request: LaunchRunRequest): LaunchRunResponse {
     access: previewAccess(request.plan),
     warnings: warningPreview(request.plan)
   };
-  if (!isLaunchReady(plan, request.confirmLaunch, new Set(request.confirmedWarnings))) {
-    throw new Error("Confirm the launch and every warning before starting a run.");
+  if (plan.access.blocking) {
+    throw new Error(`${plan.access.label} ${plan.access.detail} ${plan.access.remedy}`.trim());
   }
   const runId = `preview-${Date.now()}-${++previewRunSequence}`;
   const started: LaunchRunResponse = {
@@ -297,7 +294,7 @@ export function previewAuthExplain(agent: string): AuthExplainResponse {
     hostKeeps: ["the host environment variable value you name"],
     guestReceives: ["a placeholder API key value"],
     providerHosts: ["api.example.com"],
-    currentSafePath: "Use the API key broker for a headless run.",
+    currentSafePath: "Use an API key from this Mac for a session without a terminal.",
     notes: ["Preview data only."]
   };
 }
@@ -348,7 +345,7 @@ export function previewWhyWorkspace(scope: string): WorkspaceExplanationResponse
     decision: "allowed",
     verdict: "RunHaven can mount this folder safely.",
     nextAction: "",
-    boundary: "only the mounted path is exposed at /workspace; agent home stays in a state volume.",
+    boundary: "only the mounted path is exposed at /workspace; the assistant’s home folder stays in a state volume.",
     sensitiveOverrideUsed: false
   };
 }

@@ -91,6 +91,8 @@ fn display_agent_name_capitalizes_first_char_and_guards_empty() {
 fn status_label_maps_known_states_and_titlecases_unknown() {
     assert_eq!(status_label("running"), "Running");
     assert_eq!(status_label("started"), "Starting");
+    assert_eq!(status_label("stop-requested"), "Stopping");
+    assert_eq!(status_label("kill-requested"), "Stopping");
     assert_eq!(status_label("finished"), "Finished");
     assert_eq!(status_label("succeeded"), "Finished");
     assert_eq!(status_label("failed"), "Failed");
@@ -155,7 +157,8 @@ fn strip_terminal_controls_drops_invisible_format_characters() {
     // BOM are category Cf, not Cc, so `char::is_control` alone keeps them.
     // Both sanitizer forms must drop them so a bidi override can never
     // reorder a native window title or an in-app label.
-    let input = "pro\u{202E}ject\u{200B}\u{200D}\u{FEFF} ok\u{00AD}\u{2066}!\u{2069}\u{2060}";
+    let input =
+        "pro\u{202E}ject\u{200B}\u{200D}\u{FEFF} ok\u{00AD}\u{2066}!\u{2069}\u{2060}\u{061C}";
 
     assert_eq!(strip_terminal_controls(input), "project ok!");
     assert_eq!(

@@ -101,10 +101,10 @@ describe("sessionIdentityLabel", () => {
 describe("sessionInputLabel", () => {
   it("reports readiness from the attached flag", () => {
     expect(sessionInputLabel(session({ input: { attached: true, status: "attached", detail: "" } }))).toBe(
-      "Input ready",
+      "Messages available",
     )
     expect(
       sessionInputLabel(session({ input: { attached: false, status: "detached", detail: "" } })),
-    ).toBe("Input blocked")
+    ).toBe("Messages unavailable")
   })
 })

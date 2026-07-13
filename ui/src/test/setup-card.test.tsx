@@ -64,8 +64,8 @@ describe("SetupCard", () => {
     );
 
     expect(html).toContain("Checking your Mac");
-    expect(html).toContain("Checking setup...");
-    expect(html).toContain("Loading setup...");
+    expect(html).toContain("Checking setup…");
+    expect(html).toContain("Loading setup…");
     expect(html).not.toContain("Refresh status to try again.");
   });
 
@@ -85,7 +85,7 @@ describe("SetupCard", () => {
       <SetupCard loading={false} dashboard={dashboard()} />
     );
 
-    expect(html).toContain("Ready to run");
+    expect(html).toContain("Ready");
     expect(html).toContain("Everything RunHaven needs is ready.");
     expect(html).toContain("All checks passed.");
     expect(html).not.toContain("Needs attention");
@@ -189,7 +189,7 @@ describe("SetupCard", () => {
     const busy = renderToStaticMarkup(
       <SetupCard loading={true} dashboard={null} onCheckAgain={() => {}} />
     );
-    expect(busy).toContain(">Checking...</");
+    expect(busy).toContain(">Checking…</");
 
     const without = renderToStaticMarkup(
       <SetupCard loading={false} dashboard={null} />

@@ -1,7 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
-import { SessionLabelsProvider } from "../app/sessionLabels"
 import { RunsView } from "../app/views/RunsView"
 
 import { managedSession } from "./main-view-props"
@@ -9,8 +8,7 @@ import { managedSession } from "./main-view-props"
 describe("RunsView", () => {
   it("lists every run newest-first, keyboard-operable, and secret-free", () => {
     const html = renderToStaticMarkup(
-      <SessionLabelsProvider>
-        <RunsView
+      <RunsView
           sessions={[
             managedSession({
               id: "a",
@@ -34,11 +32,11 @@ describe("RunsView", () => {
           ]}
           onSelectSession={() => undefined}
           onSignIn={() => undefined}
-        />
-      </SessionLabelsProvider>,
+          onStart={() => undefined}
+      />,
     )
 
-    expect(html).toContain("Run history")
+    expect(html).toContain("Session history")
     expect(html).toContain("Codex - alpha")
     expect(html).toContain("Claude - beta")
     expect(html).not.toContain("Claude sign in")
@@ -56,21 +54,22 @@ describe("RunsView", () => {
 
   it("shows a compact empty state when there are no runs", () => {
     const html = renderToStaticMarkup(
-      <SessionLabelsProvider>
-        <RunsView
-          sessions={[]}
-          onSelectSession={() => undefined}
-          onSignIn={() => undefined}
-        />
-      </SessionLabelsProvider>,
+      <RunsView
+        sessions={[]}
+        onSelectSession={() => undefined}
+        onSignIn={() => undefined}
+        onStart={() => undefined}
+      />,
     )
-    expect(html).toContain("No runs yet.")
+    expect(html).toContain("No sessions yet")
+    expect(html).toContain("Sessions you start will appear here.")
+    expect(html).toContain("Start a session")
+    expect(html).not.toContain("Session history")
   })
 
   it("moves attention-needed runs here instead of Home", () => {
     const html = renderToStaticMarkup(
-      <SessionLabelsProvider>
-        <RunsView
+      <RunsView
           sessions={[
             managedSession({
               id: "failed",
@@ -83,17 +82,48 @@ describe("RunsView", () => {
               },
             }),
             managedSession({ id: "active", title: "Claude - active" }),
+            managedSession({
+              id: "review",
+              title: "Claude - review a very long project title without clipping",
+              nextAction: {
+                kind: "monitor",
+                label: "Monitor",
+                detail: "RunHaven is tracking status for this session.",
+              },
+              cleanup: {
+                available: true,
+                target: "worktree",
+                label: "Review saved copy",
+                detail: "A protected copy is ready.",
+              },
+            }),
           ]}
           onSelectSession={() => undefined}
           onSignIn={() => undefined}
-        />
-      </SessionLabelsProvider>,
+          onStart={() => undefined}
+      />,
     )
 
     expect(html).toContain("Needs attention")
     expect(html).toContain("Codex - needs help")
     expect(html).toContain("The session reported a failure.")
-    expect(html).toContain("Other runs")
+    expect(html).toContain(
+      "Claude - review a very long project title without clipping",
+    )
+    expect(html).toContain("The assistant’s changes are ready to review.")
+    expect(html).not.toContain("RunHaven is tracking status for this session.")
+    expect(html).toContain("Review changes")
+    expect(html).toContain("shrink-0 self-start")
+    const attentionPanel = html.slice(
+      html.indexOf("Needs attention"),
+      html.indexOf("Other sessions"),
+    )
+    expect(attentionPanel).not.toContain("table-fixed")
+    expect(attentionPanel).toContain("min-w-0 break-words")
+    expect(attentionPanel).not.toContain(
+      'class="truncate">Claude - review a very long project title',
+    )
+    expect(html).toContain("Other sessions")
     expect(html).toContain("Claude - active")
   })
 })

@@ -1,23 +1,31 @@
-import { RefreshCw } from "lucide-react"
-
+import type { ManagedSessionSummary } from "@/commands/runhaven"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
+import {
+  sessionAllowsRunControl,
+  sessionBadgeVariant,
+  sessionNeedsAttention,
+} from "./ManagedSessionCard"
+import type { RunControlAction } from "./types"
+
 type AppHeaderProps = {
-  title: string
-  description: string
-  loading: boolean
-  onRefresh: () => void
+  title?: string
+  session?: ManagedSessionSummary | null
+  controlBusy?: boolean
+  onControl?: (action: RunControlAction) => Promise<void>
 }
 
 export function AppHeader({
   title,
-  description,
-  loading,
-  onRefresh,
+  session = null,
+  controlBusy = false,
+  onControl,
 }: AppHeaderProps) {
   const { state: sidebarState } = useSidebar()
+  const canStop = session !== null && sessionAllowsRunControl(session)
 
   return (
     // data-tauri-drag-region: with the overlay title bar the header doubles as
@@ -34,22 +42,29 @@ export function AppHeader({
       )}
     >
       <SidebarTrigger variant="outline" />
-      <div className="min-w-0">
-        <h1 className="text-lg font-semibold">{title}</h1>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-      <div className="ml-auto flex items-center gap-2">
+      {title ? (
+        <div className="flex min-w-0 items-center gap-2">
+          <h1 className="truncate text-lg font-semibold">{title}</h1>
+          {session ? (
+            <Badge variant={sessionBadgeVariant(session)}>
+              {sessionNeedsAttention(session) ? "Needs you" : session.statusLabel}
+            </Badge>
+          ) : null}
+        </div>
+      ) : null}
+      {canStop && onControl ? (
         <Button
           type="button"
           variant="outline"
-          size="icon-sm"
-          disabled={loading}
-          onClick={onRefresh}
-          aria-label="Refresh status"
+          size="sm"
+          className="ml-auto"
+          aria-label="Stop session"
+          disabled={controlBusy}
+          onClick={() => void onControl("stop")}
         >
-          <RefreshCw className={loading ? "animate-spin" : undefined} />
+          Stop
         </Button>
-      </div>
+      ) : null}
     </header>
   )
 }

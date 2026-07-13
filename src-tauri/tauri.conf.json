@@ -4,9 +4,7 @@
   "version": "0.7.0",
   "identifier": "dev.runhaven.desktop",
   "build": {
-    "beforeDevCommand": "npm --prefix ../ui run dev",
     "beforeBuildCommand": "npm --prefix ../ui run build",
-    "devUrl": "http://127.0.0.1:5173",
     "frontendDist": "../ui/dist"
   },
   "app": {
@@ -36,8 +34,6 @@
         "menu-events",
         "menu-state",
         "attention-badge",
-        "session-window-open",
-        "session-monitor",
         "terminal",
         "window-chrome"
       ]

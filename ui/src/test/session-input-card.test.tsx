@@ -56,7 +56,8 @@ describe("SessionInputCard", () => {
     );
 
     expect(html).toContain("Message");
-    expect(html).toContain("Send text to this run.");
+    expect(html).toContain("Send a message to this session.");
+    expect(html).toContain('placeholder="Type a message."');
     expect(html).toContain("textarea");
     expect(html).toContain("disabled=\"\"");
     expect(html).not.toContain(" / 8192 bytes");
@@ -104,8 +105,8 @@ describe("SessionInputCard", () => {
     );
 
     expect(html).toContain("Message");
-    expect(html).toContain("Input unavailable");
-    expect(html).toContain("not attached");
+    expect(html).toContain("This session can’t receive messages.");
+    expect(html).toContain("Messages unavailable");
     expect(html).toContain("disabled=\"\"");
   });
 
@@ -146,10 +147,11 @@ describe("SessionInputCard", () => {
       />
     );
 
-    // One unified acknowledgement: the title and the byte-count detail each
-    // appear exactly once, not as two separate notices side by side.
+    // acceptedMessage is presence state only. The UI gives one title and one
+    // useful destination instead of repeating backend acknowledgement text.
     expect(html.split("Message sent").length - 1).toBe(1);
-    expect(html.split("Sent 5 bytes.").length - 1).toBe(1);
+    expect(html).toContain("RunHaven sent your message to Codex - project.")
+    expect(html).not.toContain("Sent 5 bytes.")
   });
 
   it("clears the sent acknowledgement when the composer is focused again", async () => {

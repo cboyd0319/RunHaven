@@ -1,7 +1,6 @@
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 
 import { safeBackendLabel } from "../labels"
-import { useSessionLabels } from "../sessionLabels"
 import { sessionDisplayTitle } from "../sessionIdentity"
 import { AgentCell } from "./AgentCell"
 import { StatusDot, runStatusTone } from "./status"
@@ -19,13 +18,12 @@ export function RunTable({
   sessions: ManagedSessionSummary[]
   onSelectSession: (sessionId: string) => void
 }) {
-  const { labels } = useSessionLabels()
   return (
     <table className="w-full table-fixed border-collapse text-sm">
       <thead>
         <tr className="text-left text-xs text-muted-foreground">
-          <th className="pb-2 pl-2 font-medium">Run</th>
-          <th className="w-[20%] pb-2 font-medium">Agent</th>
+          <th className="pb-2 pl-2 font-medium">Session</th>
+          <th className="w-[20%] pb-2 font-medium">Assistant</th>
           <th className="w-[20%] pb-2 font-medium">Status</th>
           <th className="w-[16%] pb-2 pr-2 font-medium">Updated</th>
         </tr>
@@ -49,7 +47,7 @@ export function RunTable({
                   }}
                   className="block max-w-full truncate text-left font-medium hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 >
-                  {sessionDisplayTitle(session, labels)}
+                  {sessionDisplayTitle(session)}
                 </button>
               </td>
               <td className="py-2.5">

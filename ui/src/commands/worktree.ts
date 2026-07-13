@@ -19,28 +19,20 @@ export async function getManagedSessionWorktree(
   );
 }
 
-export async function keepManagedSessionWorktree(
-  sessionId: string
-): Promise<WorktreeActionResponse> {
-  return call(
-    "keep_managed_session_worktree",
-    { request: { sessionId, confirm: true } },
-    () => previewManagedWorktreeAction(sessionId, "keep")
-  );
-}
-
 export async function mergeManagedSessionWorktree(
-  sessionId: string
+  sessionId: string,
+  reviewId: string
 ): Promise<WorktreeActionResponse> {
   return call(
     "merge_managed_session_worktree",
-    { request: { sessionId, confirm: true } },
-    () => previewManagedWorktreeAction(sessionId, "merge")
+    { request: { sessionId, confirm: true, reviewId } },
+    () => previewManagedWorktreeAction(sessionId, "merge", reviewId)
   );
 }
 
 export async function recoverManagedSessionWorktree(
-  sessionId: string
+  sessionId: string,
+  _reviewId?: string
 ): Promise<WorktreeActionResponse> {
   return call(
     "recover_managed_session_worktree",
@@ -50,11 +42,12 @@ export async function recoverManagedSessionWorktree(
 }
 
 export async function discardManagedSessionWorktree(
-  sessionId: string
+  sessionId: string,
+  reviewId: string
 ): Promise<WorktreeActionResponse> {
   return call(
     "discard_managed_session_worktree",
-    { request: { sessionId, confirm: true } },
-    () => previewManagedWorktreeAction(sessionId, "discard")
+    { request: { sessionId, confirm: true, reviewId } },
+    () => previewManagedWorktreeAction(sessionId, "discard", reviewId)
   );
 }

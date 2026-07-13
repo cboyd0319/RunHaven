@@ -8,6 +8,13 @@ import {
 
 import { errorMessage } from "./types"
 
+const PAST_OUTPUT_UNAVAILABLE =
+  "RunHaven keeps session output only until the app closes. Output for this run is no longer available."
+
+export function isPastOutputUnavailable(error: string): boolean {
+  return error.trim() === PAST_OUTPUT_UNAVAILABLE
+}
+
 export function useRunOutput({
   targetId,
   sessionId,

@@ -144,12 +144,12 @@ fn managed_session_status_reports_unavailable_without_leaking_backend_errors() {
     assert!(response.container.is_none());
     assert_eq!(
         response.status_unavailable.as_deref(),
-        Some("Container status is unavailable. The run may have stopped.")
+        Some("RunHaven can’t read this session’s current status. It may have ended.")
     );
     let recovery = response.recovery.as_ref().expect("recovery guidance");
     assert_eq!(recovery.status, "attention");
-    assert_eq!(recovery.title, "Runtime status unavailable");
-    assert!(recovery.remedy.contains("Refresh sessions"));
+    assert_eq!(recovery.title, "Can’t check this session");
+    assert!(recovery.remedy.contains("Check again"));
     assert!(!recovery.remedy.contains("Repair marker"));
     assert!(!recovery.repair_available);
     let encoded = serde_json::to_string(&response).expect("serialize status");
@@ -190,9 +190,9 @@ fn managed_session_status_marks_repair_available_for_missing_container() {
     assert!(response.container.is_none());
     let recovery = response.recovery.as_ref().expect("recovery guidance");
     assert_eq!(recovery.status, "warning");
-    assert_eq!(recovery.title, "Repair stale session marker");
-    assert!(recovery.detail.contains("container no longer exists"));
-    assert!(recovery.remedy.contains("repair the marker"));
+    assert_eq!(recovery.title, "Session ended unexpectedly");
+    assert!(recovery.detail.contains("can no longer find this session"));
+    assert!(recovery.remedy.contains("Remove it from the active list"));
     assert!(recovery.repair_available);
 }
 
@@ -238,7 +238,7 @@ fn managed_session_status_detaches_input_when_runtime_status_is_unavailable() {
     assert!(response.session.input.detail.contains("not attached"));
     assert_eq!(
         response.status_unavailable.as_deref(),
-        Some("Container status is unavailable. The run may have stopped.")
+        Some("RunHaven can’t read this session’s current status. It may have ended.")
     );
     assert!(
         response

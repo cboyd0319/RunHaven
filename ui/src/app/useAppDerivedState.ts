@@ -1,13 +1,10 @@
 import { useMemo } from "react"
 
 import {
-  isLaunchReady,
   type DashboardStatus,
-  type ImageStatusResponse,
   type LaunchRunResponse,
   type ManagedSessionList,
   type RunPlanRequest,
-  type RunPlanResponse,
 } from "@/commands/runhaven"
 
 import type { NavDestination } from "./navigation"
@@ -16,9 +13,6 @@ import { sessionIdForRun } from "./sessionSelection"
 type AppDerivedStateInput = {
   dashboard: DashboardStatus | null
   request: RunPlanRequest
-  imageStatus: ImageStatusResponse | null
-  plan: RunPlanResponse | null
-  confirmedWarnings: string[]
   managedSessions: ManagedSessionList
   navigation: NavDestination
   selectedSessionId: string | null
@@ -27,34 +21,13 @@ type AppDerivedStateInput = {
 
 // Header title and description per destination, in the shared plain-language
 // vocabulary.
-const PAGE_HEADINGS: Record<
-  NavDestination["kind"],
-  { title: string; description: string }
-> = {
-  home: {
-    title: "Home",
-    description: "Choose an agent and start a safe session.",
-  },
-  "new-session": {
-    title: "New session",
-    description: "Choose an agent and project. RunHaven uses the safest options first.",
-  },
-  runs: {
-    title: "Run history",
-    description: "Find running, finished, and attention-needed runs.",
-  },
-  session: {
-    title: "Run details",
-    description: "See what happened, send a message, or stop this run.",
-  },
-  diagnostics: {
-    title: "System details",
-    description: "Fix setup problems and remove leftover RunHaven networks.",
-  },
-  "run-terminal": {
-    title: "Run terminal",
-    description: "Type your task for the interactive agent, live in its sandbox.",
-  },
+const PAGE_TITLES: Record<NavDestination["kind"], string> = {
+  home: "Home",
+  "new-session": "New session",
+  runs: "History",
+  session: "Session",
+  diagnostics: "System",
+  "run-terminal": "Session terminal",
 }
 
 export function useAppDerivedState(input: AppDerivedStateInput) {
@@ -64,17 +37,6 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
   )
   const setupKnown = input.dashboard !== null
   const setupReady = input.dashboard?.setup.ok === true
-  const launchImageReady = input.request.image
-    ? true
-    : input.imageStatus?.image.ready === true
-  const launchReady =
-    setupReady &&
-    isLaunchReady(
-      input.plan,
-      true,
-      new Set(input.confirmedWarnings),
-      launchImageReady,
-    )
   const selectedSession = useMemo(
     () =>
       input.managedSessions.sessions.find(
@@ -82,8 +44,7 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
       ) ?? null,
     [input.managedSessions.sessions, input.selectedSessionId],
   )
-  const { title: pageTitle, description: pageDescription } =
-    PAGE_HEADINGS[input.navigation.kind]
+  const pageTitle = PAGE_TITLES[input.navigation.kind]
   const outputSessionId = selectedSession?.id ?? null
   const outputRunId = selectedSession ? null : input.lastLaunch?.runId ?? null
   const outputTargetId = outputSessionId
@@ -108,11 +69,8 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
     selectedAgent,
     setupKnown,
     setupReady,
-    launchImageReady,
-    launchReady,
     selectedSession,
     pageTitle,
-    pageDescription,
     outputTargetId,
     outputSessionId,
     outputRunId,

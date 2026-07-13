@@ -25,71 +25,59 @@ fn managed_session_input_contract_rejects_before_write() {
         WriteSessionInputRequest {
             session_id: "missing-session".to_string(),
             input: "hello".to_string(),
-            confirm_send: true,
-            client_target: "session:missing-session".to_string(),
         },
         &registry,
     )
     .expect_err("unknown session rejected");
-    assert!(missing.contains("managed session not found"));
+    assert_eq!(
+        missing,
+        "This session ended, so it can’t receive messages. Start a new session to continue."
+    );
 
     let oversized_id = crate::commands::sessions::write_session_input_for_test(
         WriteSessionInputRequest {
             session_id: "s".repeat(129),
             input: "hello".to_string(),
-            confirm_send: true,
-            client_target: format!("session:{}", "s".repeat(129)),
         },
         &registry,
     )
     .expect_err("oversized session id rejected");
-    assert!(oversized_id.contains("session id is too long"));
+    assert_eq!(
+        oversized_id,
+        "This session ended, so it can’t receive messages. Start a new session to continue."
+    );
 
-    let unconfirmed = crate::commands::sessions::write_session_input_for_test(
-        WriteSessionInputRequest {
-            session_id: "managed-session-input".to_string(),
-            input: "hello".to_string(),
-            confirm_send: false,
-            client_target: "session:managed-session-input".to_string(),
-        },
-        &registry,
-    )
-    .expect_err("confirmation required");
-    assert!(unconfirmed.contains("Confirm the send"));
-
-    for (label, input) in [
-        ("empty input", ""),
-        ("oversized input", &"a".repeat(8 * 1024 + 1)),
-        ("nul input", "hello\0there"),
-        ("escape input", "hello\x1b[31mthere"),
+    for (label, input, expected) in [
+        ("empty input", "", "Enter a message before you choose Send."),
+        (
+            "oversized input",
+            &"a".repeat(8 * 1024 + 1),
+            "This message is too long. Shorten it to 8192 bytes or less, then try again.",
+        ),
+        (
+            "nul input",
+            "hello\0there",
+            "This message contains hidden formatting that RunHaven can’t send safely.",
+        ),
+        (
+            "escape input",
+            "hello\x1b[31mthere",
+            "This message contains hidden formatting that RunHaven can’t send safely.",
+        ),
     ] {
         let error = crate::commands::sessions::write_session_input_for_test(
             WriteSessionInputRequest {
                 session_id: "managed-session-input".to_string(),
                 input: input.to_string(),
-                confirm_send: true,
-                client_target: "session:managed-session-input".to_string(),
             },
             &registry,
         )
         .expect_err(label);
-        assert!(
-            error.contains("input"),
-            "{label} returned unexpected error: {error}"
-        );
+        assert!(error.contains(expected), "{label}: {error}");
+        if !input.is_empty() {
+            assert!(!error.contains(input), "{label} leaked rejected input");
+        }
     }
-
-    let stale_target = crate::commands::sessions::write_session_input_for_test(
-        WriteSessionInputRequest {
-            session_id: "managed-session-input".to_string(),
-            input: "hello".to_string(),
-            confirm_send: true,
-            client_target: "session:older-session".to_string(),
-        },
-        &registry,
-    )
-    .expect_err("stale target rejected");
-    assert!(stale_target.contains("Selected session changed"));
 }
 
 #[test]
@@ -134,13 +122,11 @@ fn managed_session_input_contract_accepts_only_ready_session() {
         WriteSessionInputRequest {
             session_id: "managed-session-auth-input".to_string(),
             input: "hello".to_string(),
-            confirm_send: true,
-            client_target: "session:managed-session-auth-input".to_string(),
         },
         &registry,
     )
     .expect_err("auth attention rejected");
-    assert!(auth_blocked.contains("Finish sign-in before sending input"));
+    assert_eq!(auth_blocked, "Finish signing in before you send a message.");
 
     registry
         .register_writer(
@@ -156,8 +142,6 @@ fn managed_session_input_contract_accepts_only_ready_session() {
         WriteSessionInputRequest {
             session_id: "managed-session-ready-input".to_string(),
             input: "hello\nthere".to_string(),
-            confirm_send: true,
-            client_target: "session:managed-session-ready-input".to_string(),
         },
         &registry,
     )
@@ -186,7 +170,7 @@ fn managed_session_input_contract_accepts_only_ready_session() {
 }
 
 #[test]
-fn managed_session_input_requires_backend_approval_grant() {
+fn managed_session_input_requires_fresh_approval_for_each_message() {
     let (_cache, _cache_home) = isolated_cache();
     let registry = SessionInputRegistry::default();
     write_active_run_payload(
@@ -224,8 +208,6 @@ fn managed_session_input_requires_backend_approval_grant() {
     let request = WriteSessionInputRequest {
         session_id: "managed-session-grant-input".to_string(),
         input: "first".to_string(),
-        confirm_send: true,
-        client_target: "session:managed-session-grant-input".to_string(),
     };
     let denied = crate::commands::sessions::write_session_input_with_approval_for_test(
         request.clone(),
@@ -237,7 +219,8 @@ fn managed_session_input_requires_backend_approval_grant() {
         },
     )
     .expect_err("approval denial rejected");
-    assert!(denied.contains("not approved"));
+    assert_eq!(denied, "Message send canceled. Nothing was sent.");
+    assert!(!denied.contains("first"));
     assert!(writes.lock().expect("writes lock").is_empty());
 
     let accepted = crate::commands::sessions::write_session_input_with_approval_for_test(
@@ -256,17 +239,20 @@ fn managed_session_input_requires_backend_approval_grant() {
         WriteSessionInputRequest {
             session_id: "managed-session-grant-input".to_string(),
             input: "second".to_string(),
-            confirm_send: true,
-            client_target: "session:managed-session-grant-input".to_string(),
         },
         &registry,
-        |_, _| panic!("existing backend grant should be reused"),
+        |session, run_id| {
+            assert_eq!(session.id, "managed-session-grant-input");
+            assert_eq!(run_id, "managed-session-grant-input");
+            Ok(false)
+        },
     )
-    .expect("existing grant accepted");
-    assert!(second.accepted);
+    .expect_err("second message denial must not reuse the first approval");
+    assert_eq!(second, "Message send canceled. Nothing was sent.");
+    assert!(!second.contains("second"));
     assert_eq!(
         *writes.lock().expect("writes lock"),
-        vec!["first".to_string(), "second".to_string()]
+        vec!["first".to_string()]
     );
 }
 
@@ -311,13 +297,14 @@ fn managed_session_input_requires_backend_owned_transport() {
         WriteSessionInputRequest {
             session_id: "managed-session-transport-a".to_string(),
             input: "hello".to_string(),
-            confirm_send: true,
-            client_target: "session:managed-session-transport-a".to_string(),
         },
         &registry,
     )
     .expect_err("unregistered transport rejected");
-    assert!(missing.contains("session input transport not found"));
+    assert_eq!(
+        missing,
+        "This session can’t receive messages now. Check its status before you try again."
+    );
 
     registry
         .register_writer("managed-session-transport-a", "older-run", |_| Ok(1))
@@ -326,13 +313,14 @@ fn managed_session_input_requires_backend_owned_transport() {
         WriteSessionInputRequest {
             session_id: "managed-session-transport-a".to_string(),
             input: "hello".to_string(),
-            confirm_send: true,
-            client_target: "session:managed-session-transport-a".to_string(),
         },
         &registry,
     )
     .expect_err("mismatched run rejected");
-    assert!(mismatch.contains("session input transport no longer matches"));
+    assert_eq!(
+        mismatch,
+        "This session can’t receive messages now. Check its status before you try again."
+    );
 
     let session_a_writes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let session_b_writes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
@@ -369,8 +357,6 @@ fn managed_session_input_requires_backend_owned_transport() {
         WriteSessionInputRequest {
             session_id: "managed-session-transport-a".to_string(),
             input: "message for a".to_string(),
-            confirm_send: true,
-            client_target: "session:managed-session-transport-a".to_string(),
         },
         &registry,
     )

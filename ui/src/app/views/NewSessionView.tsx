@@ -3,17 +3,20 @@ import { CircleAlert } from "lucide-react"
 
 import { isTerminalState } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 
 import { LaunchPlanCard } from "../LaunchPlanCard"
-import { PlanReviewCard } from "../PlanReviewCard"
 import { SetupCard } from "../SetupCard"
 import { useImageRebuild } from "../useMaintenance"
 import type { MainViewProps } from "./props"
 
-// New Session is a first-class page. It captures intent in three small steps;
-// the trusted Rust dialog still owns the final launch decision.
+// New Session is a first-class page. Home starts at Project, while opening New
+// Session directly adds the optional Agent step. The trusted Rust dialog still
+// owns the final launch decision.
 export function NewSessionView(props: MainViewProps) {
   const flow = props.launchFlow
+  const protectedCopyError =
+    flow.error && flow.request.worktree && protectedCopyUnavailable(flow.error)
   const imageBuild = useImageRebuild()
   const buildState = imageBuild.status?.state ?? ""
   const refreshedBuild = useRef("")
@@ -32,17 +35,50 @@ export function NewSessionView(props: MainViewProps) {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-      {flow.error ? (
+      {flow.error && !protectedCopyError ? (
         <Alert variant="destructive">
           <CircleAlert />
           <AlertTitle>Could not continue</AlertTitle>
-          <AlertDescription>{flow.error}</AlertDescription>
+          <AlertDescription>
+            <p>{flow.error}</p>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {protectedCopyError ? (
+        <Alert variant="warning">
+          <CircleAlert />
+          <AlertTitle>Choose how to continue</AlertTitle>
+          <AlertDescription className="flex flex-col items-start gap-3">
+            <p>
+              RunHaven could not make a protected copy. Your original files are
+              unchanged.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                disabled={flow.planning}
+                onClick={() => void flow.retryWithoutProtectedCopy(true)}
+              >
+                Start without changing files
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={flow.planning}
+                onClick={() => void flow.retryWithoutProtectedCopy(false)}
+              >
+                Let assistant change original files (less safe)
+              </Button>
+            </div>
+          </AlertDescription>
         </Alert>
       ) : null}
       {imageBuild.error ? (
         <Alert variant="destructive">
           <CircleAlert />
-          <AlertTitle>Could not prepare this agent</AlertTitle>
+          <AlertTitle>Could not prepare this assistant</AlertTitle>
           <AlertDescription>{imageBuild.error}</AlertDescription>
         </Alert>
       ) : null}
@@ -52,7 +88,7 @@ export function NewSessionView(props: MainViewProps) {
           <AlertDescription>{imageBuild.status.detail}</AlertDescription>
         </Alert>
       ) : null}
-      {flow.launchStep === "agent" && !props.setupReady ? (
+      {!props.setupReady ? (
         <SetupCard
           loading={props.loading}
           dashboard={props.dashboard}
@@ -60,50 +96,45 @@ export function NewSessionView(props: MainViewProps) {
           onOpenDiagnostics={() => props.onNavigate({ kind: "diagnostics" })}
         />
       ) : null}
-      {flow.launchStep === "review" && flow.plan ? (
-        <PlanReviewCard
-          plan={flow.plan}
-          confirmedWarnings={flow.confirmedWarnings}
-          launchReady={props.launchReady}
-          launching={flow.launching}
-          setupOk={props.setupReady}
-          launchImageReady={props.launchImageReady}
-          onConfirmWarning={flow.setWarningConfirmation}
-          onBack={() => flow.setLaunchStep("project")}
-          onStart={flow.startRun}
-        />
-      ) : (
-        <LaunchPlanCard
-          step={flow.launchStep === "review" ? "project" : flow.launchStep}
-          agents={props.dashboard?.agents ?? []}
-          agentReadiness={props.dashboard?.agentReadiness ?? []}
-          request={flow.request}
-          selectedAgent={props.selectedAgent}
-          imageLoading={props.imageLoading}
-          imageStatus={props.imageStatus}
-          imageError={props.imageError}
-          imageInstalling={imageBuild.busy || Boolean(buildState && !isTerminalState(buildState))}
-          planning={flow.planning}
-          setupOk={props.setupReady}
-          onAgentChange={flow.changeAgent}
-          onPickFolder={flow.pickFolder}
-          onRequestChange={flow.updateRequest}
-          onNetworkChange={flow.updateNetworkMode}
-          onInstallImage={() => {
-            if (props.selectedAgent) {
-              void imageBuild.rebuild(props.selectedAgent.name)
-            }
-          }}
-          onCancel={() => {
-            flow.setOpen(false)
-            props.onNavigate({ kind: "home" })
-          }}
-          onBack={() => flow.setLaunchStep("agent")}
-          onContinue={() => flow.setLaunchStep("project")}
-          onReviewPlan={flow.reviewPlan}
-          onSignedIn={props.onSignedIn}
-        />
-      )}
+      <LaunchPlanCard
+        step={flow.launchStep}
+        agents={props.dashboard?.agents ?? []}
+        agentReadiness={props.dashboard?.agentReadiness ?? []}
+        request={flow.request}
+        selectedAgent={props.selectedAgent}
+        imageLoading={props.imageLoading}
+        imageStatus={props.imageStatus}
+        imageError={props.imageError}
+        imageInstalling={
+          imageBuild.busy || Boolean(buildState && !isTerminalState(buildState))
+        }
+        planning={flow.planning}
+        setupOk={props.setupReady}
+        onAgentChange={flow.changeAgent}
+        onPickFolder={flow.pickFolder}
+        onRequestChange={flow.updateRequest}
+        onNetworkChange={flow.updateNetworkMode}
+        onInstallImage={() => {
+          if (props.selectedAgent) {
+            void imageBuild.rebuild(props.selectedAgent.name)
+          }
+        }}
+        onCancel={() => {
+          flow.setOpen(false)
+          props.onNavigate({ kind: "home" })
+        }}
+        onBack={() => {
+          flow.setOpen(false)
+          props.onNavigate({ kind: "home" })
+        }}
+        onContinue={() => flow.setLaunchStep("project")}
+        onStartSession={flow.startSession}
+        onSignedIn={props.onSignedIn}
+      />
     </div>
   )
+}
+
+function protectedCopyUnavailable(error: string): boolean {
+  return error.startsWith("RunHaven can't make a protected copy")
 }

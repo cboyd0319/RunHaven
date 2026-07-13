@@ -66,7 +66,7 @@ export function previewManagedSessionStatus(
     container: active
       ? {
           state: session.lifecycle,
-          image: "runhaven/preview:0.1.0",
+          image: "runhaven/preview:0.7.0",
           startedAt: session.startedAt === "preview" ? null : session.startedAt,
           resources: {
             cpus: "4",
@@ -85,16 +85,16 @@ export function previewManagedSessionStatus(
       : null,
     statusUnavailable: active
       ? null
-      : "Container status is unavailable. The run may have stopped.",
+      : "Live status isn’t available because this session may have ended.",
     recovery: active
       ? null
       : {
           status: "attention",
-          title: "Runtime status unavailable",
+          title: "Session status unavailable",
           detail:
-            "RunHaven can still see this session record, but Apple container status is unavailable.",
+            "RunHaven can still see this session, but it can’t find the running process.",
           remedy:
-            "Refresh sessions or open diagnostics before taking action.",
+            "Check History for saved output or remove the session from the active list.",
           repairAvailable: false
         }
   };
@@ -190,7 +190,7 @@ export function previewManagedKill(sessionId: string): KillManagedSessionRespons
     containerName: session.containerName,
     status: "kill-requested"
   };
-  updatePreviewSessionStatus(sessionId, "kill-requested", "Hard stop requested");
+  updatePreviewSessionStatus(sessionId, "kill-requested", "Force stop requested");
   return {
     session: previewSession(sessionId),
     result
@@ -205,7 +205,7 @@ export function previewManagedRepair(sessionId: string): RepairManagedSessionRes
     status: "removed",
     markerRemoved: true
   };
-  updatePreviewSessionStatus(sessionId, "removed", "Marker removed");
+  updatePreviewSessionStatus(sessionId, "removed", "Removed from active list");
   return {
     session: previewSession(sessionId),
     result
@@ -215,7 +215,7 @@ export function previewManagedRepair(sessionId: string): RepairManagedSessionRes
 export function previewManagedCleanup(sessionId: string): CleanupManagedSessionResponse {
   const session = previewSession(sessionId);
   if (session.cleanup?.available !== true) {
-    throw new Error("Managed session cleanup is only available for saved worktree sessions.");
+    throw new Error("Saved changes are not available for this session.");
   }
   const result = {
     runId: session.runId,
@@ -236,10 +236,16 @@ export function previewSessionInput(
   validatePreviewSessionInput(input);
   const session = previewSession(sessionId);
   if (session.nextAction.kind === "auth_attention") {
-    throw new Error("Session sign-in is not ready. Finish sign-in before sending input.");
+    throw new Error("Finish signing in before you send a message.");
   }
-  if (session.nextAction.kind !== "monitor") {
-    throw new Error(`Session cannot accept input while action is ${session.nextAction.kind}.`);
+  if (
+    !session.input.attached ||
+    !["running", "starting"].includes(session.lifecycle) ||
+    session.nextAction.kind !== "monitor"
+  ) {
+    throw new Error(
+      "This session can’t receive messages now. Check its status before you try again."
+    );
   }
   const acceptedBytes = sessionInputBytes(input);
   return {
@@ -297,7 +303,7 @@ export function rememberPreviewManagedSession(
       {
         source: "auth",
         label: "Sign-in",
-        detail: "API key broker",
+        detail: "API key from this Mac",
         timestamp: "preview"
       },
       {
@@ -358,18 +364,22 @@ function updatePreviewSessionStatus(
 
 function validatePreviewSessionInput(input: string) {
   if (input.length === 0) {
-    throw new Error("session input is required");
+    throw new Error("Enter a message before you choose Send.");
   }
   if (sessionInputBytes(input) > MAX_SESSION_INPUT_BYTES) {
     throw new Error(
-      `session input is too long; keep each send at or below ${MAX_SESSION_INPUT_BYTES} bytes`
+      "This message is too long. Shorten it to 8,192 bytes or less, then try again."
     );
   }
   if (input.includes("\0")) {
-    throw new Error("session input contains a NUL byte");
+    throw new Error(
+      "This message contains hidden formatting that RunHaven can’t send safely. Paste it again as plain text, then try again."
+    );
   }
   if (containsTerminalEscape(input)) {
-    throw new Error("session input contains a terminal escape sequence");
+    throw new Error(
+      "This message contains hidden formatting that RunHaven can’t send safely. Paste it again as plain text, then try again."
+    );
   }
 }
 
@@ -390,13 +400,13 @@ function agentLabel(agent: string): string {
   const trimmed = agent.trim();
   return trimmed
     ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}`
-    : "Agent";
+    : "Assistant";
 }
 
 function networkLabel(network: string): string {
   switch (network.trim().toLowerCase()) {
     case "provider":
-      return "Provider only";
+      return "Assistant services only";
     case "internal":
       return "Local only";
     case "internet":

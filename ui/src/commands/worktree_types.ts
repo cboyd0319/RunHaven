@@ -1,7 +1,12 @@
 // Worktree review contracts for finished sessions that saved an isolated git
-// copy. The responses carry only branch names, change counts, a status summary,
-// and path-free manual step labels; the backend never sends a host path.
+// copy. File entries are bounded safe repo-relative paths; the backend never
+// sends a host path.
 import type { ManagedSessionSummary } from "./types";
+
+export type WorktreeFileChange = {
+  path: string;
+  kind: "added" | "changed" | "removed";
+};
 
 export type WorktreeReviewResponse = {
   runId: string;
@@ -10,6 +15,11 @@ export type WorktreeReviewResponse = {
   worktreeChanges: number;
   sourceChanges: number;
   clean: boolean;
+  fileChanges: WorktreeFileChange[];
+  fileChangesTruncated: boolean;
+  sourceFileChanges: WorktreeFileChange[];
+  sourceFileChangesTruncated: boolean;
+  reviewId: string;
   availableActions: string[];
 };
 

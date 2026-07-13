@@ -76,7 +76,7 @@ export function AppMainContent(props: AppMainContentProps) {
           <div
             ref={showTerminal ? focusRef : undefined}
             tabIndex={-1}
-            aria-label="Run terminal"
+            aria-label="Session terminal"
             className="flex min-h-0 flex-1 flex-col outline-none"
           >
             <TerminalPanel
@@ -84,6 +84,7 @@ export function AppMainContent(props: AppMainContentProps) {
               fill
               visible={showTerminal}
               onClose={props.launchFlow.closeRunTerminal}
+              onOpenCancelled={props.launchFlow.cancelRunTerminal}
             />
           </div>
         </div>
@@ -170,14 +171,18 @@ function MainView(props: AppMainContentProps) {
             props.launchFlow.setLaunchStep("agent")
             props.onNavigate({ kind: "new-session" })
           }}
+          onStart={() => props.onNavigate({ kind: "home" })}
         />
       )
     case "session":
-      // A removed record renavigates via the selection fallback; render nothing
-      // for the one frame in between instead of flashing another view.
+      // A removed record renavigates via the selection fallback. Home is a safe,
+      // useful frame while that reconciliation happens; an empty main area looks
+      // like the app crashed and can strand the user after a fast run exit.
       return props.selectedSession ? (
         <SessionView {...props} selectedSession={props.selectedSession} />
-      ) : null
+      ) : (
+        <HomeView {...props} />
+      )
     case "run-terminal":
       // Reached only in the impossible case of a run-terminal destination with
       // no run terminal in state (AppMainContent renders the real terminal
@@ -211,12 +216,12 @@ function mainViewLabel(navigation: NavDestination): string {
     case "new-session":
       return "New session"
     case "session":
-      return "Run details"
+      return "Session details"
     case "diagnostics":
       return "System details"
     case "runs":
-      return "Run history"
+      return "Session history"
     case "run-terminal":
-      return "Run terminal"
+      return "Session terminal"
   }
 }

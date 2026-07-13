@@ -46,8 +46,6 @@ export function runLaunch() {
     sessionId: "runabc123",
     request: {
       plan: { ...planRequest(), agent: "claude" },
-      confirmLaunch: true,
-      confirmedWarnings: [],
     },
   }
 }

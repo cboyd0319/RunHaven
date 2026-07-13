@@ -8,10 +8,11 @@
 //! session in a [`TerminalHandle`] for the registry and runs the reader thread
 //! that forwards master output to the Tauri [`Channel`].
 //!
-//! No-persist invariant: [`stream_pty_output`] forwards each chunk to the Tauri
-//! [`Channel`] and returns to reading. It never writes the output registry, run
-//! records, a log, or any file. The `terminal::source_tripwire_tests` source
-//! tripwire enforces this.
+//! No-file invariant: [`stream_pty_output`] forwards each chunk to the Tauri
+//! [`Channel`] and returns to reading. Interactive run output is also retained
+//! in the bounded, process-local output registry for same-app History views.
+//! It never writes run records, a log, or any file. The
+//! `terminal::source_tripwire_tests` source tripwire enforces this.
 
 use std::sync::Arc;
 use std::thread;
@@ -24,12 +25,33 @@ use runhaven_core::runtime::terminal::{
 };
 use tauri::ipc::Channel;
 
+use crate::session_output::SessionOutputRegistry;
+
 use super::registry::{ReaderStart, SpawnedTerminal, TerminalSessionRegistry};
 use super::{TerminalHandle, TerminalMessage};
 
 /// Bounded read window for the master, matching the existing runners' 8 KB
 /// chunks so a busy stream cannot grow an unbounded buffer in the reader.
 const READ_CHUNK_BYTES: usize = 8 * 1024;
+
+/// The already-registered, plan-owned destination for one interactive run's
+/// bounded History output. Run terminals require this value, so the production
+/// spawn cannot silently omit retention or substitute a WebView session id.
+#[derive(Clone)]
+pub(crate) struct RetainedRunOutput {
+    run_id: String,
+    registry: SessionOutputRegistry,
+}
+
+impl RetainedRunOutput {
+    pub(super) fn new(run_id: String, registry: SessionOutputRegistry) -> Self {
+        Self { run_id, registry }
+    }
+
+    fn append(&self, bytes: &[u8]) {
+        let _ = self.registry.append(&self.run_id, bytes);
+    }
+}
 
 /// A live terminal handle. Input, resize, and shutdown delegate to the core PTY
 /// session; the registry holds this while the reader thread holds a clone of the
@@ -62,7 +84,7 @@ pub(super) fn spawn_pty_terminal(
     channel: Channel<TerminalMessage>,
 ) -> Result<SpawnedTerminal, String> {
     let session = open_gui_attach_pty(plan).map_err(|error| error.to_string())?;
-    Ok(spawned_from_session(session, channel, None))
+    Ok(spawned_from_session(session, channel, None, None))
 }
 
 /// Open a host-PTY-wrapped native **login** terminal in core and wire the same
@@ -81,6 +103,7 @@ pub(super) fn spawn_login_terminal(
         session,
         channel,
         Some(agent.to_string()),
+        None,
     ))
 }
 
@@ -103,10 +126,25 @@ pub(super) fn spawn_run_terminal(
     plan: AgentRunPlan,
     run_label: &str,
     channel: Channel<TerminalMessage>,
+    retained_run_output: RetainedRunOutput,
 ) -> Result<SpawnedTerminal, String> {
     let session = open_gui_run_pty(plan, run_label)
         .map_err(|_| "RunHaven could not open the run terminal.".to_string())?;
-    Ok(spawned_from_session(session, channel, None))
+    Ok(spawned_run_from_session(
+        session,
+        channel,
+        retained_run_output,
+    ))
+}
+
+/// Run-specific wrapper keeps the retention sink mandatory while attach and
+/// sign-in terminals continue to use the shared reader with no History sink.
+fn spawned_run_from_session(
+    session: GuiPtySession,
+    channel: Channel<TerminalMessage>,
+    retained_run_output: RetainedRunOutput,
+) -> SpawnedTerminal {
+    spawned_from_session(session, channel, None, Some(retained_run_output))
 }
 
 /// Build the registry control handle and the output-reader one-shot for a live
@@ -116,6 +154,7 @@ fn spawned_from_session(
     session: GuiPtySession,
     channel: Channel<TerminalMessage>,
     sign_in_agent: Option<String>,
+    retained_run_output: Option<RetainedRunOutput>,
 ) -> SpawnedTerminal {
     let handle: Arc<dyn TerminalHandle> = Arc::new(PtyTerminal {
         session: session.clone(),
@@ -139,6 +178,7 @@ fn spawned_from_session(
                     session_id,
                     generation,
                     sign_in_agent,
+                    retained_run_output,
                 );
             })
             .map(|_| ())
@@ -154,9 +194,10 @@ fn spawned_from_session(
 /// Read the PTY master in bounded chunks and relay each chunk to the frontend
 /// over `channel`. On EOF (the child exited, or on macOS an `EIO` once the slave
 /// closes) it reaps the child for an exit code, waits for any detached launch
-/// cleanup/recording, sends a final `Exit`, and clears the registry entry. It
-/// writes nothing to disk or any registry other than removing its own entry
-/// (no-persist invariant).
+/// cleanup/recording, sends a final `Exit`, and clears the terminal registry
+/// entry. Interactive run chunks also enter the bounded process-local output
+/// registry for same-app History views. No stream bytes are logged or written
+/// to disk (no-persist invariant).
 ///
 /// Channel death is a teardown trigger, not just a loop exit. If a `send` fails
 /// the WebView is gone (the view unmounted/navigated without calling
@@ -173,27 +214,13 @@ fn stream_pty_output(
     session_id: String,
     generation: u64,
     sign_in_agent: Option<String>,
+    retained_run_output: Option<RetainedRunOutput>,
 ) {
-    let mut buffer = [0_u8; READ_CHUNK_BYTES];
-    let mut channel_alive = true;
-    loop {
-        match session.read(&mut buffer) {
-            Ok(0) => break,
-            Ok(read) => {
-                let message = TerminalMessage::Output {
-                    data: buffer[..read].to_vec(),
-                };
-                if channel.send(message).is_err() {
-                    // The WebView/window is gone and the child is still live.
-                    channel_alive = false;
-                    break;
-                }
-            }
-            // A closed slave surfaces as an error (EIO) on macOS; treat any read
-            // error as end-of-session rather than looping.
-            Err(_) => break,
-        }
-    }
+    let channel_alive = forward_pty_chunks(
+        |buffer| session.read(buffer),
+        |message| channel.send(message).is_ok(),
+        retained_run_output.as_ref(),
+    );
 
     // On a clean EOF/EIO the child has already exited, so just reap it. On
     // channel death the child is still running, so kill it first.
@@ -217,6 +244,61 @@ fn stream_pty_output(
         completion_recorded,
     });
     let _ = registry.remove_if_generation(&session_id, generation);
+}
+
+/// Forward PTY chunks through the live Channel and, for interactive runs, the
+/// bounded in-memory History buffer. Keeping this loop independent of the
+/// concrete PTY makes the reader-to-History path behavior-testable without
+/// launching Apple Container in unit tests.
+fn forward_pty_chunks(
+    mut read: impl FnMut(&mut [u8]) -> std::io::Result<usize>,
+    mut send: impl FnMut(TerminalMessage) -> bool,
+    retained_run_output: Option<&RetainedRunOutput>,
+) -> bool {
+    let mut buffer = [0_u8; READ_CHUNK_BYTES];
+    loop {
+        match read(&mut buffer) {
+            Ok(0) => return true,
+            Ok(read) => {
+                if let Some(retained_run_output) = retained_run_output {
+                    retained_run_output.append(&buffer[..read]);
+                }
+                if !send(TerminalMessage::Output {
+                    data: buffer[..read].to_vec(),
+                }) {
+                    // The WebView/window is gone and the child is still live.
+                    return false;
+                }
+            }
+            // A closed slave surfaces as an error (EIO) on macOS; treat any read
+            // error as end-of-session rather than looping.
+            Err(_) => return true,
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn retain_terminal_chunks_for_test(
+    retained_run_output: &RetainedRunOutput,
+    chunks: &[&[u8]],
+) {
+    let mut next = 0;
+    let channel_alive = forward_pty_chunks(
+        |buffer| {
+            let Some(chunk) = chunks.get(next) else {
+                return Ok(0);
+            };
+            next += 1;
+            buffer[..chunk.len()].copy_from_slice(chunk);
+            Ok(chunk.len())
+        },
+        |_| true,
+        Some(retained_run_output),
+    );
+    assert!(
+        channel_alive,
+        "the test Channel remains available through EOF"
+    );
 }
 
 fn sign_in_completion_recorded(

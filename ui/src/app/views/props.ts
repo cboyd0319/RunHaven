@@ -52,8 +52,6 @@ export type MainViewProps = {
   // The New Session flow's state and actions travel as one object so the
   // router never has to unpack its implementation details.
   launchFlow: LaunchFlow
-  launchReady: boolean
-  launchImageReady: boolean
   selectedAgent: AgentProfile | undefined
   imageLoading: boolean
   imageStatus: ImageStatusResponse | null

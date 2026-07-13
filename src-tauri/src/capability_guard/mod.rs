@@ -74,6 +74,21 @@ fn development_bundle_has_an_unambiguous_identity() {
     assert_eq!(development["productName"], "RunHaven Debug");
     assert_eq!(development["identifier"], "dev.runhaven.desktop.debug");
     assert_ne!(release["identifier"], development["identifier"]);
+
+    let package: serde_json::Value = serde_json::from_str(&read_text(
+        &manifest
+            .parent()
+            .expect("repo root")
+            .join("ui/package.json"),
+    ))
+    .expect("parse UI package");
+    assert_eq!(
+        package
+            .pointer("/scripts/tauri:dev")
+            .and_then(serde_json::Value::as_str),
+        Some("cd .. && ./scripts/dev-with-logs.sh"),
+        "every development launch must use the canonical target and build identity"
+    );
 }
 
 fn config_capabilities(path: &std::path::Path) -> Vec<String> {

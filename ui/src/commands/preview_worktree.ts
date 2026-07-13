@@ -8,7 +8,7 @@ import type {
 function requireWorktreeSession(sessionId: string): ManagedSessionSummary {
   const session = previewSession(sessionId);
   if (session.cleanup?.available !== true || session.cleanup.target !== "worktree") {
-    throw new Error("Worktree review is only available for saved worktree sessions.");
+    throw new Error("Changes are no longer available for this session.");
   }
   return session;
 }
@@ -22,19 +22,33 @@ export function previewManagedSessionWorktree(sessionId: string): WorktreeReview
   return {
     runId: session.runId,
     branch: previewWorktreeBranch(session),
-    statusSummary: "2 files changed in the isolated copy.",
+    statusSummary: "2 file changes are ready to review.",
     worktreeChanges: 2,
     sourceChanges: 0,
     clean: false,
-    availableActions: ["merge", "keep", "recover", "discard"]
+    fileChanges: [
+      { path: "src/app.ts", kind: "changed" },
+      { path: "src/session.ts", kind: "added" }
+    ],
+    fileChangesTruncated: false,
+    sourceFileChanges: [],
+    sourceFileChangesTruncated: false,
+    reviewId: "0".repeat(64),
+    availableActions: ["merge", "recover", "discard"]
   };
 }
 
 export function previewManagedWorktreeAction(
   sessionId: string,
-  action: string
+  action: string,
+  reviewId?: string
 ): WorktreeActionResponse {
   const session = requireWorktreeSession(sessionId);
+  if ((action === "merge" || action === "discard") && reviewId !== "0".repeat(64)) {
+    throw new Error(
+      "The protected copy changed since you reviewed it. Review the changes again before you continue."
+    );
+  }
   const statusByAction: Record<string, string> = {
     keep: "kept",
     merge: "merged",
@@ -54,8 +68,9 @@ export function previewManagedWorktreeAction(
       nextSteps:
         action === "recover"
           ? [
-              "Open the isolated copy in your terminal.",
-              "Review the changes before you merge or discard them."
+              "Keep the protected copy so nothing is lost.",
+              "Finish or undo other changes in your project.",
+              "Return to this review and choose Apply changes again."
             ]
           : []
     }

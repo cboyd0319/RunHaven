@@ -45,7 +45,6 @@ pub(super) const FORBIDDEN_HOST_MARKERS: &[&str] = &[
 pub(super) const MAIN_READ_FORBIDDEN_PERMISSIONS: &[&str] = &[
     "allow-get-log-snapshot",
     "allow-get-managed-session-log-snapshot",
-    "allow-open-session-window",
     "allow-launch-run",
     "allow-write-session-input",
     "allow-stop-run",
@@ -107,8 +106,7 @@ pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
 
 /// The exact grant for the terminal capability (terminal design section 7). A
 /// live PTY into a sandbox is the app's most sensitive interactive surface, so
-/// it lives in its own main-window-only capability and never widens main-read
-/// or the read-only monitor windows.
+/// it lives in its own main-window-only capability and never widens main-read.
 pub(super) const TERMINAL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-open-terminal-session", "open_terminal_session"),
     (
@@ -124,24 +122,6 @@ pub(super) const TERMINAL_PERMISSIONS: &[(&str, &str)] = &[
 pub(super) const ATTENTION_BADGE_PERMISSION: &str = "allow-set-attention-badge";
 
 pub(super) const MENU_STATE_PERMISSION: &str = "allow-sync-menu-state";
-
-/// The exact read-only grant for per-session monitor windows. Widening this
-/// set is a trust-boundary change: monitor windows must never gain output
-/// snapshots, input, run control, launch, sign-in, events, or window control.
-pub(super) const SESSION_MONITOR_PERMISSIONS: &[(&str, &str)] = &[
-    (
-        "allow-get-session-window-target",
-        "get_session_window_target",
-    ),
-    (
-        "allow-get-managed-session-status",
-        "get_managed_session_status",
-    ),
-    (
-        "allow-get-managed-session-diagnostics",
-        "get_managed_session_diagnostics",
-    ),
-];
 
 pub(super) fn capability_windows(file_name: &str) -> Vec<String> {
     let path = manifest_dir().join("capabilities").join(file_name);

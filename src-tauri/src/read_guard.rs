@@ -108,10 +108,8 @@ impl<T: Clone> ReadGuard<T> {
 /// guard, locking is per key, so a slow probe stalls only same-key callers.
 pub(crate) struct ReadGuards {
     pub(crate) managed_sessions: ReadGuard<ManagedSessionListData>,
-    /// Keyed by session id. Added with the per-session monitor windows: the
-    /// main window plus up to six monitors can poll the same session's
-    /// status, and each probe is a `container` subprocess, so same-session
-    /// polls must coalesce.
+    /// Keyed by session id. Status polls can overlap, and each probe is a
+    /// `container` subprocess, so same-session polls must coalesce.
     pub(crate) managed_session_status: ReadGuard<ManagedSessionStatusResponse>,
     pub(crate) network_prune_preview: ReadGuard<NetworkPrunePreview>,
     pub(crate) image_status: ReadGuard<ImageStatusResponse>,

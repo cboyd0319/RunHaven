@@ -85,17 +85,26 @@ fn prune_response(outcome: NetworkPruneOutcome) -> NetworkPruneResponse {
 }
 
 async fn trusted_network_prune_confirmed(app: AppHandle, count: usize) -> Result<bool, String> {
-    let message = format!(
-        "RunHaven-managed networks to remove: {count}\n\nRunHaven will delete only its own stale networks after you confirm. Networks still in use by a running session are skipped."
-    );
     confirm_native(
         app,
-        "Confirm RunHaven network cleanup",
+        "Remove old networks?",
         "Remove",
         MessageDialogKind::Warning,
-        message,
+        network_cleanup_confirmation_message(count),
     )
     .await
+}
+
+fn network_cleanup_confirmation_message(count: usize) -> String {
+    format!(
+        "RunHaven found {count} old network{}. It will remove only networks created by RunHaven. Networks used by a running session will stay in place.",
+        if count == 1 { "" } else { "s" }
+    )
+}
+
+#[cfg(test)]
+pub(crate) fn network_cleanup_confirmation_message_for_test(count: usize) -> String {
+    network_cleanup_confirmation_message(count)
 }
 
 #[cfg(test)]

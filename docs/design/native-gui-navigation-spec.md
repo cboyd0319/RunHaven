@@ -3,13 +3,15 @@
 Last updated: 2026-07-01 UTC
 
 > Historical design record, superseded 2026-07-13. The current product uses a
-> smaller information architecture: Home, History, contextual Run terminal,
-> inline Settings, first-class New Session, and contextual System details.
+> smaller information architecture: Home, History, System, a contextual Session
+> terminal, and first-class New Session.
 > Home is a four-agent launchpad only; operational status and run history live
 > one level deeper, and every app launch returns to Home.
 > Agents, Diagnostics, Maintenance, duplicate run filters, launch/settings
 > modals, and placeholder menu commands did not earn permanent surfaces. See
 > `docs/DESKTOP_APP.md` and `current-state.md` for the current contract.
+> The auxiliary session-window experiment described below was removed on
+> 2026-07-13 because it duplicated History without adding an essential task.
 
 The ideal-state navigation and IA contract for the RunHaven desktop app,
 grounded in Apple HIG guidance fetched 2026-07-01 (see Sources). It is
@@ -179,14 +181,15 @@ important actions trailing; every item also a menu bar command
 
 ### 3.4 Worktree Review (mode of Session View)
 
-- A finished worktree run gets the `Ready to review` badge and its session
-  view leads with the review panel: branch name, change counts, and four
-  actions, each behind its own native confirmation: `Merge Changes...`,
-  `Keep Branch`, `Recover...`, `Discard Changes...`. The destructive discard
-  is never the default button (dialog rules in the foundation doc).
-- After Merge or Discard the record is removed and the row leaves. After
-  Keep the badge clears and the row stays in Finished with `Clean Up
-  Session...` available. Recover shows plain next steps without mutating.
+- A finished protected-copy run leads with **Review changes**. It shows
+  project-relative filenames with plain Added, Changed, or Removed labels.
+  Assistant changes and existing project changes use separate semantic lists.
+  Each list shows at most 100 names and states when it is shortened.
+- The routine actions are **Apply changes** and **Discard changes**, each behind
+  native confirmation. Apply is unavailable while the source project has local
+  changes. Leaving the view keeps the protected copy. Recovery appears only
+  after an action fails and does not mutate files.
+- After Apply or Discard, the record is removed and the row leaves.
 - Reach: the badge, Cmd-J, or normal selection. Leave: completing an action
   or navigating away (review state persists until resolved).
 

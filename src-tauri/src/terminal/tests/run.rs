@@ -16,6 +16,7 @@ use runhaven_core::runtime::profiles::get_profile;
 use runhaven_core::support::paths::override_cache_root_for_tests;
 
 use super::{FakeTerminal, open_fake};
+use crate::session_output::SessionOutputRegistry;
 use crate::terminal::{
     MAX_TERMINAL_SESSIONS, SpawnedTerminal, TerminalSessionRegistry,
     open_agent_run_terminal_for_test,
@@ -65,11 +66,13 @@ fn interactive_run_plan() -> AgentRunPlan {
 #[test]
 fn run_terminal_invalid_id_is_rejected_before_confirm_or_spawn() {
     let registry = TerminalSessionRegistry::default();
+    let output_registry = SessionOutputRegistry::default();
     let result = open_agent_run_terminal_for_test(
         &registry,
+        &output_registry,
         "bad id\u{1b}[2J",
         || panic!("must not prepare/confirm on an invalid id"),
-        |_| panic!("must not spawn on an invalid id"),
+        |_, _, _| panic!("must not spawn on an invalid id"),
     );
     assert!(result.is_err(), "control-character run id must be rejected");
 }
@@ -79,11 +82,13 @@ fn run_terminal_confirm_cancel_spawns_nothing() {
     // The user cancelled the native launch confirmation: nothing runs, no
     // worktree branch, no registry entry.
     let registry = TerminalSessionRegistry::default();
+    let output_registry = SessionOutputRegistry::default();
     let result = open_agent_run_terminal_for_test(
         &registry,
+        &output_registry,
         "run-cancel",
         || Ok(None),
-        |_| panic!("cancel must spawn nothing"),
+        |_, _, _| panic!("cancel must spawn nothing"),
     );
     assert_eq!(result, Ok(false));
     assert!(registry.remove("run-cancel").is_none());
@@ -92,15 +97,17 @@ fn run_terminal_confirm_cancel_spawns_nothing() {
 #[test]
 fn run_terminal_forces_interactive_tty_then_registers_and_routes_input() {
     let registry = TerminalSessionRegistry::default();
+    let output_registry = SessionOutputRegistry::default();
     let fake = FakeTerminal::default();
     let spawn_fake = fake.clone();
     let spawned_command: Arc<Mutex<Option<Vec<String>>>> = Arc::new(Mutex::new(None));
     let recorder = spawned_command.clone();
     let result = open_agent_run_terminal_for_test(
         &registry,
+        &output_registry,
         "run-io",
         || Ok(Some(interactive_run_plan())),
-        move |plan| {
+        move |plan, _, _| {
             *recorder.lock().expect("record") = Some(plan.command.clone());
             Ok(SpawnedTerminal::without_reader(spawn_fake.handle()))
         },
@@ -152,11 +159,13 @@ fn run_terminal_fails_closed_and_registers_nothing_when_the_spawn_fails() {
         recovery_commands: Vec::new(),
     });
     let registry = TerminalSessionRegistry::default();
+    let output_registry = SessionOutputRegistry::default();
     let result = open_agent_run_terminal_for_test(
         &registry,
+        &output_registry,
         "run-fail",
         || Ok(Some(plan)),
-        |_| Err("RunHaven could not open the run terminal.".to_string()),
+        |_, _, _| Err("RunHaven could not open the run terminal.".to_string()),
     );
     assert!(result.is_err(), "a spawn failure must fail the open");
     assert!(
@@ -174,6 +183,7 @@ fn run_terminal_shares_the_terminal_cap_with_attach() {
     // The run open goes through the same registry, so it counts against the
     // shared cap alongside attach and login sessions.
     let registry = TerminalSessionRegistry::default();
+    let output_registry = SessionOutputRegistry::default();
     open_fake(&registry, "attach-run")
         .0
         .expect("attach within cap");
@@ -181,18 +191,20 @@ fn run_terminal_shares_the_terminal_cap_with_attach() {
     let spawn_fake = fake.clone();
     open_agent_run_terminal_for_test(
         &registry,
+        &output_registry,
         "run-one",
         || Ok(Some(interactive_run_plan())),
-        move |_| Ok(SpawnedTerminal::without_reader(spawn_fake.handle())),
+        move |_, _, _| Ok(SpawnedTerminal::without_reader(spawn_fake.handle())),
     )
     .expect("run within cap");
     // Cap is now full (MAX_TERMINAL_SESSIONS == 2); a third open is refused before
     // any prepare/confirm or spawn.
     let result = open_agent_run_terminal_for_test(
         &registry,
+        &output_registry,
         "run-overflow",
         || panic!("cap must be enforced before prepare/confirm"),
-        |_| panic!("cap must be enforced before spawn"),
+        |_, _, _| panic!("cap must be enforced before spawn"),
     );
     let error = result.expect_err("cap must hold across attach and run");
     assert!(error.contains(&MAX_TERMINAL_SESSIONS.to_string()));

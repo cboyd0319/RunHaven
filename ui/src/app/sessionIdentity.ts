@@ -1,5 +1,18 @@
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 
+export const PRODUCT_AGENTS = ["claude", "codex", "antigravity", "copilot"] as const
+
+function productAgentRank(agent: string): number {
+  const rank = PRODUCT_AGENTS.indexOf(agent as (typeof PRODUCT_AGENTS)[number])
+  return rank === -1 ? PRODUCT_AGENTS.length : rank
+}
+
+export function orderProductAgents<T extends { name: string }>(agents: readonly T[]): T[] {
+  return [...agents].sort(
+    (left, right) => productAgentRank(left.name) - productAgentRank(right.name),
+  )
+}
+
 export function displayValue(value: string): string {
   return value.trim() || "Unknown"
 }
@@ -35,25 +48,14 @@ export function sessionIdentityLabel(session: ManagedSessionSummary): string {
 }
 
 export function sessionInputLabel(session: ManagedSessionSummary): string {
-  return session.input.attached ? "Input ready" : "Input blocked"
+  return session.input.attached ? "Messages available" : "Messages unavailable"
 }
 
-// The display name for a session: the user's GUI-only label when one is set,
-// otherwise the derived "Agent - project" title. The label map is keyed by the
-// opaque session id and its values are already sanitized in persistence; the
-// trim guard here keeps a blank label from ever winning over the derived title.
-// The display title, used across the sidebar and the Home run tables. Both
-// sources are secret-free by contract: the GUI label map is sanitized in
-// persistence, and `session.title` is the backend's sanctioned "Agent - project"
-// display field (derived from the sanitized project basename, never a raw host
-// path, container name, or token). This is the one rendered field with no extra
-// frontend shape guard, so that backend contract is the guarantee; keep it.
-export function sessionDisplayTitle(
-  session: ManagedSessionSummary,
-  labels: Record<string, string>,
-): string {
-  const label = labels[session.id]
-  return label && label.trim() ? label : session.title
+// The backend provides the single display title used across History and session
+// detail. It is derived from the sanitized assistant and project labels, never
+// a raw host path, container name, or token.
+export function sessionDisplayTitle(session: ManagedSessionSummary): string {
+  return session.title
 }
 
 function identityValue(value: string): string {

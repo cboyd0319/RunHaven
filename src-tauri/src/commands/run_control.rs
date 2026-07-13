@@ -11,7 +11,10 @@ use crate::contracts::{
 };
 
 mod approval;
-use approval::{RunControlAction, RunControlTarget, trusted_run_control_confirmed};
+use approval::{RunControlAction, trusted_run_control_confirmed};
+
+#[cfg(test)]
+pub(crate) use approval::trusted_run_control_messages_for_test;
 
 // Six thin commands map onto two enum-driven paths: one direct path over a run
 // id and one managed path over a session id. Both reach the same core functions
@@ -135,7 +138,7 @@ async fn confirm_direct_run_control(
     confirmed: bool,
 ) -> Result<RunControlOutcome, String> {
     validate_direct_run_control_request(action, run_id, confirmed)?;
-    if !trusted_run_control_confirmed(app, action, RunControlTarget::Run { run_id }).await? {
+    if !trusted_run_control_confirmed(app, action).await? {
         return Err(action.canceled_error().to_string());
     }
     run_control_checked(action, run_id)
@@ -152,16 +155,7 @@ async fn confirm_managed_run_control(
 ) -> Result<(ManagedSessionSummaryData, RunControlOutcome), String> {
     let (session, run_id) =
         validate_managed_session_run_control_request(action, session_id, confirmed)?;
-    if !trusted_run_control_confirmed(
-        app,
-        action,
-        RunControlTarget::ManagedSession {
-            session: &session,
-            run_id: &run_id,
-        },
-    )
-    .await?
-    {
+    if !trusted_run_control_confirmed(app, action).await? {
         return Err(action.canceled_error().to_string());
     }
     let outcome = run_control_checked(action, &run_id)?;
@@ -173,7 +167,8 @@ fn validate_direct_run_control_request(
     run_id: &str,
     confirmed: bool,
 ) -> Result<(), String> {
-    validate_text_len("run id", run_id, MAX_RUN_ID_LEN)?;
+    validate_text_len("run id", run_id, MAX_RUN_ID_LEN)
+        .map_err(|_| action.failure_message().to_string())?;
     if !confirmed {
         return Err(action.confirm_error().to_string());
     }
@@ -189,6 +184,7 @@ fn validate_managed_session_run_control_request(
         return Err(action.confirm_error().to_string());
     }
     crate::commands::sessions::managed_session_for_run_control(session_id)
+        .map_err(|_| action.failure_message().to_string())
 }
 
 /// Run the action against the tested core function and map its payload.
@@ -201,8 +197,8 @@ fn run_control_checked(
         RunControlAction::Kill => kill_active_run(run_id),
         RunControlAction::Repair => repair_active_run(run_id),
     }
-    .map_err(|error| error.to_string())?;
-    map_run_control_payload(action, &payload)
+    .map_err(|_| action.failure_message().to_string())?;
+    map_run_control_payload(action, &payload).map_err(|_| action.failure_message().to_string())
 }
 
 /// The single payload mapper. Stop and kill share the return-code check and

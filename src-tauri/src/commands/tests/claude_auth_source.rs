@@ -16,8 +16,8 @@ fn gui_claude_launch_defaults_to_native_container_auth() {
         .expect("claude launch plan");
 
     assert_eq!(plan.claude_auth_source, None);
-    let message = trusted_launch_message_for_test(&plan, &[], false, &[]);
-    assert!(message.contains("API key broker: none"));
+    let message = trusted_launch_message_for_test(&plan, &[], false, &request);
+    assert!(!message.contains("API key broker:"));
     assert!(!message.contains("Keychain"));
     assert!(!message.contains("saved Claude token"));
 }
@@ -39,8 +39,9 @@ fn gui_explicit_api_key_broker_stays_available() {
             "ANTHROPIC_API_KEY".to_string(),
         )),
     );
-    let message = trusted_launch_message_for_test(&plan, &[], false, &[]);
-    assert!(message.contains("API key broker: ANTHROPIC_API_KEY"));
+    let message = trusted_launch_message_for_test(&plan, &[], false, &request);
+    assert!(message.contains("API key source: ANTHROPIC_API_KEY"));
+    assert!(message.contains("Assistant services only"));
 }
 
 #[test]

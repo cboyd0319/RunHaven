@@ -1,3 +1,5 @@
+import { useState } from "react"
+
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 
@@ -5,41 +7,69 @@ import { AppHeader } from "./AppHeader"
 import { AppMainContent } from "./AppMainContent"
 import { RunHavenSidebar } from "./RunHavenSidebar"
 import { userSessions } from "./sessionList"
-import { SessionLabelsProvider } from "./sessionLabels"
 import { sidebarDefaultOpen } from "./uiStatePersistence"
 import { useAppController } from "./useAppController"
 import { useAttentionBadge } from "./useAttentionBadge"
 import { useMenuEvents } from "./useMenuEvents"
 import { useMenuStateSync } from "./useMenuStateSync"
 
+function keepEditingContextMenu(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest('input, textarea, [contenteditable="true"], pre, code, .xterm') !==
+      null
+  )
+}
+
 export default function App() {
   const app = useAppController()
   const sessions = userSessions(app.managedSessions.sessions)
+  const [sidebarOpen, setSidebarOpen] = useState(sidebarDefaultOpen)
   useMenuEvents(app)
-  useMenuStateSync(sessions, app.navigation)
+  useMenuStateSync(
+    sessions,
+    app.navigation,
+    app.settings.dockBadge,
+    sidebarOpen,
+  )
   useAttentionBadge(sessions, app.settings.dockBadge)
 
   return (
     <TooltipProvider>
-      <SessionLabelsProvider>
-        <SidebarProvider defaultOpen={sidebarDefaultOpen()}>
-          <RunHavenSidebar
-            navigation={app.navigation}
-            onNavigate={app.navigate}
-            onOpenSettings={() => app.settings.setOpen(true)}
-            settings={app.settings}
-            agents={app.dashboard?.agents ?? []}
-            runTerminalActive={app.launchFlow.runTerminal !== null}
-            appVersion={app.dashboard?.appVersion ?? ""}
+      <SidebarProvider
+        open={sidebarOpen}
+        onOpenChange={setSidebarOpen}
+        onContextMenu={(event) => {
+          // WKWebView otherwise exposes Reload and Inspect Element on app
+          // chrome. Keep the normal editing menu where it is useful; session
+          // actions remain in the visible controls and native Run menu.
+          if (!keepEditingContextMenu(event.target)) {
+            event.preventDefault()
+          }
+        }}
+      >
+        <RunHavenSidebar
+          navigation={app.navigation}
+          onNavigate={app.navigate}
+          runTerminalActive={app.launchFlow.runTerminal !== null}
+          appVersion={app.dashboard?.appVersion ?? ""}
+        />
+        <SidebarInset className="h-screen overflow-hidden">
+          <AppHeader
+            title={
+              app.navigation.kind === "home"
+                ? undefined
+                : app.navigation.kind === "session"
+                  ? (app.selectedSession?.title ?? app.pageTitle)
+                  : app.pageTitle
+            }
+            session={
+              app.navigation.kind === "session" ? app.selectedSession : null
+            }
+            controlBusy={app.controlBusy}
+            onControl={app.runControl}
           />
-          <SidebarInset className="h-screen overflow-hidden">
-            <AppHeader
-              title={app.pageTitle}
-              description={app.pageDescription}
-              loading={app.loading}
-              onRefresh={() => void app.refresh()}
-            />
-            <AppMainContent
+          <AppMainContent
               navigation={app.navigation}
               error={app.error}
               launchMessage={app.launchMessage}
@@ -71,8 +101,6 @@ export default function App() {
               onControl={app.runControl}
               onWorktreeResolved={app.refreshAfterWorktree}
               launchFlow={app.launchFlow}
-              launchReady={app.launchReady}
-              launchImageReady={app.launchImageReady}
               selectedAgent={app.selectedAgent}
               imageLoading={app.imageLoading}
               imageStatus={app.imageStatus}
@@ -87,10 +115,9 @@ export default function App() {
               runStatus={app.runStatus}
               runStatusLoading={app.runStatusLoading}
               runStatusError={app.runStatusError}
-            />
-          </SidebarInset>
-        </SidebarProvider>
-      </SessionLabelsProvider>
+          />
+        </SidebarInset>
+      </SidebarProvider>
     </TooltipProvider>
   )
 }

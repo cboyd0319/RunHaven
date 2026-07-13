@@ -53,21 +53,19 @@ describe("computeMenuState", () => {
     const sessions = [session({ id: "a1" }), session({ id: "a2" })]
     const state = computeMenuState(sessions, HOME)
     expect(state).toEqual<MenuState>({
+      showAttentionBadge: true,
+      sidebarOpen: true,
       selectedSessionCanRunControl: false,
       selectedSessionCanSendInput: false,
-      selectedSessionCanViewOutput: false,
       selectedSessionHasCleanup: false,
-      selectedSessionCanOpenWindow: false,
     })
   })
 
-  it("enables run control, composer, output, and window for a running session", () => {
+  it("enables run control and the composer for a running session", () => {
     const running = session({ id: "a1", lifecycle: "running" })
     const state = computeMenuState([running], selection("a1"))
     expect(state.selectedSessionCanRunControl).toBe(true)
     expect(state.selectedSessionCanSendInput).toBe(true)
-    expect(state.selectedSessionCanViewOutput).toBe(true)
-    expect(state.selectedSessionCanOpenWindow).toBe(true)
     // A running session has no standalone clean-up.
     expect(state.selectedSessionHasCleanup).toBe(false)
   })
@@ -81,9 +79,6 @@ describe("computeMenuState", () => {
     const state = computeMenuState([finished], selection("f1"))
     expect(state.selectedSessionCanRunControl).toBe(false)
     expect(state.selectedSessionCanSendInput).toBe(false)
-    // Selection still exists, so output and window stay available.
-    expect(state.selectedSessionCanViewOutput).toBe(true)
-    expect(state.selectedSessionCanOpenWindow).toBe(true)
   })
 
   it("offers clean-up only when it is not a worktree review", () => {
@@ -120,10 +115,27 @@ describe("useMenuStateSync", () => {
     const props: {
       sessions: ManagedSessionSummary[]
       navigation: NavDestination
-    } = { sessions, navigation: HOME }
+      showAttentionBadge: boolean
+      sidebarOpen: boolean
+    } = {
+      sessions,
+      navigation: HOME,
+      showAttentionBadge: true,
+      sidebarOpen: true,
+    }
     const hook = await renderHook(
-      (p: { sessions: ManagedSessionSummary[]; navigation: NavDestination }) =>
-        useMenuStateSync(p.sessions, p.navigation),
+      (p: {
+        sessions: ManagedSessionSummary[]
+        navigation: NavDestination
+        showAttentionBadge: boolean
+        sidebarOpen: boolean
+      }) =>
+        useMenuStateSync(
+          p.sessions,
+          p.navigation,
+          p.showAttentionBadge,
+          p.sidebarOpen,
+        ),
       props,
     )
     expect(syncMenuState).toHaveBeenCalledTimes(1)
@@ -132,16 +144,49 @@ describe("useMenuStateSync", () => {
     )
 
     // A new array with the same derived state must not re-invoke.
-    await hook.rerender({ sessions: [session({ id: "a1" })], navigation: HOME })
+    await hook.rerender({
+      sessions: [session({ id: "a1" })],
+      navigation: HOME,
+      showAttentionBadge: true,
+      sidebarOpen: true,
+    })
     expect(syncMenuState).toHaveBeenCalledTimes(1)
 
     // Selecting the session changes the derived state, so it syncs again.
-    await hook.rerender({ sessions, navigation: selection("a1") })
+    await hook.rerender({
+      sessions,
+      navigation: selection("a1"),
+      showAttentionBadge: true,
+      sidebarOpen: true,
+    })
     expect(syncMenuState).toHaveBeenCalledTimes(2)
     expect(syncMenuState).toHaveBeenLastCalledWith(
       expect.objectContaining({ selectedSessionCanRunControl: true }),
     )
 
+    await hook.unmount()
+  })
+
+  it("syncs the saved app icon count choice", async () => {
+    const hook = await renderHook(
+      (showAttentionBadge: boolean) =>
+        useMenuStateSync([], HOME, showAttentionBadge),
+      false,
+    )
+    expect(syncMenuState).toHaveBeenLastCalledWith(
+      expect.objectContaining({ showAttentionBadge: false }),
+    )
+    await hook.unmount()
+  })
+
+  it("syncs whether the View menu should say Show or Hide Sidebar", async () => {
+    const hook = await renderHook(
+      (sidebarOpen: boolean) => useMenuStateSync([], HOME, true, sidebarOpen),
+      false,
+    )
+    expect(syncMenuState).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sidebarOpen: false }),
+    )
     await hook.unmount()
   })
 })

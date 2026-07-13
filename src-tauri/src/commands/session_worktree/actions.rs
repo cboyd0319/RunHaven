@@ -5,7 +5,7 @@ use tauri::AppHandle;
 use super::approval::{WorktreeReviewAction, trusted_worktree_action_confirmed};
 use super::{
     clear_session_worktree_review, discard_owned_worktree, ensure_no_active_worktree_marker,
-    resolve_worktree_lifecycle, review_next_steps, worktree_review_payload,
+    require_current_review, resolve_worktree_lifecycle, review_next_steps,
 };
 use crate::contracts::{WorktreeActionRequest, WorktreeActionResponse, WorktreeActionResult};
 
@@ -48,19 +48,12 @@ async fn run_worktree_action(
     request: WorktreeActionRequest,
     action: WorktreeReviewAction,
 ) -> Result<WorktreeActionResponse, String> {
-    let (session, lifecycle) = authorize_worktree_action(&request, action)?;
-    if !trusted_worktree_action_confirmed(
-        app,
-        action,
-        &session,
-        &lifecycle.run_id,
-        &lifecycle.branch,
-    )
-    .await?
-    {
+    authorize_worktree_action(&request, action)?;
+    if !trusted_worktree_action_confirmed(app, action).await? {
         return Err(action.canceled_error().to_string());
     }
-    execute_worktree_action(session, lifecycle, action)
+    let (session, lifecycle, review_id) = authorize_worktree_action(&request, action)?;
+    execute_worktree_action(session, lifecycle, action, review_id.as_deref())
 }
 
 /// Everything that must hold before a native confirmation is shown: confirmed
@@ -69,13 +62,20 @@ async fn run_worktree_action(
 fn authorize_worktree_action(
     request: &WorktreeActionRequest,
     action: WorktreeReviewAction,
-) -> Result<(ManagedSessionSummaryData, WorktreeLifecycle), String> {
+) -> Result<(ManagedSessionSummaryData, WorktreeLifecycle, Option<String>), String> {
     if !request.confirm {
         return Err(action.confirm_error().to_string());
     }
     let (session, lifecycle) = resolve_worktree_lifecycle(&request.session_id)?;
     ensure_no_active_worktree_marker(&lifecycle.run_id)?;
-    Ok((session, lifecycle))
+    let review_id = if action.mutates() {
+        let review_id = request.review_id.as_deref().unwrap_or_default();
+        require_current_review(&lifecycle, review_id)?;
+        Some(review_id.to_string())
+    } else {
+        None
+    };
+    Ok((session, lifecycle, review_id))
 }
 
 /// Run the action after confirmation. Merge and discard mutate on-disk git state
@@ -85,11 +85,15 @@ fn execute_worktree_action(
     mut session: ManagedSessionSummaryData,
     lifecycle: WorktreeLifecycle,
     action: WorktreeReviewAction,
+    expected_review_id: Option<&str>,
 ) -> Result<WorktreeActionResponse, String> {
+    if let Some(review_id) = expected_review_id {
+        require_current_review(&lifecycle, review_id)?;
+    }
     let next_steps = match action {
         WorktreeReviewAction::Merge => {
             ensure_no_active_worktree_marker(&lifecycle.run_id)?;
-            runs_worktree_merge(&lifecycle.run_id).map_err(|_| merge_failed_error(&lifecycle))?;
+            runs_worktree_merge(&lifecycle.run_id).map_err(|_| merge_failed_error())?;
             Vec::new()
         }
         WorktreeReviewAction::Discard => {
@@ -98,9 +102,9 @@ fn execute_worktree_action(
             discard_owned_worktree(&lifecycle)?;
             Vec::new()
         }
-        // Recover reads the tested core payload for the safe, path-free manual
-        // next steps; it does not touch the worktree.
-        WorktreeReviewAction::Recover => review_next_steps(&worktree_review_payload(&lifecycle)?),
+        // Recovery returns fixed, path-free next steps and does not touch the
+        // protected copy.
+        WorktreeReviewAction::Recover => review_next_steps(),
         // Keep is a deliberate no-op: verify_lifecycle already proved the
         // worktree is RunHaven-owned, and keeping it leaves the branch in place.
         WorktreeReviewAction::Keep => Vec::new(),
@@ -120,13 +124,11 @@ fn execute_worktree_action(
     })
 }
 
-/// The core merge error names host paths and git recovery command lines, so it
-/// is collapsed to a fixed message that points at the safe CLI recovery flow.
-fn merge_failed_error(lifecycle: &WorktreeLifecycle) -> String {
-    format!(
-        "RunHaven could not merge this worktree automatically. Open the terminal and run `runhaven runs recover {}` to see the safe next steps.",
-        lifecycle.run_id
-    )
+/// The core merge error names host paths and recovery commands, so it is
+/// collapsed to a fixed message that points at the in-app recovery steps.
+fn merge_failed_error() -> String {
+    "RunHaven couldn’t apply these changes automatically. The protected copy is still safe. Choose Show recovery steps."
+        .to_string()
 }
 
 #[cfg(test)]
@@ -167,9 +169,10 @@ fn run_worktree_action_for_test(
     action: WorktreeReviewAction,
     approve: impl FnOnce(&ManagedSessionSummaryData, &str, &str) -> Result<bool, String>,
 ) -> Result<WorktreeActionResponse, String> {
-    let (session, lifecycle) = authorize_worktree_action(&request, action)?;
+    let (session, lifecycle, _review_id) = authorize_worktree_action(&request, action)?;
     if !approve(&session, &lifecycle.run_id, &lifecycle.branch)? {
         return Err(action.canceled_error().to_string());
     }
-    execute_worktree_action(session, lifecycle, action)
+    let (session, lifecycle, review_id) = authorize_worktree_action(&request, action)?;
+    execute_worktree_action(session, lifecycle, action, review_id.as_deref())
 }

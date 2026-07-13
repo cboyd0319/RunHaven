@@ -114,19 +114,6 @@ export type ManagedSessionRecovery = {
   repairAvailable: boolean;
 };
 
-export type OpenSessionWindowResponse = {
-  // The Rust-minted monitor window label (session-<n>, never user data).
-  windowLabel: string;
-  // True when an already-open monitor was focused instead of created.
-  focusedExisting: boolean;
-};
-
-export type SessionWindowTargetResponse = {
-  // The session this monitor window was opened for, resolved by Rust from
-  // the calling window's label. Empty only in the browser preview.
-  sessionId: string;
-};
-
 export type StopManagedSessionResponse = {
   session: ManagedSessionSummary;
   result: StopRunResponse;
@@ -247,11 +234,11 @@ export type TerminalMessage =
 // Booleans only: no session ids, paths, counts, or secrets cross this boundary.
 // Mirrors MenuState in src-tauri/src/menu/state.rs.
 export type MenuState = {
+  showAttentionBadge: boolean;
+  sidebarOpen: boolean;
   selectedSessionCanRunControl: boolean;
   selectedSessionCanSendInput: boolean;
-  selectedSessionCanViewOutput: boolean;
   selectedSessionHasCleanup: boolean;
-  selectedSessionCanOpenWindow: boolean;
 };
 
 export type LogSnapshotOptions = {
@@ -324,8 +311,6 @@ export type RunPlanResponse = {
 
 export type LaunchRunRequest = {
   plan: RunPlanRequest;
-  confirmLaunch: boolean;
-  confirmedWarnings: string[];
 };
 
 export type LaunchRunResponse = {
@@ -389,6 +374,7 @@ export type {
 } from "./why_types";
 
 export type {
+  WorktreeFileChange,
   WorktreeReviewResponse,
   WorktreeActionResult,
   WorktreeActionResponse

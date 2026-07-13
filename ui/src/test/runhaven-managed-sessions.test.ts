@@ -7,6 +7,7 @@ import {
   getManagedSessionLogSnapshot,
   getManagedSessionStatus,
   getManagedSessions,
+  cleanupManagedSession,
   killManagedSession,
   launchRun as launchRunMaybe,
   repairManagedSession,
@@ -41,8 +42,6 @@ describe("runhaven managed session helpers", () => {
     };
     const started = await launchRun({
       plan: request,
-      confirmLaunch: true,
-      confirmedWarnings: []
     });
 
     const sessions = await getManagedSessions();
@@ -55,6 +54,9 @@ describe("runhaven managed session helpers", () => {
     expect(launchStatus.state).toBe("running");
     expect(launchStatus.runId).toBe(started.runId);
     expect(session?.events.map((event) => event.source)).toEqual(["run", "auth", "network"]);
+    expect(session?.events.find((event) => event.source === "network")?.detail).toBe(
+      "Assistant services only",
+    );
     expect(JSON.stringify(session)).not.toContain("/tmp/runhaven-preview");
   });
 
@@ -78,8 +80,6 @@ describe("runhaven managed session helpers", () => {
     };
     const started = await launchRun({
       plan: request,
-      confirmLaunch: true,
-      confirmedWarnings: []
     });
     const sessions = await getManagedSessions();
     const session = sessions.sessions.find((item) => item.runId === started.runId);
@@ -99,11 +99,9 @@ describe("runhaven managed session helpers", () => {
     expect(response.session.id).toBe(session!.id);
     expect(response.snapshot.runId).toBe(started.runId);
     expect(response.snapshot.text).toContain("Preview log line");
-    expect(
-      response.snapshot.warnings.some((warning) =>
-        warning.includes("removed automatically")
-      )
-    ).toBe(true);
+    expect(response.snapshot.warnings).toContain(
+      "The assistant can show private project information. Review this text before you share it.",
+    );
     expect(JSON.stringify(response)).not.toContain("/tmp/runhaven-preview");
     expect(JSON.stringify(response)).not.toContain("write_session_input");
     expect(JSON.stringify(response)).not.toContain("resize_session");
@@ -117,8 +115,6 @@ describe("runhaven managed session helpers", () => {
     };
     const started = await launchRun({
       plan: request,
-      confirmLaunch: true,
-      confirmedWarnings: []
     });
     const sessions = await getManagedSessions();
     const session = sessions.sessions.find((item) => item.runId === started.runId);
@@ -149,8 +145,6 @@ describe("runhaven managed session helpers", () => {
     };
     const started = await launchRun({
       plan: request,
-      confirmLaunch: true,
-      confirmedWarnings: []
     });
     const sessions = await getManagedSessions();
     const session = sessions.sessions.find((item) => item.runId === started.runId);
@@ -179,8 +173,6 @@ describe("runhaven managed session helpers", () => {
         workspacePath: "/tmp/runhaven-alpha",
         sessionName: "alpha"
       },
-      confirmLaunch: true,
-      confirmedWarnings: []
     });
     const secondStarted = await launchRun({
       plan: {
@@ -188,8 +180,6 @@ describe("runhaven managed session helpers", () => {
         workspacePath: "/tmp/runhaven-beta",
         sessionName: "beta"
       },
-      confirmLaunch: true,
-      confirmedWarnings: []
     });
     const sessions = await getManagedSessions();
     const firstSession = sessions.sessions.find((item) => item.runId === firstStarted.runId);
@@ -224,12 +214,11 @@ describe("runhaven managed session helpers", () => {
   it("controls preview runs through a managed session id", async () => {
     const request = {
       ...defaultRunPlanRequest(providerAgent),
-      workspacePath: "/tmp/runhaven-preview"
+      workspacePath: "/tmp/runhaven-preview",
+      worktree: false,
     };
     const started = await launchRun({
       plan: request,
-      confirmLaunch: true,
-      confirmedWarnings: []
     });
     const sessions = await getManagedSessions();
     const session = sessions.sessions.find((item) => item.runId === started.runId);
@@ -249,6 +238,24 @@ describe("runhaven managed session helpers", () => {
 
     const repair = await repairManagedSession(session!.id);
     expect(repair.result.markerRemoved).toBe(true);
+    expect(repair.session.statusLabel).toBe("Removed from active list")
+    const inactive = await getManagedSessionStatus(session!.id)
+    expect(inactive.statusUnavailable).toBe(
+      "Live status isn’t available because this session may have ended.",
+    )
+    expect(inactive.recovery?.title).toBe("Session status unavailable")
+    expect(inactive.recovery?.detail).toBe(
+      "RunHaven can still see this session, but it can’t find the running process.",
+    )
+    expect(inactive.recovery?.remedy).toBe(
+      "Check History for saved output or remove the session from the active list.",
+    )
+    await expect(writeSessionInput(session!.id, "hello")).rejects.toThrow(
+      "This session can’t receive messages now. Check its status before you try again.",
+    )
+    await expect(cleanupManagedSession(session!.id)).rejects.toThrow(
+      "Saved changes are not available for this session.",
+    )
     expect(JSON.stringify(repair)).not.toContain("/tmp/runhaven-preview");
   });
 
@@ -260,8 +267,6 @@ describe("runhaven managed session helpers", () => {
     };
     const started = await launchRun({
       plan: request,
-      confirmLaunch: true,
-      confirmedWarnings: []
     });
     const sessions = await getManagedSessions();
     const session = sessions.sessions.find((item) => item.runId === started.runId);
@@ -270,7 +275,17 @@ describe("runhaven managed session helpers", () => {
     await expect(writeSessionInput("missing-session", "hello")).rejects.toThrow(
       "managed session not found"
     );
-    await expect(writeSessionInput(session!.id, "")).rejects.toThrow("session input is required");
+    await expect(writeSessionInput(session!.id, "")).rejects.toThrow(
+      "Enter a message before you choose Send.",
+    );
+    await expect(
+      writeSessionInput(session!.id, "a".repeat(8_193)),
+    ).rejects.toThrow(
+      "This message is too long. Shorten it to 8,192 bytes or less, then try again.",
+    );
+    await expect(writeSessionInput(session!.id, "hidden\u001b[31m")).rejects.toThrow(
+      "This message contains hidden formatting that RunHaven can’t send safely.",
+    );
 
     const response = await writeSessionInput(session!.id, "hello agent\n");
 

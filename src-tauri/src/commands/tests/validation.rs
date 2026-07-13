@@ -2,10 +2,7 @@ use super::*;
 
 use std::path::PathBuf;
 
-use crate::commands::validation::{
-    validate_launch_request_bounds, validate_plan_request_bounds, validate_text_len,
-};
-use crate::contracts::LaunchRunRequest;
+use crate::commands::validation::{validate_plan_request_bounds, validate_text_len};
 
 // The plan/launch request comes from the untrusted WebView, so these bounds are
 // the first trust gate. They must reject oversized input before any field
@@ -82,42 +79,4 @@ fn plan_bounds_cap_list_length_and_entry_length() {
     rejects_with("environment variable names", |r| {
         r.env_names = vec!["E".repeat(129)]
     });
-}
-
-#[test]
-fn launch_bounds_delegate_to_plan_and_cap_confirmed_warnings() {
-    let mut plan = valid_request();
-    plan.agent = "a".repeat(65);
-    let delegated = LaunchRunRequest {
-        plan,
-        confirm_launch: true,
-        confirmed_warnings: Vec::new(),
-    };
-    assert!(
-        validate_launch_request_bounds(&delegated)
-            .expect_err("delegated agent bound")
-            .contains("agent")
-    );
-
-    let too_many = LaunchRunRequest {
-        plan: valid_request(),
-        confirm_launch: true,
-        confirmed_warnings: vec!["w".to_string(); 17],
-    };
-    assert!(
-        validate_launch_request_bounds(&too_many)
-            .expect_err("warning count")
-            .contains("too many")
-    );
-
-    let overlong = LaunchRunRequest {
-        plan: valid_request(),
-        confirm_launch: true,
-        confirmed_warnings: vec!["w".repeat(65)],
-    };
-    assert!(
-        validate_launch_request_bounds(&overlong)
-            .expect_err("warning length")
-            .contains("confirmed warning codes")
-    );
 }

@@ -3,7 +3,6 @@ import { useEffect, useState } from "react"
 import {
   discardManagedSessionWorktree,
   getManagedSessionWorktree,
-  keepManagedSessionWorktree,
   mergeManagedSessionWorktree,
   recoverManagedSessionWorktree,
   type WorktreeActionResponse,
@@ -21,9 +20,8 @@ import {
 // can prove the mapping without driving the whole hook.
 export const worktreeActionClients: Record<
   WorktreeAction,
-  (sessionId: string) => Promise<WorktreeActionResponse>
+  (sessionId: string, reviewId: string) => Promise<WorktreeActionResponse>
 > = {
-  keep: keepManagedSessionWorktree,
   merge: mergeManagedSessionWorktree,
   recover: recoverManagedSessionWorktree,
   discard: discardManagedSessionWorktree,
@@ -71,7 +69,7 @@ export function useWorktreeReview(
   }, [sessionId])
 
   async function runAction(action: WorktreeAction) {
-    if (busy) {
+    if (busy || review === null) {
       return
     }
     setBusy(true)
@@ -79,7 +77,10 @@ export function useWorktreeReview(
     setMessage("")
     setNextSteps([])
     try {
-      const { result } = await worktreeActionClients[action](sessionId)
+      const { result } = await worktreeActionClients[action](
+        sessionId,
+        review.reviewId,
+      )
       setMessage(worktreeActionSuccessMessage(result))
       setNextSteps(result.nextSteps)
       if (worktreeActionRemovesWorktree(action)) {

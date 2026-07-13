@@ -16,8 +16,10 @@ fn launch_run_blocks_missing_bundled_image() {
     )
     .expect("image readiness error");
 
-    assert!(error.contains("Image for codex is missing"));
-    assert!(error.contains("Open New Session and install this agent"));
+    assert_eq!(
+        error,
+        "This assistant isn’t ready yet. Return to New Session and install it."
+    );
     assert!(!error.contains("runhaven image rebuild codex"));
 }
 

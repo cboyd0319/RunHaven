@@ -17,7 +17,7 @@ fn setup_recovery_capability_stays_single_command_main_only_and_isolated() {
     );
     assert_generated_permission_allows_only("perform_setup_recovery");
 
-    for other in ["main-read.json", "run-control.json", "session-monitor.json"] {
+    for other in ["main-read.json", "run-control.json"] {
         assert!(
             !capability_permissions(other)
                 .iter()

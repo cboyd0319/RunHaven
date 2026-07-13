@@ -1,3 +1,4 @@
+use runhaven_core::runtime::worktrees::WorktreeFileChange;
 use runhaven_core::ui_contracts::ManagedSessionSummaryData;
 use serde::{Deserialize, Serialize};
 
@@ -9,9 +10,10 @@ pub(crate) struct WorktreeReviewRequest {
 }
 
 /// Secret-free worktree review surfaced to the untrusted WebView. Only the
-/// RunHaven-owned branch name, change counts, and available action keys are
-/// mapped: no raw host worktree path, source repository path, mounted workspace
-/// path, git recovery command line, state volume, or token is ever included.
+/// RunHaven-owned branch name, bounded safe relative file paths, change counts,
+/// and available action keys are mapped: no raw host worktree path, source
+/// repository path, mounted workspace path, git recovery command line, state
+/// volume, or token is ever included.
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct WorktreeReviewResponse {
@@ -21,6 +23,11 @@ pub(crate) struct WorktreeReviewResponse {
     pub worktree_changes: usize,
     pub source_changes: usize,
     pub clean: bool,
+    pub file_changes: Vec<WorktreeFileChange>,
+    pub file_changes_truncated: bool,
+    pub source_file_changes: Vec<WorktreeFileChange>,
+    pub source_file_changes_truncated: bool,
+    pub review_id: String,
     pub available_actions: Vec<String>,
 }
 
@@ -31,6 +38,8 @@ pub(crate) struct WorktreeReviewResponse {
 pub(crate) struct WorktreeActionRequest {
     pub session_id: String,
     pub confirm: bool,
+    #[serde(default)]
+    pub review_id: Option<String>,
 }
 
 /// Sanitized outcome of a worktree review action. `branch` is the RunHaven-owned

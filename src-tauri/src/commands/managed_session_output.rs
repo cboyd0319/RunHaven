@@ -10,7 +10,7 @@ use crate::session_output::SessionOutputRegistry;
 
 const RAW_OUTPUT_REDACTION_MESSAGE: &str =
     "Known secrets and control characters were removed automatically. Review before sharing.";
-const PAST_OUTPUT_UNAVAILABLE: &str = "Output is no longer available for this past run.";
+const PAST_OUTPUT_UNAVAILABLE: &str = "RunHaven keeps session output only until the app closes. Output for this run is no longer available.";
 
 struct PreparedManagedSessionLogSnapshot {
     session: ManagedSessionSummaryData,
@@ -27,9 +27,10 @@ pub(crate) async fn get_managed_session_log_snapshot(
 ) -> Result<ManagedSessionLogSnapshotResponse, String> {
     let output_registry = output_registry.inner().clone();
     let prepared = prepare_managed_session_log_snapshot(request)?;
+    preflight_managed_session_log_snapshot(&prepared, Some(&output_registry))?;
     if !super::log_snapshot::trusted_sensitive_output_approved(
         app,
-        "Confirm raw output view",
+        super::log_snapshot::RAW_OUTPUT_CONFIRM_TITLE,
         trusted_session_output_message(
             &prepared.session.title,
             &prepared.session.status_label,
@@ -41,6 +42,23 @@ pub(crate) async fn get_managed_session_log_snapshot(
         return Err(super::log_snapshot::raw_output_canceled_error());
     }
     read_prepared_managed_session_log_snapshot(prepared, Some(&output_registry))
+}
+
+fn preflight_managed_session_log_snapshot(
+    prepared: &PreparedManagedSessionLogSnapshot,
+    output_registry: Option<&SessionOutputRegistry>,
+) -> Result<(), String> {
+    if super::sessions::managed_session_allows_run_control(&prepared.session.lifecycle) {
+        return Ok(());
+    }
+    let retained = match output_registry {
+        Some(registry) => registry.snapshot(&prepared.session.run_id, prepared.lines)?,
+        None => None,
+    };
+    if retained.is_none() {
+        return Err(PAST_OUTPUT_UNAVAILABLE.to_string());
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -137,6 +155,7 @@ pub(crate) fn get_managed_session_log_snapshot_with_approval_for_test(
     approve: impl FnOnce(&ManagedSessionSummaryData, u32) -> Result<bool, String>,
 ) -> Result<ManagedSessionLogSnapshotResponse, String> {
     let prepared = prepare_managed_session_log_snapshot(request)?;
+    preflight_managed_session_log_snapshot(&prepared, output_registry)?;
     if !approve(&prepared.session, prepared.lines)? {
         return Err(super::log_snapshot::raw_output_canceled_error());
     }
@@ -151,6 +170,7 @@ pub(crate) fn get_managed_session_log_snapshot_with_fallback_for_test(
     fallback: impl FnOnce(&str, u32) -> Result<LogSnapshotResponse, String>,
 ) -> Result<ManagedSessionLogSnapshotResponse, String> {
     let prepared = prepare_managed_session_log_snapshot(request)?;
+    preflight_managed_session_log_snapshot(&prepared, output_registry)?;
     if !approve(&prepared.session, prepared.lines)? {
         return Err(super::log_snapshot::raw_output_canceled_error());
     }
@@ -185,8 +205,6 @@ fn managed_session_log_snapshot_response(
     ManagedSessionLogSnapshotResponse { session, snapshot }
 }
 
-pub(crate) fn trusted_session_output_message(title: &str, status: &str, lines: u32) -> String {
-    format!(
-        "Session: {title}\nStatus: {status}\nLines: {lines}\n\nRaw output may include secrets. Show output?"
-    )
+pub(crate) fn trusted_session_output_message(_title: &str, _status: &str, lines: u32) -> String {
+    super::log_snapshot::trusted_run_output_message(lines)
 }

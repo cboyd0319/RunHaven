@@ -4,6 +4,7 @@ import {
   performSetupRecovery,
   type DashboardStatus,
   type SetupActionId,
+  type SetupRecoveryResponse,
 } from "@/commands/runhaven"
 import { CircleAlert, CheckCircle2 } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -60,7 +61,7 @@ export function DiagnosticsView({
             }
           }}
         >
-          {busy ? "Checking..." : "Check again"}
+          {busy ? "Checking…" : "Check again"}
         </Button>
       </div>
       <SystemHealth dashboard={dashboard} />
@@ -69,20 +70,103 @@ export function DiagnosticsView({
         refreshing={refreshing}
         onRefresh={onRefresh}
       />
-      <NetworkCleanupCard cleanup={cleanup} setupReady={setupReady} />
       <details className="rounded-lg border bg-card p-4">
         <summary className="cursor-pointer text-sm font-medium">
-          Advanced system information
+          Advanced system tools
         </summary>
-        <div className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
-          <p>RunHaven {dashboard?.appVersion ?? "version unavailable"}</p>
-          <p>
-            Agent image and sign-in repair appear in New Session only when the
-            selected agent needs them.
-          </p>
+        <div className="mt-4 flex flex-col gap-4">
+          <ContainerServiceCard setupReady={setupReady} onRefresh={onRefresh} />
+          <NetworkCleanupCard cleanup={cleanup} setupReady={setupReady} />
+          {dashboard ? (
+            <section className="flex flex-col gap-3 text-sm text-muted-foreground">
+              <h3 className="font-medium text-foreground">Readiness checks</h3>
+              <ul aria-label="System readiness checks" className="grid gap-2">
+                {dashboard.setup.checks.map((check) => (
+                  <li key={check.name} className="rounded-md border p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-medium text-foreground">{check.name}</span>
+                      <span>{check.ok ? "Ready" : "Needs attention"}</span>
+                    </div>
+                    {check.detail.trim().toLowerCase() !== "ready." ? (
+                      <p className="mt-1">{check.detail}</p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
       </details>
     </div>
+  )
+}
+
+function ContainerServiceCard({
+  setupReady,
+  onRefresh,
+}: {
+  setupReady: boolean
+  onRefresh: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<SetupRecoveryResponse | null>(null)
+  const [error, setError] = useState("")
+
+  async function restart() {
+    if (busy) {
+      return
+    }
+    setBusy(true)
+    setResult(null)
+    setError("")
+    try {
+      setResult(await performSetupRecovery("restart-container-system"))
+    } catch (cause) {
+      setError(errorMessage(cause))
+    } finally {
+      onRefresh()
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card aria-live="polite">
+      <CardHeader>
+        <CardTitle role="heading" aria-level={2}>Fix session internet</CardTitle>
+        <CardDescription>
+          Restart Apple container when new sessions can’t connect to the
+          internet. This ends current sessions.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col items-start gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={!setupReady || busy}
+          onClick={() => void restart()}
+        >
+          {busy ? "Restarting…" : "Restart container service"}
+        </Button>
+        {result ? (
+          <Alert role="status">
+            {result.status === "succeeded" ? <CheckCircle2 /> : null}
+            <AlertTitle>
+              {result.status === "succeeded"
+                ? "Internet service refreshed"
+                : result.label}
+            </AlertTitle>
+            <AlertDescription>{result.detail}</AlertDescription>
+          </Alert>
+        ) : null}
+        {error ? (
+          <Alert variant="destructive" role="alert">
+            <CircleAlert />
+            <AlertTitle>Could not restart the service</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -141,7 +225,7 @@ function SetupChecksCard({
         {!dashboard ? (
           <p className="text-sm text-muted-foreground">
             {refreshing
-              ? "Checking your Mac's setup..."
+              ? "Checking your Mac's setup…"
               : "RunHaven could not load setup status."}
           </p>
         ) : (
@@ -163,7 +247,7 @@ function SetupChecksCard({
                       onClick={() => void recover(check.action!.id)}
                     >
                       {busyAction === check.action.id
-                        ? "Working..."
+                        ? "Working…"
                         : check.action.label}
                     </Button>
                   ) : null}
@@ -222,7 +306,7 @@ function NetworkCleanupCard({
   return (
     <Card aria-live="polite">
       <CardHeader>
-        <CardTitle role="heading" aria-level={2}>Leftover networks</CardTitle>
+        <CardTitle role="heading" aria-level={2}>Old session networks</CardTitle>
         <CardDescription>
           RunHaven can remove networks left behind by ended sessions.
         </CardDescription>
@@ -232,12 +316,12 @@ function NetworkCleanupCard({
           {!setupReady
             ? "Finish setup before checking networks."
             : cleanup.loading
-              ? "Checking for leftover networks..."
+              ? "Checking for old session networks…"
               : count === null
                 ? "The network count is unavailable."
                 : count === 0
-                  ? "No leftover networks found."
-                  : `${count} leftover ${count === 1 ? "network" : "networks"} found.`}
+                  ? "No old session networks found."
+                  : `${count} old session ${count === 1 ? "network" : "networks"} found.`}
         </p>
         <Button
           type="button"
@@ -246,7 +330,7 @@ function NetworkCleanupCard({
           disabled={!setupReady || count === null || count === 0 || cleanup.busy}
           onClick={() => void cleanup.prune()}
         >
-          {cleanup.busy ? "Removing..." : "Remove stale networks"}
+          {cleanup.busy ? "Removing old networks…" : "Remove old networks"}
         </Button>
         {cleanup.result && cleanup.result.failed > 0 ? (
           <Alert variant="destructive" role="alert">

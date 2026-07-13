@@ -56,23 +56,21 @@ export function createSessionActions({
       if (selectedSession) {
         const sessionId = selectedSession.id
         if (action === "stop") {
-          const { result } = await stopManagedSession(sessionId)
-          runControlState.setMessage(`Stop requested for ${result.runId}.`)
+          await stopManagedSession(sessionId)
+          runControlState.setMessage("Stopping this session…")
         } else if (action === "kill") {
-          const { result } = await killManagedSession(sessionId)
-          runControlState.setMessage(`Hard stop requested for ${result.runId}.`)
+          await killManagedSession(sessionId)
+          runControlState.setMessage("Ending this session…")
         } else if (action === "repair") {
           const { result } = await repairManagedSession(sessionId)
           runControlState.setMessage(
             result.markerRemoved
-              ? `Stale session record cleared for ${result.runId}.`
-              : `Repair for ${result.runId}: ${result.status}.`,
+              ? "Removed from active list"
+              : "This session is still active",
           )
         } else {
-          const { result } = await cleanupManagedSession(sessionId)
-          runControlState.setMessage(
-            `Cleaned up ${result.target} for ${result.runId}.`,
-          )
+          await cleanupManagedSession(sessionId)
+          runControlState.setMessage("Deleted the protected copy")
         }
         await selectedSessionStatus.loadStatus()
         await loadManagedSessions()
@@ -82,17 +80,17 @@ export function createSessionActions({
           return
         }
         if (action === "stop") {
-          const result = await stopRun(runId)
-          runControlState.setMessage(`Stop requested for ${result.runId}.`)
+          await stopRun(runId)
+          runControlState.setMessage("Stopping this session…")
         } else if (action === "kill") {
-          const result = await killRun(runId)
-          runControlState.setMessage(`Hard stop requested for ${result.runId}.`)
+          await killRun(runId)
+          runControlState.setMessage("Ending this session…")
         } else if (action === "repair") {
           const result = await repairRun(runId)
           runControlState.setMessage(
             result.markerRemoved
-              ? `Stale session record cleared for ${result.runId}.`
-              : `Repair for ${result.runId}: ${result.status}.`,
+              ? "Removed from active list"
+              : "This session is still active",
           )
         } else {
           return
@@ -122,11 +120,11 @@ export function createSessionActions({
     sessionInput.setErrorFor(targetSessionId, "")
     sessionInput.setAcceptedMessageFor(targetSessionId, "")
     try {
-      const response = await writeSessionInput(targetSessionId, input)
+      await writeSessionInput(targetSessionId, input)
       sessionInput.setDraftFor(targetSessionId, "")
       sessionInput.setAcceptedMessageFor(
         targetSessionId,
-        `Sent ${response.acceptedBytes} bytes.`,
+        "Message sent.",
       )
       if (selectedSessionIdRef.current === targetSessionId) {
         await selectedSessionStatus.loadStatus()

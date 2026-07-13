@@ -43,7 +43,6 @@ pub(crate) mod run_control;
 pub(crate) mod run_status;
 pub(crate) mod session_cleanup;
 pub(crate) mod session_diagnostics;
-pub(crate) mod session_window;
 pub(crate) mod session_worktree;
 pub(crate) mod sessions;
 pub(crate) mod setup_recovery;
@@ -54,11 +53,13 @@ mod warnings;
 #[allow(unused_imports)]
 pub(crate) use launch::{
     build_agent_run_plan, build_launch_response, build_plan_response,
-    build_worktree_run_plan_with_failure_for_test, image_readiness_error,
-    launch_prepared_with_approval_for_test, launch_run_with_registries,
-    launch_run_with_registries_status_and_approval, trusted_launch_message_for_test,
-    validate_launch_confirmation,
+    build_worktree_run_plan_with_failure_for_test, finalize_launch_with_approval_for_test,
+    image_readiness_error, launch_prepared_with_approval_for_test, launch_run_with_registries,
+    launch_run_with_registries_status_and_approval, sanitize_worktree_creation_error_for_test,
+    trusted_launch_message_for_test, trusted_launch_title_for_test,
 };
+#[cfg(test)]
+pub(crate) use setup_recovery::restart_system_confirmation_message_for_test;
 
 #[tauri::command]
 pub(crate) fn get_dashboard_status() -> DashboardStatus {
@@ -76,11 +77,58 @@ fn collect_setup_status() -> SetupStatus {
 }
 
 fn desktop_setup_checks(checks: Vec<runhaven_core::doctor::Check>) -> Vec<CheckStatus> {
-    checks
-        .into_iter()
-        .filter(|check| check.name != "rust")
-        .map(check_status)
-        .collect()
+    let mut visible = Vec::new();
+    let mut files_index = None;
+    let mut files_ready = true;
+    let mut mac_index = None;
+    let mut operating_system_ready = None;
+    let mut macos_version_ready = None;
+    for check in checks.into_iter().filter(|check| check.name != "rust") {
+        match check.name.as_str() {
+            "operating system" => {
+                mac_index.get_or_insert(visible.len());
+                operating_system_ready = Some(check.ok);
+            }
+            "macOS" => {
+                mac_index.get_or_insert(visible.len());
+                macos_version_ready = Some(check.ok);
+            }
+            name if is_container_file_check(name) => {
+                files_index.get_or_insert(visible.len());
+                files_ready &= check.ok;
+            }
+            _ => visible.push(check_status(check)),
+        }
+    }
+    if let Some(index) = mac_index {
+        visible.insert(
+            index,
+            macos_version_status(operating_system_ready, macos_version_ready),
+        );
+    }
+    if let Some(index) = files_index {
+        visible.insert(index, container_files_status(files_ready));
+    }
+    visible
+}
+
+fn macos_version_status(
+    operating_system_ready: Option<bool>,
+    macos_version_ready: Option<bool>,
+) -> CheckStatus {
+    let ok = operating_system_ready.unwrap_or(false) && macos_version_ready.unwrap_or(false);
+    let (detail, remedy) = if operating_system_ready == Some(false) {
+        desktop_check_copy("operating system", false)
+    } else {
+        desktop_check_copy("macOS", ok)
+    };
+    CheckStatus {
+        name: "macOS version".to_string(),
+        ok,
+        detail,
+        remedy,
+        action: None,
+    }
 }
 
 fn check_status(check: runhaven_core::doctor::Check) -> CheckStatus {
@@ -103,16 +151,56 @@ fn check_status(check: runhaven_core::doctor::Check) -> CheckStatus {
             id: SetupActionId::StartContainerSystem,
             label: "Start container service".to_string(),
         })
+    } else if is_container_file_check(&check.name) {
+        Some(reinstall_container_action())
     } else {
         None
     };
     let (detail, remedy) = desktop_check_copy(&check.name, check.ok);
     CheckStatus {
-        name: check.name,
+        name: desktop_check_name(&check.name).to_string(),
         ok: check.ok,
         detail,
         remedy,
         action,
+    }
+}
+
+fn is_container_file_check(name: &str) -> bool {
+    matches!(
+        name,
+        "Apple container runtime commit"
+            | "Apple container builder image"
+            | "Apple container vminit image"
+            | "Apple container kernel"
+    )
+}
+
+fn reinstall_container_action() -> SetupAction {
+    SetupAction {
+        id: SetupActionId::OpenAppleContainerInstaller,
+        label: "Reinstall Apple container".to_string(),
+    }
+}
+
+fn container_files_status(ok: bool) -> CheckStatus {
+    let (detail, remedy) = desktop_check_copy("Apple container files", ok);
+    CheckStatus {
+        name: "Apple container files".to_string(),
+        ok,
+        detail,
+        remedy,
+        action: (!ok).then(reinstall_container_action),
+    }
+}
+
+fn desktop_check_name(name: &str) -> &str {
+    match name {
+        "Apple container CLI" => "Apple container",
+        "container system" => "Container service",
+        "architecture" => "Mac processor",
+        name if is_container_file_check(name) => "Apple container files",
+        name => name,
     }
 }
 
@@ -148,11 +236,12 @@ fn desktop_check_copy(name: &str, ok: bool) -> (String, String) {
             "Apple container's local service is not running.",
             "Start the service, then check again.",
         ),
-        "Apple container runtime commit"
+        "Apple container files"
+        | "Apple container runtime commit"
         | "Apple container builder image"
         | "Apple container vminit image"
         | "Apple container kernel" => (
-            "Apple container's runtime files do not match the supported version.",
+            "Apple container's files do not match the supported version.",
             "Reinstall the supported Apple container version, then check again.",
         ),
         _ => (
@@ -228,7 +317,8 @@ fn collect_dashboard_status() -> DashboardStatus {
 fn desktop_app_version() -> String {
     let version = env!("CARGO_PKG_VERSION");
     if cfg!(debug_assertions) {
-        format!("{version} Debug")
+        let build = option_env!("RUNHAVEN_BUILD_ID").unwrap_or("local");
+        format!("{version} Debug {build}")
     } else {
         version.to_string()
     }

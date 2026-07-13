@@ -179,7 +179,7 @@ impl ManagedSessionSummaryData {
             detail_command: format!("runhaven runs show {run_id}"),
             input: ManagedSessionInputData::detached(),
             cleanup,
-            next_action: managed_session_next_action(&agent, &auth_status, &lifecycle),
+            next_action: managed_session_next_action(&record, &agent, &auth_status, &lifecycle),
             events: managed_session_events(&status_label, &auth_status, &network, &started_at),
             lifecycle,
         }

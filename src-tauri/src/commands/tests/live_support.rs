@@ -194,8 +194,6 @@ pub(super) fn wait_for_live_input_acceptance(
             WriteSessionInputRequest {
                 session_id: session_id.to_string(),
                 input: input.to_string(),
-                confirm_send: true,
-                client_target: format!("session:{session_id}"),
             },
             registry,
         ) {

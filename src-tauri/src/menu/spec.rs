@@ -6,7 +6,7 @@
 
 /// One custom menu item: a stable id the frontend maps, a plain label, an
 /// optional accelerator in muda syntax (`Mod+Mod+Key`), and the enabled state
-/// the menu is *built* with. Contextual Run items start off until
+/// the menu is *built* with. Contextual Session items start off until
 /// `sync_menu_state` (see `state.rs`) enables them once they apply.
 pub(super) struct CommandSpec {
     pub(super) id: &'static str,
@@ -18,8 +18,28 @@ pub(super) struct CommandSpec {
 /// Declarative menu entry.
 pub(super) enum Entry {
     Command(CommandSpec),
+    Check(CommandSpec, bool),
     Separator,
     Predefined(Predef),
+}
+
+/// A standard checked command. The initial value matches RunHaven's default;
+/// `sync_menu_state` replaces it with the persisted preference after startup.
+const fn checked_command(
+    id: &'static str,
+    label: &'static str,
+    accelerator: Option<&'static str>,
+    checked: bool,
+) -> Entry {
+    Entry::Check(
+        CommandSpec {
+            id,
+            label,
+            accelerator,
+            enabled: true,
+        },
+        checked,
+    )
 }
 
 /// The predefined (system-behavior) items this menu uses.
@@ -75,10 +95,6 @@ const fn initially_disabled(
 const APP_MENU: &[Entry] = &[
     Entry::Predefined(Predef::About),
     Entry::Separator,
-    // Two settings do not earn a separate window. This command expands the
-    // inline Settings section in the main window's sidebar.
-    command("settings", "Settings...", Some("Cmd+,")),
-    Entry::Separator,
     Entry::Predefined(Predef::Services),
     Entry::Separator,
     Entry::Predefined(Predef::Hide),
@@ -91,7 +107,7 @@ const APP_MENU: &[Entry] = &[
 // Open Recent needs a Rust-side recent-projects store and ships as its own
 // follow-up sub-slice.
 const FILE_MENU: &[Entry] = &[
-    command("new-run", "New Session...", Some("Cmd+N")),
+    command("new-run", "New Session…", Some("Cmd+N")),
     Entry::Separator,
     Entry::Predefined(Predef::CloseWindow),
 ];
@@ -107,12 +123,9 @@ const EDIT_MENU: &[Entry] = &[
 ];
 
 const VIEW_MENU: &[Entry] = &[
-    // Static menus cannot retitle on state, so the toggle names both actions.
-    command(
-        "toggle-sidebar",
-        "Show or Hide Sidebar",
-        Some("Option+Cmd+S"),
-    ),
+    command("toggle-sidebar", "Hide Sidebar", Some("Ctrl+Cmd+S")),
+    Entry::Separator,
+    checked_command("show-attention-badge", "Show Count on App Icon", None, true),
     Entry::Separator,
     Entry::Predefined(Predef::Fullscreen),
 ];
@@ -120,22 +133,16 @@ const VIEW_MENU: &[Entry] = &[
 // Acts on the selected session. Every item starts disabled and is enabled by
 // `sync_menu_state` only while it applies (a session is selected and in the
 // right state), so an inapplicable action grays out instead of silently doing
-// nothing. Worktree review actions (Merge, Keep, Recover, Discard) stay off
-// the menu until their slice lands; the review card in the session view is the
-// affordance for worktree actions today. Open in New Window opens a read-only
-// monitor window through the validated `open_session_window` command (benign,
-// no mutation, so no confirm step); it is the one menu id whose frontend
-// handler invokes a command instead of focusing a control.
+// nothing. Worktree review stays in the session view, where the changed files
+// and consequences are visible. Destructive commands use an ellipsis because
+// each opens a native confirmation before acting.
 const SESSION_MENU: &[Entry] = &[
-    initially_disabled("send-message", "Send Message...", None),
-    initially_disabled("show-output", "Show Latest Output", Some("Shift+Cmd+O")),
+    initially_disabled("send-message", "Send Message…", None),
     Entry::Separator,
-    initially_disabled("stop-session", "Stop", Some("Cmd+.")),
-    initially_disabled("hard-stop-session", "Hard Stop", Some("Option+Cmd+.")),
+    initially_disabled("stop-session", "Stop…", Some("Cmd+.")),
+    initially_disabled("hard-stop-session", "Force Stop…", Some("Option+Cmd+.")),
     Entry::Separator,
-    initially_disabled("cleanup-session", "Clean Up Run...", None),
-    Entry::Separator,
-    initially_disabled("open-session-window", "Open in New Window", None),
+    initially_disabled("cleanup-session", "Delete Protected Copy…", None),
 ];
 
 const WINDOW_MENU: &[Entry] = &[
@@ -145,10 +152,6 @@ const WINDOW_MENU: &[Entry] = &[
     Entry::Predefined(Predef::BringAllToFront),
 ];
 
-// Keep the standard macOS Help menu shell so the system owns Help search. Do
-// not advertise application Help commands until real Help content exists.
-const HELP_MENU: &[Entry] = &[];
-
 /// The whole menu bar, in macOS-standard order. On macOS the first submenu
 /// becomes the application menu.
 pub(super) const MENU_BAR: &[(&str, &[Entry])] = &[
@@ -156,15 +159,14 @@ pub(super) const MENU_BAR: &[(&str, &[Entry])] = &[
     ("File", FILE_MENU),
     ("Edit", EDIT_MENU),
     ("View", VIEW_MENU),
-    ("Run", SESSION_MENU),
+    ("Session", SESSION_MENU),
     ("Window", WINDOW_MENU),
-    ("Help", HELP_MENU),
 ];
 
 fn collect_command_ids(entries: &'static [Entry], ids: &mut Vec<&'static str>) {
     for entry in entries {
         match entry {
-            Entry::Command(spec) => ids.push(spec.id),
+            Entry::Command(spec) | Entry::Check(spec, _) => ids.push(spec.id),
             Entry::Separator | Entry::Predefined(_) => {}
         }
     }
@@ -176,19 +178,6 @@ pub(super) fn command_ids() -> Vec<&'static str> {
     for (_, entries) in MENU_BAR {
         collect_command_ids(entries, &mut ids);
     }
-    ids
-}
-
-/// Ids that act on the main window's selected session: exactly the custom
-/// commands of the Run menu, derived from the same table the builder
-/// walks so this list cannot drift from the built menu. The dispatcher in
-/// `mod.rs` drops these when a monitor window is focused, because the
-/// selection they act on is not the session that window shows. Every other
-/// id is global (Settings, New Session, or the sidebar toggle) and unambiguous
-/// from any window.
-pub(super) fn session_scoped_ids() -> Vec<&'static str> {
-    let mut ids = Vec::new();
-    collect_command_ids(SESSION_MENU, &mut ids);
     ids
 }
 
