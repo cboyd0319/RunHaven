@@ -19,7 +19,7 @@ function plan(patch: Partial<RunPlanResponse> = {}): RunPlanResponse {
     networkMode: "provider",
     networkName: "runhaven-provider-preview",
     egressSummary: "Only reviewed provider hosts are reachable.",
-    image: "runhaven/codex:0.1.0",
+    image: "runhaven/codex:0.7.0",
     providerAllowedHosts: ["api.openai.com"],
     access: {
       status: "ready",
@@ -38,13 +38,11 @@ function plan(patch: Partial<RunPlanResponse> = {}): RunPlanResponse {
 }
 
 const ready = {
-  launchConfirmation: true,
   confirmedWarnings: [] as string[],
   launchReady: true,
   launching: false,
   setupOk: true,
   launchImageReady: true,
-  onLaunchConfirmationChange: () => {},
   onConfirmWarning: () => {},
   onBack: () => {},
   onStart: async () => {}
@@ -59,7 +57,9 @@ describe("PlanReviewCard", () => {
     expect(html).toContain("Access looks good");
     expect(html).toContain("This run uses the secure default access.");
     expect(html).toContain("Only reviewed provider hosts are reachable.");
-    expect(html).toContain("Launch run");
+    expect(html).toContain("Start run");
+    expect(html).not.toContain("I reviewed this plan");
+    expect(html).toContain("RunHaven will ask for final confirmation in a Mac dialog.");
     expect(html).not.toContain("Fix access before launching a run.");
     expect(html).not.toContain("Warnings need confirmation");
     // State volume and container name travel in the plan but never render.
@@ -114,7 +114,7 @@ describe("PlanReviewCard", () => {
 
   it("shows the isolated-copy note only when the plan uses a worktree", () => {
     const without = renderToStaticMarkup(<PlanReviewCard plan={plan()} {...ready} />);
-    expect(without).not.toContain("Isolated copy (git worktree)");
+    expect(without).not.toContain("Recommended protection: isolated copy");
 
     const withWorktree = renderToStaticMarkup(
       <PlanReviewCard
@@ -125,7 +125,7 @@ describe("PlanReviewCard", () => {
         {...ready}
       />,
     );
-    expect(withWorktree).toContain("Isolated copy (git worktree)");
+    expect(withWorktree).toContain("Recommended protection: isolated copy");
     expect(withWorktree).toContain(
       "RunHaven will make a separate copy on a new git branch.",
     );
@@ -163,7 +163,7 @@ describe("PlanReviewCard", () => {
       <PlanReviewCard plan={plan()} {...ready} launching={true} />
     );
 
-    expect(html).toContain("Launching...");
-    expect(html).not.toContain(">Launch run<");
+    expect(html).toContain("Starting...");
+    expect(html).not.toContain(">Start run<");
   });
 });

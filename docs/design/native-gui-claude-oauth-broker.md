@@ -1,6 +1,12 @@
 # Native GUI Claude OAuth-Token Broker (Design C)
 
-Status: Slice 1 (custody surface, Section 2 capture folded in), Slice 3
+Status: Withdrawn on 2026-07-12. RunHaven no longer implements this design.
+Ordinary Claude authentication now runs `claude auth login` inside Claude's
+isolated container, consistently with Codex, Antigravity, and Copilot. This file
+is retained only as historical design context and must not be used as current
+product documentation. See `docs/AUTH_BROKER.md` for current behavior.
+
+Historical implementation status: Slice 1 (custody surface, Section 2 capture folded in), Slice 3
 (broker proxy extension: `CLAUDE_OAUTH_BROKER` profile, `ClaudeAuthSource`
 selector, Keychain secret-source seam, F5 decision), Slice 4 (the three Tauri
 commands plus the isolated `claude-oauth` capability), and Slice 5 (GUI: path C
@@ -150,9 +156,10 @@ the claim set already states; the dev build stores a usable, presence-free token
 
 Token rotation and bounded lifetime (Hardening 4): [J] `claude setup-token` mints
 a static one-year token with no refresh (Gate 0 fact), so RunHaven owns aging it.
-Store a NON-SECRET created-at timestamp in the item's own non-secret attributes
-(e.g. `kSecAttrCreationDate` or a RunHaven label) or a small non-secret record;
-never a secret-derived value, and never in the run marker (F1). A configurable
+Use the item's NON-SECRET `kSecAttrModificationDate` so an in-place replacement
+resets the age; fall back to `kSecAttrCreationDate` only when modification date
+is absent. Never use a secret-derived value or persist age in the run marker
+(F1). A configurable
 re-auth cadence (default 90 days: short enough to bound a leaked token, long
 enough not to nag) lets RunHaven show token age and, once past the cadence, prompt
 a fresh setup-token instead of using the stale one. It is a setting, not a forced
@@ -445,20 +452,19 @@ GUI default flips to path C.
 - Slice 1 status: IMPLEMENTED. `crates/runhaven-core/src/provider/claude_oauth_keychain.rs`
   holds store/read/clear plus the host `claude setup-token` capture (the task
   folded Section 2's capture into Slice 1). `security-framework` is pinned
-  `=3.5.1` (NOT the latest 3.7.0: the vendored `codex-network-proxy` pins
-  `security-framework = "=3.5.1"` exactly, and 3.x is one semver line, so a
-  3.7.0 pin forces a conflicting second copy the resolver rejects; 3.5.1 already
-  exposes the full access-control API). `zeroize = "=1.9.0"`. Both are in
-  `pins.toml` and the lockfile. The backend is chosen by build profile
-  (`select_backend`): release uses the data-protection keychain, an unsigned dev
-  build the legacy file keychain; the user-presence `SecAccessControl` binds in
-  both. Hermetic tests cover the exact service+account query (claim 2), the
+  `=3.7.0`, the current stable version verified on 2026-07-10 after the dormant
+  Codex TUI graph was removed from the active workspace. `zeroize = "=1.9.0"`.
+  Both are in `pins.toml` and the lockfile. The backend is chosen by an explicit
+  build contract: only the validated signed distribution process enables the
+  data-protection keychain; ordinary debug and release builds use the legacy
+  file keychain without a user-presence access control. Hermetic tests cover the
+  exact service+account query (claim 2), the
   user-presence-only flag, `parse_token` good/blank/garbage with a buffer-free
   failure message, and a no-persist source tripwire; a `#[ignore]` live
   round-trip on a test service passed against the real Keychain with no prompt.
-  MAINTAINER LIVE SMOKES still open: F3 (dev-build vs signed-release ACL and
-  data-protection behavior, and whether user presence binds on the legacy
-  keychain), F4 (`claude setup-token` prints the token to a pipe like a TTY on
+  MAINTAINER LIVE SMOKES still open: F3 (the signed distribution's
+  data-protection access control and user-presence prompt), F4 (`claude
+  setup-token` prints the token to a pipe like a TTY on
   macOS 26+ with the pinned CLI), and the real biometric prompt on a
   user-presence read. The custom prompt text (`kSecUseOperationPrompt`) is NOT
   set: the high-level `security-framework` `PasswordOptions` API does not expose
@@ -471,11 +477,13 @@ GUI default flips to path C.
   user-presence `SecAccessControl`
   (`create_with_protection(Some(AccessibleWhenUnlockedThisDeviceOnly), user-presence flag)`);
   store/read/clear where read exercises the LocalAuthentication path, plus the
-  `Zeroizing` wrapper so Slices 2 and 3 reuse it. Run the F3 dev-build probe on an
-  unsigned and a signed binary (silent, prompts per rebuild, or access-group
-  fallback) and decide the dev-build fallback here, not at Gate 2. Test: the exact
-  service + account query filter, never `kSecMatchLimitAll` (claim 2), and that the
-  item carries the user-presence access control. No GUI or proxy wiring yet.
+  `Zeroizing` wrapper so Slices 2 and 3 reuse it. F3 result: the legacy keychain
+  rejects the access control, so unsigned builds use a compatible item without
+  the per-read gate and disclose that behavior. Only the validated release
+  wrapper enables the data-protection backend after checking the signing profile
+  and entitlements. Tests pin the exact service + account query filter, never
+  `kSecMatchLimitAll` (claim 2), and the backend-specific access control. No GUI
+  or proxy wiring was part of this original slice.
 - Slice 2: host `claude setup-token` capture with the Section 2 transience,
   zeroization guard, and fail-closed paths. Prerequisite: F4 verification on
   macOS 26 that setup-token prints to a pipe like a TTY; if TTY-only, capture under
@@ -551,10 +559,12 @@ GUI default flips to path C.
   unchanged T3 terminal login. The three approved tooltip strings ship verbatim
   (exported constants, asserted character-for-character). Rotation (Hardening 4):
   `get_claude_oauth_status` now returns a non-secret `ageDays` from the item's own
-  `kSecAttrCreationDate`, read through the SAME attributes-only presence query
-  (no `kSecReturnData`, no prompt, no token read; parsed with the already-present
-  `time` crate); past the Settings cadence (default 90 days, fixed choices) the
-  card surfaces a "sign in again" prompt (a reminder, not a forced expiry). Date
+  `kSecAttrModificationDate`, with `kSecAttrCreationDate` used only when
+  modification date is absent. Both are read through the SAME attributes-only
+  presence query (no `kSecReturnData`, no prompt, no token read; parsed with the
+  already-present `time` crate); past the Settings cadence (default 90 days,
+  fixed choices) the card surfaces a "sign in again" prompt (a reminder, not a
+  forced expiry). Date
   parsing was split into `provider/claude_oauth_age.rs` to keep the keychain file
   under the structure ceiling. Docs shipped in the same slice: `AUTH_BROKER.md`
   (path C mechanism + the verbatim "does and does not do" claim set + removal +
@@ -564,8 +574,9 @@ GUI default flips to path C.
   the browser preview never invokes Tauri). Original plan below.
 - Slice 5 (original plan): GUI control, tooltips, and docs (Section 5), path C
   default, path A opt-in. Fold in the token-rotation cadence setting (Section 1,
-  Hardening 4): show token age from the non-secret created-at timestamp and prompt
-  a fresh setup-token once past the cadence. Ship docs in the same slice.
+  Hardening 4): show token age from the current value's non-secret modification
+  timestamp and prompt a fresh setup-token once past the cadence. Ship docs in
+  the same slice.
 - Gate 2 (pre-merge): full verification per `AGENTS.md`, plus a live Keychain
   round-trip and a real setup-token sign-in on macOS 26+, and a final read of the
   approved claim set against the shipped strings.

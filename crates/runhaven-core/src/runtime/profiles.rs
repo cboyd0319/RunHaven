@@ -26,15 +26,17 @@ pub fn profiles() -> Vec<AgentProfile> {
         .collect()
 }
 
+/// Product agents shown in the desktop app. The generic `shell` profile remains
+/// a CLI/custom-image utility and is not presented as a fifth agent platform.
+pub fn agent_profiles() -> Vec<AgentProfile> {
+    profiles()
+        .into_iter()
+        .filter(|profile| profile.name != "shell")
+        .collect()
+}
+
 pub fn profile_names() -> &'static [&'static str] {
-    &[
-        "antigravity",
-        "claude",
-        "codex",
-        "copilot",
-        "gemini",
-        "shell",
-    ]
+    &["antigravity", "claude", "codex", "copilot", "shell"]
 }
 
 pub fn get_profile(name: &str) -> Result<AgentProfile> {
@@ -42,7 +44,7 @@ pub fn get_profile(name: &str) -> Result<AgentProfile> {
         "claude" => AgentProfile {
             name: "claude",
             description: "Claude Code with state isolated under /home/agent/.claude.",
-            image: "runhaven/claude:0.1.0",
+            image: "runhaven/claude:0.7.0",
             command: &["claude"],
             // Disable Claude Code's non-essential traffic (DataDog telemetry,
             // error reporting, auto-update checks) so the sandboxed agent never
@@ -59,7 +61,7 @@ pub fn get_profile(name: &str) -> Result<AgentProfile> {
         "codex" => AgentProfile {
             name: "codex",
             description: "OpenAI Codex CLI with workspace-write sandboxing inside the container.",
-            image: "runhaven/codex:0.1.0",
+            image: "runhaven/codex:0.7.0",
             command: &[
                 "codex",
                 "--sandbox",
@@ -67,23 +69,14 @@ pub fn get_profile(name: &str) -> Result<AgentProfile> {
                 "--ask-for-approval",
                 "on-request",
             ],
-            home_env: &[("CODEX_HOME", "/home/agent/.codex")],
+            home_env: &[],
             image_context: Some("codex"),
             provider_hosts: bundled_provider_hosts("codex"),
         },
-        "gemini" => AgentProfile {
-            name: "gemini",
-            description: "Gemini CLI with project-scoped home state.",
-            image: "runhaven/gemini:0.1.0",
-            command: &["gemini"],
-            home_env: &[],
-            image_context: Some("gemini"),
-            provider_hosts: bundled_provider_hosts("gemini"),
-        },
         "antigravity" => AgentProfile {
             name: "antigravity",
-            description: "Google Antigravity CLI with project-scoped home state.",
-            image: "runhaven/antigravity:0.1.0",
+            description: "Google Antigravity CLI with isolated home state.",
+            image: "runhaven/antigravity:0.7.0",
             command: &["agy"],
             home_env: &[],
             image_context: Some("antigravity"),
@@ -91,8 +84,8 @@ pub fn get_profile(name: &str) -> Result<AgentProfile> {
         },
         "copilot" => AgentProfile {
             name: "copilot",
-            description: "GitHub Copilot CLI with COPILOT_HOME isolated per project.",
-            image: "runhaven/copilot:0.1.0",
+            description: "GitHub Copilot CLI with isolated COPILOT_HOME state.",
+            image: "runhaven/copilot:0.7.0",
             command: &["copilot"],
             home_env: &[("COPILOT_HOME", "/home/agent/.copilot")],
             image_context: Some("copilot"),
@@ -101,7 +94,7 @@ pub fn get_profile(name: &str) -> Result<AgentProfile> {
         "shell" => AgentProfile {
             name: "shell",
             description: "Generic shell profile for custom agent images.",
-            image: "runhaven/base:0.1.0",
+            image: "runhaven/base:0.7.0",
             command: &["/bin/bash"],
             home_env: &[],
             image_context: Some("base"),
@@ -113,4 +106,34 @@ pub fn get_profile(name: &str) -> Result<AgentProfile> {
         }
     };
     Ok(profile)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{agent_profiles, get_profile};
+
+    #[test]
+    fn bundled_agent_platforms_match_the_supported_product_set() {
+        let platform_names = agent_profiles()
+            .iter()
+            .map(|profile| profile.name)
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            platform_names,
+            ["antigravity", "claude", "codex", "copilot"]
+        );
+        assert!(get_profile("gemini").is_err());
+    }
+
+    #[test]
+    fn codex_uses_its_home_default_without_a_fresh_state_warning() {
+        let profile = get_profile("codex").expect("codex profile");
+        assert!(
+            profile
+                .home_env
+                .iter()
+                .all(|(name, _)| *name != "CODEX_HOME")
+        );
+    }
 }

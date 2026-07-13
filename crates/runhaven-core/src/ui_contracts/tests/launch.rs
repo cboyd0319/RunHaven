@@ -1,4 +1,5 @@
 use super::*;
+use crate::runtime::profiles::agent_profiles;
 
 #[test]
 fn launch_plan_contract_maps_safe_plan_fields() {
@@ -50,17 +51,7 @@ fn launch_plan_contract_round_trips_json() {
 
 #[test]
 fn agent_catalog_contract_maps_profiles() {
-    let data = AgentCatalogData::from_profiles(profiles());
-
-    let shell = data
-        .agents
-        .iter()
-        .find(|agent| agent.name == "shell")
-        .expect("shell agent");
-    assert_eq!(shell.sign_in, "n/a");
-    assert_eq!(shell.broker, "n/a");
-    assert_eq!(shell.default_network, "internet");
-    assert_eq!(shell.provider_host_count, 0);
+    let data = AgentCatalogData::from_profiles(agent_profiles());
 
     let codex = data
         .agents
@@ -89,10 +80,17 @@ fn component_payload_fixtures_decode() {
     let catalog = include_str!("../../../tests/fixtures/ui/agent-catalog.json");
     let launch_plan = include_str!("../../../tests/fixtures/ui/launch-plan-provider.json");
 
-    assert!(matches!(
-        serde_json::from_str::<RunHavenComponentPayload>(catalog).expect("agent catalog"),
-        RunHavenComponentPayload::AgentCatalog(_)
-    ));
+    let RunHavenComponentPayload::AgentCatalog(catalog) =
+        serde_json::from_str::<RunHavenComponentPayload>(catalog).expect("agent catalog")
+    else {
+        panic!("expected agent catalog fixture");
+    };
+    let names = catalog
+        .agents
+        .iter()
+        .map(|agent| agent.name.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(names, ["antigravity", "claude", "codex", "copilot"]);
     assert!(matches!(
         serde_json::from_str::<RunHavenComponentPayload>(launch_plan).expect("launch plan"),
         RunHavenComponentPayload::LaunchPlan(_)

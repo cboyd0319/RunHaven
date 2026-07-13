@@ -1,13 +1,12 @@
 # Architecture
 
-`runhaven` is a Rust CLI around Apple `container`, with a first-class terminal
-UI in active development and an alpha Tauri/Svelte desktop scaffold. It does
+`runhaven` is a Rust CLI around Apple `container`, with an alpha Tauri/React
+desktop app. It does
 not try to replace the agent CLIs. Its job is to make the safe container
 boundary easy to choose and hard to accidentally widen.
 
-The TUI opens for a bare `runhaven` on an interactive terminal and reuses the
-same planner, profiles, records, diagnostics, run-control, and provider policy
-as the CLI. Piped, redirected, or explicit-subcommand use stays on the CLI.
+The former TUI and Codex source are archived outside the release workspace.
+They are not linked into RunHaven binaries. A bare `runhaven` prints CLI help.
 
 The Tauri scaffold lives under `src-tauri/` and `ui/`. The Tauri crate is a
 workspace member, depends on `runhaven-core`, and exposes typed commands for setup, dashboard,
@@ -19,9 +18,8 @@ maintenance actions remain CLI-first until each gets a typed command, explicit
 confirmation, focused tests, and a narrow capability.
 
 Release architecture is staged. `v0.5.0` is the CLI-complete pre-release and
-keeps the CLI as the stable backend and automation surface. The TUI is now being
-built as a reusable reference implementation over that backend. The desktop app
-still needs a later first-class release path backed by the same Rust planner,
+keeps the CLI as the stable backend and automation surface. The desktop app
+uses the same Rust planner,
 validators, records, provider policy, auth metadata, and cleanup rules.
 
 ## Source Organization
@@ -30,16 +28,16 @@ Rust source is split by ownership boundary across workspace crates:
 
 | Crate or directory | Owns |
 | --- | --- |
-| `crates/runhaven/` | Binary entrypoints: `runhaven`, `runhaven-check-pins`, and the bare-interactive TUI routing decision. It does not contain shared library truth. |
+| `crates/runhaven/` | Binary entrypoints: `runhaven` and `runhaven-check-pins`. It does not contain shared library truth. |
 | `crates/runhaven-core/` | Runtime, provider egress, auth broker metadata, records, image handling, doctor checks, diagnostics, support helpers, pin-policy logic, and shared UI contracts. |
 | `crates/runhaven-cli/` | Clap schema, command dispatch, CLI text rendering, setup guide, and human presentation. It depends on core data instead of owning runtime, policy, or persistence truth. |
-| `crates/runhaven-tui/` | Codex-vendored terminal UI source plus RunHaven TUI adapters. It consumes core UI contracts and runtime data. |
+| `crates/runhaven-tui/`, `crates/codex/` | Archived terminal source outside the active workspace and release graph. |
 | `src-tauri/` | Desktop Rust shell. It depends on `runhaven-core` and exposes narrow typed commands to the untrusted WebView. |
-| `ui/` | Svelte frontend for the alpha desktop shell. |
+| `ui/` | React frontend for the desktop shell. |
 
 The `runhaven` package is binary-only. Do not reintroduce a root compatibility
 facade; shared behavior belongs in `runhaven-core`, and presentation belongs in
-the CLI, TUI, or Tauri layer that renders it.
+the CLI or Tauri layer that renders it.
 
 ## Runtime Pattern
 
@@ -94,7 +92,6 @@ Bundled profiles:
 
 - `claude`
 - `codex`
-- `gemini`
 - `antigravity`
 - `copilot`
 - `shell`
@@ -155,12 +152,13 @@ pattern with allowed proxied HTTPS plus denied proxied host, proxied IP
 literal, direct DNS, and direct IP paths. Internet mode remains unrestricted
 egress.
 
-Managed-network cleanup is explicit. `runhaven network list` reads
-`container network list --quiet` and shows only RunHaven-owned network names.
-`runhaven network prune --yes` deletes only those managed names: the
-volume-preparation network, per-project internal networks, and per-run provider
-networks. It does not delete the Apple default network, Apple-managed runtime
-networks, arbitrary user networks, images, volumes, or workspace files.
+RunHaven removes each dedicated internal or provider run network when that run
+ends, including runner-error paths. `runhaven network list` reads `container
+network list --quiet` and shows only RunHaven-owned names that remain after an
+interruption, an older release, or volume preparation. `runhaven network prune
+--yes` deletes only those managed names. It does not delete the Apple default
+network, Apple-managed runtime networks, arbitrary user networks, images,
+volumes, or workspace files.
 
 Image diagnostics are read-only. `runhaven image doctor [AGENT]` reads
 `container image list --format json`, extracts image names from
@@ -177,8 +175,12 @@ delete resources, mount workspaces, or reset state.
 ## Run Records
 
 Actual `runhaven run` executions append one JSON object to `runs.jsonl` under
-the RunHaven cache root. While a run is active, RunHaven also writes a
-temporary secret-free marker under `active-runs/` with run id, profile,
+the RunHaven cache root. Every RunHaven-owned JSONL writer serializes its batch,
+takes an operating-system file lock, and appends through one shared helper, so
+CLI and desktop writers cannot interleave records. Readers skip malformed
+nonempty records, warn without logging their content, and continue recovering
+valid records. While a run is active, RunHaven also writes a temporary
+secret-free marker under `active-runs/` with run id, profile,
 workspace, network mode, session, state volume, host pid, and the
 RunHaven-owned container name. `runhaven runs active` lists current active
 markers.
@@ -224,8 +226,8 @@ arguments, environment, and mount fields.
 ## Auth Broker Model
 
 Auth brokering is a separate host-side boundary from provider egress. The
-current implementation includes a host-side API-key broker for Codex, Claude,
-and Gemini (Copilot and Antigravity are not brokered) and static inspection
+current implementation includes a host-side API-key broker for Codex and Claude
+(Copilot and Antigravity are not brokered) and static inspection
 commands:
 
 ```bash
@@ -235,13 +237,13 @@ runhaven auth explain codex
 
 `crates/runhaven-core/src/provider/auth_profiles.rs` records per-profile auth surfaces,
 current safe paths, and broker notes. `crates/runhaven-core/src/provider/auth_broker.rs`
-owns the host-side API-key broker for Codex, Claude, and Gemini. `runhaven auth`
+owns the host-side API-key broker for Codex and Claude. `runhaven auth`
 reads static metadata only. It does not inspect Keychain, browser profiles,
 provider login caches, cloud credential files, or environment values. During a
 real run with `--api-key-broker-env`, the host process reads only the named
 environment variable, starts a subnet-restricted broker on the provider network,
-and redirects the guest at the broker (Codex custom-provider config, or an
-`ANTHROPIC_BASE_URL` / `GOOGLE_GEMINI_BASE_URL` env). Broker decisions are
+and redirects the guest at the broker (Codex custom-provider config or an
+`ANTHROPIC_BASE_URL` env). Broker decisions are
 written to `auth-broker.jsonl` under the RunHaven cache root. The log records
 method, sanitized path, allow/deny outcome, reason, upstream status, count, and
 run id; it does not record request bodies, token values, or environment variable

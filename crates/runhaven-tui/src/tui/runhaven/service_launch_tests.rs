@@ -44,15 +44,8 @@ fn launch_preview_payload_maps_profiles_to_plan_payloads_by_name() {
     let payload = RunHavenTuiService::new().launch_preview_payload(workspace.path());
 
     assert_eq!(payload.workspace, workspace.path());
-    assert!(payload.previews.len() >= 5);
-    for name in [
-        "antigravity",
-        "claude",
-        "codex",
-        "copilot",
-        "gemini",
-        "shell",
-    ] {
+    assert_eq!(payload.previews.len(), 5);
+    for name in ["antigravity", "claude", "codex", "copilot", "shell"] {
         let preview = preview(&payload, name);
         let plan = plan(preview, name);
         assert_eq!(preview.agent.name, name);

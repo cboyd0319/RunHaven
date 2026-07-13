@@ -96,7 +96,7 @@ describe("session labels in the session view", () => {
     )
 
     expect(html).toContain("Login bug")
-    expect(html).toContain("Rename session")
+    expect(html).toContain("Rename run")
   })
 
   it("saves a typed label so the title updates and persists", async () => {
@@ -117,7 +117,7 @@ describe("session labels in the session view", () => {
     })
 
     const nameButton = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Name this session",
+      (button) => button.textContent === "Name this run",
     )
     expect(nameButton).toBeDefined()
     await act(async () => {

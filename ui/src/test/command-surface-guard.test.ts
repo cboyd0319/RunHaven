@@ -44,14 +44,10 @@ const EXPECTED_TAURI_FILES = [
 ];
 const EXPECTED_INVOKED_COMMANDS = [
   "get_dashboard_status",
+  "perform_setup_recovery",
   "get_image_status",
   "rebuild_agent_image",
   "get_image_build_status",
-  "start_agent_sign_in",
-  "get_agent_sign_in_status",
-  "start_claude_oauth_signin",
-  "get_claude_oauth_status",
-  "clear_claude_oauth",
   "get_network_prune_preview",
   "prune_managed_networks",
   "get_run_status",
@@ -89,7 +85,7 @@ const EXPECTED_INVOKED_COMMANDS = [
   "open_session_window",
   "get_session_window_target",
   "open_terminal_session",
-  "open_claude_sign_in_terminal",
+  "open_agent_sign_in_terminal",
   "open_agent_run_terminal",
   "write_terminal_input",
   "resize_terminal",
@@ -117,7 +113,7 @@ function readCommandClientSource(): string {
 }
 
 // The full WebView command surface: client.ts owns the shared `call`/`invoke`
-// helper and most wrappers; terminal.ts, claude_oauth.ts, and worktree.ts own
+// helper and most wrappers; terminal.ts and worktree.ts own
 // their domain wrappers, which route through the same `call`. Auditing all
 // four keeps every host-reaching command in the allow-list even though the
 // surface is split by ownership.
@@ -126,10 +122,6 @@ function readCommandSurfaceSource(): string {
     readCommandClientSource(),
     readFileSync(
       fileURLToPath(new URL("../commands/terminal.ts", import.meta.url)),
-      "utf8"
-    ),
-    readFileSync(
-      fileURLToPath(new URL("../commands/claude_oauth.ts", import.meta.url)),
       "utf8"
     ),
     readFileSync(

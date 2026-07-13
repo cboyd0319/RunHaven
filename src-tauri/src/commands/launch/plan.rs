@@ -3,16 +3,16 @@ use std::path::{Path, PathBuf};
 
 use runhaven_core::image::doctor::collect_image_status;
 use runhaven_core::provider::runtime::{
-    claude_oauth_token_present, select_claude_auth_source_with_presence,
-    validate_runtime_auth_broker_environment,
+    select_api_key_broker_source_for_network, validate_runtime_auth_broker_environment,
 };
 use runhaven_core::runtime::active::read_active_run_records;
+use runhaven_core::runtime::launch::write_worktree_setup_failure_record;
 use runhaven_core::runtime::plans::{
-    AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
-    normalize_provider_hosts,
+    AgentRunPlan, AuthScope, ClaudeAuthSource, NetworkMode, RunOptions, WorkspaceScope,
+    WorktreeRun, build_run_plan, normalize_provider_hosts,
 };
 use runhaven_core::runtime::profiles::get_profile;
-use runhaven_core::runtime::worktrees::create_worktree_for_run;
+use runhaven_core::runtime::worktrees::{create_worktree_for_run, preview_worktree};
 
 use crate::contracts::{
     LaunchRunRequest, LaunchRunResponse, PlanWarning, RunPlanRequest, RunPlanResponse,
@@ -28,6 +28,14 @@ pub(crate) fn build_plan_response(request: RunPlanRequest) -> Result<RunPlanResp
     let active_run_count = active_run_count();
     let warnings = plan_warnings(&request, active_run_count);
     let plan = build_agent_run_plan(&request, None)?;
+    if request.worktree {
+        preview_worktree(
+            Path::new(&request.workspace_path),
+            plan.workspace_scope,
+            request.allow_sensitive_workspace,
+        )
+        .map_err(sanitize_worktree_creation_error)?;
+    }
     let access = plan_access(&plan);
     Ok(RunPlanResponse {
         profile: plan.profile_name,
@@ -57,7 +65,7 @@ fn worktree_plan_note(worktree: bool) -> Option<String> {
         return None;
     }
     Some(
-        "RunHaven will run this agent in a new, isolated git branch (a worktree). \
+        "Recommended protection is on. RunHaven will run this agent in a new, isolated git branch (a worktree). \
          Your workspace must be a clean git repository. Your original files are not \
          changed until you choose to merge."
             .to_string(),
@@ -78,34 +86,30 @@ pub(crate) fn build_agent_run_plan(
     build_run_plan(options).map_err(|error| error.to_string())
 }
 
-/// Build a launch plan with an injectable Keychain-presence source, so a test can
-/// prove the GUI selects `KeychainOAuth` from signed-in presence without touching
-/// the real Keychain. Presence-only: it never reads the token.
-#[cfg(test)]
-pub(crate) fn build_agent_run_plan_with_presence(
-    request: &RunPlanRequest,
-    run_id: Option<String>,
-    keychain_present: impl Fn() -> anyhow::Result<bool>,
-) -> Result<AgentRunPlan, String> {
-    validate_plan_request_bounds(request)?;
-    let options = agent_run_options_with_presence(
-        request,
-        run_id,
-        PathBuf::from(&request.workspace_path),
-        None,
-        keychain_present,
-    )?;
-    build_run_plan(options).map_err(|error| error.to_string())
-}
-
 /// Build the run plan for a confirmed worktree launch: create the RunHaven-owned
 /// worktree branch through the tested core function, then plan onto the mounted
-/// worktree workspace. Creation errors are collapsed to fixed, path-free guidance.
+/// worktree workspace with the auth source shown during confirmation. Creation
+/// errors are collapsed to fixed, path-free guidance.
 pub(super) fn build_worktree_run_plan(
     request: &RunPlanRequest,
     run_id: &str,
+    confirmed_plan: &AgentRunPlan,
+) -> Result<AgentRunPlan, String> {
+    build_worktree_run_plan_with_builder(request, run_id, confirmed_plan, |options| {
+        build_run_plan(options).map_err(|error| error.to_string())
+    })
+}
+
+fn build_worktree_run_plan_with_builder(
+    request: &RunPlanRequest,
+    run_id: &str,
+    confirmed_plan: &AgentRunPlan,
+    build: impl FnOnce(RunOptions) -> Result<AgentRunPlan, String>,
 ) -> Result<AgentRunPlan, String> {
     validate_plan_request_bounds(request)?;
+    if confirmed_plan.run_id.as_deref() != Some(run_id) {
+        return Err("Confirmed launch no longer matches its reserved run id.".to_string());
+    }
     let workspace_scope = WorkspaceScope::try_from(request.workspace_scope.as_str())
         .map_err(|error| error.to_string())?;
     let worktree = create_worktree_for_run(
@@ -117,13 +121,40 @@ pub(super) fn build_worktree_run_plan(
     )
     .map_err(sanitize_worktree_creation_error)?;
     let mounted_workspace = worktree.mounted_workspace.clone();
-    let options = agent_run_options(
-        request,
-        Some(run_id.to_string()),
-        mounted_workspace,
-        Some(worktree),
-    )?;
-    build_run_plan(options).map_err(|error| error.to_string())
+    let final_plan = (|| {
+        let options = agent_run_options_with_auth_source(
+            request,
+            Some(run_id.to_string()),
+            mounted_workspace,
+            Some(worktree.clone()),
+            |_| Ok(confirmed_plan.claude_auth_source.clone()),
+        )?;
+        build(options)
+    })();
+    match final_plan {
+        Ok(plan) => Ok(plan),
+        Err(_) => {
+            write_worktree_setup_failure_record(confirmed_plan, &worktree).map_err(|_| {
+                "RunHaven created an isolated worktree but could not save its recovery information."
+                    .to_string()
+            })?;
+            Err(
+                "RunHaven could not finish this launch. The isolated worktree was kept in Past runs so you can review or remove it."
+                    .to_string(),
+            )
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn build_worktree_run_plan_with_failure_for_test(
+    request: &RunPlanRequest,
+    run_id: &str,
+    confirmed_plan: &AgentRunPlan,
+) -> Result<AgentRunPlan, String> {
+    build_worktree_run_plan_with_builder(request, run_id, confirmed_plan, |_| {
+        Err("injected post-creation plan failure".to_string())
+    })
 }
 
 /// Map worktree creation failures to fixed, path-free, beginner-friendly guidance.
@@ -149,24 +180,18 @@ fn agent_run_options(
     workspace: PathBuf,
     worktree: Option<WorktreeRun>,
 ) -> Result<RunOptions, String> {
-    agent_run_options_with_presence(
-        request,
-        run_id,
-        workspace,
-        worktree,
-        claude_oauth_token_present,
-    )
+    agent_run_options_with_auth_source(request, run_id, workspace, worktree, |network| {
+        select_api_key_broker_source_for_network(request.api_key_broker_env.clone(), network)
+            .map_err(|error| error.to_string())
+    })
 }
 
-/// Build the run options with an injectable Keychain-presence source. Production
-/// uses the non-prompting attributes-only presence check; tests inject a fake so
-/// no real Keychain is touched.
-fn agent_run_options_with_presence(
+fn agent_run_options_with_auth_source(
     request: &RunPlanRequest,
     run_id: Option<String>,
     workspace: PathBuf,
     worktree: Option<WorktreeRun>,
-    keychain_present: impl Fn() -> anyhow::Result<bool>,
+    select_claude_auth_source: impl FnOnce(NetworkMode) -> Result<Option<ClaudeAuthSource>, String>,
 ) -> Result<RunOptions, String> {
     let profile = get_profile(&request.agent).map_err(|error| error.to_string())?;
     let network =
@@ -177,16 +202,7 @@ fn agent_run_options_with_presence(
         AuthScope::try_from(request.auth_scope.as_str()).map_err(|error| error.to_string())?;
     let provider_hosts =
         normalize_provider_hosts(&request.provider_hosts).map_err(|error| error.to_string())?;
-    // Rust decides the Claude auth source from the request's env-var broker NAME
-    // and the REAL, non-secret Keychain presence, never from a WebView-supplied
-    // auth-source value: the WebView cannot force or forge KeychainOAuth. The
-    // token itself is read later, once, at broker startup (never here).
-    let claude_auth_source = select_claude_auth_source_with_presence(
-        request.api_key_broker_env.clone(),
-        &request.agent,
-        keychain_present,
-    )
-    .map_err(|error| error.to_string())?;
+    let claude_auth_source = select_claude_auth_source(network)?;
     Ok(RunOptions {
         profile,
         workspace,
@@ -293,7 +309,7 @@ pub(crate) fn image_readiness_error(
     status: &str,
     agent: &str,
     image: &str,
-    fix_command: Option<&str>,
+    _fix_command: Option<&str>,
 ) -> Option<String> {
     if ready
         || request
@@ -303,14 +319,9 @@ pub(crate) fn image_readiness_error(
     {
         return None;
     }
-    let mut message = format!(
-        "Image for {agent} is {status}: {image}. Rebuild the bundled image before launching."
-    );
-    if let Some(command) = fix_command {
-        message.push_str(" Run: ");
-        message.push_str(command);
-    }
-    Some(message)
+    Some(format!(
+        "Image for {agent} is {status}: {image}. Open Agents and install this agent before launching."
+    ))
 }
 
 fn active_run_count() -> usize {

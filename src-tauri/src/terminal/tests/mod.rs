@@ -15,7 +15,7 @@ use serde_json::json;
 
 use super::*;
 
-// The Claude sign-in terminal (login path) and the interactive agent-run terminal
+// The agent sign-in terminal and the interactive agent-run terminal
 // (task #23, Option A) tests live in their own files so this attach-focused module
 // stays under its size ceiling; they reuse the fakes here.
 mod login;
@@ -246,23 +246,64 @@ fn close_all_shuts_down_every_live_session() {
 }
 
 #[test]
-fn losing_the_insert_race_shuts_down_the_orphan_spawn() {
-    // Fill the cap, then drive the flow with a resolver/approver that pass but a
-    // spawn whose handle must be shut down when the authoritative insert fails.
+fn close_during_pending_open_shuts_down_the_late_spawn() {
     let registry = TerminalSessionRegistry::default();
-    for index in 0..MAX_TERMINAL_SESSIONS {
-        open_fake(&registry, &format!("filled-{index}"))
-            .0
-            .expect("fill cap");
-    }
-    // Bypass precheck by inserting directly is not possible here, so exercise
-    // register_and_stream at the cap with a fresh id: insert must fail and the
-    // handle must be shut down.
+    let reservation = registry.reserve("pending-open").expect("reserve");
+    registry.close("pending-open").expect("cancel pending open");
+
     let fake = FakeTerminal::default();
     let spawned = SpawnedTerminal::without_reader(fake.handle());
-    let result = register_and_stream(&registry, "orphan", spawned);
-    assert!(result.is_err(), "insert past the cap must fail");
-    assert_eq!(fake.shutdowns(), 1, "the orphan spawn must be shut down");
+    let result = register_and_stream(&registry, reservation, spawned);
+
+    assert!(result.is_err(), "a canceled pending open must not register");
+    assert_eq!(fake.shutdowns(), 1, "the late child must be shut down");
+    assert!(registry.remove("pending-open").is_none());
+}
+
+#[test]
+fn close_all_during_pending_open_shuts_down_the_late_spawn() {
+    let registry = TerminalSessionRegistry::default();
+    let reservation = registry.reserve("pending-at-quit").expect("reserve");
+    registry.close_all();
+
+    let fake = FakeTerminal::default();
+    let spawned = SpawnedTerminal::without_reader(fake.handle());
+    let result = register_and_stream(&registry, reservation, spawned);
+
+    assert!(result.is_err(), "app teardown must cancel a pending open");
+    assert_eq!(fake.shutdowns(), 1, "the late child must be shut down");
+    assert!(registry.remove("pending-at-quit").is_none());
+}
+
+#[test]
+fn old_reader_generation_cannot_remove_a_reopened_session() {
+    let registry = TerminalSessionRegistry::default();
+    let first = FakeTerminal::default();
+    let first_generation = registry
+        .reserve("reused-id")
+        .expect("reserve first")
+        .activate(first.handle())
+        .expect("activate first");
+    registry.close("reused-id").expect("close first");
+
+    let second = FakeTerminal::default();
+    registry
+        .reserve("reused-id")
+        .expect("reserve second")
+        .activate(second.handle())
+        .expect("activate second");
+
+    assert!(
+        registry
+            .remove_if_generation("reused-id", first_generation)
+            .is_none(),
+        "an old reader must not remove the replacement"
+    );
+    registry
+        .write_input("reused-id", b"still-live")
+        .expect("replacement remains registered");
+    assert_eq!(second.calls.lock().expect("calls").writes.len(), 1);
+    registry.close("reused-id").expect("close replacement");
 }
 
 #[test]
@@ -274,11 +315,12 @@ fn reader_spawn_failure_removes_the_entry_and_shuts_down_the_child() {
     let fake = FakeTerminal::default();
     let spawned = SpawnedTerminal {
         handle: fake.handle(),
-        start_reader: Some(Box::new(|_registry, _session_id| {
+        start_reader: Some(Box::new(|_registry, _session_id, _generation| {
             Err("could not start the terminal: reader failed".to_string())
         })),
     };
-    let result = register_and_stream(&registry, "run-reader-fail", spawned);
+    let reservation = registry.reserve("run-reader-fail").expect("reserve");
+    let result = register_and_stream(&registry, reservation, spawned);
     assert!(result.is_err(), "a failed reader spawn must fail the open");
     assert_eq!(
         fake.shutdowns(),
@@ -302,12 +344,11 @@ fn close_all_kills_children_even_with_a_poisoned_registry() {
 
     // Poison the registry mutex by panicking while it is held.
     let poisoned = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        let _guard = registry.sessions.lock().expect("hold to poison");
-        panic!("poison the registry mutex");
+        registry.poison_for_test();
     }));
     assert!(poisoned.is_err(), "the panic must poison the lock");
     assert!(
-        registry.sessions.lock().is_err(),
+        registry.is_poisoned_for_test(),
         "the registry mutex must now be poisoned"
     );
 

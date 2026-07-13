@@ -63,7 +63,6 @@ describe("useLaunchFlow", () => {
       await result.current.reviewPlan()
     })
     await act(async () => {
-      result.current.setLaunchConfirmation(true)
       result.current.setWarningConfirmation("some-warning", true)
     })
     expect(result.current.launchStep).toBe("review")
@@ -77,7 +76,6 @@ describe("useLaunchFlow", () => {
     expect(result.current.sheetOpen).toBe(false)
     expect(result.current.launchStep).toBe("agent")
     expect(result.current.plan).toBeNull()
-    expect(result.current.launchConfirmation).toBe(false)
     expect(result.current.confirmedWarnings).toEqual([])
 
     await act(async () => {
@@ -101,13 +99,9 @@ describe("useLaunchFlow", () => {
       await result.current.reviewPlan()
     })
     await act(async () => {
-      result.current.setLaunchConfirmation(true)
-    })
-    await act(async () => {
       result.current.updateRequest({ workspacePath: "/tmp/other-project" })
     })
     expect(result.current.plan).toBeNull()
-    expect(result.current.launchConfirmation).toBe(false)
   })
 
   it("closes the sheet, selects the session, and arms a new name on launch", async () => {
@@ -150,9 +144,6 @@ describe("useLaunchFlow", () => {
     })
     const sessionNameBefore = result.current.request.sessionName
     await act(async () => {
-      result.current.setLaunchConfirmation(true)
-    })
-    await act(async () => {
       await result.current.startRun()
     })
 
@@ -162,7 +153,6 @@ describe("useLaunchFlow", () => {
     expect(result.current.sheetOpen).toBe(false)
     expect(result.current.launchStep).toBe("agent")
     expect(result.current.plan).toBeNull()
-    expect(result.current.launchConfirmation).toBe(false)
     expect(result.current.request.sessionName).not.toBe(sessionNameBefore)
     // The draft itself survives for the next run.
     expect(result.current.request.workspacePath).toBe("/tmp/launch-project")
@@ -193,6 +183,62 @@ describe("useLaunchFlow", () => {
     expect(result.current.request.agent).toBe("codex")
   })
 
+  it("does not check agent images before setup is ready", async () => {
+    let imageChecks = 0
+    const flowDeps = deps({
+      loadImageStatus: async () => {
+        imageChecks += 1
+      },
+    })
+    const { result } = await renderFlow(flowDeps)
+
+    await act(async () => {
+      await result.current.applyDashboard(dashboard(false))
+    })
+
+    expect(imageChecks).toBe(0)
+  })
+
+  it("allows alternate Claude networks without selecting the host broker", async () => {
+    const claude = {
+      ...providerAgent,
+      name: "claude",
+      description: "Claude",
+      providerHosts: ["api.anthropic.com"],
+      supportsInAppSignIn: false,
+    }
+    const withSignedInClaude = {
+      ...dashboard(true),
+      agents: [claude],
+      agentReadiness: [
+        { name: "claude", category: "signed-in" as const, label: "Signed in" },
+      ],
+    }
+    const flowDeps = deps({ dashboard: withSignedInClaude })
+    const { result } = await renderFlow(flowDeps)
+    await act(async () => {
+      await result.current.applyDashboard(withSignedInClaude)
+      result.current.updateNetworkMode("internal")
+    })
+
+    expect(result.current.request.networkMode).toBe("internal")
+    expect(result.current.request.apiKeyBrokerEnv).toBeNull()
+  })
+
+  it("turns off an explicit API key broker when an alternate network is chosen", async () => {
+    const withCodex = dashboard(true)
+    const flowDeps = deps({ dashboard: withCodex })
+    const { result } = await renderFlow(flowDeps)
+    await act(async () => {
+      await result.current.applyDashboard(withCodex)
+      result.current.updateRequest({ apiKeyBrokerEnv: "OPENAI_API_KEY" })
+      result.current.updateNetworkMode("internet")
+    })
+
+    expect(result.current.request.networkMode).toBe("internet")
+    expect(result.current.request.apiKeyBrokerEnv).toBeNull()
+  })
+
   it("opens the run terminal as a main-content destination for an interactive agent instead of a background launch", async () => {
     const flowDeps = deps()
     const { result } = await renderFlow(flowDeps)
@@ -206,9 +252,6 @@ describe("useLaunchFlow", () => {
     })
     await act(async () => {
       await result.current.reviewPlan()
-    })
-    await act(async () => {
-      result.current.setLaunchConfirmation(true)
     })
     await act(async () => {
       await result.current.startRun()
@@ -239,7 +282,7 @@ describe("useLaunchFlow", () => {
     ])
   })
 
-  it("keeps the sheet open and shows the error when the launch is rejected", async () => {
+  it("sends launch intent to the Rust-owned native confirmation without a WebView checkbox", async () => {
     const flowDeps = deps()
     const { result } = await renderFlow(flowDeps)
 
@@ -253,13 +296,13 @@ describe("useLaunchFlow", () => {
     await act(async () => {
       await result.current.reviewPlan()
     })
-    // No launch confirmation: the preview backend rejects, like the real one.
     await act(async () => {
       await result.current.startRun()
     })
 
-    expect(flowDeps.launched).toHaveLength(0)
-    expect(result.current.sheetOpen).toBe(true)
-    expect(result.current.error).toContain("Confirm the launch")
+    expect(flowDeps.launched).toHaveLength(1)
+    expect(flowDeps.launched[0]?.status).toBe("started")
+    expect(result.current.sheetOpen).toBe(false)
+    expect(result.current.error).toBe("")
   })
 })

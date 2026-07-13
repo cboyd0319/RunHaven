@@ -179,6 +179,7 @@ fn managed_session_auth_needs_attention(agent: &str, auth_status: &str) -> bool 
         auth_status.trim().to_lowercase().as_str(),
         "api-key-broker"
             | "keychain-oauth"
+            | "login-state"
             | "brokered"
             | "ready"
             | "available"
@@ -228,8 +229,8 @@ fn network_label(network: &str) -> String {
 fn auth_status_label(status: &str) -> String {
     match status.trim().to_lowercase().as_str() {
         "api-key-broker" => "API key broker".to_string(),
-        "keychain-oauth" => "Claude subscription (Keychain)".to_string(),
-        "login-state" => "Sign in needed".to_string(),
+        "keychain-oauth" => "Legacy Claude Keychain auth".to_string(),
+        "login-state" => "Isolated login".to_string(),
         "no-auth-needed" => "No sign-in needed".to_string(),
         "n/a" => "N/A".to_string(),
         "" | "-" => "Unknown".to_string(),

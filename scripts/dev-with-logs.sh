@@ -34,6 +34,8 @@ trap scan_on_exit EXIT INT TERM
   (
     cd "$root" &&
       CARGO_TARGET_DIR="$root/target" \
-        ./ui/node_modules/.bin/tauri dev --config src-tauri/tauri.conf.json
+        ./ui/node_modules/.bin/tauri dev \
+          --config src-tauri/tauri.conf.json \
+          --config src-tauri/tauri.dev.conf.json
   ) 2>&1
 } | tee -a "$teelog"

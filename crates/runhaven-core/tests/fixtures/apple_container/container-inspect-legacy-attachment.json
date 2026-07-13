@@ -2,7 +2,7 @@
   {
     "configuration": {
       "image": {
-        "reference": "runhaven/base:0.1.0"
+        "reference": "runhaven/base:0.7.0"
       },
       "resources": {
         "cpus": 1,

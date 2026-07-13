@@ -1,7 +1,10 @@
 import type { ManagedSessionSummary } from "@/commands/runhaven"
 import { Button } from "@/components/ui/button"
 
-import { sessionAttention } from "../sessionAttention"
+import {
+  sessionAttention,
+  type SessionAttentionKind,
+} from "../sessionAttention"
 import { useSessionLabels } from "../sessionLabels"
 import { sessionDisplayTitle } from "../sessionIdentity"
 import { AgentCell } from "./AgentCell"
@@ -17,13 +20,15 @@ import { timeAgo } from "./timeAgo"
 export function NeedsReviewPanel({
   sessions,
   onSelectSession,
+  onOpenAgents,
 }: {
   sessions: ManagedSessionSummary[]
   onSelectSession: (sessionId: string) => void
+  onOpenAgents: () => void
 }) {
   const { labels } = useSessionLabels()
   return (
-    <DashboardPanel title="Needs review" count={sessions.length}>
+    <DashboardPanel title="Needs you" count={sessions.length}>
       <table className="w-full table-fixed border-collapse text-sm">
         <thead>
           <tr className="text-left text-xs text-muted-foreground">
@@ -47,7 +52,9 @@ export function NeedsReviewPanel({
                   <span className="flex items-center gap-2 font-medium">
                     <span
                       aria-hidden
-                      className="size-2 shrink-0 rounded-full bg-destructive"
+                      className={`size-2 shrink-0 rounded-full ${attentionDotClass(
+                        attention?.tone,
+                      )}`}
                     />
                     <span className="truncate">
                       {sessionDisplayTitle(session, labels)}
@@ -68,13 +75,20 @@ export function NeedsReviewPanel({
                     type="button"
                     variant="outline"
                     size="sm"
-                    aria-label={`Review ${sessionDisplayTitle(session, labels)}`}
+                    aria-label={`${attentionAction(attention?.kind)} ${sessionDisplayTitle(
+                      session,
+                      labels,
+                    )}`}
                     onClick={(event) => {
                       event.stopPropagation()
-                      onSelectSession(session.id)
+                      if (attention?.kind === "needs-sign-in") {
+                        onOpenAgents()
+                      } else {
+                        onSelectSession(session.id)
+                      }
                     }}
                   >
-                    Review
+                    {attentionAction(attention?.kind)}
                   </Button>
                 </td>
               </tr>
@@ -84,4 +98,34 @@ export function NeedsReviewPanel({
       </table>
     </DashboardPanel>
   )
+}
+
+function attentionAction(kind: SessionAttentionKind | undefined): string {
+  switch (kind) {
+    case "failed":
+      return "View error"
+    case "needs-sign-in":
+      return "Sign in"
+    case "not-responding":
+      return "Repair"
+    case "ready-to-review":
+      return "Review changes"
+    default:
+      return "Open"
+  }
+}
+
+function attentionDotClass(
+  tone: "failed" | "needs-you" | "ready" | undefined,
+): string {
+  switch (tone) {
+    case "failed":
+      return "bg-destructive"
+    case "needs-you":
+      return "bg-warning"
+    case "ready":
+      return "bg-success"
+    default:
+      return "bg-muted-foreground"
+  }
 }

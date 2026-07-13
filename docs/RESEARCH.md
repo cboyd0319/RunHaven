@@ -1,12 +1,44 @@
 # Research And Source Ledger
 
-Last reviewed: 2026-06-26
+Last reviewed: 2026-07-12
 
 This file records sources used for product, security, runtime, and pinning
 decisions. Update it whenever a dependency pin, runtime assumption, security
 boundary, or agent behavior changes.
 
 ## Runtime Sources
+
+Current pin review on 2026-07-12:
+
+- Apple `container` release 1.1.0:
+  <https://github.com/apple/container/releases/tag/1.1.0>
+- Verified release commit:
+  `5973b9cc626a3e7a499bb316a958237ebe14e2ed`.
+- Signed installer:
+  <https://github.com/apple/container/releases/download/1.1.0/container-1.1.0-installer-signed.pkg>
+- Installer SHA-256:
+  `0ca1c42a2269c2557efb1d82b1b38ac553e6a3a3da1b1179c439bcee1e7d6714`.
+- `pkgutil --check-signature` reported a trusted, notarized package signed by
+  `Developer ID Installer: Apple Inc. - Containerization (UPBK2H6LZM)`.
+- The extracted signed CLI reports version 1.1.0, release build, commit
+  `5973b9c`; its application signature also has Team ID `UPBK2H6LZM`.
+- Source review used the exact signed tag and commit. Builder remains
+  `ghcr.io/apple/container-builder-shim/builder:0.12.0`; vminit updates to
+  `ghcr.io/apple/containerization/vminit:0.35.0`; Kata remains release 3.28.0,
+  kernel `vmlinux-6.18.15-186` with the existing verified kernel SHA-256.
+- Relevant 1.1.0 changes fix relative `container cp` paths, reject an empty
+  `container exec` command instead of crashing, keep image-save metadata off
+  archive stdout, and propagate system-start directory errors. No RunHaven
+  command contract or JSON field used by the current parsers was removed.
+- Live installation completed on 2026-07-12. The installed CLI and apiserver
+  report 1.1.0 commit `5973b9cc626a3e7a499bb316a958237ebe14e2ed`;
+  builder 0.12.0, vminit 0.35.0, Kata 3.28.0, and kernel
+  `vmlinux-6.18.15-186` match pins. The kernel SHA-256 remains
+  `2fe4a58d2885d623bcb4d705900ac8c1d4f02371152da8126b3b00c8c47fc3a1`.
+  `runhaven doctor`, image doctor, default runtime, provider-egress,
+  no-secret SSH, and live two-session Tauri smokes all passed with cleanup.
+
+Historical 1.0.0 review and live evidence:
 
 - Apple `container` release 1.0.0:
   <https://github.com/apple/container/releases/tag/1.0.0>
@@ -22,6 +54,8 @@ Observed runtime evidence on 2026-06-14:
   `ee848e3ebfd7c73b04dd419683be54fb450b8779`.
 - Signed installer package:
   `container-1.0.0-installer-signed.pkg`.
+- Signed installer URL used by the desktop setup handoff:
+  <https://github.com/apple/container/releases/download/1.0.0/container-1.0.0-installer-signed.pkg>.
 - Installer SHA-256:
   `13f45f26da94c354adcbefe1e8f7631e7f126e93c5d4dd6a5a538aa66b4f479d`.
 - Installer signing team ID: `UPBK2H6LZM`.
@@ -56,18 +90,18 @@ Observed runtime command surface on 2026-06-15:
   installed. RunHaven `runs attach` therefore uses guarded `container exec`
   against the active RunHaven-owned container name.
 
-Important distinction:
+Historical distinction:
 
-- Runtime pins follow the installed, signed Apple `container` 1.0.0 release and
-  live CLI output.
+- Runtime pins previously followed the installed, signed Apple `container`
+  1.0.0 release and live CLI output.
 - An upstream Apple `container` source snapshot was observed at
   `c8b4fd73a1b1696a1c6533e4de85bdedfa8fc5fc` (`1.0.0-4-gc8b4fd7`) on
   2026-06-14, which is newer than the installed release commit. Do not update
   runtime pins from that source snapshot unless the installed runtime is also
   updated and verified.
 - The source snapshot also references `containerization` `0.33.4`; the installed
-  runtime reports `ghcr.io/apple/containerization/vminit:0.33.3`. The installed
-  runtime is authoritative for this repo's current pins.
+  runtime reports `ghcr.io/apple/containerization/vminit:0.33.3`. Those values
+  are retained here as historical evidence, not current pins.
 
 ## Agent Runtime Sources
 
@@ -219,7 +253,39 @@ Pinned package scan refresh on 2026-06-24:
   `@github/copilot@1.0.64`. The 2026-06-18 host evidence above remains
   historical; `pins.toml` is the source of truth for current agent CLI pins.
 
-Live agent egress observation on 2026-06-26:
+Bundled image refresh on 2026-07-11 (historical, superseded 2026-07-12):
+
+- The npm registry and each installed CLI's local help/version output were
+  checked before updating the image locks. Current exact pins are Claude Code
+  2.1.207, Codex CLI 0.144.1, Gemini CLI 0.50.0, and GitHub Copilot CLI 1.0.70.
+  The retained sign-in entry points are `claude auth login`,
+  `codex login --device-auth`, first-run Gemini sign-in, and `copilot login`.
+- Google's official Antigravity installer manifest resolved Linux arm64 CLI
+  1.1.1 to the pinned Google Storage archive and SHA-512 in `pins.toml`. A
+  downloaded macOS archive passed its published checksum and reported 1.1.1;
+  `agy --sandbox` remains opt-in, so RunHaven's outer container remains the
+  default boundary.
+- The OCI index descriptors used by Apple `container` are pinned for
+  `debian:trixie-slim` and `node:26.5.0-trixie-slim`. npm 12.0.1 is pinned in
+  every Node image. Debian and Debian security packages resolve from the
+  2026-07-10 UTC snapshots, with every arm64 package version exact-pinned.
+- Regenerated locks for all four npm-based images report zero known
+  vulnerabilities. The ledger also binds the selected Debian Linux arm64
+  executable or native package integrity for Claude, Codex, Gemini, and
+  Copilot. Runtime image builds and non-root/read-only CLI smokes are required
+  before this refresh is release evidence.
+
+Current bundled image set on 2026-07-12:
+
+- RunHaven supports exactly Claude, Codex, Antigravity, and Copilot. Google's
+  Gemini CLI to Antigravity CLI transition is the source for retiring Gemini.
+- The Gemini image, npm lock, pins, and runtime behavior were removed. Current
+  exact agent pins are Claude Code 2.1.207, Codex CLI 0.144.1, Antigravity CLI
+  1.1.1, and GitHub Copilot CLI 1.0.70.
+- Three agent images use npm packages: Claude, Codex, and Copilot. Antigravity
+  uses Google's pinned Linux arm64 archive and published SHA-512.
+
+Historical live agent egress observation on 2026-06-26:
 
 - `runhaven login <agent>` was built and live-verified for Claude (host
   `claude setup-token`), Codex (`codex login --device-auth`, reaches
@@ -232,6 +298,9 @@ Live agent egress observation on 2026-06-26:
   and `daily-cloudcode-pa.googleapis.com`. `accounts.google.com` and
   `antigravity.google` are browser-side only. This supersedes the 2026-06-18
   "no source-backed runtime host list" note for Antigravity.
+- The Claude host `setup-token` path described in this dated observation was
+  removed on 2026-07-12. Current ordinary authentication runs each provider's
+  native login inside its isolated container volume.
 - The egress matcher now supports maintainer-curated domain-family wildcard
   patterns (`*-name.domain.tld`, anchored to one registrable domain,
   default-deny preserved). Antigravity's `daily-cloudcode-pa` pin became
@@ -264,20 +333,21 @@ Reviewed on 2026-06-16 before adding the pre-implementation UI guardrails:
 
 ## Package And Image Sources
 
-- Rust toolchain and crate versions reviewed on 2026-06-18 with local
-  `rustc --version`, `cargo --version`, and `cargo search`:
-  <https://crates.io/>
+- Rust 1.97.0 was verified as the current stable toolchain on 2026-07-11 from
+  the official release announcement; crate versions were checked with local
+  Cargo metadata and registry queries:
+  <https://blog.rust-lang.org/2026/07/09/Rust-1.97.0/>
 - Rust release calendar reference:
   <https://releases.rs/>
 - npm registry records checked with `npm view` for:
-  `@anthropic-ai/claude-code`, `@openai/codex`,
-  `@google/gemini-cli`, `@github/copilot`, and `npm`.
+  `@anthropic-ai/claude-code`, `@openai/codex`, `@github/copilot`, and `npm`.
 - Debian snapshot used by bundled images:
-  <http://snapshot.debian.org/archive/debian/20260614T000000Z>
+  <http://snapshot.debian.org/archive/debian/20260710T000000Z>
 - Debian security snapshot used by bundled images:
-  <http://snapshot.debian.org/archive/debian-security/20260614T000000Z>
-- Docker image digests checked with `docker buildx imagetools inspect`:
-  `debian:trixie-slim` and `node:26.3.0-trixie-slim`.
+  <http://snapshot.debian.org/archive/debian-security/20260710T000000Z>
+- OCI image descriptors checked with Apple `container image pull` and
+  `container image inspect`: `debian:trixie-slim` and
+  `node:26.5.0-trixie-slim`.
 - GitHub Actions release API (retained for reference only; no workflows
   currently exist, so no action pins are tracked, see `docs/PINNING.md`):
   <https://api.github.com/repos/actions/checkout/releases/latest>.

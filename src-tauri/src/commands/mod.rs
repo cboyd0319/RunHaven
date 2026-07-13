@@ -4,7 +4,8 @@ use runhaven_core::provider::auth_profiles::{agent_broker, agent_sign_in};
 use runhaven_core::records::read_run_records;
 use runhaven_core::runtime::active::read_active_run_records;
 use runhaven_core::runtime::login::supports_sandbox_login;
-use runhaven_core::runtime::profiles::profiles;
+use runhaven_core::runtime::profiles::agent_profiles;
+use runhaven_core::runtime::state::list_state_volumes;
 use runhaven_core::ui_contracts::project_label;
 use serde_json::Value;
 
@@ -14,7 +15,8 @@ pub(crate) use runhaven_core::runtime::plans::AuthScope;
 pub(crate) use runhaven_core::runtime::profiles::get_profile;
 
 use crate::contracts::{
-    AgentProfileSummary, CheckStatus, DashboardStatus, RunSummary, SetupStatus,
+    AgentProfileSummary, CheckStatus, DashboardStatus, RunSummary, SetupAction, SetupActionId,
+    SetupStatus,
 };
 
 #[cfg(test)]
@@ -22,10 +24,7 @@ pub(crate) use crate::contracts::{LaunchRunRequest, RunPlanRequest};
 
 mod access;
 mod active_marker;
-pub(crate) mod agent_sign_in;
-pub(crate) mod agent_sign_in_status;
 pub(crate) mod attention_badge;
-pub(crate) mod claude_oauth;
 pub(crate) mod diagnostics;
 pub(crate) mod diagnostics_why;
 pub(crate) mod dialog;
@@ -47,16 +46,18 @@ pub(crate) mod session_diagnostics;
 pub(crate) mod session_window;
 pub(crate) mod session_worktree;
 pub(crate) mod sessions;
+pub(crate) mod setup_recovery;
 mod validation;
 mod warnings;
 
 #[cfg(test)]
 #[allow(unused_imports)]
 pub(crate) use launch::{
-    build_agent_run_plan, build_agent_run_plan_with_presence, build_launch_response,
-    build_plan_response, image_readiness_error, launch_prepared_with_approval_for_test,
-    launch_run_with_registries, launch_run_with_registries_status_and_approval,
-    trusted_launch_message_for_test, validate_launch_confirmation,
+    build_agent_run_plan, build_launch_response, build_plan_response,
+    build_worktree_run_plan_with_failure_for_test, image_readiness_error,
+    launch_prepared_with_approval_for_test, launch_run_with_registries,
+    launch_run_with_registries_status_and_approval, trusted_launch_message_for_test,
+    validate_launch_confirmation,
 };
 
 #[tauri::command]
@@ -65,15 +66,7 @@ pub(crate) fn get_dashboard_status() -> DashboardStatus {
 }
 
 fn collect_setup_status() -> SetupStatus {
-    let checks = collect_checks()
-        .into_iter()
-        .map(|check| CheckStatus {
-            name: check.name,
-            ok: check.ok,
-            detail: check.detail,
-            remedy: check.remedy,
-        })
-        .collect::<Vec<_>>();
+    let checks = desktop_setup_checks(collect_checks());
     let blocker_count = checks.iter().filter(|check| !check.ok).count();
     SetupStatus {
         ok: blocker_count == 0,
@@ -82,8 +75,48 @@ fn collect_setup_status() -> SetupStatus {
     }
 }
 
+fn desktop_setup_checks(checks: Vec<runhaven_core::doctor::Check>) -> Vec<CheckStatus> {
+    checks
+        .into_iter()
+        .filter(|check| check.name != "rust")
+        .map(check_status)
+        .collect()
+}
+
+fn check_status(check: runhaven_core::doctor::Check) -> CheckStatus {
+    let action = if check.ok {
+        None
+    } else if matches!(
+        check.name.as_str(),
+        "Apple container CLI" | "Apple container version"
+    ) {
+        Some(SetupAction {
+            id: SetupActionId::OpenAppleContainerInstaller,
+            label: if check.name == "Apple container version" {
+                "Download required version".to_string()
+            } else {
+                "Download Apple container".to_string()
+            },
+        })
+    } else if check.name == "container system" {
+        Some(SetupAction {
+            id: SetupActionId::StartContainerSystem,
+            label: "Start container service".to_string(),
+        })
+    } else {
+        None
+    };
+    CheckStatus {
+        name: check.name,
+        ok: check.ok,
+        detail: check.detail,
+        remedy: check.remedy,
+        action,
+    }
+}
+
 fn agent_summaries() -> Vec<AgentProfileSummary> {
-    profiles()
+    agent_profiles()
         .into_iter()
         .map(|profile| AgentProfileSummary {
             name: profile.name.to_string(),
@@ -101,17 +134,14 @@ fn agent_summaries() -> Vec<AgentProfileSummary> {
                 .collect(),
             sign_in: agent_sign_in(profile.name).to_string(),
             broker: agent_broker(profile.name).to_string(),
-            // Claude has a core in-sandbox login, but its code paste-back cannot
-            // run in-app, so the GUI keeps it out of the in-app sign-in flow
-            // (matching the explicit refusal in authorize_agent_sign_in).
-            supports_in_app_sign_in: profile.name != "claude"
-                && supports_sandbox_login(profile.name),
+            supports_in_app_sign_in: supports_sandbox_login(profile.name),
         })
         .collect()
 }
 
 fn collect_dashboard_status() -> DashboardStatus {
     let mut warnings = Vec::new();
+    let setup = collect_setup_status();
     let recent_runs = match read_run_records(10) {
         Ok(records) => records.iter().map(run_summary).collect(),
         Err(error) => {
@@ -119,13 +149,25 @@ fn collect_dashboard_status() -> DashboardStatus {
             Vec::new()
         }
     };
-    let names = profiles()
+    let names = agent_profiles()
         .iter()
         .map(|profile| profile.name)
         .collect::<Vec<_>>();
-    let agent_readiness = agent_setup_readiness(&names, claude_oauth::claude_keychain_present());
+    let state_volumes = if setup.ok {
+        match list_state_volumes(None) {
+            Ok(volumes) => volumes,
+            Err(_) => {
+                warnings
+                    .push("Agent sign-in status is unavailable. Choose Check again.".to_string());
+                Vec::new()
+            }
+        }
+    } else {
+        Vec::new()
+    };
+    let agent_readiness = agent_setup_readiness(&names, &state_volumes);
     DashboardStatus {
-        setup: collect_setup_status(),
+        setup,
         agents: agent_summaries(),
         agent_readiness,
         active_runs: read_active_run_records().iter().map(run_summary).collect(),

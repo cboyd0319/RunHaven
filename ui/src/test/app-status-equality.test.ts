@@ -31,7 +31,7 @@ function agent(patch: Partial<AgentProfile> = {}): AgentProfile {
   return {
     name: "codex",
     description: "Codex agent",
-    image: "runhaven/codex:0.1.0",
+    image: "runhaven/codex:0.7.0",
     defaultCommand: ["codex", "run"],
     providerHosts: ["api.openai.com"],
     signIn: "api-key",
@@ -46,7 +46,9 @@ function dashboard(patch: Partial<DashboardStatus> = {}): DashboardStatus {
     setup: {
       ok: true,
       blockerCount: 0,
-      checks: [{ name: "container", ok: true, detail: "ready", remedy: "" }],
+      checks: [
+        { name: "container", ok: true, detail: "ready", remedy: "", action: null },
+      ],
     },
     agents: [agent()],
     agentReadiness: [{ name: "codex", category: "signed-in", label: "Signed in" }],
@@ -63,7 +65,7 @@ function imageStatus(patch: Partial<ImageStatusResponse> = {}): ImageStatusRespo
     agent: "codex",
     image: {
       agent: "codex",
-      image: "runhaven/codex:0.1.0",
+      image: "runhaven/codex:0.7.0",
       status: "ok",
       ready: true,
       expectedSourceDigest: "sha256:expected",
@@ -100,7 +102,7 @@ function runStatus(patch: Partial<RunStatusResponse> = {}): RunStatusResponse {
     },
     container: {
       state: "running",
-      image: "runhaven/codex:0.1.0",
+      image: "runhaven/codex:0.7.0",
       startedAt: "2026-07-01T02:00:03Z",
       resources: { cpus: "4", memoryBytes: 4 * 1024 ** 3 },
       networks: [

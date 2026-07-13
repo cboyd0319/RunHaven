@@ -10,8 +10,8 @@ import { sessionAttention, type SessionAttentionKind } from "./sessionAttention"
 // same UI actions a click would take. The menu never becomes a new mutation
 // path: New Run opens the existing launch sheet, Settings opens the existing
 // settings dialog, navigation ids move the existing selection, and session
-// actions only focus the existing confirm control, so the confirm step plus
-// the Rust-owned native dialog still gate every mutation. Menus are static,
+// actions only focus the existing button, so the Rust-owned native dialog still
+// gates every mutation. Menus are static,
 // so ids that do not apply right now
 // (no sessions, no selection, control not on screen) no-op here; unknown ids
 // are ignored.
@@ -35,13 +35,11 @@ export type MenuActions = {
 // (RunStatusCard, SessionInputCard, RunOutputCard); the menu-events test
 // reads those sources and fails if a label drifts away from this map.
 export const MENU_FOCUS_SELECTORS: Record<string, string> = {
-  "stop-session": '[aria-label="Confirm stopping this session."]',
-  "hard-stop-session": '[aria-label="Confirm hard-stopping this session."]',
-  "repair-session":
-    `[aria-label="Confirm clearing this session's stale session record."]`,
-  "cleanup-session":
-    `[aria-label="Confirm cleaning up this session's saved copy."]`,
-  "send-message": 'textarea[placeholder="Type a message for this session."]',
+  "stop-session": '[aria-label="Stop run"]',
+  "hard-stop-session": '[aria-label="Hard stop"]',
+  "repair-session": '[aria-label="Repair run record"]',
+  "cleanup-session": '[aria-label="Clean up run"]',
+  "send-message": 'textarea[placeholder="Type a message for this run."]',
   "show-output":
     '[aria-label="I understand raw output may include private data."]',
 }

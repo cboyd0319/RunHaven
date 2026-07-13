@@ -39,8 +39,14 @@ export function DiagnosticsSystemPanels({
     <>
       <HealthRollup dashboard={dashboard} />
       <VersionsPanel dashboard={dashboard} />
-      <ImageReadinessPanel readModels={readModels} />
-      <StaleNetworksPanel readModels={readModels} />
+      <ImageReadinessPanel
+        readModels={readModels}
+        setupReady={dashboard?.setup.ok === true}
+      />
+      <StaleNetworksPanel
+        readModels={readModels}
+        setupReady={dashboard?.setup.ok === true}
+      />
     </>
   )
 }
@@ -61,7 +67,10 @@ function HealthRollup({ dashboard }: { dashboard: DashboardStatus | null }) {
           {ok ? (
             <CheckCircle2 className="size-4 text-success" aria-hidden />
           ) : (
-            <TriangleAlert className="size-4 text-warning" aria-hidden />
+            <TriangleAlert
+              className="size-4 text-warning-foreground dark:text-warning"
+              aria-hidden
+            />
           )}
           {ok
             ? "Your Mac passes every setup check."
@@ -113,8 +122,10 @@ function VersionsPanel({ dashboard }: { dashboard: DashboardStatus | null }) {
 // A built/ready row per agent, read from the existing image status command.
 function ImageReadinessPanel({
   readModels,
+  setupReady,
 }: {
   readModels: DiagnosticsReadModels
+  setupReady: boolean
 }) {
   return (
     <Card aria-live="polite">
@@ -128,7 +139,11 @@ function ImageReadinessPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        {readModels.images.length === 0 ? (
+        {!setupReady ? (
+          <p className="text-sm text-muted-foreground">
+            Finish setup before checking agent images.
+          </p>
+        ) : readModels.images.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             {readModels.loading
               ? "Checking agent images..."
@@ -164,11 +179,13 @@ function ImageStateBadge({
 }
 
 // The count of RunHaven's own leftover networks that could be pruned. Read-only
-// here; the prune action itself stays in the Maintenance view.
+// here; the prune action itself stays in the Cleanup view.
 function StaleNetworksPanel({
   readModels,
+  setupReady,
 }: {
   readModels: DiagnosticsReadModels
+  setupReady: boolean
 }) {
   const count = readModels.staleNetworks
   return (
@@ -178,12 +195,14 @@ function StaleNetworksPanel({
           Stale networks
         </CardTitle>
         <CardDescription>
-          Leftover RunHaven networks that could be cleaned up in Maintenance.
+          Leftover RunHaven networks that could be cleaned up in Cleanup.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          {count === null
+          {!setupReady
+            ? "Finish setup before checking for stale networks."
+            : count === null
             ? readModels.loading
               ? "Checking for stale networks..."
               : "Stale network count is unavailable."
@@ -191,7 +210,7 @@ function StaleNetworksPanel({
               ? "No stale networks to clean up."
               : `${count} stale ${
                   count === 1 ? "network" : "networks"
-                } can be cleaned up in Maintenance.`}
+                } can be cleaned up in Cleanup.`}
         </p>
       </CardContent>
     </Card>

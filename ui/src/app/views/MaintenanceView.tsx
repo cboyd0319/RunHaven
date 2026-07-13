@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 
 import { useNetworkCleanup } from "../useMaintenance"
 
@@ -18,41 +17,29 @@ import { useNetworkCleanup } from "../useMaintenance"
 // command, which requires a native confirmation in Rust before any change.
 // Image rebuild lives in the Agents view. State prune stays CLI-only for
 // safety and is not offered here. See docs/DESKTOP_APP.md.
-export function MaintenanceView() {
+export function MaintenanceView({ setupReady }: { setupReady: boolean }) {
   return (
     <Card aria-live="polite">
       <CardHeader>
         <CardTitle role="heading" aria-level={2}>
-          Maintenance
+          Cleanup
         </CardTitle>
         <CardDescription>
-          Clean up what RunHaven left behind. Each action asks you to confirm
-          before anything changes.
+          Remove RunHaven items that are no longer being used.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
-        <NetworkCleanupSection />
-        <div className="flex flex-col gap-2 border-t pt-4 text-sm text-muted-foreground">
-          <p>To rebuild an agent image, open Agents in the sidebar.</p>
-          <p>
-            Resetting an agent&apos;s saved state stays in the terminal on
-            purpose, because it can erase a saved sign-in. Run{" "}
-            <code className="font-mono">runhaven state reset &lt;agent&gt;</code>{" "}
-            in your project folder.
-          </p>
-        </div>
+        <NetworkCleanupSection setupReady={setupReady} />
       </CardContent>
     </Card>
   )
 }
 
-function NetworkCleanupSection() {
+function NetworkCleanupSection({ setupReady }: { setupReady: boolean }) {
   const {
     count,
     loading,
     loadError,
-    confirm,
-    setConfirm,
     busy,
     actionError,
     result,
@@ -71,10 +58,19 @@ function NetworkCleanupSection() {
         running session are skipped.
       </p>
       <div>
-        <Button type="button" disabled={loading} onClick={() => void loadPreview()}>
+        <Button
+          type="button"
+          disabled={!setupReady || loading}
+          onClick={() => void loadPreview()}
+        >
           {loading ? "Checking..." : "Check for stale networks"}
         </Button>
       </div>
+      {!setupReady ? (
+        <p className="text-sm text-muted-foreground">
+          Finish setup before checking for stale networks.
+        </p>
+      ) : null}
       {loadError ? (
         <Alert variant="destructive">
           <CircleAlert />
@@ -93,21 +89,19 @@ function NetworkCleanupSection() {
         </p>
       ) : null}
       {count !== null && count > 0 ? (
-        <>
-          <label className="flex items-start gap-2 text-sm">
-            <Checkbox
-              checked={confirm}
-              onCheckedChange={(checked) => setConfirm(checked === true)}
-              aria-label="Confirm network cleanup"
-            />
-            <span>Yes, remove these stale networks.</span>
-          </label>
-          <div>
-            <Button type="button" variant="outline" disabled={busy || !confirm} onClick={() => void prune()}>
-              {busy ? "Removing..." : "Remove stale networks"}
-            </Button>
-          </div>
-        </>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!setupReady || busy}
+            onClick={() => void prune()}
+          >
+            {busy ? "Removing..." : "Remove stale networks"}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            RunHaven asks for confirmation in a Mac dialog.
+          </span>
+        </div>
       ) : null}
       {actionError ? (
         <Alert variant="destructive">
@@ -117,11 +111,17 @@ function NetworkCleanupSection() {
         </Alert>
       ) : null}
       {result ? (
-        <Alert>
-          <CheckCircle2 />
-          <AlertTitle>Cleanup finished</AlertTitle>
+        <Alert variant={result.failed > 0 ? "destructive" : "default"}>
+          {result.failed > 0 ? <CircleAlert /> : <CheckCircle2 />}
+          <AlertTitle>
+            {result.failed > 0
+              ? "Cleanup needs attention"
+              : "Cleanup finished"}
+          </AlertTitle>
           <AlertDescription>
-            Removed {result.removed}. Skipped {result.failed} still in use.
+            {result.failed > 0
+              ? `Removed ${result.removed}. Could not remove ${result.failed}.`
+              : `Removed ${result.removed}.`}
           </AlertDescription>
         </Alert>
       ) : null}

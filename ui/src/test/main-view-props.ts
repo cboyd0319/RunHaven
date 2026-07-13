@@ -42,7 +42,6 @@ export function launchFlow(): LaunchFlow {
     plan: null,
     planning: false,
     launching: false,
-    launchConfirmation: false,
     confirmedWarnings: [],
     launchMessage: "",
     error: "",
@@ -57,7 +56,6 @@ export function launchFlow(): LaunchFlow {
     setWarningConfirmation: () => {},
     startRun: async () => {},
     closeRunTerminal: () => {},
-    setLaunchConfirmation: () => {},
     setLaunchStep: () => {},
   }
 }
@@ -75,6 +73,7 @@ export function dashboard(setupOk: boolean): DashboardStatus {
             ? "Apple container is installed."
             : "Apple container is not installed.",
           remedy: setupOk ? "No action needed." : "Install Apple container.",
+          action: null,
         },
       ],
     },
@@ -162,13 +161,6 @@ export function mainViewProps(
     controlBusy: false,
     controlError: "",
     controlMessage: "",
-    controlConfirmations: {
-      stop: false,
-      kill: false,
-      repair: false,
-      cleanup: false,
-    },
-    onControlConfirmationChange: () => {},
     onControl: async () => {},
     onWorktreeResolved: async () => {},
     launchFlow: launchFlow(),

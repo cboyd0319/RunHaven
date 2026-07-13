@@ -16,7 +16,7 @@ vi.mock("@tauri-apps/plugin-log", () => ({
 
 const { invoke } = await import("@tauri-apps/api/core");
 const log = await import("@tauri-apps/plugin-log");
-const { call } = await import("../commands/client");
+const { call, performSetupRecovery } = await import("../commands/client");
 
 const invokeMock = vi.mocked(invoke);
 
@@ -39,6 +39,42 @@ afterEach(() => {
 });
 
 describe("call invoke tracing", () => {
+  it("sends only the opaque setup recovery action id", async () => {
+    invokeMock.mockResolvedValueOnce({
+      actionId: "start-container-system",
+      status: "succeeded",
+      label: "Container service started",
+      detail: "RunHaven started the local container service."
+    });
+
+    await performSetupRecovery("start-container-system");
+
+    expect(invokeMock).toHaveBeenCalledWith("perform_setup_recovery", {
+      request: { actionId: "start-container-system" }
+    });
+    expect(JSON.stringify(invokeMock.mock.calls[0]?.[1])).not.toContain("args");
+    expect(JSON.stringify(invokeMock.mock.calls[0]?.[1])).not.toContain("executable");
+  });
+
+  it("keeps the Apple installer target entirely behind the Rust action id", async () => {
+    invokeMock.mockResolvedValueOnce({
+      actionId: "open-apple-container-installer",
+      status: "succeeded",
+      label: "Apple installer download opened",
+      detail: "Your browser is downloading Apple's installer."
+    });
+
+    await performSetupRecovery("open-apple-container-installer");
+
+    expect(invokeMock).toHaveBeenCalledWith("perform_setup_recovery", {
+      request: { actionId: "open-apple-container-installer" }
+    });
+    const payload = JSON.stringify(invokeMock.mock.calls[0]?.[1]);
+    expect(payload).not.toContain("github.com");
+    expect(payload).not.toContain("/usr/bin/open");
+    expect(payload).not.toContain(".pkg");
+  });
+
   it("traces a slow successful invoke at warn so it is greppable", async () => {
     invokeMock.mockResolvedValueOnce("result");
     stubDuration(1500);

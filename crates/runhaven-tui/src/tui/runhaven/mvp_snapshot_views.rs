@@ -112,7 +112,7 @@ pub(super) fn diagnostics_view() -> RunHavenMvpView {
                     name: "Apple container CLI".to_string(),
                     ok: false,
                     detail: "not found on PATH".to_string(),
-                    remedy: "Install Apple container 1.0.0 and run `container system start`."
+                    remedy: "Install Apple container 1.1.0 and run `container system start`."
                         .to_string(),
                 },
             ],

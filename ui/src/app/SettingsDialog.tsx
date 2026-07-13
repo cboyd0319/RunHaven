@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/select"
 
 import { agentLabel } from "./sessionIdentity"
-import { CLAUDE_REAUTH_DAY_CHOICES } from "./uiStatePersistence"
 import type { SettingsState } from "./useSettings"
 
 type SettingsDialogProps = {
@@ -32,9 +31,9 @@ const CHOOSE_FOR_ME = "runhaven-choose-for-me"
 
 // Settings for this Mac (spec 3.9, shipped lean as a dialog in the main
 // window instead of a separate settings window; the gap tracker's B3 section
-// records why). Opens only from RunHaven > Settings... (Cmd-,) via the menu
-// event channel. Everything here is a convenience: no security default and no
-// confirmation step can ever be changed from Settings.
+// records why). Opens from the sidebar or RunHaven > Settings... (Cmd-,).
+// Everything here is a convenience: no security default and no confirmation
+// step can ever be changed from Settings.
 export function SettingsDialog({ settings, agents }: SettingsDialogProps) {
   return (
     <Dialog open={settings.open} onOpenChange={settings.setOpen}>
@@ -97,35 +96,8 @@ export function SettingsForm({ settings, agents }: SettingsDialogProps) {
           it for each run.
         </span>
       </label>
-      <label className="flex flex-col gap-1.5 text-sm font-medium">
-        Ask me to sign in to Claude again after
-        <Select
-          value={String(settings.claudeReauthDays)}
-          onValueChange={(value) =>
-            settings.setClaudeReauthDays(Number(value))
-          }
-        >
-          <SelectTrigger aria-label="Claude sign-in reminder">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {CLAUDE_REAUTH_DAY_CHOICES.map((days) => (
-                <SelectItem key={days} value={String(days)}>
-                  {days} days{days === 90 ? " (recommended)" : ""}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-        <span className="text-sm font-normal text-muted-foreground">
-          When your saved Claude token is older than this, RunHaven suggests
-          signing in again. It is only a reminder, not a cutoff.
-        </span>
-      </label>
       <p className="text-sm text-muted-foreground">
-        RunHaven uses a dark look for now. More appearance choices may come
-        later.
+        RunHaven follows your Mac&apos;s light or dark appearance.
       </p>
     </div>
   )

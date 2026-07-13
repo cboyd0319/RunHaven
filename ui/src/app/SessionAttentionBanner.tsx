@@ -35,7 +35,7 @@ export function SessionAttentionBanner({
           <AlertDescription>
             {session.nextAction.detail.trim()
               ? displayValue(session.nextAction.detail)
-              : "Check the latest output below, then clean up the session."}
+              : "Check the latest output below, then clean up the run."}
           </AlertDescription>
         </Alert>
       )
@@ -66,8 +66,8 @@ export function SessionAttentionBanner({
           <CircleAlert />
           <AlertTitle>Not responding</AlertTitle>
           <AlertDescription>
-            The sandbox for this session is gone. Use Repair session record in
-            Session controls below to clear the stale record.
+            The sandbox for this run is gone. Open More actions under Run actions
+            to clear the stale record.
           </AlertDescription>
         </Alert>
       )

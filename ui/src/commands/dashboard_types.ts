@@ -3,11 +3,21 @@
 // types.ts by ownership. All fields are the sanitized, secret-free backend
 // contract; no token, key, or raw host path is present.
 
+export type SetupActionId =
+  | "open-apple-container-installer"
+  | "start-container-system";
+
+export type SetupAction = {
+  id: SetupActionId;
+  label: string;
+};
+
 export type CheckStatus = {
   name: string;
   ok: boolean;
   detail: string;
   remedy: string;
+  action: SetupAction | null;
 };
 
 export type SetupStatus = {
@@ -42,10 +52,10 @@ export type RunSummary = {
 };
 
 // Per-agent sign-in state for the Home "Agent setup" panel. Backend-derived and
-// secret-free: `category` reflects only what RunHaven can truthfully know (Shell
-// needs no auth; Claude via the opt-in Keychain broker; other agents via a
-// secret-free sandbox sign-in marker). `label` is an agent-state string, never a
-// claim that RunHaven manages the credential.
+// secret-free: `category` reflects only what RunHaven can truthfully know
+// (Shell needs no auth; product agents use secret-free native sign-in state).
+// `label` is an agent-state string, never a claim that RunHaven manages the
+// credential.
 export type AgentReadiness = {
   name: string;
   category: "ready" | "signed-in" | "needs-sign-in";
@@ -63,4 +73,11 @@ export type DashboardStatus = {
   // non-secret string the Diagnostics view shows with the pinned runtime
   // versions from the setup checks.
   appVersion: string;
+};
+
+export type SetupRecoveryResponse = {
+  actionId: SetupActionId;
+  status: string;
+  label: string;
+  detail: string;
 };

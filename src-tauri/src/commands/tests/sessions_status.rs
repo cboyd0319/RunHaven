@@ -59,7 +59,7 @@ fn managed_session_status_resolves_session_id_and_sanitizes_container_status() {
             },
             "container": {
                 "state": "running",
-                "image": "runhaven/codex:0.1.0",
+                "image": "runhaven/codex:0.7.0",
                 "started_at": "2026-07-01T02:00:03Z",
                 "resources": {
                     "cpus": 4,
@@ -85,7 +85,7 @@ fn managed_session_status_resolves_session_id_and_sanitizes_container_status() {
     assert_eq!(response.status_unavailable, None);
     let container = response.container.as_ref().expect("container status");
     assert_eq!(container.state, "running");
-    assert_eq!(container.image.as_deref(), Some("runhaven/codex:0.1.0"));
+    assert_eq!(container.image.as_deref(), Some("runhaven/codex:0.7.0"));
     assert_eq!(container.resources.memory_bytes, Some(4_294_967_296));
     assert_eq!(
         container.networks[0].network.as_deref(),

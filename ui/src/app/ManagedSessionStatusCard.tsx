@@ -39,7 +39,7 @@ export function ManagedSessionStatusCard({
         <CardTitle role="heading" aria-level={2}>
           Runtime status
         </CardTitle>
-        <CardDescription>Current state for this session.</CardDescription>
+        <CardDescription>Current state for this run.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {loading ? (
@@ -92,7 +92,8 @@ export function ManagedSessionStatusCard({
           </div>
         ) : null}
         {container && container.networks.length > 0 ? (
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Network</TableHead>
@@ -109,7 +110,8 @@ export function ManagedSessionStatusCard({
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         ) : null}
       </CardContent>
     </Card>

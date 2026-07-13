@@ -9,7 +9,9 @@
 /// Forbidden symbols, built at runtime so this test file's own source cannot
 /// satisfy the search (mirroring the menu dispatch-only tripwire). The
 /// invariant: the terminal production module never references the captured-output
-/// registry, writes run records, touches any file, or logs/emits the stream.
+/// registry, persists terminal bytes, touches any file with the stream, or
+/// logs/emits the stream. A failed worktree launch may persist non-stream
+/// recovery metadata through the launch module.
 fn forbidden_terminal_markers() -> Vec<String> {
     let mut markers = vec![
         // Persistence sinks.

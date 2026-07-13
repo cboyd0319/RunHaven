@@ -23,9 +23,9 @@ pub(crate) struct RunPlanRequest {
     pub allow_sensitive_workspace: bool,
     pub allow_root_user: bool,
     pub user: String,
-    /// Opt-in isolation: run the agent inside a fresh RunHaven-owned git
-    /// worktree on a new branch instead of the source checkout. Secure default
-    /// is `false` (no worktree) so opting in is an explicit, reviewed choice.
+    /// Run the agent inside a fresh RunHaven-owned git worktree on a new branch
+    /// instead of the source checkout. The GUI explicitly defaults this to true;
+    /// omitted requests stay false for direct-mode compatibility.
     #[serde(default)]
     pub worktree: bool,
 }

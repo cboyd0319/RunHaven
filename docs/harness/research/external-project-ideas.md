@@ -78,8 +78,8 @@ Relevant ideas:
 RunHaven direction:
 
 - Keep threat-model language plain and limitation-aware.
-- Add per-agent profile investigations for Codex, Claude, Gemini, Copilot, and
-  future agents: required files, network hosts, update paths, auth paths, and
+- Add per-agent profile investigations for Claude, Codex, Antigravity, and
+  Copilot: required files, network hosts, update paths, auth paths, and
   known blocked operations.
 - Add macOS-only E2E smoke coverage for the safest common workflows.
 

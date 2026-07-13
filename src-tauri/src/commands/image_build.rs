@@ -7,32 +7,38 @@
 //! runs. The build itself runs on a background thread; the command returns a
 //! build id the WebView polls through the read-only `get_image_build_status`.
 
+use runhaven_core::doctor::require_supported_runtime;
 use runhaven_core::image::build::{ImageBuildPlan, build_image_plan};
-use runhaven_core::runtime::launch::{new_run_id, require_container_cli};
+use runhaven_core::runtime::launch::new_run_id;
 use runhaven_core::runtime::profiles::get_profile;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::MessageDialogKind;
 
 use super::dialog::confirm_native;
 use super::validation::{MAX_AGENT_NAME_LEN, validate_text_len};
+use crate::background_jobs::{BackgroundJobRegistry, JobClaim, image_build_key};
 use crate::contracts::{ImageBuildRequest, ImageBuildStartResponse};
 use crate::image_build_runner::spawn_image_build;
 use crate::tail_status::ImageBuildStatusRegistry;
 
-const REBUILD_CANCELED: &str = "Image rebuild canceled before it started.";
+const REBUILD_CANCELED: &str = "Agent installation canceled before it started.";
 
 #[tauri::command]
 pub(crate) async fn rebuild_agent_image(
     app: AppHandle,
     request: ImageBuildRequest,
     image_build_status: State<'_, ImageBuildStatusRegistry>,
+    background_jobs: State<'_, BackgroundJobRegistry>,
 ) -> Result<ImageBuildStartResponse, String> {
     let registry = image_build_status.inner().clone();
     let prepared = authorize_image_rebuild(&request)?;
+    if let Some(response) = existing_image_rebuild(&prepared, &registry, &background_jobs)? {
+        return Ok(response);
+    }
     if !trusted_image_rebuild_confirmed(app, &prepared.agent, &prepared.plan.tag).await? {
         return Err(REBUILD_CANCELED.to_string());
     }
-    start_image_rebuild(prepared, &registry)
+    start_image_rebuild(prepared, &registry, &background_jobs)
 }
 
 /// A validated, ownership-checked rebuild ready for the confirmation dialog.
@@ -49,7 +55,7 @@ struct PreparedRebuild {
 /// downstream so arbitrary WebView input is never reflected back.
 fn authorize_image_rebuild(request: &ImageBuildRequest) -> Result<PreparedRebuild, String> {
     if !request.confirm {
-        return Err("Confirm the rebuild before RunHaven rebuilds this agent image.".to_string());
+        return Err("Confirm before RunHaven installs this agent image.".to_string());
     }
     validate_text_len("agent", &request.agent, MAX_AGENT_NAME_LEN)?;
     let profile =
@@ -67,17 +73,23 @@ fn authorize_image_rebuild(request: &ImageBuildRequest) -> Result<PreparedRebuil
 fn start_image_rebuild(
     prepared: PreparedRebuild,
     registry: &ImageBuildStatusRegistry,
+    jobs: &BackgroundJobRegistry,
 ) -> Result<ImageBuildStartResponse, String> {
     // The container CLI is the last gate before the mutation, re-checked after
     // confirmation so a denied or canceled rebuild never touches the builder.
-    require_container_cli().map_err(|_| {
-        "The container tool is not ready. Finish RunHaven setup before rebuilding an image."
+    require_supported_runtime().map_err(|_| {
+        "RunHaven setup is not ready for image rebuilds. Open System Check and fix the listed issue."
             .to_string()
     })?;
     let build_id = new_run_id();
     let tag = prepared.plan.tag.clone();
+    let lease = match jobs.claim(&image_build_key(&tag), &build_id)? {
+        JobClaim::Started(lease) => lease,
+        JobClaim::Existing(existing_id) => return image_build_response(registry, &existing_id),
+    };
     registry.mark_building(&build_id, &prepared.agent, &tag)?;
-    if let Err(error) = spawn_image_build(build_id.clone(), prepared.plan, registry.clone()) {
+    if let Err(error) = spawn_image_build(build_id.clone(), prepared.plan, registry.clone(), lease)
+    {
         let _ = registry.mark_failed(
             &build_id,
             "RunHaven could not start the rebuild.".to_string(),
@@ -89,8 +101,33 @@ fn start_image_rebuild(
         agent: prepared.agent,
         tag,
         state: "building".to_string(),
-        label: "Building".to_string(),
-        detail: "RunHaven started rebuilding this agent image.".to_string(),
+        label: "Installing".to_string(),
+        detail: "RunHaven started installing this agent image.".to_string(),
+    })
+}
+
+fn existing_image_rebuild(
+    prepared: &PreparedRebuild,
+    registry: &ImageBuildStatusRegistry,
+    jobs: &BackgroundJobRegistry,
+) -> Result<Option<ImageBuildStartResponse>, String> {
+    jobs.active_id(&image_build_key(&prepared.plan.tag))?
+        .map(|id| image_build_response(registry, &id))
+        .transpose()
+}
+
+fn image_build_response(
+    registry: &ImageBuildStatusRegistry,
+    build_id: &str,
+) -> Result<ImageBuildStartResponse, String> {
+    let status = registry.get(build_id)?;
+    Ok(ImageBuildStartResponse {
+        build_id: status.build_id,
+        agent: status.agent,
+        tag: status.tag,
+        state: status.state,
+        label: status.label,
+        detail: "This agent image is already installing. Showing its current progress.".to_string(),
     })
 }
 
@@ -100,12 +137,12 @@ async fn trusted_image_rebuild_confirmed(
     tag: &str,
 ) -> Result<bool, String> {
     let message = format!(
-        "Agent: {agent}\nImage tag: {tag}\n\nRunHaven will rebuild this agent image from its bundled template after you confirm. Existing containers keep running until you launch a new session."
+        "Agent: {agent}\nImage tag: {tag}\n\nRunHaven will install a fresh agent image from its bundled template after you confirm. If a copy already exists, it will be replaced. Existing containers keep running until you launch a new session."
     );
     confirm_native(
         app,
-        "Confirm RunHaven image rebuild",
-        "Rebuild",
+        "Install this agent?",
+        "Install",
         MessageDialogKind::Warning,
         message,
     )
@@ -116,11 +153,15 @@ async fn trusted_image_rebuild_confirmed(
 pub(crate) fn rebuild_agent_image_for_test(
     request: ImageBuildRequest,
     registry: &ImageBuildStatusRegistry,
+    jobs: &BackgroundJobRegistry,
     approve: impl FnOnce(&str, &str) -> Result<bool, String>,
 ) -> Result<ImageBuildStartResponse, String> {
     let prepared = authorize_image_rebuild(&request)?;
+    if let Some(response) = existing_image_rebuild(&prepared, registry, jobs)? {
+        return Ok(response);
+    }
     if !approve(&prepared.agent, &prepared.plan.tag)? {
         return Err(REBUILD_CANCELED.to_string());
     }
-    start_image_rebuild(prepared, registry)
+    start_image_rebuild(prepared, registry, jobs)
 }

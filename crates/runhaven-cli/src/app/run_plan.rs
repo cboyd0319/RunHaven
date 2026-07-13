@@ -6,12 +6,15 @@ use anyhow::{Result, bail};
 use super::plan_output;
 use crate::args::RunArgs;
 use runhaven_core::provider::runtime as provider_runtime;
-use runhaven_core::runtime::launch::{launch_run_plan, require_container_cli};
-use runhaven_core::runtime::plans::{
-    AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
-    default_network_mode,
+use runhaven_core::runtime::launch::{
+    launch_run_plan, new_run_id, validate_run_plan_before_worktree,
+    write_worktree_setup_failure_record,
 };
-use runhaven_core::runtime::profiles::get_profile;
+use runhaven_core::runtime::plans::{
+    AgentRunPlan, AuthScope, ClaudeAuthSource, NetworkMode, RunOptions, WorkspaceScope,
+    WorktreeRun, build_run_plan, default_network_mode,
+};
+use runhaven_core::runtime::profiles::{AgentProfile, get_profile};
 use runhaven_core::runtime::worktrees::{create_worktree_for_run, preview_worktree};
 
 pub(super) fn plan_run(args: &RunArgs, agent_args: Vec<String>) -> Result<i32> {
@@ -31,11 +34,12 @@ pub(super) fn run_agent(
         return print_worktree_dry_run(args, agent_args);
     }
 
-    let mut plan = make_run_plan(args, agent_args.clone(), None, None, None)?;
+    let launch_run_id = (!dry_run).then(new_run_id);
+    let mut plan = make_run_plan(args, agent_args.clone(), None, None, launch_run_id.clone())?;
     if worktree_enabled {
-        provider_runtime::validate_runtime_auth_broker_environment(&plan)?;
-        require_container_cli()?;
-        let run_id = uuid::Uuid::new_v4().simple().to_string();
+        validate_run_plan_before_worktree(&plan)?;
+        let run_id = launch_run_id
+            .ok_or_else(|| anyhow::anyhow!("worktree launch is missing its reserved run id"))?;
         let workspace_scope = workspace_scope(&args.workspace_scope)?;
         let worktree = create_worktree_for_run(
             &args.workspace,
@@ -45,13 +49,25 @@ pub(super) fn run_agent(
             &run_id,
         )?;
         let mounted = worktree.mounted_workspace.clone();
-        plan = make_run_plan(
+        let final_plan = make_run_plan_with_auth_source(
             args,
             agent_args,
             Some(&mounted),
-            Some(worktree),
+            Some(worktree.clone()),
             Some(run_id),
-        )?;
+            plan.claude_auth_source.clone(),
+        );
+        plan = match final_plan {
+            Ok(plan) => plan,
+            Err(error) => {
+                if let Err(record_error) = write_worktree_setup_failure_record(&plan, &worktree) {
+                    return Err(error.context(format!(
+                        "could not save worktree recovery information: {record_error}"
+                    )));
+                }
+                return Err(error);
+            }
+        };
     }
     if dry_run {
         plan_output::print_run_plan(&plan);
@@ -87,45 +103,62 @@ pub(super) fn make_run_plan(
     worktree: Option<WorktreeRun>,
     run_id: Option<String>,
 ) -> Result<AgentRunPlan> {
-    make_run_plan_with_presence(
+    let profile = get_profile(&args.agent)?;
+    let network = match &args.network {
+        Some(value) => network_mode(value)?,
+        None => default_network_mode(&profile),
+    };
+    let claude_auth_source = provider_runtime::select_api_key_broker_source_for_network(
+        args.api_key_broker_env.clone(),
+        network,
+    )?;
+    make_run_plan_from_resolved(
         args,
         agent_args,
         workspace_override,
         worktree,
         run_id,
-        provider_runtime::claude_oauth_token_present,
+        (profile, network, claude_auth_source),
     )
 }
 
-/// Build the run plan with an injectable Keychain-presence source. Production
-/// uses the non-prompting attributes-only presence check; tests inject a fake so
-/// no real Keychain is touched. Selecting `KeychainOAuth` from PRESENCE here
-/// (never reading the token) keeps the prompting read deferred to broker startup.
-pub(super) fn make_run_plan_with_presence(
+pub(super) fn make_run_plan_with_auth_source(
     args: &RunArgs,
     agent_args: Vec<String>,
     workspace_override: Option<&Path>,
     worktree: Option<WorktreeRun>,
     run_id: Option<String>,
-    keychain_present: impl Fn() -> Result<bool>,
+    claude_auth_source: Option<ClaudeAuthSource>,
 ) -> Result<AgentRunPlan> {
     let profile = get_profile(&args.agent)?;
-    // The env-var broker flag wins; otherwise a saved Claude Keychain token drives
-    // the claude-only OAuth path. Rust decides from real presence, not a raw flag.
-    let claude_auth_source = provider_runtime::select_claude_auth_source_with_presence(
-        args.api_key_broker_env.clone(),
-        &args.agent,
-        keychain_present,
-    )?;
+    let network = match &args.network {
+        Some(value) => network_mode(value)?,
+        None => default_network_mode(&profile),
+    };
+    make_run_plan_from_resolved(
+        args,
+        agent_args,
+        workspace_override,
+        worktree,
+        run_id,
+        (profile, network, claude_auth_source),
+    )
+}
+
+fn make_run_plan_from_resolved(
+    args: &RunArgs,
+    agent_args: Vec<String>,
+    workspace_override: Option<&Path>,
+    worktree: Option<WorktreeRun>,
+    run_id: Option<String>,
+    resolved: (AgentProfile, NetworkMode, Option<ClaudeAuthSource>),
+) -> Result<AgentRunPlan> {
+    let (profile, network, claude_auth_source) = resolved;
     let tty = match args.tty.as_str() {
         "always" => true,
         "never" => false,
         "auto" => std::io::stdin().is_terminal() && std::io::stdout().is_terminal(),
         other => bail!("invalid --tty value: {other:?}"),
-    };
-    let network = match &args.network {
-        Some(value) => network_mode(value)?,
-        None => default_network_mode(&profile),
     };
     build_run_plan(RunOptions {
         profile,

@@ -39,6 +39,7 @@ export function SessionInputCard({
 
   const draftBytes = sessionInputBytes(draft)
   const inputAttached = session.input.attached
+  const showByteCount = draftBytes >= MAX_SESSION_INPUT_BYTES * 0.8
   const canSend =
     inputAttached && draft.length > 0 && draftBytes <= MAX_SESSION_INPUT_BYTES && !sending
 
@@ -50,8 +51,8 @@ export function SessionInputCard({
         </CardTitle>
         <CardDescription>
           {inputAttached
-            ? "Send text to this selected session."
-            : "Input is not attached for this session."}
+            ? "Send text to this run."
+            : "Input is not attached for this run."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -96,11 +97,13 @@ export function SessionInputCard({
                   onSend()
                 }
               }}
-              placeholder="Type a message for this session."
+              placeholder="Type a message for this run."
             />
-            <p className="text-sm text-muted-foreground">
-              {draftBytes} / {MAX_SESSION_INPUT_BYTES} bytes
-            </p>
+            {showByteCount ? (
+              <p className="text-sm text-muted-foreground">
+                {draftBytes} / {MAX_SESSION_INPUT_BYTES} bytes
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Button type="submit" disabled={!canSend}>

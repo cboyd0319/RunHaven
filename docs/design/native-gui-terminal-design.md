@@ -1,9 +1,12 @@
 # Native GUI Embedded Terminal — Design
 
-Status: design only. Do not implement, commit, or push from this doc. It exists
-to be adversarially reviewed before any code is written. Every boundary choice
-is labeled: [S] verified against source, [C] Tauri/AppKit convention, [J]
-product judgment.
+Status: Historical design record. The PTY design was implemented, then the
+sign-in surface was generalized on 2026-07-12 so Claude, Codex, Antigravity,
+and Copilot all use their native interactive login inside the agent container.
+References below to the former captured-output sign-in runner describe the
+pre-implementation state. Use `docs/DESKTOP_APP.md` for current behavior.
+Every boundary choice is labeled: [S] verified against source, [C]
+Tauri/AppKit convention, [J] product judgment.
 
 ## Project shape and platform targets
 
@@ -11,7 +14,7 @@ product judgment.
   WebView in `ui/`, over typed commands into `runhaven-core`.
 - macOS 26+ on Apple silicon only. No Windows/Linux runtime target, so a
   Unix-only PTY path is acceptable.
-- Runtime is Apple `container` 1.0.0. Interactive model is
+- Runtime is Apple `container` 1.1.0. Interactive model is
   `container exec -i -t <id> <shell>` (new process in a running container) or
   `container run -i -t ...` (fresh container). There is no docker-style attach
   to a live PID 1 PTY. [S]

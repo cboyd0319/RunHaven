@@ -219,7 +219,7 @@ describe("SessionMonitorView", () => {
         diagnostics={noopDiagnostics}
       />,
     )
-    expect(markup).toContain("This session is gone")
+    expect(markup).toContain("This run is gone")
     expect(markup).toContain("Cmd-W")
     expect(markup).toContain("Codex - alpha")
     // Details hide with the record: nothing left to load.

@@ -10,7 +10,7 @@ import {
   type RunPlanResponse,
 } from "@/commands/runhaven"
 
-import type { NavDestination } from "./navigation"
+import { sessionGroupFor, type NavDestination } from "./navigation"
 import { sessionIdForRun } from "./sessionSelection"
 
 type AppDerivedStateInput = {
@@ -18,7 +18,6 @@ type AppDerivedStateInput = {
   request: RunPlanRequest
   imageStatus: ImageStatusResponse | null
   plan: RunPlanResponse | null
-  launchConfirmation: boolean
   confirmedWarnings: string[]
   managedSessions: ManagedSessionList
   navigation: NavDestination
@@ -34,27 +33,27 @@ const PAGE_HEADINGS: Record<
 > = {
   home: {
     title: "Home",
-    description: "Start a run, review sessions, or check setup.",
+    description: "Start a run or take care of what needs you.",
   },
   runs: {
     title: "Run history",
-    description: "Open a past run to review or clean it up.",
+    description: "Find running, finished, and attention-needed runs.",
   },
   session: {
-    title: "Session",
-    description: "Review status and access for the selected agent session.",
+    title: "Run details",
+    description: "See what happened, send a message, or stop this run.",
   },
   agents: {
     title: "Agents",
     description: "Sign in and keep each agent ready to run.",
   },
   diagnostics: {
-    title: "Diagnostics",
-    description: "Read-only trust checks. Nothing here changes your Mac.",
+    title: "System Check",
+    description: "Check whether this Mac is ready for RunHaven.",
   },
   maintenance: {
-    title: "Maintenance",
-    description: "Clean up what RunHaven left behind.",
+    title: "Cleanup",
+    description: "Remove RunHaven items you no longer need.",
   },
   "run-terminal": {
     title: "Run terminal",
@@ -76,7 +75,7 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
     setupReady &&
     isLaunchReady(
       input.plan,
-      input.launchConfirmation,
+      true,
       new Set(input.confirmedWarnings),
       launchImageReady,
     )
@@ -90,6 +89,9 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
   const { title: pageTitle, description: pageDescription } =
     PAGE_HEADINGS[input.navigation.kind]
   const outputSessionId = selectedSession?.id ?? null
+  const outputSessionActive = selectedSession
+    ? sessionGroupFor(selectedSession) === "active"
+    : false
   const outputRunId = selectedSession ? null : input.lastLaunch?.runId ?? null
   const outputTargetId = outputSessionId
     ? `session:${outputSessionId}`
@@ -120,6 +122,7 @@ export function useAppDerivedState(input: AppDerivedStateInput) {
     pageDescription,
     outputTargetId,
     outputSessionId,
+    outputSessionActive,
     outputRunId,
     controlTargetId,
     lastLaunchSessionId,

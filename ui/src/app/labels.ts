@@ -70,9 +70,9 @@ export function authStatusLabel(status: string): string {
     case "brokered":
       return "API key broker"
     case "keychain-oauth":
-      return "Claude subscription (Keychain)"
+      return "Legacy Claude Keychain auth"
     case "login-state":
-      return "Sign in needed"
+      return "Isolated login"
     case "needs-sign-in":
       return "Needs sign-in"
     case "no-auth-needed":

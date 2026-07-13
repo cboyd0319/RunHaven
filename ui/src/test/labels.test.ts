@@ -40,7 +40,7 @@ describe("authStatusLabel", () => {
 
   it("names the Claude Keychain OAuth broker distinctly", () => {
     expect(authStatusLabel("keychain-oauth")).toBe(
-      "Claude subscription (Keychain)",
+      "Legacy Claude Keychain auth",
     )
   })
 

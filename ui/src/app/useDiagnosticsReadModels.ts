@@ -30,6 +30,7 @@ export type DiagnosticsReadModels = {
 // and the prune preview falls back to an unknown count on failure.
 export function useDiagnosticsReadModels(
   agents: AgentProfile[],
+  setupReady = true,
 ): DiagnosticsReadModels {
   const [images, setImages] = useState<ImageReadinessRow[]>([])
   const [staleNetworks, setStaleNetworks] = useState<number | null>(null)
@@ -40,6 +41,12 @@ export function useDiagnosticsReadModels(
   const agentNames = agents.map((agent) => agent.name).join(",")
 
   async function reload(): Promise<void> {
+    if (!setupReady) {
+      setImages([])
+      setStaleNetworks(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     try {
       const [imageResults, prune] = await Promise.all([
@@ -73,7 +80,7 @@ export function useDiagnosticsReadModels(
     // reload reads the current agents through agentNames; re-run only when the
     // agent set changes or the view remounts on destination re-entry.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentNames])
+  }, [agentNames, setupReady])
 
   return { images, staleNetworks, loading, reload }
 }

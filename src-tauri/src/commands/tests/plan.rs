@@ -3,7 +3,11 @@ use super::*;
 #[test]
 fn lists_agent_profiles_without_secrets() {
     let agents = agent_summaries();
-    assert!(agents.iter().any(|agent| agent.name == "codex"));
+    let names = agents
+        .iter()
+        .map(|agent| agent.name.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(names, ["antigravity", "claude", "codex", "copilot"]);
     assert!(agents.iter().all(|agent| !agent.image.is_empty()));
     let codex = agents
         .iter()
@@ -11,12 +15,6 @@ fn lists_agent_profiles_without_secrets() {
         .expect("codex profile");
     assert_eq!(codex.sign_in, "runhaven login");
     assert_eq!(codex.broker, "yes");
-    let shell = agents
-        .iter()
-        .find(|agent| agent.name == "shell")
-        .expect("shell profile");
-    assert_eq!(shell.sign_in, "n/a");
-    assert_eq!(shell.broker, "n/a");
 }
 
 #[test]
@@ -36,7 +34,8 @@ fn build_plan_response_uses_existing_runhaven_planner() {
             .contains("across projects on this Mac")
     );
     assert!(!response.access.blocking);
-    assert_eq!(response.warnings.len(), 0);
+    assert_eq!(response.warnings.len(), 1);
+    assert_eq!(response.warnings[0].code, "direct-workspace");
 }
 
 #[test]
@@ -60,7 +59,8 @@ fn build_plan_response_warns_for_supported_advanced_choices() {
             "full-internet",
             "sensitive-workspace",
             "environment",
-            "custom-image"
+            "custom-image",
+            "direct-workspace"
         ]
     );
 }
@@ -80,7 +80,8 @@ fn build_plan_response_accepts_allowed_api_key_broker_env_name() {
         Some("OPENAI_API_KEY".to_string())
     );
     assert!(response.access.api_key_broker_env_present.is_some());
-    assert_eq!(response.warnings.len(), 0);
+    assert_eq!(response.warnings.len(), 1);
+    assert_eq!(response.warnings[0].code, "direct-workspace");
 }
 
 #[test]
@@ -268,10 +269,14 @@ fn trusted_launch_prompt_contains_reviewable_launch_facts() {
     let workspace = tempfile::tempdir().expect("workspace");
     let mut plan_request = request(workspace.path().to_path_buf());
     plan_request.api_key_broker_env = Some("OPENAI_API_KEY".to_string());
+    plan_request.env_names = vec![
+        "OPENAI_API_KEY".to_string(),
+        "RUNHAVEN_TEST_TOKEN".to_string(),
+    ];
     let plan = build_agent_run_plan(&plan_request, Some("prompt-review-run".to_string()))
         .expect("launch plan");
 
-    let message = trusted_launch_message_for_test(&plan, &[], false);
+    let message = trusted_launch_message_for_test(&plan, &[], false, &plan_request.env_names);
 
     assert!(message.contains("Agent: codex"));
     assert!(message.contains(&format!("Workspace: {}", plan.workspace.display())));
@@ -284,9 +289,17 @@ fn trusted_launch_prompt_contains_reviewable_launch_facts() {
     assert!(!message.contains("Network: provider"));
     assert!(message.contains("Provider hosts: "));
     assert!(message.contains("API key broker: OPENAI_API_KEY"));
+    assert!(
+        message
+            .lines()
+            .any(|line| { line == "Extra host variables: OPENAI_API_KEY, RUNHAVEN_TEST_TOKEN" })
+    );
+    assert!(!message.contains("OPENAI_API_KEY="));
+    assert!(!message.contains("RUNHAVEN_TEST_TOKEN="));
     assert!(message.contains("Worktree: no"));
 
-    let worktree_message = trusted_launch_message_for_test(&plan, &[], true);
+    let worktree_message =
+        trusted_launch_message_for_test(&plan, &[], true, &plan_request.env_names);
     assert!(worktree_message.contains("Worktree: yes"));
     assert!(worktree_message.contains("isolated git branch"));
 }

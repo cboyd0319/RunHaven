@@ -13,46 +13,10 @@ surface; behavior may still change before `v1.0.0`.
 
 ## Terminal UI
 
-Running `runhaven` by itself opens the terminal UI (TUI). It uses the same
-agents and run planner as the CLI:
-
-```bash
-runhaven
-```
-
-Current rebuild state: the TUI opens an unreleased RunHaven-only checkpoint. Use
-`1` for launch, `2` for active runs, `3` for diagnostics, and `h` for run
-history. In the launch flow, choose a workspace and an agent, then review the
-launch plan. Press `n` to change the network policy and `a` to switch between
-shared agent login state and project-only login state. Review and confirm show
-auth scope, network posture, what is shared, what is not shared, safety notes,
-and the matching `container run` command before launch. Lower-security plans
-require typed confirmation. Press `q` or esc to quit except while typing
-confirmation text; there, esc backs out and `q` is entered as text.
-
-The active-runs screen shows RunHaven-owned active markers without workspace
-paths. Stop, hard stop, and repair marker actions each require a typed
-confirmation before RunHaven touches the selected run. Opening logs requires
-typing `logs` before RunHaven reads a bounded raw output snapshot. The
-diagnostics screen shows Mac/container preflight checks, auth status, and
-recent auth/network decisions without raw secrets or workspace paths. The
-history screen shows recent run records, review commands, and worktree branch
-details without host workspace paths. Opening a run diff requires typing
-`diff` before RunHaven reads a bounded preview.
-
-Use the CLI for advanced run management, worktree review, cleanup, and
-maintenance:
-
-```bash
-runhaven plan claude
-runhaven run claude
-runhaven runs active
-runhaven runs list
-runhaven doctor
-```
-
-The CLI stays the complete, scriptable surface. Any subcommand, or a piped or
-redirected invocation, uses the CLI directly and never opens the TUI.
+The terminal UI source is archived outside the release workspace. It is not
+linked into RunHaven binaries. Running `runhaven` without a subcommand prints
+CLI help. Use the desktop app for the guided experience or CLI subcommands for
+automation and diagnostics.
 
 ## Guided Setup
 
@@ -93,12 +57,16 @@ surface: builder image, vminit image, and Kata kernel. A newer Apple
 `container` release or helper drift should fail until this repo updates its
 reviewed pins.
 
+RunHaven repeats these read-only checks immediately before a real run or
+in-sandbox sign-in. If a check fails, the agent does not start and RunHaven
+tells you to run `runhaven doctor`. Planning and `--dry-run` do not run these
+checks.
+
 ## Build an Agent Image
 
 ```bash
 runhaven image build claude
 runhaven image build codex
-runhaven image build gemini
 runhaven image build antigravity
 runhaven image build copilot
 ```
@@ -171,6 +139,14 @@ plain-language `Security notices` to standard error. See
 runhaven run claude
 ```
 
+Put agent flags after `--`. A leading flag is added to the profile's normal
+command. Put an executable first when you want to replace that command:
+
+```bash
+runhaven run claude -- --version
+runhaven run shell -- /bin/bash -lc "cargo test --locked"
+```
+
 A run first checks that the agent image is built. If it is not, RunHaven stops
 before starting the sandbox and tells you to build it once with
 `runhaven image build <agent>`.
@@ -196,6 +172,12 @@ runhaven runs repair --all
 runhaven runs repair <run-id> --json
 runhaven runs repair --all --json
 ```
+
+On macOS, Ctrl-C, terminal hangup, or a normal termination signal stops and
+reaps the owned `container run` process before RunHaven removes its active
+marker and dedicated run network. An interrupted run records exit code 130 for
+Ctrl-C. A forced SIGKILL cannot run cleanup; use `runs repair` and `network
+prune` if a hard process kill leaves stale resources.
 
 `runs status` shows the active marker plus sanitized live Apple
 `container inspect` state without opening a shell:
@@ -233,7 +215,7 @@ runhaven runs logs-follow <run-id> --lines 50
 RunHaven allocates an interactive TTY when attached to a terminal. Use
 `--tty never` for non-interactive automation.
 
-Broker an API key (Codex, Claude, or Gemini) without placing the raw value in
+Broker an API key (Codex or Claude) without placing the raw value in
 the guest:
 
 ```bash
@@ -247,7 +229,6 @@ that value inside the guest:
 ```bash
 runhaven run claude --env ANTHROPIC_API_KEY
 runhaven run codex --env OPENAI_API_KEY
-runhaven run gemini --env GEMINI_API_KEY
 runhaven run copilot --env COPILOT_GITHUB_TOKEN
 ```
 
@@ -264,8 +245,8 @@ runhaven auth log --limit 20
 runhaven auth log --json
 ```
 
-The host-side API-key broker covers Codex, Claude, and Gemini. Copilot and
-Antigravity are not brokered. These commands describe the host-side broker
+The host-side API-key broker covers Codex and Claude. Copilot and Antigravity
+are not brokered. These commands describe the host-side broker
 boundary and the current safe paths for each profile. They do not inspect
 Keychain, browser profiles, provider login caches, cloud credential files, or
 environment variable values, and they do not print secrets.
@@ -284,46 +265,29 @@ projects, so you log in once per agent and every later run reuses it; pass
 in-sandbox login shows a URL and code to open in your host browser (there is no
 browser inside the container).
 
-For Codex and Copilot, `runhaven login` runs the CLI's own device login once
-inside the sandbox so later runs skip it:
+Use the same native sign-in path for every supported agent:
 
 ```bash
-runhaven login codex          # `codex login --device-auth` in the sandbox; open the URL, no code to paste back
-runhaven login copilot        # `copilot login` in the sandbox; open github.com/login/device, enter the code
-runhaven login antigravity    # starts `agy`; complete the Google sign-in in your browser, then type /exit
-runhaven login codex --clear  # delete that agent's shared home volume (logs it out)
+runhaven login claude          # open the URL, approve, paste the returned code
+runhaven login codex           # enter the device code; Codex waits for approval
+runhaven login antigravity     # finish Google OAuth and first-run setup, then exit
+runhaven login copilot         # enter the code at github.com/login/device
+runhaven login codex --clear  # delete Codex's shared agent volume
 ```
 
-These persist in the agent's shared home volume; RunHaven never sees the token.
-Codex needs the account "Allow device code login" setting on. Copilot has no
-in-container keychain, so it asks to store the token in a plaintext config file;
-answer `y` (it lands in the isolated volume, the same as every other in-container
-login). Antigravity (`agy`) prints an "Eligibility check failed" line because it
-cannot fetch your profile picture; this is harmless and the agent works, add
-`--provider-host lh3.googleusercontent.com` to silence it. The login runs in
-`provider` mode, so the allowlist includes each provider's login hosts
-(`auth.openai.com` for Codex; `github.com` and `api.github.com` for Copilot; the
-Google login and Cloud Code hosts for Antigravity, including the model-endpoint
-family pattern `*-cloudcode-pa.googleapis.com` so a Google channel or region
-change does not need a new host).
+Each provider CLI stores its own credential under the non-root agent home in the
+isolated volume. RunHaven never reads the token. The provider CLI may write its
+own configuration or support logs there. Codex device authorization can wait up
+to 15 minutes and requires device-code login to be allowed for the account.
 
-Claude signs in the same in-sandbox way:
+`--clear` deletes the whole shared agent volume, including the login,
+preferences, and other saved agent state. Local deletion does not necessarily
+revoke the provider-side authorization.
 
-```bash
-runhaven login claude          # runs `claude auth login` in the sandbox; open the URL, approve, paste the code back
-runhaven login claude --clear  # delete that agent's shared home volume (logs it out)
-```
-
-`runhaven login claude` runs Claude's default Claude.ai subscription login
-(`claude auth login`) inside the sandbox: open the URL it prints, approve in your
-browser, then paste the code back into this terminal. The login persists in
-Claude's shared home volume, so later runs reuse it; RunHaven never holds the
-token. `--clear` deletes that volume and also best-effort removes any token an
-older RunHaven stored on your Mac before this change. In the desktop app this
-in-sandbox login is the "Sign in inside the sandbox instead" opt-in; the default
-there is "Sign in on your Mac" (path C), which saves the token in your Mac's
-Keychain and never puts it in the sandbox. See
-[`AUTH_BROKER.md`](AUTH_BROKER.md) and [`SECURITY_MODEL.md`](SECURITY_MODEL.md).
+In the desktop app, all four agents use **Open sign-in terminal**. The terminal
+supports the full interactive sequence, including Claude and Antigravity
+paste-back prompts. See [Authentication](AUTH_BROKER.md) and
+[Security model](SECURITY_MODEL.md).
 
 Use `--env NAME` only when a headless run deliberately needs one token value
 inside the guest.
@@ -377,10 +341,12 @@ started from a subdirectory with the default `--workspace-scope current`,
 RunHaven mounts the matching subdirectory inside the isolated worktree rather
 than silently broadening to the whole repo.
 
-The source checkout is left untouched. RunHaven keeps the worktree after the
-run and records the worktree path, branch, base commit, and exact git commands
-for status, diff, merge, worktree removal, and branch deletion in the run
-record. Use `runhaven runs show RUN_ID --json` to retrieve those commands.
+The source checkout is left untouched. RunHaven keeps the worktree after the run
+and records its path, branch, base commit, and recovery commands in the run record.
+Use `runhaven runs show RUN_ID --json` to retrieve those commands.
+
+RunHaven checks runtime, image, configuration, and sign-in before creation when
+possible. A later failure keeps the worktree in a failed record for the commands below.
 
 After review, choose an explicit lifecycle action:
 
@@ -539,39 +505,8 @@ workspace, host, port, decision, reason, matched rule, count, and run id.
 
 ## Task Recipes
 
-Review a project without writing to it:
-
-```bash
-runhaven run claude --read-only-workspace
-```
-
-Run local checks without internet egress:
-
-```bash
-runhaven run shell --network internal -- /bin/bash -lc "cargo test --locked"
-```
-
-Talk only to a bundled provider profile:
-
-```bash
-runhaven run codex --network provider
-```
-
-Use an isolated git worktree and inspect changes before merging:
-
-```bash
-runhaven run claude --worktree
-runhaven runs list
-runhaven runs recover RUN_ID
-runhaven runs diff RUN_ID
-```
-
-Reset one project/profile agent home volume:
-
-```bash
-runhaven state reset claude --workspace .
-runhaven state reset claude --workspace . --yes
-```
+See [Task Recipes](RECIPES.md) for copyable safe-review, local-check,
+provider-only, worktree, and state-reset workflows.
 
 ## Recover Local Resources
 
@@ -601,10 +536,11 @@ runhaven network prune
 runhaven network prune --yes
 ```
 
-`network prune` filters to RunHaven-owned network names such as the
-volume-preparation network, per-project internal networks, and per-run provider
-networks. It does not delete Apple-managed networks, the default network,
-arbitrary user-created networks, workspaces, images, or state volumes.
+RunHaven normally removes each dedicated internal or provider run network when
+the run ends. `network prune` handles RunHaven-owned names left by an
+interruption, an older release, or volume preparation. It does not delete
+Apple-managed networks, the default network, arbitrary user-created networks,
+workspaces, images, or state volumes.
 `image doctor` is read-only and reports missing or stale bundled images,
 builder status and resource guidance, inactive RunHaven state volumes, and
 copyable recovery commands.

@@ -4,8 +4,8 @@
       "creationDate": "2026-06-14T03:26:26Z",
       "descriptor": {
         "annotations": {
-          "com.apple.containerization.image.name": "runhaven/base:0.1.0",
-          "io.containerd.image.name": "docker.io/runhaven/base:0.1.0",
+          "com.apple.containerization.image.name": "runhaven/base:0.7.0",
+          "io.containerd.image.name": "docker.io/runhaven/base:0.7.0",
           "org.opencontainers.image.created": "2026-06-14T03:26:29Z",
           "org.opencontainers.image.ref.name": "0.1.0"
         },
@@ -13,7 +13,7 @@
         "mediaType": "application/vnd.oci.image.index.v1+json",
         "size": 375
       },
-      "name": "runhaven/base:0.1.0"
+      "name": "runhaven/base:0.7.0"
     },
     "id": "818ed618172319fc9a28f431ccdd2b95032cdb004d5296cceab2566fb5a8d89f",
     "variants": [

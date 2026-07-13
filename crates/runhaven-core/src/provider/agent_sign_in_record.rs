@@ -1,39 +1,44 @@
 //! Per-agent sign-in tracking that RunHaven can truthfully know.
 //!
-//! A marker records that an agent completed its sign-in flow INSIDE ITS
-//! ISOLATED SANDBOX and that RunHaven observed that flow exit successfully.
-//! RunHaven never reads the credential: the marker is secret-free and holds only
-//! `{agent, scope, signed_in_at}`. It never carries a token, key, env value, or
-//! path.
+//! A record tracks whether an agent completed or cleared its sign-in flow INSIDE
+//! ITS ISOLATED SANDBOX. RunHaven never reads the credential: each record is
+//! secret-free and carries only an agent, scope, timestamp, and active state.
 //!
 //! The marker means "the agent signed in in its sandbox", NOT "signed in via
 //! RunHaven" and NOT "the token is still valid". RunHaven does not store or
 //! manage the credential; it only witnessed the sign-in flow finish. Readiness
 //! labels describe the agent's state only.
 
-use std::io::Write;
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::provider::auth_profiles::{AgentSignIn, agent_sign_in_mode};
 use crate::provider::observability::utc_timestamp;
-use crate::records::read_jsonl;
-use crate::support::paths::{agent_sign_ins_path, open_private_append};
+use crate::records::{append_private_jsonl, read_jsonl};
+use crate::runtime::session_state::shared_state_volume_name;
+use crate::support::paths::agent_sign_ins_path;
 use crate::support::validators::validate_run_id;
 
 /// The shared-agent sign-in scope: a device-code sign-in signs the agent in for
 /// its shared agent state, not a per-workspace scope.
 pub const AGENT_SIGN_IN_SCOPE: &str = "agent";
 
-/// A secret-free record that an agent completed sign-in in its sandbox. The
-/// three fields are the ONLY thing ever written; a token, key, env value, or
-/// path in this struct would be a hard security failure.
+/// A secret-free sign-in state record. `updated_at` accepts the historical
+/// `signed_in_at` field, and a missing `active` field means signed in, so
+/// existing records remain valid after the append-only sign-out state was
+/// introduced.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AgentSignInMarker {
     pub agent: String,
     pub scope: String,
-    pub signed_in_at: String,
+    #[serde(alias = "signed_in_at")]
+    pub updated_at: String,
+    #[serde(default = "active_by_default")]
+    pub active: bool,
+}
+
+const fn active_by_default() -> bool {
+    true
 }
 
 /// The per-agent readiness the Home "Agent setup" panel shows. Every field is a
@@ -47,25 +52,33 @@ pub struct AgentReadiness {
     pub label: String,
 }
 
-/// Append one secret-free sign-in marker for `agent` at `scope`.
+/// Append one secret-free signed-in state for `agent` at `scope`.
 ///
 /// The agent id and scope are validated with the same id validator the run log
 /// uses, so a control or terminal-escape byte cannot ride into the record and
-/// back out into a rendered surface. Only `{agent, scope, signed_in_at}` is
-/// written; the timestamp comes from the shared UTC helper, never a forbidden
-/// wall-clock call.
+/// back out into a rendered surface. The timestamp comes from the shared UTC
+/// helper, never a forbidden wall-clock call.
 pub fn record_agent_sign_in(agent: &str, scope: &str) -> Result<()> {
+    record_agent_sign_in_state(agent, scope, true)
+}
+
+/// Append one secret-free signed-out state after the isolated login volume was
+/// deleted. This does not inspect or handle the provider credential.
+pub fn record_agent_sign_out(agent: &str, scope: &str) -> Result<()> {
+    record_agent_sign_in_state(agent, scope, false)
+}
+
+fn record_agent_sign_in_state(agent: &str, scope: &str, active: bool) -> Result<()> {
     validate_run_id(agent)?;
     validate_run_id(scope)?;
     let marker = AgentSignInMarker {
         agent: agent.to_string(),
         scope: scope.to_string(),
-        signed_in_at: utc_timestamp(),
+        updated_at: utc_timestamp(),
+        active,
     };
     let path = agent_sign_ins_path();
-    let mut file = open_private_append(&path)?;
-    writeln!(file, "{}", serde_json::to_string(&marker)?)?;
-    Ok(())
+    append_private_jsonl(&path, &[marker])
 }
 
 /// Read every sign-in marker. Malformed lines are skipped, matching the run
@@ -79,49 +92,47 @@ pub fn agent_sign_in_markers() -> Result<Vec<AgentSignInMarker>> {
         .collect())
 }
 
-/// Whether any marker exists for `agent` at the shared agent scope. Never errors
-/// the caller out: a read failure reads as "not signed in" so a broken or
-/// missing marker file degrades to "needs sign-in" instead of a hard error.
+/// Whether the latest record for `agent` at the shared agent scope is active.
+/// Never errors the caller out: a read failure reads as "not signed in" so a
+/// broken or missing marker file degrades to "needs sign-in" instead of a hard
+/// error.
 pub fn agent_signed_in(agent: &str) -> bool {
     agent_sign_in_markers()
         .map(|markers| {
             markers
                 .iter()
-                .any(|marker| marker.agent == agent && marker.scope == AGENT_SIGN_IN_SCOPE)
+                .rev()
+                .find(|marker| marker.agent == agent && marker.scope == AGENT_SIGN_IN_SCOPE)
+                .is_some_and(|marker| marker.active)
         })
         .unwrap_or(false)
 }
 
 /// Compute per-agent setup readiness for the Home panel. Secret-free and
-/// Keychain-free: the caller passes `claude_keychain_present` (the Keychain
-/// presence check lives in the desktop app, not core).
+/// Credential-free: readiness is based on the secret-free completion marker
+/// RunHaven writes after a successful native sign-in terminal plus the
+/// continued presence of that agent's isolated login volume.
 ///
 /// Rules:
 /// - A profile with no sign-in (the generic shell) is always "ready".
-/// - `claude` is driven by the RunHaven-managed Keychain token presence.
-/// - Any other agent that signs in is "signed-in" once a marker exists.
+/// - Every supported agent is "signed-in" once its marker and volume exist.
 ///
-/// Known gap (documented, not worked around): an agent signed in only through a
-/// terminal, not the device-code runner and not the Claude Keychain, leaves no
-/// marker and reads "needs-sign-in". RunHaven will not read the sandbox
-/// credential to close this gap; a truthful "needs-sign-in" is preferred over
-/// inspecting an isolated token.
+/// A marker means RunHaven witnessed a successful sign-in, not that a token is
+/// still valid. RunHaven does not inspect the isolated credential.
 pub fn agent_setup_readiness(
     agents: &[&str],
-    claude_keychain_present: bool,
+    existing_state_volumes: &[String],
 ) -> Vec<AgentReadiness> {
     agents
         .iter()
         .map(|&name| {
             let (category, label) = if agent_sign_in_mode(name) == AgentSignIn::NotApplicable {
                 ("ready", "Ready")
-            } else if name == "claude" {
-                if claude_keychain_present {
-                    ("signed-in", "Signed in")
-                } else {
-                    ("needs-sign-in", "Needs sign-in")
-                }
-            } else if agent_signed_in(name) {
+            } else if agent_signed_in(name)
+                && existing_state_volumes
+                    .iter()
+                    .any(|volume| volume == &shared_state_volume_name(name))
+            {
                 ("signed-in", "Signed in")
             } else {
                 ("needs-sign-in", "Needs sign-in")
@@ -154,7 +165,8 @@ mod tests {
         assert_eq!(markers.len(), 1);
         assert_eq!(markers[0].agent, "codex");
         assert_eq!(markers[0].scope, AGENT_SIGN_IN_SCOPE);
-        assert!(!markers[0].signed_in_at.is_empty());
+        assert!(!markers[0].updated_at.is_empty());
+        assert!(markers[0].active);
     }
 
     #[test]
@@ -167,6 +179,18 @@ mod tests {
 
         assert!(agent_signed_in("codex"));
         assert!(!agent_signed_in("gemini"));
+    }
+
+    #[test]
+    fn latest_sign_out_record_clears_readiness_and_allows_sign_in_again() {
+        let cache = seed_cache();
+        let _override = override_cache_root_for_tests(cache.path());
+        record_agent_sign_in("codex", AGENT_SIGN_IN_SCOPE).expect("sign in");
+        record_agent_sign_out("codex", AGENT_SIGN_IN_SCOPE).expect("sign out");
+        assert!(!agent_signed_in("codex"));
+
+        record_agent_sign_in("codex", AGENT_SIGN_IN_SCOPE).expect("sign in again");
+        assert!(agent_signed_in("codex"));
     }
 
     #[test]
@@ -193,6 +217,7 @@ mod tests {
         let markers = agent_sign_in_markers().expect("markers");
         assert_eq!(markers.len(), 1);
         assert_eq!(markers[0].agent, "codex");
+        assert!(markers[0].active, "legacy record defaults to active");
         assert!(agent_signed_in("codex"));
     }
 
@@ -200,38 +225,37 @@ mod tests {
     fn readiness_marks_shell_ready() {
         let cache = seed_cache();
         let _override = override_cache_root_for_tests(cache.path());
-        let readiness = agent_setup_readiness(&["shell"], false);
+        let readiness = agent_setup_readiness(&["shell"], &[]);
         assert_eq!(readiness[0].category, "ready");
         assert_eq!(readiness[0].label, "Ready");
     }
 
     #[test]
-    fn readiness_follows_claude_keychain_flag() {
+    fn readiness_follows_each_agents_own_marker() {
         let cache = seed_cache();
         let _override = override_cache_root_for_tests(cache.path());
-        let present = agent_setup_readiness(&["claude"], true);
-        assert_eq!(present[0].category, "signed-in");
-        assert_eq!(present[0].label, "Signed in");
+        for agent in ["claude", "codex", "antigravity", "copilot"] {
+            let volumes = vec![shared_state_volume_name(agent)];
+            let before = agent_setup_readiness(&[agent], &volumes);
+            assert_eq!(before[0].category, "needs-sign-in");
 
-        let absent = agent_setup_readiness(&["claude"], false);
-        assert_eq!(absent[0].category, "needs-sign-in");
-        assert_eq!(absent[0].label, "Needs sign-in");
+            record_agent_sign_in(agent, AGENT_SIGN_IN_SCOPE).expect("record");
+
+            let after = agent_setup_readiness(&[agent], &volumes);
+            assert_eq!(after[0].category, "signed-in");
+            assert_eq!(after[0].label, "Signed in");
+        }
     }
 
     #[test]
-    fn readiness_follows_marker_for_a_brokered_agent() {
+    fn readiness_fails_closed_when_the_login_volume_is_missing() {
         let cache = seed_cache();
         let _override = override_cache_root_for_tests(cache.path());
-        // Claude's flag must not leak into other agents: a true keychain flag
-        // still leaves codex needing sign-in until it has its own marker.
-        let before = agent_setup_readiness(&["codex"], true);
-        assert_eq!(before[0].category, "needs-sign-in");
-
         record_agent_sign_in("codex", AGENT_SIGN_IN_SCOPE).expect("record");
 
-        let after = agent_setup_readiness(&["codex"], false);
-        assert_eq!(after[0].category, "signed-in");
-        assert_eq!(after[0].label, "Signed in");
+        let readiness = agent_setup_readiness(&["codex"], &[]);
+
+        assert_eq!(readiness[0].category, "needs-sign-in");
     }
 
     #[test]
@@ -243,13 +267,14 @@ mod tests {
         let marker = &agent_sign_in_markers().expect("markers")[0];
         let serialized = serde_json::to_string(marker).expect("serialize");
 
-        // Exactly the three secret-free fields, and no token-shaped text.
+        // Exactly the four secret-free fields, and no token-shaped text.
         let value: serde_json::Value = serde_json::from_str(&serialized).expect("json");
         let object = value.as_object().expect("object");
-        assert_eq!(object.len(), 3);
+        assert_eq!(object.len(), 4);
         assert!(object.contains_key("agent"));
         assert!(object.contains_key("scope"));
-        assert!(object.contains_key("signed_in_at"));
+        assert!(object.contains_key("updated_at"));
+        assert!(object.contains_key("active"));
 
         let lowered = serialized.to_ascii_lowercase();
         for needle in [

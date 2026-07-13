@@ -1,6 +1,6 @@
-//! Trust-boundary guard for the dev/test logging capability: the WebView's
-//! only log grant stays the log plugin's single write-only `log` command, on
-//! the main window only.
+//! Trust-boundary guard for the development-only logging capability. Release
+//! windows never receive it, so raw terminal access and arbitrary persistent
+//! log writes cannot coexist in a shipped WebView.
 
 use super::support::{assert_same_permission_set, capability_permissions, capability_windows};
 
@@ -20,5 +20,15 @@ fn logging_capability_stays_write_only_and_main_only() {
         capability_windows("logging.json"),
         vec!["main".to_string()],
         "logging must stay main-window-only"
+    );
+}
+
+#[test]
+fn release_config_never_grants_webview_logging() {
+    let release = std::fs::read_to_string(super::support::manifest_dir().join("tauri.conf.json"))
+        .expect("release Tauri config");
+    assert!(
+        !release.contains("\"logging\""),
+        "release WebViews must not combine terminal access with arbitrary log persistence"
     );
 }

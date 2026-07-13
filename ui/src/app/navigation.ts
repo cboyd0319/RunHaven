@@ -6,7 +6,7 @@ import type { ManagedSessionSummary } from "@/commands/runhaven"
 export type NavDestination =
   | { kind: "home" }
   | { kind: "session"; id: string }
-  | { kind: "runs" }
+  | { kind: "runs"; filter?: RunListFilter }
   | { kind: "agents" }
   | { kind: "diagnostics" }
   | { kind: "maintenance" }
@@ -18,6 +18,8 @@ export type NavDestination =
 
 export const HOME_NAV: NavDestination = { kind: "home" }
 export const RUN_TERMINAL_NAV: NavDestination = { kind: "run-terminal" }
+
+export type RunListFilter = "needs-you" | "running" | "past" | "all"
 
 // Sidebar lifecycle groups. Active covers runs that are starting, running, or
 // waiting to stop. Everything else (finished, failed, and any unknown state)

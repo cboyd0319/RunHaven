@@ -1,5 +1,3 @@
-use std::process::Command;
-
 use anyhow::{Result, bail};
 use serde_json::Value;
 
@@ -117,7 +115,7 @@ pub(super) fn summarize_builder_diagnostics(
 }
 
 fn read_builder_status() -> Result<Option<BuilderStatus>> {
-    let output = Command::new("container")
+    let output = crate::apple_container::command()?
         .args(["builder", "status", "--format", "json"])
         .output()?;
     if !output.status.success() {
@@ -132,7 +130,7 @@ fn read_builder_status() -> Result<Option<BuilderStatus>> {
 }
 
 fn read_builder_defaults() -> Result<BuilderDefaults> {
-    let output = Command::new("container")
+    let output = crate::apple_container::command()?
         .args(["system", "property", "list", "--format", "json"])
         .output()?;
     if !output.status.success() {

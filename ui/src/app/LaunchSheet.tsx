@@ -2,7 +2,7 @@ import { CircleAlert, Plus } from "lucide-react"
 
 import type {
   AgentProfile,
-  AuthStatusResponse,
+  AgentReadiness,
   ImageStatusResponse,
 } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -24,8 +24,8 @@ import { useFocusOnChange } from "./useFocusOnChange"
 type LaunchSheetProps = {
   flow: LaunchFlow
   agents: AgentProfile[]
+  agentReadiness: AgentReadiness[]
   selectedAgent: AgentProfile | undefined
-  authStatus: AuthStatusResponse | null
   imageLoading: boolean
   imageStatus: ImageStatusResponse | null
   imageError: string
@@ -47,28 +47,21 @@ export function LaunchSheet(props: LaunchSheetProps) {
 
   return (
     <Dialog open={flow.sheetOpen} onOpenChange={flow.setOpen}>
-      <div className="flex flex-col items-start gap-2">
+      <div>
         <DialogTrigger asChild>
           <Button
             type="button"
             disabled={disabledReason !== null}
-            aria-describedby={disabledReason ? "new-run-blocked-reason" : undefined}
+            aria-label={disabledReason ?? "New run"}
+            title={disabledReason ?? undefined}
           >
             <Plus />
             New run
           </Button>
         </DialogTrigger>
-        {disabledReason ? (
-          <p
-            id="new-run-blocked-reason"
-            className="text-sm text-muted-foreground"
-          >
-            {disabledReason}
-          </p>
-        ) : null}
       </div>
       <DialogContent
-        className="max-h-[85vh] overflow-y-auto sm:max-w-2xl"
+        className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl"
         showCloseButton={false}
       >
         <DialogHeader>
@@ -107,13 +100,11 @@ function LaunchSheetStep(props: LaunchSheetProps) {
     return (
       <PlanReviewCard
         plan={flow.plan}
-        launchConfirmation={flow.launchConfirmation}
         confirmedWarnings={flow.confirmedWarnings}
         launchReady={props.launchReady}
         launching={flow.launching}
         setupOk={props.setupReady}
         launchImageReady={props.launchImageReady}
-        onLaunchConfirmationChange={flow.setLaunchConfirmation}
         onConfirmWarning={flow.setWarningConfirmation}
         onBack={() => flow.setLaunchStep("project")}
         onStart={flow.startRun}
@@ -124,9 +115,9 @@ function LaunchSheetStep(props: LaunchSheetProps) {
     <LaunchPlanCard
       step={flow.launchStep === "review" ? "project" : flow.launchStep}
       agents={props.agents}
+      agentReadiness={props.agentReadiness}
       request={flow.request}
       selectedAgent={props.selectedAgent}
-      authStatus={props.authStatus}
       imageLoading={props.imageLoading}
       imageStatus={props.imageStatus}
       imageError={props.imageError}

@@ -1,0 +1,11 @@
+#!/bin/sh
+set -u
+
+agy "$@"
+status=$?
+if [ "$status" -eq 1 ] && [ -s "${HOME}/.gemini/antigravity-cli/antigravity-oauth-token" ]; then
+    if agy models >/dev/null 2>&1; then
+        exit 0
+    fi
+fi
+exit "$status"

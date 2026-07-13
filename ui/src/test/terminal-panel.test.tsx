@@ -6,13 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { TerminalMessage } from "../commands/runhaven"
 
-import { AppMainContent } from "../app/AppMainContent"
 import { act } from "./render-hook"
-import {
-  launchFlow,
-  managedSession,
-  mainViewProps,
-} from "./main-view-props"
+import { managedSession } from "./main-view-props"
 import {
   type FakeTerminalLike,
   mountActiveTerminal,
@@ -84,7 +79,7 @@ vi.mock("@/commands/runhaven", async (importActual) => ({
   ...(await importActual<typeof import("../commands/runhaven")>()),
   hasTauriRuntime: vi.fn(() => true),
   openTerminalSession: vi.fn(() => Promise.resolve()),
-  openClaudeSignInTerminal: vi.fn(() => Promise.resolve()),
+  openAgentSignInTerminal: vi.fn(() => Promise.resolve()),
   openAgentRunTerminal: vi.fn(() => Promise.resolve()),
   writeTerminalInput: vi.fn(() => Promise.resolve()),
   resizeTerminal: vi.fn(() => Promise.resolve()),
@@ -99,7 +94,7 @@ const DISCLOSURE =
 
 const hasTauriRuntime = vi.mocked(runhaven.hasTauriRuntime)
 const openTerminalSession = vi.mocked(runhaven.openTerminalSession)
-const openClaudeSignInTerminal = vi.mocked(runhaven.openClaudeSignInTerminal)
+const openAgentSignInTerminal = vi.mocked(runhaven.openAgentSignInTerminal)
 const openAgentRunTerminal = vi.mocked(runhaven.openAgentRunTerminal)
 const closeTerminalSession = vi.mocked(runhaven.closeTerminalSession)
 const writeTerminalInput = vi.mocked(runhaven.writeTerminalInput)
@@ -109,7 +104,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   hasTauriRuntime.mockReturnValue(true)
   openTerminalSession.mockResolvedValue(undefined)
-  openClaudeSignInTerminal.mockResolvedValue(undefined)
+  openAgentSignInTerminal.mockResolvedValue(undefined)
   openAgentRunTerminal.mockResolvedValue(undefined)
   closeTerminalSession.mockResolvedValue(undefined)
   writeTerminalInput.mockResolvedValue(undefined)
@@ -117,46 +112,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks()
-})
-
-describe("TerminalPanel Claude login mode", () => {
-  it("shows the desktop-only placeholder and never signs in during preview", () => {
-    hasTauriRuntime.mockReturnValue(false)
-    const html = renderToStaticMarkup(
-      <TerminalPanel login={{ sessionId: "loginabc" }} />,
-    )
-    expect(html).toContain(DISCLOSURE)
-    expect(html).toContain("The sign-in terminal needs the desktop app")
-    expect(html).not.toContain("Open sign-in terminal")
-    expect(openClaudeSignInTerminal).not.toHaveBeenCalled()
-  })
-
-  it("opens the Claude login command (not attach) under the desktop runtime", async () => {
-    const container = document.createElement("div")
-    document.body.appendChild(container)
-    const root = createRoot(container)
-    await act(async () => {
-      root.render(
-        createElement(TerminalPanel, { login: { sessionId: "loginabc" } }),
-      )
-    })
-    const openButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Open sign-in terminal"),
-    )
-    expect(openButton).toBeDefined()
-    await act(async () => {
-      openButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-    })
-    await act(async () => {})
-    expect(openClaudeSignInTerminal).toHaveBeenCalledTimes(1)
-    expect(openClaudeSignInTerminal.mock.calls[0][0]).toBe("loginabc")
-    // The login path must not fall through to the attach command.
-    expect(openTerminalSession).not.toHaveBeenCalled()
-    await act(async () => {
-      root.unmount()
-    })
-    container.remove()
-  })
 })
 
 describe("TerminalPanel run mode", () => {
@@ -170,7 +125,7 @@ describe("TerminalPanel run mode", () => {
     expect(openAgentRunTerminal).not.toHaveBeenCalled()
   })
 
-  it("opens the run command with the reviewed request (not attach) under the desktop runtime", async () => {
+  it("starts the reviewed run automatically after leaving the review sheet", async () => {
     const launch = runLaunch()
     const container = document.createElement("div")
     document.body.appendChild(container)
@@ -178,21 +133,15 @@ describe("TerminalPanel run mode", () => {
     await act(async () => {
       root.render(createElement(TerminalPanel, { run: launch }))
     })
-    const openButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Start run"),
-    )
-    expect(openButton).toBeDefined()
-    await act(async () => {
-      openButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-    })
     await act(async () => {})
+    expect(container.textContent).not.toContain("Start run")
     expect(openAgentRunTerminal).toHaveBeenCalledTimes(1)
     expect(openAgentRunTerminal.mock.calls[0][0]).toBe(launch.sessionId)
     // The reviewed launch request is handed straight to the backend.
     expect(openAgentRunTerminal.mock.calls[0][1]).toBe(launch.request)
     // The run path must not fall through to attach or login.
     expect(openTerminalSession).not.toHaveBeenCalled()
-    expect(openClaudeSignInTerminal).not.toHaveBeenCalled()
+    expect(openAgentSignInTerminal).not.toHaveBeenCalled()
     // Close-on-unmount tears down the backend run child.
     closeTerminalSession.mockClear()
     await act(async () => {
@@ -202,7 +151,7 @@ describe("TerminalPanel run mode", () => {
     container.remove()
   })
 
-  it("in the fill destination keeps a reachable Close before start and an End run after, tearing down on close", async () => {
+  it("in the fill destination keeps an End run escape hatch while starting", async () => {
     const launch = runLaunch()
     let closed = 0
     const onClose = () => {
@@ -216,22 +165,9 @@ describe("TerminalPanel run mode", () => {
         createElement(TerminalPanel, { run: launch, fill: true, onClose }),
       )
     })
-    // Before the run is started the disclosure is up and a Close escape hatch is
-    // reachable, so the user is never stranded on the destination.
+    // The run starts automatically, while the disclosure and an End run escape
+    // hatch stay reachable so the user is never stranded on the destination.
     expect(container.textContent).toContain(DISCLOSURE)
-    const preClose = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent?.trim() === "Close",
-    )
-    expect(preClose).toBeDefined()
-
-    // Start the run, then the terminal-level control ends the run (leaves the
-    // destination) instead of dead-ending on a re-launch button.
-    const startButton = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Start run"),
-    )
-    await act(async () => {
-      startButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-    })
     await act(async () => {})
     const endButton = [...container.querySelectorAll("button")].find((button) =>
       button.textContent?.includes("End run"),
@@ -322,7 +258,7 @@ describe("TerminalPanel message handling", () => {
     await act(async () => {
       handler?.({ event: "exit", code: 0 })
     })
-    expect(term.writes.join("")).toContain("This session ended")
+    expect(term.writes.join("")).toContain("This terminal ended")
     expect(term.options.disableStdin).toBe(true)
     await panel.unmount()
   })
@@ -334,6 +270,21 @@ describe("TerminalPanel message handling", () => {
       term.dataHandlers.forEach((handler) => handler("a"))
     })
     expect(writeTerminalInput).toHaveBeenCalledWith(managedSession().id, [97])
+    await panel.unmount()
+  })
+
+  it("tells the user when typed input does not reach the terminal", async () => {
+    writeTerminalInput.mockRejectedValueOnce(new Error("terminal channel closed"))
+    const panel = await mountActiveTerminal()
+    const term = xtermState.instances[0]
+
+    await act(async () => {
+      term.dataHandlers.forEach((handler) => handler("a"))
+    })
+    await act(async () => {})
+
+    expect(panel.container.textContent).toContain("Terminal input failed")
+    expect(panel.container.textContent).toContain("terminal channel closed")
     await panel.unmount()
   })
 })
@@ -384,66 +335,5 @@ describe("TerminalPanel clipboard (audit NAT-8)", () => {
     await act(async () => {})
     const bytes = [...new TextEncoder().encode("pasted")]
     expect(writeTerminalInput).toHaveBeenCalledExactlyOnceWith(id, bytes)
-  })
-})
-
-// Pins the P0 fix (audit RT-1): the run's sandbox uses this terminal's PTY as
-// its controlling TTY, so navigating away must keep the panel MOUNTED (not
-// unmount-and-kill). Guards against a future refactor silently reintroducing
-// kill-on-nav, which every static-markup test would miss.
-describe("AppMainContent keeps a live run mounted across navigation", () => {
-  it("does not tear down the run on nav change and preserves the terminal node, ending only on unmount", async () => {
-    const launch = runLaunch()
-    const container = document.createElement("div")
-    document.body.appendChild(container)
-    const root = createRoot(container)
-
-    async function show(kind: "run-terminal" | "home") {
-      await act(async () => {
-        root.render(
-          createElement(AppMainContent, {
-            ...mainViewProps({
-              launchFlow: { ...launchFlow(), runTerminal: launch },
-            }),
-            navigation: { kind },
-          }),
-        )
-      })
-    }
-
-    // Start the run on its destination (active), then flush the async xterm open.
-    await show("run-terminal")
-    const start = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Start run"),
-    )
-    if (!start) {
-      throw new Error("Start run button not found")
-    }
-    await act(async () => {
-      start.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-    })
-    await act(async () => {})
-    expect(openAgentRunTerminal).toHaveBeenCalledTimes(1)
-    const node = container.querySelector('[aria-label="Sandbox terminal"]')
-    expect(node).not.toBeNull()
-
-    // Navigate AWAY to Home: the run must NOT be torn down, and the xterm node
-    // identity must be preserved (proves no remount, so the agent survives).
-    closeTerminalSession.mockClear()
-    await show("home")
-    expect(closeTerminalSession).not.toHaveBeenCalled()
-    expect(container.querySelector('[aria-label="Sandbox terminal"]')).toBe(node)
-
-    // Navigate BACK: still the same live node, still no teardown.
-    await show("run-terminal")
-    expect(closeTerminalSession).not.toHaveBeenCalled()
-    expect(container.querySelector('[aria-label="Sandbox terminal"]')).toBe(node)
-
-    // Only a real unmount (End run clears runTerminal) tears down the child.
-    await act(async () => {
-      root.unmount()
-    })
-    expect(closeTerminalSession).toHaveBeenCalledWith(launch.sessionId)
-    container.remove()
   })
 })

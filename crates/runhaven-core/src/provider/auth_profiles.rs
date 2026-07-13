@@ -3,7 +3,7 @@ use serde::Serialize;
 
 pub const DESIGN_ONLY_AUTH_BROKER_STATUS: &str = "design-only";
 pub const CODEX_API_KEY_BROKER_STATUS: &str = "api-key-broker";
-pub const AUTH_BROKER_STATUS: &str = "api-key-broker (codex, claude, gemini)";
+pub const AUTH_BROKER_STATUS: &str = "api-key-broker (codex, claude)";
 pub const AUTH_BROKER_RUNTIME: &str = "macOS 26+ with Apple container only";
 pub const CODEX_BROKER_PLACEHOLDER_ENV: &str = "RUNHAVEN_CODEX_BROKER_TOKEN";
 
@@ -71,9 +71,9 @@ pub fn agent_broker(name: &str) -> &'static str {
     }
 }
 
-/// Whether RunHaven has a host-side API-key broker for this agent. Codex,
-/// Claude, and Gemini are brokered today; Copilot and Antigravity are
-/// design-only. Unknown agents are not brokered.
+/// Whether RunHaven has a host-side API-key broker for this agent. Codex and
+/// Claude are brokered today; Copilot and Antigravity are design-only. Unknown
+/// agents are not brokered.
 pub fn is_brokered(name: &str) -> bool {
     get_auth_broker_profile(name)
         .map(|profile| profile.status == CODEX_API_KEY_BROKER_STATUS)
@@ -86,39 +86,42 @@ pub fn get_auth_broker_profile(name: &str) -> Result<AuthBrokerProfile> {
             name: "antigravity",
             status: DESIGN_ONLY_AUTH_BROKER_STATUS,
             supported_auth: &[
-                "runtime auth sources are incomplete",
-                "no bundled credential broker is planned until official auth sources are reviewed",
+                "Google OAuth inside Antigravity's isolated container",
+                "explicit environment-variable passthrough for advanced headless use",
             ],
             host_keeps: &[
                 "no Antigravity credential is read by RunHaven",
                 "no host browser, Keychain, or cloud credential state is imported",
             ],
             guest_receives: &[
-                "nothing brokered by RunHaven today",
-                "only explicitly named --env values or isolated agent state can be visible",
+                "its own native sign-in state in Antigravity's isolated container volume",
+                "only explicitly named --env values when the user chooses that lower-security option",
             ],
-            current_safe_path: "Use isolated agent state or explicit --env NAME only after reviewing the provider's current auth requirements.",
-            notes: &["Antigravity has no bundled provider hosts yet."],
+            current_safe_path: "Use Sign in to Antigravity in the desktop app. Antigravity's own login runs inside its isolated container and later runs reuse that state.",
+            notes: &[
+                "RunHaven does not read or copy Antigravity credentials from this Mac.",
+                "Antigravity provider and login hosts are bundled in provider-only network policy.",
+            ],
         },
         "claude" => AuthBrokerProfile {
             name: "claude",
             status: CODEX_API_KEY_BROKER_STATUS,
             supported_auth: &[
+                "Claude.ai subscription sign-in inside Claude's isolated container",
                 "Anthropic API key through --api-key-broker-env NAME (brokered host-side)",
-                "Claude.ai or subscription OAuth login (use isolated state, not the broker)",
                 "Bedrock, Vertex, Azure, or Foundry provider auth (not brokered)",
             ],
             host_keeps: &[
-                "the host environment variable value named by --api-key-broker-env",
-                "the API key is injected as x-api-key only into brokered host requests to api.anthropic.com",
+                "no Claude OAuth credential; ordinary sign-in stays in Claude's isolated container volume",
+                "only the host environment variable value named by an explicitly configured --api-key-broker-env",
             ],
             guest_receives: &[
-                "a placeholder ANTHROPIC_API_KEY value",
-                "ANTHROPIC_BASE_URL pointed at the broker on the RunHaven provider network",
+                "its own native sign-in state in Claude's isolated container volume",
+                "for an explicitly configured API-key broker only: a placeholder ANTHROPIC_API_KEY and broker URL",
             ],
-            current_safe_path: "Use --network provider --api-key-broker-env ANTHROPIC_API_KEY for a headless API-key run. For OAuth or subscription login, authenticate inside the isolated Claude state volume; RunHaven never reads your host ~/.claude.json or Keychain.",
+            current_safe_path: "Use Sign in to Claude in the desktop app. Claude's own login runs inside its isolated container and later runs reuse that state. Advanced API-key users can explicitly configure --network provider --api-key-broker-env ANTHROPIC_API_KEY.",
             notes: &[
-                "The broker covers the API-key path only; OAuth and subscription logins use isolated in-container state.",
+                "RunHaven does not read or copy Claude credentials from this Mac.",
                 "The raw host API key is never placed in the container command or guest environment.",
             ],
         },
@@ -167,28 +170,6 @@ pub fn get_auth_broker_profile(name: &str) -> Result<AuthBrokerProfile> {
                 "No host-side broker: Copilot exchanges the GitHub token for a short-lived, dynamically-routed Copilot API host, which cannot be brokered without TLS interception. Use isolated in-container login state instead.",
             ],
         },
-        "gemini" => AuthBrokerProfile {
-            name: "gemini",
-            status: CODEX_API_KEY_BROKER_STATUS,
-            supported_auth: &[
-                "Gemini API key through --api-key-broker-env NAME (brokered host-side)",
-                "Google account OAuth login (use isolated state, not the broker)",
-                "Vertex AI ADC, service-account JSON, or Cloud API key (not brokered)",
-            ],
-            host_keeps: &[
-                "the host environment variable value named by --api-key-broker-env",
-                "the API key is injected as x-goog-api-key only into brokered host requests to generativelanguage.googleapis.com",
-            ],
-            guest_receives: &[
-                "a placeholder GEMINI_API_KEY value",
-                "GOOGLE_GEMINI_BASE_URL pointed at the broker on the RunHaven provider network",
-            ],
-            current_safe_path: "Use --network provider --api-key-broker-env GEMINI_API_KEY for a headless API-key run. For Google account login, authenticate inside the isolated Gemini state volume; do not mount Google Cloud ADC or service-account files into the guest.",
-            notes: &[
-                "The broker base-URL env (GOOGLE_GEMINI_BASE_URL) is currently undocumented upstream and version-fragile; re-verify per Gemini CLI version.",
-                "The raw host API key is never placed in the container command or guest environment.",
-            ],
-        },
         "shell" => AuthBrokerProfile {
             name: "shell",
             status: DESIGN_ONLY_AUTH_BROKER_STATUS,
@@ -210,14 +191,7 @@ pub fn get_auth_broker_profile(name: &str) -> Result<AuthBrokerProfile> {
 }
 
 fn profile_names() -> &'static [&'static str] {
-    &[
-        "antigravity",
-        "claude",
-        "codex",
-        "copilot",
-        "gemini",
-        "shell",
-    ]
+    &["antigravity", "claude", "codex", "copilot", "shell"]
 }
 
 #[cfg(test)]
@@ -226,12 +200,13 @@ mod tests {
 
     #[test]
     fn is_brokered_matches_the_api_key_broker_agents() {
-        for agent in ["claude", "codex", "gemini"] {
+        for agent in ["claude", "codex"] {
             assert!(is_brokered(agent), "{agent} should be brokered");
         }
-        for agent in ["copilot", "antigravity", "shell", "unknown"] {
+        for agent in ["copilot", "antigravity", "gemini", "shell", "unknown"] {
             assert!(!is_brokered(agent), "{agent} should not be brokered");
         }
+        assert!(get_auth_broker_profile("gemini").is_err());
     }
 
     #[test]
@@ -243,5 +218,15 @@ mod tests {
         assert_eq!(agent_sign_in_mode("shell"), AgentSignIn::NotApplicable);
         assert_eq!(agent_sign_in("shell"), "n/a");
         assert_eq!(agent_sign_in_mode("unknown"), AgentSignIn::InSandbox);
+    }
+
+    #[test]
+    fn claude_auth_explanation_defaults_to_native_container_sign_in() {
+        let profile = get_auth_broker_profile("claude").expect("Claude auth profile");
+        let explanation = format!("{} {}", profile.current_safe_path, profile.notes.join(" "));
+
+        assert!(explanation.contains("inside its isolated container"));
+        assert!(explanation.contains("does not read or copy Claude credentials"));
+        assert!(!explanation.contains("RunHaven-owned Keychain"));
     }
 }

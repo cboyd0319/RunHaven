@@ -79,7 +79,6 @@ export function useAppController() {
     request: launchFlow.request,
     imageStatus: statusLoaders.imageStatus,
     plan: launchFlow.plan,
-    launchConfirmation: launchFlow.launchConfirmation,
     confirmedWarnings: launchFlow.confirmedWarnings,
     managedSessions,
     navigation,
@@ -99,6 +98,7 @@ export function useAppController() {
     targetId: derived.outputTargetId,
     sessionId: derived.outputSessionId,
     runId: derived.outputRunId,
+    sessionActive: derived.outputSessionActive,
   })
 
   useEffect(() => {
@@ -188,7 +188,6 @@ export function useAppController() {
     controlBusy: runControlState.busy,
     controlError: runControlState.error,
     controlMessage: runControlState.message,
-    controlConfirmations: runControlState.confirmations,
     diagnostics: diagnostics.data,
     diagnosticsLoading: diagnostics.loading,
     diagnosticsError: diagnostics.error,
@@ -221,6 +220,5 @@ export function useAppController() {
     loadSelectedSessionDiagnostics: selectedSessionDiagnostics.load,
     loadDiagnostics: diagnostics.load,
     changeSessionInputDraft,
-    setControlConfirmation: runControlState.setConfirmation,
   }
 }

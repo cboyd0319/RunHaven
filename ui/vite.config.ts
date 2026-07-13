@@ -24,6 +24,26 @@ export default defineConfig({
   build: {
     target: "es2022",
     outDir: "dist",
-    emptyOutDir: true
+    emptyOutDir: true,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: "react",
+              test: /node_modules[\\/](react|react-dom)[\\/]/,
+            },
+            {
+              name: "ui",
+              test: /node_modules[\\/](@radix-ui|radix-ui|lucide-react)[\\/]/,
+            },
+            {
+              name: "tauri",
+              test: /node_modules[\\/]@tauri-apps[\\/]/,
+            },
+          ],
+        },
+      },
+    },
   }
 });

@@ -1,5 +1,4 @@
 use std::io;
-use std::process::Command;
 
 use anyhow::{Context, Result, bail};
 use serde_json::{Value, json};
@@ -34,7 +33,8 @@ struct SystemContainerCli;
 
 impl ContainerCli for SystemContainerCli {
     fn run(&mut self, args: &[&str]) -> io::Result<ContainerOutcome> {
-        let output = Command::new("container").args(args).output()?;
+        let mut command = crate::apple_container::command().map_err(io::Error::other)?;
+        let output = command.args(args).output()?;
         Ok(ContainerOutcome {
             code: output.status.code().unwrap_or(1),
             stderr: output.stderr,
@@ -42,27 +42,38 @@ impl ContainerCli for SystemContainerCli {
     }
 }
 
-pub fn cleanup_provider_network(plan: &AgentRunPlan) -> Result<Value> {
-    cleanup_provider_network_with_cli(plan, &mut SystemContainerCli)
+pub fn cleanup_run_network(plan: &AgentRunPlan) -> Result<Value> {
+    cleanup_run_network_with_cli(plan, &mut SystemContainerCli)
 }
 
-/// Tear down the provider network. A network cannot be deleted while a container
-/// still references it, and `container run --rm` removes the guest only on a
+/// Compatibility name for callers built against the provider-only cleanup API.
+pub fn cleanup_provider_network(plan: &AgentRunPlan) -> Result<Value> {
+    cleanup_run_network(plan)
+}
+
+/// Tear down the exact run container and, when present, its dedicated network.
+/// A network cannot be deleted while a container still references it, and
+/// `container run --rm` removes the guest only on a
 /// clean client exit: when the login or attach PTY client is killed mid-flow
 /// (terminal closed, app quit, or the login process died) the guest lingers and
 /// blocks the delete, leaking both the container and the network. So force-remove
 /// the run container first, then delete the network. The force-remove is
 /// idempotent: on the normal clean path the container is already gone, which the
 /// runtime reports as "not found" and this treats as success, so a good run still
-/// records `provider_network: deleted`, never a spurious failure.
-pub(crate) fn cleanup_provider_network_with_cli(
+/// records `provider_network: deleted`, never a spurious failure. The JSON key is
+/// retained for compatibility with existing alpha run records.
+pub(crate) fn cleanup_run_network_with_cli(
     plan: &AgentRunPlan,
     cli: &mut impl ContainerCli,
 ) -> Result<Value> {
-    let Some(name) = &plan.network_name else {
-        return Ok(json!({"provider_network": "not-created", "provider_network_name": null}));
-    };
     let run_container = force_remove_run_container(cli, &plan.container_name)?;
+    let Some(name) = &plan.network_name else {
+        return Ok(json!({
+            "provider_network": "not-created",
+            "provider_network_name": null,
+            "run_container": run_container,
+        }));
+    };
     let delete = cli.run(&["network", "delete", name])?;
     if delete.code != 0 {
         // Surface the runtime's own error (previously shown via inherited stdio)
@@ -116,7 +127,7 @@ fn report_stderr(prefix: &str, stderr: &[u8]) {
 }
 
 pub fn inspect_internal_network(name: &str) -> Result<InternalNetworkInfo> {
-    let output = Command::new("container")
+    let output = crate::apple_container::command()?
         .args(["network", "inspect", name])
         .output()?;
     if !output.status.success() {
@@ -157,7 +168,7 @@ pub(super) fn parse_internal_network_info(
 }
 
 pub fn ensure_internal_network(name: &str) -> Result<()> {
-    let existing = Command::new("container")
+    let existing = crate::apple_container::command()?
         .args(["network", "inspect", name])
         .output()?;
     if existing.status.success() {
@@ -170,7 +181,7 @@ pub fn ensure_internal_network(name: &str) -> Result<()> {
             mode.unwrap_or_else(|| "unknown".to_string())
         );
     }
-    let status = Command::new("container")
+    let status = crate::apple_container::command()?
         .args(["network", "create", "--internal", name])
         .status()?;
     if !status.success() {
@@ -195,7 +206,9 @@ pub fn run_preflight(command: &[String]) -> Result<()> {
     {
         return ensure_internal_network(name);
     }
-    let status = Command::new(&command[0]).args(&command[1..]).status()?;
+    let status = crate::apple_container::command_for_program(&command[0])?
+        .args(&command[1..])
+        .status()?;
     if !status.success() {
         bail!("preflight command failed: {status}");
     }

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -29,6 +30,9 @@ const SESSION_INPUT_GRANT_MAX_BYTES: usize = 256 * 1024;
 /// byte budget.
 const SESSION_INPUT_GRANT_TTL: Duration = Duration::from_secs(30 * 60);
 
+const SESSION_INPUT_APPROVAL_REQUIRED: &str =
+    "session input approval expired or reached its byte limit; approve input again";
+
 type SessionInputWriter = dyn Fn(&[u8]) -> Result<usize, String> + Send + Sync + 'static;
 
 #[derive(Clone)]
@@ -40,15 +44,22 @@ struct RegisteredSessionInput {
 /// A single native confirmation grant, bound to the exact run id it was approved
 /// for and metered so it cannot authorize input forever after one click.
 struct SessionInputGrant {
+    id: u64,
     run_id: String,
     granted_at: Instant,
     bytes_written: usize,
+}
+
+struct SessionInputReservation {
+    grant_id: u64,
+    bytes: usize,
 }
 
 #[derive(Clone, Default)]
 pub struct SessionInputRegistry {
     writers: Arc<Mutex<HashMap<String, RegisteredSessionInput>>>,
     grants: Arc<Mutex<HashMap<String, SessionInputGrant>>>,
+    next_grant_id: Arc<AtomicU64>,
 }
 
 impl SessionInputRegistry {
@@ -117,9 +128,15 @@ impl SessionInputRegistry {
             return Err("session input transport no longer matches the active run".to_string());
         }
 
-        let written = (registered.writer)(input.as_bytes())?;
-        self.charge_input_grant(session_id, expected_run_id, input.len())?;
-        Ok(written)
+        let reservation = self.reserve_input_grant(session_id, expected_run_id, input.len())?;
+        match (registered.writer)(input.as_bytes()) {
+            Ok(written) => Ok(written),
+            Err(error) => {
+                self.rollback_input_grant(session_id, expected_run_id, reservation)
+                    .map_err(|rollback_error| format!("{error}; {rollback_error}"))?;
+                Err(error)
+            }
+        }
     }
 
     pub fn has_writer(&self, session_id: &str, expected_run_id: &str) -> Result<bool, String> {
@@ -141,9 +158,11 @@ impl SessionInputRegistry {
             .grants
             .lock()
             .map_err(|_| "session input registry is unavailable".to_string())?;
+        let id = self.next_grant_id.fetch_add(1, Ordering::Relaxed);
         grants.insert(
             session_id.to_string(),
             SessionInputGrant {
+                id,
                 run_id: expected_run_id.to_string(),
                 granted_at: Instant::now(),
                 bytes_written: 0,
@@ -165,25 +184,61 @@ impl SessionInputRegistry {
         }))
     }
 
-    /// Add `bytes` to the active grant for `session_id` when it still matches the
-    /// run. Best-effort accounting: a send with no live grant (grants are cleared
-    /// on unregister) simply does not accumulate, and the command layer will ask
-    /// for a fresh approval before the next send.
-    fn charge_input_grant(
+    /// Reserve `bytes` from the active grant before transport I/O. Holding the
+    /// grant lock only for accounting makes concurrent writes share one exact
+    /// budget without holding a mutex across the potentially blocking writer.
+    fn reserve_input_grant(
         &self,
         session_id: &str,
         expected_run_id: &str,
         bytes: usize,
+    ) -> Result<SessionInputReservation, String> {
+        let mut grants = self
+            .grants
+            .lock()
+            .map_err(|_| "session input registry is unavailable".to_string())?;
+        let grant = grants
+            .get_mut(session_id)
+            .ok_or_else(|| SESSION_INPUT_APPROVAL_REQUIRED.to_string())?;
+        if grant.run_id != expected_run_id || grant.granted_at.elapsed() >= SESSION_INPUT_GRANT_TTL
+        {
+            return Err(SESSION_INPUT_APPROVAL_REQUIRED.to_string());
+        }
+        let reserved_total = grant
+            .bytes_written
+            .checked_add(bytes)
+            .filter(|total| *total <= SESSION_INPUT_GRANT_MAX_BYTES)
+            .ok_or_else(|| SESSION_INPUT_APPROVAL_REQUIRED.to_string())?;
+        grant.bytes_written = reserved_total;
+        Ok(SessionInputReservation {
+            grant_id: grant.id,
+            bytes,
+        })
+    }
+
+    /// Restore a failed transport write only when the same approval is still
+    /// active. A newer native approval owns a fresh budget and must not be
+    /// modified by an older in-flight write.
+    fn rollback_input_grant(
+        &self,
+        session_id: &str,
+        expected_run_id: &str,
+        reservation: SessionInputReservation,
     ) -> Result<(), String> {
         let mut grants = self
             .grants
             .lock()
             .map_err(|_| "session input registry is unavailable".to_string())?;
-        if let Some(grant) = grants.get_mut(session_id)
-            && grant.run_id == expected_run_id
-        {
-            grant.bytes_written = grant.bytes_written.saturating_add(bytes);
+        let Some(grant) = grants.get_mut(session_id) else {
+            return Ok(());
+        };
+        if grant.id != reservation.grant_id || grant.run_id != expected_run_id {
+            return Ok(());
         }
+        grant.bytes_written = grant
+            .bytes_written
+            .checked_sub(reservation.bytes)
+            .ok_or_else(|| "session input grant accounting is inconsistent".to_string())?;
         Ok(())
     }
 
@@ -218,121 +273,4 @@ fn validate_session_id(session_id: &str) -> Result<(), String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn grant_budget_boundary_covers_bytes_and_ttl() {
-        assert!(grant_within_budget(0, Duration::ZERO));
-        assert!(grant_within_budget(
-            SESSION_INPUT_GRANT_MAX_BYTES - 1,
-            Duration::from_secs(1)
-        ));
-        // Reaching the byte budget spends the grant.
-        assert!(!grant_within_budget(
-            SESSION_INPUT_GRANT_MAX_BYTES,
-            Duration::from_secs(1)
-        ));
-        // Reaching the TTL spends the grant even with bytes to spare.
-        assert!(!grant_within_budget(0, SESSION_INPUT_GRANT_TTL));
-    }
-
-    #[test]
-    fn input_grant_requires_reconfirm_past_byte_budget() {
-        let registry = SessionInputRegistry::default();
-        registry
-            .register_writer("budget-session", "budget-session", |bytes| Ok(bytes.len()))
-            .expect("register writer");
-        registry
-            .approve_input("budget-session", "budget-session")
-            .expect("approve input");
-        assert!(
-            registry
-                .input_approved("budget-session", "budget-session")
-                .expect("approved fresh grant")
-        );
-
-        let chunk = "a".repeat(MAX_SESSION_INPUT_BYTES);
-        let mut sent = 0;
-        while sent < SESSION_INPUT_GRANT_MAX_BYTES {
-            registry
-                .write("budget-session", "budget-session", &chunk)
-                .expect("send within grant");
-            sent += chunk.len();
-            if sent < SESSION_INPUT_GRANT_MAX_BYTES {
-                assert!(
-                    registry
-                        .input_approved("budget-session", "budget-session")
-                        .expect("still approved under budget"),
-                    "grant should remain valid until the byte budget is reached"
-                );
-            }
-        }
-
-        // Cumulative bytes now meet the budget, so a fresh confirmation is required.
-        assert!(
-            !registry
-                .input_approved("budget-session", "budget-session")
-                .expect("grant checked"),
-            "grant must require reconfirm once the byte budget is spent"
-        );
-
-        // A fresh approval restores the grant and resets the meter.
-        registry
-            .approve_input("budget-session", "budget-session")
-            .expect("re-approve input");
-        assert!(
-            registry
-                .input_approved("budget-session", "budget-session")
-                .expect("approved after reconfirm")
-        );
-    }
-
-    #[test]
-    fn input_grant_requires_reconfirm_past_ttl() {
-        let registry = SessionInputRegistry::default();
-        registry
-            .approve_input("ttl-session", "ttl-session")
-            .expect("approve input");
-        assert!(
-            registry
-                .input_approved("ttl-session", "ttl-session")
-                .expect("approved fresh grant")
-        );
-
-        registry.expire_grant_for_test("ttl-session");
-        assert!(
-            !registry
-                .input_approved("ttl-session", "ttl-session")
-                .expect("grant checked"),
-            "grant must require reconfirm once the wall-clock TTL passes"
-        );
-    }
-
-    #[test]
-    fn grant_is_bound_to_run_and_cleared_on_unregister() {
-        let registry = SessionInputRegistry::default();
-        registry
-            .approve_input("bound-session", "bound-run")
-            .expect("approve input");
-        assert!(
-            registry
-                .input_approved("bound-session", "bound-run")
-                .expect("approved for exact run")
-        );
-        // A different run id never inherits the grant.
-        assert!(
-            !registry
-                .input_approved("bound-session", "other-run")
-                .expect("grant checked")
-        );
-
-        registry.unregister("bound-session").expect("unregister");
-        assert!(
-            !registry
-                .input_approved("bound-session", "bound-run")
-                .expect("grant checked after unregister"),
-            "unregister must clear the grant"
-        );
-    }
-}
+mod tests;

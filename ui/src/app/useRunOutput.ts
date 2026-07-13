@@ -14,10 +14,12 @@ export function useRunOutput({
   targetId,
   sessionId,
   runId,
+  sessionActive,
 }: {
   targetId: string | null
   sessionId: string | null
   runId: string | null
+  sessionActive: boolean
 }) {
   const [snapshot, setSnapshot] = useState<LogSnapshotResponse | null>(null)
   const [snapshotTargetId, setSnapshotTargetId] = useState<string | null>(null)
@@ -33,7 +35,7 @@ export function useRunOutput({
   const [liveEnabled, setLiveEnabled] = useState(false)
   const [liveRefreshing, setLiveRefreshing] = useState(false)
   const targetRef = useRef<string | null>(targetId)
-  const requestInFlight = useRef(false)
+  const requestsInFlight = useRef(new Set<string>())
 
   const acknowledged = targetId !== null && acknowledgedTargetId === targetId
   const setAcknowledged = useCallback(
@@ -43,7 +45,7 @@ export function useRunOutput({
     [targetId],
   )
   const visibleSnapshot = snapshotTargetId === targetId ? snapshot : null
-  const liveAvailable = Boolean(sessionId)
+  const liveAvailable = Boolean(sessionId && sessionActive)
 
   const loadForTarget = useCallback(
     async ({
@@ -57,10 +59,10 @@ export function useRunOutput({
       expectedRunId: string | null
       background: boolean
     }) => {
-      if (requestInFlight.current) {
+      if (requestsInFlight.current.has(expectedTargetId)) {
         return
       }
-      requestInFlight.current = true
+      requestsInFlight.current.add(expectedTargetId)
       if (background) {
         setLiveRefreshing(true)
       } else {
@@ -103,11 +105,13 @@ export function useRunOutput({
           setError(errorMessage(cause))
         }
       } finally {
-        requestInFlight.current = false
-        if (background) {
-          setLiveRefreshing(false)
-        } else {
-          setLoading(false)
+        requestsInFlight.current.delete(expectedTargetId)
+        if (targetRef.current === expectedTargetId) {
+          if (background) {
+            setLiveRefreshing(false)
+          } else {
+            setLoading(false)
+          }
         }
       }
     },
@@ -147,7 +151,20 @@ export function useRunOutput({
   }, [acknowledged])
 
   useEffect(() => {
-    if (!liveEnabled || !acknowledged || !sessionId || !targetId) {
+    if (!liveAvailable) {
+      setLiveEnabled(false)
+      setLiveRefreshing(false)
+    }
+  }, [liveAvailable])
+
+  useEffect(() => {
+    if (
+      !liveAvailable ||
+      !liveEnabled ||
+      !acknowledged ||
+      !sessionId ||
+      !targetId
+    ) {
       return
     }
 
@@ -176,7 +193,14 @@ export function useRunOutput({
       cancelled = true
       window.clearInterval(interval)
     }
-  }, [acknowledged, liveEnabled, loadForTarget, sessionId, targetId])
+  }, [
+    acknowledged,
+    liveAvailable,
+    liveEnabled,
+    loadForTarget,
+    sessionId,
+    targetId,
+  ])
 
   return {
     acknowledged,

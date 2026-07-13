@@ -60,6 +60,21 @@ fn run_help_explains_agent_argument_separator() {
 }
 
 #[test]
+fn attach_rejects_an_unknown_tty_mode_before_runtime_lookup() {
+    let output = Command::new(env!("CARGO_BIN_EXE_runhaven"))
+        .args(["runs", "attach", "missing-run", "--tty", "sometimes"])
+        .output()
+        .expect("run runhaven attach");
+
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("invalid value 'sometimes'"));
+    assert!(stderr.contains("auto"));
+    assert!(stderr.contains("always"));
+    assert!(stderr.contains("never"));
+}
+
+#[test]
 fn plan_ssh_forwards_the_agent_socket_and_warns() {
     let workspace = tempfile::tempdir().expect("temp workspace");
     let output = Command::new(env!("CARGO_BIN_EXE_runhaven"))

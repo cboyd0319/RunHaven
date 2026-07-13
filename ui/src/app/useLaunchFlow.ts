@@ -23,7 +23,7 @@ import { loadSessionsUntilRunPresent } from "./sessionSelection"
 import { errorMessage, type LaunchStep } from "./types"
 
 // The captured, reviewed launch for an interactive agent's run terminal: the
-// full LaunchRunRequest (with confirmLaunch and confirmed warnings) plus the
+// full LaunchRunRequest (with launch intent and confirmed warnings) plus the
 // terminal session key. The backend fires the native launch confirmation before
 // anything runs, so this is intent capture, not the mutation boundary.
 export type RunTerminalLaunch = {
@@ -87,7 +87,6 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
   const [plan, setPlan] = useState<RunPlanResponse | null>(null)
   const [planning, setPlanning] = useState(false)
   const [launching, setLaunching] = useState(false)
-  const [launchConfirmation, setLaunchConfirmation] = useState(false)
   const [confirmedWarnings, setConfirmedWarnings] = useState<string[]>([])
   const [launchMessage, setLaunchMessage] = useState("")
   // The active interactive run terminal, set when startRun routes a reviewed,
@@ -115,7 +114,6 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     setSheetOpen(false)
     setLaunchStep("agent")
     setPlan(null)
-    setLaunchConfirmation(false)
     setConfirmedWarnings([])
     setError("")
     // The run terminal is a main-content destination now, not sheet content, so
@@ -148,7 +146,9 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
         agent,
       ),
     )
-    await deps.loadImageStatus(agent.name)
+    if (dashboard.setup.ok) {
+      await deps.loadImageStatus(agent.name)
+    }
   }
 
   function changeAgent(agentName: string) {
@@ -165,22 +165,36 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
           },
     )
     invalidatePlan()
-    void deps.loadImageStatus(agentName)
+    if (deps.dashboard?.setup.ok) {
+      void deps.loadImageStatus(agentName)
+    }
   }
 
   function updateNetworkMode(networkMode: RunPlanRequest["networkMode"]) {
-    setRequest((current) => ({ ...current, networkMode }))
+    setRequest((current) => ({
+      ...current,
+      networkMode,
+      // A host broker only works through RunHaven's provider network. Choosing
+      // another supported mode opts out of that broker; Rust independently
+      // guarantees no host secret crosses into the run.
+      apiKeyBrokerEnv:
+        networkMode === "provider" ? current.apiKeyBrokerEnv : null,
+    }))
     invalidatePlan()
   }
 
   function updateRequest(patch: Partial<RunPlanRequest>) {
-    setRequest((current) => ({ ...current, ...patch }))
+    setRequest((current) => {
+      const next = { ...current, ...patch }
+      return patch.apiKeyBrokerEnv
+        ? { ...next, networkMode: "provider" }
+        : next
+    })
     invalidatePlan()
   }
 
   function invalidatePlan() {
     setPlan(null)
-    setLaunchConfirmation(false)
     setConfirmedWarnings([])
     setLaunchMessage("")
   }
@@ -240,7 +254,9 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
       : { ...request, sessionName: plan.session || nextLaunchSessionName() }
     const fullRequest: LaunchRunRequest = {
       plan: launchRequest,
-      confirmLaunch: launchConfirmation,
+      // Clicking Start run expresses WebView intent. The trusted mutation
+      // boundary remains the Rust-owned native confirmation dialog.
+      confirmLaunch: true,
       confirmedWarnings,
     }
     // Interactive agent (Claude Code): its prompt lives in its own TUI and a
@@ -305,7 +321,6 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     plan,
     planning,
     launching,
-    launchConfirmation,
     confirmedWarnings,
     launchMessage,
     error,
@@ -320,7 +335,6 @@ export function useLaunchFlow(deps: LaunchFlowDeps) {
     setWarningConfirmation,
     startRun,
     closeRunTerminal,
-    setLaunchConfirmation,
     setLaunchStep,
   }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run the local macOS verification harness for RunHaven.
-# Checks Rust formatting, TUI package tests, workspace tests, clippy, pin policy,
+# Checks Rust formatting, active workspace tests, clippy, pin policy,
 # repo structure, frontend, Tauri packaging, diff hygiene, and build output.
 set -euo pipefail
 
@@ -24,16 +24,16 @@ if [ "$(uname -m)" != "arm64" ]; then
   exit 1
 fi
 
-if ! command -v cargo >/dev/null 2>&1; then
-  echo "cargo was not found on PATH."
+if ! command -v rustup >/dev/null 2>&1; then
+  echo "rustup was not found on PATH."
   exit 1
 fi
+# shellcheck disable=SC1091
+source scripts/lib/rust-toolchain.sh
+activate_pinned_rust_toolchain "$PWD"
 
 echo "== cargo fmt --check =="
 cargo fmt --check
-
-echo "== cargo test -p runhaven-tui --locked =="
-cargo test -p runhaven-tui --locked
 
 echo "== cargo test --workspace --locked =="
 cargo test --workspace --locked
@@ -46,6 +46,18 @@ cargo run --locked --bin runhaven-check-pins
 
 echo "== scripts/check-repo-structure.sh =="
 scripts/check-repo-structure.sh
+
+echo "== scripts/release-desktop-common.test.sh =="
+scripts/release-desktop-common.test.sh
+
+echo "== scripts/release-desktop-preflight.test.sh =="
+scripts/release-desktop-preflight.test.sh
+
+echo "== scripts/local-sign-desktop.test.sh =="
+scripts/local-sign-desktop.test.sh
+
+echo "== scripts/rust-toolchain.test.sh =="
+scripts/rust-toolchain.test.sh
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "python3 was not found on PATH."

@@ -15,7 +15,6 @@ pub fn bundled_provider_hosts(profile: &str) -> &'static [&'static str] {
         "claude" => &["api.anthropic.com", "claude.ai", "platform.claude.com"],
         // auth.openai.com is the Codex device-login + token-refresh host.
         "codex" => &["api.openai.com", "chatgpt.com", "auth.openai.com"],
-        "gemini" => &["generativelanguage.googleapis.com"],
         // Observed live 2026-06-26 (egress ledger): oauth2 + www.googleapis are
         // the OAuth token-exchange and userinfo hosts; cloudcode-pa is the Cloud
         // Code backend. The model call hits a channel/region prefix of that host
@@ -143,26 +142,6 @@ pub static PROVIDER_ENDPOINTS: &[ProviderEndpoint] = &[
         note: "`runhaven login codex` runs `codex login --device-auth`; the account must allow device-code login.",
     },
     ProviderEndpoint {
-        profile: "gemini",
-        host: "generativelanguage.googleapis.com",
-        status: "bundled",
-        purpose: "Gemini API key model traffic.",
-        evidence: &[
-            "https://google-gemini.github.io/gemini-cli/docs/get-started/authentication.html",
-        ],
-        note: "",
-    },
-    ProviderEndpoint {
-        profile: "gemini",
-        host: "accounts.google.com",
-        status: "candidate",
-        purpose: "Browser-based Google account sign-in for Gemini CLI.",
-        evidence: &[
-            "https://google-gemini.github.io/gemini-cli/docs/get-started/authentication.html",
-        ],
-        note: "The documented flow uses a browser and localhost callback; live container smoke is needed.",
-    },
-    ProviderEndpoint {
         profile: "antigravity",
         host: "storage.googleapis.com",
         status: "build",
@@ -198,9 +177,9 @@ pub static PROVIDER_ENDPOINTS: &[ProviderEndpoint] = &[
         profile: "antigravity",
         host: "*-cloudcode-pa.googleapis.com",
         status: "bundled",
-        purpose: "Cloud Code model endpoint family for agy runtime (Gemini); covers daily- and any channel or region prefix.",
+        purpose: "Cloud Code model endpoint family for the agy runtime; covers daily- and any channel or region prefix.",
         evidence: &["RunHaven egress ledger, observed live 2026-06-26"],
-        note: "Family pattern, so a channel/region change (daily-, us-, eu-, ...) needs no re-pin; it stays inside googleapis.com, so storage and other Google services remain denied. Not bundled (optional): antigravity-unleash.goog (feature flags), lh3.googleusercontent.com (avatar), playwright*.azureedge.net (browser binaries).",
+        note: "Family pattern, so a channel/region change (daily-, us-, eu-, ...) needs no re-pin; it stays inside googleapis.com, so storage and other Google services remain denied. Not bundled (optional): antigravity-unleash.goog (feature flags), lh3.googleusercontent.com (avatar), play.googleapis.com (telemetry), playwright*.azureedge.net (browser binaries).",
     },
     ProviderEndpoint {
         profile: "copilot",

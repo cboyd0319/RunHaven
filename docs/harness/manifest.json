@@ -2,13 +2,13 @@
   "version": 2,
   "generatedFor": "RunHaven",
   "maintainedBy": "RunHaven maintainers",
-  "lastUpdated": "2026-06-27",
+  "lastUpdated": "2026-07-12",
   "purpose": "Compact map of the active RunHaven harness. This file is not startup context.",
   "platformContract": {
     "macOS": "26+",
     "architecture": "Apple silicon",
-    "rust": "1.96.0",
-    "appleContainer": "1.0.0",
+    "rust": "1.97.0",
+    "appleContainer": "1.1.0",
     "unsupported": [
       "Windows runtime",
       "Linux runtime",
@@ -25,7 +25,6 @@
     "instructions": [
       "AGENTS.md",
       "CLAUDE.md",
-      "GEMINI.md",
       ".github/copilot-instructions.md"
     ],
     "tools": [

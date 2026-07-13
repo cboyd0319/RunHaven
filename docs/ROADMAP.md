@@ -5,7 +5,8 @@ direction. The live feature status and verification evidence are tracked in
 `feature_list.json`, `current-state.md`, and
 `docs/harness/evidence/evidence-log.md`.
 
-RunHaven is alpha/pre-release. `v0.5.0` is the CLI-only pre-release already cut.
+RunHaven is alpha/pre-release. `v0.5.0` was the CLI-only release; `v0.7.0` is
+the current CLI plus desktop coworker-test candidate.
 
 Sequencing history: on 2026-06-26, GUI/UI work was deferred behind
 runtime/security hardening, remaining non-UI product scope, and a CLI-based
@@ -29,11 +30,10 @@ The active release gap tracker lives in
 | Target | Goal | Status |
 | --- | --- | --- |
 | `v0.5.0` | CLI-complete release: command set, docs, JSON/data decisions, runtime smokes, profile support tiers, diagnostics, cleanup, secure-easy defaults, and maintainable module boundaries are complete and verified. | Scope complete (`passing`); tag cut at release-readiness |
-| Runtime/security hardening | Re-verify and audit the Apple `container` boundary (runs, provider egress, image, cleanup) on the current host; fix real findings under test before new runtime-sensitive surfaces. | Passing for the completed hardening slices; keep evidence current when touched |
-| Terminal UI checkpoint | Hardened terminal checkpoint over the same planner and policy objects as the CLI and future desktop app. A bare `runhaven` on a TTY opens the guided launcher/run manager; the CLI stays the complete explicit and automation surface, and non-interactive or explicit-subcommand use bypasses the TUI. | Active branch hardening; unreleased |
-| Remaining non-UI product scope | Promote one design-first candidate at a time from `NON_UI_BACKLOG.md` (custom profiles, MCP allowlists, path-aware host policy, workflow files, and similar), preserving CLI semantics and default safety. | Planned |
-| CLI public release | Release-readiness for the hardened CLI product: full local verification, Apple `container` smokes, current pins, docs, and security evidence. | Planned |
-| Desktop app (next focus) | First-class native-feeling macOS release: the app becomes the easiest safe path for setup, image readiness/rebuild, planning, launch, live status, bounded output, stop, kill, repair, diagnostics, worktree review, cleanup, accessibility, signed/notarized artifact, and provenance. Version label open. | Next after this branch merges |
+| `v0.7.0` coworker candidate | CLI plus native desktop easy path with guided setup, reviewed launch, managed runs, recovery, cleanup, accessibility automation, and fail-closed release packaging. | Source candidate in final verification; signed/notarized artifact, clean-Mac, four-agent native OAuth, and manual VoiceOver proofs remain |
+| Runtime/security hardening | Re-verify the Apple `container` boundary whenever runs, provider egress, images, auth, records, or cleanup change. | Passing for completed local and live slices; keep evidence current when touched |
+| Terminal UI archive | Keep the TUI and vendored Codex source outside the active workspace and release binaries. | Archived; explicit product decision and fresh security review required to reopen |
+| `v1.0.0` desktop release | Public first-class desktop release with signed/notarized artifacts, clean-Mac proof, current dependency/runtime evidence, and completed manual accessibility review. | Planned after the `v0.7.0` coworker-test cycle |
 
 Design rule for every phase: the secure path must be the easy path. Supported
 lower-security choices should warn and require explicit intent; unsupported or
@@ -77,9 +77,9 @@ current-stable pins, and keep the harness state current.
   anchored to one registrable domain, default-deny preserved), used for
   Antigravity so users manage no hosts
 - `runhaven login <agent>` isolated per-agent login, live-verified for claude
-  (host `claude setup-token`), codex (`codex login --device-auth`), copilot
+  (`claude auth login`), codex (`codex login --device-auth`), copilot
   (`copilot login`), and antigravity (agy first-run Google OAuth), with
-  `--clear`; gemini stays on the API-key broker
+  `--clear`
 
 ## v0.5.0 CLI-Complete Scope
 

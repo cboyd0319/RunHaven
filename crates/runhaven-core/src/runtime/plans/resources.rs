@@ -48,6 +48,26 @@ pub fn project_identifier(workspace: &Path) -> String {
         .collect()
 }
 
+pub(super) fn runtime_resource_identifier(
+    profile: &str,
+    auth_scope: &str,
+    session: &str,
+    run_id: Option<&str>,
+) -> String {
+    let mut digest = Sha256::new();
+    for value in [profile, auth_scope, session, run_id.unwrap_or("")] {
+        digest.update(value.as_bytes());
+        digest.update([0]);
+    }
+    digest
+        .finalize()
+        .iter()
+        .flat_map(|byte| [byte >> 4, byte & 0x0f])
+        .take(16)
+        .map(|n| char::from_digit(n as u32, 16).expect("hex digit"))
+        .collect()
+}
+
 pub fn safe_resource_name(value: &str) -> String {
     let mut normalized = String::new();
     let mut last_dash = false;

@@ -1,10 +1,11 @@
 use std::io::{Read, Write};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
 
 use anyhow::{Context, Result, bail};
+use runhaven_core::apple_container;
 use runhaven_core::runtime::launch::{AgentCommandContext, AgentCommandRunner};
 
 use crate::launch_status::LaunchStatusRegistry;
@@ -77,14 +78,13 @@ impl TauriLaunchRunner {
             }
         })
     }
-}
 
-impl AgentCommandRunner for TauriLaunchRunner {
-    fn run_agent_command(
+    fn run_agent_command_with_mark_running(
         &mut self,
         command: &[String],
         env: Option<(&str, &str)>,
         context: AgentCommandContext<'_>,
+        mark_running: impl FnOnce(&LaunchStatusRegistry, &str) -> Result<(), String>,
     ) -> Result<i32> {
         let run_id = context.run_id;
         // Wall-clock from just before spawn. The Apple `container` startup steps
@@ -100,7 +100,7 @@ impl AgentCommandRunner for TauriLaunchRunner {
         let Some(program) = command.first() else {
             bail!("agent command is empty");
         };
-        let mut agent_command = Command::new(program);
+        let mut agent_command = apple_container::command_for_program(program)?;
         agent_command
             .args(&command[1..])
             .stdin(Stdio::piped())
@@ -143,9 +143,17 @@ impl AgentCommandRunner for TauriLaunchRunner {
         };
         let stdout_handle = self.capture_output(context.run_id, stdout);
         let stderr_handle = self.capture_output(context.run_id, stderr);
-        self.launch_status
-            .mark_running(context.run_id)
-            .map_err(anyhow::Error::msg)?;
+        if let Err(error) = mark_running(&self.launch_status, context.run_id) {
+            let launch_error = anyhow::Error::msg(error);
+            if let Err(cleanup_error) =
+                cleanup_failed_spawn(&mut child, stdout_handle, stderr_handle, registration)
+            {
+                return Err(launch_error.context(format!(
+                    "could not fully clean up the spawned agent command: {cleanup_error}"
+                )));
+            }
+            return Err(launch_error);
+        }
         log::info!(
             "run {run_id}: container process spawned and running after {} ms",
             launch_start.elapsed().as_millis()
@@ -166,10 +174,64 @@ impl AgentCommandRunner for TauriLaunchRunner {
     }
 }
 
+impl AgentCommandRunner for TauriLaunchRunner {
+    fn run_agent_command(
+        &mut self,
+        command: &[String],
+        env: Option<(&str, &str)>,
+        context: AgentCommandContext<'_>,
+    ) -> Result<i32> {
+        self.run_agent_command_with_mark_running(
+            command,
+            env,
+            context,
+            LaunchStatusRegistry::mark_running,
+        )
+    }
+}
+
 fn join_output_capture(handle: thread::JoinHandle<Result<()>>) -> Result<()> {
     handle
         .join()
         .map_err(|_| anyhow::anyhow!("session output reader panicked"))?
+}
+
+fn cleanup_failed_spawn(
+    child: &mut std::process::Child,
+    stdout_handle: thread::JoinHandle<Result<()>>,
+    stderr_handle: thread::JoinHandle<Result<()>>,
+    registration: InputRegistration<'_>,
+) -> Result<()> {
+    let mut failures = Vec::new();
+    match child.try_wait() {
+        Ok(Some(_)) => {}
+        Ok(None) => {
+            if let Err(error) = child.kill() {
+                failures.push(format!("could not stop child: {error}"));
+            }
+        }
+        Err(error) => {
+            failures.push(format!("could not inspect child: {error}"));
+            if let Err(error) = child.kill() {
+                failures.push(format!("could not stop child: {error}"));
+            }
+        }
+    }
+    if let Err(error) = child.wait() {
+        failures.push(format!("could not reap child: {error}"));
+    }
+    if let Err(error) = join_output_capture(stdout_handle) {
+        failures.push(format!("stdout capture failed: {error:#}"));
+    }
+    if let Err(error) = join_output_capture(stderr_handle) {
+        failures.push(format!("stderr capture failed: {error:#}"));
+    }
+    drop(registration);
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        bail!(failures.join("; "))
+    }
 }
 
 struct InputRegistration<'a> {
@@ -189,114 +251,4 @@ impl Drop for InputRegistration<'_> {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::thread;
-    use std::time::{Duration, Instant};
-
-    use runhaven_core::runtime::launch::{AgentCommandContext, AgentCommandRunner};
-    use runhaven_core::runtime::plans::{AgentRunPlan, AuthScope, NetworkMode, WorkspaceScope};
-
-    use crate::launch_status::LaunchStatusRegistry;
-    use crate::session_input::SessionInputRegistry;
-    use crate::session_output::SessionOutputRegistry;
-
-    #[cfg(unix)]
-    fn stdin_wait_command() -> Vec<String> {
-        vec![
-            "sh".to_string(),
-            "-c".to_string(),
-            "IFS= read -r _line".to_string(),
-        ]
-    }
-
-    #[cfg(windows)]
-    fn stdin_wait_command() -> Vec<String> {
-        vec![
-            "cmd".to_string(),
-            "/C".to_string(),
-            "set /p line=".to_string(),
-        ]
-    }
-
-    fn test_plan(workspace: &std::path::Path) -> AgentRunPlan {
-        AgentRunPlan {
-            command: stdin_wait_command(),
-            preflight: Vec::new(),
-            workspace: workspace.to_path_buf(),
-            state_volume: "runhaven-tauri-runner-home".to_string(),
-            session: "default".to_string(),
-            container_name: "runhaven-tauri-runner-run".to_string(),
-            profile_name: "shell".to_string(),
-            workspace_scope: WorkspaceScope::Current,
-            workspace_scope_note: None,
-            auth_scope: AuthScope::Agent,
-            worktree: None,
-            run_id: Some("tauri-runner-seam".to_string()),
-            network_name: None,
-            network_mode: NetworkMode::Internet,
-            egress_summary: "unrestricted internet egress".to_string(),
-            image: "image".to_string(),
-            provider_allowed_hosts: Vec::new(),
-            claude_auth_source: None,
-            security_notices: Vec::new(),
-        }
-    }
-
-    #[test]
-    fn tauri_launch_runner_registers_stdin_until_child_exits() {
-        let workspace = tempfile::tempdir().expect("workspace");
-        let plan = test_plan(workspace.path());
-        let registry = SessionInputRegistry::default();
-        let runner_registry = registry.clone();
-        let launch_status = LaunchStatusRegistry::default();
-        let runner_launch_status = launch_status.clone();
-
-        let handle = thread::spawn(move || {
-            let mut runner = super::TauriLaunchRunner::new(
-                runner_registry,
-                SessionOutputRegistry::default(),
-                runner_launch_status,
-            );
-            runner.run_agent_command(
-                &stdin_wait_command(),
-                None,
-                AgentCommandContext {
-                    plan: &plan,
-                    run_id: "tauri-runner-seam",
-                    started_at: "2026-06-30T00:00:00Z",
-                },
-            )
-        });
-
-        let deadline = Instant::now() + Duration::from_secs(2);
-        let accepted = loop {
-            match registry.write("tauri-runner-seam", "tauri-runner-seam", "hello\n") {
-                Ok(accepted) => break accepted,
-                Err(error)
-                    if error.contains("session input transport not found")
-                        && Instant::now() < deadline =>
-                {
-                    thread::sleep(Duration::from_millis(10));
-                }
-                Err(error) => panic!("write session input: {error}"),
-            }
-        };
-
-        assert_eq!(accepted, "hello\n".len());
-        assert_eq!(
-            handle.join().expect("runner thread").expect("runner exit"),
-            0
-        );
-        assert_eq!(
-            launch_status
-                .get("tauri-runner-seam")
-                .expect("launch status")
-                .state,
-            "running"
-        );
-        let missing = registry
-            .write("tauri-runner-seam", "tauri-runner-seam", "again\n")
-            .expect_err("writer unregistered after child exit");
-        assert!(missing.contains("session input transport not found"));
-    }
-}
+mod tests;

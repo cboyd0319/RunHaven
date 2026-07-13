@@ -28,7 +28,7 @@ output, run control, and multi-session isolation.
 
 Real-agent broker smoke is skipped by default. To opt in, export:
   RUNHAVEN_GUI_LIVE_REAL_AGENT=1
-  RUNHAVEN_GUI_LIVE_AGENT=<codex|claude|gemini> or pass --with-agent
+  RUNHAVEN_GUI_LIVE_AGENT=<codex|claude> or pass --with-agent
   RUNHAVEN_GUI_LIVE_AGENT_API_KEY_ENV=<fixed broker env> or pass --agent-api-key-env
   The selected broker env itself, for example OPENAI_API_KEY=...
 EOF
@@ -102,7 +102,6 @@ expected_broker_env() {
   case "$1" in
     codex) printf '%s\n' "OPENAI_API_KEY" ;;
     claude) printf '%s\n' "ANTHROPIC_API_KEY" ;;
-    gemini) printf '%s\n' "GEMINI_API_KEY" ;;
     *) return 1 ;;
   esac
 }
@@ -153,10 +152,10 @@ validate_real_agent_config() {
   local expected_env
   local broker_secret
   [ -n "$LIVE_AGENT" ] || {
-    fail "RUNHAVEN_GUI_LIVE_REAL_AGENT=1 requires --with-agent <codex|claude|gemini> or RUNHAVEN_GUI_LIVE_AGENT"
+    fail "RUNHAVEN_GUI_LIVE_REAL_AGENT=1 requires --with-agent <codex|claude> or RUNHAVEN_GUI_LIVE_AGENT"
   }
   expected_env="$(expected_broker_env "$LIVE_AGENT")" || {
-    fail "--with-agent currently supports brokered agents only: codex, claude, gemini"
+    fail "--with-agent currently supports brokered agents only: codex, claude"
   }
   if [ -z "$LIVE_AGENT_API_KEY_ENV" ]; then
     fail "RUNHAVEN_GUI_LIVE_REAL_AGENT=1 with agent $LIVE_AGENT requires --agent-api-key-env $expected_env"

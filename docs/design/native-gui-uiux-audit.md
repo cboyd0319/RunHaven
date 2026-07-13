@@ -76,8 +76,8 @@ Tauri/Rust window/menu work, not just CSS.
 - **NAT-1 (done)** Double chrome: default OS title bar + a separate web header.
   Shipped `titleBarStyle: Overlay` + `hiddenTitle`, full-height sidebar,
   drag-region header.
-- **NAT-2 (done)** Native vibrancy. `window-vibrancy =0.6.0` +
-  `NSVisualEffectMaterial::Sidebar` applied to the transparent main window in
+- **NAT-2 (done)** Native vibrancy. Tauri's built-in `Effect::Sidebar` is
+  applied to the transparent main window in
   `lib.rs` setup; `body` is transparent so the frosted material shows, the
   sidebar paints a 72%-alpha tint over it (glass), and the main content
   (`SidebarInset`, `bg-background`) stays opaque. Requires `transparent: true`

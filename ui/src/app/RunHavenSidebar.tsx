@@ -5,6 +5,7 @@ import {
   CircleAlert,
   CirclePlay,
   House,
+  Settings,
   Terminal,
   Wrench,
   type LucideIcon,
@@ -30,21 +31,20 @@ import type { ManagedSessionSummary } from "@/commands/runhaven"
 import { groupSessions, RUN_TERMINAL_NAV, type NavDestination } from "./navigation"
 import { sessionAttention } from "./sessionAttention"
 
-// Sidebar (design variant 06): the four destinations at the top, then a Runs
-// summary of the run pipeline as three counts (Needs review, Active, Finished),
-// then the app version. Individual sessions are no longer listed here; they are
-// reached from Home's Needs review and Recent activity tables. The count rows
-// navigate to Home, the run overview.
+// Fixed destinations first, then three filtered Run history shortcuts and the
+// app version. Individual runs stay out of the sidebar so it remains stable.
 export function RunHavenSidebar({
   sessions,
   navigation,
   onNavigate,
+  onOpenSettings,
   runTerminalActive,
   appVersion,
 }: {
   sessions: ManagedSessionSummary[]
   navigation: NavDestination
   onNavigate: (destination: NavDestination) => void
+  onOpenSettings: () => void
   // True while an interactive run terminal is live. It is not a managed session,
   // so it gets its own fixed row: without it, navigating away from a live run
   // would leave no way back (audit RT-1/RT-2).
@@ -93,13 +93,13 @@ export function RunHavenSidebar({
                 onSelect={() => onNavigate({ kind: "agents" })}
               />
               <DestinationRow
-                label="Diagnostics"
+                label="System Check"
                 Icon={Activity}
                 active={navigation.kind === "diagnostics"}
                 onSelect={() => onNavigate({ kind: "diagnostics" })}
               />
               <DestinationRow
-                label="Maintenance"
+                label="Cleanup"
                 Icon={Wrench}
                 active={navigation.kind === "maintenance"}
                 onSelect={() => onNavigate({ kind: "maintenance" })}
@@ -117,7 +117,7 @@ export function RunHavenSidebar({
         </SidebarGroup>
         {/* The three counts are independent status flags, not a partition: a
             finished run that is ready to review is intentionally in both "Needs
-            review" (attention) and "Finished" (lifecycle), matching the Home
+            you" (attention) and "Past" (lifecycle), matching the Home
             panels, so they can sum to more than the session total. */}
         <SidebarGroup>
           <SidebarGroupLabel className="tracking-[0.2em] uppercase">
@@ -126,31 +126,43 @@ export function RunHavenSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               <CountRow
-                label="Needs review"
+                label="Needs you"
                 Icon={CircleAlert}
                 iconClassName="text-destructive"
                 count={needsReview}
-                onSelect={() => onNavigate({ kind: "runs" })}
+                onSelect={() => onNavigate({ kind: "runs", filter: "needs-you" })}
               />
               <CountRow
-                label="Active"
+                label="Running"
                 Icon={CirclePlay}
                 iconClassName="text-primary"
                 count={groups.active.length}
-                onSelect={() => onNavigate({ kind: "runs" })}
+                onSelect={() => onNavigate({ kind: "runs", filter: "running" })}
               />
               <CountRow
-                label="Finished"
+                label="Past"
                 Icon={CheckCircle2}
                 iconClassName="text-success"
                 count={groups.finished.length}
-                onSelect={() => onNavigate({ kind: "runs" })}
+                onSelect={() => onNavigate({ kind: "runs", filter: "past" })}
               />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Settings"
+              type="button"
+              onClick={onOpenSettings}
+            >
+              <Settings />
+              <span>Settings</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
         <div className="px-3 py-1 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
           {`RunHaven ${appVersion}`.trim()}
         </div>

@@ -240,7 +240,7 @@ export type ManagedSessionList = {
 // stored or logged in the frontend.
 export type TerminalMessage =
   | { event: "output"; data: number[] }
-  | { event: "exit"; code: number };
+  | { event: "exit"; code: number; completionRecorded?: boolean };
 
 // Which selection-scoped menu items apply right now, sent to Rust so the
 // native menu grays out actions that would do nothing (navigation invariant 5).
@@ -399,9 +399,12 @@ export type {
 
 export type {
   CheckStatus,
+  SetupActionId,
+  SetupAction,
   SetupStatus,
   AgentProfile,
   RunSummary,
   AgentReadiness,
-  DashboardStatus
+  DashboardStatus,
+  SetupRecoveryResponse
 } from "./dashboard_types";

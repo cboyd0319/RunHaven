@@ -1,66 +1,15 @@
 [workspace]
 members = [
-    "crates/codex/ansi-escape",
-    "crates/codex/app-server-client",
-    "crates/codex/app-server-protocol",
-    "crates/codex/async-utils",
-    "crates/codex/codex-api",
-    "crates/codex/codex-client",
-    "crates/codex/codex-experimental-api-macros",
-    "crates/codex/config",
-    "crates/codex/connectors",
-    "crates/codex/context-fragments",
-    "crates/codex/core",
-    "crates/codex/core-skills",
-    "crates/codex/exec-server",
-    "crates/codex/exec-server-protocol",
-    "crates/codex/execpolicy",
-    "crates/codex/feedback",
-    "crates/codex/features",
-    "crates/codex/file-search",
-    "crates/codex/file-system",
-    "crates/codex/git-utils",
-    "crates/codex/install-context",
-    "crates/codex/memories/read",
-    "crates/codex/model-provider-info",
-    "crates/codex/models-manager",
-    "crates/codex/network-proxy",
-    "crates/codex/otel",
-    "crates/codex/plugin",
-    "crates/codex/protocol",
-    "crates/codex/response-debug-context",
-    "crates/codex/sandboxing",
-    "crates/codex/shell-command",
-    "crates/codex/terminal-detection",
-    "crates/codex/utils/absolute-path",
-    "crates/codex/utils/approval-presets",
-    "crates/codex/utils/cache",
-    "crates/codex/utils/cargo-bin",
-    "crates/codex/utils/cli",
-    "crates/codex/utils/elapsed",
-    "crates/codex/utils/fuzzy-match",
-    "crates/codex/utils/home-dir",
-    "crates/codex/utils/image",
-    "crates/codex/utils/output-truncation",
-    "crates/codex/utils/path-utils",
-    "crates/codex/utils/path-uri",
-    "crates/codex/utils/plugins",
-    "crates/codex/utils/pty",
-    "crates/codex/utils/rustls-provider",
-    "crates/codex/utils/sleep-inhibitor",
-    "crates/codex/utils/string",
-    "crates/codex/utils/stream-parser",
-    "crates/codex/windows-sandbox-rs",
     "crates/runhaven",
     "crates/runhaven-cli",
     "crates/runhaven-core",
-    "crates/runhaven-tui",
     "src-tauri",
 ]
+exclude = ["crates/codex/*", "crates/codex/*/*", "crates/runhaven-tui"]
 resolver = "3"
 
 [workspace.package]
-version = "0.5.0"
+version = "0.7.0"
 edition = "2024"
 rust-version = "1.96"
 license = "MIT"
@@ -70,7 +19,7 @@ repository = "https://github.com/cboyd0319/RunHaven"
 homepage = "https://github.com/cboyd0319/RunHaven"
 
 [workspace.dependencies]
-anyhow = "=1.0.102"
+anyhow = "=1.0.103"
 arboard = { version = "=3.6.1", features = ["wayland-data-control"] }
 ansi-to-tui = "=8.0.1"
 base64 = "=0.22.1"
@@ -89,10 +38,8 @@ lazy_static = "=1.5.0"
 # Logging facade for the desktop shell's dev/test log trail (src-tauri). The
 # tauri-plugin-log backend routes these records to stdout and the local app
 # log file; log lines must never carry secrets, payloads, or terminal bytes.
-# Pinned to 0.4.32, not current stable 0.4.33: the vendored codex-utils-pty
-# crate exact-pins log =0.4.32 and one 0.4.x must resolve for the whole graph
-# (same vendored-tree constraint as security-framework =3.5.1).
-log = "=0.4.32"
+# Logging facade for the desktop shell's local diagnostic trail.
+log = "=0.4.33"
 pathdiff = "=0.2.3"
 pretty_assertions = "=1.4.1"
 pty-process = "=0.5.3"
@@ -103,24 +50,15 @@ regex = "=1.12.4"
 regex-lite = "=0.1.8"
 reqwest = { version = "=0.13.4", features = ["blocking"] }
 rmcp = { version = "=1.8.0", default-features = false }
-runhaven-cli = { path = "crates/runhaven-cli", version = "=0.5.0" }
-runhaven-core = { path = "crates/runhaven-core", version = "=0.5.0" }
-runhaven-tui = { path = "crates/runhaven-tui", version = "=0.5.0" }
+runhaven-cli = { path = "crates/runhaven-cli", version = "=0.7.0" }
+runhaven-core = { path = "crates/runhaven-core", version = "=0.7.0" }
 schemars = "=0.8.22"
-# Type-enforced secret wrapper for the in-memory Claude OAuth broker token
-# (crates/runhaven-core). Redacts Debug and omits Display so a stray `{:?}`/`{}`
-# on the held credential cannot leak it, and composes zeroize's wipe-on-drop
-# (secrecy re-exports and drives zeroize; no separate feature to enable). All-
-# platform, `forbid(unsafe_code)`. Pinned to =0.10.3.
+# Type-enforced wrapper for explicitly configured host API keys. It redacts
+# Debug, omits Display, and wipes its held copy on drop.
 secrecy = "=0.10.3"
-# macOS Keychain custody for the Claude OAuth broker (crates/runhaven-core,
-# target-gated to macOS). `OSX_10_15` unlocks the data-protection keychain
-# (`kSecUseDataProtectionKeychain`) plus `SecAccessControl` user-presence.
-# Pinned to =3.5.1 to match the exact pin the vendored `codex-network-proxy`
-# already carries: security-framework 3.x is one semver line, so a =3.7.0 pin
-# here would force a second, conflicting copy the resolver rejects. 3.5.1
-# already exposes the full access-control/data-protection API this module uses.
-security-framework = { version = "=3.5.1", features = ["OSX_10_15"] }
+# Safe macOS CLI signal registration. The parent must reap its owned container
+# process and finish marker/network cleanup after Ctrl-C, termination, or hangup.
+signal-hook = "=0.4.4"
 serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = { version = "=1.0.150", features = ["preserve_order"] }
 serial_test = "=3.5.0"
@@ -130,7 +68,7 @@ strum = "=0.27.2"
 strum_macros = "=0.28.0"
 supports-color = "=3.0.2"
 syntect = "=5.3.0"
-tauri = { version = "=2.11.3", features = ["macos-private-api"] }
+tauri = { version = "=2.11.5", features = ["macos-private-api"] }
 tauri-build = { version = "=2.6.3", features = [] }
 tauri-plugin-dialog = "=2.7.1"
 # Official Tauri v2 log plugin: writes app logs to stdout plus a rotated file
@@ -140,11 +78,6 @@ tauri-plugin-dialog = "=2.7.1"
 # (crates.io, verified 2026-07-04).
 tauri-plugin-log = "=2.8.0"
 tauri-plugin-window-state = "=2.4.1"
-# Tauri-ecosystem crate for the native macOS NSVisualEffectView sidebar
-# vibrancy (NAT-2). Already resolved in the lockfile via the Tauri stack, so
-# making it a direct dep adds no new transitive surface. Pinned to the current
-# 0.6.0 (crates.io, verified 2026-07-04).
-window-vibrancy = "=0.6.0"
 tempfile = "=3.27.0"
 textwrap = "=0.16.2"
 time = { version = "=0.3.51", features = ["formatting", "parsing"] }
@@ -162,11 +95,6 @@ url = "=2.5.8"
 urlencoding = "=2.1.3"
 uuid = { version = "=1.23.3", features = ["v4"] }
 vt100 = "=0.16.2"
-# Best-effort overwrite-on-drop for transient secret buffers (setup-token
-# capture, extracted token). All-platform: later slices hold a secret in the
-# broker's cross-platform state. Encapsulates its own unsafe (composes with
-# `unsafe_code = forbid`).
-zeroize = "=1.9.0"
 
 [workspace.lints.rust]
 warnings = { level = "deny", priority = -1 }
@@ -177,7 +105,3 @@ all = { level = "deny", priority = -1 }
 
 [profile.release]
 overflow-checks = true
-
-[patch.crates-io]
-tokio-tungstenite = { git = "https://github.com/openai-oss-forks/tokio-tungstenite", rev = "0e5b2d73aa18dd9f0a50ee9ff199d5aef7594186" }
-tungstenite = { git = "https://github.com/openai-oss-forks/tungstenite-rs", rev = "4fffad30fe373adbdcffab9545e9e9bf4f2fc19f" }

@@ -1,6 +1,6 @@
 # Apple Container Gap Analysis
 
-Last updated: 2026-06-27
+Last updated: 2026-07-12
 
 Status: historical pre-Tauri gap analysis plus recurring runtime evidence
 reference.
@@ -10,17 +10,26 @@ what was covered before the Tauri scaffold started, what remains intentionally
 out of scope, and which runtime evidence gates still apply before broadening
 CLI or desktop behavior.
 
-Current release context: RunHaven remains alpha/pre-release after the `v0.5.0`
-CLI-only pre-release. The TUI is active and the Tauri scaffold has started, but
-runtime, provider, image, SSH, and cleanup claims still require focused Apple
-`container` evidence before any release or runtime-sensitive UI expansion.
+Current release context: RunHaven remains pre-release after the `v0.5.0`
+CLI-only release. The native Tauri desktop app is the active v0.7.0 coworker
+test target; TUI work is deferred. Runtime, provider, image, SSH, and cleanup
+claims still require focused Apple `container` evidence before release.
+
+The repository now pins Apple `container` 1.1.0 at verified tag commit
+`5973b9cc626a3e7a499bb316a958237ebe14e2ed`. Its signed, notarized installer
+has SHA-256
+`0ca1c42a2269c2557efb1d82b1b38ac553e6a3a3da1b1179c439bcee1e7d6714`
+and Apple Team ID `UPBK2H6LZM`. Exact-tag source review found no removed
+RunHaven command or JSON contract; builder and Kata pins stay unchanged, while
+vminit advances to 0.35.0. The signed update and full local smoke matrix passed
+on 2026-07-12.
 
 ## Evidence Used
 
-- Host evidence: macOS 26.5.1, arm64, `/usr/local/bin/container`, Apple
-  `container` CLI 1.0.0 build `release` commit `ee848e3`.
+- Host evidence: macOS 27.0, arm64, `/usr/local/bin/container`, Apple
+  `container` CLI 1.1.0 build `release` commit `5973b9c`.
 - Runtime service evidence: `container system status` reported running
-  `container-apiserver` 1.0.0 commit `ee848e3`.
+  `container-apiserver` 1.1.0 commit `5973b9c`.
 - Live Rust smoke evidence: `scripts/apple_container_smoke.sh --with-provider`
   passed on 2026-06-16, covering `doctor`, shell image readiness, internal
   read-only workspace behavior, active-run status/logs-follow/stop cleanup,
@@ -29,7 +38,7 @@ runtime, provider, image, SSH, and cleanup claims still require focused Apple
   a macOS Local Network privacy prompt or guest-to-host proxy reachability
   failure on the current host.
 - SSH smoke evidence: the no-secret `ssh-add -l` connectivity check now passes
-  for the non-root agent user. On macOS 26+ with Apple `container` 1.0.0, the
+  for the non-root agent user. On macOS 26+ with Apple `container` 1.1.0, the
   default macOS launchd SSH agent socket is world-accessible (`srw-rw-rw-`), so
   the forwarded socket is usable by the non-root `agent` user: a no-identities
   `container run --ssh --user agent runhaven/base sh -c 'ssh-add -l'` returns
@@ -42,7 +51,7 @@ runtime, provider, image, SSH, and cleanup claims still require focused Apple
   `container system property list --format json` matched the reviewed Apple
   `container` commit, builder image
   `ghcr.io/apple/container-builder-shim/builder:0.12.0`, vminit image
-  `ghcr.io/apple/containerization/vminit:0.33.3`, and Kata kernel `3.28.0` /
+  `ghcr.io/apple/containerization/vminit:0.35.0`, and Kata kernel `3.28.0` /
   `vmlinux-6.18.15-186`.
 - Local CLI help reviewed: `container run`, `container network`,
   `container image list`, `container volume list`, `container logs`,
@@ -59,9 +68,7 @@ runtime, provider, image, SSH, and cleanup claims still require focused Apple
   `crates/runhaven-core/src/runtime/active/`, `crates/runhaven-core/src/image/`,
   `crates/runhaven-core/src/doctor.rs`, and product docs under `docs/`.
 
-The local Apple source checkout was treated as source-map evidence. The
-installed CLI help and RunHaven pins are the release-specific evidence for
-Apple `container` 1.0.0 behavior.
+The exact 1.1.0 tag and installed signed CLI are release-specific evidence.
 
 ## Covered Today
 
@@ -72,7 +79,7 @@ Apple `container` 1.0.0 behavior.
 | Sensitive mounts | Home directories, cloud credential folders, browser profiles, raw SSH keys, and broad system paths are rejected unless explicitly allowed. | `crates/runhaven-core/src/runtime/plans/validation.rs`, `docs/SECURITY_MODEL.md` |
 | State volume preparation | Non-root home volume ownership is prepared by a short-lived root container on an internal network with DNS disabled. | `crates/runhaven-core/src/runtime/plans/mod.rs`, `crates/runhaven-core/src/provider/runtime.rs` |
 | Internal networks | Local-only runs create or reuse host-only Apple `container` networks and reject existing non-host-only networks. | `crates/runhaven-core/src/provider/runtime.rs` |
-| Provider egress | Provider mode creates a managed host-only network, inspects gateway/subnet, starts a subnet-restricted host-side CONNECT proxy, injects proxy env vars with the Apple gateway URL, logs decisions, and deletes the managed provider network after the run. On Apple `container` 1.0.0 the gateway is not a bindable macOS address, so tests and live smokes cover wildcard listener binding plus off-subnet client rejection. | `crates/runhaven-core/src/provider/runtime.rs`, `crates/runhaven-core/src/provider/egress.rs` |
+| Provider egress | Provider mode creates a managed host-only network, inspects gateway/subnet, starts a subnet-restricted host-side CONNECT proxy, injects proxy env vars with the Apple gateway URL, logs decisions, and deletes the managed provider network after the run. On Apple `container` 1.1.0 the gateway is not a bindable macOS address, so tests and live smokes cover wildcard listener binding plus off-subnet client rejection. | `crates/runhaven-core/src/provider/runtime.rs`, `crates/runhaven-core/src/provider/egress.rs` |
 | Active run control | `runs status`, `attach`, `logs-follow`, `stop`, `kill`, and `repair` route through Apple `container inspect`, `exec`, `logs`, `stop`, and `kill` with RunHaven-owned container-name validation. | `crates/runhaven-core/src/runtime/active/` |
 | Image lifecycle | `image build` uses Apple `container build` with source-digest labels. `image doctor` reads Apple image, builder status, and volume listings without mutating resources. | `crates/runhaven-core/src/image/build.rs`, `crates/runhaven-core/src/image/doctor.rs` |
 | Managed cleanup | `network list/prune`, `state list/prune/reset`, and repair commands operate on RunHaven-owned names only. | `crates/runhaven-core/src/runtime/network.rs`, `crates/runhaven-core/src/runtime/state.rs` |
@@ -81,7 +88,7 @@ Apple `container` 1.0.0 behavior.
 | SSH agent forwarding | `runhaven plan/run --ssh` forwards only the host SSH agent socket (never raw keys, non-root), with an explicit lower-security warning. Verified no-secret: the non-root agent user connects to the world-accessible default macOS launchd agent socket and `ssh-add -l` returns the no-identities status. | `crates/runhaven-core/src/runtime/plans/mod.rs`, `crates/runhaven/tests/cli.rs`, `scripts/apple_container_smoke.sh`, `docs/USAGE.md` |
 | Apple `container` release-update playbook | Runtime pin updates have a repo-owned checklist for source review, installer signature and checksum evidence, helper images, Kata kernel, CLI help diffs, docs, tests, smokes, cleanup, and rollback. | `docs/harness/release/apple-container-update-playbook.md` |
 | Opt-in live smoke | `scripts/apple_container_smoke.sh` proves the internal runtime path by default and adds provider egress coverage with `--with-provider`; it is intentionally local-only while alpha CI is disabled. | `scripts/apple_container_smoke.sh`, `docs/harness/feedback/verification-matrix.md` |
-| JSON parser fixtures | Trimmed fixtures cover Apple `container` 1.0.0 image list, network inspect, container inspect, source-backed legacy inspect attachment aliases, and missing-container stderr classification without requiring live Apple `container` in unit tests. | `crates/runhaven-core/tests/fixtures/apple_container/`, `crates/runhaven-core/src/image/doctor.rs`, `crates/runhaven-core/src/provider/runtime.rs`, `crates/runhaven-core/src/runtime/active/` |
+| JSON parser fixtures | Trimmed fixtures cover Apple `container` image list, network inspect, container inspect, source-backed legacy inspect attachment aliases, and missing-container stderr classification; live 1.1.0 smokes confirm the consumed shapes remain compatible. | `crates/runhaven-core/tests/fixtures/apple_container/`, `crates/runhaven-core/src/image/doctor.rs`, `crates/runhaven-core/src/provider/runtime.rs`, `crates/runhaven-core/src/runtime/active/` |
 | Machine default avoidance | RunHaven defaults to task-scoped `container run`, not `container machine`, because machine defaults can mount the host home directory read-write. Explicit or user-managed machine workflows should warn and require intent, not be blocked solely because they are less secure. | `docs/ARCHITECTURE.md`, Apple `docs/container-machine.md` |
 
 ## Intentional Decisions
@@ -106,9 +113,9 @@ Apple `container` 1.0.0 behavior.
 
 | Priority | Gap | Why It Matters | Suggested Action | Verification |
 | --- | --- | --- | --- | --- |
-| P0 | Rust-era live runtime smokes must stay easy to run before CLI release and broad desktop runtime controls. | Unit tests prove command construction, but not installed Apple `container` JSON shapes or runtime behavior. | Use `scripts/apple_container_smoke.sh` as the opt-in local smoke. It runs `runhaven doctor`, `runhaven plan shell`, a minimal `runhaven run shell` smoke, active-run status/logs-follow/stop/repair cleanup, provider plan guidance, and exact resource cleanup checks. Keep it out of hosted CI while alpha CI is disabled. | `scripts/apple_container_smoke.sh` exits 0 on macOS 26+ with Apple `container` 1.0.0 and records cleanup evidence. |
+| P0 | Rust-era live runtime smokes must stay easy to run before CLI release and broad desktop runtime controls. | Unit tests prove command construction, but not installed Apple `container` JSON shapes or runtime behavior. | Use `scripts/apple_container_smoke.sh` as the opt-in local smoke. It runs `runhaven doctor`, `runhaven plan shell`, a minimal `runhaven run shell` smoke, active-run status/logs-follow/stop/repair cleanup, provider plan guidance, and exact resource cleanup checks. Keep it out of hosted CI while alpha CI is disabled. | `scripts/apple_container_smoke.sh` exits 0 on macOS 26+ with Apple `container` 1.1.0 and records cleanup evidence. |
 | P0 | Provider-mode live smoke must stay covered in Rust. | Provider mode depends on host-only networking, network inspect schema, Apple gateway reachability, subnet-restricted host proxy binding, proxy env injection, and cleanup. | Use `scripts/apple_container_smoke.sh --with-provider` for `v0.5.0`, release, and provider-sensitive desktop evidence. Keep the default smoke usable without live provider network/proxy dependencies. | Provider smoke passes with allowed proxied HTTPS, denied proxied host, denied proxied IP literal, denied direct DNS/IP egress, and no leftover provider network. |
-| Resolved | SSH agent forwarding is re-enabled and verified no-secret for the non-root agent user. | `--ssh` maps to Apple `container --ssh`, which bind-mounts `SSH_AUTH_SOCK` into the guest with the host socket's mode bits (`RuntimeService.swift` ~1034-1046). The default macOS launchd SSH agent socket is world-accessible (`srw-rw-rw-`), so the forwarded socket is usable by RunHaven's non-root `agent` user. A private `0600` agent socket (a fresh `ssh-agent`) is permission-denied inside the guest, which fails safe (the agent cannot use it); no raw keys are ever mounted and the agent stays non-root. | Re-enabled: `build_run_plan` adds `--ssh` and emits a lower-security warning; a raw key mount and root are still refused. | Verified end to end on macOS 26+ / Apple `container` 1.0.0: `container run --ssh --user agent runhaven/base:0.1.0 sh -c 'ssh-add -l'` returns "The agent has no identities" (rc=1), not permission denied, against the default launchd agent. `crates/runhaven-core/src/runtime/plans/{mod,tests}.rs`, `crates/runhaven/tests/cli.rs`, `scripts/apple_container_smoke.sh`. |
+| Resolved | SSH agent forwarding is re-enabled and verified no-secret for the non-root agent user. | `--ssh` maps to Apple `container --ssh`, which bind-mounts `SSH_AUTH_SOCK` into the guest with the host socket's mode bits. The default macOS launchd SSH agent socket is world-accessible (`srw-rw-rw-`), so the forwarded socket is usable by RunHaven's non-root `agent` user. A private `0600` agent socket is permission-denied inside the guest and fails safe; no raw keys are ever mounted and the agent stays non-root. | Re-enabled: `build_run_plan` adds `--ssh` and emits a lower-security warning; a raw key mount and root are still refused. | Verified end to end on macOS 26+ / Apple `container` 1.1.0: `container run --ssh --user agent runhaven/base:0.7.0 sh -c 'ssh-add -l'` returns the no-identities status, not permission denied, against the default launchd agent. `crates/runhaven-core/src/runtime/plans/{mod,tests}.rs`, `crates/runhaven/tests/cli.rs`, `scripts/apple_container_smoke.sh`. |
 
 Current P0, parser-fixture, doctor-pin, and builder-diagnostic status: the
 opt-in Rust smoke harness exists and passed with provider coverage on
@@ -124,7 +131,7 @@ Local Network privacy symptoms. `scripts/apple_container_smoke.sh --with-ssh`
 now verifies the no-secret `--ssh` connectivity path: a non-root agent run with
 `--ssh` connects to the forwarded default macOS launchd agent socket and
 `ssh-add -l` returns the no-identities status. That live smoke passed on macOS
-26+ with Apple `container` 1.0.0, so `runhaven plan/run --ssh` are re-enabled and
+26+ with Apple `container` 1.1.0, so `runhaven plan/run --ssh` are re-enabled and
 forward only the agent socket (never raw keys, non-root), with an explicit
 lower-security warning; a private `0600` agent socket is permission-denied
 inside the guest and fails safe. The Apple `container` release-update

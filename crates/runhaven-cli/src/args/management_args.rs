@@ -153,6 +153,7 @@ pub(crate) enum RunsCommand {
         #[arg(
             long,
             default_value = "auto",
+            value_parser = ["auto", "always", "never"],
             help = "allocate a TTY for the attached process; auto follows the current terminal"
         )]
         tty: String,

@@ -27,7 +27,7 @@ const REGISTRY_UNAVAILABLE: &str = "Terminal sessions are unavailable.";
 /// tear the half-open session down instead of leaving it registered without a
 /// reader.
 pub(super) type ReaderStart =
-    Box<dyn FnOnce(TerminalSessionRegistry, String) -> Result<(), String> + Send>;
+    Box<dyn FnOnce(TerminalSessionRegistry, String, u64) -> Result<(), String> + Send>;
 
 /// What a spawn produces: the control handle for the registry, plus a one-shot
 /// that starts the output reader thread. The reader is started only *after* the
@@ -48,46 +48,132 @@ impl SpawnedTerminal {
     }
 }
 
-/// Registry of live terminal sessions, keyed by session id (which is the run id
-/// for an attach). Mirrors `SessionInputRegistry`: a poisoned lock fails closed
-/// through [`lock_or`], and every mutation is bounded.
+enum TerminalEntry {
+    Pending {
+        generation: u64,
+    },
+    Live {
+        generation: u64,
+        handle: Arc<dyn TerminalHandle>,
+    },
+}
+
+#[derive(Default)]
+struct RegistryState {
+    sessions: HashMap<String, TerminalEntry>,
+    next_generation: u64,
+}
+
+/// An in-progress open reserved before native confirmation or process spawn.
+/// Dropping it removes only its own generation. Explicit close can remove the
+/// pending entry first, in which case a later activation fails and the newly
+/// spawned child is shut down.
+pub(super) struct TerminalReservation {
+    registry: TerminalSessionRegistry,
+    session_id: String,
+    generation: u64,
+    armed: bool,
+}
+
+impl TerminalReservation {
+    pub(super) fn session_id(&self) -> &str {
+        &self.session_id
+    }
+
+    pub(super) fn activate(mut self, handle: Arc<dyn TerminalHandle>) -> Result<u64, String> {
+        self.registry
+            .activate(&self.session_id, self.generation, handle)?;
+        self.armed = false;
+        Ok(self.generation)
+    }
+}
+
+impl Drop for TerminalReservation {
+    fn drop(&mut self) {
+        if self.armed {
+            self.registry
+                .remove_pending(&self.session_id, self.generation);
+        }
+    }
+}
+
+/// Registry of pending and live terminal sessions, keyed by session id (which
+/// is the run id for an attach). Mirrors `SessionInputRegistry`: a poisoned lock
+/// fails closed through [`lock_or`], and every mutation is bounded.
 #[derive(Clone, Default)]
 pub(crate) struct TerminalSessionRegistry {
-    pub(super) sessions: Arc<Mutex<HashMap<String, Arc<dyn TerminalHandle>>>>,
+    state: Arc<Mutex<RegistryState>>,
 }
 
 impl TerminalSessionRegistry {
-    /// Best-effort pre-check before the confirmation dialog: reject a duplicate
-    /// session or a request past the cap so no dialog is shown for a request
-    /// that cannot succeed. [`Self::insert`] re-checks authoritatively.
-    pub(super) fn precheck(&self, session_id: &str) -> Result<(), String> {
-        validate_terminal_session_id(session_id)?;
-        let sessions = lock_or(self.sessions.lock(), REGISTRY_UNAVAILABLE)?;
-        check_capacity(&sessions, session_id)
+    #[cfg(test)]
+    pub(super) fn poison_for_test(&self) {
+        let _guard = self.state.lock().expect("hold registry lock");
+        panic!("poison the registry mutex");
     }
 
-    /// Authoritative reserve: re-check duplicate and cap under the lock, then
-    /// insert. On error the caller must shut down the freshly spawned handle.
-    pub(super) fn insert(
+    #[cfg(test)]
+    pub(super) fn is_poisoned_for_test(&self) -> bool {
+        self.state.lock().is_err()
+    }
+
+    /// Reserve a generation before native confirmation and process spawn. The
+    /// reservation counts toward the cap and prevents duplicate opens. This is
+    /// authoritative, so close/app teardown can cancel a slow pending open.
+    pub(super) fn reserve(&self, session_id: &str) -> Result<TerminalReservation, String> {
+        validate_terminal_session_id(session_id)?;
+        let mut state = lock_or(self.state.lock(), REGISTRY_UNAVAILABLE)?;
+        check_capacity(&state.sessions, session_id)?;
+        state.next_generation = state
+            .next_generation
+            .checked_add(1)
+            .ok_or_else(|| REGISTRY_UNAVAILABLE.to_string())?;
+        let generation = state.next_generation;
+        state.sessions.insert(
+            session_id.to_string(),
+            TerminalEntry::Pending { generation },
+        );
+        Ok(TerminalReservation {
+            registry: self.clone(),
+            session_id: session_id.to_string(),
+            generation,
+            armed: true,
+        })
+    }
+
+    fn activate(
         &self,
         session_id: &str,
+        generation: u64,
         handle: Arc<dyn TerminalHandle>,
     ) -> Result<(), String> {
-        validate_terminal_session_id(session_id)?;
-        let mut sessions = lock_or(self.sessions.lock(), REGISTRY_UNAVAILABLE)?;
-        check_capacity(&sessions, session_id)?;
-        sessions.insert(session_id.to_string(), handle);
-        Ok(())
+        let mut state = lock_or(self.state.lock(), REGISTRY_UNAVAILABLE)?;
+        match state.sessions.get(session_id) {
+            Some(TerminalEntry::Pending {
+                generation: pending,
+            }) if *pending == generation => {
+                state.sessions.insert(
+                    session_id.to_string(),
+                    TerminalEntry::Live { generation, handle },
+                );
+                Ok(())
+            }
+            _ => Err("This terminal was closed before it finished opening.".to_string()),
+        }
     }
 
     /// The handle for `session_id`, cloned out so the PTY write/resize syscall
     /// runs without holding the registry lock.
     fn handle(&self, session_id: &str) -> Result<Arc<dyn TerminalHandle>, String> {
         validate_terminal_session_id(session_id)?;
-        let sessions = lock_or(self.sessions.lock(), REGISTRY_UNAVAILABLE)?;
-        sessions
+        let state = lock_or(self.state.lock(), REGISTRY_UNAVAILABLE)?;
+        state
+            .sessions
             .get(session_id)
-            .cloned()
+            .and_then(|entry| match entry {
+                TerminalEntry::Live { handle, .. } => Some(handle.clone()),
+                TerminalEntry::Pending { .. } => None,
+            })
             .ok_or_else(|| "No open terminal for this session.".to_string())
     }
 
@@ -102,8 +188,50 @@ impl TerminalSessionRegistry {
     /// Remove and return the handle for `session_id`, if present. Used by the
     /// reader thread on EOF; dropping the returned handle drops the master.
     pub(super) fn remove(&self, session_id: &str) -> Option<Arc<dyn TerminalHandle>> {
-        let mut sessions = self.sessions.lock().ok()?;
-        sessions.remove(session_id)
+        let mut state = self.state.lock().ok()?;
+        match state.sessions.remove(session_id) {
+            Some(TerminalEntry::Live { handle, .. }) => Some(handle),
+            _ => None,
+        }
+    }
+
+    /// Remove a live entry only when it is still the reader's generation. A
+    /// delayed reader from an older session can never remove a reopened session
+    /// that happens to reuse the same id.
+    pub(super) fn remove_if_generation(
+        &self,
+        session_id: &str,
+        generation: u64,
+    ) -> Option<Arc<dyn TerminalHandle>> {
+        let mut state = self.state.lock().ok()?;
+        let matches = matches!(
+            state.sessions.get(session_id),
+            Some(TerminalEntry::Live {
+                generation: current,
+                ..
+            }) if *current == generation
+        );
+        if !matches {
+            return None;
+        }
+        match state.sessions.remove(session_id) {
+            Some(TerminalEntry::Live { handle, .. }) => Some(handle),
+            _ => None,
+        }
+    }
+
+    fn remove_pending(&self, session_id: &str, generation: u64) {
+        let Ok(mut state) = self.state.lock() else {
+            return;
+        };
+        if matches!(
+            state.sessions.get(session_id),
+            Some(TerminalEntry::Pending {
+                generation: current
+            }) if *current == generation
+        ) {
+            state.sessions.remove(session_id);
+        }
     }
 
     /// Explicit close: remove the entry and kill its child.
@@ -122,11 +250,15 @@ impl TerminalSessionRegistry {
         // must be killed even if a writer panicked, so a poisoned registry can
         // never leave an orphaned `container exec` child alive.
         let handles: Vec<Arc<dyn TerminalHandle>> = self
-            .sessions
+            .state
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
+            .sessions
             .drain()
-            .map(|(_, handle)| handle)
+            .filter_map(|(_, entry)| match entry {
+                TerminalEntry::Live { handle, .. } => Some(handle),
+                TerminalEntry::Pending { .. } => None,
+            })
             .collect();
         for handle in handles {
             handle.shutdown();
@@ -135,7 +267,7 @@ impl TerminalSessionRegistry {
 }
 
 fn check_capacity(
-    sessions: &HashMap<String, Arc<dyn TerminalHandle>>,
+    sessions: &HashMap<String, TerminalEntry>,
     session_id: &str,
 ) -> Result<(), String> {
     if sessions.contains_key(session_id) {

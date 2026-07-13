@@ -10,6 +10,7 @@ use crate::session_output::SessionOutputRegistry;
 
 const RAW_OUTPUT_REDACTION_MESSAGE: &str =
     "Known secrets and control characters were removed automatically. Review before sharing.";
+const PAST_OUTPUT_UNAVAILABLE: &str = "Output is no longer available for this past run.";
 
 struct PreparedManagedSessionLogSnapshot {
     session: ManagedSessionSummaryData,
@@ -67,6 +68,18 @@ fn read_prepared_managed_session_log_snapshot(
     prepared: PreparedManagedSessionLogSnapshot,
     output_registry: Option<&SessionOutputRegistry>,
 ) -> Result<ManagedSessionLogSnapshotResponse, String> {
+    read_prepared_managed_session_log_snapshot_with_fallback(
+        prepared,
+        output_registry,
+        super::log_snapshot::read_log_snapshot,
+    )
+}
+
+fn read_prepared_managed_session_log_snapshot_with_fallback(
+    prepared: PreparedManagedSessionLogSnapshot,
+    output_registry: Option<&SessionOutputRegistry>,
+    fallback: impl FnOnce(&str, u32) -> Result<LogSnapshotResponse, String>,
+) -> Result<ManagedSessionLogSnapshotResponse, String> {
     let PreparedManagedSessionLogSnapshot {
         session,
         run_id,
@@ -77,9 +90,9 @@ fn read_prepared_managed_session_log_snapshot(
     // a real lag on a live log view that the SLOW-invoke WARN surfaced). Both
     // paths bound and redact through the same `log_snapshot_payload_from_stdout`
     // (`SessionOutputRegistry::snapshot` and `read_log_snapshot` alike), so this
-    // reorder never widens what a viewer can see. Fall back to the container CLI
-    // only when the registry has nothing for this run (not captured by this app
-    // instance, or evicted), preserving the original behavior for those cases.
+    // reorder never widens what a viewer can see. An active session may fall
+    // back to the container CLI when the registry has nothing; a past session
+    // cannot use that active-only reader and returns a fixed error instead.
     let registry_snapshot = match output_registry {
         Some(registry) => registry.snapshot(&session.run_id, lines)?,
         None => None,
@@ -87,7 +100,10 @@ fn read_prepared_managed_session_log_snapshot(
     if let Some(snapshot) = registry_snapshot {
         return Ok(managed_session_log_snapshot_response(session, snapshot));
     }
-    let snapshot = super::log_snapshot::read_log_snapshot(&run_id, lines)?;
+    if !super::sessions::managed_session_allows_run_control(&session.lifecycle) {
+        return Err(PAST_OUTPUT_UNAVAILABLE.to_string());
+    }
+    let snapshot = fallback(&run_id, lines)?;
     Ok(managed_session_log_snapshot_response(session, snapshot))
 }
 
@@ -121,6 +137,20 @@ pub(crate) fn get_managed_session_log_snapshot_with_approval_for_test(
         return Err(super::log_snapshot::raw_output_canceled_error());
     }
     read_prepared_managed_session_log_snapshot(prepared, output_registry)
+}
+
+#[cfg(test)]
+pub(crate) fn get_managed_session_log_snapshot_with_fallback_for_test(
+    request: ManagedSessionLogSnapshotRequest,
+    output_registry: Option<&SessionOutputRegistry>,
+    approve: impl FnOnce(&ManagedSessionSummaryData, u32) -> Result<bool, String>,
+    fallback: impl FnOnce(&str, u32) -> Result<LogSnapshotResponse, String>,
+) -> Result<ManagedSessionLogSnapshotResponse, String> {
+    let prepared = prepare_managed_session_log_snapshot(request)?;
+    if !approve(&prepared.session, prepared.lines)? {
+        return Err(super::log_snapshot::raw_output_canceled_error());
+    }
+    read_prepared_managed_session_log_snapshot_with_fallback(prepared, output_registry, fallback)
 }
 
 #[cfg(test)]

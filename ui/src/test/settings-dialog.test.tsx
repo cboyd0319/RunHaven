@@ -17,10 +17,8 @@ function state(patch: Partial<SettingsState> = {}): SettingsState {
     setOpen: () => {},
     dockBadge: true,
     defaultAgent: null,
-    claudeReauthDays: 90,
     setDockBadge: () => {},
     setDefaultAgent: () => {},
-    setClaudeReauthDays: () => {},
     ...patch,
   }
 }
@@ -37,11 +35,8 @@ describe("SettingsForm", () => {
     expect(markup).toContain("The number counts sessions that need you.")
     expect(markup).toContain("Start new runs with")
     expect(markup).toContain("You can still change")
-    // The Claude re-sign-in reminder cadence is a plain, soft nudge.
-    expect(markup).toContain("Ask me to sign in to Claude again after")
-    expect(markup).toContain("It is only a reminder, not a cutoff.")
     // Appearance is honest prose, not a dead control.
-    expect(markup).toContain("RunHaven uses a dark look for now.")
+    expect(markup).toContain("follows your Mac")
   })
 
   it("reflects the saved choices and shows no paths or commands", () => {
@@ -74,7 +69,6 @@ describe("useSettings", () => {
     expect(result.current.open).toBe(false)
     expect(result.current.dockBadge).toBe(true)
     expect(result.current.defaultAgent).toBeNull()
-    expect(result.current.claudeReauthDays).toBe(90)
 
     await act(async () => {
       result.current.setOpen(true)
@@ -97,20 +91,6 @@ describe("useSettings", () => {
     const second = await renderHook(() => useSettings(), undefined)
     expect(second.result.current.dockBadge).toBe(false)
     expect(second.result.current.defaultAgent).toBe("codex")
-  })
-
-  it("persists the Claude re-sign-in cadence so a fresh mount reads it back", async () => {
-    const first = await renderHook(() => useSettings(), undefined)
-    await act(async () => {
-      first.result.current.setClaudeReauthDays(30)
-    })
-    expect(first.result.current.claudeReauthDays).toBe(30)
-    await first.unmount()
-
-    // The dropdown offers only the fixed choices; the persistence layer clamps a
-    // tampered store back to the default (ui-state-persistence.test.ts).
-    const second = await renderHook(() => useSettings(), undefined)
-    expect(second.result.current.claudeReauthDays).toBe(30)
   })
 
   it("clears the default agent back to choose-for-me", async () => {

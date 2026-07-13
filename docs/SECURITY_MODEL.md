@@ -50,8 +50,12 @@ before the agent starts. That preflight mounts only the project-scoped
 uses a dedicated internal network.
 
 `runhaven` also serializes access to each project/profile/session home volume.
-This avoids concurrent attachment of the same named volume and keeps the
-failure mode understandable for non-technical users. The in-app Claude sign-in
+After taking that lock, it checks Apple container's captured JSON list for an
+existing attachment of the exact volume. This closes the process-crash gap
+where the host lock is gone but an orphaned container still holds the volume.
+RunHaven never logs that container list and never auto-removes the other
+container. It fails before launch with one fixed, path-free recovery message.
+The in-app Claude sign-in
 terminal runs `claude auth login` through the same serialized path, so while it
 is open it holds the shared Claude home volume: a Claude run or a second Claude
 sign-in fails closed with the "already in use" message until the sign-in
@@ -78,6 +82,13 @@ checks expected bundled RunHaven image tags, compares RunHaven image source
 metadata, reviews inactive RunHaven state volume names, and does not build
 images, delete resources, mount workspaces, read credentials, or reset state.
 
+Immediately before a real run or in-sandbox sign-in, Rust repeats the read-only
+host checks used by `runhaven doctor`: macOS 26+, Apple silicon, the pinned
+Apple `container` CLI and API server version and commit, the running service,
+and the pinned builder, vminit, and Kata kernel settings. Any failed check stops
+the launch before the agent container starts. Plan and dry-run paths do not run
+this gate.
+
 ## Secure Easy Path And Explicit Overrides
 
 Above all else, the default and easiest path must be the secure path. New CLI
@@ -90,7 +101,9 @@ Supported advanced choices warn but do not hide or block. Lower-security run
 configuration (a sensitive workspace, a custom or root `--user`, a custom image,
 `--env` passthrough, or an additional provider host) requires an explicit flag
 and prints plain-language `Security notices` at plan and run time so the tradeoff
-is visible. Destructive resource operations (state deletion, network pruning,
+is visible. The desktop's native launch confirmation lists every requested host
+environment variable name, but never reads or shows its value. Destructive
+resource operations (state deletion, network pruning,
 worktree merge or discard, hard-stop recovery) require explicit confirmation such
 as `--yes`. Apple `container machine` use is warned and explicit rather than
 blocked.
@@ -114,6 +127,30 @@ Unsupported, invalid, or nonfunctional paths still fail closed. Examples include
 failed setup checks, invalid input, missing confirmations, and unsupported
 platform state. This is not a policy block around a supported choice; it is a
 runtime correctness and safety failure.
+
+### Desktop setup recovery
+
+The desktop app can start Apple container's local service when that setup check
+fails. This is a narrow host mutation:
+
+- The untrusted WebView supplies only the opaque action ID
+  `start-container-system`. Unknown IDs and extra executable or argument fields
+  are rejected during deserialization.
+- Rust uses Apple's fixed `/usr/local/bin/container` path, verifies that same
+  executable is the pinned 1.1.0 release, and maps the ID to the fixed argument
+  list `system start --enable-kernel-install`. The flag prevents an unattended
+  app process from waiting on a terminal prompt. No shell string or
+  frontend-supplied path reaches process creation.
+- The command has its own one-permission Tauri capability, scoped only to the
+  main window. Read-only and session monitor windows cannot call it.
+- Rust rechecks macOS 26+, Apple silicon, the exact CLI version, and that the
+  service is still stopped before showing the native confirmation. Canceling
+  leaves the host unchanged. A single-flight gate rejects duplicate repair
+  requests while one is active.
+- After the start command exits successfully, Rust checks the service again and
+  reports success only when it is running. The WebView receives only a fixed
+  success status or a fixed path-free error. Raw process output is discarded
+  and never returned.
 
 ## Container Machine Is Not Default
 
@@ -139,8 +176,8 @@ without a reviewed approval gate.
 ## Auth Broker Boundary
 
 `runhaven auth status` and `runhaven auth explain AGENT` describe the host-side
-provider credential broker boundary. The host-side API-key broker covers Codex,
-Claude, and Gemini; Copilot and Antigravity are not brokered and use isolated
+provider credential broker boundary. The host-side API-key broker covers Codex
+and Claude; Copilot and Antigravity are not brokered and use isolated
 in-container login state. Those commands read static profile metadata. They do
 not inspect Keychain, browser profiles, cloud credential files, provider login
 caches, or environment variable values, and they do not print secrets.
@@ -236,90 +273,54 @@ construction, not by convention:
 
 ## Terminal Sessions
 
-The desktop app can open a live terminal inside a sandbox, in two shapes: an
-attach into one running sandbox, and a Claude sign-in terminal. This is the most
-powerful interactive surface it has, so it is fenced carefully.
+The desktop app can open a live terminal in three cases: attach to a running
+sandbox, sign in to an agent, or run an interactive agent. This is the app's
+most powerful interactive surface, so it is fenced carefully.
 
-- RunHaven never trusts a name from the WebView. When you open a terminal,
-  RunHaven looks up the run in its own active-run records and builds the
-  `container exec` command in Rust, reusing the exact same checks as the CLI
-  `runs attach`: the container must be RunHaven-owned, and the shell always runs
-  as the non-root `agent` user. There is no way for the GUI to run the terminal
-  as root; `--allow-root-user` is never offered here.
-- Consent happens once, before anything starts. A raw keystroke stream cannot be
-  confirmed message by message, so RunHaven shows a native confirmation dialog
-  that names the run and its container and states, in plain words, that what you
-  type goes straight to the sandbox and what it prints is shown but not filtered
-  and not saved. If you cancel, no terminal and no `container exec` process is
-  ever started.
-- The live stream is shown, not stored. This is the one place RunHaven does not
-  redact, and it says so up front. The reader relays each chunk from the sandbox
-  straight to the terminal view and nowhere else: it does not append to the
-  captured-output history, write run records, or write any log or file. A
-  build-time source test (`terminal` in `src-tauri`) fails if that code ever
-  gains a path to disk or to the output history. This "does not filter, read,
-  store, or log" statement is scoped strictly to the live terminal stream, not
-  to the whole app: saved output snapshots, run records, and auth/egress history
-  are still redacted and kept locally as before.
-- The terminal adds interactivity, not reach. It attaches into the run's
-  existing sandbox, so it inherits that run's read-only root filesystem, dropped
-  capabilities, and provider-only network. No new mounts, no host environment,
-  no `container machine`.
-- Only the main window can open a terminal. The `terminal` capability is granted
-  to the main window alone; the read-only monitor windows never receive it, and
-  the `capability_guard` tests fail closed if that ever changes. At most two
-  terminals can be open at once; opening past that fails with a clear message.
-- Terminals are never restored across relaunch, and closing the main window
-  kills every live terminal child, so no sandbox shell outlives the app.
+- Rust validates the session id and resolves or builds the exact target. Agent
+  sign-in accepts only Claude, Codex, Antigravity, or Copilot.
+- A native confirmation appears before any terminal child starts.
+- Terminal bytes go directly between the PTY and the WebView. RunHaven does not
+  append them to captured output, run records, status registries, or logs.
+- The terminal changes only stdio. The container keeps its non-root user,
+  read-only root filesystem, dropped capabilities, reviewed mounts, and selected
+  network policy.
+- Only the main window receives the terminal capability. All terminal types
+  share the same two-session resource cap and close-on-window teardown.
+- Sign-in uses the same native provider command as `runhaven login <agent>` on
+  the agent's isolated home volume. No project folder is mounted.
+- After sign-in, RunHaven writes a secret-free completion marker before the UI
+  refreshes only after any required provider-owned readiness check succeeds.
+  Claude requires `claude auth status`. Antigravity can return code 1 after a
+  successful interactive session, so its image wrapper requires both its fixed
+  credential file to be nonempty and a successful, non-generative `agy models`
+  probe before translating that one code to success. Other exit and
+  cancellation codes are preserved. RunHaven never reads credential bytes.
+- A force-quit can leave an unused RunHaven internal network while the detached
+  cleanup thread is finishing. The Cleanup screen safely removes that network.
 
-The Claude sign-in terminal shares that whole boundary and adds a few facts of
-its own:
+The provider CLI may write its own configuration, credential, or support-log
+files inside its isolated volume. The no-store statement applies to RunHaven's
+terminal relay, not to the provider's own behavior.
 
-- It is Rust-owned and native-confirmed. The Agents view button opens a terminal
-  whose target is fixed to Claude in Rust and core; the WebView supplies only a
-  session id (a registry key and run label), never what runs. A native dialog
-  names that it opens a Claude sign-in terminal and states the same
-  no-filter/no-store facts, plus that the code you paste is visible on screen.
-  Nothing starts until you confirm.
-- It runs the same in-sandbox login as `runhaven login claude`, not a raw host
-  command. Because a sign-in has no already-running container, it starts a fresh
-  one through the normal provider launch path, so provider-only egress stays
-  enforced by the live allowlist proxy the whole time (a bare `container run`
-  would have no route to the sign-in hosts). It keeps the non-root `agent` user,
-  read-only root filesystem, dropped capabilities, and the existing
-  `platform.claude.com` / `claude.ai` provider hosts. No new egress, no new
-  mounts, no host environment. Only the child's stdio is a host PTY so the pasted
-  code can round-trip.
-- The captured-output device-code sign-in still refuses Claude. That runner
-  feeds the login `/dev/null` stdin and cannot host a paste-back, so it stays
-  refused; the terminal path is a separate, narrower command and does not weaken
-  it. The login byte stream follows the same shown-not-stored rule as any
-  terminal; the run metadata it writes (a run record, like the CLI login) is not
-  the stream.
-- It shares the terminal capability and the two-terminal cap, main window only,
-  and fails closed: if the login terminal cannot open (the container tool is
-  missing, the image is not built, the PTY or proxy setup fails), nothing is
-  registered and the app keeps its "run `runhaven login claude` in your terminal"
-  fallback.
-
-The interactive agent run terminal (New run for Claude Code) shares that same
+The interactive agent run terminal started from **New run** shares that same
 boundary and adds a few facts of its own:
 
 - It is Rust-owned and native-confirmed. The New Run flow hands the reviewed
   request to Rust, which reuses the exact normal-launch path: it builds the same
-  plan, selects the saved Claude token (Keychain OAuth) from token presence, and
-  shows the same native launch confirmation a background run shows. Nothing runs,
-  and no worktree branch is created, until you confirm. The WebView supplies only
-  a session id (a registry key and run label), never what runs; the plan comes
-  from the reviewed request and Rust-side selection.
+  plan and shows the same native launch confirmation a background run shows.
+  Nothing runs, and no worktree branch is created, until you confirm. The
+  WebView supplies only a session id (a registry key and run label), never what
+  runs; the plan comes from the reviewed request and Rust-side selection.
 - Only the execution differs from a background run. The same finalized plan runs
   under the same provider egress proxy, non-root `agent` user, read-only root
   filesystem, dropped capabilities, and workspace mount; nothing is widened. The
   one change is that the run's argv is forced to `--interactive --tty` and its
   stdio is a host PTY, so the agent runs its interactive TUI (an interactive agent
   with no terminal would otherwise drop to headless `--print` and error with no
-  prompt). The token stays outside the sandbox: the broker injects it into the
-  run's requests at spawn, never onto the plan and never into the terminal stream.
+  prompt). Ordinary OAuth state stays in the selected agent's isolated volume.
+  If an advanced API-key broker was explicitly configured, its key remains in
+  the host broker and never enters the terminal stream.
 - The run byte stream follows the same shown-not-stored rule as any terminal: the
   reader relays each chunk to the WebView `Channel` and nowhere else, and the same
   build-time source test covers the run spawn, so it cannot gain a storage or
@@ -339,7 +340,8 @@ profile with `--network internet`. Use `internal` for local-only runs.
 with bundled provider hosts.
 It runs the agent on an internal Apple `container` network, starts a host-side
 CONNECT proxy, injects proxy environment variables at runtime, and deletes the
-managed provider network after the run. Apple `container` 1.0.0 exposes an
+managed run network after the run. Local-only `internal` runs use the same
+automatic per-run network cleanup. Apple `container` 1.0.0 exposes an
 internal gateway address to guests that is not always bindable on the macOS
 host, so the host listener can bind wildcard while rejecting clients outside the
 inspected Apple `container` subnet. The proxy permits the bundled provider hosts
@@ -355,6 +357,13 @@ RunHaven prints a calm two-line notice that names the agent and the count of
 blocked destinations and points to `runhaven egress log`; the per-host detail
 (host, port, count, denial reason, matched rule) stays in that log so users can
 review missing endpoints without weakening the default policy.
+
+The host listeners also bound untrusted guest resource use. The CONNECT proxy
+admits at most 32 concurrent clients, and the credential broker admits at most
+8; excess connections close before a worker thread is created. Broker requests
+have an 8 MiB body limit, an 8 KiB request-line limit, and a 10-second
+local-client timeout. Each service retains at most 256 distinct decision keys
+per run and combines later keys into fixed allowed or denied overflow counts.
 
 Host-only networks block guest egress to the internet, but they do not firewall
 the host's own listening ports. A guest on an `internal` or `provider` network
@@ -423,50 +432,23 @@ release-note, update, plugin marketplace, and broad path-sensitive hosts may
 fail until an additional fully qualified host is reviewed and passed with
 `--provider-host`.
 
-The host-side auth broker covers the API-key path for Codex, Claude, and Gemini
-through `--api-key-broker-env NAME`. It keeps the raw API key in the RunHaven
-host process and gives the guest only a placeholder key plus a base-URL redirect
-at the broker (Codex custom-provider config, or `ANTHROPIC_BASE_URL` /
-`GOOGLE_GEMINI_BASE_URL`). Broker decisions are logged without request bodies,
-token values, or environment variable names. Even with the broker the credential
-is usable, not readable: a compromised guest cannot read the key but can still
-spend through it within the pinned host and path the broker forwards to. The
-API-key broker is for API keys only; other OAuth and subscription logins (and
-Copilot, which cannot be brokered without TLS interception) use isolated
-in-container state. RunHaven never reads your host `~/.claude.json` or your other
-Keychain logins; the one exception is Claude's Keychain OAuth broker (path C),
-which reads only the single Keychain item RunHaven itself created. `--env NAME`
-remains an explicit fallback that places a token in the guest. See
-[`AUTH_BROKER.md`](AUTH_BROKER.md). Use
-[`AUTH_BROKER.md`](AUTH_BROKER.md) for the current boundary and non-goals.
+Ordinary OAuth for Claude, Codex, Antigravity, and Copilot runs inside each
+agent container. RunHaven does not read Mac Keychain items, provider state from
+the Mac home folder, or browser profiles. The provider CLI stores its credential
+in the isolated agent volume. That volume is owner-scoped but is not a
+hardware-backed secret store.
 
-For Codex, Copilot, and Antigravity, RunHaven holds no agent token: they log in
-inside the sandbox with `runhaven login <agent>`, the credential lives only in
-that agent's isolated home volume, and RunHaven never sees, stores, logs, or
-injects it. Claude's in-sandbox login (`runhaven login claude`, path A) works
-the same way and holds no host custody.
+The optional host-side API-key broker covers explicitly configured Claude and
+Codex API keys through `--api-key-broker-env NAME`. It is never selected only
+because an environment variable exists. The plan stores the name, not the
+value. At launch the broker keeps the key in host process memory and gives the
+guest only a placeholder plus a provider base-URL redirect. A compromised guest
+cannot read the key directly but can still spend through it within the broker's
+pinned host and path. Provider-only network mode is required.
 
-Claude adds one deliberate exception: the desktop app's default "Sign in on your
-Mac" (path C) reintroduces a small host custody for Claude only. RunHaven runs
-`claude setup-token` on the host and stores the printed token in a
-RunHaven-owned macOS Keychain item, then the existing broker injects it as
-`Authorization: Bearer` to `api.anthropic.com`. This trade is bounded on
-purpose: the token lives only in the OS Keychain, is
-`AccessibleWhenUnlockedThisDeviceOnly`, and carries a user-presence access
-control, so every read needs a live Touch ID or device-password approval and
-RunHaven cannot read it silently (cross-app isolation binds only on a signed
-release build, the supported path for this claim; on an unsigned dev build the
-same access control is attached to a legacy-keychain item and confirming the
-presence gate binds there is a pending maintainer check, F3). The token never enters the
-sandbox (the guest holds only a placeholder), it is inference-only (no account
-takeover), and a Settings cadence prompts a fresh sign-in so a leaked token's
-useful life is bounded. During a run the broker holds the token in memory to
-inject it and overwrites its own copy once saved, but cannot fully wipe it from
-memory. "Remove saved token" (or `runhaven login claude --clear`) deletes only
-RunHaven's Keychain item; it does not revoke the token on Anthropic's side. The
-full trade-off analysis and claim set live in
-[`AUTH_BROKER.md`](AUTH_BROKER.md) (Claude Keychain OAuth broker) and the design
-`docs/design/native-gui-claude-oauth-broker.md`.
+Copilot and Antigravity have no RunHaven API-key broker. `--env NAME` remains
+an explicit lower-security fallback that places the named value in the guest.
+See [Authentication and API-key brokers](AUTH_BROKER.md).
 
 The selected agent still controls what it reads inside `/workspace` and
 `/home/agent`. If the agent has model credentials inside its project volume and

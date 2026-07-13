@@ -11,15 +11,21 @@ import { MaintenanceView } from "../app/views/MaintenanceView"
 import { maintenanceClients } from "../app/useMaintenance"
 
 describe("MaintenanceView", () => {
-  it("offers network cleanup and points at Agents and the CLI for the rest", () => {
-    const markup = renderToStaticMarkup(<MaintenanceView />)
+  it("offers one plain cleanup task without terminal-only instructions", () => {
+    const markup = renderToStaticMarkup(<MaintenanceView setupReady />)
     expect(markup).toContain("Clean up stale networks")
     expect(markup).toContain("Check for stale networks")
     // Image rebuild moved to the Agents destination; a note links there.
     expect(markup).not.toContain("Rebuild agent image")
-    expect(markup).toContain("open Agents in the sidebar")
-    // Saved-state reset stays CLI-only, named plainly with the command.
-    expect(markup).toContain("runhaven state reset")
+    expect(markup).not.toContain("runhaven state reset")
+    expect(markup).not.toContain("Yes, remove these stale networks")
+  })
+
+  it("explains why cleanup is unavailable before setup is ready", () => {
+    const markup = renderToStaticMarkup(<MaintenanceView setupReady={false} />)
+
+    expect(markup).toContain("Finish setup before checking for stale networks")
+    expect(markup).toContain("disabled")
   })
 
   it("binds each maintenance action to its typed client", () => {

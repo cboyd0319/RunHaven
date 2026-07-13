@@ -38,14 +38,15 @@ describe("HomeView", () => {
       />
     );
 
-    expect(html).toContain("Finish setup");
+    expect(html).toContain("Setup needs attention");
     expect(html).toContain("Apple container is not installed.");
     expect(html).toContain("Install Apple container.");
     expect(html).toContain("Check again");
+    expect(html).toContain("Open System Check");
     expect(html).toContain('disabled=""');
-    expect(html).toContain("Fix the setup problem above before starting a run.");
-    // The readiness line reads "Setup needed", not the ready copy.
-    expect(html).toContain("Setup needed");
+    expect(html).toContain("New run, unavailable until setup is ready");
+    // One recovery surface owns the blocker; there is no duplicate status line.
+    expect(html).not.toContain("Setup needed");
     expect(html).not.toContain("Ready to run");
   });
 
@@ -82,7 +83,7 @@ describe("HomeView", () => {
     expect(html).toContain("1 signed in");
   });
 
-  it("splits attention runs into Needs review and the rest into Recent activity", () => {
+  it("splits attention runs into Needs you and the rest into Recent activity", () => {
     const html = renderToStaticMarkup(
       <HomeView
         {...mainViewProps({
@@ -100,7 +101,7 @@ describe("HomeView", () => {
       />
     );
 
-    expect(html).toContain("Needs review");
+    expect(html).toContain("Needs you");
     expect(html).toContain("Codex - failing");
     expect(html).toContain("Recent activity");
     expect(html).toContain("Codex - done");

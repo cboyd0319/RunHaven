@@ -1,12 +1,12 @@
 use super::*;
-use crate::runtime::profiles::{get_profile, profile_names, profiles};
+use crate::runtime::profiles::{agent_profiles, get_profile};
 
 #[test]
 fn from_profiles_builds_one_item_per_profile_in_order() {
-    let data = AgentCatalogData::from_profiles(profiles());
+    let data = AgentCatalogData::from_profiles(agent_profiles());
 
     let names: Vec<&str> = data.agents.iter().map(|item| item.name.as_str()).collect();
-    assert_eq!(names, profile_names());
+    assert_eq!(names, ["antigravity", "claude", "codex", "copilot"]);
 }
 
 #[test]
@@ -15,7 +15,7 @@ fn from_profile_derives_labels_for_brokered_networked_agent() {
     let item = AgentCatalogItemData::from_profile(&codex);
 
     assert_eq!(item.name, "codex");
-    assert_eq!(item.image, "runhaven/codex:0.1.0");
+    assert_eq!(item.image, "runhaven/codex:0.7.0");
     // Codex signs in through the host and is covered by the API-key broker.
     assert_eq!(item.sign_in, "runhaven login");
     assert_eq!(item.broker, "yes");
@@ -42,7 +42,7 @@ fn from_profile_marks_shell_as_hostless_internet_default() {
 
 #[test]
 fn catalog_serializes_camel_case_and_round_trips() {
-    let data = AgentCatalogData::from_profiles(profiles());
+    let data = AgentCatalogData::from_profiles(agent_profiles());
     let encoded = serde_json::to_value(&data).expect("serialize catalog");
 
     let first = encoded

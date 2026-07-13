@@ -4,9 +4,7 @@
 // (plan defaults, warning preview, launch-ready).
 export * from "./types";
 export * from "./maintenance_types";
-export * from "./claude_oauth_types";
 export * from "./client";
-export * from "./claude_oauth";
 export * from "./plan";
 export * from "./terminal";
 export * from "./worktree";

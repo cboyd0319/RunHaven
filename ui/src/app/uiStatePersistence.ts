@@ -87,33 +87,11 @@ export type AppSettings = {
   dockBadge: boolean
   // Agent preselected for new runs; null lets RunHaven choose.
   defaultAgent: string | null
-  // How many days a saved Claude token can age before RunHaven suggests signing
-  // in again (design C, Hardening 4). This is a soft nudge, never a forced
-  // expiry, and only ever one of the fixed choices below.
-  claudeReauthDays: number
-}
-
-// The fixed cadence choices offered in Settings. A small closed set keeps the
-// choice plain for non-technical users and lets a bad stored value fall back to
-// the recommended default instead of an arbitrary number.
-export const CLAUDE_REAUTH_DAY_CHOICES = [30, 60, 90, 180] as const
-
-// The design default: short enough to bound a leaked token, long enough not to
-// nag.
-export const DEFAULT_CLAUDE_REAUTH_DAYS = 90
-
-// Clamp a stored or incoming cadence to one of the fixed choices, defaulting to
-// the recommended value, so a tampered store can never set an odd cadence.
-export function sanitizeClaudeReauthDays(value: unknown): number {
-  return CLAUDE_REAUTH_DAY_CHOICES.find((choice) => choice === value)
-    ? (value as number)
-    : DEFAULT_CLAUDE_REAUTH_DAYS
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   dockBadge: true,
   defaultAgent: null,
-  claudeReauthDays: DEFAULT_CLAUDE_REAUTH_DAYS,
 }
 
 export function persistSettings(settings: AppSettings): void {
@@ -127,7 +105,6 @@ export function persistSettings(settings: AppSettings): void {
       OPAQUE_TOKEN.test(settings.defaultAgent)
         ? settings.defaultAgent
         : null,
-    claudeReauthDays: sanitizeClaudeReauthDays(settings.claudeReauthDays),
   }
   try {
     window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(sanitized))
@@ -148,10 +125,9 @@ export function loadSettings(): AppSettings {
     if (typeof parsed !== "object" || parsed === null) {
       return DEFAULT_SETTINGS
     }
-    const { dockBadge, defaultAgent, claudeReauthDays } = parsed as {
+    const { dockBadge, defaultAgent } = parsed as {
       dockBadge?: unknown
       defaultAgent?: unknown
-      claudeReauthDays?: unknown
     }
     return {
       dockBadge: dockBadge !== false,
@@ -159,7 +135,6 @@ export function loadSettings(): AppSettings {
         typeof defaultAgent === "string" && OPAQUE_TOKEN.test(defaultAgent)
           ? defaultAgent
           : null,
-      claudeReauthDays: sanitizeClaudeReauthDays(claudeReauthDays),
     }
   } catch {
     return DEFAULT_SETTINGS

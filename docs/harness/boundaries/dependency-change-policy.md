@@ -31,7 +31,7 @@ Record:
   enough.
 - Pin or lockfile update.
 - Focused test, build, audit, or smoke command.
-- Rust 1.96.0, Cargo lockfile, and macOS 26+ runtime impact.
+- Rust 1.97.0, Cargo lockfile, and macOS 26+ runtime impact.
 - macOS 26+ contributor-check impact. Do not add Windows or Linux dependency,
   CI, script, or command-construction surfaces.
 

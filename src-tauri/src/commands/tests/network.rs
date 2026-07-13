@@ -1,4 +1,4 @@
-use crate::commands::network::prune_managed_networks_for_test;
+use crate::commands::network::{managed_network_count_for_test, prune_managed_networks_for_test};
 use crate::contracts::NetworkPruneRequest;
 use runhaven_core::runtime::network::NetworkPruneOutcome;
 
@@ -53,4 +53,31 @@ fn prune_managed_networks_returns_sanitized_counts() {
     // The response carries only counts; no field can hold a network name.
     let encoded = serde_json::to_string(&response).expect("serialize");
     assert_eq!(encoded, "{\"removed\":2,\"failed\":1}");
+}
+
+#[test]
+fn network_preview_collapses_raw_list_failures_to_a_plain_error() {
+    let error = managed_network_count_for_test(Err(
+        "/Users/alice/private: XPC connection invalid token=secret".to_string(),
+    ))
+    .expect_err("failed network list");
+
+    assert_eq!(error, "RunHaven could not list its managed networks.");
+    assert!(!error.contains("/Users/"));
+    assert!(!error.contains("XPC"));
+    assert!(!error.contains("secret"));
+}
+
+#[test]
+fn confirmed_network_cleanup_deletes_only_the_list_shown_for_confirmation() {
+    let source = include_str!("../network.rs");
+
+    assert!(
+        source.contains("core_prune(&networks)"),
+        "the trusted command must pass its pre-confirmation network snapshot to cleanup"
+    );
+    assert!(
+        !source.contains("core_prune()"),
+        "cleanup must not re-list after the user confirms a different snapshot"
+    );
 }

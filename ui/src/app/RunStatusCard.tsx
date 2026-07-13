@@ -4,7 +4,6 @@ import type { RunStatusResponse } from "@/commands/runhaven"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
   TableBody,
@@ -28,8 +27,6 @@ type RunStatusCardProps = {
   controlBusy: boolean
   controlError: string
   controlMessage: string
-  controlConfirmations: Record<RunControlAction, boolean>
-  onConfirmationChange: (action: RunControlAction, checked: boolean) => void
   onControl: (action: RunControlAction) => Promise<void>
 }
 
@@ -44,8 +41,6 @@ export function RunStatusCard({
   controlBusy,
   controlError,
   controlMessage,
-  controlConfirmations,
-  onConfirmationChange,
   onControl,
 }: RunStatusCardProps) {
   const showControls =
@@ -72,7 +67,7 @@ export function RunStatusCard({
         {showStatus && runStatus ? (
           <>
             <div className="grid gap-3 sm:grid-cols-3">
-              <Metric label="Session record" value={runStatus.run.status} />
+              <Metric label="Run record" value={runStatus.run.status} />
               <Metric label="Container state" value={runStatus.container.state} />
               <Metric label="Image" value={runStatus.container.image ?? "-"} />
               <Metric
@@ -89,7 +84,8 @@ export function RunStatusCard({
               />
             </div>
             {runStatus.container.networks.length > 0 ? (
-              <Table>
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Network</TableHead>
@@ -106,58 +102,76 @@ export function RunStatusCard({
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
+              </div>
             ) : null}
 
           </>
         ) : null}
         {showControls ? (
-          <div className="grid gap-3">
+          <div className="flex flex-col gap-3">
             {controlsAvailable ? (
-              <>
-                <RunControl
-                  label="Confirm stopping this session."
-                  button="Stop run"
-                  checked={controlConfirmations.stop}
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label="Stop run"
                   disabled={controlBusy}
-                  onCheckedChange={(checked) =>
-                    onConfirmationChange("stop", checked)
-                  }
                   onClick={() => void onControl("stop")}
-                />
-                <RunControl
-                  label="Confirm hard-stopping this session."
-                  button="Hard stop"
-                  checked={controlConfirmations.kill}
-                  disabled={controlBusy}
-                  onCheckedChange={(checked) =>
-                    onConfirmationChange("kill", checked)
-                  }
-                  onClick={() => void onControl("kill")}
-                />
-                <RunControl
-                  label="Confirm clearing this session's stale session record."
-                  button="Repair session record"
-                  checked={controlConfirmations.repair}
-                  disabled={controlBusy}
-                  onCheckedChange={(checked) =>
-                    onConfirmationChange("repair", checked)
-                  }
-                  onClick={() => void onControl("repair")}
-                />
-              </>
+                >
+                  Stop run
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  RunHaven asks for confirmation in a Mac dialog.
+                </span>
+              </div>
             ) : null}
             {cleanupAvailable ? (
-              <RunControl
-                label="Confirm cleaning up this session's saved copy."
-                button="Clean up session"
-                checked={controlConfirmations.cleanup}
-                disabled={controlBusy}
-                onCheckedChange={(checked) =>
-                  onConfirmationChange("cleanup", checked)
-                }
-                onClick={() => void onControl("cleanup")}
-              />
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label="Clean up run"
+                  disabled={controlBusy}
+                  onClick={() => void onControl("cleanup")}
+                >
+                  Clean up run
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  RunHaven asks for confirmation in a Mac dialog.
+                </span>
+              </div>
+            ) : null}
+            {controlsAvailable ? (
+              <details className="rounded-lg border p-3">
+                <summary className="cursor-pointer text-sm font-medium">
+                  More actions
+                </summary>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Use these only when a normal stop does not work or a saved run
+                  record is stale.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    aria-label="Hard stop"
+                    disabled={controlBusy}
+                    onClick={() => void onControl("kill")}
+                  >
+                    Hard stop
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    aria-label="Repair run record"
+                    disabled={controlBusy}
+                    onClick={() => void onControl("repair")}
+                  >
+                    Repair run record
+                  </Button>
+                </div>
+              </details>
             ) : null}
           </div>
         ) : null}
@@ -176,49 +190,5 @@ export function RunStatusCard({
         ) : null}
       </CardContent>
     </Card>
-  )
-}
-
-function RunControl({
-  label,
-  button,
-  checked,
-  disabled,
-  onCheckedChange,
-  onClick,
-}: {
-  label: string
-  button: string
-  checked: boolean
-  disabled: boolean
-  onCheckedChange: (checked: boolean) => void
-  onClick: () => void
-}) {
-  const buttonLabel = !checked
-    ? `${button}: confirmation required`
-    : disabled
-      ? `${button}: action in progress`
-      : button
-
-  return (
-    <div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_auto] sm:items-center">
-      <label className="flex items-center gap-3 text-sm">
-        <Checkbox
-          checked={checked}
-          aria-label={label}
-          onCheckedChange={(value) => onCheckedChange(value === true)}
-        />
-        <span>{label}</span>
-      </label>
-      <Button
-        type="button"
-        variant="outline"
-        disabled={!checked || disabled}
-        aria-label={buttonLabel}
-        onClick={onClick}
-      >
-        {button}
-      </Button>
-    </div>
   )
 }

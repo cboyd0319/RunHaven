@@ -12,11 +12,18 @@ line, and this guide says which ones.
 ## Before you start
 
 - A Mac with Apple silicon running macOS 26 or newer.
-- Apple `container` installed and started. See
-  [docs/INSTALLATION.md](INSTALLATION.md).
-- The RunHaven app built from this repo (there is no signed download yet).
+- The signed and notarized RunHaven coworker-test disk image from the release
+  owner. Drag RunHaven to Applications before opening it.
+- Your Mac administrator password when Apple's `container` installer asks for
+  it. RunHaven guides this prerequisite after first launch.
 
 ## Open the app
+
+Coworkers open RunHaven from Applications. On first launch, Home checks the Mac
+and guides each required setup action. If macOS says the app cannot be verified,
+stop and ask the release owner for a new artifact. Do not bypass Gatekeeper.
+
+## Run a development build
 
 From the repo folder, run:
 
@@ -26,71 +33,134 @@ npm --prefix ui run tauri:dev
 
 This opens the app in a development window. The first build takes a few minutes.
 
-To make a local app build instead, run `npm --prefix ui run tauri:build`.
+To check that the production frontend and desktop executable build together, run
+`npm --prefix ui run tauri:build`. This developer check does not create a signed,
+shareable app bundle.
+
+To test an installed, development-signed build before release, use the local
+Apple Development signing lane. It uses the separate bundle identifier
+`dev.runhaven.desktop.local`. A free Xcode Personal Team can create the
+**Apple Development** certificate and Xcode-managed profile needed for this
+local check, but it cannot sign or notarize the coworker release. In Xcode, use
+automatic signing for a macOS app target with that exact identifier, then build
+it once to create the profile. Personal Team profiles expire after seven days
+and must then be refreshed. Run:
+
+```bash
+export RUNHAVEN_DEVELOPMENT_SIGNING_IDENTITY='Apple Development: Example (TEAMID)'
+export RUNHAVEN_DEVELOPMENT_PROVISIONING_PROFILE="$HOME/path/to/RunHaven-Local.provisionprofile"
+npm --prefix ui run tauri:local-signed
+```
+
+The command validates the installed certificate, profile, application ID, and
+expiration. Xcode's macOS profile may omit
+`com.apple.security.get-task-allow` because macOS does not require a profile to
+authorize it. RunHaven still requires that entitlement on the final signed
+development app and rejects it from a release signature. The command builds and
+opens **RunHaven Local**. It never creates a DMG, notarizes, or publishes an
+artifact. Use it to verify installation, launch, native confirmations, and the
+four in-container sign-in terminals. An ad-hoc signature (`-`) is not enough
+for this signing test because it has no Apple development identity or profile.
+Apple documents [development profiles](https://developer.apple.com/help/account/provisioning-profiles/create-a-development-provisioning-profile)
+and [macOS provisioning entitlements](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles).
+
+`npm --prefix ui run tauri:bundle` is the shareable-release command. It refuses
+to build from a dirty or untagged commit and requires full Xcode, a matching
+Developer ID Application identity and provisioning profile, and saved Apple
+notary credentials:
+
+```bash
+export RUNHAVEN_SIGNING_IDENTITY='Developer ID Application: Example (TEAMID)'
+export RUNHAVEN_PROVISIONING_PROFILE="$HOME/path/to/RunHaven.provisionprofile"
+export RUNHAVEN_NOTARY_PROFILE='runhaven-notary'
+npm --prefix ui run tauri:bundle
+```
+
+The command validates the profile and certificate, builds an arm64 app with the
+hardened runtime and the exact reviewed release entitlements, runs the full local harness
+and non-credentialed CLI/desktop container smokes, signs and notarizes the app
+and DMG, staples both tickets, asks Gatekeeper to assess both artifacts, and
+produces checksums, CycloneDX SBOMs, notarization receipts, and provenance under
+`target/release-artifacts/v<version>/`. It publishes nothing if any check fails.
+The finished DMG still needs a clean supported-Mac install test before sharing.
 
 ## First look: Home
 
 The app opens on **Home**. Home answers two questions: is this Mac ready, and
-what needs you right now? It shows a one-line health note when setup is good,
-your agents and their sign-in states with a link to the Agents view, a
-"Needs you" list of sessions waiting on you, your recent finished runs, and
-the **New run** button. Each run shows in one list only: a failed run or a run
-waiting for review sits in "Needs you", never again under recent finished
-runs.
+what needs you right now? It shows one health note when setup is good, an agent
+summary, a **Needs you** list, recent activity, and the **New run** button. A
+run that needs action appears in **Needs you** instead of being repeated in the
+recent list.
 
-When the app opens, it checks that your Mac is ready: the right macOS version,
-Apple `container` installed and running, and the agent images built. If a check
-fails, Home leads with that one problem, a short plain fix, and a
+When the app opens, it checks that your Mac is ready: the right macOS version
+and Apple `container` installed and running. Agent image readiness is checked
+when you open Agents or choose an agent in New Run. If a host check fails, Home
+leads with that one problem, a short plain fix, and a
 **Check again** button. While setup is broken, **New run** is disabled and says
 why, but your running sessions and the sidebar views all stay reachable.
 
+RunHaven repeats the supported macOS and Apple `container` checks immediately
+before every real run. If the service stopped or a reviewed runtime changed
+after Home last checked, the run stays stopped and points you to
+`runhaven doctor`.
+
+If Apple container is missing, Home shows **Download Apple container**. Choose
+it and confirm the macOS dialog. RunHaven opens Apple's exact signed 1.1.0
+installer download in your browser. Open the downloaded `.pkg`, finish Apple's
+installer, return to RunHaven, and choose **Check again**. The URL, executable,
+and arguments are fixed in Rust and never come from the app's web content.
+
+If a different Apple container version is installed, Home shows **Download
+required version**. The same fixed action opens Apple's exact signed 1.1.0
+package after native confirmation. It does not install or replace the existing
+version by itself; review Apple's installer, then choose **Check again**.
+
+If Apple container is installed but its local service is off, Home shows
+**Start container service**. Choose it and confirm the macOS dialog. RunHaven
+starts the service and checks setup again. You do not need to open Terminal or
+type a command. Other setup problems still link to **System Check** until they
+have their own safe in-app fix.
+
 ## Sign in to an agent
 
-Signing in stores your agent sign-in once so your runs can reuse it. Open
-**Agents** in the sidebar to see every agent in one place: its sign-in state,
-whether its image is ready, its read-only sign-in details, and the image
-rebuild task. A **Check again** button refreshes the view. You can also pick an agent
-in the first step of a run. Both places show, for most agents, a **Sign in**
-button.
+Open **Agents** in the sidebar. Choose Claude, Codex, Antigravity, or Copilot,
+then choose **Open sign-in terminal**. RunHaven shows a native confirmation
+before it starts anything.
 
-- Codex, Copilot, and Antigravity sign in right in the app. Click **Sign in**,
-  confirm the box the app pops up, then open the link it shows and enter the
-  short code in your browser. The app waits and updates when you are done. It
-  shows the link and code, never your token or key.
-- Claude signs in on your Mac by default. Click **Sign in on your Mac**, confirm
-  the box the app pops up, and RunHaven runs Claude's own sign-in on your Mac.
-  RunHaven saves your Claude token to your Mac's Keychain and uses it to sign
-  your runs. The token never goes inside the sandbox. RunHaven can use your token
-  only after you approve it with Touch ID or your device password, and it never
-  shows the token on screen. After you sign in, the Claude card shows how long
-  ago the token was saved. Once it is older than the reminder time you set in
-  **Settings** (90 days to start), the card suggests signing in again. That is
-  only a reminder: the old token keeps working until you replace it.
-- **Remove saved token** deletes only the token RunHaven saved in your Mac's
-  Keychain. It does not touch anything else in your Keychain, and it does not
-  cancel the token on Anthropic's side. To fully cancel it, revoke it in your
-  Anthropic account.
-- Prefer to keep Claude's sign-in inside the sandbox? Click **Sign in inside the
-  sandbox instead**. This opens a small terminal that runs `claude auth login`
-  inside a sandbox: open the link it prints, approve in your browser, then paste
-  the code it gives you back into that terminal, and come back and refresh. Your
-  Claude sign-in is then saved in the agent's own space, not on your Mac's
-  Keychain. The same standing terminal warning applies (see "Open a terminal"):
-  what you type and what it prints, including the code, are shown on screen and
-  are not filtered or saved. While that terminal is open it holds Claude's saved
-  state, so you cannot start a Claude run until you close it. Closing it removes
-  the sign-in sandbox container and its network even if sign-in did not finish;
-  a force-quit mid-sign-in may leave one unused network that the Maintenance
-  panel's "Clean up stale networks" removes safely. You can also run
-  `runhaven login claude` in your own terminal; a **Copy command** button copies
-  the exact command.
+The provider's own CLI runs inside a fresh sandbox. Follow the instructions in
+the terminal and finish the browser step:
 
-For Codex, Copilot, Antigravity, and Claude's in-sandbox option, the sign-in stays
-in the sandbox and RunHaven holds no token. Claude's on-your-Mac option is the
-one place RunHaven keeps a token, saved only in your Mac's Keychain and used only
-to sign your runs; see [`AUTH_BROKER.md`](AUTH_BROKER.md) for exactly what it
-does and does not do. You can also pass an API key by its environment variable
-name for a headless run.
+- Claude prints a link. Approve in your browser, then paste the returned code
+  into the terminal.
+- Codex prints a link and one-time code, then waits for approval.
+- Antigravity asks you to choose Google OAuth, paste a returned code, finish
+  first-run setup, and exit the agent. Because Antigravity can exit with code 1
+  even when sign-in worked, RunHaven then runs the non-generative `agy models`
+  check inside the same sandbox.
+- Copilot prints GitHub's device link and a one-time code, then waits for
+  approval.
+
+The terminal is live. RunHaven shows its bytes but does not filter, read, store,
+or log them. The provider CLI saves its own credential and settings in that
+agent's isolated container volume, not the Mac Keychain or your Mac home folder.
+RunHaven never persists terminal bytes or provider credentials. It appends
+secret-free readiness state after the provider command succeeds. Claude must
+also pass its own `claude auth status` check. For Antigravity's ambiguous exit
+code, RunHaven writes readiness only when the follow-up `agy models` check also
+succeeds. It never reads credential contents. As with ordinary runs, it can
+retain secret-free lifecycle, cleanup, and egress metadata.
+
+Closing the terminal stops the sign-in container. A force-quit may leave a
+RunHaven container or network. If the container still holds the agent's saved
+state, the next sign-in fails before launch with a safe message. Stop the other
+run or use **Cleanup** to remove leftover resources, then try again. **Check
+again** refreshes agent status. “Signed in” means RunHaven witnessed a
+successful provider command and any required provider-owned readiness check. It
+never reads the provider credential.
+
+The optional API-key broker remains under **Advanced options** for explicitly
+configured Claude or Codex API keys. It is not selected automatically and is not
+the ordinary sign-in path. See [Authentication and API-key brokers](AUTH_BROKER.md).
 
 ## Start a run
 
@@ -100,51 +170,65 @@ Click **New run** on Home. A window opens over the app with three short steps:
 2. Project: pick the folder the agent works in.
 3. Review: check what the run can reach before anything starts.
 
-The review step shows the plan in plain language: which agent, which folder, the
-network setting, and the sign-in it will use. Nothing starts until you confirm.
-If a choice is less safe than the default (for example, opening the internet or
-passing an extra environment value), the app says so first.
+The Agent step shows the agent choice, readiness, and sign-in state without
+showing broker or image internals. The Project step uses the normal Mac folder
+picker. Sign-in sharing, network access, resource limits, and raw paths stay
+under **Advanced options**.
+Recommended isolated-copy protection stays visible on the Project step. The
+Review step leads with the agent, project, and access result. Network, image,
+and run-name details stay under **Technical details**.
+
+Choose **Start run** when the summary is right. RunHaven then asks for final
+confirmation in a native Mac dialog. There is no second confirmation checkbox
+in the app. If a choice is less safe than the default, such as full internet
+access, its specific warning still requires explicit acknowledgement.
 
 You can close the window at any time with **Cancel** or the Escape key. That
 never starts anything, and the values you entered are kept, so opening
-**New run** again picks up where you left off. When you launch and confirm,
-the window closes and the app takes you straight to the new session.
+**New run** again picks up where you left off. When you start and confirm, the
+window closes and the app takes you straight to the new run.
 
 Some agents are interactive: they work as a chat in their own terminal, so there
 is no separate box to type your task into. When you start one of these (Claude
-Code today) and confirm, the **New run** window closes and RunHaven opens the run
+Code today), the **New run** window closes and RunHaven opens the run
 in a full terminal that fills the main area of the window, the same place a
 session opens. You type your task in the terminal the same way you would in your
-own. The same confirm step runs first, so nothing starts until you approve it,
+own. The native confirm step runs as the terminal opens, so nothing starts
+until you approve it,
 and the run uses the same sandbox rules as any other run: the same non-root agent
 user, the same network setting, and your saved Claude sign-in added only to the
 run's requests, never inside the sandbox. The same standing terminal warning
 applies (see [Open a terminal](#open-a-terminal)): what the run prints is shown
-but not filtered or saved. A **Close** button is always visible, and **End run**
-appears once the run starts. Either one ends the run and takes you back Home, so
-the terminal can never grow past the window or leave you stuck. Pressing Escape
-or closing the window also ends the run cleanly. Afterward the session shows as
-**Ended** in the Finished group, not Failed: you close an interactive run
+but not filtered or saved. **End run** stays visible while the terminal starts
+and runs. It ends the run and takes you back Home, so the terminal cannot leave
+you stuck. Closing the window also ends the run cleanly. Afterward the run shows as
+**Ended** under Past, not Failed: you close an interactive run
 yourself, so ending it is normal and never marked as an error.
 
-On the Agent step you can open `Sign-in details` to see, for the chosen agent,
-how it signs in, what stays on this Mac, what the agent gets, and which
-provider hosts it can reach. These are read-only summaries with no secrets,
-tokens, or file paths.
-
-On the Project step, the `Why is this safe?` panel explains four boundaries in
+Under **Advanced options** on the Project step, the `Why is this safe?` panel explains four boundaries in
 plain language: the network setting, the workspace folder, a provider host you
 type in, and where the agent's saved state is kept. The workspace answer shows
 only a verdict, such as whether the folder can be mounted, never the full path.
 These are read-only checks; they do not change your run and show no secrets or
 file paths.
 
-On the Project step you can turn on `Run in an
-isolated copy (git worktree)`. This is off by default. When it is on, RunHaven runs the agent on a
-new branch in a separate copy of your project, so your original files do not
-change until you choose to merge. The review and the confirm dialog both say
-when a worktree will be created. Your folder must be a clean git repository for
-this to work.
+**Provider only** stays the default, but every supported network mode remains
+available. Choosing another mode turns off the optional API key broker. Native
+OAuth state remains inside the agent's isolated volume. **Internet** still
+shows its warning and requires explicit confirmation. Rust independently
+guarantees that a host-broker secret never crosses into an incompatible run.
+
+On the Project step, **Protect my project with an isolated copy** is the
+recommended default. RunHaven uses a new branch in a separate copy of your
+project, so your original files do not change until you choose to merge. You
+can turn this protection off to run directly in the selected folder. The review
+then warns that a writable direct run can change your original files and asks
+you to confirm that choice. Read-only direct runs do not show that warning. The
+review and confirm dialog both say when a copy will be created. Your folder
+must be a clean git repository for the copy to work. RunHaven checks that before confirm,
+then checks setup, the image, and sign-in choices before it creates the copy
+when possible. If a later launch step fails, the failed run appears under Past
+with the isolated copy kept for review or removal.
 
 The safe defaults are the easiest path. By default a run gets provider-only
 network access, no access to your home folder, cloud keys, SSH keys, or browser
@@ -153,44 +237,39 @@ profiles, and it does not run as root. See
 
 The app says `Run accepted` when it hands the run to the sandbox. The run then
 shows up in your sessions as it comes up. Once it does, the acceptance notice
-clears and a one-line notice points you at the new session in the sidebar.
+clears and a one-line notice points you at the new run in Recent activity.
 
 ## Find your way around
 
-The sidebar is how you move around the app. **Home** is always first and shows
-what needs you, plus the **New run** button. Below it, your sessions appear in two groups: **Active**
-for runs that are starting, running, or stopping, and **Finished** for runs
-that ended and may need review or cleanup. Empty groups hide. At the bottom,
-the **System** group holds three fixed places: **Agents** (sign in and rebuild
-agent images), **Diagnostics** (read-only trust checks), and **Maintenance**
-(clean up leftovers).
-
-Newer sessions sit higher in each group, and rows never jump around when a
-run's status changes. If a session needs you, its row shows a small badge with
-a symbol in a dot plus a status line that names the state: Failed, Needs
-sign-in, Not responding, or Ready to review. If the session you are viewing is
-removed, the app moves you to the nearest session in the sidebar, or Home when
-there is no clear neighbor to pick. It never switches views on its own for any
-other reason.
+The sidebar is how you move around the app. Its fixed destinations are **Home**,
+**Agents**, **System Check**, and **Cleanup**. Below them, three run counts open
+the same Run history with a real filter: **Needs you**, **Running**, and
+**Past**. Individual runs stay out of the sidebar so it remains short and
+stable. **Settings** is always available at the bottom. Open a run from Home or
+Run history. If the run you are viewing is
+removed, the app moves to the nearest available run or Home. It never switches
+views on its own for any other reason.
 
 The app icon in your Dock shows the same signal as one number: how many
 sessions need you right now, and nothing else. The number goes down as you
 take care of each session, and the badge disappears when nothing needs you.
-You can turn the number off in Settings (Cmd-,).
+You can turn the number off from **Settings** in the sidebar or with Cmd-,.
 
 ## Menu bar and keyboard shortcuts
 
 The app has a normal Mac menu bar: RunHaven, File, Edit, View, Session, Agent,
 Window, and Help. Standard items like About, Quit, Undo, Copy, Paste, Close,
 Minimize, Zoom, and Full Screen behave the way they do in every Mac app.
-Quitting the app does not stop your runs; they keep working in the sandbox and
-show up again when you reopen the app.
+Quitting the app does not stop background runs; they keep working in the
+sandbox and show up again when you reopen the app. A live **Run terminal** or
+sign-in terminal is different: closing its window or quitting ends that live
+terminal. Use **End run** when you are finished.
 
 Menu items never skip a safety step. A menu action does exactly what the same
 click in the window would do. **Stop** and **Hard Stop** take you to that
 session's stop control; you still check the confirm box and answer the native
 dialog before anything stops. Items that do not apply right now are grayed out,
-so their shortcut does nothing until it can. For example, the Session menu
+so their shortcut does nothing until it can. For example, the Run menu
 items turn on only when a session is selected and can take that action, and
 Cmd-1 through Cmd-9 light up only for sessions your sidebar actually has.
 Session shortcuts work when the main window is active; while a session watch
@@ -201,30 +280,30 @@ are not looking at. Everything else in the menus works from any window.
 | --- | --- |
 | Cmd-N | New Run: opens the run window |
 | Cmd-0 | Go to Home |
-| Cmd-1 to Cmd-9 | Select session 1 to 9, top to bottom in the sidebar |
-| Shift-Cmd-] / [ | Next / previous session |
-| Cmd-J | Jump to the next session that needs you |
+| Cmd-1 to Cmd-9 | Select run 1 to 9 in run-list order |
+| Shift-Cmd-] / [ | Next / previous run |
+| Cmd-J | Jump to the next run that needs you |
 | Cmd-. | Go to the selected session's Stop control |
 | Opt-Cmd-. | Go to the selected session's Hard stop control |
 | Cmd-Return | Send the message you typed in the session's composer |
 | Shift-Cmd-O | Go to the output confirm box for the selected session |
 | Cmd-R | Check again: refresh the app's status |
-| Opt-Cmd-1 / 2 / 3 | Go to Agents / Diagnostics / Maintenance |
+| Opt-Cmd-1 / 2 / 3 | Go to Agents / System Check / Cleanup |
 | Opt-Cmd-S | Show or hide the sidebar |
 | Ctrl-Cmd-F | Enter or leave full screen |
 | Cmd-, W M Q | Settings, Close, Minimize, Quit |
 
 A few items are visible but grayed out because their screens are not built
-yet: **Filter Sessions** (Cmd-F) and the Help entries. They will turn on when
+yet: **Filter Runs** (Cmd-F) and the Help entries. They will turn on when
 those parts of the app ship. Other items gray out only until they apply again,
-such as **Stop** with no running session selected, or **Next Session That Needs
-You** when nothing needs you. The Session menu's worktree actions (Merge, Keep,
+such as **Stop** with no active run selected, or **Next Run That Needs You**
+when nothing needs you. The Run menu's worktree actions (Merge, Keep,
 Recover, Discard) live in the finished session's review for now, and Open
 Recent arrives with a recent-projects list. **Open in New Window** opens a
 watching window for the selected session; see "Watch a session in its own
 window" below.
 
-**Send Message** in the Session menu takes you to that session's composer, the
+**Send Message** in the Run menu takes you to that run's composer, the
 same way Stop takes you to its Stop control. The real send shortcut is
 Cmd-Return, pressed in the composer: it sends the message you typed through the
 same confirm step and native dialog as the Send button. The menu item carries
@@ -232,19 +311,18 @@ no shortcut of its own so Cmd-Return has one clear meaning.
 
 ## Settings
 
-Open Settings from the **RunHaven** menu (**Settings...**, or Cmd-,). It opens
-over the main window and holds only small convenience choices:
+Open **Settings** at the bottom of the sidebar, or use the **RunHaven** menu
+(**Settings...**, or Cmd-,). It opens over the main window and holds only small
+convenience choices:
 
 - **Show a number on the app icon.** The Dock number counts sessions that
   need you. Turn it off to clear the number.
 - **Start new runs with.** The agent picked first when you start a new run.
   Leave it on "Choose for me" to let RunHaven pick, and you can still change
   the agent for each run either way.
-- **Ask me to sign in to Claude again after.** How old your saved Claude token
-  can get before the Agents view suggests signing in again (30, 60, 90, or 180
-  days; 90 to start). It is only a reminder, not a cutoff.
 
-RunHaven uses a dark look for now; more appearance choices may come later.
+RunHaven follows your Mac's light or dark appearance. There is no separate
+theme setting to keep in sync.
 Safety never lives in Settings: no security default can be changed there and
 no confirmation step can be turned off. Your choices are saved on this Mac
 only, and nothing sensitive is stored with them.
@@ -260,33 +338,34 @@ no drafts, no output, no paths, and no sign-in data are saved this way.
 
 ## Watch your sessions
 
-Each run becomes a managed session in the sidebar. Each row stays simple to
-scan: the agent and project as the row's name, and one short status line below
-it. The sign-in state, network, and input detail live in the session's own view
-and its Details section, not in the sidebar row.
-
-Select a session to see it top to bottom in one reading order. If the session
+Each run appears on Home and in Run history with its agent, project, and one
+short status. Open it to see one reading order. If the run
 needs you, a banner leads the view and names the one fix: a failed run points
-at its output, a session that needs sign-in offers **Open Agents**, a session
-that stopped responding points at its repair control, and a finished worktree
-run points at its review. The session controls sit near the top, never at the
-bottom of the window. Below them come the session overview with its recent
-events, the output, and the message box.
+at its output, a run that needs sign-in offers **Open Agents**, a run that
+stopped responding points at **More actions**, and a finished worktree run
+points at its review. **Run actions** sits near the top. Normal stopping is
+immediate to find; hard stop and record repair stay under **More actions**.
+Rust asks for native confirmation before any of these changes. Below that are a
+compact overview, output, and the message box. Events and technical status stay
+behind disclosures.
 
-You can give a session your own name. Use **Name this session** (or **Rename
-session**) near the top of the session, type a short name, and save. The name
-then shows on the sidebar row and at the top of the session, in place of the
+You can give a run your own name. Use **Name this run** or **Rename run** near
+the top, type a short name, and save. The name
+then shows in Run history and at the top of the run, in place of the
 "agent and project" name. Leave it blank to go back to the default name. This
 name is just a label for you: it shows only in this app on this Mac, it does
-not rename the session itself, and nothing sensitive is saved with it.
+not rename the saved run itself, and nothing sensitive is saved with it.
 
 The output is trimmed so it will not flood the window, but raw output can
 still include private data, so the app asks you to confirm before it shows
-any. If a session is ready for input, you can type a message and send it. The
-app asks you to confirm before it sends.
+any. **Keep output updated** is available only while a run is active. A past
+run can still show output retained by this app, but it does not keep polling.
+If older output is no longer available, the app says so without showing an
+internal run ID or command error. If a session is ready for input, you can type
+a message and send it. The app asks you to confirm before it sends.
 
 Deeper runtime detail (container state, resources, networks) and the
-session's own diagnostics sit behind a **Show details** button, so the view
+run's own diagnostics sit behind a **Show details** button, so the view
 stays focused on what needs you.
 
 The list updates itself in place. It does not blink, clear your draft, or jump
@@ -360,11 +439,10 @@ rather than joining one already running.
 Close the terminal with **Close terminal**, or just leave the session or reload
 the app; either way the app shuts down the shell in the sandbox.
 
-The Claude sign-in terminal on the Agents view is the same kind of in-app
-terminal. It runs `claude auth login` in a fresh sandbox so the sign-in link and
-the code you paste back stay in the app. It keeps the same non-root sandbox, the
-same provider-only network, and the same standing warning above; the code you
-paste is visible on screen and is not saved.
+The sign-in terminal on the Agents view is the same kind of in-app terminal.
+It runs the selected provider's native login command in a fresh sandbox. It
+keeps the same non-root sandbox, provider-only network, and standing warning
+above; any code you paste is visible on screen and is not saved by RunHaven.
 
 ## Review a worktree run
 
@@ -384,13 +462,13 @@ active or looks unexpected. It never shows raw file paths, saved state, or
 secrets.
 
 If you kept the isolated copy earlier, the finished session offers a
-**Clean up session** control that removes that saved copy once you no longer
+**Clean up run** control that removes that saved copy once you no longer
 need it. Like every change, it asks you to confirm first and answers to the
 same native dialog.
 
-## Check diagnostics
+## Check this Mac
 
-The **Diagnostics** view in the sidebar is read-only trust and health evidence
+The **System Check** view in the sidebar is read-only trust and health evidence
 for the whole app. It loads by itself when you open it. A **Check again** button
 re-reads everything. It never changes anything, and it shows only safe summary
 details, never full paths, secrets, or request bodies. From top to bottom it
@@ -403,13 +481,20 @@ shows:
 - **Agent images**: whether each agent's sandbox image is built and ready.
   Rebuilding an image stays in the Agents view.
 - **Stale networks**: how many leftover RunHaven networks could be cleaned up.
-  Cleaning them up stays in the Maintenance view.
+  Cleaning them up stays in Cleanup.
 - Every setup check with its result and fix.
 - The trust checks: sign-in broker decisions and provider network decisions.
 
 Everything here only reads; the actions that change things (rebuild, prune)
 stay in their own views. A session's own diagnostics live in that session's
 view behind **Show details**, so there is one surface at a time.
+
+The desktop check omits the Rust toolchain because coworkers do not need Rust.
+The contributor-only CLI `doctor` command still checks the pinned toolchain.
+
+When setup is not ready, System Check does not ask the stopped container
+service for image or network details. Those cards say to finish setup first,
+while the setup checks still show the problem and its next step.
 
 ## Debug logs
 
@@ -428,7 +513,7 @@ files, so it stays small.
 Before sharing a log, you can double-check it with `scripts/scan-dev-log.sh`,
 which fails if any token-shaped text ever appears.
 
-## Maintenance
+## Cleanup and repair
 
 Two safe upkeep tasks live in the sidebar. Each one asks you to confirm in a
 native dialog before anything changes.
@@ -438,11 +523,17 @@ native dialog before anything changes.
   the background and shows live progress: building, then succeeded or failed,
   with a short, secret-safe tail of the build output. Sessions that are
   already running keep working until you launch a new one. The confirm dialog
-  names the exact agent and image tag.
-- Clean up stale networks, in the **Maintenance** view. RunHaven first shows
+  names the exact agent and image tag. Leaving and returning does not start a
+  second build for the same tag; choosing rebuild again shows the existing job.
+  Immediately before building, RunHaven repeats the full supported-runtime
+  check shown in System Check. Quitting RunHaven cancels and reaps the active
+  builder process.
+- Clean up stale networks, in **Cleanup**. RunHaven first shows
   how many of its own leftover networks it can remove, then removes only those
-  after you confirm. A network still used by a running session is skipped, not
-  forced. The app shows only counts, never network names.
+  after you confirm. Cleanup stays unavailable until setup is ready. If listing
+  networks fails, RunHaven stops before deleting anything. A network that
+  cannot be removed is left alone and reported as **Could not remove**, not as
+  a successful cleanup. The app shows only counts, never network names.
 
 Resetting or pruning saved state stays in the command line on purpose. That
 task can erase an agent's saved sign-in across sessions, and previewing it needs

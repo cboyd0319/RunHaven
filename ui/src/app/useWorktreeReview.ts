@@ -17,13 +17,6 @@ import {
   type WorktreeAction,
 } from "./worktreeReview"
 
-const emptyConfirmations: Record<WorktreeAction, boolean> = {
-  keep: false,
-  merge: false,
-  recover: false,
-  discard: false,
-}
-
 // Each review action maps to exactly one typed client call. Exported so tests
 // can prove the mapping without driving the whole hook.
 export const worktreeActionClients: Record<
@@ -43,8 +36,6 @@ export function useWorktreeReview(
   const [review, setReview] = useState<WorktreeReviewResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState("")
-  const [confirmations, setConfirmations] =
-    useState<Record<WorktreeAction, boolean>>(emptyConfirmations)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState("")
   const [nextSteps, setNextSteps] = useState<string[]>([])
@@ -54,7 +45,6 @@ export function useWorktreeReview(
     let active = true
     setReview(null)
     setLoadError("")
-    setConfirmations(emptyConfirmations)
     setMessage("")
     setNextSteps([])
     setActionError("")
@@ -80,12 +70,8 @@ export function useWorktreeReview(
     }
   }, [sessionId])
 
-  function setConfirmation(action: WorktreeAction, checked: boolean) {
-    setConfirmations((current) => ({ ...current, [action]: checked }))
-  }
-
   async function runAction(action: WorktreeAction) {
-    if (busy || !confirmations[action]) {
+    if (busy) {
       return
     }
     setBusy(true)
@@ -96,7 +82,6 @@ export function useWorktreeReview(
       const { result } = await worktreeActionClients[action](sessionId)
       setMessage(worktreeActionSuccessMessage(result))
       setNextSteps(result.nextSteps)
-      setConfirmations(emptyConfirmations)
       if (worktreeActionRemovesWorktree(action)) {
         await onResolved()
       } else {
@@ -114,12 +99,10 @@ export function useWorktreeReview(
     review,
     loading,
     loadError,
-    confirmations,
     busy,
     message,
     nextSteps,
     actionError,
-    setConfirmation,
     runAction,
   }
 }

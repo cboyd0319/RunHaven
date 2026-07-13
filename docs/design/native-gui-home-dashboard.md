@@ -69,24 +69,20 @@ broker" method label. `DashboardStatus.agentReadiness` is computed in core
 without reading an isolated credential:
 
 - Shell (no auth needed) -> `ready` / "Ready".
-- Claude -> Keychain token presence (the opt-in broker, attributes-only, no
-  token read, no prompt) -> "Signed in" / "Needs sign-in".
-- Other agents -> a secret-free sandbox sign-in marker
-  (`cache_root/agent-sign-ins.jsonl`, fields `{agent, scope, signed_in_at}`,
-  0600) written only when RunHaven's device-code sign-in exits 0.
+- Claude, Codex, Antigravity, and Copilot -> the newest secret-free native
+  sign-in state plus presence of that agent's isolated shared home volume.
+  The append-only record fields are `{agent, scope, updated_at, active}` and the
+  host file is owner-only.
 
 Labels describe the AGENT'S state only. Nothing implies RunHaven holds or
 manages the credential (no "via RunHaven"); the marker means the agent completed
-sign-in in its isolated sandbox, which RunHaven observed -- it never sees the
-credential. Security-reviewed SOUND (secret-free marker, no Keychain read/prompt,
-no secret across IPC).
+sign-in in its isolated sandbox, which RunHaven observed. It never sees the
+credential.
 
 Honesty ceilings (documented, not worked around by reading the token):
 - The marker means "signed in in its sandbox", not "the token is still valid".
-- A sign-out / cleared sandbox state does not remove the marker, so it can read
-  stale "Signed in" until re-evaluated. Follow-up.
-- An agent signed in ONLY through a terminal (not the device-code runner, not
-  Claude Keychain) leaves no marker and reads "Needs sign-in". Follow-up.
+- Clearing shared agent data appends an inactive state. Missing shared state
+  fails closed to "Needs sign-in" even if an older active record remains.
 
 ## Safety
 

@@ -3,22 +3,40 @@
   "data": {
     "agents": [
       {
-        "name": "codex",
-        "description": "OpenAI Codex CLI with workspace-write sandboxing inside the container.",
-        "image": "runhaven/codex:0.1.0",
+        "name": "antigravity",
+        "description": "Google Antigravity CLI with project-scoped home state.",
+        "image": "runhaven/antigravity:0.7.0",
         "signIn": "runhaven login",
-        "broker": "yes",
+        "broker": "no",
         "defaultNetwork": "provider",
         "providerHostCount": 4
       },
       {
-        "name": "shell",
-        "description": "Generic shell profile for custom agent images.",
-        "image": "runhaven/base:0.1.0",
-        "signIn": "n/a",
-        "broker": "n/a",
-        "defaultNetwork": "internet",
-        "providerHostCount": 0
+        "name": "claude",
+        "description": "Claude Code with state isolated under /home/agent/.claude.",
+        "image": "runhaven/claude:0.7.0",
+        "signIn": "runhaven login",
+        "broker": "yes",
+        "defaultNetwork": "provider",
+        "providerHostCount": 3
+      },
+      {
+        "name": "codex",
+        "description": "OpenAI Codex CLI with workspace-write sandboxing inside the container.",
+        "image": "runhaven/codex:0.7.0",
+        "signIn": "runhaven login",
+        "broker": "yes",
+        "defaultNetwork": "provider",
+        "providerHostCount": 3
+      },
+      {
+        "name": "copilot",
+        "description": "GitHub Copilot CLI with COPILOT_HOME isolated per project.",
+        "image": "runhaven/copilot:0.7.0",
+        "signIn": "runhaven login",
+        "broker": "no",
+        "defaultNetwork": "provider",
+        "providerHostCount": 9
       }
     ]
   }

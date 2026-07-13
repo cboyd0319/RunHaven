@@ -39,8 +39,7 @@ Treat those changes as product changes with scope, verification, and rollback.
 ## Detected Routing Markers
 
 - Root canonical instructions: `AGENTS.md`.
-- Thin platform routers: `CLAUDE.md`, `GEMINI.md`, and
-  `.github/copilot-instructions.md`.
+- Thin platform routers: `CLAUDE.md` and `.github/copilot-instructions.md`.
 - Product docs: `README.md`, `docs/INSTALLATION.md`, `docs/USAGE.md`,
   `docs/CAPABILITIES.md`, `docs/SECURITY_MODEL.md`, `docs/ARCHITECTURE.md`,
   `docs/AUTH_BROKER.md`, `docs/PROVIDER_ENDPOINTS.md`, and `docs/PINNING.md`.
@@ -67,11 +66,11 @@ Treat those changes as product changes with scope, verification, and rollback.
 | Run launch, records, and active runs | `crates/runhaven-core/src/runtime/launch.rs`, `crates/runhaven-core/src/runtime/lock.rs`, `crates/runhaven-core/src/records/`, `crates/runhaven-core/src/runtime/active/`, `crates/runhaven-core/src/support/git.rs` | Launch behavior, state-volume locking, and observability must stay secret-free and avoid raw command lines, env values, prompts, request bodies, and token values. `records/` is the facade. |
 | Worktree lifecycle | `crates/runhaven-core/src/runtime/worktrees/` | Data-loss boundary. Keep source-checkout validation, RunHaven-owned branch checks, and explicit merge/discard recovery paths. |
 | Host readiness and repair UX | `crates/runhaven-core/src/doctor.rs`, `crates/runhaven-core/src/doctor/runtime_pins.rs`, `crates/runhaven-core/src/runtime/session_state.rs`, `crates/runhaven-core/src/runtime/state.rs`, `crates/runhaven-core/src/image/doctor.rs`, `crates/runhaven-core/src/runtime/network.rs`, `crates/runhaven-cli/src/setup.rs` | `doctor` is shared host-readiness data, not CLI presentation. Repair commands should preview before deletion, mutate only RunHaven-owned resources, and print exact next steps. |
-| Bundled images | `images/base/`, `images/claude/`, `images/codex/`, `images/gemini/`, `images/antigravity/`, `images/copilot/`, `images/common/` | Keep image tags, npm packages, Debian snapshot inputs, non-root user setup, and source-digest labels pinned and reviewed. |
+| Bundled images | `images/base/`, `images/claude/`, `images/codex/`, `images/antigravity/`, `images/copilot/`, `images/common/` | Keep image tags, npm packages, Debian snapshot inputs, non-root user setup, and source-digest labels pinned and reviewed. |
 | Pin policy | `crates/runhaven-core/src/harness/pins.rs`, `crates/runhaven/src/bin/runhaven-check-pins.rs`, `pins.toml`, `Cargo.toml`, `Cargo.lock`, `ui/package.json`, `ui/package-lock.json` | Pin checks are a release gate. Dependency changes and any future workflow or runner changes need primary-source evidence. |
 | Test suite | crate-local integration tests plus compiled module tests | Focused Rust tests cover CLI, plans, egress, images, state, worktrees, auth, Tauri commands, and repo policy. The Codex-vendored TUI contains dormant upstream test modules while their parent modules are staged; treat `cargo test -p runhaven-tui --locked -- --list` as the active TUI test registry. |
 | Harness operating layer | `AGENTS.md`, `.agents/skills/`, `feature_list.json`, `current-state.md`, `docs/harness/` | Keep the three startup files compact and load repo-local skills plus focused harness docs only on demand. |
-| Human documentation | `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/` | Docs are product surfaces. Keep macOS 26+ only support, Apple `container` 1.0.0, security boundaries, and command examples aligned with code. |
+| Human documentation | `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/` | Docs are product surfaces. Keep macOS 26+ only support, Apple `container` 1.1.0, security boundaries, and command examples aligned with code. |
 | Project asset | `docs/assets/logo.png` | Required README asset and manifest entry. |
 
 ## Routing Rules
@@ -87,7 +86,7 @@ Treat those changes as product changes with scope, verification, and rollback.
   mutate Apple `container` resources unless the task needs it and the command
   is documented.
 - Product runtime and contributor verification support is macOS 26+ on Apple
-  silicon with Rust 1.96.0 and Apple `container` 1.0.0.
+  silicon with Rust 1.97.0 and Apple `container` 1.1.0.
 - Do not add Windows or Linux verification targets; unsupported platforms
   should fail closed or be documented as unsupported.
 - Do not commit machine-local absolute paths, private checkout paths, secret

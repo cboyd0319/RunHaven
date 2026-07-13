@@ -47,11 +47,27 @@ pub fn create_worktree_for_run(
 ) -> Result<WorktreeRun> {
     let (source_workspace, repo_root, base_head) =
         preview_worktree(workspace, workspace_scope, allow_sensitive_workspace)?;
-    let worktree_root = worktrees_dir().join(run_id);
-    if let Some(parent) = worktree_root.parent() {
-        fs::create_dir_all(parent)?;
-    }
+    let worktrees_root = worktrees_dir();
+    fs::create_dir_all(&worktrees_root)?;
+    let worktrees_root = worktrees_root.canonicalize()?;
+    let worktree_root = worktrees_root.join(run_id);
     let branch = format!("runhaven/{profile_name}/{run_id}");
+    let workspace_relative = source_workspace
+        .strip_prefix(&repo_root)
+        .with_context(|| "could not place the selected project folder inside its git repository")?;
+    if !workspace_relative.as_os_str().is_empty() {
+        let workspace_object = format!("{base_head}:{}", workspace_relative.display());
+        let tracked = Command::new("git")
+            .args(["-C"])
+            .arg(&repo_root)
+            .args(["cat-file", "-e", &workspace_object])
+            .output()?;
+        if !tracked.status.success() {
+            bail!(
+                "the selected project folder is not in the committed git snapshot; commit the folder or choose the repository root before using an isolated copy"
+            );
+        }
+    }
     let output = Command::new("git")
         .args(["-C"])
         .arg(&repo_root)
@@ -79,17 +95,16 @@ pub fn create_worktree_for_run(
             }
         );
     }
-    let mounted_workspace = worktree_root.join(
-        source_workspace
-            .strip_prefix(&repo_root)
-            .unwrap_or(Path::new("")),
-    );
-    fs::create_dir_all(&mounted_workspace)?;
+    // The successful Git checkout guarantees both paths now exist. Every
+    // fallible path computation and validation happened before `worktree add`,
+    // so no later error can orphan a worktree before callers receive recovery
+    // metadata.
+    let mounted_workspace = worktree_root.join(workspace_relative);
     Ok(WorktreeRun {
         source_workspace,
         source_repo_root: repo_root.clone(),
-        worktree_root: worktree_root.canonicalize()?,
-        mounted_workspace: mounted_workspace.canonicalize()?,
+        worktree_root: worktree_root.clone(),
+        mounted_workspace,
         branch: branch.clone(),
         base_head: Some(base_head),
         recovery_commands: recovery_commands(&repo_root, &worktree_root, &branch),
@@ -216,5 +231,44 @@ mod tests {
         std::fs::write(repo_root.join("dirty.txt"), "x").expect("write dirty");
         let error = ensure_clean_source_repo(&repo_root).expect_err("dirty repo must be rejected");
         assert!(error.to_string().contains("clean source git worktree"));
+    }
+
+    #[test]
+    fn untracked_empty_subfolder_fails_before_git_worktree_mutation() {
+        let cache = tempfile::tempdir().expect("cache");
+        let _cache_home = crate::support::paths::override_cache_root_for_tests(cache.path());
+        let dir = tempfile::tempdir().expect("tempdir");
+        let repo = dir.path();
+        git(repo, &["init", "-q"]);
+        git(repo, &["config", "user.email", "test@example.com"]);
+        git(repo, &["config", "user.name", "test"]);
+        std::fs::write(repo.join("seed.txt"), "base").expect("write seed");
+        git(repo, &["add", "seed.txt"]);
+        git(repo, &["commit", "-qm", "seed"]);
+        let empty = repo.join("empty-project");
+        std::fs::create_dir(&empty).expect("empty folder");
+
+        let error = create_worktree_for_run(
+            &empty,
+            WorkspaceScope::Current,
+            false,
+            "shell",
+            "worktree-preflight",
+        )
+        .expect_err("untracked folder must fail before worktree add");
+
+        assert!(
+            error
+                .to_string()
+                .contains("not in the committed git snapshot")
+        );
+        assert!(!worktrees_dir().join("worktree-preflight").exists());
+        let branches = Command::new("git")
+            .arg("-C")
+            .arg(repo)
+            .args(["branch", "--list", "runhaven/shell/worktree-preflight"])
+            .output()
+            .expect("list branches");
+        assert!(branches.stdout.is_empty());
     }
 }

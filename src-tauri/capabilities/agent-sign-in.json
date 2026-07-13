@@ -1,7 +1,0 @@
-{
-  "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "agent-sign-in",
-  "description": "Explicitly confirmed mutating command that starts an in-app device-code agent sign-in. Isolated from run control so the credential-adjacent trigger keeps its own minimal grant.",
-  "windows": ["main"],
-  "permissions": ["allow-start-agent-sign-in"]
-}

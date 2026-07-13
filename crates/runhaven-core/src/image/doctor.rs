@@ -1,5 +1,4 @@
 use std::collections::BTreeSet;
-use std::process::Command;
 
 use anyhow::{Result, bail};
 use serde_json::Value;
@@ -120,7 +119,7 @@ fn selected_profiles(agent: Option<&str>) -> Result<Vec<AgentProfile>> {
     Ok(profiles())
 }
 
-/// Whether `image` (for example `runhaven/codex:0.1.0`) is present in the local
+/// Whether `image` (for example `runhaven/codex:0.7.0`) is present in the local
 /// Apple container image store. Used to fail a run with a clear "build it first"
 /// message instead of letting `container run` try to pull a RunHaven image from
 /// a registry and return a confusing 401.
@@ -129,7 +128,7 @@ pub fn image_is_built(image: &str) -> Result<bool> {
 }
 
 fn list_local_images() -> Result<Vec<LocalImage>> {
-    let output = Command::new("container")
+    let output = crate::apple_container::command()?
         .args(["image", "list", "--format", "json"])
         .output()?;
     if !output.status.success() {
@@ -223,7 +222,7 @@ fn find_local_image<'a>(image: &str, local_images: &'a [LocalImage]) -> Option<&
 }
 
 fn list_state_volume_names() -> Result<Vec<String>> {
-    let output = Command::new("container")
+    let output = crate::apple_container::command()?
         .args(["volume", "list", "--quiet"])
         .output()?;
     if !output.status.success() {
@@ -306,8 +305,8 @@ mod tests {
         let images = parse_local_images(IMAGE_LIST_CURRENT).expect("image list");
 
         assert_eq!(images.len(), 1);
-        assert!(images[0].names.contains("runhaven/base:0.1.0"));
-        assert!(images[0].names.contains("docker.io/runhaven/base:0.1.0"));
+        assert!(images[0].names.contains("runhaven/base:0.7.0"));
+        assert!(images[0].names.contains("docker.io/runhaven/base:0.7.0"));
         assert!(!images[0].names.contains("0.1.0"));
         assert!(!images[0].names.contains("2026-06-14T03:26:29Z"));
         assert_eq!(

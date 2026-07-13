@@ -4,22 +4,22 @@
 
 # RunHaven
 
-![Rust 1.96.0](https://img.shields.io/badge/rust-1.96.0-orange)
+![Rust 1.97.0](https://img.shields.io/badge/rust-1.97.0-orange)
 ![macOS 26+](https://img.shields.io/badge/macOS-26%2B-black)
-![Apple container 1.0.0](https://img.shields.io/badge/apple%20container-1.0.0-555)
+![Apple container 1.1.0](https://img.shields.io/badge/apple%20container-1.1.0-555)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > [!CAUTION]
-> **Pre-release: `v0.5.0`, CLI-complete.** The latest cut is a pre-1.0,
-> CLI-only pre-release. This checkout includes an unreleased terminal UI over
-> the same planner, run records, diagnostics, and run-control cores. The desktop
-> app remains alpha. Container and image layouts, run-record formats, provider
-> allowlists, auth-broker behavior, TUI behavior, desktop behavior, and `--json`
-> outputs may still change before a stable release.
+> **Pre-release candidate: `v0.7.0`.** This source tree is being prepared for
+> limited coworker testing, not public distribution. The desktop app must still
+> be signed, notarized, and clean-Mac tested before it is shared. Container and image
+> layouts, run-record formats, provider allowlists, auth-broker behavior,
+> desktop behavior, and `--json` outputs may still change before a stable
+> release.
 
-RunHaven is a Rust CLI with an unreleased terminal UI and an alpha
-Tauri/React desktop shell for running Claude Code, Codex, Gemini, Antigravity,
-Copilot, or custom coding agents inside Apple `container` on macOS 26+ (Apple
+RunHaven is a Rust CLI with a Tauri/React desktop app for running
+Claude Code, Codex, Antigravity, Copilot, or custom coding agents inside Apple
+`container` on macOS 26+ (Apple
 silicon only). It does not replace those tools. It gives them a repeatable local
 boundary so the secure way to run an agent is also the easy way.
 
@@ -32,9 +32,9 @@ login is never read or mounted.
 
 | Surface | Status | Use it for |
 | --- | --- | --- |
-| CLI | `v0.5.0` pre-release, complete for the current command contract | Automation, explicit commands, recovery, diagnostics, and the stable backend for every UI. |
-| Terminal UI | Active Codex-vendored TUI, unreleased | A bare interactive `runhaven` opens the RunHaven TUI for workspace choice, agent choice, network/auth policy changes, plan review, typed launch confirmation, foreground launch handoff, active-run summaries, typed run control, confirmation-gated log snapshots, confirmation-gated run diff review, run history, diagnostics, and post-run recovery. |
-| Desktop app | Early preview | Typed setup, launch, multi-session status, bounded logs, session input, run control, orphaned-session recovery, and diagnostics. See the [desktop app guide](docs/DESKTOP_APP.md). Full sign-in, worktree runs, and maintenance flows remain CLI-first. |
+| CLI | `v0.7.0` candidate; the `v0.5.0` command contract remains complete | Automation, explicit commands, recovery, diagnostics, and the stable backend for every UI. |
+| Terminal UI | Archived, not shipped | Source is parked outside the release workspace until this surface is explicitly reopened and re-audited. |
+| Desktop app | `v0.7.0` coworker-test candidate, primary easy path | Guided setup and recovery, in-app sign-in, secure launch, filtered run history, bounded logs and input, run control, worktree review, image repair, cleanup, and System Check. See the [desktop app guide](docs/DESKTOP_APP.md). |
 
 ## Why RunHaven
 
@@ -49,7 +49,7 @@ run inside a bounded sandbox.
 | Broad host access | Mounts one selected workspace at `/workspace`, not your whole home directory or credential folders. |
 | Ambient credentials | Does not mount raw SSH keys, browser profiles, cloud credential folders, provider login caches, or arbitrary environment variables by default. |
 | Unclear execution | `runhaven plan` prints the workspace, state volume, network mode, egress status, preflight, and Apple `container run` command before execution. |
-| Repeated sign-in | `runhaven login <agent>` signs in once and reuses isolated agent state across runs. Claude uses an explicit host setup-token flow; RunHaven never reads your `~/.claude.json`, macOS Keychain, or browser profiles. |
+| Repeated sign-in | The desktop app and `runhaven login <agent>` run each provider's native OAuth inside its isolated container. Later runs reuse that agent volume. RunHaven does not read Mac Keychain items, provider files from your home folder, or browser profiles. |
 | Network sprawl | Uses a secure profile-aware default: provider allowlist where the agent's hosts are bundled, otherwise internet. Local-only `internal` and explicit `--network` overrides remain available. |
 | Risky edits | `--worktree` runs in a RunHaven-owned git worktree you can diff, keep, recover, merge, or discard. |
 | Local cleanup | RunHaven-owned images, volumes, networks, runs, egress logs, and auth-broker state have explicit inspection and cleanup commands. |
@@ -61,7 +61,20 @@ agent can still read the mounted workspace and its isolated home volume, and
 
 ## Quick start
 
-Start Apple `container`, then install RunHaven from this checkout:
+For coworker testing, open the signed and notarized
+`RunHaven-0.7.0-macos-arm64.dmg`, drag RunHaven to Applications, eject the disk
+image, and open RunHaven from Applications. The app guides the rest:
+
+1. Download Apple's signed `container` 1.1.0 installer if it is missing.
+2. Start the local container service.
+3. Open Agents, install one agent, and sign in.
+4. Choose New run, select a project, review access, and start.
+
+No Rust, Git, Xcode, or Terminal is needed for that path. See
+[Installation](docs/INSTALLATION.md) for the exact first-run, update, removal,
+and troubleshooting steps.
+
+Contributors can instead start Apple `container` and install from this checkout:
 
 ```bash
 container system start
@@ -89,20 +102,8 @@ runhaven plan claude
 runhaven run claude
 ```
 
-Or open the terminal UI on an interactive terminal:
-
-```bash
-runhaven
-```
-
-The TUI is an unreleased RunHaven-only checkpoint over the same Rust backend. It
-opens with a launch flow, shows the exact command and safety facts before
-launch, requires typed confirmation for lower-security plans, restores the
-terminal before starting the agent, and includes active-run summaries,
-typed stop/hard-stop/repair controls, confirmation-gated log snapshots,
-confirmation-gated run diff review, run history, preflight diagnostics, and
-post-run recovery. It does not replace the CLI: subcommands, pipes, and
-redirected invocations still use the CLI directly.
+Running `runhaven` without a subcommand prints CLI help. The archived terminal
+UI is not linked into release binaries.
 
 Use the smallest project directory the agent needs. RunHaven mounts that
 directory at `/workspace`, not your whole home directory. See
@@ -111,15 +112,14 @@ directory at `/workspace`, not your whole home directory. See
 
 ## Signing in
 
-RunHaven never reads your host login state. You sign in once, the credential
-lives in an isolated per-agent home volume (or, for Claude, host-side and
-injected at run time), and every later run reuses it.
+RunHaven never reads your host login state. You sign in once inside the agent
+container, the credential lives in its isolated home volume, and every later
+run reuses it.
 
 | Agent | Sign in with | How it works |
 | --- | --- | --- |
-| Claude | `runhaven login claude` | Runs Anthropic's `claude setup-token` on your host (needs Claude Code installed). The token is injected into the sandbox at run time, never written to `~/.claude` and never placed on a command line. |
+| Claude | `runhaven login claude` | Runs `claude auth login` inside the sandbox. Open the printed URL, approve, then paste the returned code into the terminal. |
 | Codex | `runhaven login codex` | `codex login --device-auth` inside the sandbox. Enable device-code login in ChatGPT under Settings then Security. |
-| Gemini | Isolated in-sandbox login, or API-key broker | Google account OAuth is kept inside the isolated Gemini state volume. Headless API-key runs can use `--api-key-broker-env GEMINI_API_KEY`. |
 | Copilot | `runhaven login copilot` | The GitHub device flow inside the sandbox. Answer `y` when it offers to store the token; the file lands in the isolated volume, not on your Mac. |
 | Antigravity | `runhaven login antigravity` | Starts `agy`; approve the Google sign-in in your browser, then type `/exit`. |
 
@@ -176,23 +176,24 @@ The terminal checkpoint exposes active-run summaries, typed stop/hard-stop/repai
 controls, bounded log snapshots only after you type `logs`, run history without
 host workspace paths, run diff review only after you type `diff`, preflight
 checks, secret-free diagnostics, and post-run recovery over the same validated
-cores. The desktop app now has a narrow cleanup control for eligible stopped
-managed-session worktrees. Worktree diff/merge review, image rebuild, state
-cleanup, and network cleanup remain CLI-first today.
+cores. The desktop app includes worktree review, image repair, and stale-network
+cleanup. Resetting or pruning saved agent state remains CLI-only because it can
+erase a saved sign-in.
 
 ## Status and roadmap
 
-RunHaven is alpha/pre-release. `v0.5.0` is the CLI-only pre-release already cut.
-This checkout now contains the unreleased RunHaven-only TUI checkpoint as a
-terminal reference over the same CLI backend. The Tauri/React desktop shell is
-alpha: it can read setup, dashboard, profile, folder-pick, and run-plan state
-and supports reviewed launch, image readiness, sanitized live status, bounded
-output snapshots, session input, stop, kill, repair, eligible worktree cleanup,
-and secret-free diagnostics. Image build, state cleanup, network cleanup, and
-worktree diff/merge review remain CLI-first.
+RunHaven is alpha/pre-release. `v0.5.0` was the CLI-only release; `v0.7.0` is
+the current CLI plus desktop coworker-test candidate.
+This checkout keeps the Codex-derived TUI source as an archived reference, but
+it is outside the release workspace and binaries. The Tauri/React desktop shell is
+alpha and is now the primary easy path: it covers guided setup recovery,
+sign-in, reviewed launch, filtered run history, sanitized live status, bounded
+output and input, stop, hard stop, repair, worktree review, image repair,
+network cleanup, and secret-free System Check. Saved-state reset remains
+CLI-only.
 
-The roadmap now treats the CLI as the complete technical surface, the TUI as a
-hardened terminal checkpoint, and the desktop app as the future easiest path
+The roadmap now treats the CLI as the complete technical surface, the archived
+TUI as future work requiring a fresh audit, and the desktop app as the easiest path
 (full detail in [ROADMAP.md](docs/ROADMAP.md) and the
 [release plan](docs/V1_RELEASE_PLAN.md)):
 
@@ -202,14 +203,13 @@ hardened terminal checkpoint, and the desktop app as the future easiest path
 - **Runtime and security hardening:** completed slices are recorded in the
   roadmap and state files; keep runtime evidence current when the boundary is
   touched.
-- **Hardened terminal checkpoint:** a bare interactive `runhaven` opens the
-  four-step launch wizard and run manager over the shared planner and policy.
-  Keep it focused on the workflow and boundary checks that harden the backend.
+- **Archived terminal UI:** its source remains for future work, but it is not a
+  workspace member or release dependency and `runhaven` does not launch it.
 - **Remaining non-UI scope and CLI public release:** promote one design-first
   item at a time without weakening CLI semantics or default safety.
-- **First-class desktop app, next:** the native macOS app becomes the easiest
-  safe path for nontechnical users, signed and notarized. Its release version
-  label is open.
+- **`v0.7.0` coworker-test candidate:** the native macOS app is the easiest
+  safe path for nontechnical users. A shareable artifact still needs signing,
+  notarization, and clean-Mac verification.
 
 ## Product rule
 

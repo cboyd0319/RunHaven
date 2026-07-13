@@ -1,4 +1,4 @@
-use std::process::Command;
+use crate::apple_container;
 
 use serde_json::Value as JsonValue;
 use toml::Value as TomlValue;
@@ -70,10 +70,11 @@ struct SystemVersionSummary {
 }
 
 fn container_system_version_check(pins: &AppleContainerPins) -> Check {
-    match Command::new("container")
-        .args(["system", "version", "--format", "json"])
-        .output()
-    {
+    match apple_container::command().and_then(|mut command| {
+        Ok(command
+            .args(["system", "version", "--format", "json"])
+            .output()?)
+    }) {
         Ok(output) => {
             let text = if output.stdout.is_empty() {
                 &output.stderr
@@ -171,10 +172,11 @@ fn parse_system_version(text: &str) -> Result<SystemVersionSummary, String> {
 }
 
 fn container_system_property_checks(pins: &AppleContainerPins) -> Vec<Check> {
-    match Command::new("container")
-        .args(["system", "property", "list", "--format", "json"])
-        .output()
-    {
+    match apple_container::command().and_then(|mut command| {
+        Ok(command
+            .args(["system", "property", "list", "--format", "json"])
+            .output()?)
+    }) {
         Ok(output) => {
             let text = if output.stdout.is_empty() {
                 &output.stderr
@@ -277,31 +279,31 @@ mod tests {
 
     fn fixture_pins() -> AppleContainerPins {
         AppleContainerPins {
-            version: "1.0.0".to_string(),
-            commit: "ee848e3ebfd7c73b04dd419683be54fb450b8779".to_string(),
+            version: "1.1.0".to_string(),
+            commit: "5973b9cc626a3e7a499bb316a958237ebe14e2ed".to_string(),
             kata_release: "3.28.0".to_string(),
             kernel: "vmlinux-6.18.15-186".to_string(),
             builder_image: "ghcr.io/apple/container-builder-shim/builder:0.12.0".to_string(),
-            vminit_image: "ghcr.io/apple/containerization/vminit:0.33.3".to_string(),
+            vminit_image: "ghcr.io/apple/containerization/vminit:0.35.0".to_string(),
         }
     }
 
     #[test]
     fn parses_system_version_json() {
         let summary = parse_system_version(
-            r#"[{"appName":"container","buildType":"release","commit":"ee848e3ebfd7c73b04dd419683be54fb450b8779","version":"1.0.0"},{"appName":"container-apiserver","buildType":"release","commit":"ee848e3ebfd7c73b04dd419683be54fb450b8779","version":"container-apiserver version 1.0.0 (build: release, commit: ee848e3)"}]"#,
+            r#"[{"appName":"container","buildType":"release","commit":"5973b9cc626a3e7a499bb316a958237ebe14e2ed","version":"1.1.0"},{"appName":"container-apiserver","buildType":"release","commit":"5973b9cc626a3e7a499bb316a958237ebe14e2ed","version":"container-apiserver version 1.1.0 (build: release, commit: 5973b9c)"}]"#,
         )
         .expect("valid version JSON");
 
-        assert_eq!(summary.container_version.as_deref(), Some("1.0.0"));
+        assert_eq!(summary.container_version.as_deref(), Some("1.1.0"));
         assert_eq!(
             summary.container_commit.as_deref(),
-            Some("ee848e3ebfd7c73b04dd419683be54fb450b8779")
+            Some("5973b9cc626a3e7a499bb316a958237ebe14e2ed")
         );
-        assert_eq!(summary.apiserver_version.as_deref(), Some("1.0.0"));
+        assert_eq!(summary.apiserver_version.as_deref(), Some("1.1.0"));
         assert_eq!(
             summary.apiserver_commit.as_deref(),
-            Some("ee848e3ebfd7c73b04dd419683be54fb450b8779")
+            Some("5973b9cc626a3e7a499bb316a958237ebe14e2ed")
         );
     }
 
@@ -309,12 +311,12 @@ mod tests {
     fn system_version_check_fails_commit_mismatch() {
         let check = system_version_check_from_text(
             true,
-            r#"[{"appName":"container","buildType":"release","commit":"0000000000000000000000000000000000000000","version":"1.0.0"},{"appName":"container-apiserver","buildType":"release","commit":"ee848e3ebfd7c73b04dd419683be54fb450b8779","version":"container-apiserver version 1.0.0 (build: release, commit: ee848e3)"}]"#,
+            r#"[{"appName":"container","buildType":"release","commit":"0000000000000000000000000000000000000000","version":"1.1.0"},{"appName":"container-apiserver","buildType":"release","commit":"5973b9cc626a3e7a499bb316a958237ebe14e2ed","version":"container-apiserver version 1.1.0 (build: release, commit: 5973b9c)"}]"#,
             &fixture_pins(),
         );
 
         assert!(!check.ok);
-        assert!(check.detail.contains("expected 1.0.0 ee848e3"));
+        assert!(check.detail.contains("expected 1.1.0 5973b9c"));
     }
 
     #[test]
@@ -329,7 +331,7 @@ mod tests {
     fn system_version_check_fails_missing_apiserver() {
         let check = system_version_check_from_text(
             true,
-            r#"[{"appName":"container","buildType":"release","commit":"ee848e3ebfd7c73b04dd419683be54fb450b8779","version":"1.0.0"}]"#,
+            r#"[{"appName":"container","buildType":"release","commit":"5973b9cc626a3e7a499bb316a958237ebe14e2ed","version":"1.1.0"}]"#,
             &fixture_pins(),
         );
 
@@ -341,7 +343,7 @@ mod tests {
     fn system_property_checks_match_pins() {
         let checks = system_property_checks_from_text(
             true,
-            r#"{"build":{"image":"ghcr.io/apple/container-builder-shim/builder:0.12.0"},"kernel":{"binaryPath":"opt/kata/share/kata-containers/vmlinux-6.18.15-186","url":"https://github.com/kata-containers/kata-containers/releases/download/3.28.0/kata-static-3.28.0-arm64.tar.zst"},"vminit":{"image":"ghcr.io/apple/containerization/vminit:0.33.3"}}"#,
+            r#"{"build":{"image":"ghcr.io/apple/container-builder-shim/builder:0.12.0"},"kernel":{"binaryPath":"opt/kata/share/kata-containers/vmlinux-6.18.15-186","url":"https://github.com/kata-containers/kata-containers/releases/download/3.28.0/kata-static-3.28.0-arm64.tar.zst"},"vminit":{"image":"ghcr.io/apple/containerization/vminit:0.35.0"}}"#,
             &fixture_pins(),
         );
 

@@ -26,6 +26,7 @@ export default function App() {
             sessions={app.managedSessions.sessions}
             navigation={app.navigation}
             onNavigate={app.navigate}
+            onOpenSettings={() => app.settings.setOpen(true)}
             runTerminalActive={app.launchFlow.runTerminal !== null}
             appVersion={app.dashboard?.appVersion ?? ""}
           />
@@ -33,8 +34,6 @@ export default function App() {
             <AppHeader
               title={app.pageTitle}
               description={app.pageDescription}
-              setupKnown={app.setupKnown}
-              setupReady={app.setupReady}
               loading={app.loading}
               onRefresh={() => void app.refresh()}
             />
@@ -68,8 +67,6 @@ export default function App() {
               controlBusy={app.controlBusy}
               controlError={app.controlError}
               controlMessage={app.controlMessage}
-              controlConfirmations={app.controlConfirmations}
-              onControlConfirmationChange={app.setControlConfirmation}
               onControl={app.runControl}
               onWorktreeResolved={app.refreshAfterWorktree}
               launchFlow={app.launchFlow}

@@ -10,15 +10,11 @@ pub const DEFAULT_ENV_PASSTHROUGH: &[&str] = &["TERM", "COLORTERM", "LANG", "LC_
 pub const CONTAINER_PATH: &str =
     "/opt/runhaven-agent/node_modules/.bin:/home/agent/.local/bin:/usr/local/bin:/usr/bin:/bin";
 pub const VOLUME_PREP_IMAGE: &str =
-    "debian:trixie-slim@sha256:4e401d95de7083948053197a9c3913343cd06b706bf15eb6a0c3ccd26f436a0e";
+    "debian:trixie-slim@sha256:28de0877c2189802884ccd20f15ee41c203573bd87bb6b883f5f46362d24c5c2";
 pub const VOLUME_PREP_NETWORK: &str = "runhaven-volume-prep-internal";
 
-/// Which Claude auth path a run uses through the host-side broker. This replaces
-/// a bare `api_key_broker_env: Option<String>` so the OAuth token can never land
-/// on a persisted plan field (design C Section 3, F1): the token is read from
-/// the macOS Keychain at broker-spawn and flows straight into the broker's
-/// in-memory state, never onto the plan, a marker, a record, or a log. Both
-/// variants are non-secret; neither ever holds a token.
+/// An explicitly configured host-side API-key broker selector. The value is the
+/// environment-variable name only, never its secret value.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub enum ClaudeAuthSource {
     /// API-key broker: the run reads the real key from this host environment
@@ -26,23 +22,13 @@ pub enum ClaudeAuthSource {
     /// value. This is the only broker path that existed before design C, and it
     /// is unchanged.
     ApiKeyBrokerEnv(String),
-    /// Claude subscription OAuth token brokered from the macOS Keychain. No
-    /// payload: the token is fetched from the Keychain at broker-spawn and never
-    /// touches the plan. A run using this variant persists no env NAME and no
-    /// secret-derived value anywhere.
-    KeychainOAuth,
 }
 
 impl ClaudeAuthSource {
-    /// The host environment variable NAME for the API-key broker path, or `None`
-    /// for the Keychain OAuth path (which reads no env var). This NEVER returns a
-    /// secret: `ApiKeyBrokerEnv` carries only the variable name, and
-    /// `KeychainOAuth` carries nothing. Read sites that only need the display or
-    /// persistence name use this.
+    /// The host environment-variable name. This never returns its value.
     pub fn broker_env_name(&self) -> Option<&str> {
         match self {
             Self::ApiKeyBrokerEnv(name) => Some(name.as_str()),
-            Self::KeychainOAuth => None,
         }
     }
 }
@@ -113,24 +99,16 @@ impl AgentRunPlan {
     }
 
     /// The API-key broker host environment variable NAME for this run, if it
-    /// uses the env-var broker path. `None` for the Keychain OAuth path or a run
-    /// with no broker. NEVER returns a secret (see [`ClaudeAuthSource`]).
+    /// uses the env-var broker path. `None` for a run with no broker.
     pub fn api_key_broker_env_name(&self) -> Option<&str> {
         self.claude_auth_source
             .as_ref()
             .and_then(ClaudeAuthSource::broker_env_name)
     }
 
-    /// A non-secret label for the auth broker this run uses, for audit logs and
-    /// run records: `keychain-oauth` for the Claude Keychain OAuth broker,
-    /// `api-key` for the env-var API-key broker (Codex/Gemini/Claude). Matches
-    /// the injection kind; never a secret. Replaces a hardcoded `codex-api-key`
-    /// that mislabeled every broker.
+    /// A provider-neutral, non-secret label for host API-key broker records.
     pub fn broker_label(&self) -> &'static str {
-        match self.claude_auth_source {
-            Some(ClaudeAuthSource::KeychainOAuth) => "keychain-oauth",
-            _ => "api-key",
-        }
+        "api-key"
     }
 
     pub fn shell_preflight(&self) -> Vec<String> {
@@ -337,14 +315,10 @@ mod tests {
             run_id: Some("label".to_string()),
         })
         .expect("plan");
-        // No source and the env-var API-key broker both read as "api-key"; only
-        // the Keychain OAuth broker reads as "keychain-oauth". Never "codex-api-key".
-        assert_eq!(plan.broker_label(), "api-key");
+        // Broker labels remain provider-neutral and never include a secret.\n        assert_eq!(plan.broker_label(), "api-key");
         plan.claude_auth_source = Some(ClaudeAuthSource::ApiKeyBrokerEnv(
             "ANTHROPIC_API_KEY".to_string(),
         ));
         assert_eq!(plan.broker_label(), "api-key");
-        plan.claude_auth_source = Some(ClaudeAuthSource::KeychainOAuth);
-        assert_eq!(plan.broker_label(), "keychain-oauth");
     }
 }

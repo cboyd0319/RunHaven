@@ -5,7 +5,7 @@
   "windows": ["main"],
   "permissions": [
     "allow-open-terminal-session",
-    "allow-open-claude-sign-in-terminal",
+    "allow-open-agent-sign-in-terminal",
     "allow-open-agent-run-terminal",
     "allow-write-terminal-input",
     "allow-resize-terminal",

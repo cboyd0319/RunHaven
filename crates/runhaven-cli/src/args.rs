@@ -82,8 +82,7 @@ pub(super) enum TopCommand {
     },
 }
 
-const AGENT_ARGS_HELP: &str =
-    "Use -- before flags meant for the agent, for example:\n  runhaven run claude -- --version";
+const AGENT_ARGS_HELP: &str = "Use -- before flags meant for the agent, for example:\n  runhaven run claude -- --version\nPut an executable first to replace the profile command:\n  runhaven run shell -- /bin/bash -lc pwd";
 
 #[derive(Args, Clone, Debug)]
 pub(super) struct RunArgs {
@@ -121,6 +120,7 @@ pub(super) struct RunArgs {
     #[arg(
         long,
         default_value = "auto",
+        value_parser = ["auto", "always", "never"],
         help = "allocate a container TTY; auto follows the current terminal"
     )]
     pub(super) tty: String,
@@ -141,7 +141,7 @@ pub(super) struct RunArgs {
         long,
         alias = "codex-api-key-broker-env",
         value_name = "NAME",
-        help = "read this host environment variable at run time and broker the selected agent's API requests (Codex, Claude, Gemini) without placing the raw value in the guest"
+        help = "read this host environment variable at run time and broker the selected agent's API requests (Codex or Claude) without placing the raw value in the guest"
     )]
     pub(super) api_key_broker_env: Option<String>,
     #[arg(

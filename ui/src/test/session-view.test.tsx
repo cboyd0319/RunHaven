@@ -17,11 +17,11 @@ describe("SessionView", () => {
 
     // No banner for a quiet session; controls, status header, output, and
     // composer all render, with controls before the output region.
-    expect(html).toContain("Session controls")
-    expect(html).toContain("Selected session overview.")
+    expect(html).toContain("Run actions")
+    expect(html).toContain("Selected run overview.")
     expect(html).toContain("Latest output")
     expect(html).toContain("Message")
-    expect(html.indexOf("Session controls")).toBeLessThan(
+    expect(html.indexOf("Run actions")).toBeLessThan(
       html.indexOf("Latest output"),
     )
     expect(html.indexOf("Latest output")).toBeLessThan(html.indexOf("Message"))
@@ -38,7 +38,7 @@ describe("SessionView", () => {
 
     expect(html).toContain("This run failed")
     expect(html.indexOf("This run failed")).toBeLessThan(
-      html.indexOf("Selected session overview."),
+      html.indexOf("Selected run overview."),
     )
   })
 

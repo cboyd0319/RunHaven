@@ -25,13 +25,12 @@ export async function openTerminalSession(
   return call("open_terminal_session", { onEvent, sessionId }, () => undefined);
 }
 
-// Open a live Claude sign-in terminal (terminal path A). Rust runs the in-sandbox
-// `claude auth login` through a host PTY behind its own native no-filter/no-store
-// confirm, so the printed OAuth link and the pasted-back code round-trip in-app.
-// The target is fixed to Claude in Rust; sessionId is only the registry key, so
-// the WebView cannot steer what runs. Streaming, input, resize, and close reuse
-// the same commands as an attach. The browser preview returns without invoking.
-export async function openClaudeSignInTerminal(
+// Open one supported agent's native sign-in command through a host PTY behind a
+// Rust-owned no-filter/no-store confirmation. Rust validates the exact product
+// agent set and builds the fixed command; sessionId is only the registry key.
+// Streaming, input, resize, and close reuse the same commands as an attach.
+export async function openAgentSignInTerminal(
+  agent: string,
   sessionId: string,
   onMessage: (message: TerminalMessage) => void
 ): Promise<void> {
@@ -40,8 +39,8 @@ export async function openClaudeSignInTerminal(
   }
   const onEvent = new Channel<TerminalMessage>(onMessage);
   return call(
-    "open_claude_sign_in_terminal",
-    { onEvent, sessionId },
+    "open_agent_sign_in_terminal",
+    { agent, onEvent, sessionId },
     () => undefined
   );
 }
@@ -50,8 +49,8 @@ export async function openClaudeSignInTerminal(
 // interactive agent (Claude Code today) is a TUI: with no terminal it drops to
 // headless --print and errors without a piped prompt, and a RunHaven run carries
 // no prompt by design. Rust reuses the normal launch machinery end to end: it
-// builds the plan from `request`, selects the Keychain OAuth broker from token
-// presence, shows the native launch confirm (on cancel nothing runs), then runs
+// builds the plan from `request`, shows the native launch confirm (on cancel
+// nothing runs), then runs
 // the finalized plan under a host PTY streamed over the Channel so the user types
 // their prompt in the agent's TUI. Same egress proxy, non-root user, read-only
 // rootfs, cap-drop, and workspace mount as a background run; only the execution

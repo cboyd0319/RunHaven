@@ -1,5 +1,4 @@
 use std::io::IsTerminal;
-use std::process::Command;
 
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
@@ -101,7 +100,7 @@ pub fn runs_attach(
         command.push("--tty");
     }
     command.extend(["--user", user, "--workdir", workdir, container_name]);
-    let mut process = Command::new("container");
+    let mut process = crate::apple_container::command()?;
     process.args(command);
     if command_args.is_empty() {
         process.args(DEFAULT_ATTACH_COMMAND);
@@ -196,7 +195,7 @@ pub fn runs_logs_follow(run_id: &str, lines: u32) -> Result<i32> {
     eprintln!(
         "Live logs are not automatically redacted and can contain secrets or workspace content."
     );
-    Ok(Command::new("container")
+    Ok(crate::apple_container::command()?
         .args(["logs", "--follow", "-n", &lines.to_string(), container_name])
         .status()?
         .code()
@@ -217,13 +216,24 @@ pub fn stop_active_run(run_id: &str) -> Result<Value> {
         "active run record is missing container name",
     )?;
     validate_runhaven_container_name(container_name)?;
-    markers::mark_active_run_stop_requested(run_id, &record)?;
-    let status = Command::new("container")
-        .args(["stop", container_name])
-        .status()?;
+    markers::mark_active_run_stop_requested(run_id)?;
+    let mut command = match crate::apple_container::command() {
+        Ok(command) => command,
+        Err(error) => {
+            markers::clear_active_run_stop_requested(run_id)?;
+            return Err(error);
+        }
+    };
+    let status = match command.args(["stop", container_name]).status() {
+        Ok(status) => status,
+        Err(error) => {
+            markers::clear_active_run_stop_requested(run_id)?;
+            return Err(error.into());
+        }
+    };
     let code = status.code().unwrap_or(1);
     if !status.success() {
-        let _ = markers::clear_active_run_stop_requested(run_id, &record);
+        markers::clear_active_run_stop_requested(run_id)?;
     }
     Ok(json!({
         "run_id": run_id,
@@ -259,13 +269,24 @@ pub fn kill_active_run(run_id: &str) -> Result<Value> {
         "active run record is missing container name",
     )?;
     validate_runhaven_container_name(container_name)?;
-    markers::mark_active_run_kill_requested(run_id, &record)?;
-    let status = Command::new("container")
-        .args(["kill", container_name])
-        .status()?;
+    markers::mark_active_run_kill_requested(run_id)?;
+    let mut command = match crate::apple_container::command() {
+        Ok(command) => command,
+        Err(error) => {
+            markers::clear_active_run_kill_requested(run_id)?;
+            return Err(error);
+        }
+    };
+    let status = match command.args(["kill", container_name]).status() {
+        Ok(status) => status,
+        Err(error) => {
+            markers::clear_active_run_kill_requested(run_id)?;
+            return Err(error.into());
+        }
+    };
     let code = status.code().unwrap_or(1);
     if !status.success() {
-        let _ = markers::clear_active_run_kill_requested(run_id, &record);
+        markers::clear_active_run_kill_requested(run_id)?;
     }
     Ok(json!({
         "run_id": run_id,
@@ -312,7 +333,7 @@ fn validate_attach_command(command: &[String]) -> Result<()> {
 
 pub fn runs_status(run_id: &str, json_output: bool) -> Result<i32> {
     let (record, container_name) = active_run_record_and_container(run_id)?;
-    let output = Command::new("container")
+    let output = crate::apple_container::command()?
         .args(["inspect", container_name.as_str()])
         .output()?;
     if !output.status.success() {
@@ -330,7 +351,7 @@ pub fn runs_status(run_id: &str, json_output: bool) -> Result<i32> {
 
 pub fn active_run_status_payload(run_id: &str) -> Result<Value> {
     let (record, container_name) = active_run_record_and_container(run_id)?;
-    let output = Command::new("container")
+    let output = crate::apple_container::command()?
         .args(["inspect", container_name.as_str()])
         .output()?;
     if !output.status.success() {

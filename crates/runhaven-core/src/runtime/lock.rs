@@ -3,7 +3,7 @@ use std::io::Write;
 
 use anyhow::{Context, Result, bail};
 
-use crate::support::paths::{open_private_read_write, state_lock_path};
+use crate::support::paths::{active_run_lock_path, open_private_read_write, state_lock_path};
 
 pub struct StateLock {
     file: File,
@@ -28,6 +28,18 @@ pub fn acquire_state_lock(state_volume: &str) -> Result<StateLock> {
             return Err(error).with_context(|| format!("could not lock {}", path.display()));
         }
     }
+    file.set_len(0)?;
+    writeln!(file, "{}", std::process::id())?;
+    file.flush()?;
+    Ok(StateLock { file })
+}
+
+pub(crate) fn acquire_active_run_lock(run_id: &str) -> Result<StateLock> {
+    let path = active_run_lock_path(run_id)?;
+    let mut file = open_private_read_write(&path)
+        .with_context(|| format!("could not open active run lock: {}", path.display()))?;
+    file.lock()
+        .with_context(|| format!("could not lock active run marker for {run_id}"))?;
     file.set_len(0)?;
     writeln!(file, "{}", std::process::id())?;
     file.flush()?;

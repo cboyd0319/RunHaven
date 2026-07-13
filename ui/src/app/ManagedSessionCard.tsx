@@ -1,11 +1,8 @@
-import { CircleAlert, ShieldCheck } from "lucide-react"
-
 import type {
   ManagedSessionSummary,
   SessionLifecycle,
   SessionNextActionKind,
 } from "@/commands/runhaven"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -26,7 +23,6 @@ export function ManagedSessionCard({
   session: ManagedSessionSummary
 }) {
   const needsAttention = sessionNeedsAttention(session)
-  const action = session.nextAction
   const { labels } = useSessionLabels()
 
   return (
@@ -37,45 +33,36 @@ export function ManagedSessionCard({
             <CardTitle role="heading" aria-level={2}>
               {sessionDisplayTitle(session, labels)}
             </CardTitle>
-            <CardDescription>Selected session overview.</CardDescription>
+            <CardDescription>Selected run overview.</CardDescription>
           </div>
           <Badge variant={sessionBadgeVariant(session)}>
-            {needsAttention ? "Needs attention" : session.statusLabel}
+            {needsAttention ? "Needs you" : session.statusLabel}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {needsAttention ? (
-          <Alert variant="destructive">
-            <CircleAlert />
-            <AlertTitle>{displayValue(action.label)}</AlertTitle>
-            <AlertDescription>
-              {displayValue(action.detail)}
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <Alert role="status">
-            <ShieldCheck />
-            <AlertTitle>{displayValue(action.label)}</AlertTitle>
-            <AlertDescription>
-              {displayValue(action.detail)}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-3">
           <Metric label="Agent" value={displayValue(session.agent)} />
           <Metric label="Project" value={displayValue(session.project)} />
-          <Metric label="Session name" value={displayValue(session.session)} />
-          <Metric label="Status" value={displayValue(session.statusLabel)} />
-          <Metric label="Sign-in" value={authStatusLabel(session.authStatus)} />
-          <Metric label="Sign-in sharing" value={authScopeLabel(session.authScope)} />
-          <Metric label="Network" value={networkLabel(session.network)} />
           <Metric label="Started" value={displayValue(session.startedAt)} />
         </div>
 
-        {session.events.length > 0 ? (
-          <section aria-labelledby="managed-session-events">
+        <details className="rounded-lg border p-3">
+          <summary className="cursor-pointer text-sm font-medium">
+            Run details and events
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Metric label="Run name" value={displayValue(session.session)} />
+            <Metric label="Status" value={displayValue(session.statusLabel)} />
+            <Metric label="Sign-in" value={authStatusLabel(session.authStatus)} />
+            <Metric
+              label="Sign-in sharing"
+              value={authScopeLabel(session.authScope)}
+            />
+            <Metric label="Network" value={networkLabel(session.network)} />
+          </div>
+          {session.events.length > 0 ? (
+            <section className="mt-4" aria-labelledby="managed-session-events">
             <h3
               id="managed-session-events"
               className="mb-2 text-sm font-medium"
@@ -101,7 +88,8 @@ export function ManagedSessionCard({
               ))}
             </ul>
           </section>
-        ) : null}
+          ) : null}
+        </details>
       </CardContent>
     </Card>
   )

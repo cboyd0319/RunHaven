@@ -9,7 +9,7 @@ use crate::provider::egress::{EgressPolicy, ThreadedAllowlistProxy};
 use crate::provider::observability::{print_provider_blocked_host_review, write_auth_broker_log};
 use crate::records::{RunRecordInput, write_run_record};
 use crate::runtime::launch::{
-    AgentCommandExecution, AgentCommandRunner, StatusAgentCommandRunner,
+    AgentCommandExecution, AgentCommandRunner, StatusAgentCommandRunner, require_plan_run_id,
     run_agent_command_lifecycle,
 };
 use crate::runtime::plans::AgentRunPlan;
@@ -19,18 +19,18 @@ mod decision_log;
 mod network;
 
 pub use broker_secret::{
-    claude_oauth_token_present, require_api_key_broker_secret,
-    select_claude_auth_source_with_presence, validate_runtime_auth_broker_environment,
+    require_api_key_broker_secret, select_api_key_broker_source_for_network,
+    validate_runtime_auth_broker_environment,
 };
 use decision_log::{ProviderDecisionLogStream, start_provider_decision_log_stream};
 use network::command_starts_with;
 pub use network::{
-    InternalNetworkInfo, cleanup_provider_network, ensure_internal_network,
+    InternalNetworkInfo, cleanup_provider_network, cleanup_run_network, ensure_internal_network,
     inspect_internal_network, inspect_network_mode, run_preflight,
 };
 
 pub fn run_provider_agent(plan: &AgentRunPlan) -> Result<i32> {
-    let mut runner = StatusAgentCommandRunner;
+    let mut runner = StatusAgentCommandRunner::new()?;
     run_provider_agent_with_runner(plan, &mut runner)
 }
 
@@ -38,6 +38,7 @@ pub(crate) fn run_provider_agent_with_runner(
     plan: &AgentRunPlan,
     runner: &mut impl AgentCommandRunner,
 ) -> Result<i32> {
+    let run_id = require_plan_run_id(plan)?.to_string();
     let network_name = plan
         .network_name
         .as_ref()
@@ -52,10 +53,6 @@ pub(crate) fn run_provider_agent_with_runner(
     let mut broker: Option<ApiKeyBrokerProxy> = None;
     let mut broker_thread = None;
     let mut decision_log_stream = None;
-    let run_id = plan
-        .run_id
-        .clone()
-        .unwrap_or_else(|| uuid::Uuid::new_v4().simple().to_string());
     let mut cleanup =
         json!({"provider_network": "not-created", "provider_network_name": network_name});
     let mut return_code = None;
@@ -93,8 +90,8 @@ pub(crate) fn run_provider_agent_with_runner(
         let command = if let Some((broker_profile, api_key)) = broker_secret {
             let key_broker = create_api_key_broker(broker_profile, api_key, &network_info)?;
             // Bare base URL; the guest-config step appends any provider-specific
-            // path segment (Codex expects a /v1 suffix; Claude and Gemini append
-            // the full path themselves).
+            // path segment (Codex expects a /v1 suffix; Claude appends the full
+            // path itself).
             let broker_base_url = format!(
                 "http://{}:{}",
                 network_info.ipv4_gateway,
@@ -150,7 +147,7 @@ pub(crate) fn run_provider_agent_with_runner(
         .map(ProviderDecisionLogStream::stop)
         .unwrap_or(Ok(()));
     if provider_network_created {
-        cleanup = cleanup_provider_network(plan).unwrap_or_else(|error| {
+        cleanup = cleanup_run_network(plan).unwrap_or_else(|error| {
             json!({
                 "provider_network": "cleanup-error",
                 "provider_network_name": network_name,
@@ -290,8 +287,8 @@ pub fn with_api_key_broker_config(
             Ok(result)
         }
         GuestRedirect::EnvRedirect { base_url_env } => {
-            // Claude and Gemini honor a base-URL env var; point it at the broker
-            // and hand the guest only the placeholder key.
+            // Claude honors a base-URL env var; point it at the broker and hand
+            // the guest only the placeholder key.
             let injected = [
                 "--env".to_string(),
                 format!("{base_url_env}={broker_base_url}"),

@@ -33,7 +33,7 @@ static SECRET_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
         r"sk-ant-[A-Za-z0-9_-]{10,}",  // Anthropic API keys and OAuth tokens
         r"sk-[A-Za-z0-9]{20,}",        // OpenAI-style API keys
         r"gh[opsru]_[A-Za-z0-9]{20,}", // GitHub tokens (Copilot)
-        r"AIza[A-Za-z0-9_-]{20,}",     // Google API keys (Gemini, Antigravity)
+        r"AIza[A-Za-z0-9_-]{20,}",     // Google API keys (Antigravity)
         r"ya29\.[A-Za-z0-9_-]{20,}",   // Google OAuth access tokens (Antigravity device flow)
         r"1//[A-Za-z0-9_-]{20,}",      // Google OAuth refresh tokens
         r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}", // JWTs (OAuth/device-code)

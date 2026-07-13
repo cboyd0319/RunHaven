@@ -8,4 +8,5 @@ pub mod profiles;
 pub mod session_state;
 pub mod state;
 pub mod terminal;
+mod volume_attachment;
 pub mod worktrees;

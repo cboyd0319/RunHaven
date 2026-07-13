@@ -258,11 +258,7 @@ fn api_key_broker_accepts_brokered_profiles_only_on_provider_network() {
         run_id: None,
     };
 
-    for (agent, env_name) in [
-        ("codex", "OPENAI_API_KEY"),
-        ("claude", "ANTHROPIC_API_KEY"),
-        ("gemini", "GEMINI_API_KEY"),
-    ] {
+    for (agent, env_name) in [("codex", "OPENAI_API_KEY"), ("claude", "ANTHROPIC_API_KEY")] {
         let plan = build_run_plan(options_for(agent, NetworkMode::Provider, env_name))
             .unwrap_or_else(|error| panic!("{agent} broker should plan: {error}"));
         assert_eq!(plan.api_key_broker_env_name(), Some(env_name));

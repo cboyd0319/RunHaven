@@ -47,7 +47,7 @@ function status(
     session: session(),
     container: {
       state: "running",
-      image: "runhaven/codex:0.1.0",
+      image: "runhaven/codex:0.7.0",
       startedAt: "2026-07-01T02:00:03Z",
       resources: {
         cpus: "4",
@@ -77,8 +77,8 @@ describe("ManagedSessionStatusCard", () => {
 
     expect(html).toContain("Runtime status");
     expect(html).toContain("Container");
-    expect(html).toContain("Current state for this session.");
-    expect(html).toContain("runhaven/codex:0.1.0");
+    expect(html).toContain("Current state for this run.");
+    expect(html).toContain("runhaven/codex:0.7.0");
     expect(html).toContain("4096 MiB");
     expect(html).toContain("runhaven-provider-preview");
     expect(html).not.toContain("/Users/");

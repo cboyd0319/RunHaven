@@ -26,8 +26,10 @@ pub use validation::{
 };
 
 use crate::provider::auth_broker::{GuestRedirect, broker_profile_for_agent};
-use crate::runtime::session_state::{session_digest, shared_state_volume_name, state_volume_name};
+use crate::runtime::session_state::{shared_state_volume_name, state_volume_name};
 use crate::support::validators::validate_run_id;
+
+use self::resources::runtime_resource_identifier;
 
 pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     if let Some(run_id) = &options.run_id {
@@ -73,18 +75,6 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
                 bail!("API key broker requires --network provider");
             }
         }
-        Some(ClaudeAuthSource::KeychainOAuth) => {
-            // The Keychain OAuth broker is Claude-only (design C): the token is a
-            // Claude subscription OAuth token injected as `Authorization: Bearer`
-            // to api.anthropic.com. No env var name is read here; the token is
-            // fetched from the Keychain at broker-spawn.
-            if options.profile.name != "claude" {
-                bail!("the Claude Keychain OAuth broker is only available for the claude profile");
-            }
-            if options.network != NetworkMode::Provider {
-                bail!("the Claude OAuth broker requires --network provider");
-            }
-        }
         None => {}
     }
     validate_resource_options(&options.cpus, &options.memory, &options.user)?;
@@ -105,18 +95,18 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
             options.session.as_deref(),
         )?,
     };
-    let container_name = match options.session.as_deref() {
-        Some(_) => safe_resource_name(&format!(
-            "runhaven-{}-{project_id}-s-{}-run",
-            options.profile.name,
-            session_digest(&session)
-        )),
-        None => safe_resource_name(&format!(
-            "runhaven-{}-{project_id}-run",
-            options.profile.name
-        )),
-    };
-    let default_network_name = safe_resource_name(&format!("runhaven-{project_id}-internal"));
+    let runtime_id = runtime_resource_identifier(
+        options.profile.name,
+        options.auth_scope.as_str(),
+        &session,
+        options.run_id.as_deref(),
+    );
+    let container_name = safe_resource_name(&format!(
+        "runhaven-{}-{project_id}-{runtime_id}-run",
+        options.profile.name
+    ));
+    let default_network_name =
+        safe_resource_name(&format!("runhaven-{project_id}-{runtime_id}-internal"));
     let image = options
         .image
         .clone()
@@ -239,7 +229,7 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
         }
         NetworkMode::Provider => {
             let provider_network = safe_resource_name(&format!(
-                "runhaven-{}-{project_id}-provider",
+                "runhaven-{}-{project_id}-{runtime_id}-provider",
                 options.profile.name
             ));
             preflight.push(vec![
@@ -262,6 +252,18 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
             .iter()
             .map(|s| (*s).to_string())
             .collect();
+    } else if agent_command
+        .first()
+        .is_some_and(|argument| argument.starts_with('-'))
+    {
+        let mut profile_command = options
+            .profile
+            .command
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect::<Vec<_>>();
+        profile_command.append(&mut agent_command);
+        agent_command = profile_command;
     }
     if options
         .claude_auth_source
@@ -309,5 +311,9 @@ pub fn build_run_plan(options: RunOptions) -> Result<AgentRunPlan> {
     })
 }
 
+#[cfg(test)]
+mod agent_args_tests;
+#[cfg(test)]
+mod identity_tests;
 #[cfg(test)]
 mod tests;

@@ -115,21 +115,21 @@ const EDIT_MENU: &[Entry] = &[
     Entry::Separator,
     // The session filter field does not exist yet; the item and its shortcut
     // are reserved and disabled until the filter ships.
-    initially_disabled("filter-sessions", "Filter Sessions", Some("Cmd+F")),
+    initially_disabled("filter-sessions", "Filter Runs", Some("Cmd+F")),
 ];
 
 // Cmd-1..9 select the Nth sidebar row. Each starts disabled and turns on only
 // while the sidebar actually has that many sessions (sync_menu_state).
 const SELECT_SESSION_MENU: &[Entry] = &[
-    initially_disabled("select-session-1", "Session 1", Some("Cmd+1")),
-    initially_disabled("select-session-2", "Session 2", Some("Cmd+2")),
-    initially_disabled("select-session-3", "Session 3", Some("Cmd+3")),
-    initially_disabled("select-session-4", "Session 4", Some("Cmd+4")),
-    initially_disabled("select-session-5", "Session 5", Some("Cmd+5")),
-    initially_disabled("select-session-6", "Session 6", Some("Cmd+6")),
-    initially_disabled("select-session-7", "Session 7", Some("Cmd+7")),
-    initially_disabled("select-session-8", "Session 8", Some("Cmd+8")),
-    initially_disabled("select-session-9", "Session 9", Some("Cmd+9")),
+    initially_disabled("select-session-1", "Run 1", Some("Cmd+1")),
+    initially_disabled("select-session-2", "Run 2", Some("Cmd+2")),
+    initially_disabled("select-session-3", "Run 3", Some("Cmd+3")),
+    initially_disabled("select-session-4", "Run 4", Some("Cmd+4")),
+    initially_disabled("select-session-5", "Run 5", Some("Cmd+5")),
+    initially_disabled("select-session-6", "Run 6", Some("Cmd+6")),
+    initially_disabled("select-session-7", "Run 7", Some("Cmd+7")),
+    initially_disabled("select-session-8", "Run 8", Some("Cmd+8")),
+    initially_disabled("select-session-9", "Run 9", Some("Cmd+9")),
 ];
 
 const VIEW_MENU: &[Entry] = &[
@@ -142,22 +142,18 @@ const VIEW_MENU: &[Entry] = &[
     Entry::Separator,
     command("go-home", "Go to Home", Some("Cmd+0")),
     command("go-agents", "Go to Agents", Some("Option+Cmd+1")),
-    command("go-diagnostics", "Go to Diagnostics", Some("Option+Cmd+2")),
-    command("go-maintenance", "Go to Maintenance", Some("Option+Cmd+3")),
+    command("go-diagnostics", "Go to System Check", Some("Option+Cmd+2")),
+    command("go-maintenance", "Go to Cleanup", Some("Option+Cmd+3")),
     Entry::Separator,
     Entry::Submenu {
-        label: "Select Session",
+        label: "Select Run",
         entries: SELECT_SESSION_MENU,
     },
     // Session movement needs at least one session; jump also needs a session
     // that actually needs the user. Both start disabled and sync on.
-    initially_disabled("next-session", "Next Session", Some("Shift+Cmd+]")),
-    initially_disabled("previous-session", "Previous Session", Some("Shift+Cmd+[")),
-    initially_disabled(
-        "jump-needs-you",
-        "Next Session That Needs You",
-        Some("Cmd+J"),
-    ),
+    initially_disabled("next-session", "Next Run", Some("Shift+Cmd+]")),
+    initially_disabled("previous-session", "Previous Run", Some("Shift+Cmd+[")),
+    initially_disabled("jump-needs-you", "Next Run That Needs You", Some("Cmd+J")),
     Entry::Separator,
     command("check-again", "Check Again", Some("Cmd+R")),
     Entry::Separator,
@@ -180,8 +176,8 @@ const SESSION_MENU: &[Entry] = &[
     initially_disabled("stop-session", "Stop", Some("Cmd+.")),
     initially_disabled("hard-stop-session", "Hard Stop", Some("Option+Cmd+.")),
     Entry::Separator,
-    initially_disabled("repair-session", "Repair Session Record...", None),
-    initially_disabled("cleanup-session", "Clean Up Session...", None),
+    initially_disabled("repair-session", "Repair Run Record...", None),
+    initially_disabled("cleanup-session", "Clean Up Run...", None),
     Entry::Separator,
     initially_disabled("open-session-window", "Open in New Window", None),
 ];
@@ -216,7 +212,7 @@ pub(super) const MENU_BAR: &[(&str, &[Entry])] = &[
     ("File", FILE_MENU),
     ("Edit", EDIT_MENU),
     ("View", VIEW_MENU),
-    ("Session", SESSION_MENU),
+    ("Run", SESSION_MENU),
     ("Agent", AGENT_MENU),
     ("Window", WINDOW_MENU),
     ("Help", HELP_MENU),

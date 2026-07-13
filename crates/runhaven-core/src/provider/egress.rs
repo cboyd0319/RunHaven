@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::io::{Read, Write};
 use std::net::{IpAddr, SocketAddr, TcpListener, TcpStream};
 use std::str::FromStr;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -21,6 +21,49 @@ pub use tunnel::{is_safe_upstream_address, parse_connect_target};
 pub const MAX_HEADER_BYTES: usize = 64 * 1024;
 pub const RELAY_BUFFER_BYTES: usize = 64 * 1024;
 pub const MAX_DENIED_CONNECT_TARGETS: usize = 50;
+pub const MAX_CONCURRENT_EGRESS_CLIENTS: usize = 32;
+pub const MAX_PROXY_DECISION_KEYS: usize = 256;
+
+#[derive(Debug)]
+pub(crate) struct ClientAdmission {
+    active: AtomicUsize,
+    limit: usize,
+}
+
+impl ClientAdmission {
+    pub(crate) fn new(limit: usize) -> Arc<Self> {
+        Arc::new(Self {
+            active: AtomicUsize::new(0),
+            limit,
+        })
+    }
+
+    pub(crate) fn try_acquire(self: &Arc<Self>) -> Option<ClientPermit> {
+        self.active
+            .fetch_update(Ordering::AcqRel, Ordering::Acquire, |active| {
+                (active < self.limit).then_some(active + 1)
+            })
+            .ok()?;
+        Some(ClientPermit {
+            admission: Arc::clone(self),
+        })
+    }
+
+    #[cfg(test)]
+    pub(crate) fn active(&self) -> usize {
+        self.active.load(Ordering::Acquire)
+    }
+}
+
+pub(crate) struct ClientPermit {
+    admission: Arc<ClientAdmission>,
+}
+
+impl Drop for ClientPermit {
+    fn drop(&mut self) {
+        self.admission.active.fetch_sub(1, Ordering::AcqRel);
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ProxyDecision {
@@ -40,6 +83,7 @@ struct ProxyState {
     allowed_client_networks: Vec<IpNet>,
     denied_connect_targets: Mutex<Vec<(String, u16)>>,
     policy_decisions: Mutex<BTreeMap<ProxyDecisionKey, usize>>,
+    client_admission: Arc<ClientAdmission>,
 }
 
 type ProxyDecisionKey = (String, u16, String, String, String);
@@ -75,6 +119,7 @@ impl ThreadedAllowlistProxy {
                 allowed_client_networks: networks,
                 denied_connect_targets: Mutex::new(Vec::new()),
                 policy_decisions: Mutex::new(BTreeMap::new()),
+                client_admission: ClientAdmission::new(MAX_CONCURRENT_EGRESS_CLIENTS),
             }),
             shutdown: Arc::new(AtomicBool::new(false)),
         })
@@ -88,10 +133,17 @@ impl ThreadedAllowlistProxy {
         while !self.shutdown.load(Ordering::Relaxed) {
             match self.listener.accept() {
                 Ok((stream, peer)) => {
+                    let Some(permit) = self.state.client_admission.try_acquire() else {
+                        drop(stream);
+                        continue;
+                    };
                     let state = Arc::clone(&self.state);
-                    thread::spawn(move || {
-                        let _ = handle_proxy_client(stream, peer, state);
-                    });
+                    let _ = thread::Builder::new()
+                        .name("runhaven-egress-client".to_string())
+                        .spawn(move || {
+                            let _permit = permit;
+                            let _ = handle_proxy_client(stream, peer, state);
+                        });
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                     thread::sleep(Duration::from_millis(50));
@@ -278,7 +330,28 @@ fn record_decision(
         reason.to_string(),
         matched_rule.to_string(),
     );
-    *decisions.entry(key).or_insert(0) += 1;
+    if let Some(count) = decisions.get_mut(&key) {
+        *count = count.saturating_add(1);
+        return;
+    }
+    if decisions.len() < MAX_PROXY_DECISION_KEYS.saturating_sub(2) {
+        decisions.insert(key, 1);
+        return;
+    }
+    let overflow_decision = if decision == "allowed" {
+        "allowed"
+    } else {
+        "denied"
+    };
+    let overflow = (
+        "<other>".to_string(),
+        0,
+        overflow_decision.to_string(),
+        "decision-key-limit".to_string(),
+        String::new(),
+    );
+    let count = decisions.entry(overflow).or_insert(0);
+    *count = count.saturating_add(1);
 }
 
 #[cfg(test)]

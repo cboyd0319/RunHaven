@@ -1,0 +1,21 @@
+{
+  "app": {
+    "security": {
+      "capabilities": [
+        "main-read",
+        "setup-recovery",
+        "folder-pick",
+        "launch-run",
+        "run-control",
+        "menu-events",
+        "menu-state",
+        "attention-badge",
+        "session-window-open",
+        "session-monitor",
+        "terminal",
+        "window-chrome",
+        "logging"
+      ]
+    }
+  }
+}

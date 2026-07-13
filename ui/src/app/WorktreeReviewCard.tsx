@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 
 import { Metric } from "./Metric"
 import {
@@ -23,12 +22,10 @@ export type WorktreeReviewCardProps = {
   review: WorktreeReviewResponse | null
   loading: boolean
   loadError: string
-  confirmations: Record<WorktreeAction, boolean>
   busy: boolean
   message: string
   nextSteps: string[]
   actionError: string
-  onConfirmationChange: (action: WorktreeAction, checked: boolean) => void
   onAction: (action: WorktreeAction) => void
 }
 
@@ -36,12 +33,10 @@ export function WorktreeReviewCard({
   review,
   loading,
   loadError,
-  confirmations,
   busy,
   message,
   nextSteps,
   actionError,
-  onConfirmationChange,
   onAction,
 }: WorktreeReviewCardProps) {
   return (
@@ -103,13 +98,8 @@ export function WorktreeReviewCard({
                 <WorktreeActionControl
                   key={definition.action}
                   button={definition.button}
-                  confirmLabel={definition.confirmLabel}
                   description={definition.description}
-                  checked={confirmations[definition.action]}
                   disabled={busy}
-                  onCheckedChange={(checked) =>
-                    onConfirmationChange(definition.action, checked)
-                  }
                   onClick={() => onAction(definition.action)}
                 />
               ))}
@@ -147,45 +137,23 @@ export function WorktreeReviewCard({
 
 function WorktreeActionControl({
   button,
-  confirmLabel,
   description,
-  checked,
   disabled,
-  onCheckedChange,
   onClick,
 }: {
   button: string
-  confirmLabel: string
   description: string
-  checked: boolean
   disabled: boolean
-  onCheckedChange: (checked: boolean) => void
   onClick: () => void
 }) {
-  const buttonLabel = !checked
-    ? `${button}: confirmation required`
-    : disabled
-      ? `${button}: action in progress`
-      : button
-
   return (
     <div className="grid gap-2 rounded-lg border p-3 sm:grid-cols-[1fr_auto] sm:items-center">
-      <label className="flex items-start gap-3 text-sm">
-        <Checkbox
-          checked={checked}
-          aria-label={confirmLabel}
-          onCheckedChange={(value) => onCheckedChange(value === true)}
-        />
-        <span className="flex flex-col gap-1">
-          <span className="font-medium">{confirmLabel}</span>
-          <span className="text-muted-foreground">{description}</span>
-        </span>
-      </label>
+      <p className="text-sm text-muted-foreground">{description}</p>
       <Button
         type="button"
         variant="outline"
-        disabled={!checked || disabled}
-        aria-label={buttonLabel}
+        disabled={disabled}
+        aria-label={disabled ? `${button}: action in progress` : button}
         onClick={onClick}
       >
         {button}

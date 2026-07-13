@@ -1,11 +1,33 @@
 use std::collections::VecDeque;
 use std::fs;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
 use anyhow::Result;
+use serde::Serialize;
 use serde_json::Value;
+
+use crate::support::paths::open_private_append;
+
+const MALFORMED_JSONL_WARNING: &str =
+    "RunHaven skipped a malformed nonempty JSONL record; record content was not logged";
+
+pub(crate) fn append_private_jsonl<T: Serialize>(path: &Path, records: &[T]) -> Result<()> {
+    if records.is_empty() {
+        return Ok(());
+    }
+    let mut encoded = Vec::new();
+    for record in records {
+        serde_json::to_writer(&mut encoded, record)?;
+        encoded.push(b'\n');
+    }
+
+    let mut file = open_private_append(path)?;
+    file.lock()?;
+    file.write_all(&encoded)?;
+    Ok(())
+}
 
 pub fn read_jsonl(path: &Path, limit: usize) -> Result<Vec<Value>> {
     if !path.exists() {
@@ -77,13 +99,20 @@ fn parse_jsonl_lines(text: &str) -> Vec<Value> {
 }
 
 fn parse_jsonl_line(line: &str) -> Option<Value> {
+    parse_jsonl_line_with_warning(line, |message| log::warn!("{message}"))
+}
+
+fn parse_jsonl_line_with_warning(line: &str, warn: impl FnOnce(&str)) -> Option<Value> {
     if line.trim().is_empty() {
         return None;
     }
-    let Ok(payload) = serde_json::from_str::<Value>(line) else {
-        return None;
-    };
-    payload.is_object().then_some(payload)
+    match serde_json::from_str::<Value>(line) {
+        Ok(payload) if payload.is_object() => Some(payload),
+        _ => {
+            warn(MALFORMED_JSONL_WARNING);
+            None
+        }
+    }
 }
 
 fn limit_records(records: Vec<Value>, limit: usize) -> Vec<Value> {
@@ -96,7 +125,74 @@ fn limit_records(records: Vec<Value>, limit: usize) -> Vec<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
     use std::io::Write;
+    use std::sync::{Arc, Barrier};
+
+    #[test]
+    fn concurrent_private_jsonl_appends_keep_every_record_intact() {
+        const WRITERS: usize = 16;
+        const RECORDS_PER_WRITER: usize = 64;
+
+        let dir = tempfile::tempdir().expect("dir");
+        let path = dir.path().join("events.jsonl");
+        let barrier = Arc::new(Barrier::new(WRITERS));
+        let handles = (0..WRITERS)
+            .map(|writer| {
+                let path = path.clone();
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    for record in 0..RECORDS_PER_WRITER {
+                        append_private_jsonl(
+                            &path,
+                            &[serde_json::json!({
+                                "id": format!("{writer}-{record}"),
+                                "padding": "x".repeat(1024),
+                            })],
+                        )
+                        .expect("append record");
+                    }
+                })
+            })
+            .collect::<Vec<_>>();
+        for handle in handles {
+            handle.join().expect("writer thread");
+        }
+
+        let records = read_jsonl(&path, 0).expect("records");
+        let ids = records
+            .iter()
+            .map(|record| record["id"].as_str().expect("record id"))
+            .collect::<HashSet<_>>();
+        assert_eq!(records.len(), WRITERS * RECORDS_PER_WRITER);
+        assert_eq!(ids.len(), records.len());
+    }
+
+    #[test]
+    fn malformed_nonempty_jsonl_warns_without_record_content_and_is_skipped() {
+        let malformed = r#"{"secret":"never-log-this""#;
+        let mut warning = None;
+
+        assert!(
+            parse_jsonl_line_with_warning(malformed, |message| warning = Some(message.to_string()))
+                .is_none()
+        );
+        assert_eq!(warning.as_deref(), Some(MALFORMED_JSONL_WARNING));
+        assert!(!warning.expect("warning").contains("never-log-this"));
+
+        let dir = tempfile::tempdir().expect("dir");
+        let path = dir.path().join("recovery.jsonl");
+        std::fs::write(
+            &path,
+            format!("{{\"idx\":1}}\n{malformed}\n{{\"idx\":2}}\n"),
+        )
+        .expect("fixture");
+        let records = read_jsonl(&path, 0).expect("tolerant read");
+        assert_eq!(records.len(), 2);
+        assert_eq!(records[0]["idx"], 1);
+        assert_eq!(records[1]["idx"], 2);
+    }
 
     #[test]
     fn bounded_tail_reader_keeps_recent_jsonl_records() {

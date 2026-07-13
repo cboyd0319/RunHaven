@@ -1,18 +1,23 @@
-use std::process::Command;
-
 use anyhow::{Result, bail};
 use serde_json::json;
 
-use super::lock::acquire_state_lock;
-use crate::doctor::find_on_path;
+use crate::doctor::require_supported_runtime;
 use crate::provider::observability::utc_timestamp;
 use crate::provider::runtime as provider_runtime;
-use crate::records::{RunRecordInput, write_run_record};
+use crate::records::{RunRecordInput, find_run_record, write_run_record};
 use crate::runtime::active::{
     active_run_terminal_status, remove_active_run_record, write_active_run_record,
 };
-use crate::runtime::plans::{AgentRunPlan, NetworkMode};
+use crate::runtime::plans::{AgentRunPlan, NetworkMode, WorktreeRun};
+use crate::runtime::volume_attachment::launch_with_state_volume_guard;
+#[cfg(test)]
+use crate::runtime::volume_attachment::{
+    ensure_state_volume_detached_from_container_list, launch_under_state_lock_with_attachment_check,
+};
 use crate::support::git::{GitChange, capture_git_snapshot, summarize_git_change};
+
+#[cfg(target_os = "macos")]
+mod signals;
 
 pub struct AgentCommandContext<'a> {
     pub plan: &'a AgentRunPlan,
@@ -40,6 +45,12 @@ pub(crate) struct AgentCommandExecution {
 
 pub(crate) struct StatusAgentCommandRunner;
 
+impl StatusAgentCommandRunner {
+    pub(crate) fn new() -> Result<Self> {
+        Ok(Self)
+    }
+}
+
 impl AgentCommandRunner for StatusAgentCommandRunner {
     fn run_agent_command(
         &mut self,
@@ -47,16 +58,54 @@ impl AgentCommandRunner for StatusAgentCommandRunner {
         env: Option<(&str, &str)>,
         _context: AgentCommandContext<'_>,
     ) -> Result<i32> {
-        let mut agent_command = Command::new(&command[0]);
+        let mut agent_command = crate::apple_container::command_for_program(&command[0])?;
         agent_command.args(&command[1..]);
         if let Some((name, value)) = env {
             agent_command.env(name, value);
         }
+        #[cfg(target_os = "macos")]
+        {
+            // Install only around the owned child. Dropping this local state
+            // immediately restores normal signal behavior before resource and
+            // record cleanup, so a second Ctrl-C can terminate a stuck cleanup.
+            let signal_state = signals::install_cleanup_signal_handlers()?;
+            let mut child = match agent_command.spawn() {
+                Ok(child) => child,
+                Err(error) => {
+                    signal_state.finish_child();
+                    return Err(anyhow::anyhow!(
+                        "could not launch agent command {:?}: {error}",
+                        command[0]
+                    ));
+                }
+            };
+            let result = signals::wait_for_child(&mut child, signal_state).map_err(|error| {
+                anyhow::anyhow!("could not wait for agent command {:?}: {error}", command[0])
+            });
+            signal_state.finish_child();
+            result
+        }
+        #[cfg(not(target_os = "macos"))]
         let status = agent_command.status().map_err(|error| {
             anyhow::anyhow!("could not launch agent command {:?}: {error}", command[0])
         })?;
-        Ok(status.code().unwrap_or(1))
+        #[cfg(not(target_os = "macos"))]
+        Ok(command_exit_code(status))
     }
+}
+
+fn command_exit_code(status: std::process::ExitStatus) -> i32 {
+    if let Some(code) = status.code() {
+        return code;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::ExitStatusExt;
+        if let Some(signal) = status.signal() {
+            return 128 + signal;
+        }
+    }
+    1
 }
 
 pub fn new_run_id() -> String {
@@ -64,25 +113,146 @@ pub fn new_run_id() -> String {
 }
 
 pub fn launch_run_plan(plan: &AgentRunPlan) -> Result<i32> {
-    let mut runner = StatusAgentCommandRunner;
+    let mut runner = StatusAgentCommandRunner::new()?;
     launch_run_plan_with_runner(plan, &mut runner)
+}
+
+/// Launch `plan` and run `on_success` after all child, cleanup, and record work
+/// has succeeded, while the plan's shared-state lock is still held.
+pub fn launch_run_plan_with_completion(
+    plan: &AgentRunPlan,
+    on_success: impl FnOnce() -> Result<()>,
+) -> Result<i32> {
+    let mut runner = StatusAgentCommandRunner::new()?;
+    launch_run_plan_with_runner_and_completion(plan, &mut runner, on_success)
 }
 
 pub fn launch_run_plan_with_runner(
     plan: &AgentRunPlan,
     runner: &mut impl AgentCommandRunner,
 ) -> Result<i32> {
+    launch_run_plan_with_runner_and_completion(plan, runner, || Ok(()))
+}
+
+pub fn launch_run_plan_with_runner_and_completion(
+    plan: &AgentRunPlan,
+    runner: &mut impl AgentCommandRunner,
+    on_success: impl FnOnce() -> Result<()>,
+) -> Result<i32> {
+    launch_run_plan_with_runtime_check_runner_and_completion(
+        plan,
+        runner,
+        require_supported_runtime,
+        on_success,
+    )
+}
+
+/// Run every non-mutating launch check that can be completed before creating a
+/// worktree. Launch repeats these checks because runtime and image state can
+/// change between planning and execution.
+pub fn validate_run_plan_before_worktree(plan: &AgentRunPlan) -> Result<()> {
+    validate_run_plan_before_worktree_with_runtime_check(plan, require_supported_runtime)
+}
+
+fn validate_run_plan_before_worktree_with_runtime_check(
+    plan: &AgentRunPlan,
+    runtime_check: impl FnOnce() -> Result<()>,
+) -> Result<()> {
+    require_plan_run_id(plan)?;
+    runtime_check()?;
     provider_runtime::validate_runtime_auth_broker_environment(plan)?;
     require_container_cli()?;
-    ensure_agent_image_built(plan)?;
-    let _state_lock = acquire_state_lock(&plan.state_volume)?;
-    if plan.network_mode == NetworkMode::Provider {
-        return provider_runtime::run_provider_agent_with_runner(plan, runner);
+    ensure_agent_image_built(plan)
+}
+
+#[cfg(test)]
+fn launch_run_plan_with_runtime_check_and_runner(
+    plan: &AgentRunPlan,
+    runner: &mut impl AgentCommandRunner,
+    runtime_check: impl FnOnce() -> Result<()>,
+) -> Result<i32> {
+    launch_run_plan_with_runtime_check_runner_and_completion(plan, runner, runtime_check, || Ok(()))
+}
+
+fn launch_run_plan_with_runtime_check_runner_and_completion(
+    plan: &AgentRunPlan,
+    runner: &mut impl AgentCommandRunner,
+    runtime_check: impl FnOnce() -> Result<()>,
+    on_success: impl FnOnce() -> Result<()>,
+) -> Result<i32> {
+    let result = (|| {
+        validate_run_plan_before_worktree_with_runtime_check(plan, runtime_check)?;
+        launch_with_state_volume_guard(
+            plan,
+            || {
+                if plan.network_mode == NetworkMode::Provider {
+                    return provider_runtime::run_provider_agent_with_runner(plan, runner);
+                }
+                run_standard_launch_with_ops(
+                    plan,
+                    runner,
+                    provider_runtime::run_preflight,
+                    provider_runtime::cleanup_run_network,
+                )
+            },
+            on_success,
+        )
+    })();
+    match result {
+        Ok(code) => Ok(code),
+        Err(error) => {
+            if let Err(record_error) = record_missing_worktree_failure(plan) {
+                return Err(error.context(format!(
+                    "could not save worktree recovery information: {record_error}"
+                )));
+            }
+            Err(error)
+        }
     }
-    for command in &plan.preflight {
-        provider_runtime::run_preflight(command)?;
+}
+
+/// Persist a failed run with worktree recovery metadata when launch aborts
+/// before the normal lifecycle writes a complete record. Existing records win,
+/// so a runner error that already recorded execution is never duplicated.
+fn record_missing_worktree_failure(plan: &AgentRunPlan) -> Result<()> {
+    if plan.worktree.is_none() {
+        return Ok(());
     }
-    run_standard_agent_with_runner(plan, runner)
+    let run_id = require_plan_run_id(plan)?;
+    if find_run_record(run_id).is_ok() {
+        return Ok(());
+    }
+    let timestamp = utc_timestamp();
+    write_run_record(RunRecordInput {
+        plan,
+        run_id,
+        started_at: &timestamp,
+        finished_at: &timestamp,
+        return_code: 1,
+        status: Some("failed"),
+        provider_decisions: &[],
+        auth_decisions: None,
+        cleanup: json!({
+            "provider_network": "launch-failed",
+            "worktree": "kept-for-recovery",
+        }),
+        git: GitChange::Unavailable {
+            reason: "launch-failed-without-complete-git-record".to_string(),
+            repo_root: None,
+        },
+    })
+}
+
+/// Record a worktree created during final plan construction when that
+/// construction fails before any agent process can start.
+pub fn write_worktree_setup_failure_record(
+    preview_plan: &AgentRunPlan,
+    worktree: &WorktreeRun,
+) -> Result<()> {
+    let mut recovery_plan = preview_plan.clone();
+    recovery_plan.workspace = worktree.mounted_workspace.clone();
+    recovery_plan.worktree = Some(worktree.clone());
+    record_missing_worktree_failure(&recovery_plan)
 }
 
 /// Fail early with an actionable message when the agent image is not built,
@@ -109,7 +279,7 @@ fn image_not_built_message(image: &str, agent: &str) -> String {
 }
 
 pub fn run_standard_agent(plan: &AgentRunPlan) -> Result<i32> {
-    let mut runner = StatusAgentCommandRunner;
+    let mut runner = StatusAgentCommandRunner::new()?;
     run_standard_agent_with_runner(plan, &mut runner)
 }
 
@@ -117,8 +287,58 @@ pub fn run_standard_agent_with_runner(
     plan: &AgentRunPlan,
     runner: &mut impl AgentCommandRunner,
 ) -> Result<i32> {
-    let run_id = plan.run_id.clone().unwrap_or_else(new_run_id);
-    let execution = run_agent_command_lifecycle(plan, &run_id, plan.command.clone(), runner)?;
+    run_standard_agent_with_runner_and_cleanup(plan, runner, |_| {
+        Ok(json!({"provider_network": "not-applicable"}))
+    })
+}
+
+fn run_standard_launch_with_ops(
+    plan: &AgentRunPlan,
+    runner: &mut impl AgentCommandRunner,
+    mut run_preflight: impl FnMut(&[String]) -> Result<()>,
+    cleanup_run_network: impl Fn(&AgentRunPlan) -> Result<serde_json::Value>,
+) -> Result<i32> {
+    let mut run_network_ready = false;
+    for command in &plan.preflight {
+        if let Err(error) = run_preflight(command) {
+            if run_network_ready && let Err(cleanup_error) = cleanup_run_network(plan) {
+                eprintln!(
+                    "runhaven: could not clean up the run network after preflight failed: {cleanup_error}"
+                );
+            }
+            return Err(error);
+        }
+        run_network_ready |= is_internal_run_network_create(plan, command);
+    }
+    run_standard_agent_with_runner_and_cleanup(plan, runner, cleanup_run_network)
+}
+
+fn is_internal_run_network_create(plan: &AgentRunPlan, command: &[String]) -> bool {
+    plan.network_mode == NetworkMode::Internal
+        && command
+            .get(0..4)
+            .is_some_and(|prefix| prefix == ["container", "network", "create", "--internal"])
+        && plan.network_name.as_ref() == command.last()
+}
+
+fn run_standard_agent_with_runner_and_cleanup(
+    plan: &AgentRunPlan,
+    runner: &mut impl AgentCommandRunner,
+    cleanup_run_network: impl FnOnce(&AgentRunPlan) -> Result<serde_json::Value>,
+) -> Result<i32> {
+    let run_id = require_plan_run_id(plan)?.to_string();
+    let execution = run_agent_command_lifecycle(plan, &run_id, plan.command.clone(), runner);
+    // The `container run --rm` client can be killed before it removes its guest.
+    // Always clean the exact run container after a spawned standard lifecycle,
+    // even when the run used Internet mode and owned no network.
+    let cleanup = cleanup_run_network(plan).unwrap_or_else(|error| {
+        json!({
+            "provider_network": "cleanup-error",
+            "provider_network_name": plan.network_name,
+            "error": error.to_string(),
+        })
+    });
+    let execution = execution?;
     let AgentCommandExecution {
         started_at,
         finished_at,
@@ -136,13 +356,19 @@ pub fn run_standard_agent_with_runner(
         status: terminal_status.as_deref(),
         provider_decisions: &[],
         auth_decisions: None,
-        cleanup: json!({"provider_network": "not-applicable"}),
+        cleanup,
         git,
     })?;
     if let Some(error) = command_error {
         return Err(error);
     }
     Ok(return_code)
+}
+
+pub(crate) fn require_plan_run_id(plan: &AgentRunPlan) -> Result<&str> {
+    plan.run_id
+        .as_deref()
+        .ok_or_else(|| anyhow::anyhow!("run plan is missing its reserved run id"))
 }
 
 pub(crate) fn run_agent_command_lifecycle(
@@ -167,16 +393,23 @@ pub(crate) fn run_agent_command_lifecycle(
         },
     );
     let terminal_status = active_run_terminal_status(run_id);
-    let _ = remove_active_run_record(run_id);
+    let marker_removal = remove_active_run_record(run_id);
     let finished_at = utc_timestamp();
     let mut command_error = None;
-    let return_code = match status_result {
+    let mut return_code = match status_result {
         Ok(code) => code,
         Err(error) => {
             command_error = Some(error);
             1
         }
     };
+    if let Err(error) = marker_removal {
+        return_code = 1;
+        command_error = Some(match command_error {
+            Some(command_error) => command_error.context(error.to_string()),
+            None => error,
+        });
+    }
     let git = summarize_git_change(git_before, capture_git_snapshot(&plan.workspace));
     Ok(AgentCommandExecution {
         started_at,
@@ -189,162 +422,13 @@ pub(crate) fn run_agent_command_lifecycle(
 }
 
 pub fn require_container_cli() -> Result<()> {
-    if find_on_path("container").is_some() {
+    if crate::apple_container::resolve_program().is_some() {
         return Ok(());
     }
     bail!(
-        "Apple container CLI was not found. Install it from https://github.com/apple/container/releases and run `container system start`."
+        "Apple container CLI was not found. In the desktop app, choose Download Apple container. For the CLI, install Apple's signed 1.1.0 package and run `container system start`."
     )
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::runtime::plans::{AuthScope, WorkspaceScope};
-    use crate::support::paths::override_cache_root_for_tests;
-    use std::path::{Path, PathBuf};
-
-    struct RecordingRunner {
-        expected_run_id: String,
-        command: Option<Vec<String>>,
-        saw_active_marker: bool,
-        active_marker_auth_scope: Option<String>,
-    }
-
-    struct FailingRunner {
-        expected_run_id: String,
-        saw_active_marker: bool,
-    }
-
-    impl AgentCommandRunner for RecordingRunner {
-        fn run_agent_command(
-            &mut self,
-            command: &[String],
-            env: Option<(&str, &str)>,
-            context: AgentCommandContext<'_>,
-        ) -> Result<i32> {
-            assert_eq!(context.run_id, self.expected_run_id);
-            assert_eq!(
-                context.plan.run_id.as_deref(),
-                Some(self.expected_run_id.as_str())
-            );
-            assert!(env.is_none());
-            self.command = Some(command.to_vec());
-            if let Ok(record) = crate::runtime::active::find_active_run_record(context.run_id) {
-                self.saw_active_marker = true;
-                self.active_marker_auth_scope = record
-                    .get("auth_scope")
-                    .and_then(serde_json::Value::as_str)
-                    .map(str::to_string);
-            }
-            Ok(0)
-        }
-    }
-
-    impl AgentCommandRunner for FailingRunner {
-        fn run_agent_command(
-            &mut self,
-            _command: &[String],
-            env: Option<(&str, &str)>,
-            context: AgentCommandContext<'_>,
-        ) -> Result<i32> {
-            assert_eq!(context.run_id, self.expected_run_id);
-            assert!(env.is_none());
-            self.saw_active_marker =
-                crate::runtime::active::find_active_run_record(context.run_id).is_ok();
-            Err(anyhow::anyhow!("backend runner failed"))
-        }
-    }
-
-    fn test_plan(workspace: &Path) -> AgentRunPlan {
-        AgentRunPlan {
-            command: vec![
-                "container".to_string(),
-                "run".to_string(),
-                "image".to_string(),
-            ],
-            preflight: Vec::new(),
-            workspace: PathBuf::from(workspace),
-            state_volume: "runhaven-shell-test-home".to_string(),
-            session: "default".to_string(),
-            container_name: "runhaven-shell-test-runner-seam".to_string(),
-            profile_name: "shell".to_string(),
-            workspace_scope: WorkspaceScope::Current,
-            workspace_scope_note: None,
-            auth_scope: AuthScope::Agent,
-            worktree: None,
-            run_id: Some("runner-seam".to_string()),
-            network_name: None,
-            network_mode: NetworkMode::Internet,
-            egress_summary: "unrestricted internet egress".to_string(),
-            image: "image".to_string(),
-            provider_allowed_hosts: Vec::new(),
-            claude_auth_source: None,
-            security_notices: Vec::new(),
-        }
-    }
-
-    #[test]
-    fn image_not_built_message_points_to_the_build_command_for_bundled_images() {
-        let bundled = image_not_built_message("runhaven/codex:0.1.0", "codex");
-        assert!(bundled.contains("runhaven image build codex"));
-        // A custom --image is the user's to provide, so no build hint.
-        let custom = image_not_built_message("my/custom:1.0", "codex");
-        assert!(!custom.contains("runhaven image build"));
-        assert!(custom.contains("my/custom:1.0"));
-    }
-
-    #[test]
-    fn standard_launch_can_use_backend_owned_command_runner() {
-        let cache = tempfile::tempdir().expect("cache");
-        let _cache_home = override_cache_root_for_tests(cache.path());
-        let workspace = tempfile::tempdir().expect("workspace");
-        let plan = test_plan(workspace.path());
-        let mut runner = RecordingRunner {
-            expected_run_id: "runner-seam".to_string(),
-            command: None,
-            saw_active_marker: false,
-            active_marker_auth_scope: None,
-        };
-
-        let code = run_standard_agent_with_runner(&plan, &mut runner).expect("standard launch");
-
-        assert_eq!(code, 0);
-        assert_eq!(runner.command.as_deref(), Some(plan.command.as_slice()));
-        assert!(runner.saw_active_marker);
-        assert_eq!(runner.active_marker_auth_scope.as_deref(), Some("agent"));
-        assert!(crate::runtime::active::find_active_run_record("runner-seam").is_err());
-    }
-
-    #[test]
-    fn standard_launch_records_and_cleans_up_failed_backend_runner() {
-        let cache = tempfile::tempdir().expect("cache");
-        let _cache_home = override_cache_root_for_tests(cache.path());
-        let workspace = tempfile::tempdir().expect("workspace");
-        let mut plan = test_plan(workspace.path());
-        plan.run_id = Some("runner-error-seam".to_string());
-        let mut runner = FailingRunner {
-            expected_run_id: "runner-error-seam".to_string(),
-            saw_active_marker: false,
-        };
-
-        let error = run_standard_agent_with_runner(&plan, &mut runner).expect_err("runner failure");
-
-        assert!(error.to_string().contains("backend runner failed"));
-        assert!(runner.saw_active_marker);
-        assert!(crate::runtime::active::find_active_run_record("runner-error-seam").is_err());
-        let record = crate::records::find_run_record("runner-error-seam").expect("run record");
-        assert_eq!(
-            record
-                .pointer("/return_code")
-                .and_then(serde_json::Value::as_i64),
-            Some(1)
-        );
-        assert_eq!(
-            record
-                .pointer("/status")
-                .and_then(serde_json::Value::as_str),
-            Some("failed")
-        );
-    }
-}
+mod tests;

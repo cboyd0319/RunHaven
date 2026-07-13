@@ -10,9 +10,10 @@
 use std::sync::{Arc, Mutex};
 
 use runhaven_core::runtime::plans::{
-    AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
+    AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, WorktreeRun, build_run_plan,
 };
 use runhaven_core::runtime::profiles::get_profile;
+use runhaven_core::support::paths::override_cache_root_for_tests;
 
 use super::{FakeTerminal, open_fake};
 use crate::terminal::{
@@ -137,11 +138,24 @@ fn run_terminal_fails_closed_and_registers_nothing_when_the_spawn_fails() {
     // Fail closed: if core cannot open the run PTY (container missing, image not
     // built, proxy setup fails), nothing is registered so the UI keeps its
     // background-run fallback.
+    let cache = tempfile::tempdir().expect("cache");
+    let _cache_home = override_cache_root_for_tests(cache.path());
+    let worktree = tempfile::tempdir().expect("worktree");
+    let mut plan = interactive_run_plan();
+    plan.worktree = Some(WorktreeRun {
+        source_workspace: worktree.path().to_path_buf(),
+        source_repo_root: worktree.path().to_path_buf(),
+        worktree_root: worktree.path().to_path_buf(),
+        mounted_workspace: worktree.path().to_path_buf(),
+        branch: "runhaven/shell/term-run".to_string(),
+        base_head: Some("base-head".to_string()),
+        recovery_commands: Vec::new(),
+    });
     let registry = TerminalSessionRegistry::default();
     let result = open_agent_run_terminal_for_test(
         &registry,
         "run-fail",
-        || Ok(Some(interactive_run_plan())),
+        || Ok(Some(plan)),
         |_| Err("RunHaven could not open the run terminal.".to_string()),
     );
     assert!(result.is_err(), "a spawn failure must fail the open");
@@ -149,6 +163,10 @@ fn run_terminal_fails_closed_and_registers_nothing_when_the_spawn_fails() {
         registry.remove("run-fail").is_none(),
         "a failed run open must leave no registry entry"
     );
+    let record = runhaven_core::records::find_run_record("term-run")
+        .expect("worktree spawn failure recovery record");
+    assert_eq!(record["status"], "failed");
+    assert_eq!(record["cleanup"]["worktree"], "kept-for-recovery");
 }
 
 #[test]

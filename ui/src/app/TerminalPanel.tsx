@@ -6,7 +6,7 @@ import {
   closeTerminalSession,
   hasTauriRuntime,
   openAgentRunTerminal,
-  openClaudeSignInTerminal,
+  openAgentSignInTerminal,
   openTerminalSession,
   resizeTerminal,
   writeTerminalInput,
@@ -26,14 +26,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-
-// The exact scoped disclosure from the terminal design ("what RunHaven can and
-// cannot see"). It is a standing warning, always visible before and during the
-// terminal, and applies only to the live terminal stream, not the app.
-const TERMINAL_DISCLOSURE =
-  "This is a live terminal inside the sandbox. RunHaven does not filter, read, " +
-  "store, or log it. It just shows what the sandbox prints. So anything here, " +
-  "including passwords or codes, is visible on this screen."
+import {
+  attachTerminalConfig,
+  loginTerminalConfig,
+  runTerminalConfig,
+  TerminalDisclosure,
+} from "./terminalPresentation"
 
 // Bounded in-WebView scrollback (design F5). The raw stream lives only here, in
 // memory, for the life of the view; it is never written to disk or logged.
@@ -41,10 +39,15 @@ const SCROLLBACK_LINES = 1000
 
 type TerminalPhase = "idle" | "opening" | "live" | "ended" | "error"
 
+type TerminalInteractionError = {
+  title: string
+  detail: string
+}
+
 // The three panel modes share every mechanic (host PTY over a Channel, xterm,
 // close-on-unmount) and differ only in the open command, the fixed session key,
 // and the surrounding copy. `attach` types live inside a running session's
-// sandbox; `login` runs the in-app Claude sign-in terminal (path A); `run`
+// sandbox; `login` runs a supported agent's native sign-in terminal; `run`
 // launches an interactive agent and lets the user type their task in its TUI
 // (task #23, Option A).
 type TerminalOpen = (
@@ -52,66 +55,13 @@ type TerminalOpen = (
   onMessage: (message: TerminalMessage) => void,
 ) => Promise<void>
 
-type TerminalConfig = {
-  sessionId: string
-  title: string
-  description: string
-  openLabel: string
-  previewText: string
-  connectedText: string
-}
-
-function attachConfig(session: ManagedSessionSummary): TerminalConfig {
-  return {
-    sessionId: session.id,
-    title: "Terminal",
-    description: "Type live inside this session's sandbox.",
-    openLabel: "Open terminal",
-    previewText:
-      "Terminal needs the desktop app. Open RunHaven on your Mac to type live with this session.",
-    connectedText: "Connected. What you type goes straight to the sandbox.",
-  }
-}
-
-function loginConfig(sessionId: string): TerminalConfig {
-  return {
-    sessionId,
-    title: "Claude sign-in terminal",
-    description:
-      "Sign in to Claude here. RunHaven runs claude auth login in a sandbox, prints a link to open in your browser, and reads the code you paste back.",
-    openLabel: "Open sign-in terminal",
-    previewText:
-      "The sign-in terminal needs the desktop app. Open RunHaven on your Mac to sign in to Claude here.",
-    connectedText: "Connected. Open the printed link, approve, then paste the code here.",
-  }
-}
-
-function runConfig(sessionId: string): TerminalConfig {
-  return {
-    sessionId,
-    title: "Run terminal",
-    description:
-      "This agent is interactive, so you type your task right here in its terminal. RunHaven starts the run in a sandbox and connects it to this terminal.",
-    openLabel: "Start run",
-    previewText:
-      "The run terminal needs the desktop app. Open RunHaven on your Mac to start this agent and type here.",
-    connectedText: "Connected. Type your task for the agent here.",
-  }
-}
-
-function TerminalDisclosure() {
-  return (
-    <Alert variant="warning">
-      <TriangleAlert />
-      <AlertTitle>Live terminal, shown but not saved</AlertTitle>
-      <AlertDescription>{TERMINAL_DISCLOSURE}</AlertDescription>
-    </Alert>
-  )
-}
-
 export type TerminalPanelProps =
   | { session: ManagedSessionSummary; login?: undefined; run?: undefined }
-  | { login: { sessionId: string }; session?: undefined; run?: undefined }
+  | {
+      login: { agent: string; agentLabel: string; sessionId: string; onSignedIn?: () => void }
+      session?: undefined
+      run?: undefined
+    }
   | {
       run: { sessionId: string; request: LaunchRunRequest }
       session?: undefined
@@ -129,10 +79,10 @@ export type TerminalPanelProps =
 
 export function TerminalPanel(props: TerminalPanelProps) {
   const config = props.session
-    ? attachConfig(props.session)
+    ? attachTerminalConfig(props.session)
     : props.login
-      ? loginConfig(props.login.sessionId)
-      : runConfig(props.run.sessionId)
+      ? loginTerminalConfig(props.login.agentLabel, props.login.sessionId)
+      : runTerminalConfig(props.run.sessionId)
   const { sessionId } = config
   const mode: "attach" | "login" | "run" = props.session
     ? "attach"
@@ -150,19 +100,26 @@ export function TerminalPanel(props: TerminalPanelProps) {
   // this terminal's life) into the uniform (sessionId, onMessage) open shape, so
   // the plan the backend launches is the reviewed request, not a WebView value.
   const runRequest = props.run?.request
+  const loginAgent = props.login?.agent
   const open = useMemo<TerminalOpen>(() => {
     switch (mode) {
       case "attach":
         return openTerminalSession
       case "login":
-        return openClaudeSignInTerminal
+        return (sessionId, onMessage) =>
+          openAgentSignInTerminal(loginAgent as string, sessionId, onMessage)
       case "run": {
         const request = runRequest as LaunchRunRequest
         return (sessionId, onMessage) =>
           openAgentRunTerminal(sessionId, request, onMessage)
       }
     }
-  }, [mode, runRequest])
+  }, [loginAgent, mode, runRequest])
+  const onSignedIn = props.login?.onSignedIn
+  const onSignedInRef = useRef(onSignedIn)
+  useEffect(() => {
+    onSignedInRef.current = onSignedIn
+  }, [onSignedIn])
   const containerRef = useRef<HTMLDivElement | null>(null)
   const fitRef = useRef<import("@xterm/addon-fit").FitAddon | null>(null)
   // The primary control the keyboard escape lands on. xterm captures Tab and
@@ -173,10 +130,12 @@ export function TerminalPanel(props: TerminalPanelProps) {
   // "End run" on the run destination, "Close terminal" for attach/login. Names
   // both the visible button and the discoverable escape hint from one source.
   const primaryControlLabel = onClose ? "End run" : "Close terminal"
-  const [active, setActive] = useState(false)
-  const [phase, setPhase] = useState<TerminalPhase>("idle")
+  const autoStart = mode === "run" && hasTauriRuntime()
+  const [active, setActive] = useState(autoStart)
+  const [phase, setPhase] = useState<TerminalPhase>(autoStart ? "opening" : "idle")
   const [errorText, setErrorText] = useState("")
-
+  const [interactionError, setInteractionError] =
+    useState<TerminalInteractionError | null>(null)
   // Kill the backend child when the user navigates away or reloads. The unmount
   // path (the effect below) covers navigation; these listeners cover window
   // reload/close, which does not unmount React first. Both call the same close.
@@ -206,6 +165,12 @@ export function TerminalPanel(props: TerminalPanelProps) {
     let disposed = false
     let term: import("@xterm/xterm").Terminal | undefined
     let observer: ResizeObserver | undefined
+
+    function reportInteractionError(title: string, cause: unknown) {
+      if (!disposed) {
+        setInteractionError({ title, detail: errorMessage(cause) })
+      }
+    }
 
     async function start() {
       const [{ Terminal }, { FitAddon }] = await Promise.all([
@@ -245,18 +210,25 @@ export function TerminalPanel(props: TerminalPanelProps) {
         if (event.metaKey && event.key === "c") {
           const selection = term?.getSelection() ?? ""
           if (selection && event.type === "keydown") {
-            void navigator.clipboard.writeText(selection)
+            void navigator.clipboard
+              .writeText(selection)
+              .catch((cause) => reportInteractionError("Copy failed", cause))
           }
           return !selection
         }
         if (event.metaKey && event.key === "v") {
           if (event.type === "keydown") {
-            void navigator.clipboard.readText().then((text) => {
-              const bytes = [...new TextEncoder().encode(text)]
-              if (bytes.length > 0) {
-                void writeTerminalInput(sessionId, bytes).catch(() => undefined)
-              }
-            })
+            void navigator.clipboard
+              .readText()
+              .then((text) => {
+                const bytes = [...new TextEncoder().encode(text)]
+                if (bytes.length > 0) {
+                  void writeTerminalInput(sessionId, bytes).catch((cause) =>
+                    reportInteractionError("Terminal input failed", cause),
+                  )
+                }
+              })
+              .catch((cause) => reportInteractionError("Paste failed", cause))
           }
           return false
         }
@@ -264,7 +236,9 @@ export function TerminalPanel(props: TerminalPanelProps) {
       })
       fitAddon.fit()
       term.onData((data) => {
-        void writeTerminalInput(sessionId, [...new TextEncoder().encode(data)]).catch(() => undefined)
+        void writeTerminalInput(sessionId, [...new TextEncoder().encode(data)]).catch(
+          (cause) => reportInteractionError("Terminal input failed", cause),
+        )
       })
       term.onResize(({ cols, rows }) => {
         void resizeTerminal(sessionId, cols, rows).catch(() => undefined)
@@ -289,9 +263,19 @@ export function TerminalPanel(props: TerminalPanelProps) {
             term.write(new Uint8Array(message.data))
           } else {
             term.writeln("")
-            term.writeln("This session ended")
+            term.writeln(config.endedText)
             term.options.disableStdin = true
             setPhase("ended")
+            if (mode === "login" && message.code === 0) {
+              if (message.completionRecorded === false) {
+                reportInteractionError(
+                  "Sign-in status was not saved",
+                  "The agent may still be signed in, but RunHaven could not update its status. Close this terminal, check your Mac has free space, then try again.",
+                )
+              } else {
+                onSignedInRef.current?.()
+              }
+            }
           }
         })
         if (disposed || !term) {
@@ -322,7 +306,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
       void closeTerminalSession(sessionId).catch(() => undefined)
       term?.dispose()
     }
-  }, [active, sessionId, open])
+  }, [active, config.endedText, mode, open, sessionId])
 
   // Re-fit when the run terminal returns to view. While its destination is not
   // shown the panel stays mounted but hidden (0-size), so the ResizeObserver is
@@ -338,6 +322,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
 
   function openTerminal() {
     setErrorText("")
+    setInteractionError(null)
     setPhase("opening")
     setActive(true)
   }
@@ -353,6 +338,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
     setActive(false)
     setPhase("idle")
     setErrorText("")
+    setInteractionError(null)
   }
 
   return (
@@ -399,7 +385,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
               aria-label="Sandbox terminal"
               className={cn(
                 "overflow-hidden rounded-lg border bg-black p-2",
-                fill ? "min-h-0 flex-1" : "min-h-72",
+                fill ? "min-h-0 flex-1" : "h-72",
               )}
             />
             {phase === "error" ? (
@@ -407,6 +393,13 @@ export function TerminalPanel(props: TerminalPanelProps) {
                 <TriangleAlert />
                 <AlertTitle>Terminal did not open</AlertTitle>
                 <AlertDescription>{errorText}</AlertDescription>
+              </Alert>
+            ) : null}
+            {interactionError ? (
+              <Alert variant="destructive" role="alert">
+                <TriangleAlert />
+                <AlertTitle>{interactionError.title}</AlertTitle>
+                <AlertDescription>{interactionError.detail}</AlertDescription>
               </Alert>
             ) : null}
             <div className="flex flex-wrap items-center gap-3">
@@ -419,7 +412,12 @@ export function TerminalPanel(props: TerminalPanelProps) {
                 {primaryControlLabel}
               </Button>
               <span className="text-sm text-muted-foreground" aria-live="polite">
-                {terminalStatusText(phase, config.connectedText, primaryControlLabel)}
+                {terminalStatusText(
+                  phase,
+                  config.connectedText,
+                  config.endedText,
+                  primaryControlLabel,
+                )}
               </span>
             </div>
           </div>
@@ -432,6 +430,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
 function terminalStatusText(
   phase: TerminalPhase,
   connectedText: string,
+  endedText: string,
   escapeTarget: string,
 ): string {
   switch (phase) {
@@ -442,7 +441,7 @@ function terminalStatusText(
       // chord and where it lands, so keyboard and screen-reader users can leave.
       return `${connectedText} To leave with the keyboard, press Shift+Esc to move to the ${escapeTarget} button.`
     case "ended":
-      return "This session ended."
+      return endedText
     default:
       return ""
   }

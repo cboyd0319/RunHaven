@@ -1,26 +1,25 @@
-# Current stable pins verified on 2026-06-24.
-# Logging pins (log, tauri-plugin-log, @tauri-apps/plugin-log) verified on 2026-07-04.
-# log stays at 0.4.32 (not current 0.4.33): the vendored codex-utils-pty pins
-# log = "=0.4.32" exactly, and one 0.4.x graph cannot hold two exact pins.
+# Current stable pins verified through 2026-07-11. Rust, Tauri, and frontend
+# dependencies were refreshed or reconfirmed on 2026-07-10; bundled image,
+# agent CLI, base-image, Debian, npm, and Linux arm64 pins on 2026-07-11.
 
 [runhaven]
-version = "0.5.0"
+version = "0.7.0"
 
 [rust]
-toolchain = "1.96.0"
+toolchain = "1.97.0"
 edition = "2024"
-anyhow = "1.0.102"
+anyhow = "1.0.103"
 base64 = "0.22.1"
 clap = "4.6.1"
 idna = "1.1.0"
 image = "0.25.10"
 ipnet = "2.12.0"
-log = "0.4.32"
+log = "0.4.33"
 ratatui = "0.30.2"
 regex = "1.12.4"
 schemars = "0.8.22"
 secrecy = "0.10.3"
-security-framework = "3.5.1"
+signal-hook = "0.4.4"
 serde = "1.0.228"
 serde_json = "1.0.150"
 sha2 = "0.11.0"
@@ -32,24 +31,23 @@ unicode-width = "0.2.2"
 ureq = "3.3.0"
 url = "2.5.8"
 uuid = "1.23.3"
-zeroize = "1.9.0"
 insta = "1.48.0"
 pty-process = "0.5.3"
 tempfile = "3.27.0"
 vt100 = "0.16.2"
 
 [tauri]
-tauri = "2.11.3"
+tauri = "2.11.5"
 tauri-build = "2.6.3"
 tauri-plugin-dialog = "2.7.1"
 tauri-plugin-log = "2.8.0"
 tauri-plugin-window-state = "2.4.1"
-window-vibrancy = "0.6.0"
 
 [frontend]
+"@axe-core/playwright" = "4.12.1"
 "@playwright/test" = "1.61.1"
 "@tauri-apps/api" = "2.11.1"
-"@tauri-apps/cli" = "2.11.3"
+"@tauri-apps/cli" = "2.11.4"
 "@tauri-apps/plugin-dialog" = "2.7.1"
 "@tauri-apps/plugin-log" = "2.8.0"
 "@tailwindcss/vite" = "4.3.2"
@@ -74,9 +72,10 @@ vite = "8.1.0"
 vitest = "4.1.9"
 
 [apple_container]
-version = "1.0.0"
-commit = "ee848e3ebfd7c73b04dd419683be54fb450b8779"
-installer_sha256 = "13f45f26da94c354adcbefe1e8f7631e7f126e93c5d4dd6a5a538aa66b4f479d"
+version = "1.1.0"
+commit = "5973b9cc626a3e7a499bb316a958237ebe14e2ed"
+installer_url = "https://github.com/apple/container/releases/download/1.1.0/container-1.1.0-installer-signed.pkg"
+installer_sha256 = "0ca1c42a2269c2557efb1d82b1b38ac553e6a3a3da1b1179c439bcee1e7d6714"
 installer_team_id = "UPBK2H6LZM"
 
 [apple_container_runtime]
@@ -84,19 +83,19 @@ kata_release = "3.28.0"
 kernel = "vmlinux-6.18.15-186"
 kernel_sha256 = "2fe4a58d2885d623bcb4d705900ac8c1d4f02371152da8126b3b00c8c47fc3a1"
 builder_image = "ghcr.io/apple/container-builder-shim/builder:0.12.0"
-vminit_image = "ghcr.io/apple/containerization/vminit:0.33.3"
+vminit_image = "ghcr.io/apple/containerization/vminit:0.35.0"
 
 [container_images]
-debian_trixie_slim = { tag = "trixie-slim", digest = "sha256:4e401d95de7083948053197a9c3913343cd06b706bf15eb6a0c3ccd26f436a0e" }
-node_26_trixie_slim = { tag = "26.3.0-trixie-slim", digest = "sha256:95a34da32a840bd9b3b09a5b773591c16923e350174b1c50e1200c75bf15eaa9" }
+debian_trixie_slim = { tag = "trixie-slim", digest = "sha256:28de0877c2189802884ccd20f15ee41c203573bd87bb6b883f5f46362d24c5c2" }
+node_26_trixie_slim = { tag = "26.5.0-trixie-slim", digest = "sha256:ffc78385a788964bb3cbab5e434ff79a10bdc25b8ae6db03fe5fe6cb14053c09" }
 
 [node_runtime]
-npm = "11.17.0"
+npm = "12.0.1"
 
 [debian_snapshot]
-timestamp = "20260614T000000Z"
-debian_uri = "http://snapshot.debian.org/archive/debian/20260614T000000Z"
-security_uri = "http://snapshot.debian.org/archive/debian-security/20260614T000000Z"
+timestamp = "20260710T000000Z"
+debian_uri = "http://snapshot.debian.org/archive/debian/20260710T000000Z"
+security_uri = "http://snapshot.debian.org/archive/debian-security/20260710T000000Z"
 
 [debian_trixie_arm64]
 adduser = "3.152"
@@ -144,7 +143,7 @@ libreadline8t64 = "8.2-6"
 librtmp1 = "2.4+20151223.gitfa8646d.1-2+b5"
 libsasl2_2 = "2.1.28+dfsg1-9"
 libsasl2_modules_db = "2.1.28+dfsg1-9"
-libssh2_1t64 = "1.11.1-1"
+libssh2_1t64 = "1.11.1-1+deb13u1"
 libtasn1_6 = "4.20.0-2"
 libunistring5 = "1.3-2"
 media_types = "13.0.0"
@@ -163,17 +162,22 @@ zsh = "5.9-8+b23"
 zsh_common = "5.9-8"
 
 [agent_cli]
-claude_code = "2.1.190"
-codex = "0.142.0"
-gemini_cli = "0.47.0"
-antigravity_cli = "1.0.8"
-copilot_cli = "1.0.64"
-npm = "11.17.0"
+claude_code = "2.1.207"
+codex = "0.144.1"
+antigravity_cli = "1.1.1"
+copilot_cli = "1.0.70"
+npm = "12.0.1"
 
 [agent_cli_integrity]
-claude_code = "sha512-J+0teG/jcjkgCQryQWAg0eJm38fCFOMJ6YlsthXMFH1S+DnWtRpmMqTfXwus5amhDhTA/9T6vMtB3kUSwgsGnw=="
-codex = "sha512-c7WftbRyE4zOLJV5p73mcGn4jVK3FmK84Q65hrZrXboZzLPDWRfbFedCbsIjU4PJS/kvgyMPhv7dH4/nhXzUyg=="
-gemini_cli = "sha512-cg0Y3X2bwJD7lyjD6lodyR6VeNXDmzqC7JqjZKf6cYVIImIwdPX5ARgOewOnkEufb3MwZe9SRl4G49IfdEvCuQ=="
-antigravity_cli = "sha512-982b344defd2e63b08d4a9ef608a770aba3a92e9a4118d318e0082f29743457e8a16aaf1c00f7c3ade75c2d07aef5a8fa5da660e408cb199b47a8778b31228a0"
-copilot_cli = "sha512-Dch34NNBWjWlkEUxrC4CkDFunQs5cRmkEEO/PR6Lqj23zzwDwzJUxWA/6K28EokfoPhc9hLyPsCbS9rQ9v2TFA=="
-npm = "sha512-PurxiZexEHDTE4SSaLI3ZrnbAGiZfeyUcQcxcP5D+hfytNAze/D1IzDuInTn9XVLIbAQUnQuSPXJx02LHjLvQw=="
+claude_code = "sha512-30D3lGMO0iPmWnz6rCSHKd6d6gWtQ8CV2zKHHspEHZFyjDJsNOr2Xg6Kb/XEPsaFFu4BGIJz/7L6FQkcFq5cNA=="
+codex = "sha512-Xir1zqPfpenhdoAoshN53uonzbBXj18COyzRkFlVZpSNyEl5XtkuYu9oddELePFN7K/0sXUcSO34Ad5IeCXPbw=="
+antigravity_cli = "sha512-6d3d89c7b88d4e22e2eef937ce731345299657ac7a14236a93a5f9dce67eb7251845ccc9804b0ab1881125ff6165311ce73c6933c1376ec3b966659a94753e60"
+copilot_cli = "sha512-onEwx5tod9t31Lc2rT5ns6s/fY6jtdwVWS3Fzs8hKUjCv7LFIMGf71MLcikl4GBXn6cq44+HVdNzCMWnLjYl3g=="
+
+[agent_cli_source]
+antigravity_url = "https://storage.googleapis.com/antigravity-public/antigravity-cli/1.1.1-6269367663591424/linux-arm/cli_linux_arm64.tar.gz"
+
+[agent_cli_linux_arm64]
+claude = { package = "@anthropic-ai/claude-code-linux-arm64", version = "2.1.207", integrity = "sha512-Jmcvn8Sg8+FaPLOy9t4h7ip+K1i5YYrimT1+iZL1YHBTA44WHJ9H/F8DW3QKnVyqUGqEza9Tg5PPVjzhi5fwyg==" }
+codex = { package = "@openai/codex-linux-arm64", version = "0.144.1-linux-arm64", integrity = "sha512-451o15+XtaXCCb35t/KCyyPqXHnTPxPxtdqEYOnE3e4sH5AfnI/uVJwfdjOksMG6vRLy6R+fLvSDOMguRFLmQw==" }
+copilot = { package = "@github/copilot-linux-arm64", version = "1.0.70", integrity = "sha512-EpR3VEEqMy5M9t3cs+6FtjX/AhyfoefzmcMAjBls+RGv1fILjaAby+rhKHzX5YVSxOu9OyQDlQVHK3kxznTU5Q==" }

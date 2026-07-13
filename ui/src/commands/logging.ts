@@ -1,10 +1,9 @@
 import { debug, error, info, trace, warn } from "@tauri-apps/plugin-log";
 
-// Diagnostic log trail for the WebView, active in EVERY build (DEBUG detail in
-// dev, INFO and up in release; the level lives in src-tauri/src/lib.rs, capped
-// below TRACE on purpose so the in-process HTTP stack cannot wire-dump a token).
+// Development-only diagnostic log trail for the WebView. The release WebView
+// has no logging capability because it also owns the interactive terminal.
 // Everything here is write-only telemetry into the local app log file (main
-// window only, `logging` capability): the original console behavior is
+// development window only, `logging` capability): the original console behavior is
 // preserved, forwarding failures are swallowed so logging can never break or
 // loop the app, and no invoke payload, secret, or terminal PTY byte is ever
 // sent. The no-console source guard (ui/src/test/no-console-guard.test.ts)
@@ -75,7 +74,7 @@ export function traceInvoke(
   failure?: unknown,
   slow = false
 ): void {
-  if (!hasTauriRuntime() || UNTRACED_COMMANDS.has(command)) {
+  if (!import.meta.env.DEV || !hasTauriRuntime() || UNTRACED_COMMANDS.has(command)) {
     return;
   }
   const duration = durationMs.toFixed(1);
@@ -109,8 +108,8 @@ function forwardConsole(level: keyof typeof CONSOLE_SINKS): void {
 
 // Route console output, window errors, and stray promise rejections into the
 // app log file so every run leaves a reviewable trail without screenshots.
-// Called once at boot from main.tsx, main window only (the logging capability
-// does not reach monitor windows).
+// Called once in development from main.tsx, main window only (the logging
+// capability does not reach monitor windows or release builds).
 export function installDiagnosticLogging(): void {
   if (!hasTauriRuntime()) {
     return;

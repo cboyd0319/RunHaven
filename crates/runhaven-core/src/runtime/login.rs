@@ -16,7 +16,11 @@ use std::io::IsTerminal;
 
 use anyhow::{Result, bail};
 
-use crate::runtime::launch::launch_run_plan;
+use crate::provider::agent_sign_in_record::{
+    AGENT_SIGN_IN_SCOPE, record_agent_sign_in, record_agent_sign_out,
+};
+use crate::runtime::launch::{launch_run_plan_with_completion, new_run_id};
+use crate::runtime::lock::acquire_state_lock;
 use crate::runtime::plans::{
     AgentRunPlan, AuthScope, RunOptions, WorkspaceScope, build_run_plan, default_network_mode,
 };
@@ -42,53 +46,37 @@ pub fn supports_login(agent: &str) -> bool {
 
 /// Whether this agent has an in-sandbox login command. All four supported agents
 /// (claude, codex, copilot, antigravity) do. This is a core capability, not the
-/// desktop app's in-app sign-in: the app additionally excludes claude, whose
-/// login needs a code pasted back into the terminal, which the app's
-/// captured-output runner cannot host (see
-/// src-tauri/src/commands/agent_sign_in.rs).
+/// desktop-only exception; the app uses this same capability for its
+/// interactive sign-in terminal.
 pub fn supports_sandbox_login(agent: &str) -> bool {
     sandbox_login_command(agent).is_some()
 }
 
-/// Build the in-sandbox login run plan for an agent without running it, so a
-/// caller (the desktop app) can run the exact same login under its own
-/// output-capturing runner. The plan is capture-friendly (`tty` off) because the
-/// desktop app reads stdout/stderr through pipes rather than a terminal. Fails
-/// for an agent with no in-sandbox login command.
-pub fn build_sandbox_login_plan(agent: &str) -> Result<AgentRunPlan> {
-    let login_args = sandbox_login_command(agent)
-        .ok_or_else(|| anyhow::anyhow!("{agent} has no in-sandbox login; nothing was started"))?;
-    build_sandbox_login_run_plan(agent, login_args, false)
-}
-
 /// The command to run inside the sandbox to log in. Codex and Copilot have
-/// device-code login subcommands; Claude runs `claude auth login` (its default
-/// Claude.ai subscription flow); Antigravity (agy) has no login subcommand, so
-/// it runs the agent, which prompts a Google sign-in on first run.
+/// device-code login subcommands. Claude's wrapper runs `claude auth login`
+/// (its default Claude.ai subscription flow), then requires `claude auth status`
+/// to confirm readiness. Antigravity (agy) has no login subcommand, so its
+/// wrapper runs the agent, then confirms readiness with `agy models`.
 fn sandbox_login_command(agent: &str) -> Option<&'static [&'static str]> {
     match agent {
-        "claude" => Some(&["claude", "auth", "login"]),
+        "claude" => Some(&["runhaven-claude-login"]),
         "codex" => Some(&["codex", "login", "--device-auth"]),
         "copilot" => Some(&["copilot", "login"]),
-        "antigravity" => Some(&["agy"]),
+        "antigravity" => Some(&["runhaven-antigravity-login"]),
         _ => None,
     }
 }
 
 /// Build the in-sandbox login run plan for the desktop **terminal** login path:
 /// a TTY-on plan (the host-PTY terminal is a real terminal, so paste-back works)
-/// with a caller-supplied run id. Unlike [`build_sandbox_login_plan`] (TTY off,
-/// for the captured-output device-code runner), this is the interactive
-/// paste-back path the app hosts in an xterm terminal, so Claude's
-/// `claude auth login` code can be pasted back in-app. It is still run through
+/// with a caller-supplied run id. This is the interactive path the app hosts in
+/// an xterm terminal for every supported agent. It is still run through
 /// the normal provider launch path (proxy-enforced egress); only the stdio is a
 /// host PTY. Fails for an agent with no in-sandbox login command.
 pub fn build_sandbox_login_terminal_plan(agent: &str, run_id: &str) -> Result<AgentRunPlan> {
     let login_args = sandbox_login_command(agent)
         .ok_or_else(|| anyhow::anyhow!("{agent} has no in-sandbox login; nothing was started"))?;
-    let mut plan = build_sandbox_login_run_plan(agent, login_args, true)?;
-    plan.run_id = Some(run_id.to_string());
-    Ok(plan)
+    build_sandbox_login_run_plan(agent, login_args, true, run_id)
 }
 
 fn sandbox_login_guidance(agent: &str) -> &'static str {
@@ -122,15 +110,31 @@ pub fn logout(agent: &str) -> Result<i32> {
 }
 
 fn logout_shared_volume(agent: &str) -> Result<i32> {
+    logout_shared_volume_with(agent, delete_volume, || {
+        record_agent_sign_out(agent, AGENT_SIGN_IN_SCOPE)
+    })
+}
+
+fn logout_shared_volume_with(
+    agent: &str,
+    delete: impl FnOnce(&str) -> Result<VolumeDeletion>,
+    sign_out: impl FnOnce() -> Result<()>,
+) -> Result<i32> {
     let volume = shared_state_volume_name(agent);
+    // A launch/login using this state volume holds the same lock for its whole
+    // lifetime. Keep deletion and the matching secret-free sign-out marker in
+    // one locked critical section so clear cannot race a live credential write.
+    let _state_lock = acquire_state_lock(&volume)?;
     // Reuse the shared deletion path (existence check, in-use retry, no error on
     // a volume that was never created).
-    match delete_volume(&volume)? {
+    match delete(&volume)? {
         VolumeDeletion::Deleted => {
+            sign_out()?;
             eprintln!("Cleared the {agent} login (deleted the shared home volume {volume}).");
             Ok(0)
         }
         VolumeDeletion::Missing => {
+            sign_out()?;
             eprintln!("No {agent} login volume to clear ({volume}).");
             Ok(0)
         }
@@ -146,8 +150,9 @@ fn logout_shared_volume(agent: &str) -> Result<i32> {
 fn login_in_sandbox(agent: &str, login_args: &[&'static str], guidance: &str) -> Result<i32> {
     let tty = std::io::stdin().is_terminal() && std::io::stdout().is_terminal();
     eprintln!("{guidance}");
-    let plan = build_sandbox_login_run_plan(agent, login_args, tty)?;
-    launch_run_plan(&plan)
+    let run_id = new_run_id();
+    let plan = build_sandbox_login_run_plan(agent, login_args, tty, &run_id)?;
+    launch_run_plan_with_completion(&plan, || record_agent_sign_in(agent, AGENT_SIGN_IN_SCOPE))
 }
 
 /// Shared plan builder for an in-sandbox login. `tty` is on for the interactive
@@ -156,6 +161,7 @@ fn build_sandbox_login_run_plan(
     agent: &str,
     login_args: &[&'static str],
     tty: bool,
+    run_id: &str,
 ) -> Result<AgentRunPlan> {
     let profile = get_profile(agent)?;
     let network = default_network_mode(&profile);
@@ -181,7 +187,7 @@ fn build_sandbox_login_run_plan(
         provider_hosts: Vec::new(),
         claude_auth_source: None,
         worktree: None,
-        run_id: None,
+        run_id: Some(run_id.to_string()),
     })
 }
 
@@ -193,7 +199,7 @@ mod tests {
     fn sandbox_login_commands_invoke_each_cli_login() {
         assert_eq!(
             sandbox_login_command("claude"),
-            Some(&["claude", "auth", "login"][..])
+            Some(&["runhaven-claude-login"][..])
         );
         assert_eq!(
             sandbox_login_command("codex"),
@@ -203,7 +209,10 @@ mod tests {
             sandbox_login_command("copilot"),
             Some(&["copilot", "login"][..])
         );
-        assert_eq!(sandbox_login_command("antigravity"), Some(&["agy"][..]));
+        assert_eq!(
+            sandbox_login_command("antigravity"),
+            Some(&["runhaven-antigravity-login"][..])
+        );
         assert_eq!(sandbox_login_command("gemini"), None);
     }
 
@@ -230,7 +239,17 @@ mod tests {
             crate::provider::egress::EgressPolicy::new(&antigravity_hosts).expect("policy");
         assert!(policy.allows("daily-cloudcode-pa.googleapis.com", 443));
         assert!(policy.allows("us-cloudcode-pa.googleapis.com", 443));
-        assert!(!policy.allows("storage.googleapis.com", 443));
+        for denied in [
+            "storage.googleapis.com",
+            "antigravity-unleash.goog",
+            "lh3.googleusercontent.com",
+            "play.googleapis.com",
+            "playwright.azureedge.net",
+            "playwright-akamai.azureedge.net",
+            "playwright-verizon.azureedge.net",
+        ] {
+            assert!(!policy.allows(denied, 443), "{denied} must stay denied");
+        }
     }
 
     #[test]
@@ -251,59 +270,58 @@ mod tests {
     }
 
     #[test]
-    fn build_sandbox_login_plan_uses_the_login_command_and_refuses_unknown_agents() {
-        // Keep the login-workspace directory under a temp cache root, not the
-        // real user cache.
+    fn build_sandbox_login_terminal_plan_is_exact_tty_non_root_native_login() {
         let cache = tempfile::tempdir().expect("cache");
         let _cache_home = crate::support::paths::override_cache_root_for_tests(cache.path());
-        let plan = build_sandbox_login_plan("codex").expect("codex login plan");
-        // The plan runs the device-auth login inside the sandbox, never a raw
-        // host login, and carries no token or API-key broker.
-        assert!(plan.command.iter().any(|arg| arg == "codex"));
-        assert!(plan.command.iter().any(|arg| arg == "--device-auth"));
-        assert!(plan.claude_auth_source.is_none());
-        // Captured-output runner: no --tty is added to the run command.
-        assert!(!plan.command.iter().any(|arg| arg == "--tty"));
-        // Claude now has an in-sandbox login command, so a plan builds; the
-        // desktop app, not core, keeps claude out of in-app sign-in (its
-        // paste-back step).
-        assert!(build_sandbox_login_plan("claude").is_ok());
-        // An agent with no login command still fails closed.
-        assert!(build_sandbox_login_plan("unknown").is_err());
+        for (agent, expected) in [
+            ("claude", &["runhaven-claude-login"][..]),
+            ("codex", &["codex", "login", "--device-auth"][..]),
+            ("antigravity", &["runhaven-antigravity-login"][..]),
+            ("copilot", &["copilot", "login"][..]),
+        ] {
+            let plan = build_sandbox_login_terminal_plan(agent, &format!("login-{agent}"))
+                .unwrap_or_else(|error| panic!("{agent} plan: {error}"));
+            assert!(
+                plan.command
+                    .windows(expected.len())
+                    .any(|window| window == expected)
+            );
+            // A real terminal: the interactive-plus-TTY flags the captured-output
+            // plan omits are present here.
+            assert!(plan.command.iter().any(|arg| arg == "--interactive"));
+            assert!(plan.command.iter().any(|arg| arg == "--tty"));
+            // Always the non-root agent user; never root.
+            let user = plan
+                .command
+                .windows(2)
+                .find(|pair| pair[0] == "--user")
+                .map(|pair| pair[1].as_str());
+            assert_eq!(user, Some("agent"));
+            assert!(!plan.command.iter().any(|arg| arg == "root"));
+            // No token or API-key broker is ever injected.
+            assert!(plan.claude_auth_source.is_none());
+            // The caller's login id becomes the run id (the terminal session key).
+            assert_eq!(
+                plan.run_id.as_deref(),
+                Some(format!("login-{agent}").as_str())
+            );
+        }
+        // An agent with no in-sandbox login still fails closed.
+        assert!(build_sandbox_login_terminal_plan("unknown", "x").is_err());
     }
 
     #[test]
-    fn build_sandbox_login_terminal_plan_is_tty_non_root_claude_login() {
+    fn sandbox_login_resources_are_owned_by_the_supplied_run_id() {
         let cache = tempfile::tempdir().expect("cache");
         let _cache_home = crate::support::paths::override_cache_root_for_tests(cache.path());
-        let plan = build_sandbox_login_terminal_plan("claude", "login-seam")
-            .expect("claude terminal login plan");
-        // Runs `claude auth login` inside the sandbox, interactively, so the
-        // printed OAuth code can be pasted back in the host-PTY terminal.
-        assert!(plan.command.iter().any(|arg| arg == "claude"));
-        assert!(
-            plan.command
-                .windows(2)
-                .any(|pair| pair == ["auth", "login"])
-        );
-        // A real terminal: the interactive-plus-TTY flags the captured-output
-        // plan omits are present here.
-        assert!(plan.command.iter().any(|arg| arg == "--interactive"));
-        assert!(plan.command.iter().any(|arg| arg == "--tty"));
-        // Always the non-root agent user; never root.
-        let user = plan
-            .command
-            .windows(2)
-            .find(|pair| pair[0] == "--user")
-            .map(|pair| pair[1].as_str());
-        assert_eq!(user, Some("agent"));
-        assert!(!plan.command.iter().any(|arg| arg == "root"));
-        // No token or API-key broker is ever injected.
-        assert!(plan.claude_auth_source.is_none());
-        // The caller's login id becomes the run id (the terminal session key).
-        assert_eq!(plan.run_id.as_deref(), Some("login-seam"));
-        // An agent with no in-sandbox login still fails closed.
-        assert!(build_sandbox_login_terminal_plan("unknown", "x").is_err());
+
+        let alpha =
+            build_sandbox_login_terminal_plan("codex", "login-alpha").expect("alpha login plan");
+        let beta =
+            build_sandbox_login_terminal_plan("codex", "login-beta").expect("beta login plan");
+
+        assert_ne!(alpha.container_name, beta.container_name);
+        assert_ne!(alpha.network_name, beta.network_name);
     }
 
     #[test]
@@ -320,5 +338,64 @@ mod tests {
                 "{agent} should not support runhaven login"
             );
         }
+    }
+
+    #[test]
+    fn login_clear_refuses_to_delete_state_while_a_run_holds_the_volume_lock() {
+        use std::cell::Cell;
+
+        let cache = tempfile::tempdir().expect("cache");
+        let _cache_home = crate::support::paths::override_cache_root_for_tests(cache.path());
+        let volume = shared_state_volume_name("lock-probe");
+        let _held = crate::runtime::lock::acquire_state_lock(&volume).expect("hold state lock");
+        let deleted = Cell::new(false);
+        let signed_out = Cell::new(false);
+
+        let error = logout_shared_volume_with(
+            "lock-probe",
+            |_| {
+                deleted.set(true);
+                Ok(VolumeDeletion::Deleted)
+            },
+            || {
+                signed_out.set(true);
+                Ok(())
+            },
+        )
+        .expect_err("a busy shared state volume must not be deleted");
+
+        assert!(error.to_string().contains("already in use"));
+        assert!(!deleted.get(), "delete must stay behind the state lock");
+        assert!(
+            !signed_out.get(),
+            "sign-out must stay behind the state lock"
+        );
+    }
+
+    #[test]
+    fn login_clear_holds_the_lock_through_sign_out_then_releases_it() {
+        let cache = tempfile::tempdir().expect("cache");
+        let _cache_home = crate::support::paths::override_cache_root_for_tests(cache.path());
+        let volume = shared_state_volume_name("lock-probe");
+        let sign_out_volume = volume.clone();
+
+        assert_eq!(
+            logout_shared_volume_with(
+                "lock-probe",
+                |_| Ok(VolumeDeletion::Missing),
+                move || {
+                    assert!(
+                        crate::runtime::lock::acquire_state_lock(&sign_out_volume).is_err(),
+                        "sign-out must complete before the shared-volume lock is released"
+                    );
+                    Ok(())
+                },
+            )
+            .expect("clear"),
+            0
+        );
+
+        crate::runtime::lock::acquire_state_lock(&volume)
+            .expect("clear releases the lock when complete");
     }
 }

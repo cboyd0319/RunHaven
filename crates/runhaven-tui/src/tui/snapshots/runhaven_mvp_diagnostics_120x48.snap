@@ -10,7 +10,7 @@ expression: rendered
   Preflight
   ok  1 check passed
   fix  Apple container CLI  not found on PATH
-      Install Apple container 1.0.0 and run `container system start`.
+      Install Apple container 1.1.0 and run `container system start`.
 
   Auth        ready
   Runtime     runhaven isolated login state

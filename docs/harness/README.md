@@ -26,7 +26,7 @@ names:
 
 | Template Concept | RunHaven Owner |
 | --- | --- |
-| Root router and repo-local skills | `AGENTS.md`, `.agents/skills/`, with thin `CLAUDE.md`, `GEMINI.md`, and Copilot shims |
+| Root router and repo-local skills | `AGENTS.md`, `.agents/skills/`, with thin Claude and Copilot shims |
 | Architecture map | `docs/ARCHITECTURE.md`, `boundaries/component-inventory.md`, `state/modularization-plan.md` |
 | Product behavior | `README.md`, `docs/USAGE.md`, `docs/CAPABILITIES.md`, `docs/ROADMAP.md`, `docs/plans/` |
 | Security rules | `docs/SECURITY_MODEL.md`, `boundaries/security-boundary-map.md`, `boundaries/change-contract.md` |

@@ -2,7 +2,7 @@ use super::*;
 use crate::runtime::plans::{
     AgentRunPlan, AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
 };
-use crate::runtime::profiles::{get_profile, profiles};
+use crate::runtime::profiles::get_profile;
 
 fn test_plan(network: NetworkMode) -> AgentRunPlan {
     let workspace = tempfile::tempdir().expect("workspace");
@@ -44,6 +44,7 @@ mod helpers;
 mod launch;
 mod payload;
 mod review;
+mod session_auth;
 mod session_cleanup;
 mod session_recovery;
 mod sessions;

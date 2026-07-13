@@ -52,7 +52,7 @@ fn menu_bar_has_the_eight_spec_menus_in_order() {
     assert_eq!(
         labels,
         [
-            "RunHaven", "File", "Edit", "View", "Session", "Agent", "Window", "Help"
+            "RunHaven", "File", "Edit", "View", "Run", "Agent", "Window", "Help"
         ]
     );
 }

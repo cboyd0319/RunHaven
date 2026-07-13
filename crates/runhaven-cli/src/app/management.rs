@@ -1,10 +1,9 @@
-use std::process::Command;
-
 use anyhow::Result;
 
 use super::run_plan::workspace_scope;
 use crate::args::{ImageCommand, NetworkCommand, RunsCommand, StateCommand};
 use runhaven_core::diagnostics::{read_auth_broker_log, read_egress_policy_log};
+use runhaven_core::doctor::require_supported_runtime;
 use runhaven_core::image::build::build_image_plan;
 use runhaven_core::image::doctor as image_doctor;
 use runhaven_core::records::{runs_diff, runs_list, runs_log, runs_show};
@@ -32,12 +31,14 @@ pub(super) fn image_command(command: ImageCommand) -> Result<i32> {
                 println!("{}", plan.shell_command());
                 return Ok(0);
             }
-            require_container_cli()?;
-            Ok(Command::new(&plan.command[0])
-                .args(&plan.command[1..])
-                .status()?
-                .code()
-                .unwrap_or(1))
+            require_supported_runtime()?;
+            Ok(
+                runhaven_core::apple_container::command_for_program(&plan.command[0])?
+                    .args(&plan.command[1..])
+                    .status()?
+                    .code()
+                    .unwrap_or(1),
+            )
         }
     }
 }
@@ -118,7 +119,7 @@ fn state_reset(
         return Ok(2);
     }
     require_container_cli()?;
-    match runtime_state::delete_volume(&plan.state_volume)? {
+    match runtime_state::delete_volume_with_state_lock(&plan.state_volume)? {
         runtime_state::VolumeDeletion::Deleted => {
             println!("Deleted state volume: {}", plan.state_volume);
             Ok(0)

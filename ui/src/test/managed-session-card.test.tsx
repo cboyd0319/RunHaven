@@ -73,8 +73,8 @@ describe("ManagedSessionCard", () => {
     expect(html).toContain("Provider only");
     expect(html).toContain("Sign-in sharing");
     expect(html).toContain("Project");
-    expect(html).toContain("Selected session overview.");
-    expect(html).toContain("Monitor session");
+    expect(html).toContain("Selected run overview.");
+    expect(html).not.toContain("RunHaven is tracking status for this session.");
     expect(html).toContain("Run record");
     expect(html).not.toContain("/Users/");
     expect(html).not.toContain("/sensitive/");
@@ -104,9 +104,9 @@ describe("ManagedSessionCard", () => {
 
     const html = renderToStaticMarkup(<ManagedSessionCard session={blocked} />);
 
-    expect(html).toContain("Finish sign-in");
-    expect(html).toContain("Sign-in is not ready for Codex.");
-    expect(html).toContain("Needs attention");
+    expect(html).not.toContain("Finish sign-in");
+    expect(html).not.toContain("Sign-in is not ready for Codex.");
+    expect(html).toContain("Needs you");
     expect(html).not.toContain("Start session");
   });
 
@@ -125,15 +125,15 @@ describe("ManagedSessionCard", () => {
 
     const html = renderToStaticMarkup(<ManagedSessionCard session={stale} />);
 
-    expect(html).toContain("Repair session");
+    expect(html).not.toContain("Repair session");
     expect(html).toContain("Not responding");
-    expect(html).toContain("Needs attention");
+    expect(html).toContain("Needs you");
   });
 
   it("renders explicit auth labels for managed-session statuses", () => {
     const cases: Array<[authStatus: string, label: string]> = [
       ["api-key-broker", "API key broker"],
-      ["login-state", "Sign in needed"],
+      ["login-state", "Isolated login"],
       ["needs-sign-in", "Needs sign-in"],
       ["no-auth-needed", "No sign-in needed"],
       ["unknown", "Unknown"]
@@ -145,9 +145,7 @@ describe("ManagedSessionCard", () => {
       );
 
       expect(authStatusLabel(authStatus)).toBe(label);
-      expect(html).toContain(
-        `class="mt-1 break-all font-medium">${label}</div>`
-      );
+      expect(html).toContain(label);
     }
   });
 

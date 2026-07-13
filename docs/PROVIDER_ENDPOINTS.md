@@ -49,7 +49,6 @@ denied. Patterns are curated by maintainers, not entered by users.
 | --- | --- | --- | --- |
 | `claude` | `api.anthropic.com`, `claude.ai`, `platform.claude.com` | Claude API requests, WebFetch domain safety checks, Claude account auth, and Anthropic Console auth. | Anthropic Claude Code network configuration. |
 | `codex` | `api.openai.com`, `chatgpt.com`, `auth.openai.com` | OpenAI API traffic, Codex network-policy examples, ChatGPT sign-in, Codex web surface, the standalone installer host, and Codex device-code login plus token refresh (`auth.openai.com`). | OpenAI Codex auth, CLI, approvals/security, and permissions docs. |
-| `gemini` | `generativelanguage.googleapis.com` | Gemini API-key model traffic. | Gemini CLI authentication docs. |
 | `antigravity` | `oauth2.googleapis.com`, `www.googleapis.com`, `cloudcode-pa.googleapis.com`, `*-cloudcode-pa.googleapis.com` | Google OAuth token exchange and refresh, Google userinfo, and the Cloud Code backend and model-endpoint family used by the `agy` login and runtime. The `*-cloudcode-pa.googleapis.com` family covers the channel/region prefix the model call uses. | RunHaven egress ledger, observed live 2026-06-26. |
 | `copilot` | `api.githubcopilot.com`, `individual.githubcopilot.com`, `business.githubcopilot.com`, `enterprise.githubcopilot.com`, `githubcopilot.com`, `copilot-proxy.githubusercontent.com`, `origin-tracker.githubusercontent.com`, `github.com`, `api.github.com` | Copilot suggestion API and subscription-based Copilot routing, plus the GitHub device-flow login (`github.com`) and token exchange (`api.github.com`) for `runhaven login copilot`. | GitHub Copilot allowlist and subscription-routing docs. |
 
@@ -69,13 +68,13 @@ redirect (`antigravity.google`) happen in the host browser during
 | `claude` | `downloads.claude.ai` | optional | Claude Code plugin executable downloads, native installer, and native updater. | RunHaven installs pinned npm packages into images. Runtime updater hosts should stay explicit. |
 | `claude` | `raw.githubusercontent.com` | optional | Changelog feed, release notes, and plugin marketplace install counts. | GitHub raw content is broader than model/auth traffic. |
 | `claude` | `bridge.claudeusercontent.com` | optional | Claude in Chrome extension bridge. | Not needed for normal CLI runs. |
-| `gemini` | `accounts.google.com` | candidate | Browser-based Google account sign-in. | The documented flow uses a browser and localhost callback; live container smoke is still needed. |
-| `gemini` | `aiplatform.googleapis.com` | candidate | Vertex AI mode. | Vertex projects have organization-specific controls and should be explicit. |
-| `gemini` | `cloudcode-pa.googleapis.com` | candidate | Gemini Code Assist path observed in public Gemini CLI error reports. | Issue evidence is weaker than a vendor allowlist. |
 | `antigravity` | `storage.googleapis.com` | build | Pinned Antigravity CLI archive download during image build. | Build-time only in the current image template; also a data-egress host kept out of the runtime allowlist. |
 | `antigravity` | `accounts.google.com` | browser-side | Google account sign-in consent during `runhaven login antigravity`. | The consent runs in the host browser, not the guest, so it is not needed inside the container. |
 | `antigravity` | `antigravity.google` | browser-side | OAuth redirect target during `runhaven login antigravity`. | The redirect lands in the host browser, not the guest. |
 | `antigravity` | `lh3.googleusercontent.com` | optional | Profile picture for the `agy` eligibility check. | Cosmetic; a blocked fetch only prints an "Eligibility check failed" line and the agent still works. Add with `--provider-host` to silence it. |
+| `antigravity` | `antigravity-unleash.goog` | optional | Feature-flag checks. | Live sign-in and the authenticated `agy models` readiness check succeeded while this host stayed denied. |
+| `antigravity` | `play.googleapis.com` | optional | Client telemetry. | Telemetry is not required for sign-in or model readiness. |
+| `antigravity` | `playwright*.azureedge.net` | optional | Browser binary downloads for optional browser tooling. | RunHaven does not download browser binaries during agent sign-in or the readiness check. |
 | `copilot` | `collector.github.com` | optional | GitHub analytics telemetry. | Telemetry is not bundled. |
 | `copilot` | `copilot-telemetry.githubusercontent.com` | optional | Copilot client telemetry. | Telemetry is not bundled. |
 | `copilot` | `default.exp-tas.com` | optional | Copilot client experimentation. | Experimentation is not required for a secure default. |
@@ -112,10 +111,6 @@ step; the signed auto-updating policy is not built yet.
   <https://developers.openai.com/codex/agent-approvals-security>
 - OpenAI Codex permissions:
   <https://developers.openai.com/codex/permissions>
-- Gemini CLI authentication:
-  <https://google-gemini.github.io/gemini-cli/docs/get-started/authentication.html>
-- Gemini CLI configuration:
-  <https://google-gemini.github.io/gemini-cli/docs/get-started/configuration.html>
 - GitHub Copilot allowlist reference:
   <https://docs.github.com/en/copilot/reference/copilot-allowlist-reference>
 - GitHub Copilot subscription routing:

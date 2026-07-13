@@ -19,7 +19,7 @@ function imageStatus(ready: boolean): ImageStatusResponse {
     agent: "codex",
     image: {
       agent: "codex",
-      image: "runhaven/codex:0.1.0",
+      image: "runhaven/codex:0.7.0",
       status: ready ? "ready" : "missing",
       ready,
       expectedSourceDigest: "sha256:expected",
@@ -45,6 +45,18 @@ beforeEach(() => {
 })
 
 describe("useAgentImageStatus", () => {
+  it("does not query image state before setup is ready", async () => {
+    getImage.mockResolvedValue(imageStatus(false))
+    const hook = await renderHook(
+      () => useAgentImageStatus("codex", 0, false),
+      undefined,
+    )
+
+    expect(getImage).not.toHaveBeenCalled()
+    expect(hook.result.current.loading).toBe(false)
+    await hook.unmount()
+  })
+
   it("reads image status on mount and re-reads when the reload key bumps", async () => {
     getImage.mockResolvedValueOnce(imageStatus(false))
     const hook = await renderHook(

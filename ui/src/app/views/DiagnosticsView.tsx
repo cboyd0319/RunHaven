@@ -40,7 +40,10 @@ export function DiagnosticsView({
   // Read-only system panels (health rollup, versions, image matrix, stale
   // networks) built from existing commands. The hook loads on entry and
   // reloads when the agent set changes; Check again reloads it too.
-  const readModels = useDiagnosticsReadModels(dashboard?.agents ?? [])
+  const readModels = useDiagnosticsReadModels(
+    dashboard?.agents ?? [],
+    dashboard?.setup.ok === true,
+  )
   // Load on entry, once per visit. Background polls never remount this view,
   // so quiet refresh stays quiet; re-entering the destination reloads.
   useEffect(() => {

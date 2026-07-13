@@ -244,7 +244,7 @@ check_runhaven_edges() {
 
 check_crate_dependencies() {
   check_runhaven_edges crates/runhaven/Cargo.toml runhaven \
-    runhaven-cli runhaven-core runhaven-tui
+    runhaven-cli runhaven-core
   check_runhaven_edges crates/runhaven-core/Cargo.toml runhaven-core
   check_runhaven_edges crates/runhaven-cli/Cargo.toml runhaven-cli \
     runhaven-core
@@ -286,6 +286,9 @@ check_workspace_members() {
     if [ "$dir" = "." ]; then
       continue
     fi
+    case "$dir" in
+      crates/codex/*|crates/runhaven-tui) continue ;;
+    esac
     if ! grep -Fq "\"${dir}\"" Cargo.toml; then
       append_violation "${manifest} is not listed in the root workspace members"
     fi

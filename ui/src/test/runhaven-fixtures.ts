@@ -3,7 +3,7 @@ import type { AgentProfile } from "../commands/runhaven";
 export const providerAgent: AgentProfile = {
   name: "codex",
   description: "Codex",
-  image: "runhaven/codex:0.1.0",
+  image: "runhaven/codex:0.7.0",
   defaultCommand: ["codex"],
   providerHosts: ["api.openai.com"],
   signIn: "runhaven login",
@@ -14,7 +14,7 @@ export const providerAgent: AgentProfile = {
 export const localAgent: AgentProfile = {
   name: "shell",
   description: "Shell",
-  image: "runhaven/base:0.1.0",
+  image: "runhaven/base:0.7.0",
   defaultCommand: ["/bin/bash"],
   providerHosts: [],
   signIn: "n/a",

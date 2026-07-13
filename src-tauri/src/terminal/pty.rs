@@ -19,7 +19,8 @@ use std::thread;
 use runhaven_core::runtime::active::GuiAttachPlan;
 use runhaven_core::runtime::plans::AgentRunPlan;
 use runhaven_core::runtime::terminal::{
-    GuiPtySession, open_gui_attach_pty, open_gui_login_pty, open_gui_run_pty,
+    GuiPtySession, STATE_VOLUME_IN_USE_TERMINAL_ERROR, open_gui_attach_pty, open_gui_login_pty,
+    open_gui_run_pty,
 };
 use tauri::ipc::Channel;
 
@@ -61,28 +62,39 @@ pub(super) fn spawn_pty_terminal(
     channel: Channel<TerminalMessage>,
 ) -> Result<SpawnedTerminal, String> {
     let session = open_gui_attach_pty(plan).map_err(|error| error.to_string())?;
-    Ok(spawned_from_session(session, channel))
+    Ok(spawned_from_session(session, channel, None))
 }
 
-/// Open a host-PTY-wrapped Claude **login** terminal in core and wire the same
-/// reader/handle glue as an attach. Core runs the real provider login (proxy-
-/// enforced egress) with the child's stdio on a host PTY so `claude auth login`
-/// can read the pasted code; the target is fixed to Claude in core, never taken
-/// from the WebView. On failure the core error is collapsed to a fixed message
-/// (it can name host paths) so the WebView keeps its terminal fallback text.
+/// Open a host-PTY-wrapped native **login** terminal in core and wire the same
+/// reader/handle glue as an attach. Core selects the exact provider command and
+/// runs it with proxy-enforced egress, non-root execution, and a host PTY. On
+/// failure, expose the one fixed recovery message core explicitly marks safe;
+/// collapse every other core error because it can name host paths.
 pub(super) fn spawn_login_terminal(
+    agent: &str,
     login_id: &str,
     channel: Channel<TerminalMessage>,
 ) -> Result<SpawnedTerminal, String> {
-    let session = open_gui_login_pty("claude", login_id)
-        .map_err(|_| "RunHaven could not open the Claude sign-in terminal.".to_string())?;
-    Ok(spawned_from_session(session, channel))
+    let session = open_gui_login_pty(agent, login_id)
+        .map_err(|error| login_open_error_message(&error.to_string()))?;
+    Ok(spawned_from_session(
+        session,
+        channel,
+        Some(agent.to_string()),
+    ))
+}
+
+fn login_open_error_message(error: &str) -> String {
+    if error == STATE_VOLUME_IN_USE_TERMINAL_ERROR {
+        return STATE_VOLUME_IN_USE_TERMINAL_ERROR.to_string();
+    }
+    "RunHaven could not open the sign-in terminal.".to_string()
 }
 
 /// Open a host-PTY-wrapped interactive **agent run** in core and wire the same
 /// reader/handle glue as an attach/login. Core runs the finalized run plan through
 /// the real provider launch path (proxy-enforced egress, non-root `agent` user,
-/// read-only rootfs, cap-drop, workspace mount, and the Keychain OAuth broker),
+/// read-only rootfs, cap-drop, workspace mount, and any explicit API-key broker),
 /// with the child's stdio on a host PTY so the agent's interactive TUI can be
 /// typed in-app; the plan already carries `--interactive --tty`. On failure the
 /// core error is collapsed to a fixed message (it can name host paths) so the
@@ -94,7 +106,7 @@ pub(super) fn spawn_run_terminal(
 ) -> Result<SpawnedTerminal, String> {
     let session = open_gui_run_pty(plan, run_label)
         .map_err(|_| "RunHaven could not open the run terminal.".to_string())?;
-    Ok(spawned_from_session(session, channel))
+    Ok(spawned_from_session(session, channel, None))
 }
 
 /// Build the registry control handle and the output-reader one-shot for a live
@@ -103,6 +115,7 @@ pub(super) fn spawn_run_terminal(
 fn spawned_from_session(
     session: GuiPtySession,
     channel: Channel<TerminalMessage>,
+    sign_in_agent: Option<String>,
 ) -> SpawnedTerminal {
     let handle: Arc<dyn TerminalHandle> = Arc::new(PtyTerminal {
         session: session.clone(),
@@ -114,12 +127,19 @@ fn spawned_from_session(
     // session registered and cap-consuming; `register_and_stream` removes the
     // entry and kills the child. (Returning the error also keeps this module
     // free of any logging sink, per the no-persist/no-log invariant.)
-    let start_reader: ReaderStart = Box::new(move |registry, session_id| {
+    let start_reader: ReaderStart = Box::new(move |registry, session_id, generation| {
         let thread_name = format!("runhaven-terminal-{session_id}");
         thread::Builder::new()
             .name(thread_name)
             .spawn(move || {
-                stream_pty_output(reader_session, channel, registry, session_id);
+                stream_pty_output(
+                    reader_session,
+                    channel,
+                    registry,
+                    session_id,
+                    generation,
+                    sign_in_agent,
+                );
             })
             .map(|_| ())
             .map_err(|error| format!("could not start the terminal: {error}"))
@@ -133,9 +153,10 @@ fn spawned_from_session(
 
 /// Read the PTY master in bounded chunks and relay each chunk to the frontend
 /// over `channel`. On EOF (the child exited, or on macOS an `EIO` once the slave
-/// closes) it reaps the child for an exit code, sends a final `Exit`, and clears
-/// the registry entry. It writes nothing to disk or any registry other than
-/// removing its own entry (no-persist invariant).
+/// closes) it reaps the child for an exit code, waits for any detached launch
+/// cleanup/recording, sends a final `Exit`, and clears the registry entry. It
+/// writes nothing to disk or any registry other than removing its own entry
+/// (no-persist invariant).
 ///
 /// Channel death is a teardown trigger, not just a loop exit. If a `send` fails
 /// the WebView is gone (the view unmounted/navigated without calling
@@ -150,6 +171,8 @@ fn stream_pty_output(
     channel: Channel<TerminalMessage>,
     registry: TerminalSessionRegistry,
     session_id: String,
+    generation: u64,
+    sign_in_agent: Option<String>,
 ) {
     let mut buffer = [0_u8; READ_CHUNK_BYTES];
     let mut channel_alive = true;
@@ -179,6 +202,66 @@ fn stream_pty_output(
     } else {
         session.kill_and_reap()
     };
-    let _ = channel.send(TerminalMessage::Exit { code });
-    let _ = registry.remove(&session_id);
+    // A zero child code is not enough: provider cleanup, run recording, and
+    // login-status publication happen after the child exits. Core reports only
+    // a path-free success/failure bit after that entire lifecycle completes.
+    let lifecycle_succeeded = if channel_alive {
+        session.wait_for_launch_completion()
+    } else {
+        session.wait_for_launch_completion_bounded()
+    };
+    let completion_recorded =
+        sign_in_completion_recorded(code, sign_in_agent.as_deref(), lifecycle_succeeded);
+    let _ = channel.send(TerminalMessage::Exit {
+        code,
+        completion_recorded,
+    });
+    let _ = registry.remove_if_generation(&session_id, generation);
+}
+
+fn sign_in_completion_recorded(
+    code: i32,
+    agent: Option<&str>,
+    lifecycle_succeeded: Option<bool>,
+) -> Option<bool> {
+    if code != 0 {
+        return None;
+    }
+    agent.map(|_| lifecycle_succeeded.unwrap_or(false))
+}
+
+#[cfg(test)]
+mod tests {
+    use runhaven_core::runtime::terminal::STATE_VOLUME_IN_USE_TERMINAL_ERROR;
+
+    use super::{login_open_error_message, sign_in_completion_recorded};
+
+    #[test]
+    fn login_open_exposes_only_the_fixed_state_conflict_message() {
+        assert_eq!(
+            login_open_error_message(STATE_VOLUME_IN_USE_TERMINAL_ERROR),
+            STATE_VOLUME_IN_USE_TERMINAL_ERROR
+        );
+        assert_eq!(
+            login_open_error_message("could not mount /Users/private/workspace"),
+            "RunHaven could not open the sign-in terminal."
+        );
+    }
+
+    #[test]
+    fn completion_record_reports_success_failure_and_non_login_exit() {
+        assert_eq!(
+            sign_in_completion_recorded(0, Some("codex"), Some(true)),
+            Some(true),
+        );
+        assert_eq!(
+            sign_in_completion_recorded(0, Some("codex"), Some(false)),
+            Some(false),
+        );
+        assert_eq!(
+            sign_in_completion_recorded(1, Some("codex"), Some(true)),
+            None
+        );
+        assert_eq!(sign_in_completion_recorded(0, None, Some(true)), None);
+    }
 }

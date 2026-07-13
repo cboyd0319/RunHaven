@@ -6,12 +6,12 @@ Users are trusting this project with personal machines, personal files, and
 developer credentials. Security-sensitive behavior must fail closed when it
 cannot verify a boundary. Do not hide risk behind friendly wording.
 
-RunHaven remains alpha/pre-release until after the `v0.5.0` CLI-complete
-milestone. Treat the CLI as the current product surface. Per the 2026-06-26
-directive, all GUI/UI work (the Tauri desktop app and a terminal UI) is deferred
-to the very end of the roadmap; near-term work is runtime/security hardening of
-the Apple `container` boundary, the remaining non-UI product scope, and a
-CLI-based public release.
+RunHaven remains alpha/pre-release. The CLI is the complete technical surface,
+and the Tauri desktop app is the primary easy path for nontechnical users. The
+`v0.7.0` source is a limited coworker-test candidate, not a public desktop
+release until signed, notarized, and clean-Mac tested. The terminal UI and
+vendored Codex source are archived outside the active workspace and must not be
+reopened without an explicit product decision and fresh security review.
 
 RunHaven only supports macOS 26+ on Apple silicon. Do not add Windows or Linux
 runtime or contributor-verification surfaces.

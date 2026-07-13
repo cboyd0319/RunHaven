@@ -9,8 +9,6 @@ import {
   previewImageStatus,
   previewImageBuildStart,
   previewImageBuildStatus,
-  previewAgentSignInStart,
-  previewAgentSignInStatus,
   previewNetworkPrunePreview,
   previewNetworkPrune,
   previewLaunchStatus,
@@ -37,6 +35,8 @@ import type {
   AuthLogResponse,
   AuthStatusResponse,
   DashboardStatus,
+  SetupActionId,
+  SetupRecoveryResponse,
   EgressLogResponse,
   HostExplanationResponse,
   ImageStatusResponse,
@@ -68,8 +68,6 @@ import type {
   WriteSessionInputResponse
 } from "./types";
 import type {
-  AgentSignInStartResponse,
-  AgentSignInStatusResponse,
   ImageBuildStartResponse,
   ImageBuildStatusResponse,
   NetworkPrunePreview,
@@ -104,9 +102,23 @@ export async function call<T>(command: string, args: Record<string, unknown>, fa
     throw failure;
   }
 }
-
 export async function getDashboardStatus(): Promise<DashboardStatus> {
   return call("get_dashboard_status", {}, previewDashboardStatus);
+}
+
+export async function performSetupRecovery(
+  actionId: SetupActionId
+): Promise<SetupRecoveryResponse> {
+  return call(
+    "perform_setup_recovery",
+    { request: { actionId } },
+    () => ({
+      actionId,
+      status: "preview",
+      label: "Desktop app required",
+      detail: "Open RunHaven on your Mac to repair setup."
+    })
+  );
 }
 
 export async function getImageStatus(agent: string): Promise<ImageStatusResponse> {
@@ -126,24 +138,6 @@ export async function getImageBuildStatus(buildId: string): Promise<ImageBuildSt
     "get_image_build_status",
     { request: { buildId } },
     () => previewImageBuildStatus(buildId)
-  );
-}
-
-export async function startAgentSignIn(agent: string): Promise<AgentSignInStartResponse> {
-  return call(
-    "start_agent_sign_in",
-    { request: { agent, confirm: true } },
-    () => previewAgentSignInStart(agent)
-  );
-}
-
-export async function getAgentSignInStatus(
-  signInId: string
-): Promise<AgentSignInStatusResponse> {
-  return call(
-    "get_agent_sign_in_status",
-    { request: { signInId } },
-    () => previewAgentSignInStatus(signInId)
   );
 }
 

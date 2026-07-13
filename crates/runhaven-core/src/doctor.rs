@@ -1,8 +1,12 @@
 use std::process::Command;
 
+use anyhow::{Result, bail};
+
+use crate::apple_container;
+
 mod runtime_pins;
 
-pub const PINNED_APPLE_CONTAINER_VERSION: &str = "1.0.0";
+pub const PINNED_APPLE_CONTAINER_VERSION: &str = "1.1.0";
 
 #[derive(Clone, Debug)]
 pub struct Check {
@@ -29,7 +33,7 @@ pub fn collect_checks() -> Vec<Check> {
         "rust",
         true,
         rust_version(),
-        "Use the pinned Rust 1.96.0 toolchain.",
+        "Use the pinned Rust 1.97.0 toolchain.",
     ));
     let os = run_capture("uname", &["-s"]).unwrap_or_else(|| "unknown".to_string());
     checks.push(Check::new(
@@ -53,7 +57,7 @@ pub fn collect_checks() -> Vec<Check> {
         machine.trim(),
         "Use an Apple silicon Mac.",
     ));
-    let container_path = find_on_path("container");
+    let container_path = apple_container::resolve_program().map(|path| path.display().to_string());
     checks.push(Check::new(
         "Apple container CLI",
         container_path.is_some(),
@@ -61,7 +65,7 @@ pub fn collect_checks() -> Vec<Check> {
             .as_deref()
             .unwrap_or("not found on PATH")
             .to_string(),
-        "Install Apple container 1.0.0 and run `container system start`.",
+        "In the desktop app, choose Download Apple container. For the CLI, install Apple's signed 1.1.0 package, then run `container system start`.",
     ));
     if container_path.is_some() {
         checks.push(container_version_check());
@@ -71,12 +75,32 @@ pub fn collect_checks() -> Vec<Check> {
     checks
 }
 
+/// Recheck the supported host and pinned Apple container runtime immediately
+/// before a real launch or image mutation. This is read-only and deliberately
+/// does not cache safety-critical runtime state across operations.
+pub fn require_supported_runtime() -> Result<()> {
+    supported_runtime_result(&collect_checks())
+}
+
+fn supported_runtime_result(checks: &[Check]) -> Result<()> {
+    let Some(failed) = checks.iter().find(|check| !check.ok) else {
+        return Ok(());
+    };
+    bail!(
+        "RunHaven cannot start this operation because the supported runtime check failed: {}. {} Run `runhaven doctor` for all checks.",
+        failed.name,
+        failed.remedy
+    )
+}
+
 pub fn parse_major_version(value: &str) -> Option<u32> {
     value.split('.').next()?.parse().ok()
 }
 
 pub fn container_version_check() -> Check {
-    match Command::new("container").arg("--version").output() {
+    match apple_container::command()
+        .and_then(|mut command| Ok(command.arg("--version").output()?))
+    {
         Ok(output) => {
             let text = if output.stdout.is_empty() {
                 &output.stderr
@@ -84,7 +108,7 @@ pub fn container_version_check() -> Check {
                 &output.stdout
             };
             let detail = String::from_utf8_lossy(text).trim().to_string();
-            let version = parse_container_version(&detail);
+            let version = parse_container_cli_version(&detail);
             Check::new(
                 "Apple container version",
                 output.status.success()
@@ -97,7 +121,7 @@ pub fn container_version_check() -> Check {
                         detail
                     }
                 ),
-                "Install the reviewed Apple container 1.0.0 release.",
+                "Install Apple's signed Apple container 1.1.0 package, then check again.",
             )
         }
         Err(error) => Check::new(
@@ -116,10 +140,17 @@ pub fn parse_container_version(value: &str) -> Option<String> {
         .map(|m| m.as_str().to_string())
 }
 
+pub fn parse_container_cli_version(value: &str) -> Option<String> {
+    let re =
+        regex::Regex::new(r"^container CLI version (\d+\.\d+\.\d+)(?: \([^\r\n]*\))?$").ok()?;
+    re.captures(value.trim())
+        .and_then(|captures| captures.get(1))
+        .map(|version| version.as_str().to_string())
+}
+
 pub fn container_status_check() -> Check {
-    match Command::new("container")
-        .args(["system", "status"])
-        .output()
+    match apple_container::command()
+        .and_then(|mut command| Ok(command.args(["system", "status"]).output()?))
     {
         Ok(output) => {
             let text = if output.stdout.is_empty() {
@@ -166,4 +197,51 @@ pub fn find_on_path(program: &str) -> Option<String> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn supported_runtime_result_is_plain_and_actionable() {
+        let checks = [Check::new(
+            "Apple container runtime commit",
+            false,
+            "raw host path and subprocess detail",
+            "Install the reviewed Apple container release.",
+        )];
+
+        let error = supported_runtime_result(&checks).expect_err("failed runtime check");
+        let message = error.to_string();
+
+        assert!(message.contains("Apple container runtime commit"));
+        assert!(message.contains("Install the reviewed Apple container release."));
+        assert!(message.contains("runhaven doctor"));
+        assert!(message.contains("cannot start this operation"));
+        assert!(!message.contains("raw host path"));
+    }
+
+    #[test]
+    fn supported_runtime_result_accepts_all_green_checks() {
+        let checks = [Check::new("container system", true, "running", "start it")];
+
+        supported_runtime_result(&checks).expect("supported runtime");
+    }
+
+    #[test]
+    fn cli_version_parser_accepts_only_apples_version_line() {
+        assert_eq!(
+            parse_container_cli_version(
+                "container CLI version 1.0.0 (build: release, commit: ee848e3)"
+            )
+            .as_deref(),
+            Some("1.0.0")
+        );
+        assert_eq!(
+            parse_container_cli_version("warning 9.9.9; container CLI version 1.0.0"),
+            None
+        );
+        assert_eq!(parse_container_cli_version("container 1.0.0"), None);
+    }
 }

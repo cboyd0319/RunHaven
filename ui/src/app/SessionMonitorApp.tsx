@@ -66,14 +66,14 @@ function MonitorBody({
     )
   }
   if (!monitor.sessionId || (!monitor.status && !monitor.gone && !monitor.pollError)) {
-    return <p className="text-sm text-muted-foreground">Loading session...</p>
+    return <p className="text-sm text-muted-foreground">Loading run...</p>
   }
   return (
     <>
       {monitor.gone ? (
         <Alert role="status">
           <CircleAlert />
-          <AlertTitle>This session is gone</AlertTitle>
+          <AlertTitle>This run is gone</AlertTitle>
           <AlertDescription>
             Its record was removed, so this view will not update anymore.
             Close this window when you are done (Cmd-W).

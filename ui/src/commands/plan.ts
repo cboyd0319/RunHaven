@@ -1,10 +1,14 @@
-import type { AgentProfile, PlanWarning, RunPlanRequest, RunPlanResponse } from "./types";
+import type {
+  AgentProfile,
+  PlanWarning,
+  RunPlanRequest,
+  RunPlanResponse
+} from "./types";
 
 let launchSessionSequence = 0;
 const apiKeyBrokerEnvByAgent: Record<string, string> = {
   claude: "ANTHROPIC_API_KEY",
-  codex: "OPENAI_API_KEY",
-  gemini: "GEMINI_API_KEY"
+  codex: "OPENAI_API_KEY"
 };
 
 // Pick the agent to preselect on first load. Prefer an agent that can sign in
@@ -63,7 +67,7 @@ export function defaultRunPlanRequest(agent: AgentProfile | undefined): RunPlanR
     allowSensitiveWorkspace: false,
     allowRootUser: false,
     user: "agent",
-    worktree: false
+    worktree: true
   };
 }
 
@@ -142,6 +146,12 @@ export function warningPreview(request: RunPlanRequest, context: WarningPreviewC
     warnings.push({
       code: "provider-host",
       message: "Additional provider hosts allow that host and its subdomains in provider-only mode."
+    });
+  }
+  if (!request.worktree && !request.readOnlyWorkspace) {
+    warnings.push({
+      code: "direct-workspace",
+      message: "Direct mode lets the agent change files in your original project folder. Use the recommended isolated copy unless you need direct access."
     });
   }
   return warnings;

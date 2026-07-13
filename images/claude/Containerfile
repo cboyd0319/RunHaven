@@ -1,6 +1,6 @@
 # Claude Code RunHaven image template.
 # Installs pinned OS packages, npm, Claude Code, and the non-root agent user.
-FROM node:26.3.0-trixie-slim@sha256:95a34da32a840bd9b3b09a5b773591c16923e350174b1c50e1200c75bf15eaa9
+FROM node:26.5.0-trixie-slim@sha256:ffc78385a788964bb3cbab5e434ff79a10bdc25b8ae6db03fe5fe6cb14053c09
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -9,12 +9,13 @@ COPY common/apt-snapshot.conf /etc/apt/apt.conf.d/99snapshot
 COPY common/debian-packages.txt /tmp/debian-packages.txt
 COPY common/create-agent-user.sh /usr/local/sbin/create-agent-user
 COPY claude/package.json claude/package-lock.json /opt/runhaven-agent/
+COPY claude/runhaven-claude-login /usr/local/bin/runhaven-claude-login
 
 RUN apt-get update \
     && xargs -a /tmp/debian-packages.txt apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* /tmp/debian-packages.txt
 
-RUN npm install -g npm@11.17.0 --no-audit --no-fund --ignore-scripts --allow-git=none --allow-file=none --allow-directory=none \
+RUN npm install -g npm@12.0.1 --no-audit --no-fund --ignore-scripts --allow-git=none --allow-file=none --allow-directory=none \
     && npm cache clean --force
 
 WORKDIR /opt/runhaven-agent
@@ -23,6 +24,7 @@ RUN npm ci --omit=dev --no-audit --no-fund --strict-allow-scripts=true --allow-g
     && npm cache clean --force
 
 RUN /bin/sh /usr/local/sbin/create-agent-user \
+    && chmod 0755 /usr/local/bin/runhaven-claude-login \
     && rm /usr/local/sbin/create-agent-user
 
 ENV HOME=/home/agent

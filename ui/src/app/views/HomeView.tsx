@@ -45,12 +45,12 @@ export function HomeView(props: MainViewProps) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <ReadinessLine {...props} />
+        {props.setupReady ? <ReadinessLine {...props} /> : <span />}
         <LaunchSheet
           flow={props.launchFlow}
           agents={props.dashboard?.agents ?? []}
+          agentReadiness={props.dashboard?.agentReadiness ?? []}
           selectedAgent={props.selectedAgent}
-          authStatus={props.authStatus}
           imageLoading={props.imageLoading}
           imageStatus={props.imageStatus}
           imageError={props.imageError}
@@ -67,6 +67,7 @@ export function HomeView(props: MainViewProps) {
           loading={props.loading}
           dashboard={props.dashboard}
           onCheckAgain={props.onRefresh}
+          onOpenDiagnostics={() => props.onNavigate({ kind: "diagnostics" })}
         />
       ) : null}
 
@@ -76,6 +77,7 @@ export function HomeView(props: MainViewProps) {
             <NeedsReviewPanel
               sessions={needsReview}
               onSelectSession={props.onSelectSession}
+              onOpenAgents={() => props.onNavigate({ kind: "agents" })}
             />
           ) : null}
           <RecentActivityPanel
@@ -114,26 +116,11 @@ export function HomeView(props: MainViewProps) {
 // Diagnostics link for the full checks. The blocking detail renders in the
 // SetupCard below; this line is the at-a-glance summary.
 function ReadinessLine(props: MainViewProps) {
-  const state = props.setupReady
-    ? "ready"
-    : props.loading && props.dashboard === null
-      ? "checking"
-      : "blocked"
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
       <span className="flex items-center gap-2 font-medium">
-        {state === "ready" ? (
-          <CheckCircle2 className="size-4 text-success" aria-hidden />
-        ) : state === "checking" ? (
-          <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
-        ) : (
-          <CircleAlert className="size-4 text-destructive" aria-hidden />
-        )}
-        {state === "ready"
-          ? "Ready to run"
-          : state === "checking"
-            ? "Checking setup..."
-            : "Setup needed"}
+        <CheckCircle2 className="size-4 text-success" aria-hidden />
+        Ready to run
       </span>
       {props.lastRefreshedAt ? <LastChecked at={props.lastRefreshedAt} /> : null}
       <button
@@ -177,7 +164,7 @@ function newRunDisabledReason(props: MainViewProps): string | null {
   if (props.dashboard === null) {
     return "RunHaven could not read your Mac's setup. Try Check again."
   }
-  return "Fix the setup problem above before starting a run."
+  return "New run, unavailable until setup is ready"
 }
 
 // After a launch becomes a managed session, the live status, controls, and
@@ -195,7 +182,7 @@ function LaunchedRunNotice({
       <CheckCircle2 />
       <AlertTitle>Run started. Find it in Recent activity.</AlertTitle>
       <AlertDescription className="flex flex-col items-start gap-2">
-        <span>Open the session to watch its status and controls.</span>
+        <span>Open the run to watch its status and controls.</span>
         <Button
           type="button"
           variant="outline"
@@ -227,8 +214,6 @@ function RunView(props: MainViewProps & { lastLaunch: LaunchRunResponse }) {
         controlBusy={props.controlBusy}
         controlError={props.controlError}
         controlMessage={props.controlMessage}
-        controlConfirmations={props.controlConfirmations}
-        onConfirmationChange={props.onControlConfirmationChange}
         onControl={props.onControl}
       />
       <OutputView runOutput={props.runOutput} />

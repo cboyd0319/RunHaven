@@ -48,7 +48,7 @@ export function ManagedSessionDiagnosticsCard({
             ? "Loading diagnostics..."
             : diagnostics
               ? "Refresh diagnostics"
-              : "Load session diagnostics"}
+              : "Load run diagnostics"}
         </Button>
         {error ? (
           <Alert variant="destructive">
@@ -68,7 +68,7 @@ export function ManagedSessionDiagnosticsCard({
             </Alert>
             <SessionLogTable
               title="Auth records"
-              empty="No auth broker records for this session."
+              empty="No auth broker records for this run."
               rows={diagnostics.authLogEntries.map((entry, index) => ({
                 // Index first: the log writer stamps one timestamp per batch,
                 // so timestamp-path-decision alone can collide within a batch.
@@ -80,7 +80,7 @@ export function ManagedSessionDiagnosticsCard({
             />
             <SessionLogTable
               title="Network records"
-              empty="No provider network records for this session."
+              empty="No provider network records for this run."
               rows={diagnostics.egressLogEntries.map((entry, index) => ({
                 key: `${index}-${entry.timestamp}-${entry.host}-${entry.decision}`,
                 first: entry.host,

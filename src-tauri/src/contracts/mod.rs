@@ -1,6 +1,4 @@
-mod agent_sign_in;
 mod attention;
-mod claude_oauth;
 mod dashboard;
 mod diagnostics;
 mod diagnostics_why;
@@ -11,11 +9,10 @@ mod network;
 mod run_control;
 mod run_status;
 mod session_window;
+mod setup_recovery;
 mod worktree;
 
-pub(crate) use agent_sign_in::*;
 pub(crate) use attention::*;
-pub(crate) use claude_oauth::*;
 pub(crate) use dashboard::*;
 pub(crate) use diagnostics::*;
 pub(crate) use diagnostics_why::*;
@@ -26,4 +23,5 @@ pub(crate) use network::*;
 pub(crate) use run_control::*;
 pub(crate) use run_status::*;
 pub(crate) use session_window::*;
+pub(crate) use setup_recovery::*;
 pub(crate) use worktree::*;

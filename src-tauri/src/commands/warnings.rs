@@ -56,6 +56,12 @@ pub(super) fn plan_warnings(request: &RunPlanRequest, active_run_count: usize) -
             "Additional provider hosts allow that host and its subdomains in provider-only mode.",
         ));
     }
+    if !request.worktree && !request.read_only_workspace {
+        warnings.push(warning(
+            "direct-workspace",
+            "Direct mode lets the agent change files in your original project folder. Use the recommended isolated copy unless you need direct access.",
+        ));
+    }
     warnings
 }
 

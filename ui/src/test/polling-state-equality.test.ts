@@ -57,7 +57,7 @@ function sessionStatus(
     session: session(),
     container: {
       state: "running",
-      image: "runhaven/codex:0.1.0",
+      image: "runhaven/codex:0.7.0",
       startedAt: "2026-07-01T02:00:03Z",
       resources: {
         cpus: "4",

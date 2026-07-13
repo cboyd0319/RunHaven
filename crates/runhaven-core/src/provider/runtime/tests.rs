@@ -1,12 +1,10 @@
 mod network;
 mod selection;
 
-use super::broker_secret::require_api_key_broker_secret_with_sources;
+use super::broker_secret::require_api_key_broker_secret_with_env;
 use super::decision_log::{DecisionCounts, provider_decision_deltas};
 use super::*;
-use anyhow::anyhow;
 use secrecy::{ExposeSecret, SecretString};
-use zeroize::Zeroizing;
 
 use crate::provider::egress::ProxyDecision;
 use crate::runtime::launch::{AgentCommandContext, AgentCommandRunner};
@@ -112,7 +110,7 @@ fn codex_broker_wildcard_bind_rejects_clients_outside_container_subnet() {
 }
 
 fn broker_plan(profile_name: &str, agent: &str) -> AgentRunPlan {
-    let image = "runhaven/base:0.1.0";
+    let image = "runhaven/base:0.7.0";
     AgentRunPlan {
         command: vec![
             "container".to_string(),
@@ -145,12 +143,6 @@ fn broker_plan(profile_name: &str, agent: &str) -> AgentRunPlan {
 
 use crate::runtime::plans::ClaudeAuthSource;
 
-/// Keychain reader stub for the env-var broker tests: the API-key path MUST NOT
-/// read the Keychain, so calling this is a test failure.
-fn keychain_never() -> Result<Option<Zeroizing<Vec<u8>>>> {
-    panic!("the API-key broker path must never read the Keychain");
-}
-
 #[test]
 fn api_key_broker_secret_requires_fixed_host_env() {
     let mut plan = broker_plan("codex", "codex");
@@ -158,11 +150,9 @@ fn api_key_broker_secret_requires_fixed_host_env() {
         "OPENAI_API_KEY".to_string(),
     ));
 
-    let secret = require_api_key_broker_secret_with_sources(
-        &plan,
-        |name| (name == "OPENAI_API_KEY").then(|| "test-openai-key".to_string()),
-        keychain_never,
-    )
+    let secret = require_api_key_broker_secret_with_env(&plan, |name| {
+        (name == "OPENAI_API_KEY").then(|| "test-openai-key".to_string())
+    })
     .expect("broker secret")
     .expect("broker enabled");
 
@@ -174,110 +164,18 @@ fn api_key_broker_secret_requires_fixed_host_env() {
     plan.claude_auth_source = Some(ClaudeAuthSource::ApiKeyBrokerEnv(
         "AWS_SECRET_ACCESS_KEY".to_string(),
     ));
-    let wrong_env = require_api_key_broker_secret_with_sources(
-        &plan,
-        |_| Some("must-not-be-read".to_string()),
-        keychain_never,
-    )
-    .expect_err("unrelated env rejected");
+    let wrong_env =
+        require_api_key_broker_secret_with_env(&plan, |_| Some("must-not-be-read".to_string()))
+            .expect_err("unrelated env rejected");
     assert!(wrong_env.to_string().contains("OPENAI_API_KEY"));
 
     plan.claude_auth_source = Some(ClaudeAuthSource::ApiKeyBrokerEnv(
         "OPENAI_API_KEY".to_string(),
     ));
-    let missing = require_api_key_broker_secret_with_sources(&plan, |_| None, keychain_never)
+    let missing = require_api_key_broker_secret_with_env(&plan, |_| None)
         .expect_err("missing fixed env rejected");
     assert!(missing.to_string().contains("OPENAI_API_KEY"));
     assert!(missing.to_string().contains("not set on the host"));
-}
-
-#[test]
-fn keychain_oauth_source_reads_token_from_the_keychain_seam_not_env() {
-    // The Claude OAuth run selects the Bearer OAuth profile and takes its secret
-    // from the injected Keychain reader, never from an env var.
-    let mut plan = broker_plan("claude", "claude");
-    plan.claude_auth_source = Some(ClaudeAuthSource::KeychainOAuth);
-
-    let (profile, token) = require_api_key_broker_secret_with_sources(
-        &plan,
-        |_| panic!("the Keychain OAuth path must never read an env var"),
-        || {
-            Ok(Some(Zeroizing::new(
-                b"  sk-ant-oat01-FROM-KEYCHAIN  ".to_vec(),
-            )))
-        },
-    )
-    .expect("keychain secret")
-    .expect("broker enabled");
-
-    assert_eq!(
-        profile,
-        crate::provider::auth_broker::CLAUDE_OAUTH_BROKER,
-        "the OAuth source must select the Bearer OAuth broker, not the x-api-key broker"
-    );
-    assert_eq!(
-        profile.injection.injected_header_names(),
-        vec!["authorization"]
-    );
-    // The token stays a `SecretString` end to end; compare through the one
-    // `expose_secret()` accessor.
-    assert_eq!(
-        token.expose_secret(),
-        "sk-ant-oat01-FROM-KEYCHAIN",
-        "the token is trimmed"
-    );
-}
-
-#[test]
-fn keychain_oauth_source_fails_closed_on_read_error_or_missing_item() {
-    let mut plan = broker_plan("claude", "claude");
-    plan.claude_auth_source = Some(ClaudeAuthSource::KeychainOAuth);
-
-    // Read failure / user cancel: the read seam returns an error and the run
-    // fails closed with a fixed, path-free message.
-    let read_error = require_api_key_broker_secret_with_sources(
-        &plan,
-        |_| None,
-        || Err(anyhow!("could not read the Claude token from the Keychain")),
-    )
-    .expect_err("read error must fail the run");
-    assert!(
-        read_error
-            .to_string()
-            .contains("could not read the Claude token")
-    );
-
-    // No stored item: fail closed with a plain sign-in prompt.
-    let missing = require_api_key_broker_secret_with_sources(&plan, |_| None, || Ok(None))
-        .expect_err("missing item must fail the run");
-    assert!(missing.to_string().contains("no Claude token is saved"));
-
-    // Empty stored token: fail closed.
-    let empty = require_api_key_broker_secret_with_sources(
-        &plan,
-        |_| None,
-        || Ok(Some(Zeroizing::new(b"   ".to_vec()))),
-    )
-    .expect_err("empty token must fail the run");
-    assert!(empty.to_string().contains("empty"));
-}
-
-#[test]
-fn keychain_oauth_source_is_claude_only() {
-    // A non-Claude profile cannot use the Keychain OAuth broker.
-    let mut plan = broker_plan("codex", "codex");
-    plan.claude_auth_source = Some(ClaudeAuthSource::KeychainOAuth);
-    let error = require_api_key_broker_secret_with_sources(
-        &plan,
-        |_| None,
-        || Ok(Some(Zeroizing::new(b"sk-ant-oat01-x".to_vec()))),
-    )
-    .expect_err("non-claude oauth rejected");
-    assert!(
-        error
-            .to_string()
-            .contains("only available for the claude profile")
-    );
 }
 
 #[test]
@@ -296,21 +194,6 @@ fn claude_broker_redirects_base_url_and_gives_guest_only_placeholder() {
     // The host key env var name never enters the guest command; the broker reads
     // it host-side and the guest sees only the placeholder.
     assert!(!joined.contains("PROVIDER_KEY"));
-}
-
-#[test]
-fn gemini_broker_redirects_base_url() {
-    let plan = broker_plan("gemini", "gemini");
-    let result = with_api_key_broker_config(
-        &plan.command,
-        &plan,
-        crate::provider::auth_broker::GEMINI_BROKER,
-        "http://192.0.2.1:8080",
-    )
-    .expect("gemini broker config");
-    let joined = result.join(" ");
-    assert!(joined.contains("GOOGLE_GEMINI_BASE_URL=http://192.0.2.1:8080"));
-    assert!(joined.contains("GEMINI_API_KEY=runhaven-broker-placeholder"));
 }
 
 #[test]

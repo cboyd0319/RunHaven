@@ -239,7 +239,7 @@ mod tests {
         let summary = summarize_container_inspect(json!({
             "id": "runhaven-shell-abc-run",
             "configuration": {
-                "image": {"reference": "runhaven/base:0.1.0"},
+                "image": {"reference": "runhaven/base:0.7.0"},
                 "resources": {"cpus": 2, "memoryInBytes": 1073741824},
                 "initProcess": {
                     "arguments": ["agent", "--secret-flag"],
@@ -259,7 +259,7 @@ mod tests {
             }
         }));
 
-        assert_eq!(summary["image"], "runhaven/base:0.1.0");
+        assert_eq!(summary["image"], "runhaven/base:0.7.0");
         assert_eq!(summary["state"], "running");
         assert_eq!(summary["resources"]["cpus"], 2.0);
         assert_eq!(summary["networks"][0]["ipv4_address"], "192.168.64.20/24");

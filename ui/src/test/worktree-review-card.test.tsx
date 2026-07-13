@@ -16,7 +16,6 @@ import {
   sessionAllowsWorktreeReview,
   worktreeActionRemovesWorktree,
   worktreeActionSuccessMessage,
-  type WorktreeAction,
 } from "../app/worktreeReview";
 
 function session(patch: Partial<ManagedSessionSummary> = {}): ManagedSessionSummary {
@@ -56,33 +55,20 @@ function review(patch: Partial<WorktreeReviewResponse> = {}): WorktreeReviewResp
   };
 }
 
-const emptyConfirmations: Record<WorktreeAction, boolean> = {
-  keep: false,
-  merge: false,
-  recover: false,
-  discard: false,
-};
-
 function renderCard(patch: Partial<Parameters<typeof WorktreeReviewCard>[0]> = {}) {
   return renderToStaticMarkup(
     <WorktreeReviewCard
       review={review()}
       loading={false}
       loadError=""
-      confirmations={emptyConfirmations}
       busy={false}
       message=""
       nextSteps={[]}
       actionError=""
-      onConfirmationChange={() => undefined}
       onAction={() => undefined}
       {...patch}
     />,
   );
-}
-
-function disabledButtonCount(html: string): number {
-  return html.match(/disabled=""/g)?.length ?? 0;
 }
 
 describe("worktree review gating", () => {
@@ -170,14 +156,11 @@ describe("WorktreeReviewCard", () => {
     expect(html).not.toContain("state_volume");
   });
 
-  it("keeps every action button disabled until its box is confirmed", () => {
-    const unconfirmed = renderCard();
-    expect(disabledButtonCount(unconfirmed)).toBe(4);
-
-    const oneConfirmed = renderCard({
-      confirmations: { ...emptyConfirmations, merge: true },
-    });
-    expect(disabledButtonCount(oneConfirmed)).toBe(3);
+  it("relies on the Rust-owned native confirmation for every action", () => {
+    const html = renderCard();
+    expect(html).not.toContain('type="checkbox"');
+    expect(html).not.toContain("confirmation required");
+    expect(html).not.toContain('disabled=""');
   });
 
   it("shows only the actions the backend allows", () => {

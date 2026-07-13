@@ -1,41 +1,81 @@
 # Installation
 
-RunHaven is a macOS-only project. Runtime and contributor verification require
-macOS 26+ on Apple silicon, Rust 1.96.0, and Apple `container` 1.0.0.
-Windows and Linux are not supported.
+RunHaven is a macOS-only app. It requires macOS 26 or newer on Apple silicon
+and Apple `container` 1.1.0. Windows, Linux, and Intel Macs are not supported.
 
-RunHaven is alpha/pre-release. `v0.5.0` is the CLI-only pre-release already
-cut, and current development includes unreleased TUI and desktop work. Install
-from source only if you are comfortable with changing CLI contracts, TUI
-behavior, desktop behavior, image layouts, run records, and provider allowlists
-before a stable release.
+RunHaven is alpha/pre-release. `v0.5.0` was the CLI-only release; `v0.7.0` is a
+limited CLI plus desktop coworker-test candidate. Coworkers should use the
+signed and notarized disk image. Rust, Git, Xcode, and Terminal are not needed
+for that path. The archived TUI is not installed.
 
-## Requirements
+## Install the coworker-test app
 
-- macOS 26+
-- Apple silicon
-- Rust 1.96.0
-- Apple [`container`](https://github.com/apple/container) 1.0.0
-- Git
+1. Quit an older copy of RunHaven if it is open.
+2. Open `RunHaven-0.7.0-macos-arm64.dmg`.
+3. Drag **RunHaven** onto the **Applications** folder in that window. Choose
+   **Replace** if macOS asks.
+4. Eject the **RunHaven 0.7.0** disk image.
+5. Open **Applications**, then open **RunHaven**.
 
-RunHaven intentionally pins Apple `container` 1.0.0. If Apple ships a newer
-runtime, `runhaven doctor` should fail until this repo updates and verifies the
-new runtime pin.
+Do not run RunHaven from inside the disk image. Installing it in Applications
+keeps the app available after the disk image is ejected.
 
-## Apple Container
+The release owner must sign, notarize, staple, and clean-Mac test the disk image
+before sharing it. If macOS says the app cannot be verified, stop and ask for a
+new release artifact. Do not bypass Gatekeeper for a coworker-test build.
 
-Install Apple `container` from Apple's project, then start the container
-system:
+## First launch
+
+RunHaven checks the Mac and leads with the first item that needs attention.
+
+1. If Apple `container` is missing, choose **Download Apple container** and
+   confirm the macOS dialog. RunHaven opens Apple's exact signed 1.1.0 installer
+   download in the default browser. Open the downloaded `.pkg`, follow Apple's
+   installer, then return to RunHaven and choose **Check again**. Apple asks for
+   the Mac administrator password because its installer writes under
+   `/usr/local`.
+2. If the local container service is stopped, choose **Start container
+   service** and confirm. The first start may download Apple's reviewed kernel
+   and base file system. RunHaven checks the service again before continuing.
+3. Open **Agents**, choose the agent you want, then choose **Install** followed
+   by that agent's name, such as **Install Codex**.
+   Wait for installation to finish. The first image build can take several
+   minutes and needs an internet connection.
+4. Complete the sign-in shown for that agent.
+5. Return to **Home**, choose **New run**, select the smallest project folder
+   the agent needs, review access, and start the run.
+
+RunHaven intentionally requires Apple `container` 1.1.0. If a different
+version is installed, choose **Download required version**, confirm the macOS
+dialog, and review Apple's installer before replacing the existing version.
+You can also get the exact signed package from
+[Apple's official release](https://github.com/apple/container/releases/tag/1.1.0).
+Return to RunHaven and choose **Check again** when the installer finishes.
+RunHaven does not silently upgrade or downgrade a system tool.
+
+## Update or reinstall RunHaven
+
+Quit RunHaven, open the new signed disk image, and drag RunHaven to Applications.
+Choose **Replace** when asked. Agent sign-ins, images, and run records stay in
+their existing RunHaven and Apple container storage.
+
+## Remove RunHaven
+
+Quit RunHaven and move it from Applications to the Trash. Removing the app does
+not delete agent sign-ins, images, run records, or other Apple container data.
+RunHaven does not yet have a one-button erase-all action. Its Cleanup view only
+removes the specific leftover resources it lists. Ask the release owner for
+help if all saved RunHaven data must also be removed. Do not uninstall Apple
+`container` only to remove RunHaven; other apps may use it.
+
+## Install from source
+
+Source installation is for contributors. It requires Rust 1.97.0, Git, and the
+exact Apple `container` 1.1.0 release. Start Apple container, then install the
+CLI from this checkout:
 
 ```bash
 container system start
-```
-
-## Install From This Checkout
-
-Install the CLI from this checkout:
-
-```bash
 cargo install --path crates/runhaven --locked
 ```
 
@@ -68,7 +108,7 @@ runhaven doctor
 version and commit, Apple container system status, and the reviewed runtime
 helper surface: builder image, vminit image, and Kata kernel.
 
-## First Run
+## First CLI run
 
 Run the non-mutating guided setup before running an agent:
 
@@ -127,7 +167,13 @@ networking, or install flow.
 
 ## Troubleshooting
 
-Start with the guided setup:
+In the desktop app, start on **Home** and choose **Check again**. Open **System
+Check** to see every check and its next step. If an agent is missing or sign-in
+is incomplete, open **Agents**. Copy only the plain error message when asking
+for help. Do not share raw logs unless the release owner asks for a specific,
+bounded diagnostic.
+
+Contributors using the CLI can start with the guided setup:
 
 ```bash
 runhaven setup

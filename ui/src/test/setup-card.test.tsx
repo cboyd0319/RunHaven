@@ -10,6 +10,7 @@ function check(patch: Partial<CheckStatus> = {}): CheckStatus {
     ok: true,
     detail: "Apple container is installed.",
     remedy: "No action needed.",
+    action: null,
     ...patch
   };
 }
@@ -62,10 +63,9 @@ describe("SetupCard", () => {
       <SetupCard loading={true} dashboard={null} />
     );
 
-    expect(html).toContain("Finish setup");
+    expect(html).toContain("Checking your Mac");
     expect(html).toContain("Checking setup...");
     expect(html).toContain("Loading setup...");
-    expect(html).toContain(">Checking</");
     expect(html).not.toContain("Refresh status to try again.");
   });
 
@@ -76,7 +76,7 @@ describe("SetupCard", () => {
 
     expect(html).toContain("RunHaven could not read setup status.");
     expect(html).toContain("Refresh status to try again.");
-    expect(html).toContain(">Unknown</");
+    expect(html).toContain("Setup unavailable");
     expect(html).not.toContain("All checks passed.");
   });
 
@@ -85,10 +85,9 @@ describe("SetupCard", () => {
       <SetupCard loading={false} dashboard={dashboard()} />
     );
 
-    expect(html).toContain("Setup ready");
-    expect(html).toContain("Ready to launch.");
+    expect(html).toContain("Ready to run");
+    expect(html).toContain("Everything RunHaven needs is ready.");
     expect(html).toContain("All checks passed.");
-    expect(html).toContain(">Ready</");
     expect(html).not.toContain("Needs attention");
     // Active and recent run workspaces travel in the dashboard, but this card
     // renders only setup, so those host paths never reach the screen.
@@ -116,13 +115,69 @@ describe("SetupCard", () => {
       />
     );
 
-    expect(html).toContain("Finish setup");
-    expect(html).toContain(">Blocked</");
+    expect(html).toContain("Setup needs attention");
     expect(html).toContain("Needs attention");
     expect(html).toContain("Container CLI");
     expect(html).toContain("Apple container is not installed.");
     expect(html).toContain("Install Apple container and retry.");
     expect(html).not.toContain("All checks passed.");
+  });
+
+  it("offers only the backend-owned recovery action, never a raw command", () => {
+    const html = renderToStaticMarkup(
+      <SetupCard
+        loading={false}
+        dashboard={dashboard({
+          setup: {
+            ok: false,
+            blockerCount: 1,
+            checks: [
+              check({
+                name: "Container system",
+                ok: false,
+                action: {
+                  id: "start-container-system",
+                  label: "Start container service",
+                },
+              }),
+            ],
+          },
+        })}
+      />
+    );
+
+    expect(html).toContain("Start container service");
+    expect(html).not.toContain("container system start");
+    expect(html).not.toContain("--enable-kernel-install");
+  });
+
+  it("offers the fixed installer handoff without exposing its URL or executable", () => {
+    const html = renderToStaticMarkup(
+      <SetupCard
+        loading={false}
+        dashboard={dashboard({
+          setup: {
+            ok: false,
+            blockerCount: 1,
+            checks: [
+              check({
+                name: "Apple container CLI",
+                ok: false,
+                action: {
+                  id: "open-apple-container-installer",
+                  label: "Download Apple container",
+                },
+              }),
+            ],
+          },
+        })}
+      />
+    );
+
+    expect(html).toContain("Download Apple container");
+    expect(html).not.toContain("github.com/apple");
+    expect(html).not.toContain("/usr/bin/open");
+    expect(html).not.toContain("installer-signed.pkg");
   });
 
   it("offers a Check again action only when a handler is provided", () => {

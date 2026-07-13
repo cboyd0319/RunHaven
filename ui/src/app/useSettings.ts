@@ -10,7 +10,7 @@ export type SettingsState = ReturnType<typeof useSettings>
 
 // State for the in-app Settings dialog (spec 3.9, shipped lean inside the
 // main window; see docs/plans/native-gui-navigation-gap.md B3). The dialog
-// opens from RunHaven > Settings... (Cmd-,) through the menu event channel;
+// opens from the sidebar or RunHaven > Settings... (Cmd-,);
 // choices persist through the sanitized uiStatePersistence allowed set and
 // hold only convenience preferences, never security defaults or confirmation
 // suppression.
@@ -29,10 +29,7 @@ export function useSettings() {
     setOpen,
     dockBadge: settings.dockBadge,
     defaultAgent: settings.defaultAgent,
-    claudeReauthDays: settings.claudeReauthDays,
     setDockBadge: (dockBadge: boolean) => update({ dockBadge }),
     setDefaultAgent: (defaultAgent: string | null) => update({ defaultAgent }),
-    setClaudeReauthDays: (claudeReauthDays: number) =>
-      update({ claudeReauthDays }),
   }
 }

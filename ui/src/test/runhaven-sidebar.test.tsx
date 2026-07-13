@@ -50,6 +50,7 @@ function renderSidebar(
           sessions={sessions}
           navigation={navigation}
           onNavigate={() => undefined}
+          onOpenSettings={() => undefined}
           runTerminalActive={runTerminalActive}
           appVersion="9.9.9"
         />
@@ -64,8 +65,8 @@ describe("RunHavenSidebar", () => {
 
     const home = html.indexOf(">Home<")
     const agents = html.indexOf(">Agents<")
-    const diagnostics = html.indexOf(">Diagnostics<")
-    const maintenance = html.indexOf(">Maintenance<")
+    const diagnostics = html.indexOf(">System Check<")
+    const maintenance = html.indexOf(">Cleanup<")
     const runs = html.indexOf(">Runs<")
     expect(home).toBeGreaterThanOrEqual(0)
     expect(agents).toBeGreaterThan(home)
@@ -73,9 +74,10 @@ describe("RunHavenSidebar", () => {
     expect(maintenance).toBeGreaterThan(diagnostics)
     // The Runs summary sits below the destinations.
     expect(runs).toBeGreaterThan(maintenance)
-    expect(html).toContain(">Needs review<")
-    expect(html).toContain(">Active<")
-    expect(html).toContain(">Finished<")
+    expect(html).toContain(">Needs you<")
+    expect(html).toContain(">Running<")
+    expect(html).toContain(">Past<")
+    expect(html).toContain(">Settings<")
     expect(html).toContain("RunHaven 9.9.9")
 
     // Home is the one selected destination.
@@ -130,6 +132,6 @@ describe("RunHavenSidebar", () => {
     const html = renderSidebar([], { kind: "diagnostics" })
     expect(html.match(/aria-current="page"/g) ?? []).toHaveLength(1)
     const currentIndex = html.indexOf('aria-current="page"')
-    expect(html.indexOf(">Diagnostics<")).toBeGreaterThan(currentIndex)
+    expect(html.indexOf(">System Check<")).toBeGreaterThan(currentIndex)
   })
 })

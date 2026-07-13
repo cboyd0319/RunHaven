@@ -9,13 +9,13 @@ fn diagnostics_contract_maps_secret_free_fields_only() {
                 name: "container\u{1b}".to_string(),
                 ok: false,
                 detail: "not found\u{7}".to_string(),
-                remedy: "Install Apple container 1.0.0.".to_string(),
+                remedy: "Install Apple container 1.1.0.".to_string(),
             },
             Check {
                 name: "Apple container CLI".to_string(),
                 ok: true,
                 detail: "/Users/example/bin/container".to_string(),
-                remedy: "Install Apple container 1.0.0.".to_string(),
+                remedy: "Install Apple container 1.1.0.".to_string(),
             },
         ],
         serde_json::json!({

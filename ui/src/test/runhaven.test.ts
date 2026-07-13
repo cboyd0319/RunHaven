@@ -5,6 +5,7 @@ import {
   getAuthStatus,
   getDashboardStatus,
   getImageStatus,
+  performSetupRecovery,
   getRunStatus,
   isLaunchReady,
   launchRun,
@@ -66,7 +67,7 @@ describe("runhaven command helpers", () => {
   it("uses fixed API key broker env names by agent", () => {
     expect(apiKeyBrokerEnvForAgent({ ...providerAgent, name: "codex" })).toBe("OPENAI_API_KEY");
     expect(apiKeyBrokerEnvForAgent({ ...providerAgent, name: "claude" })).toBe("ANTHROPIC_API_KEY");
-    expect(apiKeyBrokerEnvForAgent({ ...providerAgent, name: "gemini" })).toBe("GEMINI_API_KEY");
+    expect(apiKeyBrokerEnvForAgent({ ...providerAgent, name: "gemini" })).toBeNull();
     expect(apiKeyBrokerEnvForAgent({ ...providerAgent, name: "other" })).toBeNull();
     expect(supportsApiKeyBroker({ ...providerAgent, name: "other" })).toBe(false);
   });
@@ -75,6 +76,26 @@ describe("runhaven command helpers", () => {
     const request = defaultRunPlanRequest(providerAgent);
 
     expect(request.authScope).toBe("agent");
+  });
+
+  it("defaults GUI launches to an isolated project copy", () => {
+    expect(defaultRunPlanRequest(providerAgent).worktree).toBe(true);
+  });
+
+  it("warns only when direct mode can change original project files", () => {
+    const direct = {
+      ...defaultRunPlanRequest(providerAgent),
+      worktree: false,
+    };
+
+    expect(warningPreview(direct).map((warning) => warning.code)).toContain(
+      "direct-workspace",
+    );
+    expect(
+      warningPreview({ ...direct, readOnlyWorkspace: true }).map(
+        (warning) => warning.code,
+      ),
+    ).not.toContain("direct-workspace");
   });
 
   it("keeps broker fields tied to brokered agents", () => {
@@ -128,10 +149,22 @@ describe("runhaven command helpers", () => {
   it("returns dashboard preview data outside the Tauri runtime", async () => {
     const dashboard = await getDashboardStatus();
 
-    expect(dashboard.agents.map((agent) => agent.name)).toContain("codex");
+    expect(dashboard.agents.map((agent) => agent.name)).toEqual([
+      "claude",
+      "codex",
+      "antigravity",
+      "copilot"
+    ]);
     expect(dashboard.agents.find((agent) => agent.name === "codex")?.signIn).toBe("runhaven login");
-    expect(dashboard.agents.find((agent) => agent.name === "shell")?.broker).toBe("n/a");
+    expect(dashboard.agents.find((agent) => agent.name === "copilot")?.broker).toBe("no");
     expect(dashboard.warnings[0]).toContain("Desktop runtime commands are unavailable");
+  });
+
+  it("keeps setup recovery on an opaque action id in preview", async () => {
+    const result = await performSetupRecovery("start-container-system");
+
+    expect(result.actionId).toBe("start-container-system");
+    expect(result.detail).not.toContain("container system start");
   });
 
   it("returns brokered auth status preview data", async () => {

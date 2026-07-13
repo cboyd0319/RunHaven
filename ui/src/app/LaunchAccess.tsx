@@ -11,10 +11,12 @@ import { CircleAlert, ShieldCheck } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 
 import { authStatusBadgeVariant } from "./authDetails"
 import { authScopeLabels, authStatusLabel, safeBackendLabel } from "./labels"
+import { agentLabel } from "./sessionIdentity"
 
 export function AgentAccessSummary({
   agent,
@@ -116,7 +118,7 @@ export function ApiKeyBrokerField({
         <span className="text-muted-foreground">
           Fixed host variable: <code className="font-mono">{envName}</code>.
           RunHaven keeps the key on this Mac and gives the session a
-          placeholder value.
+          placeholder value. Turning this on uses Provider only.
         </span>
       </span>
     </label>
@@ -127,10 +129,14 @@ export function ImageReadiness({
   imageLoading,
   imageStatus,
   imageError,
+  installing = false,
+  onInstall,
 }: {
   imageLoading: boolean
   imageStatus: ImageStatusResponse | null
   imageError: string
+  installing?: boolean
+  onInstall?: () => void
 }) {
   if (imageLoading) {
     return <p className="text-sm text-muted-foreground">Checking image...</p>
@@ -154,9 +160,28 @@ export function ImageReadiness({
         {imageStatus.image.ready ? "Agent ready" : "Agent setup needed"}
       </AlertTitle>
       <AlertDescription>
-        {imageStatus.image.ready
-          ? "This agent is installed."
-          : imageStatus.image.fixCommand}
+        {imageStatus.image.ready ? (
+          "This agent is installed."
+        ) : (
+          <span className="flex flex-col items-start gap-2">
+            <span>
+              {onInstall
+                ? "Install this agent before starting a run."
+                : "Open Agents to install this agent before continuing."}
+            </span>
+            {onInstall ? (
+              <Button
+                type="button"
+                disabled={installing}
+                onClick={onInstall}
+              >
+                {installing
+                  ? `Installing ${agentLabel(imageStatus.agent)}...`
+                  : `Install ${agentLabel(imageStatus.agent)}`}
+              </Button>
+            ) : null}
+          </span>
+        )}
       </AlertDescription>
     </Alert>
   )

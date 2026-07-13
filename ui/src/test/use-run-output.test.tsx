@@ -24,6 +24,7 @@ type Props = {
   targetId: string | null
   sessionId: string | null
   runId: string | null
+  sessionActive: boolean
 }
 
 function baseSnapshot(patch: Partial<LogSnapshotResponse> = {}): LogSnapshotResponse {
@@ -80,6 +81,7 @@ const sessionProps: Props = {
   targetId: "session:s1",
   sessionId: "s1",
   runId: null,
+  sessionActive: true,
 }
 
 type Hook = Awaited<ReturnType<typeof renderHook<Props, ReturnType<typeof useRunOutput>>>>
@@ -124,6 +126,22 @@ afterEach(() => {
 })
 
 describe("useRunOutput", () => {
+  it("does not offer or poll live output for a past run", async () => {
+    const hook = await renderHook(
+      (props: Props) => useRunOutput(props),
+      { ...sessionProps, sessionActive: false },
+    )
+
+    expect(hook.result.current.liveAvailable).toBe(false)
+    await act(async () => {
+      hook.result.current.setAcknowledged(true)
+      hook.result.current.setLiveEnabled(true)
+      await vi.advanceTimersByTimeAsync(9_000)
+    })
+    expect(getSessionSnapshot).not.toHaveBeenCalled()
+    await hook.unmount()
+  })
+
   it("renders the loaded snapshot for the current target", async () => {
     getSessionSnapshot.mockResolvedValue(sessionResponse(baseSnapshot()))
     const hook = await renderHook(
@@ -190,7 +208,12 @@ describe("useRunOutput", () => {
 
     // Switching target must drop the prior snapshot; with live off nothing
     // repopulates it, so the new target starts empty (no stale card frame).
-    await hook.rerender({ targetId: "session:s2", sessionId: "s2", runId: null })
+    await hook.rerender({
+      targetId: "session:s2",
+      sessionId: "s2",
+      runId: null,
+      sessionActive: true,
+    })
     expect(hook.result.current.visibleSnapshot).toBeNull()
     await hook.unmount()
   })
@@ -208,13 +231,54 @@ describe("useRunOutput", () => {
       loadPromise = hook.result.current.loadSnapshot()
     })
 
-    await hook.rerender({ targetId: "session:s2", sessionId: "s2", runId: null })
+    await hook.rerender({
+      targetId: "session:s2",
+      sessionId: "s2",
+      runId: null,
+      sessionActive: true,
+    })
     await act(async () => {
       pending.resolve(sessionResponse(baseSnapshot({ text: "stale\n" })))
       await loadPromise
     })
     // The stale s1 response must not surface under s2.
     expect(hook.result.current.visibleSnapshot).toBeNull()
+    await hook.unmount()
+  })
+
+  it("loads a newly selected target while the old target request is still pending", async () => {
+    const oldTarget = deferred<ManagedSessionLogSnapshotResponse>()
+    getSessionSnapshot
+      .mockReturnValueOnce(oldTarget.promise)
+      .mockResolvedValueOnce(
+        sessionResponse(baseSnapshot({ runId: "run-2", text: "new target\n" })),
+      )
+    const hook = await renderHook(
+      (props: Props) => useRunOutput(props),
+      sessionProps,
+    )
+    let oldLoad: Promise<void> = Promise.resolve()
+    await act(async () => {
+      oldLoad = hook.result.current.loadSnapshot()
+    })
+
+    await hook.rerender({
+      targetId: "session:s2",
+      sessionId: "s2",
+      runId: null,
+      sessionActive: true,
+    })
+    await act(async () => {
+      await hook.result.current.loadSnapshot()
+    })
+
+    expect(getSessionSnapshot).toHaveBeenCalledTimes(2)
+    expect(hook.result.current.visibleSnapshot?.text).toBe("new target\n")
+    await act(async () => {
+      oldTarget.resolve(sessionResponse(baseSnapshot({ text: "old target\n" })))
+      await oldLoad
+    })
+    expect(hook.result.current.visibleSnapshot?.text).toBe("new target\n")
     await hook.unmount()
   })
 

@@ -9,7 +9,7 @@
     "session": "default",
     "stateVolume": "runhaven-codex-shared-home",
     "containerName": "runhaven-codex-runhaven-run",
-    "image": "runhaven/codex:0.1.0",
+    "image": "runhaven/codex:0.7.0",
     "worktree": null,
     "network": {
       "mode": "provider",
@@ -33,7 +33,7 @@
       ]
     },
     "preflightCommands": [],
-    "command": "container run --rm --init --name runhaven-codex-runhaven-run --read-only --tmpfs /tmp --cap-drop ALL runhaven/codex:0.1.0",
+    "command": "container run --rm --init --name runhaven-codex-runhaven-run --read-only --tmpfs /tmp --cap-drop ALL runhaven/codex:0.7.0",
     "safetyNotes": [],
     "confirmRequired": false
   }

@@ -90,8 +90,8 @@ export function AppMainContent(props: AppMainContentProps) {
       ) : null}
 
       {!showTerminal ? (
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          <section className="flex w-full min-w-0 flex-col gap-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          <section className="mx-auto flex w-full max-w-[1440px] min-w-0 flex-col gap-4">
             <div
               ref={focusRef}
               tabIndex={-1}
@@ -154,7 +154,8 @@ function MainView(props: AppMainContentProps) {
       return (
         <AgentsView
           agents={props.dashboard?.agents ?? []}
-          authStatus={props.authStatus}
+          agentReadiness={props.dashboard?.agentReadiness ?? []}
+          setupReady={props.setupReady}
           refreshing={props.loading}
           onSignedIn={props.onSignedIn}
           onRefresh={props.onRefresh}
@@ -173,12 +174,16 @@ function MainView(props: AppMainContentProps) {
         />
       )
     case "maintenance":
-      return <MaintenanceView />
+      return <MaintenanceView setupReady={props.setupReady} />
     case "runs":
       return (
         <RunsView
+          filter={props.navigation.filter ?? "all"}
           sessions={props.sessions}
           onSelectSession={props.onSelectSession}
+          onFilterChange={(filter) =>
+            props.onNavigate({ kind: "runs", filter })
+          }
         />
       )
     case "session":
@@ -209,6 +214,8 @@ function mainViewFocusKey(
   switch (navigation.kind) {
     case "session":
       return `session:${navigation.id}:${worktreeReviewEligible}`
+    case "runs":
+      return `runs:${navigation.filter ?? "all"}`
     default:
       return navigation.kind
   }
@@ -219,13 +226,13 @@ function mainViewLabel(navigation: NavDestination): string {
     case "home":
       return "Home"
     case "session":
-      return "Session details"
+      return "Run details"
     case "agents":
       return "Agents"
     case "diagnostics":
-      return "Diagnostics"
+      return "System Check"
     case "maintenance":
-      return "Maintenance"
+      return "Cleanup"
     case "runs":
       return "Run history"
     case "run-terminal":

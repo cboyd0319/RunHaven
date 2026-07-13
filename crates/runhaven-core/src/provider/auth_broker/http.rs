@@ -1,4 +1,4 @@
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
 
 use anyhow::{Result, bail};
@@ -6,17 +6,41 @@ use anyhow::{Result, bail};
 use super::upstream::BrokerUpstreamResponse;
 use super::{PathRule, headers};
 
+pub(super) enum BoundedLine {
+    Eof,
+    Line(String),
+    TooLong,
+}
+
+pub(super) fn read_bounded_line(
+    reader: &mut impl BufRead,
+    max_bytes: usize,
+) -> Result<BoundedLine> {
+    let mut line = String::new();
+    let read = reader
+        .take(max_bytes.saturating_add(1) as u64)
+        .read_line(&mut line)?;
+    if read == 0 {
+        return Ok(BoundedLine::Eof);
+    }
+    if read > max_bytes {
+        return Ok(BoundedLine::TooLong);
+    }
+    Ok(BoundedLine::Line(line))
+}
+
 pub(super) fn read_headers(reader: &mut BufReader<TcpStream>) -> Result<Vec<(String, String)>> {
     let mut headers = Vec::new();
     let mut consumed = 0usize;
     loop {
-        let mut line = String::new();
-        let read = reader.read_line(&mut line)?;
-        consumed += read;
-        if consumed > crate::provider::egress::MAX_HEADER_BYTES {
-            bail!("headers too large");
-        }
-        if read == 0 || line == "\r\n" || line == "\n" {
+        let remaining = crate::provider::egress::MAX_HEADER_BYTES.saturating_sub(consumed);
+        let line = match read_bounded_line(reader, remaining)? {
+            BoundedLine::Eof => break,
+            BoundedLine::TooLong => bail!("headers too large"),
+            BoundedLine::Line(line) => line,
+        };
+        consumed += line.len();
+        if line == "\r\n" || line == "\n" {
             break;
         }
         if let Some((name, value)) = line.split_once(':') {

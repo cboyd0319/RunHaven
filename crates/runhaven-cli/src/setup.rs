@@ -82,10 +82,10 @@ fn print_setup_network_choices(agent: &str) {
         "- Provider-only: use `runhaven run {agent} --network provider` to allow reviewed provider hosts through the proxy. Login, telemetry, package registries, or feature paths may need extra reviewed hosts."
     );
     println!(
-        "- Package install: use default internet mode with `runhaven run {agent}` when package managers or dependency updates need broad registry and CDN access."
+        "- Package install: choose `--network internet` explicitly when package managers or dependency updates need broad registry and CDN access."
     );
     println!(
-        "- Unrestricted internet: default `runhaven run {agent}` leaves egress unrestricted inside Apple `container` and your host network."
+        "- Default: RunHaven uses the agent's secure default. `runhaven plan {agent}` shows whether that is provider-only or local-only before anything starts."
     );
     println!("- Use `runhaven plan` before changing network modes.");
 }

@@ -49,11 +49,6 @@ export type MainViewProps = {
   controlBusy: boolean
   controlError: string
   controlMessage: string
-  controlConfirmations: Record<RunControlAction, boolean>
-  onControlConfirmationChange: (
-    action: RunControlAction,
-    checked: boolean,
-  ) => void
   onControl: (action: RunControlAction) => Promise<void>
   onWorktreeResolved: () => Promise<void>
   // The New Run sheet's whole state and actions travel as one object; Home

@@ -214,16 +214,16 @@ describe("handleMenuCommand", () => {
     expect(app.refresh).toHaveBeenCalledTimes(1)
   })
 
-  it("focuses the existing confirm control for session actions", () => {
+  it("focuses the existing action button for session actions", () => {
     const checkbox = document.createElement("button")
-    checkbox.setAttribute("aria-label", "Confirm stopping this session.")
+    checkbox.setAttribute("aria-label", "Stop run")
     document.body.append(checkbox)
 
     const app = actions({ navigation: { kind: "session", id: "a1" } })
     handleMenuCommand("stop-session", app)
     expect(document.activeElement).toBe(checkbox)
     // Focus only: the stop command itself must stay behind the user's own
-    // confirm click plus the Rust-owned native dialog.
+    // click plus the Rust-owned native dialog.
     expect(app.selectSession).not.toHaveBeenCalled()
     expect(app.navigate).not.toHaveBeenCalled()
   })
@@ -295,11 +295,11 @@ describe("menu contract tripwires", () => {
       appSource("RunOutputCard.tsx"),
     ].join("\n")
     const labels = [
-      "Confirm stopping this",
-      "Confirm hard-stopping this",
-      "Confirm clearing this",
-      "Confirm cleaning up this session's saved copy.",
-      "Type a message for this session.",
+      'aria-label="Stop run"',
+      'aria-label="Hard stop"',
+      'aria-label="Repair run record"',
+      'aria-label="Clean up run"',
+      "Type a message for this run.",
       "I understand raw output may include private data.",
     ]
     for (const label of labels) {

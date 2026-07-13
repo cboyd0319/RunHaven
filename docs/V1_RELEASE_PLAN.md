@@ -7,9 +7,10 @@ sequence is owned by `current-state.md` and `docs/ROADMAP.md`.
 
 > Sequencing update: the 2026-06-26 directive deferred GUI/UI work behind
 > runtime/security hardening, remaining non-UI scope, and a CLI-based public
-> release. On 2026-06-27, the terminal UI was pulled forward and is now active as
-> a first-class reference implementation for sibling projects. The desktop design
-> content below stays valid for a later first-class desktop release; the
+> release. The former terminal UI checkpoint is now archived outside the release
+> workspace because it is not part of the CLI plus desktop product and carried a
+> large unaudited dependency graph. The desktop design content below remains the
+> active first-class release direction; the
 > `v1.0.0` label is no longer locked to that desktop release. Already-shipped
 > desktop slices stay complete and verified.
 
@@ -27,15 +28,18 @@ important for automation, diagnostics, and power users, but the desktop app
 must carry the primary safe workflow from setup through launch, observation,
 review, recovery, and cleanup.
 
-The release ladder is two-stage:
+The release ladder is three-stage:
 
 - `v0.5.0` is the CLI-complete release.
+- `v0.7.0` is the limited CLI plus desktop coworker-test candidate. It does not
+  become shareable until the release wrapper produces a signed, notarized
+  artifact and that artifact passes clean-Mac verification.
 - `v1.0.0` is the first-class desktop release built on that stable CLI
   foundation.
 
 RunHaven remains alpha/pre-release. `v0.5.0` has been cut as the CLI-complete
-pre-release; it establishes the CLI contract and is not the full public desktop
-release.
+pre-release; it establishes the CLI contract. `v0.7.0` adds the coworker-test
+desktop candidate and is not the full public desktop release.
 
 ## Release Decision
 
@@ -101,8 +105,8 @@ In scope for v1.0.0:
 - A public desktop release boundary replacing the alpha contract in
   user-facing docs after `v0.5.0`.
 - A first-class Tauri desktop app for the safe workflow listed above.
-- A first-class terminal UI over the same planner and policy. The TUI is now
-  being built before the desktop release as a reusable reference implementation.
+- Archived terminal UI and Codex source may be reopened only through a separate
+  audited product decision; it is not a v1 release dependency.
 - A stable CLI that shares the same planner, validators, run records, provider
   policy, auth broker metadata, and cleanup rules as the desktop app.
 - Narrow Tauri capabilities for every privileged operation.
@@ -137,7 +141,7 @@ Out of scope for v1.0.0:
 - Bundling broad path-sensitive hosts such as `github.com` or `api.github.com`
   for Copilot without a provider-specific broker or another enforceable
   policy.
-- New Claude, Gemini, Copilot, or Antigravity credential brokers. Each is
+- New Claude, Copilot, or Antigravity credential brokers. Each is
   credential-handling product work and should be a v1.x feature only after
   provider-specific design, tests, and disposable-secret smokes.
 - MCP, editor extension, plugin marketplace, host socket, registry credential,
@@ -258,11 +262,11 @@ Unsupported or intentionally limited users:
   storage. A dedicated non-UI security slice should add a shared sanitizer before
   any raw or semi-raw output reaches CLI, Tauri, TUI, JSONL records, or support
   output.
-- Because RunHaven only targets macOS 26+, host-held RunHaven secret material
-  should prefer macOS Keychain storage where practical. This applies to
-  RunHaven-owned secrets such as Claude setup tokens or future broker-owned
-  credentials, not provider-owned Keychain entries, browser profiles, cloud
-  credential stores, or arbitrary host credentials.
+- Ordinary provider OAuth stays inside each agent's isolated container volume.
+  If RunHaven later accepts an explicitly configured host API key, that
+  advanced broker-owned secret should prefer macOS Keychain storage rather
+  than a plaintext file. RunHaven must not copy provider-owned Keychain items,
+  browser profiles, cloud credential stores, or arbitrary host credentials.
 - Run records intentionally omit secrets and contents, but workspace paths,
   changed file names, provider hostnames, and run metadata can still reveal
   private project structure.
@@ -303,7 +307,7 @@ Unsupported or intentionally limited users:
 
 ### Networking And Provider Behavior
 
-- Provider mode is IPv4-gateway based for the current Apple `container` 1.0.0
+- Provider mode is IPv4-gateway based for the pinned Apple `container` 1.1.0
   implementation. Missing or changed IPv4 gateway/subnet fields must fail
   closed.
 - Browser sign-in flows can need localhost callbacks, broad auth hosts, or
@@ -416,7 +420,8 @@ only where the support matrix claims verified provider/auth behavior.
 
 ### M2: Build The Desktop Core Workflow
 
-- Implement first-run setup and prerequisite guidance in the desktop app.
+- Keep the implemented first-run prerequisite recovery, signed-installer handoff,
+  service start, visible agent installation, and launch-readiness checks aligned.
 - Keep native folder picking and path validation through typed Rust commands.
 - Add goal-based network selection with secure defaults and visible egress
   summaries.
@@ -511,16 +516,16 @@ git diff --check
 
 ### M6: Prove The Runtime Boundary
 
-- Refresh Apple `container` 1.0.0 evidence or intentionally update pins through
+- Refresh Apple `container` 1.1.0 evidence through
   `docs/harness/release/apple-container-update-playbook.md`.
-- Run the default Apple container smoke, provider smoke, and SSH fail-closed
-  smoke.
+- Run the default Apple container smoke, provider smoke, and no-secret SSH
+  forwarding smoke.
 - Verify cleanup after smokes: active runs, state volumes, managed networks,
   native container list, volume list, and network list.
 - Reconfirm provider wildcard-bind fallback is still subnet-restricted and
   off-subnet clients are denied.
-- Reconfirm `--ssh` fails closed and that no raw key mount or root default user
-  workaround was introduced.
+- Reconfirm `--ssh` forwards only the agent socket after an explicit warning,
+  and that no raw key mount or root default user workaround was introduced.
 
 Verification:
 
@@ -558,7 +563,6 @@ Example verification:
 ```bash
 cargo run --locked --bin runhaven -- image build claude --dry-run
 cargo run --locked --bin runhaven -- image build codex --dry-run
-cargo run --locked --bin runhaven -- image build gemini --dry-run
 cargo run --locked --bin runhaven -- image build antigravity --dry-run
 cargo run --locked --bin runhaven -- image build copilot --dry-run
 cargo run --locked --bin runhaven -- image doctor
@@ -607,12 +611,21 @@ Verification:
 cargo run --locked --bin runhaven-check-pins
 cargo build --locked
 npm --prefix ui run tauri:build
+npm --prefix ui run tauri:bundle
 git status --short --branch
 git diff --check
 ```
 
-Add the actual signing, notarization, checksum, and SBOM commands once the
-release packaging path is chosen.
+`scripts/release-desktop.sh` owns this gate. It verifies a clean exact-tagged
+source tree, full Xcode, the Developer ID identity and matching provisioning
+profile, notary credentials, hardened runtime, signed entitlements, notarization
+acceptance, stapled tickets, Gatekeeper acceptance, checksums, CycloneDX SBOMs,
+and provenance. It publishes the artifact directory only after every check
+passes. The remaining release proof is to run it with the project's real Apple
+credentials and install the resulting DMG on a clean supported Mac. The wrapper
+also mounts the finished DMG, checks its exact drag-to-Applications layout,
+copies the app to an isolated Applications directory, and rechecks architecture,
+bundle metadata, signature, stapled ticket, and Gatekeeper acceptance.
 
 ### M10: Final Public Readiness Review
 

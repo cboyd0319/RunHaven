@@ -81,7 +81,7 @@ fn managed_sessions_response_is_read_only_and_secret_free() {
     assert_eq!(session.auth_status, "login-state");
     assert_eq!(session.auth_scope, "project");
     assert_eq!(session.lifecycle, "running");
-    assert_eq!(session.next_action.kind, "auth_attention");
+    assert_eq!(session.next_action.kind, "monitor");
     assert_eq!(
         session
             .events

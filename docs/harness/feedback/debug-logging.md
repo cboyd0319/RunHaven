@@ -1,8 +1,10 @@
 # Desktop debug logging
 
-Diagnostic log trail for the Tauri desktop shell. Every run of the app writes a
+Diagnostic log trail for the Tauri desktop shell. Development runs write a
 reviewable local log so problems can be caught from the log file instead of
-screenshots. The user-facing "Debug logs" section lives in
+screenshots. Release builds keep structured Rust-side lifecycle logging, but
+do not grant the untrusted WebView permission to append arbitrary strings. The
+user-facing "Debug logs" section lives in
 `docs/DESKTOP_APP.md`; this note is the maintainer-facing detail.
 
 Run the app with `npm --prefix ui run tauri:dev:log`
@@ -16,7 +18,7 @@ included) via `scripts/scan-dev-log.sh`, so no session ends unscanned.
   first in `src-tauri/src/lib.rs`. Global level is DEBUG in debug builds, INFO
   in release (capped below TRACE on purpose, see below). Targets: stdout and
   `runhaven.log` under the app log dir. `tao`/`wry` are damped to INFO.
-- WebView side (main window only): `@tauri-apps/plugin-log` forwarding in
+- WebView side (development main window only): `@tauri-apps/plugin-log` forwarding in
   `ui/src/commands/logging.ts`, installed by `ui/src/main.tsx`. Console
   output keeps its normal behavior and is also appended to the same file,
   along with `window.onerror` and unhandled promise rejections (bounded to
@@ -78,8 +80,9 @@ The tee `dev.log` is capped at 5 MiB with one rotated backup by
 
 ## Capability boundary
 
-The WebView write path is the log plugin's single `log` command, granted by
-`src-tauri/capabilities/logging.json` (`log:allow-log`, main window only).
-The grant is pinned by `logging_capability_stays_write_only_and_main_only`
-in `src-tauri/src/capability_guard/command_scopes.rs` and vetted in
+The development WebView write path is the log plugin's single `log` command,
+granted by `src-tauri/capabilities/logging.json` (`log:allow-log`, main window
+only) through `src-tauri/tauri.dev.conf.json`. The release config omits that
+capability. The boundary is pinned by `logging_capability_stays_write_only_and_main_only`
+and `release_config_never_grants_webview_logging`, then vetted in
 `VETTED_PLUGIN_PERMISSIONS`. Monitor windows have no log grant.

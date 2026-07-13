@@ -71,8 +71,8 @@ pub fn runs_log_path() -> PathBuf {
     runhaven_cache_root().join("runs.jsonl")
 }
 
-/// Secret-free per-agent sign-in markers. One JSONL line per observed in-sandbox
-/// sign-in; never holds a token, key, or path (see `agent_sign_in_record`).
+/// Secret-free per-agent sign-in state records. Never holds a token, key, or
+/// provider credential path (see `agent_sign_in_record`).
 pub fn agent_sign_ins_path() -> PathBuf {
     runhaven_cache_root().join("agent-sign-ins.jsonl")
 }
@@ -96,6 +96,13 @@ pub fn worktrees_dir() -> PathBuf {
 pub fn active_run_path(run_id: &str) -> Result<PathBuf> {
     validate_run_id(run_id)?;
     Ok(active_runs_dir().join(format!("{run_id}.json")))
+}
+
+pub fn active_run_lock_path(run_id: &str) -> Result<PathBuf> {
+    validate_run_id(run_id)?;
+    Ok(runhaven_cache_root()
+        .join("locks")
+        .join(format!("active-run-{run_id}.lock")))
 }
 
 pub fn state_lock_path(state_volume: &str) -> PathBuf {
@@ -154,7 +161,7 @@ pub fn create_private_file(path: &Path) -> Result<File> {
     Ok(file)
 }
 
-pub fn open_private_append(path: &Path) -> Result<File> {
+pub(crate) fn open_private_append(path: &Path) -> Result<File> {
     ensure_private_parent(path)?;
     let mut options = OpenOptions::new();
     options.append(true).create(true);

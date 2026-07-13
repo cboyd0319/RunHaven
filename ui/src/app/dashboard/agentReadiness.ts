@@ -4,10 +4,10 @@ import type { StatusTone } from "./status"
 
 // Presentation for the backend-derived per-agent sign-in state. The category and
 // label are computed by the backend from what RunHaven can truthfully know
-// (Shell needs no auth; Claude via the opt-in Keychain broker; other agents via
-// a secret-free sandbox sign-in marker); the frontend only maps the category to
-// a dot tone and rolls the categories into a one-line summary. No auth logic and
-// no "via RunHaven" framing lives here.
+// (Shell needs no auth; product agents use secret-free native sign-in state);
+// the frontend only maps the category to a dot tone and rolls the categories
+// into a one-line summary. No auth logic and no "via RunHaven" framing lives
+// here.
 
 export function readinessTone(category: AgentReadiness["category"]): StatusTone {
   switch (category) {

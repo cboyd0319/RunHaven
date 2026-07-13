@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufReader, Read};
 use std::net::{IpAddr, SocketAddr, TcpListener, TcpStream};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -12,6 +12,8 @@ use ipnet::IpNet;
 use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 
+use crate::provider::egress::ClientAdmission;
+
 mod headers;
 mod http;
 mod profiles;
@@ -21,9 +23,8 @@ pub use headers::broker_request_headers;
 pub use http::{broker_upstream_path, parse_content_length, sanitize_broker_request_path};
 use http::{header_value, read_headers, send_error, send_upstream_response};
 pub use profiles::{
-    BROKER_PLACEHOLDER_VALUE, CLAUDE_BROKER, CLAUDE_OAUTH_BROKER, CODEX_BROKER,
-    CredentialInjection, GEMINI_BROKER, GuestRedirect, PathRule, ProviderBrokerProfile,
-    broker_profile_for_agent,
+    BROKER_PLACEHOLDER_VALUE, CLAUDE_BROKER, CODEX_BROKER, CredentialInjection, GuestRedirect,
+    PathRule, ProviderBrokerProfile, broker_profile_for_agent,
 };
 
 pub use crate::provider::auth_profiles::{
@@ -35,7 +36,12 @@ pub const CODEX_BROKER_PROVIDER_ID: &str = "runhaven_openai";
 pub const CODEX_BROKER_PLACEHOLDER_VALUE: &str = "runhaven-broker-placeholder";
 pub const CODEX_BROKER_UPSTREAM_HOST: &str = "api.openai.com";
 pub const CODEX_BROKER_REQUEST_TIMEOUT_SECONDS: u64 = 120;
-pub const MAX_CODEX_BROKER_REQUEST_BYTES: usize = 64 * 1024 * 1024;
+pub const BROKER_CLIENT_IO_TIMEOUT_SECONDS: u64 = 10;
+pub const MAX_BROKER_REQUEST_LINE_BYTES: usize = 8 * 1024;
+pub const MAX_BROKER_REQUEST_BYTES: usize = 8 * 1024 * 1024;
+pub const MAX_CODEX_BROKER_REQUEST_BYTES: usize = MAX_BROKER_REQUEST_BYTES;
+pub const MAX_BROKER_DECISION_KEYS: usize = 256;
+pub const MAX_CONCURRENT_BROKER_CLIENTS: usize = 8;
 pub use upstream::{BrokerUpstream, BrokerUpstreamResponse, HttpsUpstream};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -70,6 +76,7 @@ struct BrokerState {
     upstream: Arc<dyn BrokerUpstream>,
     allowed_client_networks: Vec<IpNet>,
     decisions: Mutex<BTreeMap<BrokerDecisionKey, usize>>,
+    client_admission: Arc<ClientAdmission>,
 }
 
 type BrokerDecisionKey = (String, String, String, String, Option<u16>);
@@ -120,6 +127,7 @@ impl ApiKeyBrokerProxy {
                 upstream,
                 allowed_client_networks: networks,
                 decisions: Mutex::new(BTreeMap::new()),
+                client_admission: ClientAdmission::new(MAX_CONCURRENT_BROKER_CLIENTS),
             }),
             shutdown: Arc::new(AtomicBool::new(false)),
         })
@@ -133,10 +141,17 @@ impl ApiKeyBrokerProxy {
         while !self.shutdown.load(Ordering::Relaxed) {
             match self.listener.accept() {
                 Ok((stream, peer)) => {
+                    let Some(permit) = self.state.client_admission.try_acquire() else {
+                        drop(stream);
+                        continue;
+                    };
                     let state = Arc::clone(&self.state);
-                    thread::spawn(move || {
-                        let _ = handle_broker_client(stream, peer, state);
-                    });
+                    let _ = thread::Builder::new()
+                        .name("runhaven-auth-broker-client".to_string())
+                        .spawn(move || {
+                            let _permit = permit;
+                            let _ = handle_broker_client(stream, peer, state);
+                        });
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
                     thread::sleep(Duration::from_millis(50));
@@ -178,12 +193,12 @@ fn handle_broker_client(
     peer: SocketAddr,
     state: Arc<BrokerState>,
 ) -> Result<()> {
-    stream.set_read_timeout(Some(Duration::from_secs(
-        CODEX_BROKER_REQUEST_TIMEOUT_SECONDS,
-    )))?;
-    stream.set_write_timeout(Some(Duration::from_secs(
-        CODEX_BROKER_REQUEST_TIMEOUT_SECONDS,
-    )))?;
+    // On macOS an accepted socket can inherit the listener's nonblocking mode.
+    // Client workers use blocking reads with explicit timeouts, so normalize the
+    // accepted stream before reading the request line.
+    stream.set_nonblocking(false)?;
+    stream.set_read_timeout(Some(Duration::from_secs(BROKER_CLIENT_IO_TIMEOUT_SECONDS)))?;
+    stream.set_write_timeout(Some(Duration::from_secs(BROKER_CLIENT_IO_TIMEOUT_SECONDS)))?;
     if !allows_client(&state, peer.ip()) {
         record_decision(
             &state,
@@ -198,11 +213,17 @@ fn handle_broker_client(
     }
 
     let mut reader = BufReader::new(stream.try_clone()?);
-    let mut request_line = String::new();
-    if reader.read_line(&mut request_line)? == 0 {
-        send_error(&mut stream, 400, "Bad Request")?;
-        return Ok(());
-    }
+    let request_line = match http::read_bounded_line(&mut reader, MAX_BROKER_REQUEST_LINE_BYTES)? {
+        http::BoundedLine::Line(line) => line,
+        http::BoundedLine::Eof => {
+            send_error(&mut stream, 400, "Bad Request")?;
+            return Ok(());
+        }
+        http::BoundedLine::TooLong => {
+            send_error(&mut stream, 414, "URI Too Long")?;
+            return Ok(());
+        }
+    };
     let parts = request_line.split_whitespace().collect::<Vec<_>>();
     if parts.len() != 3 {
         send_error(&mut stream, 400, "Bad Request")?;
@@ -338,12 +359,33 @@ fn record_decision(
     let mut decisions = state.decisions.lock().expect("broker decision lock");
     let key = (
         method.to_string(),
-        path.to_string(),
+        sanitize_broker_request_path(path),
         decision.to_string(),
         reason.to_string(),
         upstream_status,
     );
-    *decisions.entry(key).or_insert(0) += 1;
+    if let Some(count) = decisions.get_mut(&key) {
+        *count = count.saturating_add(1);
+        return;
+    }
+    if decisions.len() < MAX_BROKER_DECISION_KEYS.saturating_sub(2) {
+        decisions.insert(key, 1);
+        return;
+    }
+    let overflow_decision = if decision == "allowed" {
+        "allowed"
+    } else {
+        "denied"
+    };
+    let overflow = (
+        "<other>".to_string(),
+        "<capped>".to_string(),
+        overflow_decision.to_string(),
+        "decision-key-limit".to_string(),
+        None,
+    );
+    let count = decisions.entry(overflow).or_insert(0);
+    *count = count.saturating_add(1);
 }
 
 #[cfg(test)]

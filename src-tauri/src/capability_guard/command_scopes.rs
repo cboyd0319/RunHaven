@@ -254,41 +254,6 @@ fn session_input_registry_stays_off_dormant_codex_transports() {
     }
 }
 
-#[test]
-fn agent_sign_in_stays_isolated_and_status_read_only() {
-    let manifest_dir = manifest_dir();
-    let main_read = manifest_dir.join("capabilities").join("main-read.json");
-    let run_control = manifest_dir.join("capabilities").join("run-control.json");
-    let sign_in = capability_permissions("agent-sign-in.json");
-
-    // The mutating sign-in trigger lives in its own minimal capability, granting
-    // only itself, and never leaks into run-control or the read-only capability.
-    assert_same_permission_set("agent-sign-in", &sign_in, &["allow-start-agent-sign-in"]);
-    assert_generated_permission_allows_only("start_agent_sign_in");
-
-    let main_read_raw = fs::read_to_string(&main_read).expect("read main-read capability");
-    assert!(
-        !main_read_raw.contains("allow-start-agent-sign-in"),
-        "main-read must not grant the mutating sign-in trigger"
-    );
-    let run_control_raw = fs::read_to_string(&run_control).expect("read run-control capability");
-    assert!(
-        !run_control_raw.contains("allow-start-agent-sign-in"),
-        "run-control must not own the isolated sign-in trigger"
-    );
-
-    // Read-only sign-in progress stays in main-read only.
-    assert!(
-        main_read_raw.contains("allow-get-agent-sign-in-status"),
-        "main-read must grant read-only sign-in progress"
-    );
-    assert!(
-        !run_control_raw.contains("allow-get-agent-sign-in-status"),
-        "run-control must not own read-only sign-in progress"
-    );
-    assert_generated_permission_allows_only("get_agent_sign_in_status");
-}
-
 /// The window-scope pin for the whole capability set: every capability except
 /// the monitor read grant targets exactly the main window. Adding a
 /// capability that reaches any other window label, or widening an existing
@@ -345,7 +310,6 @@ fn session_monitor_capability_grants_exactly_the_monitor_reads() {
         .map(|(permission, _)| *permission)
         .chain([
             "allow-launch-run",
-            "allow-start-agent-sign-in",
             "allow-set-attention-badge",
             "allow-sync-menu-state",
             "allow-open-session-window",
@@ -353,13 +317,10 @@ fn session_monitor_capability_grants_exactly_the_monitor_reads() {
             "allow-get-managed-session-log-snapshot",
             "allow-get-log-snapshot",
             "allow-open-terminal-session",
-            "allow-open-claude-sign-in-terminal",
+            "allow-open-agent-sign-in-terminal",
             "allow-write-terminal-input",
             "allow-resize-terminal",
             "allow-close-terminal-session",
-            "allow-start-claude-oauth-signin",
-            "allow-get-claude-oauth-status",
-            "allow-clear-claude-oauth",
         ])
     {
         assert!(
@@ -397,7 +358,6 @@ fn session_window_open_capability_stays_narrow_and_main_only() {
         "run-control.json",
         "session-monitor.json",
         "launch-run.json",
-        "agent-sign-in.json",
         "menu-events.json",
         "menu-state.json",
         "attention-badge.json",

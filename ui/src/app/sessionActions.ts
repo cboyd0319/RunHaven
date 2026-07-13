@@ -103,7 +103,6 @@ export function createSessionActions({
     } catch (cause) {
       runControlState.setError(errorMessage(cause))
     } finally {
-      runControlState.resetConfirmations()
       runControlState.setBusy(false)
     }
   }

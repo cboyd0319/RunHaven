@@ -1,3 +1,4 @@
+pub mod apple_container;
 pub mod diagnostics;
 pub mod doctor;
 pub mod harness;

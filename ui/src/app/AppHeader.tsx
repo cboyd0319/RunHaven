@@ -1,6 +1,5 @@
 import { RefreshCw } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
@@ -8,8 +7,6 @@ import { cn } from "@/lib/utils"
 type AppHeaderProps = {
   title: string
   description: string
-  setupKnown: boolean
-  setupReady: boolean
   loading: boolean
   onRefresh: () => void
 }
@@ -17,13 +14,9 @@ type AppHeaderProps = {
 export function AppHeader({
   title,
   description,
-  setupKnown,
-  setupReady,
   loading,
   onRefresh,
 }: AppHeaderProps) {
-  const status = !setupKnown || loading ? "Checking" : setupReady ? "Ready" : "Blocked"
-  const variant = !setupKnown || loading ? "outline" : setupReady ? "success" : "destructive"
   const { state: sidebarState } = useSidebar()
 
   return (
@@ -46,15 +39,15 @@ export function AppHeader({
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       <div className="ml-auto flex items-center gap-2">
-        <Badge variant={variant}>{status}</Badge>
         <Button
           type="button"
           variant="outline"
           size="icon-sm"
+          disabled={loading}
           onClick={onRefresh}
           aria-label="Refresh status"
         >
-          <RefreshCw />
+          <RefreshCw className={loading ? "animate-spin" : undefined} />
         </Button>
       </div>
     </header>

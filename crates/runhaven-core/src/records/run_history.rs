@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
 
@@ -15,9 +13,9 @@ pub use log::runs_log;
 use crate::runtime::plans::AgentRunPlan;
 use crate::runtime::worktrees::worktree_record;
 use crate::support::git::{GitChange, git_value_available};
-use crate::support::paths::{open_private_append, runs_log_path};
+use crate::support::paths::runs_log_path;
 
-use super::{read_jsonl, read_jsonl_tail_bounded};
+use super::{append_private_jsonl, read_jsonl, read_jsonl_tail_bounded};
 
 pub struct RunRecordInput<'a> {
     pub plan: &'a AgentRunPlan,
@@ -72,8 +70,7 @@ pub fn write_run_record(input: RunRecordInput<'_>) -> Result<()> {
     if let Some(worktree) = &input.plan.worktree {
         payload["worktree"] = worktree_record(worktree);
     }
-    let mut file = open_private_append(&path)?;
-    writeln!(file, "{}", serde_json::to_string(&payload)?)?;
+    append_private_jsonl(&path, &[payload])?;
     summary::log_run_summary(&input, &status);
     Ok(())
 }
@@ -270,7 +267,7 @@ pub fn print_run_record(record: &Value) {
     }
     if let Some(cleanup) = record.get("cleanup") {
         println!(
-            "Cleanup provider network: {}",
+            "Cleanup run network: {}",
             cleanup
                 .get("provider_network")
                 .and_then(Value::as_str)
@@ -323,6 +320,8 @@ pub fn read_run_records_tail_bounded(limit: usize, max_tail_bytes: u64) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+
     use crate::runtime::plans::{
         AuthScope, NetworkMode, RunOptions, WorkspaceScope, build_run_plan,
     };

@@ -1,6 +1,8 @@
 use runhaven_core::provider::agent_sign_in_record::AgentReadiness;
 use serde::Serialize;
 
+use super::SetupAction;
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct CheckStatus {
@@ -8,6 +10,9 @@ pub(crate) struct CheckStatus {
     pub ok: bool,
     pub detail: String,
     pub remedy: String,
+    /// A supported Rust-owned recovery, when this exact check can be fixed in
+    /// the app. No executable, arguments, or host path cross into the WebView.
+    pub action: Option<SetupAction>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -28,11 +33,9 @@ pub(crate) struct AgentProfileSummary {
     pub provider_hosts: Vec<String>,
     pub sign_in: String,
     pub broker: String,
-    /// True when the desktop app can drive this agent's sign-in fully in-app
-    /// (device-code login). Claude has a core in-sandbox login too, but its
-    /// sign-in needs a code pasted back into the terminal, so the GUI keeps it
-    /// out of the in-app flow (it signs in from a terminal). The mutating
-    /// command still fails closed regardless.
+    /// True when the desktop app can drive this agent's native sign-in through
+    /// its in-app terminal. The mutating command still validates the exact
+    /// supported agent set and fails closed regardless.
     pub supports_in_app_sign_in: bool,
 }
 

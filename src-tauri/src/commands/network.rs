@@ -29,7 +29,9 @@ pub(crate) fn get_network_prune_preview(
     // mutating prune below is never throttled or cached and re-counts fresh
     // before its confirmation dialog.
     read_guards.network_prune_preview.run("preview", || {
-        managed_network_count().map(|count| NetworkPrunePreview { count })
+        managed_networks().map(|networks| NetworkPrunePreview {
+            count: networks.len(),
+        })
     })
 }
 
@@ -39,11 +41,11 @@ pub(crate) async fn prune_managed_networks(
     request: NetworkPruneRequest,
 ) -> Result<NetworkPruneResponse, String> {
     authorize_network_prune(&request)?;
-    let count = managed_network_count()?;
-    if !trusted_network_prune_confirmed(app, count).await? {
+    let networks = managed_networks()?;
+    if !trusted_network_prune_confirmed(app, networks.len()).await? {
         return Err(PRUNE_CANCELED.to_string());
     }
-    let outcome = core_prune().map_err(|_| {
+    let outcome = core_prune(&networks).map_err(|_| {
         "RunHaven could not remove the managed networks. Open diagnostics or try again.".to_string()
     })?;
     Ok(prune_response(outcome))
@@ -60,12 +62,17 @@ fn authorize_network_prune(request: &NetworkPruneRequest) -> Result<(), String> 
     Ok(())
 }
 
-fn managed_network_count() -> Result<usize, String> {
+fn managed_networks() -> Result<Vec<String>, String> {
     require_container_cli().map_err(|_| {
         "The container tool is not ready. Finish RunHaven setup before cleaning up networks."
             .to_string()
     })?;
-    list_managed_networks()
+    list_managed_networks().map_err(|_| "RunHaven could not list its managed networks.".to_string())
+}
+
+#[cfg(test)]
+fn map_managed_network_count<E>(networks: Result<Vec<String>, E>) -> Result<usize, String> {
+    networks
         .map(|networks| networks.len())
         .map_err(|_| "RunHaven could not list its managed networks.".to_string())
 }
@@ -103,4 +110,11 @@ pub(crate) fn prune_managed_networks_for_test(
         return Err(PRUNE_CANCELED.to_string());
     }
     Ok(prune_response(prune()?))
+}
+
+#[cfg(test)]
+pub(crate) fn managed_network_count_for_test(
+    networks: Result<Vec<String>, String>,
+) -> Result<usize, String> {
+    map_managed_network_count(networks)
 }

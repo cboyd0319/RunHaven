@@ -1,6 +1,11 @@
 # Native GUI Help, Tips, and Privacy Communication
 
-Last updated: 2026-07-02 UTC
+Status: Historical design record. The Claude Keychain and setup-token guidance
+below was withdrawn on 2026-07-12 when all four agents moved to native OAuth
+inside their containers. Use `docs/AUTH_BROKER.md` and `docs/DESKTOP_APP.md` for
+current behavior.
+
+Last updated: 2026-07-12 UTC
 
 Design guidance for how the RunHaven desktop app explains itself: privacy copy,
 in-app help, and first-encounter tips. Scope is what to say and when to show it,

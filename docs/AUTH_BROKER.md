@@ -1,321 +1,107 @@
-# Auth Broker
+# Authentication and API-key brokers
 
-Status: host-side API-key broker for Codex, Claude, and Gemini, plus
-`runhaven login` for all four sign-in agents (Claude, Codex, Copilot, and
-Antigravity) via an in-sandbox login. RunHaven holds no agent token on the host,
-with one opt-in exception: the desktop app's Claude Keychain broker (path C,
-default for Claude sign-in) saves your Claude token in your Mac's Keychain only.
-Path A (sign in inside the sandbox) keeps zero host custody. See "Claude token
-custody" below. No Copilot or Antigravity API-key broker is planned.
+RunHaven's default sign-in path is the provider CLI's own OAuth flow inside the
+agent container. RunHaven does not copy credentials from macOS, read provider
+Keychain items, or store OAuth tokens on the host.
 
-RunHaven exposes two auth inspection commands:
+## Ordinary sign-in
 
-```bash
-runhaven auth status
-runhaven auth explain claude
-```
+In the desktop app, choose an agent and open its sign-in terminal. The same
+commands are available from the CLI with `runhaven login <agent>`.
 
-These commands are intentionally safe to run. They do not inspect Keychain,
-browser profiles, cloud credential files, provider login caches, or environment
-values. They print broker status and profile-specific guidance only.
+| Agent | Command inside the container | What the user does |
+| --- | --- | --- |
+| Claude | `claude auth login` | Open the printed URL, approve in the browser, then paste the returned code into the terminal. |
+| Codex | `codex login --device-auth` | Open the printed URL, enter the one-time code, and approve. Codex polls until approval completes. |
+| Antigravity | `agy` | Choose Google OAuth on first launch, approve in the browser, paste the returned code, finish first-run setup, then exit the agent. |
+| Copilot | `copilot login` | Open GitHub's device page, enter the one-time code, and approve. Copilot waits for approval. |
 
-## Boundary
+The sign-in container uses:
 
-Trusted:
+- the non-root `agent` user;
+- a read-only root filesystem;
+- dropped Linux capabilities;
+- provider-only egress by default;
+- a small RunHaven-owned login workspace, not the user's project;
+- the agent's isolated home volume.
 
-- the user
-- the RunHaven host process
-- explicit user approval for a brokered auth action
+A successful shared-agent sign-in remains available to later runs of that agent.
+Project-scoped sign-in uses that project's separate agent state instead.
 
-Untrusted or partially trusted:
+RunHaven relays terminal bytes directly to the app and does not write them to
+RunHaven logs, run records, or status registries. The provider CLI may write its
+own configuration, credential, or support-log files inside its isolated home
+volume.
 
-- repository contents
-- the selected agent CLI
-- model output
-- package install scripts
-- MCP servers or extensions
-- code running inside the Apple `container` guest
+## Credential storage
 
-Sensitive:
+OAuth credential storage is owned by each Linux provider CLI. It is protected by:
 
-- provider API keys and OAuth tokens
-- local provider login caches
-- browser profiles and cookies
-- Keychain items
-- Google Cloud ADC and service account JSON files
-- GitHub, Copilot, OpenAI, Anthropic, Gemini, and Claude credentials
+- isolation from the Mac home directory and Mac Keychain;
+- an owner-only RunHaven container volume;
+- no default host-home, browser-profile, SSH-key, cloud-credential, or arbitrary
+  environment-variable mounts;
+- no display or inspection of the stored credential by RunHaven.
 
-## API-Key Broker
+The volume is not a hardware-backed secret store. Anyone with sufficient access
+to the Mac account and Apple container data may be able to inspect it. Deleting
+the agent's data volume removes the local credential and all other saved state
+for that agent. Local deletion does not necessarily revoke the provider-side
+authorization.
 
-Codex, Claude, and Gemini support an explicit host-side API-key broker. The
-host environment variable is named once; the real key stays on the host and the
-guest is redirected at the broker:
+RunHaven writes a separate secret-free marker after a sign-in command exits
+successfully. The GUI uses that marker for “Signed in” status. It means RunHaven
+witnessed a successful sign-in, not that the provider token is still valid.
 
-```bash
-runhaven run codex  --network provider --api-key-broker-env OPENAI_API_KEY
-runhaven run claude --network provider --api-key-broker-env ANTHROPIC_API_KEY
-runhaven run gemini --network provider --api-key-broker-env GEMINI_API_KEY
-```
+## Codex device authorization
 
-`--api-key-broker-env` resolves the broker from the selected profile. (The old
-`--codex-api-key-broker-env` name still works as an alias.)
+Current OpenAI source confirms that `--device-auth` is a first-class login
+flag. Codex requests a device code, prints the verification URL and one-time
+code, then polls the token endpoint at the server-provided interval for up to 15
+minutes. After approval it exchanges the authorization code and persists the
+tokens under `CODEX_HOME`. In RunHaven, `CODEX_HOME` is within the isolated
+agent home volume.
 
-Per provider, the broker pins one upstream host, injects the real credential
-host-side, and points the guest at the broker:
+Source: [openai/codex device-code implementation](https://github.com/openai/codex/blob/c888e8e75a9f0e90ce7d5517f8b9540832cbbf76/codex-rs/login/src/device_code_auth.rs).
 
-| Provider | Upstream host | Credential injected host-side | Guest redirect |
-| --- | --- | --- | --- |
-| Codex | `api.openai.com` | `Authorization: Bearer` | Codex custom-provider config (`/v1`) |
-| Claude | `api.anthropic.com` | `x-api-key` + `anthropic-version` | `ANTHROPIC_BASE_URL` |
-| Gemini | `generativelanguage.googleapis.com` | `x-goog-api-key` | `GOOGLE_GEMINI_BASE_URL` |
+## Copilot device authorization
 
-Current behavior, for every brokered provider:
+GitHub documents `copilot login` as an OAuth device flow. On headless Linux,
+when no system credential store is available, Copilot can store its token in
+`~/.copilot/config.json`. In RunHaven that path is inside Copilot's isolated
+home volume.
 
-- no host credential store is read
-- the named host environment variable is read only for a real run, never for
-  `plan`, `run --dry-run`, `auth status`, or `auth explain`
-- the raw API key is not copied into the guest environment or container command
-- the guest receives only a placeholder key value plus the broker base-URL
-  redirect above
-- the broker binds to the RunHaven provider network, restricts clients to that
-  Apple `container` subnet, and forwards only the provider's allowed request
-  paths to the pinned upstream host
-- the broker strips any guest-sent copy of the injected credential headers
-  before injecting the real value
-- after a brokered run, `runhaven auth log` records only method, sanitized path,
-  decision, reason, upstream status, count, and run id
-- no token is printed in plan, status, JSON, or diagnostic output, and no token
-  value, request body, or environment variable name is stored in the log
+Source: [GitHub Copilot CLI authentication](https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/authenticate-copilot-cli).
 
-`--env NAME` is still available as an explicit fallback when a user deliberately
-wants a token value inside the guest, but it is not the preferred headless path.
+## Antigravity first-run authorization
 
-Provider egress controls are separate. `--network provider` limits CONNECT
-targets by host and records policy decisions; after a run that blocked any
-target it prints a calm two-line notice and keeps the per-host detail in
-`runhaven egress log`. It does not authenticate to the provider and it does not
-see HTTPS URL paths.
+Google documents first-run `agy` as an interactive flow: select Google OAuth,
+complete browser sign-in, paste the returned code, choose a theme, accept the
+terms, and confirm workspace trust. The real terminal is required for this full
+sequence.
 
-## OAuth And Subscription Logins
+Source: [Google Antigravity CLI codelab](https://codelabs.developers.google.com/antigravity-cli-hands-on).
 
-The broker is for API keys only. If you sign in with OAuth or a subscription
-(Claude.ai or Claude Pro/Max, ChatGPT sign-in for Codex, a Google account for
-Gemini, GitHub OAuth for Copilot), the broker does not apply.
+## Advanced API-key broker
 
-RunHaven deliberately does not mount or read your host login state:
-`~/.claude.json`, the macOS Keychain, browser profiles, and cloud credential
-files stay on the host. For an OAuth or subscription agent, authenticate once
-inside the container's persistent state volume (`/home/agent`, per profile,
-workspace, and session). The tokens live in that isolated volume and later runs
-reuse it; your host login is never touched. For this to work, the provider
-allowlist must permit the OAuth login and token-refresh hosts, not only the API
-host.
-
-A host-side OAuth-token broker was researched (2026-06-26) and first decided
-against for every provider. For Codex, Gemini, and Copilot that decision still
-stands: their OAuth/subscription tokens are not drop-in bearers (they target
-separate login endpoints or need the official client), so those logins stay on
-the isolated-in-container path (path A) and the work there is allowlisting each
-provider's login and refresh hosts, not a broker. Tracked in
-[`NON_UI_BACKLOG.md`](NON_UI_BACKLOG.md).
-
-For Claude only, that decision was reversed in the desktop app. Claude's
-`setup-token` mints a long-lived token that Claude Code sends as a normal
-`Authorization: Bearer` to `api.anthropic.com`, so it *is* a drop-in bearer the
-existing broker can inject, and sign-in runs on the host with Anthropic's own
-tool (RunHaven never handles your password or OAuth session, only the printed
-token). This is Claude's "path C" (see below). It reintroduces a small,
-OS-vaulted host custody for Claude only; the trade-off is analyzed in
-[`SECURITY_MODEL.md`](SECURITY_MODEL.md).
-
-### Claude Keychain OAuth broker (path C)
-
-Path C is the default Claude sign-in in the desktop app: "Sign in on your Mac."
-RunHaven runs `claude setup-token` on the host, stores the printed token in a
-RunHaven-owned macOS Keychain item, and the broker injects it as
-`Authorization: Bearer` for requests to `api.anthropic.com`. The token never
-enters the sandbox; the guest holds only a placeholder and a broker base URL.
-
-The item lives at service `RunHaven Claude OAuth`, account `claude`. It carries
-an access control with a user-presence flag, so every read needs a live Touch ID
-or device-password approval, and it is `AccessibleWhenUnlockedThisDeviceOnly`
-(never synced to iCloud, never in backups). Cross-app isolation binds only on a
-signed, notarized release build; an unsigned dev build falls back to the legacy
-keychain, where the same user-presence access control is attached. Confirming the
-presence gate binds on that legacy dev keychain is a pending maintainer check
-(F3); the signed release build is the supported path for the claims below.
-
-**What RunHaven does and does not do with your token**
-
-- RunHaven saves no copy of its own; the only saved copy is in your Mac's
-  Keychain.
-- RunHaven reads only the one Keychain item it created. It does not read your
-  other Keychain logins, including Claude's own.
-- RunHaven uses your token only to sign your runs. It does not log it, display
-  it, or keep any saved copy outside your Mac's Keychain.
-- Your token never goes inside the sandbox. The sandbox holds only a
-  placeholder; RunHaven adds the real token on your Mac, only for requests to
-  Anthropic.
-- RunHaven can use your Claude token only after you approve it with Touch ID or
-  your device password. It cannot use your token silently.
-- RunHaven sends your token only to Anthropic, to authorize your runs, and
-  nowhere else.
-
-Honest limits: during a run the broker holds the token in memory to inject it,
-and it overwrites its own copy as soon as it is saved, but it cannot wipe the
-token from memory entirely. On an unsigned dev build the cross-app isolation
-claim does not hold; only the Touch ID / device-password gate does.
-
-**Remove the token.** In the Agents view, "Remove saved token" deletes only
-RunHaven's own Keychain item; it does not touch your other logins and does not
-revoke the token on Anthropic's side (revoke that in your Anthropic account).
-The CLI equivalent stays `runhaven login claude --clear`, which also best-effort
-removes a legacy host token.
-
-**Token age and re-sign-in.** `setup-token` mints a static, non-refreshing
-token, so RunHaven ages it from the Keychain item's own non-secret creation
-date (never the token value). Once the token is older than the cadence you set
-in Settings (default 90 days), the Agents view suggests signing in again. It is
-a reminder, not a cutoff: the old token keeps working until you replace it.
-
-### `runhaven login`
-
-`runhaven login <agent>` signs you in once and later runs reuse it. The shape
-depends on what each CLI supports.
-
-**Codex and Copilot (in-sandbox device login).** `runhaven login codex` and
-`runhaven login copilot` run the CLI's own device-code login once inside the
-sandbox, on the agent's shared home volume (`--auth-scope agent`). The CLI
-prints a URL; you approve in your browser and it polls to completion (Codex has
-no code to paste back; Copilot uses `github.com/login/device` with a code). The
-credential lands only in that isolated volume and later runs reuse it; RunHaven
-never sees the token, so this stays the default-isolation path. The login runs
-in `provider` mode, so the egress allowlist must include each provider's login
-and refresh hosts: `auth.openai.com` for Codex, and `github.com` plus
-`api.github.com` for Copilot (a deliberate widening, RunHaven cannot yet
-path-restrict those GitHub hosts). Codex needs the account "Allow device code
-login" setting on. Clear a login with `runhaven login <agent> --clear`, which
-deletes that shared home volume.
-
-**Claude (in-sandbox login, path A).** `runhaven login claude` runs
-`claude auth login` (Claude's default Claude.ai subscription flow) inside the
-sandbox, the same as the other agents. Open the URL it prints, approve in your
-browser, then paste the code it gives you back into the terminal. The login
-persists in Claude's shared home volume, so later runs reuse it, and RunHaven
-never sees, stores, or injects the token. The OAuth token exchange hits
-`platform.claude.com` and the client-metadata fetch hits `claude.ai`, both
-already in the bundled provider allowlist, so no egress change is needed. Clear
-it with `runhaven login claude --clear`, which deletes that shared home volume
-and best-effort removes any token an older RunHaven stored on your Mac before
-this change. In the desktop app this is the "Sign in inside the sandbox instead"
-opt-in; the default there is path C (Keychain OAuth broker, above).
-
-**Antigravity (first-run Google login).** `agy` has no login subcommand, so
-`runhaven login antigravity` starts `agy`, which prompts a Google sign-in on
-first run: open the URL it prints, approve in your browser, then type `/exit`
-once you are in the agy session. The login persists in the shared home volume.
-Its hosts were pinned from live egress observation (2026-06-26):
-`oauth2.googleapis.com` (token exchange), `www.googleapis.com` (userinfo),
-`cloudcode-pa.googleapis.com`, and the model-endpoint family pattern
-`*-cloudcode-pa.googleapis.com`. That pattern covers the `daily-` channel this
-`agy` build uses and any future channel or region prefix (`us-`, `eu-`, ...)
-without a re-pin, and because it is anchored inside `googleapis.com` it cannot
-reach `storage` or other Google services. The OAuth consent
-(`accounts.google.com`) and redirect (`antigravity.google`) happen in your host
-browser, not the guest, so neither is bundled. `agy` also prints an "Eligibility check failed" line because
-it cannot fetch your profile picture from `lh3.googleusercontent.com`; this is
-harmless (the agent works), add `--provider-host lh3.googleusercontent.com` to
-silence it. Gemini uses the API-key broker.
-
-## Smoke Coverage
-
-Codex broker behavior is live-verified on macOS 26+ with Apple `container` using
-a disposable OpenAI API key:
+Claude and Codex retain an optional host-side API-key broker for explicitly
+configured advanced use:
 
 ```bash
-export RUNHAVEN_CODEX_SMOKE_API_KEY=...
+runhaven run claude --network provider \
+  --api-key-broker-env ANTHROPIC_API_KEY -- <agent args>
+
 runhaven run codex --network provider \
-  --api-key-broker-env RUNHAVEN_CODEX_SMOKE_API_KEY -- \
-  codex --version
+  --api-key-broker-env OPENAI_API_KEY -- <agent args>
 ```
 
-The Claude and Gemini broker paths are covered by unit tests (credential
-injection, path matching, placeholder-only guest config). Their live redirect
-(`ANTHROPIC_BASE_URL` over the broker, Gemini's currently undocumented
-`GOOGLE_GEMINI_BASE_URL`) must be confirmed with a real provider API key on the
-target CLI version before being treated as proven. The key value is inherited by
-the host process only; it is never placed on the command line or inside the
-guest environment.
+The plan stores only the environment-variable name. At launch, RunHaven reads
+the value into memory, starts a narrow host broker, gives the container a
+placeholder credential, and forwards only approved provider requests with the
+real key. The key is never placed in the container command or guest environment.
 
-## Why Host-Side
+This broker is not the ordinary sign-in path. RunHaven does not automatically
+select it because an environment variable happens to exist. The user must
+explicitly configure it, and provider-only network mode is required.
 
-A plain HTTPS CONNECT proxy sees the destination host and port, not the request
-path inside the TLS stream. RunHaven should not intercept provider TLS by
-default just to learn paths. A host-side broker keeps the model clean:
-
-- the host owns the sensitive provider credential
-- the guest asks for a narrow provider action through a pinned host and path
-- RunHaven audits the request and fails closed when the policy is not explicit
-- the guest does not receive a usable credential
-
-## Provider Notes
-
-- Codex supports ChatGPT sign-in, OpenAI API-key sign-in, trusted access tokens,
-  custom model providers, and the Responses API. The broker uses the API-key
-  plus custom-provider path (`/v1/responses`).
-- Claude Code supports Claude.ai or subscription OAuth, the Anthropic API key,
-  cloud provider auth, and `apiKeyHelper`. The broker uses the API-key path:
-  `x-api-key` to `api.anthropic.com` with an `ANTHROPIC_BASE_URL` redirect.
-  OAuth and subscription logins use isolated in-container state.
-- Gemini CLI supports Google login, the Gemini API key, and Vertex AI auth. The
-  broker uses the Gemini API-key path: `x-goog-api-key` to
-  `generativelanguage.googleapis.com` with a base-URL redirect. The redirect env
-  is currently undocumented upstream and version-fragile; re-verify per CLI
-  version. Vertex AI and Google account login are not brokered.
-- Copilot CLI is design-only and not brokered. The Copilot API host is bounded
-  (`*.githubcopilot.com`) and could be pinned, so this is not a hard technical
-  block, but brokering is still the wrong call: GitHub's terms forbid proxying
-  Copilot, the credential is a GitHub OAuth token exchanged at an undocumented
-  endpoint, and a broker would have to read the host token store. Use isolated
-  in-container login state; the GitHub device flow works headlessly and
-  `runhaven login copilot` runs it for you.
-- Antigravity auth and runtime endpoint sources remain incomplete, so no broker
-  behavior is planned until official sources are reviewed.
-
-The reviewed source links are recorded in
-[`RESEARCH.md`](RESEARCH.md#agent-runtime-sources).
-
-## Non-Goals
-
-The broker design does not allow:
-
-- automatic Keychain extraction
-- browser profile or cookie reads
-- mounting `~/.config`, cloud credential folders, SSH material, or the macOS
-  home directory
-- reading host login state such as `~/.claude.json` to broker OAuth tokens
-- copying Google ADC or service account JSON files into the guest by default
-- implicit `--env` passthrough
-- printing token values or credential file contents
-- TLS interception as the default provider egress model
-- treating broad GitHub hosts as safe merely because Copilot uses them
-
-## Remaining Acceptance Criteria
-
-Codex, Claude, and Gemini brokers exist today. Before another provider gets a
-real broker, or before any broker becomes a default path, the implementation
-must satisfy all relevant criteria:
-
-- explicit user opt-in for each provider account or credential source
-- provider-specific policy tied to the endpoint matrix
-- no real secret values in logs, plans, status output, JSON, exceptions, or
-  tests
-- least-privilege token or action scope
-- clear expiry and revocation behavior
-- run records that show what provider action was brokered without exposing the
-  credential
-- focused regression tests proving secret values are not printed
-- live smoke coverage for the selected provider flow on macOS 26+ with Apple
-  `container`
-- failure mode that leaves the guest unauthenticated instead of widening the
-  boundary
+Copilot and Antigravity do not have a RunHaven API-key broker.

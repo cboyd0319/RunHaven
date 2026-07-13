@@ -61,18 +61,15 @@ pub(super) const MAIN_READ_FORBIDDEN_PERMISSIONS: &[&str] = &[
     "allow-discard-managed-session-worktree",
     "allow-rebuild-agent-image",
     "allow-prune-managed-networks",
-    "allow-start-agent-sign-in",
+    "allow-perform-setup-recovery",
     "allow-set-attention-badge",
     "allow-sync-menu-state",
     "allow-open-terminal-session",
-    "allow-open-claude-sign-in-terminal",
+    "allow-open-agent-sign-in-terminal",
     "allow-open-agent-run-terminal",
     "allow-write-terminal-input",
     "allow-resize-terminal",
     "allow-close-terminal-session",
-    "allow-start-claude-oauth-signin",
-    "allow-get-claude-oauth-status",
-    "allow-clear-claude-oauth",
 ];
 pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-get-log-snapshot", "get_log_snapshot"),
@@ -115,26 +112,13 @@ pub(super) const RUN_CONTROL_PERMISSIONS: &[(&str, &str)] = &[
 pub(super) const TERMINAL_PERMISSIONS: &[(&str, &str)] = &[
     ("allow-open-terminal-session", "open_terminal_session"),
     (
-        "allow-open-claude-sign-in-terminal",
-        "open_claude_sign_in_terminal",
+        "allow-open-agent-sign-in-terminal",
+        "open_agent_sign_in_terminal",
     ),
     ("allow-open-agent-run-terminal", "open_agent_run_terminal"),
     ("allow-write-terminal-input", "write_terminal_input"),
     ("allow-resize-terminal", "resize_terminal"),
     ("allow-close-terminal-session", "close_terminal_session"),
-];
-
-/// The exact grant for the Claude Keychain sign-in capability (design C,
-/// Section 4). The host token custody surface is credential-sensitive, so it
-/// lives in its own main-window-only capability, isolated from run control and
-/// agent sign-in, and never widens main-read or the read-only monitor windows.
-pub(super) const CLAUDE_OAUTH_PERMISSIONS: &[(&str, &str)] = &[
-    (
-        "allow-start-claude-oauth-signin",
-        "start_claude_oauth_signin",
-    ),
-    ("allow-get-claude-oauth-status", "get_claude_oauth_status"),
-    ("allow-clear-claude-oauth", "clear_claude_oauth"),
 ];
 
 pub(super) const ATTENTION_BADGE_PERMISSION: &str = "allow-set-attention-badge";

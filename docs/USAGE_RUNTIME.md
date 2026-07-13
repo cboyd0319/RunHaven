@@ -44,23 +44,23 @@ command line or inside the guest environment.
 runhaven plan claude --ssh
 ```
 
-`--ssh` currently fails closed on the pinned Apple `container` 1.0.0 runtime.
-RunHaven keeps the flag visible so the CLI can explain the blocker, but it does
-not build or launch an SSH-forwarded run while the non-root agent user cannot
-use the forwarded socket.
+`--ssh` forwards the host SSH agent socket only after an explicit warning. It
+never mounts private key files, and the container still runs as the non-root
+`agent` user. The sandboxed agent can act as your SSH identity while the run is
+active, so leave this off unless the project needs private Git access.
 
-For local verification, use the Apple container smoke harness. Its default path
-checks that `runhaven plan --ssh` fails closed. `--with-ssh` also checks that
-`runhaven run --ssh` refuses before launching a container:
+For local verification, use the Apple container smoke harness. `--with-ssh`
+uses an empty disposable agent and verifies that the non-root container can
+reach the forwarded socket without exposing a private key:
 
 ```bash
 scripts/apple_container_smoke.sh --with-ssh
 ```
 
-The live blocker found on 2026-06-16 was that RunHaven's non-root `agent` user
-could see the forwarded socket path, but `ssh-add -l` returned permission
-denied. Treat that as an Apple `container` SSH-forwarding blocker, not as a
-reason to mount raw SSH keys or run the agent as root.
+The original 2026-06-16 permission failure used a private `0600` agent socket.
+That case still fails safe. The default macOS launchd agent socket was later
+verified as accessible to the non-root container user; `ssh-add -l` returned
+the expected no-identities status.
 
 ## Reusable Sessions And State Volumes
 

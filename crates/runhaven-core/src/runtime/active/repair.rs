@@ -1,5 +1,3 @@
-use std::process::Command;
-
 use anyhow::{Result, bail};
 use serde_json::{Value, json};
 
@@ -88,25 +86,41 @@ fn repair_one_marker(record: &Value) -> Result<Value> {
     )?;
     validate_run_id(run_id)?;
     validate_runhaven_container_name(container_name)?;
-    let output = Command::new("container")
+    let output = crate::apple_container::command()?
         .args(["inspect", container_name])
         .output()?;
     let code = output.status.code().unwrap_or(1);
-    if output.status.success() {
+    repair_result_for_inspect(
+        run_id,
+        container_name,
+        output.status.success(),
+        code,
+        &output.stderr,
+    )
+}
+
+fn repair_result_for_inspect(
+    run_id: &str,
+    container_name: &str,
+    inspect_succeeded: bool,
+    inspect_return_code: i32,
+    stderr: &[u8],
+) -> Result<Value> {
+    if inspect_succeeded {
         return Ok(json!({
             "run_id": run_id,
             "container_name": container_name,
-            "inspect_return_code": code,
+            "inspect_return_code": inspect_return_code,
             "marker_removed": false,
             "status": "kept",
         }));
     }
-    if is_missing_container_stderr(&output.stderr) {
+    if is_missing_container_stderr(stderr) {
         remove_active_run_record(run_id)?;
         return Ok(json!({
             "run_id": run_id,
             "container_name": container_name,
-            "inspect_return_code": code,
+            "inspect_return_code": inspect_return_code,
             "marker_removed": true,
             "status": "removed",
         }));
@@ -114,7 +128,7 @@ fn repair_one_marker(record: &Value) -> Result<Value> {
     Ok(json!({
         "run_id": run_id,
         "container_name": container_name,
-        "inspect_return_code": code,
+        "inspect_return_code": inspect_return_code,
         "marker_removed": false,
         "status": "unverified",
     }))
@@ -145,7 +159,7 @@ pub fn active_run_repair_available(run_id: &str) -> Result<bool> {
         "active run record is missing container name",
     )?;
     validate_runhaven_container_name(container_name)?;
-    let output = Command::new("container")
+    let output = crate::apple_container::command()?
         .args(["inspect", container_name])
         .output()?;
     Ok(!output.status.success() && is_missing_container_stderr(&output.stderr))
@@ -154,6 +168,9 @@ pub fn active_run_repair_available(run_id: &str) -> Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    use crate::support::paths::{active_run_path, override_cache_root_for_tests};
 
     #[test]
     fn missing_container_stderr_accepts_current_cli_wording() {
@@ -178,7 +195,35 @@ mod tests {
             b"Error: network not found: runhaven-fixture\n"
         ));
         assert!(!is_missing_container_stderr(
-            b"Error: image not found: runhaven/base:0.1.0\n"
+            b"Error: image not found: runhaven/base:0.7.0\n"
         ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn repair_does_not_report_removed_when_marker_deletion_fails() {
+        let cache = tempfile::tempdir().expect("cache");
+        let _cache_home = override_cache_root_for_tests(cache.path());
+        let path = active_run_path("repair-delete-error").expect("marker path");
+        std::fs::create_dir_all(&path).expect("directory at marker path");
+
+        let error = repair_result_for_inspect(
+            "repair-delete-error",
+            "runhaven-repair-delete-error",
+            false,
+            1,
+            b"Error: container not found: runhaven-repair-delete-error\n",
+        )
+        .expect_err("repair must propagate a marker deletion failure");
+
+        assert!(
+            error
+                .to_string()
+                .contains("could not remove active run marker")
+        );
+        assert!(
+            path.is_dir(),
+            "repair must not claim the marker was removed"
+        );
     }
 }

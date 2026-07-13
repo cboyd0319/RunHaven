@@ -119,3 +119,114 @@ fn relay_moves_bytes_in_both_directions() {
     relay_thread.join().expect("relay");
     upstream_server.join().expect("upstream server");
 }
+
+#[test]
+fn proxy_and_broker_accept_loops_admit_before_spawning_workers() {
+    for source in [
+        include_str!("../egress.rs"),
+        include_str!("../auth_broker.rs"),
+    ] {
+        let accept_loop = source
+            .split("pub fn serve_forever")
+            .nth(1)
+            .expect("serve loop");
+        let before_handler = accept_loop.split("handle_").next().expect("accept branch");
+        assert!(
+            before_handler.contains("try_acquire"),
+            "client admission must happen before a worker thread is spawned"
+        );
+    }
+}
+
+#[test]
+fn client_admission_releases_capacity_when_a_worker_finishes() {
+    assert_eq!(MAX_CONCURRENT_EGRESS_CLIENTS, 32);
+    let admission = ClientAdmission::new(2);
+    let first = admission.try_acquire().expect("first client");
+    let _second = admission.try_acquire().expect("second client");
+
+    assert!(admission.try_acquire().is_none(), "excess client rejected");
+    drop(first);
+    assert!(
+        admission.try_acquire().is_some(),
+        "finished worker releases slot"
+    );
+}
+
+#[test]
+fn proxy_closes_an_excess_client_before_spawning_a_worker() {
+    let mut proxy = ThreadedAllowlistProxy::bind(
+        ("127.0.0.1", 0),
+        EgressPolicy::new(&["example.com".to_string()]).expect("policy"),
+        &[],
+    )
+    .expect("proxy");
+    Arc::get_mut(&mut proxy.state)
+        .expect("unshared proxy state")
+        .client_admission = ClientAdmission::new(1);
+    let server = {
+        let proxy = proxy.clone();
+        thread::spawn(move || proxy.serve_forever())
+    };
+    let address = proxy.server_addr().expect("proxy address");
+    let first = TcpStream::connect(address).expect("first client");
+    let deadline = std::time::Instant::now() + Duration::from_secs(2);
+    while proxy.state.client_admission.active() != 1 && std::time::Instant::now() < deadline {
+        thread::yield_now();
+    }
+    assert_eq!(proxy.state.client_admission.active(), 1);
+    let mut excess = TcpStream::connect(address).expect("excess client");
+    excess
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .expect("excess timeout");
+    let mut byte = [0_u8; 1];
+
+    let closed = match excess.read(&mut byte) {
+        Ok(0) => true,
+        Err(error) => matches!(
+            error.kind(),
+            std::io::ErrorKind::ConnectionReset | std::io::ErrorKind::ConnectionAborted
+        ),
+        _ => false,
+    };
+
+    assert!(closed, "excess proxy client must be closed");
+    drop(first);
+    proxy.shutdown();
+    server.join().expect("proxy server");
+}
+
+#[test]
+fn proxy_decision_keys_have_a_fixed_cardinality_limit() {
+    let proxy = ThreadedAllowlistProxy::bind(
+        ("127.0.0.1", 0),
+        EgressPolicy::new(&["example.com".to_string()]).expect("policy"),
+        &[],
+    )
+    .expect("proxy");
+    for index in 0..300 {
+        record_decision(
+            &proxy.state,
+            &format!("denied-{index}.example"),
+            443,
+            "denied",
+            "test",
+            "",
+        );
+    }
+
+    let decisions = proxy.policy_decisions();
+    assert!(decisions.len() <= MAX_PROXY_DECISION_KEYS);
+    assert_eq!(
+        decisions
+            .iter()
+            .map(|decision| decision.count)
+            .sum::<usize>(),
+        300
+    );
+    assert!(
+        decisions
+            .iter()
+            .any(|decision| decision.reason == "decision-key-limit")
+    );
+}

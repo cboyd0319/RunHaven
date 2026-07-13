@@ -68,7 +68,7 @@
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.48 0.13 246);
+    --primary: oklch(0.47 0.13 246);
     --primary-foreground: oklch(0.985 0.015 246);
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
@@ -90,11 +90,10 @@
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
     --radius: 0.625rem;
-    /* Alpha lets the macOS Sidebar vibrancy show as glass (NAT-2). Light mode
-     * is not currently reachable (html is hardcoded .dark) but kept correct. */
+    /* Alpha lets the macOS Sidebar vibrancy show as glass (NAT-2). */
     --sidebar: oklch(0.985 0 0 / 72%);
     --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.48 0.13 246);
+    --sidebar-primary: oklch(0.47 0.13 246);
     --sidebar-primary-foreground: oklch(0.985 0.015 246);
     --sidebar-accent: oklch(0.955 0.006 220);
     --sidebar-accent-foreground: oklch(0.205 0 0);
@@ -106,9 +105,10 @@
  * Dark ladder from the macOS UI Kit, hue-shifted to the RunHaven navy
  * (docs/design/native-gui-macos-kit-notes.md section 6): kit-neutral surfaces
  * keep their kit lightness/alpha on the navy hue; label, fill, and separator
- * tokens adopt the kit white-alpha relationships (labels 96/55%, fills 8/11%,
+ * tokens adopt the kit white-alpha relationships (labels 96%, fills 8/11%,
  * separators 8%); accents are kit dark system colors, contrast-tuned to keep
- * every text pair at or above 4.5:1.
+ * every text pair at or above 4.5:1. Secondary labels use 70% because 55% does
+ * not meet AA over the translucent sidebar material.
  */
 .dark {
     --background: oklch(0.24 0.042 222);
@@ -117,14 +117,14 @@
     --card-foreground: oklch(0.97 0.01 210);
     --popover: oklch(0.3 0.048 222);
     --popover-foreground: oklch(0.97 0.01 210);
-    --primary: oklch(0.55 0.16 250);
+    --primary: oklch(0.47 0.15 250);
     --primary-foreground: oklch(0.985 0.015 246);
     --secondary: oklch(1 0 0 / 7%);
     --secondary-foreground: oklch(0.97 0.01 210);
     --success: oklch(0.756 0.208 147);
     --success-foreground: oklch(0.16 0.047 222);
     --muted: oklch(1 0 0 / 8%);
-    --muted-foreground: oklch(1 0 0 / 55%);
+    --muted-foreground: oklch(1 0 0 / 70%);
     --accent: oklch(1 0 0 / 11%);
     --accent-foreground: oklch(0.97 0.01 210);
     --warning: oklch(0.762 0.167 57);
@@ -140,7 +140,7 @@
     --chart-5: oklch(0.762 0.167 57);
     --sidebar: oklch(0.155 0.044 224 / 72%);
     --sidebar-foreground: oklch(1 0 0 / 96%);
-    --sidebar-primary: oklch(0.55 0.16 250);
+    --sidebar-primary: oklch(0.47 0.15 250);
     --sidebar-primary-foreground: oklch(0.985 0.015 246);
     --sidebar-accent: oklch(1 0 0 / 11%);
     --sidebar-accent-foreground: oklch(1 0 0 / 96%);

@@ -104,7 +104,7 @@ container behavior.
 
 Update only the files needed for the changed pin surface:
 
-- `pins.toml`: Apple `container` version, commit, installer SHA-256, installer
+- `pins.toml`: Apple `container` version, commit, installer URL, installer SHA-256, installer
   Team ID, builder image, vminit image, Kata release, kernel filename, and
   kernel SHA-256.
 - `crates/runhaven-core/src/doctor/runtime_pins.rs`: fixture pins and parser fixtures

@@ -12,7 +12,7 @@ fn managed_session_live_smoke_launches_real_agent_profile() {
     let Some(config) = live_agent_smoke_config() else {
         eprintln!(
             "skipping real-agent GUI smoke: set RUNHAVEN_GUI_LIVE_REAL_AGENT=1, \
-RUNHAVEN_GUI_LIVE_AGENT=<codex|claude|gemini>, RUNHAVEN_GUI_LIVE_AGENT_API_KEY_ENV=<fixed broker env>, \
+RUNHAVEN_GUI_LIVE_AGENT=<codex|claude>, RUNHAVEN_GUI_LIVE_AGENT_API_KEY_ENV=<fixed broker env>, \
 and export that broker env on the host to opt in"
         );
         return;
@@ -174,7 +174,6 @@ fn expected_broker_env(agent: &str) -> Option<&'static str> {
     match agent {
         "codex" => Some("OPENAI_API_KEY"),
         "claude" => Some("ANTHROPIC_API_KEY"),
-        "gemini" => Some("GEMINI_API_KEY"),
         _ => None,
     }
 }

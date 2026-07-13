@@ -39,64 +39,77 @@ fn run_args(agent: &str, workspace: PathBuf) -> RunArgs {
 }
 
 #[test]
-fn cli_run_plan_for_claude_with_saved_token_selects_keychain_oauth() {
+fn cli_claude_run_defaults_to_native_container_auth() {
     let cache = tempfile::tempdir().expect("cache");
     let _cache_home = override_cache_root_for_tests(cache.path());
     let workspace = tempfile::tempdir().expect("workspace");
     let args = run_args("claude", workspace.path().to_path_buf());
 
-    // Injected presence stands in for the non-prompting Keychain check; no real
-    // Keychain is touched. A present token drives the claude-only OAuth path.
-    let plan =
-        super::run_plan::make_run_plan_with_presence(&args, Vec::new(), None, None, None, || {
-            Ok(true)
-        })
+    let plan = super::run_plan::make_run_plan(&args, Vec::new(), None, None, None)
         .expect("claude run plan");
 
-    assert_eq!(
-        plan.claude_auth_source,
-        Some(ClaudeAuthSource::KeychainOAuth)
-    );
+    assert_eq!(plan.claude_auth_source, None);
     assert_eq!(plan.network_mode, NetworkMode::Provider);
 }
 
 #[test]
-fn cli_run_plan_for_claude_without_token_selects_no_broker() {
-    let cache = tempfile::tempdir().expect("cache");
-    let _cache_home = override_cache_root_for_tests(cache.path());
-    let workspace = tempfile::tempdir().expect("workspace");
-    let args = run_args("claude", workspace.path().to_path_buf());
-
-    let plan =
-        super::run_plan::make_run_plan_with_presence(&args, Vec::new(), None, None, None, || {
-            Ok(false)
-        })
-        .expect("claude run plan");
-
-    assert_eq!(plan.claude_auth_source, None);
-}
-
-#[test]
-fn cli_run_plan_explicit_env_broker_beats_a_saved_token() {
+fn cli_explicit_environment_broker_remains_available() {
     let cache = tempfile::tempdir().expect("cache");
     let _cache_home = override_cache_root_for_tests(cache.path());
     let workspace = tempfile::tempdir().expect("workspace");
     let mut args = run_args("claude", workspace.path().to_path_buf());
     args.api_key_broker_env = Some("ANTHROPIC_API_KEY".to_string());
 
-    // Even with a present token, the explicit env-var broker wins.
-    let plan =
-        super::run_plan::make_run_plan_with_presence(&args, Vec::new(), None, None, None, || {
-            Ok(true)
-        })
-        .expect("claude run plan");
+    let plan = super::run_plan::make_run_plan(&args, Vec::new(), None, None, None)
+        .expect("explicit broker plan");
 
     assert_eq!(
         plan.claude_auth_source,
         Some(ClaudeAuthSource::ApiKeyBrokerEnv(
-            "ANTHROPIC_API_KEY".to_string()
-        ))
+            "ANTHROPIC_API_KEY".to_string(),
+        )),
     );
+}
+
+#[test]
+fn cli_non_provider_native_auth_has_no_host_selector() {
+    let cache = tempfile::tempdir().expect("cache");
+    let _cache_home = override_cache_root_for_tests(cache.path());
+    let workspace = tempfile::tempdir().expect("workspace");
+
+    for network in ["internal", "internet"] {
+        let mut args = run_args("claude", workspace.path().to_path_buf());
+        args.network = Some(network.to_string());
+
+        let plan = super::run_plan::make_run_plan(&args, Vec::new(), None, None, None)
+            .expect("supported non-provider Claude plan");
+
+        assert_eq!(plan.network_mode.as_str(), network);
+        assert_eq!(plan.claude_auth_source, None);
+        assert!(
+            !plan
+                .command
+                .iter()
+                .any(|arg| arg.contains("ANTHROPIC_API_KEY"))
+        );
+    }
+}
+
+#[test]
+fn cli_non_provider_explicit_environment_broker_is_rejected() {
+    let cache = tempfile::tempdir().expect("cache");
+    let _cache_home = override_cache_root_for_tests(cache.path());
+    let workspace = tempfile::tempdir().expect("workspace");
+
+    for network in ["internal", "internet"] {
+        let mut args = run_args("claude", workspace.path().to_path_buf());
+        args.network = Some(network.to_string());
+        args.api_key_broker_env = Some("ANTHROPIC_API_KEY".to_string());
+
+        let error = super::run_plan::make_run_plan(&args, Vec::new(), None, None, None)
+            .expect_err("explicit broker requires provider network");
+        assert!(error.to_string().contains("--network provider"));
+    }
 }
 
 #[test]

@@ -18,7 +18,7 @@ fn run_status_response_maps_sanitized_payload_without_raw_fields() {
         },
         "container": {
             "state": "running",
-            "image": "runhaven/codex:0.1.0",
+            "image": "runhaven/codex:0.7.0",
             "started_at": "2026-06-16T00:00:10Z",
             "resources": {
                 "cpus": 2.0,

@@ -52,7 +52,7 @@ export function SessionView(
       />
       {showRunControlCard ? (
         <RunStatusCard
-          title="Session controls"
+          title="Run actions"
           showStatus={false}
           controlsAvailable={runControlsAvailable}
           cleanupAvailable={cleanupAvailable}
@@ -62,8 +62,6 @@ export function SessionView(
           controlBusy={props.controlBusy}
           controlError={props.controlError}
           controlMessage={props.controlMessage}
-          controlConfirmations={props.controlConfirmations}
-          onConfirmationChange={props.onControlConfirmationChange}
           onControl={props.onControl}
         />
       ) : null}
@@ -122,7 +120,7 @@ function SessionLabelEditor({ session }: { session: ManagedSessionSummary }) {
     return (
       <div>
         <Button type="button" variant="outline" size="sm" onClick={start}>
-          {current ? "Rename session" : "Name this session"}
+          {current ? "Rename run" : "Name this run"}
         </Button>
       </div>
     )
@@ -136,7 +134,7 @@ function SessionLabelEditor({ session }: { session: ManagedSessionSummary }) {
         save()
       }}
     >
-      <Label htmlFor={inputId}>Session name</Label>
+      <Label htmlFor={inputId}>Run name</Label>
       <div className="flex flex-wrap items-center gap-2">
         <Input
           id={inputId}
@@ -166,7 +164,7 @@ function SessionLabelEditor({ session }: { session: ManagedSessionSummary }) {
       </div>
       <p className="text-xs text-muted-foreground">
         This name shows only in this app on this Mac. Leave it blank to use the
-        agent and project name. It does not rename the session itself.
+        agent and project name. It does not rename the saved run itself.
       </p>
     </form>
   )
@@ -221,12 +219,10 @@ function SessionWorktreeReview({
       review={review.review}
       loading={review.loading}
       loadError={review.loadError}
-      confirmations={review.confirmations}
       busy={review.busy}
       message={review.message}
       nextSteps={review.nextSteps}
       actionError={review.actionError}
-      onConfirmationChange={review.setConfirmation}
       onAction={review.runAction}
     />
   )

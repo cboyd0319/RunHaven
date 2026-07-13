@@ -20,13 +20,12 @@ use std::sync::{Arc, Mutex};
 use runhaven_core::provider::observability::utc_timestamp;
 use runhaven_core::support::redact::redact_run_output;
 
-use crate::contracts::{AgentSignInStatusResponse, ImageBuildStatusResponse};
+use crate::contracts::ImageBuildStatusResponse;
 use crate::registry_support::{
     BoundedMap, lock_or, strip_control_chars, truncate_on_char_boundary, validate_registry_id,
 };
 
 const MAX_IMAGE_BUILD_STATUSES: usize = 20;
-const MAX_SIGN_IN_STATUSES: usize = 20;
 const MAX_OUTPUT_TAIL_LINES: usize = 200;
 const MAX_OUTPUT_LINE_LEN: usize = 500;
 
@@ -230,80 +229,6 @@ impl ImageBuildStatusRegistry {
             updated_at: entry.updated_at.clone(),
         })
     }
-}
-
-/// Sanitized status tracking for background in-app agent sign-ins. Surfaced by
-/// the read-only `get_agent_sign_in_status` command.
-#[derive(Clone)]
-pub(crate) struct AgentSignInStatusRegistry {
-    inner: TailStatusRegistry,
-}
-
-impl Default for AgentSignInStatusRegistry {
-    fn default() -> Self {
-        Self {
-            inner: TailStatusRegistry::new(
-                MAX_SIGN_IN_STATUSES,
-                "sign-in status registry is unavailable",
-                "sign-in status not found",
-            ),
-        }
-    }
-}
-
-impl AgentSignInStatusRegistry {
-    pub(crate) fn mark_starting(&self, sign_in_id: &str, agent: &str) -> Result<(), String> {
-        self.inner.insert_starting(
-            sign_in_id,
-            agent,
-            None,
-            "starting",
-            "Starting",
-            format!("RunHaven is starting sign-in for {agent}."),
-        )
-    }
-
-    pub(crate) fn append_output(&self, sign_in_id: &str, line: &str) -> Result<(), String> {
-        self.inner
-            .append(sign_in_id, line, Some(flip_to_needs_browser))
-    }
-
-    pub(crate) fn mark_succeeded(&self, sign_in_id: &str, agent: &str) -> Result<(), String> {
-        self.inner.set_terminal(
-            sign_in_id,
-            "succeeded",
-            "Signed in",
-            format!("You are signed in to {agent}."),
-        )
-    }
-
-    pub(crate) fn mark_failed(&self, sign_in_id: &str, detail: String) -> Result<(), String> {
-        self.inner
-            .set_terminal(sign_in_id, "failed", "Sign-in failed", detail)
-    }
-
-    pub(crate) fn get(&self, sign_in_id: &str) -> Result<AgentSignInStatusResponse, String> {
-        self.inner
-            .read(sign_in_id, |entry| AgentSignInStatusResponse {
-                sign_in_id: sign_in_id.to_string(),
-                agent: entry.agent.clone(),
-                state: entry.state.clone(),
-                label: entry.label.clone(),
-                detail: entry.detail.clone(),
-                output_tail: entry.output_tail(),
-                updated_at: entry.updated_at.clone(),
-            })
-    }
-}
-
-/// The sign-in first-output transition: the first login line is where the URL
-/// and short-lived device code appear, so the UI is told to open the browser.
-fn flip_to_needs_browser(entry: &mut TailEntry) {
-    entry.state = "needs_browser".to_string();
-    entry.label = "Open your browser".to_string();
-    entry.detail =
-        "Open the sign-in link shown below and finish in your browser. RunHaven is waiting."
-            .to_string();
 }
 
 #[cfg(test)]

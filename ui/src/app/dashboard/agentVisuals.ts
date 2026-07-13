@@ -1,6 +1,5 @@
 import {
   Bot,
-  Gem,
   Hexagon,
   Sparkles,
   Terminal,
@@ -24,7 +23,6 @@ const AGENT_VISUALS: Record<string, AgentVisual> = {
   claude: { Icon: Sparkles, tint: "text-orange-400" },
   codex: { Icon: Hexagon, tint: "text-sky-300" },
   copilot: { Icon: Bot, tint: "text-blue-400" },
-  gemini: { Icon: Gem, tint: "text-indigo-400" },
   shell: { Icon: Terminal, tint: "text-emerald-400" },
 }
 

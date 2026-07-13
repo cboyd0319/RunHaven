@@ -1,8 +1,9 @@
 # Verification Matrix
 
-Use the smallest check set that can catch likely regressions. Escalate to
-`./init.sh` when a change crosses components, affects runtime behavior, or
-changes a security boundary.
+Use the smallest check set that can catch likely regressions. Use the scoped
+CLI plus desktop gate for the active coworker-test release. `./init.sh` covers
+the complete active workspace. The archived TUI/Codex source is intentionally
+outside the release workspace until that product surface is reopened.
 
 ## Common Checks
 
@@ -21,13 +22,15 @@ changes a security boundary.
 | Provider egress or endpoint policy | Focused egress/provider tests; source review for endpoint changes; `scripts/apple_container_smoke.sh --with-provider` when behavior changes and the host is available |
 | SSH forwarding boundary | Planner and CLI tests proving `--ssh` fails closed; `scripts/apple_container_smoke.sh --with-ssh` only when changing that guard |
 | Auth or secrets | Focused auth/provider tests; confirm diagnostics and records do not expose secrets; confirm secure defaults stay easiest and lower-security choices are explicit and warned |
+| Bundled image definitions | `cargo run --locked --bin runhaven-check-pins`; isolated `npm ci --ignore-scripts` plus audit for each npm image; build all six `0.7.0` images; `runhaven image doctor`; smoke every bundled CLI as the non-root agent with a read-only root and dropped capabilities; verify Node/npm versions where used |
+| Desktop installer and first setup | `scripts/release-desktop-common.test.sh`; `scripts/release-desktop-preflight.test.sh`; `scripts/local-sign-desktop.test.sh`; focused Tauri setup-recovery/capability tests; focused Agents/New Run frontend tests; pin check; build and mount the signed DMG; verify its exact drag-to-Applications layout, copied app signature, ticket, Gatekeeper result, bundle metadata, architecture, and clean-Mac Finder launch |
+| CLI plus desktop coworker-test prep | `cargo fmt --check`; tests and Clippy for `runhaven-core`, `runhaven-cli`, `runhaven-tauri`, and the `runhaven` CLI integration; frontend check, unit, E2E, and build; no-bundle Tauri build; `runhaven doctor`; relevant Apple container and GUI live smokes; pin/source and dependency audit; structure/docs/JSON/diff checks; signed/notarized app bundle plus clean-machine launch when distributing an artifact. Record TUI exclusion explicitly |
 | Release prep | `./init.sh`; `runhaven doctor`; relevant Apple container smokes; pin/source review; dirty-tree check |
 
 ## Detected Commands
 
 ```bash
 cargo fmt --check
-cargo test -p runhaven-tui --locked
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo run --locked --bin runhaven-check-pins

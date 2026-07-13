@@ -71,7 +71,8 @@ describe("SessionAttentionBanner", () => {
       />,
     )
     expect(html).toContain("Not responding")
-    expect(html).toContain("Repair session record")
+    expect(html).toContain("More actions")
+    expect(html).toContain("Run actions")
   })
 
   it("points a finished worktree run at the review below", () => {

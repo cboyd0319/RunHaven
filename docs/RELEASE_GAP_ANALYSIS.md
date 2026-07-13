@@ -1,6 +1,6 @@
 # RunHaven v0.5.0 And v1.0.0 Gap Analysis
 
-Last updated: 2026-06-27
+Last updated: 2026-07-10
 
 Status: active release-gap tracker.
 
@@ -199,39 +199,43 @@ release notes are deferred to the release-readiness cut.
 
 ### Summary
 
-The v1 gap is much larger than the v0.5 gap. The current desktop app proves the
-initial architecture and launch path, but it is not yet the first-class safe
-path. Most recovery, cleanup, diagnostics, worktree review, packaging,
-accessibility, and release-trust work remains.
+The desktop app now covers the primary beginner workflow and is the active easy
+path. The 2026-07-10 audit verified doctor, all bundled images, provider and SSH
+smokes, Tauri launch/control, isolated-worktree recovery, and Ctrl-C cleanup.
+The source candidate version is `v0.7.0`. Remaining distribution evidence is a
+signed/notarized package, clean-machine proof, real native OAuth and
+credential-broker proof, and manual accessibility proof. Cargo audit reports no
+known vulnerabilities; its warnings are upstream macOS Tauri Unicode crates and
+Linux-only GTK lockfile entries outside RunHaven's supported runtime.
 
 ### Blocking Gaps
 
 | ID | Gap | Current State | Done When | Verification |
 | --- | --- | --- | --- | --- |
-| V1-G1 | Desktop setup and prerequisite path | Desktop can read setup/dashboard state. | A less-technical user can understand exact missing prerequisites, image readiness, builder status, and next action without using the CLI. | Frontend tests, Tauri tests, Playwright, minimum-window review. |
-| V1-G2 | Desktop image build/rebuild | Desktop shows image status but does not build or rebuild images. | Missing/stale bundled images can be rebuilt from explicit UI action with builder status and confirmation. | Tauri command tests; frontend tests; image dry-run/build smoke where appropriate. |
+| V1-G1 | Desktop setup and prerequisite path | Implemented: Home opens Apple's exact pinned signed installer when the CLI is missing and can start a stopped service, each through a fixed Rust-owned action with native confirmation and post-confirmation revalidation. Finder-launched operations resolve Apple's fixed install location. | A less-technical user can understand and recover supported setup failures without using the CLI. | Frontend tests, Tauri tests, Playwright, minimum-window review, signed Finder-launch setup smoke. |
+| V1-G2 | Desktop image build/rebuild | Implemented with a visible first-time Install action, launch blocking until ready, native confirmation, bounded redacted status, backend single-flight, and app-owned cancellation/reaping on quit. | Missing/stale bundled images install once, report progress, and cannot duplicate or orphan work across navigation or quit. | Tauri command tests; frontend tests; image build/cancel/quit smoke. |
 | V1-G3 | Desktop run control | Done: the desktop app can stop, hard-stop (`kill_run`), and repair (`repair_run`) one validated RunHaven run behind `run-control`, each confirm-gated with exact target preview. | GUI can stop, hard-stop, and repair one validated RunHaven run with exact target preview and confirmation. | Rust/Tauri command tests, capability review, Playwright, Apple container smoke for run-control paths. |
-| V1-G4 | Desktop recovery after app quit/crash/host interruption | Release plan names this as unproven. | App quit, force quit, crash, sleep, reboot, stale active marker, and leftover container guidance is verified or documented in the GUI. | Manual lifecycle smokes plus focused tests for stale-marker repair guidance. |
-| V1-G5 | Desktop diagnostics | Partial: egress log and auth status/log are exposed read-only behind `main-read` (`get_egress_log`, `get_auth_log`, `get_auth_status`), secret-free and without workspace paths. `why` explanations, blocked-host review, and auth explain remain CLI-only. | GUI exposes `why host/workspace/network/state`, blocked-host review, egress log summaries, auth status/explain/log, and safe next actions without raw secrets. | Tauri command tests; frontend tests; secret-output review. |
-| V1-G6 | Desktop state/network cleanup | CLI has state and network cleanup; desktop cleanup is missing. | GUI previews exact RunHaven-owned state volumes and networks, then resets/prunes only after explicit confirmation. | Tauri tests, frontend tests, destructive-target validation tests. |
-| V1-G7 | Desktop worktree review | CLI has diff, keep, recover, merge, discard; desktop does not. | GUI makes dirty repo choices clear before launch and supports diff/review/keep/recover/merge/discard for RunHaven-owned worktrees. | Worktree tests, Tauri tests, frontend tests, data-loss review. |
-| V1-G8 | Desktop profile support tiers | Not yet a first-class UI surface. | GUI clearly distinguishes image availability, CLI start support, provider mode support, auth path, and known limits per profile. | Profile matrix docs, frontend tests, profile dry-runs/smokes. |
-| V1-G9 | Accessibility and responsive UI | Not yet release-gated. | The app is keyboard navigable, readable at minimum supported window size, has visible focus states, non-overlapping text, and accessible labels. | Playwright screenshots, keyboard review, Svelte checks, manual accessibility pass. |
-| V1-G10 | Desktop maintainability before feature expansion | `src-tauri/src/commands/mod.rs`, `ui/src/commands/runhaven.ts`, and `ui/src/app/App.svelte` are already over the rough size guard. | These surfaces are split by domain before adding many more desktop controls. Duplication is removed during each slice. | File-size scan, focused tests after each split, frontend/Tauri checks. |
+| V1-G4 | Desktop recovery after app quit/crash/host interruption | Stale-marker repair and recovery guidance exist; abnormal-exit, sleep, reboot, and background-job ownership still need release-candidate proof. | App quit, force quit, crash, sleep, reboot, stale markers, and leftover resources have verified cleanup or clear GUI recovery. | Manual lifecycle smokes plus focused fault-injection tests. |
+| V1-G5 | Desktop diagnostics | Implemented: setup, auth, network, why explanations, per-run diagnostics, and bounded logs are available through typed read-only commands. | Secret review and live failure-state checks show useful next actions without raw paths or credentials. | Tauri/frontend tests; secret-output review; live failed-run smoke. |
+| V1-G6 | Desktop state/network cleanup | Network cleanup is implemented with native confirmation and exact confirmed-snapshot deletion. State reset stays CLI-only because it can erase shared sign-in state. | GUI cleanup cannot delete an unconfirmed or foreign target; the intentional state-reset limitation is documented. | Tauri/frontend destructive-target tests and live stale-network smoke. |
+| V1-G7 | Desktop worktree review | Implemented: every created worktree is owned by an active, failed-recoverable, or completed run record; a live isolated shell run proved source isolation, diff capture, discard, and run-network cleanup. | Keep this ownership invariant under fault-injection and live smokes. | Worktree fault-injection tests, Tauri/frontend tests, live isolated-worktree smoke, data-loss review. |
+| V1-G8 | Desktop profile support tiers | Agents shows installation, image, sign-in, and known auth/network path state. | Each shipped profile's real login and launch path is current and documented. | Profile matrix docs, frontend tests, profile dry-runs/smokes. |
+| V1-G9 | Accessibility and responsive UI | Semantic controls, focus return, keyboard terminal escape, reduced motion, system appearance, 800x560 coverage, and automated WCAG 2/2.1/2.2 AA scans cover Home, New run, Agents, System Check, Settings, access review and warnings, run details, Cleanup, worktree review, Run history, and the browser terminal fallback. The scans caught and corrected primary-button, muted-text, alert, and badge contrast. Manual native WKWebView VoiceOver verification remains. | Keyboard, VoiceOver, contrast, zoom/reflow, minimum-window, and non-color status checks pass. | Playwright plus axe-core, keyboard and VoiceOver review. |
+| V1-G10 | Desktop maintainability before feature expansion | React, command, contract, and Tauri modules are split by ownership and enforced by the repository structure gate. | The structure gate, focused tests, and duplication review stay clean. | Structure scan and focused frontend/Tauri tests. |
 | V1-G11 | Data/history performance | Append-only JSONL records are currently read into memory. | Long-term run, egress, and auth history can be listed or tailed without unbounded frontend or CLI memory assumptions, or limits are explicitly documented. | Focused tests or documented limits; performance smoke with generated records if implemented. |
-| V1-G12 | Packaging and release trust | Tauri build exists, but v1 release artifact path is not complete. | macOS app is built, signed, notarized, checksummed, and backed by provenance. SBOM status and update policy are stated. | `npm --prefix ui run tauri:build`, signing/notarization commands, checksum/SBOM/provenance record. |
-| V1-G13 | Runtime release evidence | Prior smokes exist but v1 needs current release-candidate evidence. | `./init.sh`, doctor, provider smoke, SSH fail-closed smoke, profile evidence, desktop launch/control smokes, and cleanup checks are current for the release candidate. | Full release gate commands from `V1_RELEASE_PLAN.md`. |
-| V1-G14 | Public docs alpha-to-release transition | Docs now say alpha through v0.5, but v1 release docs need final stable wording. | User docs replace alpha warnings with precise stable/unsupported/known-limited surfaces only when v1 gates pass. | Docs stale scan, link check, release notes review. |
+| V1-G12 | Packaging and release trust | The fail-closed release wrapper now requires a clean exact tag, full Xcode, matching Developer ID identity/profile, notarization, stapling, Gatekeeper assessment, exact mounted-DMG layout, copied-app signature/ticket/metadata/architecture verification, checksums, CycloneDX SBOMs, and provenance. No signed artifact has been produced on this host because its signing identity, profile, notary credentials, and full Xcode are absent. | Run the wrapper with the project credentials, then install and exercise its DMG on a clean supported Mac. | `npm --prefix ui run tauri:build`, `npm --prefix ui run tauri:bundle`, published notarization receipts/checksums/SBOMs/provenance, clean-Mac smoke record. |
+| V1-G13 | Runtime release evidence | Current: scoped CLI/desktop gates, doctor, five bundled images (base plus four agents), default/provider/SSH smokes, Tauri launch/control, isolated worktree, and cleanup pass on macOS 27 with Apple container 1.1.0. The four-agent native OAuth/reuse matrix remains. | Add disposable credentialed agent proof without exposing secrets; full public release additionally requires the intentionally broader `./init.sh` gate. | Coworker-test gate in `docs/harness/feedback/verification-matrix.md`; full release commands in `V1_RELEASE_PLAN.md`. |
+| V1-G14 | Public docs alpha-to-release transition | Docs identify `v0.7.0` as a limited coworker-test candidate and keep signing/notarization and external proof gaps explicit. | User docs replace alpha warnings with precise stable/unsupported/known-limited surfaces only when v1 gates pass. | Docs stale scan, link check, release notes review. |
 
 ### v1.x Follow-Ups, Not v1.0.0 Blockers
 
 | Follow-Up | Reason |
 | --- | --- |
-| New Claude, Gemini, Copilot, or Antigravity credential brokers | Provider-specific secret handling needs separate design and disposable-secret smokes. |
+| New Claude, Copilot, or Antigravity credential brokers | Provider-specific secret handling needs separate design and disposable-secret smokes. |
 | Path-aware HTTPS policy for `github.com` or `api.github.com` | Host-only CONNECT policy cannot inspect URL paths without TLS interception. |
 | Generic desktop terminal or command runner | It widens the desktop trust surface and is not needed for first-class safe workflow. |
 | Automatic updater | Manual updates are acceptable for v1.0.0 if release notes say so. |
-| Installer or Apple `container` service-management automation | Needs separate user-consent and security design. |
+| Automatic Apple `container` install, update, downgrade, or removal | RunHaven may open the exact pinned signed package and start a stopped service after confirmation. Performing administrator installation or changing/removing system-tool data needs a separate user-consent and security design. |
 | Managed Apple `container machine` integration | Not required for v1.0.0. User-managed machine workflows should not be blocked solely for a lower-security posture, but any RunHaven integration needs warning, explicit intent, target validation, and deletion approval. |
 | MCP, extension, plugin marketplace, or host socket support | Deny-by-default policy exists; implementation is larger product work. |
 | Windows, Linux, Intel Mac, hosted CI runtime support | Outside the project support boundary. |

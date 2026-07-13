@@ -1,7 +1,6 @@
-mod agent_sign_in_runner;
+mod background_jobs;
 #[cfg(test)]
 mod capability_guard;
-mod claude_oauth_signin;
 mod commands;
 mod contracts;
 mod image_build_runner;
@@ -18,8 +17,8 @@ mod tail_status;
 pub(crate) mod terminal;
 
 use tauri::Manager;
+use tauri::window::{Effect, EffectsBuilder};
 use tauri_plugin_window_state::StateFlags;
-use window_vibrancy::{NSVisualEffectMaterial, apply_vibrancy};
 
 use session_windows::SESSION_WINDOW_LABEL_PREFIX;
 
@@ -143,7 +142,7 @@ pub fn run() {
             // only; the read-only session monitors stay opaque.
             if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL)
                 && let Err(error) =
-                    apply_vibrancy(&window, NSVisualEffectMaterial::Sidebar, None, None)
+                    window.set_effects(EffectsBuilder::new().effect(Effect::Sidebar).build())
             {
                 log::warn!("macOS vibrancy unavailable, using solid background: {error}");
             }
@@ -171,6 +170,10 @@ pub fn run() {
                     .app_handle()
                     .state::<terminal::TerminalSessionRegistry>()
                     .close_all();
+                window
+                    .app_handle()
+                    .state::<background_jobs::BackgroundJobRegistry>()
+                    .shutdown();
             }
         })
         .manage(session_input::SessionInputRegistry::default())
@@ -179,11 +182,12 @@ pub fn run() {
         .manage(session_output::SessionOutputRegistry::default())
         .manage(launch_status::LaunchStatusRegistry::default())
         .manage(tail_status::ImageBuildStatusRegistry::default())
-        .manage(tail_status::AgentSignInStatusRegistry::default())
-        .manage(claude_oauth_signin::ClaudeOAuthSignInRegistry::default())
+        .manage(background_jobs::BackgroundJobRegistry::default())
+        .manage(commands::setup_recovery::SetupRecoveryGate::default())
         .manage(read_guard::ReadGuards::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_dashboard_status,
+            commands::setup_recovery::perform_setup_recovery,
             commands::image_status::get_image_status,
             commands::image_build_status::get_image_build_status,
             commands::network::get_network_prune_preview,
@@ -216,11 +220,6 @@ pub fn run() {
             commands::session_worktree::actions::recover_managed_session_worktree,
             commands::session_worktree::actions::discard_managed_session_worktree,
             commands::image_build::rebuild_agent_image,
-            commands::agent_sign_in::start_agent_sign_in,
-            commands::agent_sign_in_status::get_agent_sign_in_status,
-            commands::claude_oauth::start_claude_oauth_signin,
-            commands::claude_oauth::get_claude_oauth_status,
-            commands::claude_oauth::clear_claude_oauth,
             commands::network::prune_managed_networks,
             commands::launch::plan_run,
             commands::launch::launch_run,
@@ -229,14 +228,20 @@ pub fn run() {
             commands::session_window::open_session_window,
             commands::session_window::get_session_window_target,
             terminal::open_terminal_session,
-            terminal::open_claude_sign_in_terminal,
+            terminal::open_agent_sign_in_terminal,
             terminal::open_agent_run_terminal,
             terminal::write_terminal_input,
             terminal::resize_terminal,
             terminal::close_terminal_session,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running RunHaven desktop app");
+        .build(tauri::generate_context!())
+        .expect("error while building RunHaven desktop app")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                app.state::<background_jobs::BackgroundJobRegistry>()
+                    .shutdown();
+            }
+        });
 }
 
 /// Route Rust panics into the diagnostic log before the process unwinds, then

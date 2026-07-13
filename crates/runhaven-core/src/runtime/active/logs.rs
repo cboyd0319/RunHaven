@@ -1,5 +1,5 @@
 use std::io::Read;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::thread;
 
 use anyhow::{Result, anyhow, bail};
@@ -74,7 +74,7 @@ fn returned_lines(text: &str) -> usize {
 }
 
 fn read_container_logs(run_id: &str, container_name: &str, lines: u32) -> Result<Vec<u8>> {
-    let mut child = Command::new("container")
+    let mut child = crate::apple_container::command()?
         .args(["logs", "-n", &lines.to_string(), container_name])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

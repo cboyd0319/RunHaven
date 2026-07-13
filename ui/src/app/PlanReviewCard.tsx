@@ -11,21 +11,18 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Separator } from "@/components/ui/separator"
-import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table"
 
 import { authScopeLabel, networkLabel } from "./labels"
 import { LaunchSteps } from "./LaunchSteps"
+import { agentLabel } from "./sessionIdentity"
 
 type PlanReviewCardProps = {
   plan: RunPlanResponse
-  launchConfirmation: boolean
   confirmedWarnings: string[]
   launchReady: boolean
   launching: boolean
   setupOk: boolean
   launchImageReady: boolean
-  onLaunchConfirmationChange: (checked: boolean) => void
   onConfirmWarning: (code: string, checked: boolean) => void
   onBack: () => void
   onStart: () => Promise<void>
@@ -33,13 +30,11 @@ type PlanReviewCardProps = {
 
 export function PlanReviewCard({
   plan,
-  launchConfirmation,
   confirmedWarnings,
   launchReady,
   launching,
   setupOk,
   launchImageReady,
-  onLaunchConfirmationChange,
   onConfirmWarning,
   onBack,
   onStart,
@@ -57,28 +52,20 @@ export function PlanReviewCard({
       <CardContent className="flex flex-col gap-4">
         <LaunchSteps step="review" />
 
-        <Table>
-          <TableBody>
-            {[
-              ["Agent", plan.profile],
-              ["Project", plan.workspace],
-              ["Session name", plan.session],
-              ["Sign-in sharing", authScopeLabel(plan.authScope)],
-              ["Network", networkLabel(plan.networkMode)],
-              ["Image", plan.image],
-            ].map(([label, value]) => (
-              <TableRow key={label}>
-                <TableHead className="w-40">{label}</TableHead>
-                <TableCell className="break-all">{value}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <dl className="grid gap-3 sm:grid-cols-2">
+          <ReviewItem label="Agent" value={agentLabel(plan.profile)} />
+          <ReviewItem label="Project" value={projectName(plan.workspace)} />
+        </dl>
+
+        <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+          <div className="font-medium">Project folder</div>
+          <div className="mt-1 break-all text-muted-foreground">{plan.workspace}</div>
+        </div>
 
         {plan.worktree ? (
           <Alert>
             <GitBranch />
-            <AlertTitle>Isolated copy (git worktree)</AlertTitle>
+            <AlertTitle>Recommended protection: isolated copy</AlertTitle>
             <AlertDescription>
               {plan.worktreeNote ??
                 "RunHaven will run this agent in an isolated copy of your project on a new git branch."}
@@ -103,12 +90,26 @@ export function PlanReviewCard({
           </AlertDescription>
         </Alert>
 
-        {plan.providerAllowedHosts.length > 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Can reach: {plan.providerAllowedHosts.join(", ")} only.
-          </p>
-        ) : null}
-        <p className="text-sm text-muted-foreground">{plan.egressSummary}</p>
+        <details className="rounded-lg border p-3">
+          <summary className="cursor-pointer text-sm font-medium">
+            Technical details
+          </summary>
+          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+            <ReviewItem label="Run name" value={plan.session} />
+            <ReviewItem
+              label="Sign-in sharing"
+              value={authScopeLabel(plan.authScope)}
+            />
+            <ReviewItem label="Network" value={networkLabel(plan.networkMode)} />
+            <ReviewItem label="Agent image" value={plan.image} />
+          </dl>
+          {plan.providerAllowedHosts.length > 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Can reach: {plan.providerAllowedHosts.join(", ")} only.
+            </p>
+          ) : null}
+          <p className="mt-2 text-sm text-muted-foreground">{plan.egressSummary}</p>
+        </details>
 
         {plan.warnings.length > 0 ? (
           <Alert variant="warning">
@@ -132,18 +133,6 @@ export function PlanReviewCard({
             </AlertDescription>
           </Alert>
         ) : null}
-
-        <Separator />
-
-        <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
-          <Checkbox
-            checked={launchConfirmation}
-            onCheckedChange={(checked) =>
-              onLaunchConfirmationChange(checked === true)
-            }
-          />
-          <span>I reviewed this plan and want to start this run.</span>
-        </label>
 
         {!setupOk ? (
           <p id="launch-reason-setup" className="text-sm text-muted-foreground">
@@ -175,12 +164,29 @@ export function PlanReviewCard({
             )}
             onClick={() => void onStart()}
           >
-            {launching ? "Launching..." : "Launch run"}
+            {launching ? "Starting..." : "Start run"}
           </Button>
         </div>
+        <p className="text-right text-xs text-muted-foreground">
+          RunHaven will ask for final confirmation in a Mac dialog.
+        </p>
       </CardContent>
     </Card>
   )
+}
+
+function ReviewItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-lg border p-3">
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dd className="mt-1 break-words font-medium">{value}</dd>
+    </div>
+  )
+}
+
+function projectName(path: string): string {
+  const parts = path.split(/[\\/]/).filter(Boolean)
+  return parts.at(-1) ?? path
 }
 
 // Point the disabled "Launch run" button at whichever blocking reasons are on

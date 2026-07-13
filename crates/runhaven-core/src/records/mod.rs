@@ -1,6 +1,7 @@
 mod io;
 pub mod run_history;
 
+pub(crate) use io::append_private_jsonl;
 pub use io::{read_jsonl, read_jsonl_tail_bounded};
 pub use run_history::{
     RunRecordInput, find_run_record, format_git_summary, print_run_record, read_run_records,

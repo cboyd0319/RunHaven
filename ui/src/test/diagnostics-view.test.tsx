@@ -44,6 +44,8 @@ describe("DiagnosticsView", () => {
     expect(healthy).toContain("RunHaven app")
     expect(healthy).toContain("Agent images")
     expect(healthy).toContain("Stale networks")
+    expect(healthy).toContain("cleaned up in Cleanup")
+    expect(healthy).not.toContain("cleaned up in Maintenance")
 
     const blocked = renderToStaticMarkup(
       <DiagnosticsView {...viewProps({ dashboard: dashboard(false) })} />,

@@ -1,5 +1,3 @@
-use std::io::Write;
-
 use anyhow::Result;
 use serde_json::json;
 use time::OffsetDateTime;
@@ -7,8 +5,9 @@ use time::format_description::well_known::Rfc3339;
 
 use crate::provider::auth_broker::{BrokerDecision, sanitize_broker_request_path};
 use crate::provider::egress::ProxyDecision;
+use crate::records::append_private_jsonl;
 use crate::runtime::plans::AgentRunPlan;
-use crate::support::paths::{auth_broker_log_path, egress_policy_log_path, open_private_append};
+use crate::support::paths::{auth_broker_log_path, egress_policy_log_path};
 
 pub fn utc_timestamp() -> String {
     OffsetDateTime::now_utc()
@@ -26,24 +25,25 @@ pub fn write_provider_policy_log(
     }
     let path = egress_policy_log_path();
     let timestamp = utc_timestamp();
-    let mut file = open_private_append(&path)?;
-    for decision in decisions {
-        let payload = json!({
-            "timestamp": timestamp,
-            "run_id": run_id,
-            "profile": plan.profile_name,
-            "workspace": plan.workspace.display().to_string(),
-            "network": plan.network_mode.as_str(),
-            "host": decision.host,
-            "port": decision.port,
-            "decision": decision.decision,
-            "reason": decision.reason,
-            "matched_rule": decision.matched_rule,
-            "count": decision.count,
-        });
-        writeln!(file, "{}", serde_json::to_string(&payload)?)?;
-    }
-    Ok(())
+    let payloads = decisions
+        .iter()
+        .map(|decision| {
+            json!({
+                "timestamp": timestamp,
+                "run_id": run_id,
+                "profile": plan.profile_name,
+                "workspace": plan.workspace.display().to_string(),
+                "network": plan.network_mode.as_str(),
+                "host": decision.host,
+                "port": decision.port,
+                "decision": decision.decision,
+                "reason": decision.reason,
+                "matched_rule": decision.matched_rule,
+                "count": decision.count,
+            })
+        })
+        .collect::<Vec<_>>();
+    append_private_jsonl(&path, &payloads)
 }
 
 pub fn write_auth_broker_log(
@@ -54,17 +54,15 @@ pub fn write_auth_broker_log(
 ) -> Result<()> {
     let path = auth_broker_log_path();
     let timestamp = utc_timestamp();
-    let mut file = open_private_append(&path)?;
-    if decisions.is_empty() {
-        let payload = auth_payload(plan, run_id, &timestamp, None, return_code);
-        writeln!(file, "{}", serde_json::to_string(&payload)?)?;
-        return Ok(());
-    }
-    for decision in decisions {
-        let payload = auth_payload(plan, run_id, &timestamp, Some(decision), return_code);
-        writeln!(file, "{}", serde_json::to_string(&payload)?)?;
-    }
-    Ok(())
+    let payloads = if decisions.is_empty() {
+        vec![auth_payload(plan, run_id, &timestamp, None, return_code)]
+    } else {
+        decisions
+            .iter()
+            .map(|decision| auth_payload(plan, run_id, &timestamp, Some(decision), return_code))
+            .collect()
+    };
+    append_private_jsonl(&path, &payloads)
 }
 
 fn auth_payload(

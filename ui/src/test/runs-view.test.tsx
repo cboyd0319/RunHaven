@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
 import { SessionLabelsProvider } from "../app/sessionLabels"
-import { RunsView } from "../app/views/RunsView"
+import { filterRuns, RunsView } from "../app/views/RunsView"
 
 import { managedSession } from "./main-view-props"
 
@@ -11,6 +11,7 @@ describe("RunsView", () => {
     const html = renderToStaticMarkup(
       <SessionLabelsProvider>
         <RunsView
+          filter="all"
           sessions={[
             managedSession({
               id: "a",
@@ -27,11 +28,12 @@ describe("RunsView", () => {
             }),
           ]}
           onSelectSession={() => undefined}
+          onFilterChange={() => undefined}
         />
       </SessionLabelsProvider>,
     )
 
-    expect(html).toContain("All runs")
+    expect(html).toContain("Run history")
     expect(html).toContain("Codex - alpha")
     expect(html).toContain("Claude - beta")
     // Newest-first: beta (03:00) before alpha (01:00).
@@ -47,9 +49,41 @@ describe("RunsView", () => {
   it("shows a compact empty state when there are no runs", () => {
     const html = renderToStaticMarkup(
       <SessionLabelsProvider>
-        <RunsView sessions={[]} onSelectSession={() => undefined} />
+        <RunsView
+          filter="all"
+          sessions={[]}
+          onSelectSession={() => undefined}
+          onFilterChange={() => undefined}
+        />
       </SessionLabelsProvider>,
     )
     expect(html).toContain("No runs yet.")
+  })
+
+  it("honors the run category selected in the sidebar", () => {
+    const sessions = [
+      managedSession({ id: "running", lifecycle: "running" }),
+      managedSession({
+        id: "failed",
+        lifecycle: "failed",
+        statusLabel: "Failed",
+      }),
+      managedSession({
+        id: "past",
+        lifecycle: "finished",
+        statusLabel: "Ended",
+      }),
+    ]
+
+    expect(filterRuns(sessions, "needs-you").map((session) => session.id)).toEqual([
+      "failed",
+    ])
+    expect(filterRuns(sessions, "running").map((session) => session.id)).toEqual([
+      "running",
+    ])
+    expect(filterRuns(sessions, "past").map((session) => session.id)).toEqual([
+      "failed",
+      "past",
+    ])
   })
 })

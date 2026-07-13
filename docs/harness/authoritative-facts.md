@@ -15,7 +15,7 @@ maintainer promotes a finding into repo-owned artifacts.
 | CLI/runtime behavior | `crates/runhaven-core/`, `crates/runhaven-cli/`, `crates/runhaven/tests/`, `docs/USAGE.md` |
 | Desktop shell | `src-tauri/`, `ui/`, `docs/TAURI_UI_GUARDRAILS.md` |
 | Security and privacy | `docs/SECURITY_MODEL.md`, `docs/harness/boundaries/security-boundary-map.md` |
-| Platform contracts | macOS 26+, Apple `container` 1.0.0, Rust 1.96.0 |
+| Platform contracts | macOS 26+, Apple `container` 1.1.0, Rust 1.97.0 |
 | Release/package surface | `docs/V1_RELEASE_PLAN.md`, `docs/RELEASE_GAP_ANALYSIS.md`, `Cargo.toml`, `Cargo.lock`, `pins.toml`, `docs/harness/release/` |
 
 ## Fan-Out Budget

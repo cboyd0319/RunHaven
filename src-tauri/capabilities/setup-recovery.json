@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "setup-recovery",
+  "description": "Main-window access to one Rust-owned, natively confirmed setup recovery action.",
+  "windows": ["main"],
+  "permissions": ["allow-perform-setup-recovery"]
+}

@@ -32,13 +32,8 @@ time.workspace = true
 toml.workspace = true
 ureq.workspace = true
 uuid.workspace = true
-zeroize.workspace = true
-
-# macOS Keychain custody for the Claude OAuth broker lives only on macOS. The
-# crate owns any FFI through `security-framework`'s safe wrappers, so this
-# composes with the workspace `unsafe_code = forbid` lint.
 [target.'cfg(target_os = "macos")'.dependencies]
-security-framework.workspace = true
+signal-hook.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

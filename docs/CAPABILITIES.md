@@ -7,10 +7,10 @@ protects by default, and where the current limits are.
 RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
 supported runtimes or contributor verification targets.
 
-RunHaven is alpha/pre-release. `v0.5.0` is the CLI-only pre-release already
-cut. This checkout includes an unreleased terminal UI over the same planner, run
-records, diagnostics, and run-control cores. The Tauri desktop app remains alpha
-and will need a later first-class release path for less-technical users.
+RunHaven is alpha/pre-release. `v0.5.0` was the CLI-only release; `v0.7.0` is
+the current CLI plus desktop coworker-test candidate. The desktop app is the
+primary easy path for nontechnical users. The terminal UI and vendored Codex
+source are archived outside the active workspace and are not shipped.
 
 For command walkthroughs, use [Usage](USAGE.md). For the full security boundary,
 use [Security model](SECURITY_MODEL.md).
@@ -20,7 +20,7 @@ use [Security model](SECURITY_MODEL.md).
 | Area | What RunHaven provides |
 | --- | --- |
 | Runtime boundary | One selected workspace, one isolated agent home volume, non-root bundled images, read-only root filesystem, dropped Linux capabilities, and explicit command preview. |
-| Agent profiles | Bundled Claude, Codex, Gemini, Antigravity, Copilot, and shell profiles, plus custom images through the `shell` profile. |
+| Agent profiles | Bundled Claude, Codex, Antigravity, and Copilot agents, plus a CLI-only `shell` profile for custom images. |
 | Network modes | Secure profile-aware default (provider allowlist where the agent's hosts are bundled, otherwise internet), plus local-only internal networking and explicit override. |
 | Workspace safety | Current-directory mounts by default, explicit git-root expansion, sensitive-path rejection, and optional RunHaven-owned git worktrees. |
 | Credentials | No host home, raw SSH key, browser profile, cloud credential folder, or arbitrary environment passthrough by default. |
@@ -48,14 +48,13 @@ repository at `/workspace`.
 
 ## Agent Profiles
 
-| Profile | Default image | Use case |
-| --- | --- | --- |
-| `claude` | `runhaven/claude:0.1.0` | Claude Code with isolated project state |
-| `codex` | `runhaven/codex:0.1.0` | Codex CLI with its own workspace sandbox enabled |
-| `gemini` | `runhaven/gemini:0.1.0` | Gemini CLI with project-scoped home state |
-| `antigravity` | `runhaven/antigravity:0.1.0` | Antigravity CLI in the same container boundary |
-| `copilot` | `runhaven/copilot:0.1.0` | GitHub Copilot CLI with isolated state |
-| `shell` | `runhaven/base:0.1.0` | Generic shell profile for custom agent images |
+| Profile | Default image | Bundled tool | Use case |
+| --- | --- | --- | --- |
+| `claude` | `runhaven/claude:0.7.0` | Claude Code 2.1.207 | Claude Code with isolated project state |
+| `codex` | `runhaven/codex:0.7.0` | Codex CLI 0.144.1 | Codex CLI with its own workspace sandbox enabled |
+| `antigravity` | `runhaven/antigravity:0.7.0` | Antigravity CLI 1.1.1 | Antigravity CLI in the same container boundary |
+| `copilot` | `runhaven/copilot:0.7.0` | GitHub Copilot CLI 1.0.70 | GitHub Copilot CLI with isolated state |
+| `shell` | `runhaven/base:0.7.0` | Bash 5.2 | Generic shell profile for custom agent images |
 
 Use `shell` with `--image IMAGE` when you want to run another agent image.
 
@@ -71,14 +70,12 @@ detail.
 | --- | --- | --- | --- | --- |
 | `claude` | Bundled: `api.anthropic.com`, `claude.ai`, `platform.claude.com` | `runhaven login claude` (`claude auth login` in the sandbox; paste the code back), the login persists in isolated state | API-key broker: `--api-key-broker-env ANTHROPIC_API_KEY`, `x-api-key` via `ANTHROPIC_BASE_URL` | API key brokered host-side; OAuth and subscription logins use isolated state |
 | `codex` | Bundled: `api.openai.com`, `chatgpt.com`, `auth.openai.com` | `runhaven login codex` (`codex login --device-auth`), or ChatGPT sign-in in isolated state | API-key broker: `--api-key-broker-env OPENAI_API_KEY`, Responses API (`/v1/responses`) | Key brokered host-side; device-code login needs the ChatGPT account setting on |
-| `gemini` | Partial: only `generativelanguage.googleapis.com` bundled; `accounts.google.com` and Vertex hosts are candidates | Google account login or API key in isolated state (no `runhaven login`) | API-key broker: `--api-key-broker-env GEMINI_API_KEY`, `x-goog-api-key` via base-URL redirect | Redirect env is undocumented upstream and version-fragile; Vertex and account login are not brokered |
 | `copilot` | Bundled: the `githubcopilot.com` hosts plus `github.com` and `api.github.com` for the device login | `runhaven login copilot` (GitHub device flow) | Design-only (cannot be brokered cleanly) | Token exchange + dynamically-routed API host; the in-container login stores the token in the isolated volume |
 | `antigravity` | Bundled: Google OAuth, userinfo, and Cloud Code hosts plus the `*-cloudcode-pa.googleapis.com` model-endpoint family | First-run Google login in isolated state (`runhaven login antigravity`) | None | No API-key broker; uses isolated login state. Google sign-in consent and redirect happen in the host browser |
 | `shell` | None | Decided by the custom image | None | Generic base for custom images; you supply image and credentials |
 
 The API-key broker only accepts the fixed per-agent host env names above:
-`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `GEMINI_API_KEY`. Arbitrary host env
-names are rejected.
+`OPENAI_API_KEY` and `ANTHROPIC_API_KEY`. Arbitrary host env names are rejected.
 
 "Design-only" means no credential broker is wired yet, so headless use relies on
 isolated login state or an explicit `--env NAME`. See
@@ -95,7 +92,7 @@ for the source-backed detail.
 
 When you do not pass `--network`, RunHaven picks the secure default that still
 works: `provider` for profiles with bundled provider hosts (`claude`, `codex`,
-`copilot`, `gemini`, `antigravity`) and `internet` for profiles without them
+`copilot`, `antigravity`) and `internet` for profiles without them
 (`shell`), where provider mode would have an empty allowlist. Pass
 `--network` to override. A provider-default run reaches the agent's own API but
 not arbitrary hosts; add `--provider-host HOST` or use `--network internet` when
@@ -161,8 +158,8 @@ default.
 
 | Credential mechanism | What it does |
 | --- | --- |
-| `--api-key-broker-env NAME` | Enables the host-side API-key broker for provider-network Codex, Claude, or Gemini runs, keeping the raw key on the host (old name `--codex-api-key-broker-env` still works as an alias). |
-| `runhaven login <agent>` | Signs in once and later runs reuse it: all four agents (Claude, Codex, Copilot, Antigravity) log in in-sandbox on the shared home volume, so RunHaven never holds any agent token. `--clear` removes the login (Claude's `--clear` also best-effort removes any legacy host-stored token). See [Auth broker](AUTH_BROKER.md). |
+| `--api-key-broker-env NAME` | Enables the host-side API-key broker for provider-network Codex or Claude runs, keeping the raw key on the host (old name `--codex-api-key-broker-env` still works as an alias). |
+| `runhaven login <agent>` | Runs the provider's native OAuth inside its isolated container and lets later runs reuse that agent's home volume. The desktop app uses the same terminal path for Claude, Codex, Antigravity, and Copilot. `--clear` deletes the agent volume. See [Authentication](AUTH_BROKER.md). |
 | `--auth-scope agent\|project` | `agent` (default) shares one login per agent across all your projects so an OAuth login is done once; `project` isolates the login to this workspace's own volume. |
 | `runhaven auth status` / `runhaven auth explain AGENT` | Explains current broker boundaries without reading or printing secrets. |
 
@@ -232,8 +229,8 @@ RunHaven is not a complete data-loss or exfiltration solution.
   agent home volume.
 - Credentials inside the agent home volume or passed with `--env NAME` may be
   misused by malicious repository content.
-- Host-side API-key brokering covers Codex, Claude, and Gemini. Copilot and
-  Antigravity are not brokered and use isolated in-container login state.
+- Host-side API-key brokering covers Codex and Claude. Copilot and Antigravity
+  are not brokered and use isolated in-container login state.
 - Agent-native approval systems are useful, but they are not a replacement for
   the outer container boundary.
 

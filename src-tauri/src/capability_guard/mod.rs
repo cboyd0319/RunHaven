@@ -9,9 +9,10 @@
 //! See `docs/harness/boundaries/component-inventory.md` and
 //! `docs/harness/boundaries/security-boundary-map.md`.
 
-mod claude_oauth_scope;
 mod command_scopes;
 mod logging_scope;
+mod release_packaging;
+mod setup_recovery_scope;
 mod support;
 mod terminal_scope;
 
@@ -22,46 +23,87 @@ use support::{
     generated_permission_files, invoke_handler_commands, manifest_dir, read_text,
 };
 
-/// Pin `tauri.conf.json` to the capability files. Every entry under
-/// `app.security.capabilities` must be an identifier string naming a file
-/// under `capabilities/`, and the sets must match exactly. An inline
-/// capability object here would bypass every per-file scope guard above, so
-/// it fails this test regardless of what it grants.
+/// Pin release and development configs to the capability files. Release omits
+/// the one development-only WebView logging grant, so no production window can
+/// both receive raw terminal bytes and persist arbitrary strings. Development
+/// adds that reviewed write-only grant for the secret-scanned local log trail.
 #[test]
-fn tauri_conf_capabilities_are_exactly_the_capability_file_identifiers() {
-    let path = manifest_dir().join("tauri.conf.json");
+fn tauri_configs_pin_release_and_development_capabilities() {
+    const DEV_ONLY: &str = "logging";
+    let manifest = manifest_dir();
+    let path = manifest.join("tauri.conf.json");
+    let dev_path = manifest.join("tauri.dev.conf.json");
+    let mut file_identifiers = capability_file_identifiers();
+    let mut release_identifiers = file_identifiers
+        .iter()
+        .filter(|identifier| identifier.as_str() != DEV_ONLY)
+        .cloned()
+        .collect::<Vec<_>>();
+    let mut listed_identifiers = config_capabilities(&path);
+    let mut dev_identifiers = config_capabilities(&dev_path);
+    listed_identifiers.sort();
+    release_identifiers.sort();
+    dev_identifiers.sort();
+    file_identifiers.sort();
+    assert_eq!(
+        listed_identifiers, release_identifiers,
+        "the release config must omit only the development logging capability"
+    );
+    assert_eq!(
+        dev_identifiers, file_identifiers,
+        "the development override must reference every reviewed capability file"
+    );
+    assert!(
+        !release_identifiers.is_empty(),
+        "no release capability identifiers found"
+    );
+}
+
+fn config_capabilities(path: &std::path::Path) -> Vec<String> {
     let conf: serde_json::Value =
-        serde_json::from_str(&read_text(&path)).expect("parse tauri.conf.json");
+        serde_json::from_str(&read_text(path)).expect("parse Tauri config");
     let listed = conf
         .pointer("/app/security/capabilities")
         .and_then(serde_json::Value::as_array)
-        .expect("tauri.conf.json must pin app.security.capabilities as an explicit array");
-    let mut listed_identifiers: Vec<String> = listed
+        .expect("Tauri config must pin app.security.capabilities as an explicit array");
+    listed
         .iter()
         .map(|entry| {
             entry
                 .as_str()
                 .unwrap_or_else(|| {
                     panic!(
-                        "tauri.conf.json declares an inline capability `{entry}`; inline \
+                        "Tauri config declares an inline capability `{entry}`; inline \
                          capabilities bypass the per-file scope guards, so every capability \
                          must be a file under capabilities/ referenced by its identifier"
                     )
                 })
                 .to_owned()
         })
-        .collect();
-    let mut file_identifiers = capability_file_identifiers();
-    listed_identifiers.sort();
-    file_identifiers.sort();
+        .collect()
+}
+
+#[test]
+fn tauri_bundle_requires_the_supported_macos_version() {
+    let path = manifest_dir().join("tauri.conf.json");
+    let conf: serde_json::Value =
+        serde_json::from_str(&read_text(&path)).expect("parse tauri.conf.json");
     assert_eq!(
-        listed_identifiers, file_identifiers,
-        "app.security.capabilities must reference exactly the capability files under \
-         capabilities/; review any change as a trust-boundary change"
+        conf.pointer("/bundle/macOS/minimumSystemVersion")
+            .and_then(serde_json::Value::as_str),
+        Some("26.0"),
+        "the desktop bundle must fail before launch on unsupported macOS versions"
     );
-    assert!(
-        !file_identifiers.is_empty(),
-        "no capability identifiers found under capabilities/"
+    assert_eq!(
+        conf.get("version").and_then(serde_json::Value::as_str),
+        Some(env!("CARGO_PKG_VERSION")),
+        "the desktop bundle version must match the Rust release version"
+    );
+    assert_eq!(
+        conf.pointer("/bundle/active")
+            .and_then(serde_json::Value::as_bool),
+        Some(true),
+        "release packaging must not be disabled in tauri.conf.json"
     );
 }
 

@@ -1,4 +1,3 @@
-use std::process::Command;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
@@ -41,19 +40,18 @@ impl Drop for LiveTauriRunCleanup {
         if let Some(network_name) = self.network_name.as_deref()
             && is_runhaven_managed_network(network_name)
             && container_resource_exists("network", network_name)
+            && let Ok(mut command) = runhaven_core::apple_container::command()
         {
-            let _ = Command::new("container")
-                .args(["network", "delete", network_name])
-                .status();
+            let _ = command.args(["network", "delete", network_name]).status();
         }
     }
 }
 
 fn container_resource_exists(kind: &str, name: &str) -> bool {
-    let Ok(output) = Command::new("container")
-        .args([kind, "list", "--quiet"])
-        .output()
-    else {
+    let Ok(mut command) = runhaven_core::apple_container::command() else {
+        return true;
+    };
+    let Ok(output) = command.args([kind, "list", "--quiet"]).output() else {
         return true;
     };
     if !output.status.success() {

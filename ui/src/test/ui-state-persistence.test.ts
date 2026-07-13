@@ -88,23 +88,20 @@ describe("settings persistence", () => {
     expect(DEFAULT_SETTINGS).toEqual({
       dockBadge: true,
       defaultAgent: null,
-      claudeReauthDays: 90,
     })
   })
 
   it("round-trips the allowed choices", () => {
-    persistSettings({ dockBadge: false, defaultAgent: "codex", claudeReauthDays: 30 })
+    persistSettings({ dockBadge: false, defaultAgent: "codex" })
     expect(loadSettings()).toEqual({
       dockBadge: false,
       defaultAgent: "codex",
-      claudeReauthDays: 30,
     })
 
-    persistSettings({ dockBadge: true, defaultAgent: null, claudeReauthDays: 180 })
+    persistSettings({ dockBadge: true, defaultAgent: null })
     expect(loadSettings()).toEqual({
       dockBadge: true,
       defaultAgent: null,
-      claudeReauthDays: 180,
     })
   })
 
@@ -112,7 +109,6 @@ describe("settings persistence", () => {
     const settings = {
       dockBadge: false,
       defaultAgent: "codex",
-      claudeReauthDays: 60,
       // Anything beyond the allowed set must never reach the store, even if
       // a future AppSettings variant carries more fields.
       workspacePath: "/Users/someone/secret-project",
@@ -120,17 +116,7 @@ describe("settings persistence", () => {
     persistSettings(settings)
     expect(
       JSON.parse(window.localStorage.getItem(SETTINGS_KEY) ?? ""),
-    ).toEqual({ dockBadge: false, defaultAgent: "codex", claudeReauthDays: 60 })
-  })
-
-  it("clamps an off-menu or malformed cadence back to the default", () => {
-    for (const claudeReauthDays of [4000, 0, -1, 45, "90", null]) {
-      window.localStorage.setItem(
-        SETTINGS_KEY,
-        JSON.stringify({ dockBadge: true, defaultAgent: null, claudeReauthDays }),
-      )
-      expect(loadSettings().claudeReauthDays).toBe(90)
-    }
+    ).toEqual({ dockBadge: false, defaultAgent: "codex" })
   })
 
   it("reads an empty or malformed store as the defaults", () => {
@@ -158,7 +144,7 @@ describe("settings persistence", () => {
       )
       expect(loadSettings().defaultAgent).toBeNull()
 
-      persistSettings({ dockBadge: true, defaultAgent, claudeReauthDays: 90 })
+      persistSettings({ dockBadge: true, defaultAgent })
       expect(
         JSON.parse(window.localStorage.getItem(SETTINGS_KEY) ?? "").defaultAgent,
       ).toBeNull()
@@ -246,7 +232,7 @@ describe("monitor-window write guard", () => {
 
   it("never persists settings from a monitor window", () => {
     window.history.replaceState(null, "", "/?monitor=1")
-    persistSettings({ dockBadge: false, defaultAgent: "codex", claudeReauthDays: 30 })
+    persistSettings({ dockBadge: false, defaultAgent: "codex" })
     expect(window.localStorage.getItem(SETTINGS_KEY)).toBeNull()
   })
 

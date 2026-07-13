@@ -1,9 +1,9 @@
 //! Network-owned provider-runtime tests: internal-network inspect parsing and
-//! the provider-network teardown choke point (`cleanup_provider_network`).
+//! the managed run-network teardown choke point (`cleanup_run_network`).
 
 use super::broker_plan;
 use crate::provider::runtime::network::{
-    ContainerCli, ContainerOutcome, cleanup_provider_network_with_cli, parse_internal_network_info,
+    ContainerCli, ContainerOutcome, cleanup_run_network_with_cli, parse_internal_network_info,
 };
 
 const NETWORK_INSPECT_HOSTONLY: &[u8] = include_bytes!(concat!(
@@ -132,7 +132,7 @@ fn cleanup_force_removes_lingering_run_container_before_deleting_network() {
     let plan = broker_plan("claude", "claude");
     let mut cli = RuntimeSim::new(true);
 
-    let cleanup = cleanup_provider_network_with_cli(&plan, &mut cli).expect("cleanup");
+    let cleanup = cleanup_run_network_with_cli(&plan, &mut cli).expect("cleanup");
 
     // Order matters: force-remove the run container, THEN delete the network.
     assert_eq!(cli.calls.len(), 2);
@@ -154,7 +154,7 @@ fn cleanup_on_clean_run_treats_already_removed_container_as_success() {
     let plan = broker_plan("claude", "claude");
     let mut cli = RuntimeSim::new(false);
 
-    let cleanup = cleanup_provider_network_with_cli(&plan, &mut cli).expect("cleanup");
+    let cleanup = cleanup_run_network_with_cli(&plan, &mut cli).expect("cleanup");
 
     assert_eq!(cli.calls.len(), 2);
     assert_eq!(cli.calls[0], ["rm", "--force", "runhaven-test-run"]);
@@ -168,6 +168,20 @@ fn cleanup_on_clean_run_treats_already_removed_container_as_success() {
 }
 
 #[test]
+fn internet_cleanup_force_removes_only_the_run_container() {
+    let mut plan = broker_plan("claude", "claude");
+    plan.network_name = None;
+    let mut cli = RuntimeSim::new(true);
+
+    let cleanup = cleanup_run_network_with_cli(&plan, &mut cli).expect("cleanup");
+
+    assert_eq!(cli.calls, [["rm", "--force", "runhaven-test-run"]]);
+    assert_eq!(cleanup["run_container"], "removed");
+    assert_eq!(cleanup["provider_network"], "not-created");
+    assert!(cleanup["provider_network_name"].is_null());
+}
+
+#[test]
 fn cleanup_surfaces_delete_failure_when_container_cannot_be_removed() {
     // An unexpected remove failure must not abort teardown, and a network that
     // stays referenced is surfaced as delete-failed, never silently swallowed.
@@ -175,7 +189,7 @@ fn cleanup_surfaces_delete_failure_when_container_cannot_be_removed() {
     let mut cli = StubbornSim { calls: Vec::new() };
 
     let cleanup =
-        cleanup_provider_network_with_cli(&plan, &mut cli).expect("structured teardown outcome");
+        cleanup_run_network_with_cli(&plan, &mut cli).expect("structured teardown outcome");
 
     assert_eq!(
         cli.calls.len(),

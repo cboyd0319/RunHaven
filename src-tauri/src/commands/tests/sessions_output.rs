@@ -1,5 +1,20 @@
 use super::*;
 
+fn write_past_output_session(run_id: &str) {
+    write_history_run_record(json!({
+        "timestamp": "2026-07-01T05:00:00Z",
+        "started_at": "2026-07-01T04:00:00Z",
+        "finished_at": "2026-07-01T05:00:00Z",
+        "run_id": run_id,
+        "profile": "codex",
+        "workspace": "/sensitive/workspaces/past-output",
+        "network": "provider",
+        "status": "succeeded",
+        "auth_scope": "project",
+        "session": "past-output"
+    }));
+}
+
 #[test]
 fn managed_session_log_snapshot_resolves_session_id_and_stays_read_only() {
     let (_cache, _cache_home) = isolated_cache();
@@ -232,4 +247,105 @@ fn managed_session_log_snapshot_redacts_tokens_served_from_the_registry() {
     // Still served (redacted), proving the registry path answered, not an error.
     assert!(response.snapshot.text.contains("agent printed"));
     assert!(response.snapshot.text.contains("[redacted]"));
+}
+
+#[test]
+fn past_session_log_snapshot_still_serves_retained_registry_output() {
+    let (_cache, _cache_home) = isolated_cache();
+    write_past_output_session("managed-session-past-retained");
+    let output_registry = SessionOutputRegistry::default();
+    output_registry
+        .register("managed-session-past-retained")
+        .expect("register past output");
+    output_registry
+        .append("managed-session-past-retained", b"retained past output\n")
+        .expect("append past output");
+
+    let response =
+        crate::commands::sessions::get_managed_session_log_snapshot_with_output_for_test(
+            ManagedSessionLogSnapshotRequest {
+                session_id: "managed-session-past-retained".to_string(),
+                lines: Some(20),
+                confirm_sensitive_output: true,
+            },
+            &output_registry,
+        )
+        .expect("retained past output");
+
+    assert_eq!(response.session.lifecycle, "finished");
+    assert_eq!(response.snapshot.text, "retained past output\n");
+}
+
+#[test]
+fn past_session_without_retained_output_returns_a_fixed_id_free_error() {
+    let (_cache, _cache_home) = isolated_cache();
+    let run_id = "managed-session-past-missing-output";
+    write_past_output_session(run_id);
+
+    let error = crate::commands::sessions::get_managed_session_log_snapshot_for_test(
+        ManagedSessionLogSnapshotRequest {
+            session_id: run_id.to_string(),
+            lines: Some(20),
+            confirm_sensitive_output: true,
+        },
+    )
+    .expect_err("past output was not retained");
+
+    assert_eq!(error, "Output is no longer available for this past run.");
+    assert!(!error.contains(run_id));
+    assert!(!error.contains("active run"));
+}
+
+#[test]
+fn active_session_without_retained_output_uses_the_active_fallback() {
+    let (_cache, _cache_home) = isolated_cache();
+    let run_id = "managed-session-active-fallback";
+    write_active_run_payload(
+        run_id,
+        json!({
+            "timestamp": "2026-07-01T05:00:00Z",
+            "run_id": run_id,
+            "profile": "codex",
+            "workspace": "/sensitive/workspaces/active-output",
+            "network": "provider",
+            "status": "running",
+            "container_name": "runhaven-codex-active-fallback",
+            "state_volume": "runhaven-codex-hidden-home",
+            "session": "active-output"
+        }),
+    )
+    .expect("active run payload");
+    let registry = SessionOutputRegistry::default();
+    let mut approved = false;
+    let mut fallback_called = false;
+
+    let response = crate::commands::managed_session_output::get_managed_session_log_snapshot_with_fallback_for_test(
+        ManagedSessionLogSnapshotRequest {
+            session_id: run_id.to_string(),
+            lines: Some(20),
+            confirm_sensitive_output: true,
+        },
+        Some(&registry),
+        |session, lines| {
+            approved = true;
+            assert_eq!(session.lifecycle, "running");
+            assert_eq!(lines, 20);
+            Ok(true)
+        },
+        |fallback_run_id, lines| {
+            fallback_called = true;
+            assert_eq!(fallback_run_id, run_id);
+            crate::commands::log_snapshot::log_snapshot_response(
+                fallback_run_id,
+                lines,
+                b"active fallback output\n",
+                1024,
+            )
+        },
+    )
+    .expect("active fallback output");
+
+    assert!(approved);
+    assert!(fallback_called);
+    assert_eq!(response.snapshot.text, "active fallback output\n");
 }

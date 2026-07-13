@@ -18,7 +18,6 @@ workspace = true
 [dependencies]
 runhaven-cli.workspace = true
 runhaven-core.workspace = true
-runhaven-tui.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

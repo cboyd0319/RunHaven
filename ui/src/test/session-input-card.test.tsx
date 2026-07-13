@@ -56,12 +56,30 @@ describe("SessionInputCard", () => {
     );
 
     expect(html).toContain("Message");
-    expect(html).toContain("Send text to this selected session.");
+    expect(html).toContain("Send text to this run.");
     expect(html).toContain("textarea");
     expect(html).toContain("disabled=\"\"");
+    expect(html).not.toContain(" / 8192 bytes");
     expect(html).not.toContain("/Users/");
     expect(html).not.toContain("resize_session");
     expect(html).not.toContain("attach_session");
+  });
+
+  it("shows the byte limit only when a draft is close to it", () => {
+    const draft = "a".repeat(7_000);
+    const html = renderToStaticMarkup(
+      <SessionInputCard
+        session={session()}
+        draft={draft}
+        sending={false}
+        error=""
+        acceptedMessage=""
+        onDraftChange={() => undefined}
+        onSend={() => undefined}
+      />
+    );
+
+    expect(html).toContain("7000 / 8192 bytes");
   });
 
   it("shows when a running session cannot accept input in this window", () => {

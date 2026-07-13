@@ -2,9 +2,9 @@
   "name": "runhaven-claude-image",
   "private": true,
   "dependencies": {
-    "@anthropic-ai/claude-code": "2.1.190"
+    "@anthropic-ai/claude-code": "2.1.207"
   },
   "allowScripts": {
-    "@anthropic-ai/claude-code@2.1.190": true
+    "@anthropic-ai/claude-code@2.1.207": true
   }
 }

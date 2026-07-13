@@ -41,6 +41,7 @@ const checkStatusChecked = {
   ok: true,
   detail: true,
   remedy: true,
+  action: true,
 } satisfies Record<keyof CheckStatus, true>
 void checkStatusChecked
 
@@ -157,7 +158,9 @@ export function sameDashboardStatus(
         check.name === nextCheck.name &&
         check.ok === nextCheck.ok &&
         check.detail === nextCheck.detail &&
-        check.remedy === nextCheck.remedy
+        check.remedy === nextCheck.remedy &&
+        check.action?.id === nextCheck.action?.id &&
+        check.action?.label === nextCheck.action?.label
       )
     }) &&
     sameAgents(current.agents, next.agents) &&

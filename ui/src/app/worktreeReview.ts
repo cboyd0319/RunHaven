@@ -8,7 +8,6 @@ export type WorktreeAction = "keep" | "merge" | "recover" | "discard"
 export type WorktreeActionDefinition = {
   action: WorktreeAction
   button: string
-  confirmLabel: string
   description: string
 }
 
@@ -18,28 +17,24 @@ export const WORKTREE_ACTIONS: WorktreeActionDefinition[] = [
   {
     action: "merge",
     button: "Merge into project",
-    confirmLabel: "Confirm merging the isolated copy back into your project.",
     description:
       "Bring the agent's changes back into your project files, then remove the copy.",
   },
   {
     action: "keep",
     button: "Keep for later",
-    confirmLabel: "Confirm keeping the isolated copy for now.",
     description:
       "Leave the isolated copy and its branch in place so you can review it later.",
   },
   {
     action: "recover",
     button: "Recover by hand",
-    confirmLabel: "Confirm getting manual steps to recover the isolated copy.",
     description:
       "Show plain steps to open the copy yourself. Nothing is merged or deleted.",
   },
   {
     action: "discard",
     button: "Discard changes",
-    confirmLabel: "Confirm discarding the isolated copy and its changes.",
     description:
       "Throw away the agent's changes and remove the copy. This cannot be undone.",
   },

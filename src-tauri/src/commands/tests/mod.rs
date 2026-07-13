@@ -19,10 +19,8 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-mod agent_sign_in;
 mod auth;
 mod claude_auth_source;
-mod claude_oauth;
 mod image;
 mod image_build;
 mod launch_status;
@@ -42,7 +40,29 @@ mod sessions;
 mod sessions_diagnostics;
 mod sessions_output;
 mod sessions_status;
+mod setup_installer_recovery;
+mod setup_recovery;
 mod validation;
+mod worktree_launch_recovery;
+
+fn ready_host() -> crate::commands::setup_recovery::RecoveryHost {
+    crate::commands::setup_recovery::RecoveryHost {
+        operating_system: "macos".to_string(),
+        macos_major: Some(26),
+        architecture: "aarch64".to_string(),
+        container_program: Some(PathBuf::from("/Applications/container/bin/container")),
+    }
+}
+
+fn command_output(
+    success: bool,
+    text: &str,
+) -> crate::commands::setup_recovery::RecoveryCommandOutput {
+    crate::commands::setup_recovery::RecoveryCommandOutput {
+        success,
+        text: text.to_string(),
+    }
+}
 
 fn isolated_cache() -> (tempfile::TempDir, CacheRootOverride) {
     let cache = tempfile::tempdir().expect("cache");

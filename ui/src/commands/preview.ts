@@ -19,8 +19,6 @@ import type {
   WorkspaceExplanationResponse
 } from "./types";
 import type {
-  AgentSignInStartResponse,
-  AgentSignInStatusResponse,
   ImageBuildStartResponse,
   ImageBuildStatusResponse,
   NetworkPrunePreview,
@@ -43,27 +41,22 @@ export {
   previewManagedSessionWorktree,
   previewManagedWorktreeAction
 } from "./preview_worktree";
-export {
-  previewClaudeOAuthClear,
-  previewClaudeOAuthStart,
-  previewClaudeOAuthStatus
-} from "./preview_claude_oauth";
 
 const mockAgents: AgentProfile[] = [
   {
     name: "claude",
     description: "Claude Code with isolated project state.",
-    image: "runhaven/claude:0.1.0",
+    image: "runhaven/claude:0.7.0",
     defaultCommand: ["claude"],
     providerHosts: ["api.anthropic.com"],
     signIn: "runhaven login",
     broker: "yes",
-    supportsInAppSignIn: false
+    supportsInAppSignIn: true
   },
   {
     name: "codex",
     description: "Codex CLI with isolated project state.",
-    image: "runhaven/codex:0.1.0",
+    image: "runhaven/codex:0.7.0",
     defaultCommand: ["codex"],
     providerHosts: ["api.openai.com", "chatgpt.com"],
     signIn: "runhaven login",
@@ -71,14 +64,24 @@ const mockAgents: AgentProfile[] = [
     supportsInAppSignIn: true
   },
   {
-    name: "shell",
-    description: "Generic shell profile for custom agent images.",
-    image: "runhaven/base:0.1.0",
-    defaultCommand: ["/bin/bash"],
-    providerHosts: [],
-    signIn: "n/a",
-    broker: "n/a",
-    supportsInAppSignIn: false
+    name: "antigravity",
+    description: "Google Antigravity CLI with isolated project state.",
+    image: "runhaven/antigravity:0.7.0",
+    defaultCommand: ["agy"],
+    providerHosts: ["accounts.google.com", "oauth2.googleapis.com"],
+    signIn: "runhaven login",
+    broker: "no",
+    supportsInAppSignIn: true
+  },
+  {
+    name: "copilot",
+    description: "GitHub Copilot CLI with isolated project state.",
+    image: "runhaven/copilot:0.7.0",
+    defaultCommand: ["copilot"],
+    providerHosts: ["github.com", "api.github.com"],
+    signIn: "runhaven login",
+    broker: "no",
+    supportsInAppSignIn: true
   }
 ];
 
@@ -94,7 +97,8 @@ export function previewDashboardStatus(): DashboardStatus {
           name: "Preview mode",
           ok: true,
           detail: "Using static preview data",
-          remedy: "Open the desktop app to read local setup status."
+          remedy: "Open the desktop app to read local setup status.",
+          action: null
         }
       ]
     },
@@ -102,7 +106,8 @@ export function previewDashboardStatus(): DashboardStatus {
     agentReadiness: [
       { name: "claude", category: "signed-in", label: "Signed in" },
       { name: "codex", category: "needs-sign-in", label: "Needs sign-in" },
-      { name: "shell", category: "ready", label: "Ready" }
+      { name: "antigravity", category: "needs-sign-in", label: "Needs sign-in" },
+      { name: "copilot", category: "needs-sign-in", label: "Needs sign-in" }
     ],
     activeRuns: [],
     recentRuns: [],
@@ -190,7 +195,7 @@ export function previewPlanRun(request: RunPlanRequest): RunPlanResponse {
     warnings: warningPreview(request),
     worktree: request.worktree,
     worktreeNote: request.worktree
-      ? "RunHaven will make an isolated copy of your project on a new git branch. Your original files change only if you merge later."
+      ? "Recommended protection is on. RunHaven will make an isolated copy of your project on a new git branch. Your original files change only if you merge later."
       : null
   };
 }
@@ -357,7 +362,8 @@ export function previewAuthStatus(): AuthStatusResponse {
     profiles: [
       { name: "claude", status: "api-key-broker" },
       { name: "codex", status: "api-key-broker" },
-      { name: "shell", status: "n/a" }
+      { name: "antigravity", status: "needs-sign-in" },
+      { name: "copilot", status: "needs-sign-in" }
     ]
   };
 }
@@ -383,46 +389,6 @@ export function previewImageBuildStatus(buildId: string): ImageBuildStatusRespon
     detail: "Preview mode: rebuild status is simulated.",
     outputTail: "Preview build output.",
     updatedAt: "1970-01-01T00:00:00Z"
-  };
-}
-
-const previewSignInReads = new Map<string, number>();
-
-export function previewAgentSignInStart(agent: string): AgentSignInStartResponse {
-  previewSignInReads.delete(`preview-sign-in-${agent}`);
-  return {
-    signInId: `preview-sign-in-${agent}`,
-    agent,
-    state: "starting",
-    label: "Starting",
-    detail: "Preview mode: no sign-in runs without the desktop app."
-  };
-}
-
-export function previewAgentSignInStatus(signInId: string): AgentSignInStatusResponse {
-  // Progress across polls so the browser-preview and e2e paths can cover a
-  // successful sign-in: the first poll shows the device link, the next succeeds.
-  const reads = (previewSignInReads.get(signInId) ?? 0) + 1;
-  previewSignInReads.set(signInId, reads);
-  if (reads <= 1) {
-    return {
-      signInId,
-      agent: "preview",
-      state: "needs_browser",
-      label: "Open your browser",
-      detail: "Preview mode: sign-in progress is simulated.",
-      outputTail: "Open https://example.com/device and enter CODE-1234.",
-      updatedAt: "1970-01-01T00:00:00Z"
-    };
-  }
-  return {
-    signInId,
-    agent: "preview",
-    state: "succeeded",
-    label: "Signed in",
-    detail: "Preview mode: simulated sign-in finished.",
-    outputTail: "Sign-in complete.",
-    updatedAt: "1970-01-01T00:00:01Z"
   };
 }
 

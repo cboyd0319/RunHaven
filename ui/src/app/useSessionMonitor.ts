@@ -59,7 +59,7 @@ export function useSessionMonitor(): SessionMonitorState {
           setSessionId(id)
         } else {
           setResolveError(
-            "This window has no session to watch. Close it and use Open in New Window from the main window.",
+            "This window has no run to watch. Close it and use Open in New Window from the main window.",
           )
         }
       } catch (cause) {

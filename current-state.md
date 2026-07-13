@@ -1,20 +1,21 @@
 # Current State
 
-Last updated: 2026-07-04 UTC
+Last updated: 2026-07-12 UTC
 
 ## Current Direction
 
 RunHaven's active product work is now CLI plus native-feeling desktop GUI only.
 The CLI remains the complete technical, automation, recovery, and verification
-surface. The GUI is the primary easy path for nontechnical users. TUI work is
-backlogged for the foreseeable future and should not be expanded, polished,
-refactored, tested, or planned unless the user explicitly reopens that scope or
-a CLI/GUI change requires compile-only maintenance.
+surface. The GUI is the primary easy path for nontechnical users. The TUI and
+vendored Codex source are archived outside the active Cargo workspace and
+release graph. Reopening them requires an explicit product decision and fresh
+dependency/security review.
 
-Do not push this branch, tag, version-bump, cut a release, notarize, add an
-updater, or do public distribution work unless the maintainer explicitly asks
-for that pass. Current GUI prototype work should not require a paid Apple
-Developer Program membership.
+The maintainer authorized the `v0.7.0` source-version bump. Do not push this
+branch, tag, cut a release, notarize, add an updater, or distribute a build
+unless the maintainer explicitly asks for that pass. Producing a shareable
+desktop artifact requires the paid Apple release credentials and external
+verification listed below.
 
 ## Startup Contract
 
@@ -29,8 +30,9 @@ only when the task touches that surface.
 
 ## Product Facts
 
-- RunHaven is a Rust 1.96.0 workspace for running AI coding agents inside Apple
-  `container` on macOS 26+ on Apple silicon.
+- RunHaven is a Rust 1.97.0 workspace for running AI coding agents inside Apple
+  `container` on macOS 26+ on Apple silicon. Repository setup and doctor pins
+  require Apple `container` 1.1.0.
 - Windows and Linux are not supported runtime or contributor-verification
   targets.
 - The safe default is task-scoped `container run`, not `container machine`.
@@ -43,7 +45,7 @@ only when the task touches that surface.
   allowlisted; arbitrary data-egress hosts stay closed.
 - `--ssh` forwards the host SSH agent socket only (never raw keys, non-root),
   and is re-enabled after a no-secret live smoke proved it works. On macOS 26+
-  with Apple `container` 1.0.0, the default launchd SSH agent socket is
+  with Apple `container` 1.1.0, the default launchd SSH agent socket is
   world-accessible (`srw-rw-rw-`), so the forwarded socket is usable by the
   non-root `agent` user: `runhaven run --ssh` -> `ssh-add -l` returns the
   no-identities status (verified end to end), not permission denied. It is an
@@ -58,16 +60,16 @@ only when the task touches that surface.
 
 | Area | Path | Owns |
 | --- | --- | --- |
-| Binary entrypoints | `crates/runhaven/` | `runhaven` and `runhaven-check-pins`; bare-interactive TUI routing stays compile-only/backlogged. |
+| Binary entrypoints | `crates/runhaven/` | `runhaven` and `runhaven-check-pins`. |
 | Core library | `crates/runhaven-core/` | Runtime, provider, records, image, doctor, diagnostics, support, harness pins, and shared UI contracts. |
 | CLI presentation | `crates/runhaven-cli/` | Clap dispatch, setup text, and human CLI output. |
-| Terminal UI | `crates/runhaven-tui/` | Codex-vendored TUI source plus RunHaven TUI adapters. |
+| Terminal UI archive | `crates/runhaven-tui/`, `crates/codex/` | Parked source outside the release workspace and binaries. |
 | Desktop Rust shell | `src-tauri/` | Narrow typed Tauri commands over `runhaven-core`. |
 | Frontend | `ui/` | React + shadcn/ui desktop WebView prototype over typed Tauri commands. |
 
 `crates/runhaven` stays binary-only. Shared runtime truth belongs in
 `runhaven-core`; active presentation work belongs in CLI, Tauri, or frontend
-layers. TUI presentation work is backlogged.
+layers. Archived TUI presentation work is out of scope.
 
 ## Harness Rules
 
@@ -92,24 +94,19 @@ Tauri/Rust boundary. Do not add generic command execution, filesystem RPC, MCP,
 app-server transport, login bridges, resize, attach, or host-reaching Codex
 paths without a designed and tested RunHaven boundary.
 
-Design direction: dark by default, logo-informed, restrained, and native
-feeling. Use a dark navy base, subtle glass-like panels, blue primary actions,
-teal/green ready states, amber warnings, and red only for blocked or destructive
-states. Avoid corny safety copy. The canonical logo is `docs/assets/logo.png`.
+Design direction: follow system appearance; stay restrained and native-feeling;
+use blue actions, green ready states, amber warnings, and red only for blocked
+or destructive states. The canonical logo is `docs/assets/logo.png`.
 
 Refresh, polling, and status updates must keep the current workspace stable.
 Session views should update panels in place without full-page blink/remounts,
 without clearing user input drafts, and without falling back to the launch
 wizard unless the user changes context or the selected session disappears.
 
-In-app maintenance (V1 milestone M5, safe subset) is shipped: the Maintenance
-panel rebuilds an agent image (background build with sanitized, bounded,
-secret-redacted live status) and cleans up RunHaven-managed stale networks
-(count preview, confirm, count-only outcome). Both mutations are run-control
-commands behind a Rust-owned native confirmation and fail closed. State prune
-stays CLI-only on purpose: it can erase agent login/state across sessions and
-its preview needs saved-state names the WebView never receives. Live image
-build and network delete on a real Apple container host are a documented
+In-app maintenance is shipped: Agents repairs images with bounded redacted
+status, and Cleanup removes stale managed networks after a count preview. Both
+use Rust-owned native confirmation and fail closed. State prune stays CLI-only
+because it can erase sign-in state. Live mutation remains a documented
 follow-up. End-user guide: `docs/DESKTOP_APP.md`.
 
 Useful GUI design docs:
@@ -125,6 +122,28 @@ Useful GUI design docs:
 
 ## Latest State
 
+- The bounded second adversarial pass is remediated in source. Targeted state
+  deletion now holds the per-volume lock; active-marker reads and mutations are
+  serialized per run and cannot recreate a removed marker; sign-in readiness
+  publishes under the same state lock as launch; natural PTY EOF waits for
+  cleanup, run recording, and readiness publication before reporting Exit;
+  explicit teardown remains bounded. Release WebViews no longer receive the
+  arbitrary log-write permission that development uses, and release artifact
+  publication holds an atomic per-version lock through the final rename.
+  Integrated gates pass: 249 core tests (2 ignored fixtures), 6 CLI tests, 265
+  Tauri tests (5 live-only ignored), warnings-denied workspace Clippy, 405
+  frontend tests, production build, 11 Playwright/axe flows, release/local-sign
+  shell tests, structure/docs/JSON/diff guards, and production plus development
+  Tauri config builds.
+- Apple `container` 1.1.0 is installed and live-verified. Official release and
+  exact-tag source review, installer SHA-256, Apple Team ID, notarization, and
+  embedded CLI signature/version are verified. Pins now use release commit
+  `5973b9cc626a3e7a499bb316a958237ebe14e2ed`, vminit 0.35.0, and the unchanged
+  builder/Kata surface. The installed CLI and apiserver report that exact
+  commit; helper properties and the host kernel hash match pins. `runhaven
+  doctor`, image doctor, default runtime, provider-egress, no-secret SSH, and
+  live two-session Tauri smokes pass with exact RunHaven cleanup.
+
 - Live-test iteration (2026-07-04, adversarial gate CONCERNS -> remediated; all
   suites green): (1) COPY-2 vocabulary unified across 43 files (sign in / run /
   session; "Sign-in sharing", "Shared agent sign-in" / "This project only",
@@ -132,19 +151,20 @@ Useful GUI design docs:
   drift pin that reads `ui/src/app/labels.ts` from a Rust test. (2) macOS shell:
   NAT-1 overlay title bar + hidden title, full-height sidebar, draggable header,
   `window-chrome` capability, minWidth 800; NAT-2 native vibrancy
-  (window-vibrancy =0.6.0 NSVisualEffectMaterial::Sidebar, transparent main
+  (Tauri's native `Effect::Sidebar`, transparent main
   window + macOSPrivateApi + macos-private-api feature -> App Store ineligible,
   RunHaven ships direct; body transparent, sidebar 72% glass, content opaque,
   monitors stay opaque). Vibrancy is cosmetic; tint needs a live-look tune.
-  (3) Comprehensive diagnostic logging (tauri-plugin-log =2.8.0, log =0.4.32
-  vendored-forced) to `~/Library/Logs/dev.runhaven.desktop/runhaven.log`: WebView
-  console + window errors + invoke tracing (name/ms/outcome, write/resize
-  excluded), run-id correlation, per-run summary, panic hook, 12 runner
+  (3) Comprehensive diagnostic logging (tauri-plugin-log =2.8.0, log =0.4.33)
+  to `~/Library/Logs/dev.runhaven.desktop/runhaven.log`: development-only
+  WebView console + window errors + invoke tracing (name/ms/outcome,
+  write/resize excluded), plus release-safe Rust run-id correlation, per-run summary, panic hook, 12 runner
   eprintln->log, >1s SLOW-invoke WARN. SECURITY: a live session leaked the broker
   Bearer token via TRACE http wire-dumps -> fixed by capping the global level
   below TRACE (DEBUG dev/INFO release) + http/tls WARN pins + a redaction filter;
   `scripts/dev-with-logs.sh` auto-scans (`scan-dev-log.sh`) on every exit.
-  `logging` cap (log:allow-log, main-only) + no-console guard; leak-gated SOUND.
+  `logging` cap (log:allow-log, development main-only) + no-console guard;
+  release WebViews have no arbitrary log-write capability; leak-gated SOUND.
 
 - Comprehensive UI/UX audit shipped (task #25,
   `docs/design/native-gui-uiux-audit.md`): five parallel read-only lenses
@@ -159,46 +179,44 @@ Useful GUI design docs:
   SOUND: the interactive run terminal now stays mounted (hidden) across navigation
   instead of unmounting and killing the run, with a sidebar "Run terminal" handle
   to return; End run and app-quit still tear down. P1 shipped (gated CONCERNS ->
-  fixed): sign-in Stop-waiting cancel + 45s stall (poll kept alive after cancel so
-  a late success still refreshes auth, F1), the native launch confirm now shows
-  friendly labels not raw enum codes (COPY-1), status icons use success/warning
+  fixed): the native launch confirm shows friendly labels instead of raw enum
+  codes (COPY-1), status icons use success/warning
   tokens + ready-to-review is teal not amber (VIS-1/2), and a Shift+Esc terminal
-  keyboard escape (A11Y-1). Deferred: agent sign-in backend concurrency guard
-  (#32), the run/session + sign-in vocabulary rename (#33, awaiting user). P2
+  keyboard escape (A11Y-1). Agent sign-in now uses the terminal registry and its
+  shared two-session cap; app teardown kills and reaps terminal children.
+  Real CLI/GUI image mutations repeat the pinned supported-runtime gate.
+  Deferred: the run/session + sign-in vocabulary rename (#33, awaiting user). P2
   Wave 1 (rounded-rect buttons, motion, terminal Cmd-C/V) + high-value P3 state
   bugs shipped. P2 NAT-1 overlay chrome + NAT-2 native vibrancy shipped; P3 nits
   held (TerminalPanel at its line ceiling needs a split first).
-- Home dashboard redesign (variant 06, `docs/design/native-gui-home-dashboard.md`):
-  sidebar keeps nav + Runs counts; Home = 4 secret-free panels + primitives,
-  a11y-fixed. Agent setup shows real per-agent sign-in (sandbox marker + Claude
-  Keychain, secret-free, security SOUND). Run-history view shipped; deferred: switcher #37, ceilings #39.
-- Broker hardening complete (detail in
-  `docs/design/native-gui-claude-oauth-broker.md` and git): the held Claude OAuth
-  token is `secrecy::SecretString` (`=0.10.3`, pinned) redacting Debug/Display on
-  top of zeroize's wipe, plaintext only via the single greppable `expose_secret()`
-  at header injection + the Keychain store (task #22). F3 resolved: the
-  user-presence `SecAccessControl` gate attaches only on the data-protection
-  keychain (signed release), while the legacy dev keychain stores a usable token
-  without it, so the "cannot read the token silently" guarantee is release-scoped.
-- Claude OAuth capture (path C) now runs `claude setup-token` under a host PTY,
-  not a pipe. Live smoke (F4) proved setup-token is a TTY-required Claude Code
-  (ink) polling flow: piped stdout hangs it; under a PTY the user authorizes in
-  the browser (no paste) and it polls and prints the one-year token. The capture
-  (`provider/claude_oauth_capture.rs`, split from `claude_oauth_keychain.rs`)
-  reads until the token appears, extracts it (ANSI/soft-wrap tolerant, rejects a
-  half-streamed token, no glue), reaps the child, and stores it; buffers and
-  token stay `Zeroizing`; 180s timeout + 256 KiB cap fail closed. Path C stays
-  one-click. Remaining live smoke: click Sign in end to end, token lands in the
-  Keychain, Touch ID on a later run.
-- Provider-network teardown no longer leaks the run container or its network on
-  a mid-flow killed login/attach client. `cleanup_provider_network`
+- Home dashboard redesign (variant 06) is shipped with secret-free setup,
+  safety, recent-run, and access panels. Agent readiness now uses the same
+  secret-free successful sign-in marker for Claude, Codex, Antigravity, and
+  Copilot.
+- Native container OAuth is the only ordinary desktop sign-in path as of
+  2026-07-12. All four providers run their own login command in the shared
+  terminal surface on an isolated agent volume. The host Claude setup-token,
+  Keychain OAuth broker, captured-output sign-in runner, polling registries,
+  Tauri commands/capabilities, token-age setting, signing entitlements, and
+  direct Keychain dependencies were deleted. The optional explicit
+  environment-variable API-key broker remains for Claude and Codex only.
+
+- Managed run-network teardown no longer leaks the run container or its network on
+  a mid-flow killed login/attach client. `cleanup_run_network`
   (`provider/runtime/network.rs`) force-removes the run container
   (`container rm --force`, verified on Apple container 1.0.0) before deleting the
   network; idempotent, so a clean `--rm` run still records `cleanup=deleted` and
   a real referring-container failure is surfaced, not swallowed. Single choke
-  point for both failed-login and terminal-close paths; hermetic red/green tests
-  in `provider/runtime/tests/network.rs`. `docs/DESKTOP_APP.md` caveat tightened.
-  Lead's live re-smoke (fail a login, confirm no orphan) is the remaining step.
+  point for provider failed-login and terminal-close paths. Standard local-only
+  runs now use the same cleanup after success or runner failure, preventing one
+  stale network per run after per-run identity isolation. Hermetic red/green
+  tests live in `provider/runtime/tests/network.rs` and `runtime/launch/tests.rs`;
+  a live isolated-worktree shell run proved source isolation, diff capture,
+  discard, and automatic network removal. The CLI parent now owns macOS
+  termination signals through exact-pinned `signal-hook` 0.4.4, kills and
+  reaps its child, then completes normal recording and cleanup. A real Ctrl-C
+  smoke exited 130 with a failed record, no active marker or run container, and
+  `cleanup=deleted`; SIGKILL remains recoverable, not cleanable in-process.
 - Earlier verification and hardening milestones are complete (detail in
   `feature_list.json` evidence and git): live-runtime verification on a real
   macOS 27 / Apple container 1.0.0 host (five live Tauri container tests, `runs
@@ -217,39 +235,31 @@ Useful GUI design docs:
   diagnostics, one canonical label vocabulary + accessibility/focus, dead-code
   deletion, and docs/e2e realignment. The deferred Apple-HIG visual redesign has
   its references in `docs/design/native-gui-design-resources.md`.
-- Agent login unified in-sandbox (2026-07-01): all four sign-in agents (Claude,
-  Codex, Copilot, Antigravity) log in *inside* the sandbox on the shared home
-  volume via `runhaven login <agent>` (path A), which deleted the old host token
-  store (`runtime/token_store.rs`, the run-time env injection, the
-  `RUNHAVEN_TOKEN_STORE=keychain` seam). CURRENT TRUTH (updated 2026-07-02): the
-  desktop app's Claude Keychain broker (path C, the default for Claude sign-in,
-  see the broker note below) later reintroduced *opt-in* host custody of the
-  Claude OAuth token in the macOS Keychain. So "RunHaven holds no host token" now
-  applies to path A and to the non-Claude agents; a path-C Claude token is held
-  only in the Keychain. `login claude --clear` and the GUI "Remove saved token"
-  delete their respective stores.
-- In-app agent sign-in landed seam-first (detail in git and
-  `docs/DESKTOP_APP.md`): Codex/Copilot/Antigravity sign in from the app via the
-  isolated `agent-sign-in` capability (native confirm, fail-closed, device-code
-  plan on the `AgentCommandRunner` seam, sanitized redacted progress). Claude is
-  excluded from the device-code path by an explicit check and signs in via the
-  in-app terminal (T3) or the path-C Keychain broker; credentials stay in the
-  agent's home volume, never returned or stored.
-- The GUI now has parity for git-worktree runs and their review lifecycle (V1
-  milestone M4). The launch flow has an opt-in worktree choice (secure default
-  off): `RunPlanRequest.worktree` threads into the planner, the plan review and
-  native confirm dialog both show that an isolated branch will be created, and
-  the branch is created only after confirmation (no git mutation before
-  approval). A read-only `get_managed_session_worktree` (main-read capability)
-  returns a sanitized review (branch, change counts, status, available actions)
-  for eligible stopped worktree sessions. Four run-control commands
-  (`keep`/`merge`/`recover`/`discard`_managed_session_worktree) resolve the
-  backend-owned run in Rust, verify the worktree is RunHaven-owned and not
-  active/stale/foreign (the same `verify_lifecycle` gate cleanup uses), require
-  native confirmation, reuse the tested core functions, and return sanitized
-  results. No worktree command exposes raw host paths, state volumes, or
-  secrets (proven by no-leak tests). Shared launch-plan and capability-guard
-  files were split by ownership to stay under structure ceilings.
+- Agent authentication is consistent across CLI and GUI. Claude wraps
+  `claude auth login` and requires `claude auth status`; Codex runs `codex login
+  --device-auth`; Antigravity wraps first-launch `agy`; Copilot runs `copilot
+  login`. After Antigravity's ambiguous exit 1, its wrapper requires the fixed
+  token file plus a successful non-generative `agy models` probe before the
+  secret-free marker is written. Every GUI login uses a native-confirmed PTY,
+  provider-only egress, non-root execution, no project
+  mount, and a secret-free success marker. PTY bytes are never written by
+  RunHaven. Provider CLIs own credential storage inside their isolated volumes.
+  Current OpenAI source confirms Codex polls at the server interval for up to 15
+  minutes before token exchange and storage under `CODEX_HOME`. After taking
+  the state lock, launch also checks Apple's captured container list for the
+  exact volume; conflicts fail before preparation with a fixed path-free message
+  and no automatic container removal.
+
+- GUI git-worktree launch and review parity is shipped (M4). The GUI defaults
+  to recommended isolated-copy protection, validates it before review and
+  native confirmation, lets users turn it off, and warns before writable direct
+  mode; all possible runtime, image, configuration, and auth-selection checks run
+  before creation. A later launch failure writes a failed recoverable run record
+  and keeps the worktree. Read-only review and confirmed keep, merge, recover,
+  and discard commands resolve backend-owned records, reject active, stale, or
+  foreign targets through `verify_lifecycle`, and return sanitized results.
+  No command exposes host paths, state volumes, or secrets. Shared launch and
+  capability files remain split below structure ceilings.
 - CLI-complete v0.5.0 scope remains closed and was reverified on 2026-07-01:
   CLI surface breadth 39/39, CLI/core tests, CLI/core clippy, non-TTY CLI help
   routing, pin policy, structure guard, docs local-path guard, JSON validation,
@@ -302,9 +312,14 @@ short: spec sidebar taxonomy with prioritized symbol-in-dot attention badges
 wizard extracted into the modal New Run sheet (`LaunchSheet.tsx`,
 `useLaunchFlow.ts`; the Rust-owned native confirmation stays the mutation
 boundary), Home as the spec 3.1 destination replacing the `SetupCard`
-takeover, Agents with image readiness and the Claude copy button, Diagnostics
-with auto-loaded doctor detail, and the session view reordered behind
+takeover, Agents with image readiness and the Claude copy button, System Check
+with auto-loaded doctor detail, and the run detail view reordered behind
 `SessionAttentionBanner.tsx` with runtime detail demoted to Show details.
+
+The 2026-07-10 pass added setup recovery, Run filters, progressive disclosure,
+plain vocabulary, system appearance, and small-window coverage. Follow-up fixed
+premature reads, network failures, past-run polling, and cleanup; owned JSONL
+appends now lock, and malformed records warn without content.
 
 Wave B slices B1 (commit `cb9d5a9`), B2+B5 (commit `1b85d21`), and B3
 (commit `d7a29b3`) are complete; per-slice detail lives in the gap tracker
@@ -313,7 +328,7 @@ native macOS menu bar and keyboard map emit item ids over a listen-only
 `menu-events` capability with no new mutation path; window frame, the
 sanitized last destination, and the sidebar cookie persist and re-verify on
 relaunch; the Dock badge reports the needs-you count through the narrow
-`attention-badge` capability; and Settings (Cmd-,) is a lean in-window
+`attention-badge` capability; and Settings (sidebar or Cmd-,) is a lean in-window
 dialog holding the two real preferences (deviation recorded in the
 tracker's B3 section). Menu, relaunch-restore, badge, and Settings behavior
 share one still-pending `tauri dev` smoke.
@@ -350,22 +365,28 @@ drive a growth loop. `Close`/`End run` (and Escape/unmount) tear down via the
 existing close-on-unmount + `closeTerminalSession` and return Home. Backend
 contract, `open_agent_run_terminal`, disclosure, and native confirm unchanged.
 
-Session-display fix (display/labeling only; no broker/auth/capability/egress or
-terminal change): a working interactive Claude run no longer shows "Failed" or
-"API key broker". Interactive TTY runs exit non-zero when the user closes the
-TUI, so `write_run_record` records the neutral status `ended` for any
-`AgentRunPlan::is_interactive_tty()` plan (`--tty`) absent an explicit status;
-background runs keep the exit-code succeeded/failed split. `ended` threads as a
-neutral terminal state like `stopped`/`finished` (lifecycle, next-action "none",
-cleanup, `status_label` "Ended") through `ui_contracts` and the frontend
-(`SessionLifecycle`, `sessionAttention` null), never the red failed styling.
-`managed_session_auth_status` now returns `keychain-oauth` when
-`/auth_broker/broker == "keychain-oauth"` (label "Claude subscription
-(Keychain)", not needs-attention); `labels.ts`/`authDetails.ts` mirror it.
-`DESKTOP_APP.md` documents the Ended status.
+Terminal viewport QA (2026-07-12) closed the same resize-loop risk for login
+and attach modes: their non-fill xterm container is now fixed at `h-72` instead
+of `min-h-72`, so FitAddon cannot grow its own ResizeObserver target. The
+fail-first component regression was red before the one-class fix and green
+after it. Browser and Playwright matrices cover every primary GUI destination
+at 800x560 and 1080x720, including all four Agent states, both System Check
+tabs, Cleanup, every run filter, Settings, all New Run steps, and run-terminal
+navigation. The pass also corrected stale System Check copy from Maintenance to
+Cleanup. The real Tauri entry surface rendered correctly at both sizes and its
+live log plus secret scan stayed clean. macOS denied assistive click access, so
+the credentialed native terminal interaction remains in the existing live
+provider gate rather than being claimed from browser evidence.
+
+Session-display fix: interactive TTY runs exit non-zero when the user closes
+the agent UI, so `write_run_record` records the neutral status `ended` for any
+`AgentRunPlan::is_interactive_tty()` plan (`--tty`) absent an explicit status.
+Background runs keep the exit-code succeeded/failed split. `ended` threads as a
+neutral terminal state through `ui_contracts` and the frontend and never uses
+the red failed styling. `DESKTOP_APP.md` documents the Ended status.
 
 B4 read-only session monitor windows are complete (detail in the gap tracker
-B4 section): Session menu > Open in New Window mints the `session-<n>` label in
+B4 section): Run menu > Open in New Window mints the `session-<n>` label in
 Rust, caps monitors at 6, focuses instead of duplicating, and grants monitors
 exactly three reads over a `session-monitor` (`session-*`) capability pinned to
 their own session; every mutation stays main-only (fail closed). Live
@@ -376,44 +397,6 @@ for real external user testing. Start by keeping TUI work out of scope, then
 continue hardest-first through live session ownership, real-agent auth/session
 behavior, multi-session isolation, typed status, run control, recovery, and
 fail-closed boundaries before visual polish.
-
-Claude OAuth Keychain broker (`docs/design/native-gui-claude-oauth-broker.md`
-holds the full spec and per-slice status). Slices 1, 3, 4, and 5 landed; Gate 1
-passed and authorized the GUI flip; Gate 2 (pre-merge full verification + live
-Keychain / real setup-token maintainer smokes + a final claim-set read) and the
-double-coverage review remain before merge. Slices 1/3/4 (custody + broker +
-commands): macOS-gated `provider/claude_oauth_keychain.rs` custody (user-presence
-`SecAccessControl`, `Zeroizing` capture, no disk/log copy; deps
-`security-framework =3.5.1`, `zeroize =1.9.0`); `ClaudeAuthSource` keeps any
-token off persisted plan/marker fields (`keychain-oauth` tag only, F1);
-`CLAUDE_OAUTH_BROKER` reuses `BearerAuth` + `ANTHROPIC_BASE_URL`, pins
-`api.anthropic.com` + `/v1/`; three `claude-oauth`-capability commands
-(`start_claude_oauth_signin`, `get_claude_oauth_status`, `clear_claude_oauth`),
-main-only, no token/prefix/path in any response. Slice 5 (GUI + rotation + docs):
-`ClaudeSignIn.tsx`/`useClaudeOAuthSignIn.ts` make path C ("Sign in on your Mac")
-the primary action and keep the unchanged T3 terminal login as the "Sign in
-inside the sandbox instead" opt-in; the three approved tooltip strings ship
-verbatim (asserted). `get_claude_oauth_status` now returns a non-secret `ageDays`
-from the item's own `kSecAttrCreationDate` via the SAME attributes-only presence
-query (no `kSecReturnData`, no prompt, no token read; parsed with `time`, split
-into `provider/claude_oauth_age.rs`); past the Settings cadence (default 90 days)
-the card prompts a fresh sign-in (a reminder, not an expiry). Docs shipped:
-`AUTH_BROKER.md` (mechanism + verbatim claim set + removal + rotation),
-`SECURITY_MODEL.md` (custody-reversal trade-off), `DESKTOP_APP.md`, `USAGE.md`.
-No secret reaches the WebView; browser preview shows the placeholder and never
-invokes Tauri. Selection wiring fix (F1 + F3, the double-coverage review's
-load-bearing finding): `KeychainOAuth` was never constructed in a production
-launch path, so a signed-in token was unused. Selection precedence now lives once
-in `broker_secret.rs::select_claude_auth_source_with_presence` (env-var broker
-NAME wins; else a PRESENT claude token via non-prompting `claude_oauth_token_present`
-drives `KeychainOAuth`; else none) and both CLI (`make_run_plan`) and GUI
-(`agent_run_options`) call it; the GUI decides from real Keychain presence, never
-a WebView value. The prompting token read stays deferred to broker startup
-(`require_api_key_broker_secret`) after the trusted confirm and fires exactly once;
-plan prep and pre-confirm validation are presence-only. Hermetic tests (injected
-presence/reader): `provider/runtime/tests/selection.rs`, CLI `app/tests.rs`, GUI
-`commands/tests/claude_auth_source.rs`. Lead still owns the review re-verification
-and the Gate 2 live Keychain smokes before merge.
 
 For this CLI+GUI completion goal, local downloads, installs, tool runs, and
 external research are authorized when they directly reduce risk or accelerate
@@ -431,19 +414,34 @@ git diff --check
 ```
 
 Add Rust, Tauri, frontend, or live smoke checks when touched files require
-them. Per-crate `cargo test -p runhaven-core` and `-p runhaven-tauri` plus
-`cargo build --workspace` are clean. `cargo test --workspace` has pre-existing,
-out-of-scope failures that stay on the backlog and are not RunHaven CLI/GUI
-regressions: the backlogged TUI test fixtures need `ActiveRunSummaryData`'s
-`auth_scope`, and the vendored `codex-exec-server` integration tests do not
-compile (unresolved `codex_test_binary_support`). Do not spend the CLI/GUI push
-fixing TUI.
+them. The active workspace is CLI plus desktop only; full workspace test,
+Clippy, and build gates must pass. Archived TUI/Codex source is not a release
+dependency.
+
+The 2026-07-10 hostile review closed the then-reproducible runtime and release
+findings: Internet runs clean their exact container, process-global signal
+handling preserves normal termination after child exit and fails safe on a
+second signal, worktree validation finishes before mutation, and release
+staging is temporary and fail closed. Expanded axe coverage passes across 11
+desktop flows. The later Claude Keychain design was removed on 2026-07-12.
+
+After the `v0.7.0` version bump, `./init.sh` passes with the repository-pinned
+Rust and Cargo 1.97.0 rather than an unrelated Homebrew toolchain. The full gate
+covers Rust tests, warnings-denied Clippy, pin, structure and release tests, 424
+frontend tests, production build, 11 Playwright/axe flows, Tauri debug build,
+workspace build, JSON validation, and diff hygiene. npm audit reports zero vulnerabilities.
+Cargo audit reports zero vulnerabilities and 17 allowed upstream warnings: five
+Tauri/macOS Unicode crates and twelve Linux-only GTK/GLib lockfile entries.
+
+The 2026-07-11 refresh updated every `0.7.0` image, package, lock,
+checksum, and agent pin. On 2026-07-12 the desktop agent set became Claude,
+Codex, Antigravity, and Copilot only. Shell stays CLI-only; legacy Gemini names
+remain cleanup-only.
 
 ## Next Step
 
-CLI is reverified and should stay contract-preserving except for bug fixes,
-security fixes, docs corrections, pin updates, or internal GUI support that
-preserves CLI semantics. Continue hardest-first on real-agent auth/session
-correctness beyond shell, GUI recovery beyond verified worktree cleanup,
-CLI/GUI parity checks, fail-closed security boundary checks, and a current
-visual screenshot pass. Keep the safe path short, stable, and nontechnical.
+The native-auth verification slice is complete: all four real GUI paths report
+signed in, provider-owned readiness checks pass where required, no Mac Keychain
+prompt or terminal-byte persistence occurred, and live cleanup left no run
+resources. Keep TUI deferred and do not distribute until Developer ID
+notarization and clean-Mac distribution gates pass.
