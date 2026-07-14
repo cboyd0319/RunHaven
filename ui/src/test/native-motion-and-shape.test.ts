@@ -71,4 +71,21 @@ describe("macOS visual accessibility preferences", () => {
     expect(css).toMatch(/:root[\s\S]*--warning-text:/);
     expect(css).toMatch(/\.dark[\s\S]*--warning-text:/);
   });
+
+  it("separates readable error text from filled destructive controls", () => {
+    expect(css).toContain("--color-error-text: var(--error-text)");
+    expect(css).toMatch(/:root[\s\S]*--error-text:/);
+    expect(css).toMatch(/\.dark[\s\S]*--error-text:/);
+  });
+
+  it("uses the active dark token for editable text", () => {
+    expect(css).toMatch(
+      /\.dark \[data-slot="input"\][\s\S]*color:\s*var\(--foreground\)/,
+    );
+  });
+
+  it("keeps the dark work surface and sidebar above the retired near-black ladder", () => {
+    expect(css).toMatch(/\.dark[\s\S]*--background:\s*oklch\(0\.30 /);
+    expect(css).toMatch(/\.dark[\s\S]*--sidebar:\s*oklch\(0\.27 /);
+  });
 });

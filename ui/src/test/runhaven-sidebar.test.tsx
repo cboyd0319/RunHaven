@@ -131,9 +131,10 @@ describe("RunHavenSidebar", () => {
       </TooltipProvider>,
     )
 
-    expect(html).toContain("Claude · Starting")
-    expect(html).toContain("Claude · Starting (2)")
-    expect(html).not.toContain("secret-project")
+    expect(html).toContain("Claude · secret-projectbad")
+    expect(html).toContain("Claude · secret-projectbad (2)")
+    expect(html).not.toContain("/tmp/")
+    expect(html).not.toContain("\u202e")
   })
 
   it("announces unavailable setups and shows sidebar errors beside the action", () => {

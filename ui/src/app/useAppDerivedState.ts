@@ -27,7 +27,7 @@ const PAGE_TITLES: Record<NavDestination["kind"], string> = {
   session: "Session",
   diagnostics: "System",
   help: "Help",
-  "run-terminal": "Session terminal",
+  "run-terminal": "Terminal workspace",
 }
 
 export function useAppDerivedState(input: AppDerivedStateInput) {

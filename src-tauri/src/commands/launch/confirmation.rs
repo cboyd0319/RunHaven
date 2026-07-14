@@ -78,7 +78,7 @@ fn trusted_launch_message(
         "The assistant can change files in this folder."
     };
     let mut message = format!("Project: {project}\nInternet: {network}\n{file_access}");
-    if let Some(disclosure) = generative_ai_disclosure(plan) {
+    if let Some(disclosure) = generative_ai_disclosure(plan, request.read_only_workspace) {
         message.push_str("\n\n");
         message.push_str(&disclosure);
     }
@@ -132,7 +132,7 @@ fn trusted_launch_message(
     message
 }
 
-fn generative_ai_disclosure(plan: &AgentRunPlan) -> Option<String> {
+fn generative_ai_disclosure(plan: &AgentRunPlan, read_only_workspace: bool) -> Option<String> {
     let (assistant, provider) = match plan.profile_name.as_str() {
         "claude" => ("Claude", "Anthropic"),
         "codex" => ("Codex", "OpenAI"),
@@ -140,9 +140,12 @@ fn generative_ai_disclosure(plan: &AgentRunPlan) -> Option<String> {
         "copilot" => ("Copilot", "GitHub"),
         _ => return None,
     };
-    let mut disclosure = format!(
-        "{assistant} uses generative AI and can make mistakes. Review its output and file changes."
-    );
+    let review = if read_only_workspace {
+        "Review its output."
+    } else {
+        "Review its output and file changes."
+    };
+    let mut disclosure = format!("{assistant} uses generative AI and can make mistakes. {review}");
     if plan.network_mode != NetworkMode::Internal {
         disclosure.push_str(&format!(
             "\n{assistant} can send your messages and project content it reads to {provider} services. {provider} handles that data under the terms for your account. RunHaven does not control whether {provider} stores this content or uses it for training. That depends on your account settings and {provider}’s terms."

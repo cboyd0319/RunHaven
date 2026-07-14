@@ -22,6 +22,7 @@ import { useSavedSetups } from "./useSavedSetups"
 import { useRunControlState } from "./useRunControlState"
 import { useSessionInputState } from "./useSessionInputState"
 import { useStatusLoaders } from "./useStatusLoaders"
+import { useSupportReport } from "./useSupportReport"
 
 export function useAppController() {
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null)
@@ -58,6 +59,7 @@ export function useAppController() {
     applyRequest: launchFlow.applySavedSetup,
     navigate,
   })
+  const supportReport = useSupportReport()
 
   const derived = useAppDerivedState({
     dashboard,
@@ -133,6 +135,7 @@ export function useAppController() {
     dashboard,
     launchFlow,
     savedSetups,
+    supportReport,
     loading,
     lastRefreshedAt,
     imageLoading: statusLoaders.imageLoading,

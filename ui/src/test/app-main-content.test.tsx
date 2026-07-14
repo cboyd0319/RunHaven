@@ -34,6 +34,11 @@ describe("AppMainContent", () => {
     expect(mainViewFocusKey(session, 0)).toBe("session:run-1:0")
     expect(mainViewFocusKey(session, 0)).toBe(mainViewFocusKey(session, 0))
     expect(mainViewFocusKey(session, 1)).not.toBe(mainViewFocusKey(session, 0))
+    expect(
+      mainViewFocusKey({ kind: "run-terminal", id: "terminal-a" }, 0),
+    ).not.toBe(
+      mainViewFocusKey({ kind: "run-terminal", id: "terminal-b" }, 0),
+    )
   })
 
   it("renders a concise in-app guide at the Help destination", () => {
@@ -91,7 +96,8 @@ describe("AppMainContent", () => {
     // standing no-filter/no-store disclosure are present, and there is no New
     // Run dialog around it (that lives on New session).
     expect(html).toContain("<main")
-    expect(html).toContain("Session terminal")
+    expect(html).toContain("Claude · Project")
+    expect(html).toContain('aria-label="Claude · Project terminal workspace"')
     expect(html).toContain("RunHaven keeps a filtered copy in memory until you quit")
     expect(html).not.toContain("New run")
     // Browser preview (no Tauri runtime in tests) shows the placeholder and a
@@ -123,6 +129,52 @@ describe("AppMainContent", () => {
     expect(html).toContain("hidden")
     // ...and the New session flow renders alongside it.
     expect(html).toContain("Choose assistant")
+  })
+
+  it("restores Review focus after a native run confirmation is canceled", async () => {
+    const terminal = runTerminal()
+    const container = document.createElement("div")
+    document.body.append(container)
+    const root = createRoot(container)
+
+    await act(async () => {
+      root.render(
+        <AppMainContent
+          {...mainViewProps({
+            launchFlow: {
+              ...launchFlow(),
+              runTerminal: terminal,
+              runTerminals: [terminal],
+            },
+          })}
+          navigation={{ kind: "run-terminal", id: terminal.sessionId }}
+        />,
+      )
+    })
+    await act(async () => {
+      root.render(
+        <AppMainContent
+          {...mainViewProps({
+            launchFlow: {
+              ...launchFlow(),
+              launchStep: "review",
+              reviewFocusRevision: 1,
+              request: {
+                ...planRequest(),
+                workspacePath: "/tmp/cancel-review",
+              },
+            },
+          })}
+          navigation={{ kind: "new-session" }}
+        />,
+      )
+    })
+
+    expect(document.activeElement).toBe(
+      container.querySelector('[role="heading"][aria-level="2"]'),
+    )
+    await act(async () => root.unmount())
+    container.remove()
   })
 
   it("offers a Dismiss action on the top-level error and hides it when used", async () => {

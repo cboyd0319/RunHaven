@@ -1,5 +1,8 @@
 use std::process::Command;
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 #[test]
 fn bare_non_tty_prints_cli_help() {
     let output = Command::new(env!("CARGO_BIN_EXE_runhaven"))
@@ -16,6 +19,56 @@ fn bare_non_tty_prints_cli_help() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("Usage: runhaven"));
     assert!(stdout.contains("Commands:"));
+}
+
+#[cfg(unix)]
+#[test]
+fn support_creates_one_private_report_and_never_uploads_it() {
+    let home = tempfile::tempdir().expect("home");
+    let output = Command::new(env!("CARGO_BIN_EXE_runhaven"))
+        .arg("support")
+        .env("HOME", home.path())
+        .env_remove("RUNHAVEN_CACHE_HOME")
+        .output()
+        .expect("run support command");
+
+    assert!(
+        output.status.success(),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Support report created:"));
+    assert!(stdout.contains("Nothing was uploaded or submitted."));
+    assert!(stdout.contains(
+        "https://github.com/cboyd0319/RunHaven/issues/new?template=runhaven-support.yml"
+    ));
+    assert!(!stdout.contains("gh issue"));
+
+    let reports = home
+        .path()
+        .join("Library")
+        .join("Application Support")
+        .join("RunHaven")
+        .join("Support Reports");
+    let files = std::fs::read_dir(&reports)
+        .expect("support reports directory")
+        .map(|entry| entry.expect("report entry").path())
+        .collect::<Vec<_>>();
+    assert_eq!(files.len(), 1);
+    assert_eq!(
+        files[0].extension().and_then(|value| value.to_str()),
+        Some("txt")
+    );
+    assert_eq!(
+        std::fs::metadata(&files[0])
+            .expect("report metadata")
+            .permissions()
+            .mode()
+            & 0o777,
+        0o600,
+    );
 }
 
 #[test]

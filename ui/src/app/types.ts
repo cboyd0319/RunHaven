@@ -2,9 +2,9 @@ import type { RunPlanRequest } from "@/commands/runhaven"
 
 export type RunControlAction = "stop" | "kill" | "repair" | "cleanup"
 
-// New Session asks for an assistant only when opened directly, then asks for a
-// project. The trusted native sheet owns the one final review.
-export type LaunchStep = "agent" | "project"
+// New session keeps one visible choice at a time, then summarizes the selected
+// boundary before the trusted native confirmation owns the final decision.
+export type LaunchStep = "agent" | "project" | "review"
 
 export function networkHelp(mode: RunPlanRequest["networkMode"]): string {
   if (mode === "provider") {

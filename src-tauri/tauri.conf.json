@@ -34,6 +34,7 @@
         "run-control",
         "menu-events",
         "menu-state",
+        "support-report",
         "terminal",
         "window-chrome"
       ]

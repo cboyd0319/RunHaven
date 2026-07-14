@@ -148,7 +148,9 @@ describe("useLaunchFlow", () => {
   ])(
     "replans protected-copy recovery with readOnlyWorkspace=%s",
     async (readOnlyWorkspace, expectedReadOnly) => {
-      const requests: Array<{ plan: { worktree: boolean; readOnlyWorkspace: boolean } }> = []
+      const requests: Array<{
+        plan: { worktree: boolean; readOnlyWorkspace: boolean }
+      }> = []
       const { result } = await renderFlow(
         deps({
           launchRunCommand: async (request) => {
@@ -266,9 +268,12 @@ describe("useLaunchFlow", () => {
       "copilot",
       "antigravity",
     ])
-    expect(new Set(terminals.map((terminal) => terminal.sessionId)).size).toBe(2)
+    expect(new Set(terminals.map((terminal) => terminal.sessionId)).size).toBe(
+      2,
+    )
     expect(
-      new Set(terminals.map((terminal) => terminal.request.plan.sessionName)).size,
+      new Set(terminals.map((terminal) => terminal.request.plan.sessionName))
+        .size,
     ).toBe(2)
     expect(flowDeps.navigated).toEqual([
       expect.objectContaining({ kind: "run-terminal" }),
@@ -302,6 +307,7 @@ describe("useLaunchFlow", () => {
         agent: "shell",
         workspacePath: "/tmp/cancel-project",
       })
+      result.current.setLaunchStep("review")
     })
     await act(async () => {
       await result.current.startSession()
@@ -311,6 +317,33 @@ describe("useLaunchFlow", () => {
     expect(flowDeps.navigated).toEqual([])
     expect(result.current.error).toBe("")
     expect(result.current.planning).toBe(false)
+    expect(result.current.launchStep).toBe("review")
+    expect(result.current.request.workspacePath).toBe("/tmp/cancel-project")
+  })
+
+  it("returns a canceled interactive launch to the retained review", async () => {
+    const flowDeps = deps()
+    const { result } = await renderFlow(flowDeps)
+    await act(async () => {
+      result.current.updateRequest({
+        agent: "codex",
+        workspacePath: "/tmp/cancel-interactive",
+      })
+    })
+    await act(async () => {
+      await result.current.startSession()
+    })
+
+    const pending = result.current.runTerminal
+    expect(pending).not.toBeNull()
+    await act(async () => {
+      result.current.cancelRunTerminal(pending?.sessionId)
+    })
+
+    expect(result.current.launchStep).toBe("review")
+    expect(result.current.reviewFocusRevision).toBe(1)
+    expect(result.current.request.workspacePath).toBe("/tmp/cancel-interactive")
+    expect(flowDeps.navigated.at(-1)).toEqual({ kind: "new-session" })
   })
 
   it("uses the safe default assistant once and avoids image checks before setup", async () => {

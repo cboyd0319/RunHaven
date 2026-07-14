@@ -133,7 +133,11 @@ const WINDOW_MENU: &[Entry] = &[
     Entry::Predefined(Predef::BringAllToFront),
 ];
 
-const HELP_MENU: &[Entry] = &[command("show-help", "RunHaven Help", None)];
+const HELP_MENU: &[Entry] = &[
+    command("show-help", "RunHaven Help", None),
+    Entry::Separator,
+    command("get-support", "Get Support…", None),
+];
 
 /// The whole menu bar, in macOS-standard order. On macOS the first submenu
 /// becomes the application menu.

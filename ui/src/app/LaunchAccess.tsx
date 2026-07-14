@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 
 import { authScopeLabels } from "./labels"
+import { AgentSignIn } from "./AgentSignIn"
 import { agentLabel } from "./sessionIdentity"
 
 export function AuthScopePicker({
@@ -24,13 +25,13 @@ export function AuthScopePicker({
   onChange: (value: RunPlanRequest["authScope"]) => void
 }) {
   return (
-    <fieldset className="rounded-lg border p-3">
-      <legend className="px-1 text-sm font-medium">Sign-in sharing</legend>
+    <fieldset className="grid gap-2 border-0 p-0">
+      <legend className="mb-2 text-sm font-medium">Sign-in sharing</legend>
       <div className="grid gap-2 sm:grid-cols-2">
         {(["agent", "project"] as const).map((scope) => (
           <label
             key={scope}
-            className="flex items-start gap-2 rounded-lg border p-3 text-sm"
+            className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-sm"
           >
             <input
               type="radio"
@@ -39,8 +40,12 @@ export function AuthScopePicker({
               onChange={() => onChange(scope)}
             />
             <span>
-              <span className="block font-medium">{authScopeLabels[scope]}</span>
-              <span className="text-muted-foreground">{authScopeHelp(scope)}</span>
+              <span className="block font-medium">
+                {authScopeLabels[scope]}
+              </span>
+              <span className="text-muted-foreground">
+                {authScopeHelp(scope)}
+              </span>
             </span>
           </label>
         ))}
@@ -63,7 +68,7 @@ export function ApiKeyBrokerField({
     return null
   }
   return (
-    <label className="flex items-start gap-3 rounded-lg border p-3 text-sm">
+    <label className="flex items-start gap-3 rounded-lg bg-muted/50 p-3 text-sm">
       <Checkbox
         checked={value !== null}
         onCheckedChange={(checked) =>
@@ -74,9 +79,9 @@ export function ApiKeyBrokerField({
       <span className="flex flex-col gap-1">
         <span className="font-medium">Use an API key from this Mac</span>
         <span className="text-muted-foreground">
-          RunHaven keeps <code className="font-mono">{envName}</code> on this Mac
-          and gives the assistant temporary access for this session. This option
-          uses Assistant services only.
+          RunHaven keeps <code className="font-mono">{envName}</code> on this
+          Mac and gives the assistant temporary access for this session. This
+          option uses Assistant services only.
         </span>
       </span>
     </label>
@@ -98,7 +103,10 @@ export function ImageReadiness({
 }) {
   if (imageLoading) {
     return (
-      <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+      <p
+        role="status"
+        className="flex items-center gap-2 text-base text-muted-foreground"
+      >
         <ActivityIndicator />
         Checking assistant setup…
       </p>
@@ -116,37 +124,71 @@ export function ImageReadiness({
   if (!imageStatus) {
     return null
   }
+  if (imageStatus.image.ready) {
+    return (
+      <p
+        role="status"
+        className="flex items-center gap-2 text-base text-muted-foreground"
+      >
+        <ShieldCheck className="size-4 text-success" aria-hidden />
+        Assistant ready
+      </p>
+    )
+  }
   return (
     <Alert>
       <ShieldCheck />
-      <AlertTitle>
-        {imageStatus.image.ready ? "Assistant ready" : "Assistant setup needed"}
-      </AlertTitle>
+      <AlertTitle>Assistant setup needed</AlertTitle>
       <AlertDescription>
-        {imageStatus.image.ready ? (
-          "This assistant is installed."
-        ) : (
-          <span className="flex flex-col items-start gap-2">
-            <span>
-              {onInstall
-                ? "Install this assistant before starting a session."
-                : "This assistant must be installed before continuing."}
-            </span>
-            {onInstall ? (
-              <Button
-                type="button"
-                disabled={installing}
-                onClick={onInstall}
-              >
-                {installing ? <ActivityIndicator /> : null}
-                {installing
-                  ? `Installing ${agentLabel(imageStatus.agent)}…`
-                  : `Install ${agentLabel(imageStatus.agent)}…`}
-              </Button>
-            ) : null}
+        <span className="flex flex-col items-start gap-2">
+          <span>
+            {onInstall
+              ? "Install this assistant before starting a session."
+              : "This assistant must be installed before continuing."}
           </span>
-        )}
+          {onInstall ? (
+            <Button type="button" disabled={installing} onClick={onInstall}>
+              {installing ? <ActivityIndicator /> : null}
+              {installing
+                ? `Installing ${agentLabel(imageStatus.agent)}…`
+                : `Install ${agentLabel(imageStatus.agent)}…`}
+            </Button>
+          ) : null}
+        </span>
       </AlertDescription>
     </Alert>
+  )
+}
+
+export function AssistantPreparation({
+  agent,
+  imageLoading,
+  imageStatus,
+  imageError,
+  installing,
+  onInstall,
+  needsSignIn,
+  onSignedIn,
+}: {
+  agent: AgentProfile | undefined
+  imageLoading: boolean
+  imageStatus: ImageStatusResponse | null
+  imageError: string
+  installing: boolean
+  onInstall?: () => void
+  needsSignIn: boolean
+  onSignedIn: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <ImageReadiness
+        imageLoading={imageLoading}
+        imageStatus={imageStatus}
+        imageError={imageError}
+        installing={installing}
+        onInstall={imageStatus && !imageStatus.image.ready ? onInstall : undefined}
+      />
+      {needsSignIn ? <AgentSignIn agent={agent} onSignedIn={onSignedIn} /> : null}
+    </div>
   )
 }

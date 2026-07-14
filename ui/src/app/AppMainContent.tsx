@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button"
 
 import { helpReturnLabel, type NavDestination } from "./navigation"
 import { TerminalPanel } from "./TerminalPanel"
+import {
+  activeTerminalWorkspace,
+  terminalWorkspaceTitle,
+} from "./terminalWorkspace"
 import { useFocusOnChange } from "./useFocusOnChange"
 import { DiagnosticsView } from "./views/DiagnosticsView"
 import { HelpView } from "./views/HelpView"
@@ -58,11 +62,7 @@ export function AppMainContent(props: AppMainContentProps) {
   const runTerminals = props.launchFlow.runTerminals
   const selectedRunTerminal =
     navigation.kind === "run-terminal"
-      ? (runTerminals.find(
-          (terminal) =>
-            terminal.runId === navigation.id ||
-            terminal.sessionId === navigation.id,
-        ) ?? (navigation.id ? null : runTerminals.at(-1) ?? null))
+      ? activeTerminalWorkspace(runTerminals, navigation.id)
       : null
   const showTerminal = selectedRunTerminal !== null
 
@@ -86,15 +86,14 @@ export function AppMainContent(props: AppMainContentProps) {
             />
           ) : null}
           <div
-            ref={terminalVisible ? focusRef : undefined}
-            tabIndex={-1}
-            aria-label="Session terminal"
+            aria-label={`${terminalWorkspaceTitle(runTerminal)} terminal workspace`}
             className="flex min-h-0 flex-1 flex-col outline-none"
           >
             <TerminalPanel
               run={runTerminal}
               fill
               visible={terminalVisible}
+              headingRef={terminalVisible ? focusRef : undefined}
               onOpened={(opened) => {
                 props.launchFlow.markRunTerminalOpened(
                   runTerminal.sessionId,
@@ -123,13 +122,13 @@ export function AppMainContent(props: AppMainContentProps) {
       })}
 
       {!showTerminal ? (
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <section className="mx-auto flex w-full max-w-[1440px] min-w-0 flex-col gap-4">
+        <div className="flex min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          <section className="@container mx-auto flex min-h-full w-full max-w-[1440px] min-w-0 flex-col gap-4">
             <div
               ref={focusRef}
               tabIndex={-1}
               aria-label={mainViewLabel(navigation)}
-              className="flex flex-col gap-4 outline-none"
+              className="flex min-h-0 w-full flex-1 flex-col gap-4 outline-none"
             >
               {showError ? (
                 <AppErrorAlert
@@ -215,6 +214,7 @@ function MainView(props: AppMainContentProps) {
         <HelpView
           backLabel={helpReturnLabel(returnTo)}
           onBack={() => props.onNavigate(returnTo)}
+          supportReport={props.supportReport}
         />
       )
     }
@@ -246,6 +246,8 @@ export function mainViewFocusKey(
   switch (navigation.kind) {
     case "session":
       return `session:${navigation.id}:${sessionContentRevision}`
+    case "run-terminal":
+      return `run-terminal:${navigation.id ?? "latest"}`
     default:
       return navigation.kind
   }
@@ -264,6 +266,6 @@ function mainViewLabel(navigation: NavDestination): string {
     case "runs":
       return "Session history"
     case "run-terminal":
-      return "Session terminal"
+      return "Terminal workspace"
   }
 }

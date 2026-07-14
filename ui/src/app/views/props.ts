@@ -15,6 +15,7 @@ import type { RunControlAction } from "../types"
 import type { LaunchFlow } from "../useLaunchFlow"
 import type { useRunOutput } from "../useRunOutput"
 import type { SavedSetupsState } from "../useSavedSetups"
+import type { SupportReportState } from "../useSupportReport"
 
 // The prop bag the app controller feeds the main content router. New session and
 // Session take the whole bag (they own most of the app's state surface); the
@@ -54,6 +55,7 @@ export type MainViewProps = {
   // router never has to unpack its implementation details.
   launchFlow: LaunchFlow
   savedSetups: SavedSetupsState
+  supportReport: SupportReportState
   selectedAgent: AgentProfile | undefined
   imageLoading: boolean
   imageStatus: ImageStatusResponse | null

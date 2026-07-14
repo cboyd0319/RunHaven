@@ -25,6 +25,8 @@ pub(super) enum TopCommand {
     Agents,
     #[command(about = "check local runtime prerequisites")]
     Doctor,
+    #[command(about = "create a private report for a GitHub support issue")]
+    Support,
     #[command(about = "guide first-run prerequisites and next commands")]
     Setup {
         #[arg(

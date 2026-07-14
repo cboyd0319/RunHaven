@@ -4,6 +4,7 @@ import type {
   RunTerminalOpenResponse,
   TerminalMessage,
 } from "@/commands/runhaven"
+import type { Ref } from "react"
 
 // Bounded in-WebView scrollback. Raw terminal bytes live only in memory for
 // the life of the view and are never written to disk or logged.
@@ -34,7 +35,11 @@ export type TerminalPanelProps =
       run?: undefined
     }
   | {
-      run: { sessionId: string; request: LaunchRunRequest }
+      run: {
+        sessionId: string
+        request: LaunchRunRequest
+        label?: string
+      }
       session?: undefined
       login?: undefined
       fill?: boolean
@@ -43,4 +48,5 @@ export type TerminalPanelProps =
       onOpened?: (opened: RunTerminalOpenResponse) => void
       onEnded?: () => void
       visible?: boolean
+      headingRef?: Ref<HTMLDivElement>
     }

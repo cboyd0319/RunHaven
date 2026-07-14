@@ -47,6 +47,9 @@ cargo run --locked --bin runhaven-check-pins
 echo "== scripts/check-repo-structure.sh =="
 scripts/check-repo-structure.sh
 
+echo "== scripts/check-support-issue-form.sh =="
+scripts/check-support-issue-form.sh
+
 echo "== scripts/release-desktop-common.test.sh =="
 scripts/release-desktop-common.test.sh
 

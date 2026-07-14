@@ -368,6 +368,12 @@ export type RepairRunResponse = {
   markerRemoved: boolean;
 };
 
+export type SupportReportResponse = {
+  fileName: string;
+  issueOpened: boolean;
+  finderRevealed: boolean;
+};
+
 export type {
   EgressLogEntry,
   EgressLogResponse,

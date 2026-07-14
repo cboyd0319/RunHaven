@@ -45,6 +45,7 @@ const EXPECTED_TAURI_FILES = [
 const EXPECTED_INVOKED_COMMANDS = [
   "get_dashboard_status",
   "perform_setup_recovery",
+  "create_support_report",
   "get_image_status",
   "rebuild_agent_image",
   "get_image_build_status",

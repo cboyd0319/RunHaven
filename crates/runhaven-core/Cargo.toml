@@ -19,6 +19,7 @@ test-support = []
 
 [dependencies]
 anyhow.workspace = true
+dirs.workspace = true
 idna.workspace = true
 ipnet.workspace = true
 log.workspace = true

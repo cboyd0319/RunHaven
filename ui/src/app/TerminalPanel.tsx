@@ -13,9 +13,9 @@ import {
   writeTerminalInput,
   type LaunchRunRequest,
 } from "@/commands/runhaven"
-
 import { errorMessage } from "./types"
 import { cn } from "@/lib/utils"
+import { terminalWorkspaceTitle } from "./terminalWorkspace"
 
 import {
   loadTextSize,
@@ -53,7 +53,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
     ? attachTerminalConfig(props.session)
     : props.login
       ? loginTerminalConfig(props.login.agentLabel, props.login.sessionId)
-      : runTerminalConfig(props.run.sessionId)
+      : runTerminalConfig(props.run.sessionId, terminalWorkspaceTitle(props.run))
   const { sessionId } = config
   const mode: "attach" | "login" | "run" = props.session
     ? "attach"
@@ -358,7 +358,8 @@ export function TerminalPanel(props: TerminalPanelProps) {
   return (
     <Card className={cn(fill && "min-h-0 flex-1")}>
       <CardHeader>
-        <CardTitle role="heading" aria-level={2}>
+        <CardTitle ref={runProps?.headingRef} role="heading" aria-level={2}
+          tabIndex={mode === "run" ? -1 : undefined} className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
           {config.title}
         </CardTitle>
         <CardDescription>{config.description}</CardDescription>
@@ -396,7 +397,7 @@ export function TerminalPanel(props: TerminalPanelProps) {
             <div
               ref={containerRef}
               role="group"
-              aria-label="Session terminal"
+              aria-label={mode === "run" ? `${config.title} terminal` : "Session terminal"}
               className={cn(
                 "overflow-hidden rounded-lg border bg-black p-2",
                 fill ? "min-h-0 flex-1" : "h-72",

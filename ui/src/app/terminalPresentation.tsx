@@ -66,10 +66,13 @@ export function loginTerminalConfig(
   }
 }
 
-export function runTerminalConfig(sessionId: string): TerminalConfig {
+export function runTerminalConfig(
+  sessionId: string,
+  title: string,
+): TerminalConfig {
   return {
     sessionId,
-    title: "Session terminal",
+    title,
     description:
       "Type your task here. RunHaven starts the assistant in a protected session and connects you to it.",
     openLabel: "Start session…",

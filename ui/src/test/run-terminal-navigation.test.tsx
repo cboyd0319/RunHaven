@@ -81,17 +81,17 @@ it("keeps a live run mounted across navigation and ends it only on unmount", asy
   await show("run-terminal")
   await act(async () => {})
   expect(openAgentRunTerminal).toHaveBeenCalledTimes(1)
-  const node = container.querySelector('[aria-label="Session terminal"]')
+  const node = container.querySelector('[aria-label$="terminal workspace"]')
   expect(node).not.toBeNull()
 
   closeTerminalSession.mockClear()
   await show("new-session")
   expect(closeTerminalSession).not.toHaveBeenCalled()
-  expect(container.querySelector('[aria-label="Session terminal"]')).toBe(node)
+  expect(container.querySelector('[aria-label$="terminal workspace"]')).toBe(node)
 
   await show("run-terminal")
   expect(closeTerminalSession).not.toHaveBeenCalled()
-  expect(container.querySelector('[aria-label="Session terminal"]')).toBe(node)
+  expect(container.querySelector('[aria-label$="terminal workspace"]')).toBe(node)
 
   await act(async () => root.unmount())
   expect(closeTerminalSession).toHaveBeenCalledWith(launch.sessionId)

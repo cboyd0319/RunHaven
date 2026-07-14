@@ -280,3 +280,28 @@ fn managed_session_diagnostics_stays_read_only() {
         "get_managed_session_diagnostics permission must allow only the fixed command"
     );
 }
+
+#[test]
+fn support_report_capability_grants_only_the_fixed_support_command() {
+    let permissions = capability_permissions("support-report.json");
+    assert_same_permission_set(
+        "support-report",
+        &permissions,
+        &["allow-create-support-report"],
+    );
+    assert_generated_permission_allows_only("create_support_report");
+
+    for capability in [
+        "main-read.json",
+        "run-control.json",
+        "setup-recovery.json",
+        "terminal.json",
+    ] {
+        assert!(
+            !capability_permissions(capability)
+                .iter()
+                .any(|permission| permission == "allow-create-support-report"),
+            "{capability} must not grant support report creation"
+        );
+    }
+}

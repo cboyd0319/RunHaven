@@ -34,6 +34,7 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    --color-error-text: var(--error-text);
     --color-warning-text: var(--warning-text);
     --color-warning-foreground: var(--warning-foreground);
     --color-warning: var(--warning);
@@ -83,6 +84,7 @@
     --warning-foreground: oklch(0.22 0.045 68);
     --warning-text: var(--warning-foreground);
     --destructive: oklch(0.577 0.245 27.325);
+    --error-text: var(--destructive);
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
     --ring: oklch(0.48 0.13 246);
@@ -104,51 +106,59 @@
 }
 
 /*
- * Dark ladder from the macOS UI Kit, hue-shifted to the RunHaven navy
- * (docs/design/native-gui-macos-kit-notes.md section 6): kit-neutral surfaces
- * keep their kit lightness/alpha on the navy hue; label, fill, and separator
- * tokens adopt the kit white-alpha relationships (labels 96%, fills 8/11%,
- * separators 8%); accents are kit dark system colors, contrast-tuned to keep
- * every text pair at or above 4.5:1. Secondary labels use 70% because 55% does
- * not meet AA over the translucent sidebar material.
+ * Calm Control Room dark ladder. The navy work surface stays visibly blue,
+ * with lighter grouped layers and sidebar material instead of near-black
+ * planes. Labels retain the macOS white-alpha hierarchy and every text pair
+ * remains contrast-tested.
  */
 .dark {
-    --background: oklch(0.24 0.042 222);
+    --background: oklch(0.30 0.04 222);
     --foreground: oklch(0.97 0.01 210);
-    --card: oklch(1 0 0 / 3%);
+    --card: oklch(1 0 0 / 5%);
     --card-foreground: oklch(0.97 0.01 210);
-    --popover: oklch(0.3 0.048 222);
+    --popover: oklch(0.37 0.045 222);
     --popover-foreground: oklch(0.97 0.01 210);
-    --primary: oklch(0.47 0.15 250);
+    --primary: oklch(0.52 0.15 250);
     --primary-foreground: oklch(0.985 0.015 246);
-    --secondary: oklch(1 0 0 / 7%);
+    --secondary: oklch(1 0 0 / 9%);
     --secondary-foreground: oklch(0.97 0.01 210);
     --success: oklch(0.756 0.208 147);
     --success-foreground: oklch(0.16 0.047 222);
-    --muted: oklch(1 0 0 / 8%);
+    --muted: oklch(1 0 0 / 10%);
     --muted-foreground: oklch(1 0 0 / 70%);
-    --accent: oklch(1 0 0 / 11%);
+    --accent: oklch(1 0 0 / 14%);
     --accent-foreground: oklch(0.97 0.01 210);
     --warning: oklch(0.762 0.167 57);
     --warning-foreground: oklch(0.16 0.047 222);
     --warning-text: var(--foreground);
-    --destructive: #ff453a;
-    --border: oklch(1 0 0 / 8%);
-    --input: oklch(1 0 0 / 16%);
+    --destructive: oklch(0.577 0.245 27.325);
+    --error-text: oklch(0.75 0.16 25);
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 20%);
     --ring: oklch(0.651 0.192 251.5);
     --chart-1: oklch(0.76 0.12 184);
     --chart-2: oklch(0.7 0.11 205);
     --chart-3: oklch(0.55 0.16 250);
     --chart-4: oklch(0.756 0.208 147);
     --chart-5: oklch(0.762 0.167 57);
-    --sidebar: oklch(0.155 0.044 224 / 72%);
+    --sidebar: oklch(0.27 0.042 224 / 86%);
     --sidebar-foreground: oklch(1 0 0 / 96%);
-    --sidebar-primary: oklch(0.47 0.15 250);
+    --sidebar-primary: oklch(0.52 0.15 250);
     --sidebar-primary-foreground: oklch(0.985 0.015 246);
-    --sidebar-accent: oklch(1 0 0 / 11%);
+    --sidebar-accent: oklch(1 0 0 / 14%);
     --sidebar-accent-foreground: oklch(1 0 0 / 96%);
-    --sidebar-border: oklch(1 0 0 / 8%);
+    --sidebar-border: oklch(1 0 0 / 12%);
     --sidebar-ring: oklch(0.651 0.192 251.5);
+}
+
+/* Tailwind resolves text-foreground against the light root token. Use the
+ * active dark token for editable text and its placeholder. */
+.dark [data-slot="input"] {
+    color: var(--foreground);
+}
+
+.dark [data-slot="input"]::placeholder {
+    color: var(--muted-foreground);
 }
 
 @layer base {
@@ -202,12 +212,12 @@
     --sidebar: oklch(0.985 0 0);
   }
   .dark {
-    --card: oklch(0.28 0.042 222);
-    --secondary: oklch(0.3 0.042 222);
-    --muted: oklch(0.3 0.042 222);
-    --accent: oklch(0.33 0.042 222);
-    --sidebar: oklch(0.155 0.044 224);
-    --sidebar-accent: oklch(0.24 0.044 224);
+    --card: oklch(0.34 0.04 222);
+    --secondary: oklch(0.36 0.04 222);
+    --muted: oklch(0.36 0.04 222);
+    --accent: oklch(0.40 0.04 222);
+    --sidebar: oklch(0.27 0.042 224);
+    --sidebar-accent: oklch(0.36 0.042 224);
   }
   body {
     background-color: var(--background);

@@ -44,7 +44,7 @@ export function ResourceLimitsFields({
         {cpuInvalid ? (
           <span
             id="cpu-error"
-            className="text-xs font-normal text-destructive"
+            className="text-xs font-normal text-error-text"
           >
             Enter CPU cores as a number, such as 4 or 2.5.
           </span>
@@ -76,7 +76,7 @@ export function ResourceLimitsFields({
         {memoryInvalid ? (
           <span
             id="memory-error"
-            className="text-xs font-normal text-destructive"
+            className="text-xs font-normal text-error-text"
           >
             Enter a value such as 4g or 4096m.
           </span>

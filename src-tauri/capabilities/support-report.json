@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "support-report",
+  "description": "Main-window access to one natively confirmed, Rust-owned private support report workflow.",
+  "windows": ["main"],
+  "permissions": ["allow-create-support-report"]
+}

@@ -48,6 +48,7 @@ mod sessions_status;
 mod setup_installer_recovery;
 mod setup_recovery;
 mod setup_restart_recovery;
+mod support_report;
 mod validation;
 mod worktree_launch_recovery;
 

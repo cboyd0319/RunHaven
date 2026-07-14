@@ -28,6 +28,7 @@ export type MenuActions = {
   launchFlow: { setOpen: (open: boolean) => void }
   navigate: (destination: NavDestination) => void
   runControl: (action: RunControlAction) => Promise<void>
+  supportReport: { create: () => Promise<void> }
 }
 
 // Stop and cleanup commands use the selected session directly. The trusted
@@ -84,6 +85,10 @@ export function handleMenuCommand(id: string, app: MenuActions): void {
       return
     case "show-help":
       app.navigate(helpNavigation(app.navigation))
+      return
+    case "get-support":
+      app.navigate(helpNavigation(app.navigation))
+      void app.supportReport.create()
       return
     case "toggle-sidebar":
       document

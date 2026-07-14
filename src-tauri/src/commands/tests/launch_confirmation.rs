@@ -265,6 +265,8 @@ fn trusted_launch_prompt_keeps_defaults_plain_and_lists_advanced_access() {
         trusted_launch_message_for_test(&read_only_plan, &[], false, &plan_request);
     assert!(read_only_message.contains("can read this folder but can’t change it"));
     assert!(!read_only_message.contains("can change files in this folder"));
+    assert!(read_only_message.contains("Review its output."));
+    assert!(!read_only_message.contains("Review its output and file changes."));
 }
 
 #[test]

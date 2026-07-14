@@ -2,12 +2,16 @@ import type { ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 
+import type { SupportReportState } from "../useSupportReport"
+
 export function HelpView({
   backLabel,
   onBack,
+  supportReport,
 }: {
   backLabel: string
   onBack: () => void
+  supportReport: SupportReportState
 }) {
   return (
     <article className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-1 sm:py-3">
@@ -69,6 +73,35 @@ export function HelpView({
           Open System when RunHaven cannot start a session. It shows the
           problem, what it affects, and the safest available next action.
         </p>
+      </HelpSection>
+
+      <HelpSection title="Get support">
+        <div className="space-y-3">
+          <p>
+            RunHaven can create one text report that helps diagnose app
+            problems. Review it before you attach it to GitHub. RunHaven does
+            not upload the report. GitHub uploads it when you attach it to the
+            public support form.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={supportReport.busy}
+            onClick={() => void supportReport.create()}
+          >
+            {supportReport.busy ? "Creating report…" : "Get Support…"}
+          </Button>
+          {supportReport.message ? (
+            <p role="status" className="text-foreground">
+              {supportReport.message}
+            </p>
+          ) : null}
+          {supportReport.error ? (
+            <p role="alert" className="text-error-text">
+              {supportReport.error}
+            </p>
+          ) : null}
+        </div>
       </HelpSection>
 
       <HelpSection title="How RunHaven protects your project">

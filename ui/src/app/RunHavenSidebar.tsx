@@ -22,15 +22,10 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import { type NavDestination } from "./navigation"
-import { agentLabel } from "./sessionIdentity"
-
-type RunningTerminalRow = {
-  sessionId: string
-  runId?: string
-  label?: string
-  request?: { plan: { agent: string; workspacePath: string } }
-  startedAt?: string
-}
+import {
+  terminalSidebarLabel,
+  type TerminalWorkspaceSession,
+} from "./terminalWorkspace"
 
 type SavedSetupRow = { id: string; name: string; available?: boolean }
 
@@ -51,7 +46,7 @@ export function RunHavenSidebar({
   // so it gets its own fixed row: without it, navigating away from a live run
   // would leave no way back (audit RT-1/RT-2).
   runTerminalActive?: boolean
-  runTerminals?: RunningTerminalRow[]
+  runTerminals?: TerminalWorkspaceSession[]
   savedSetups?: SavedSetupRow[]
   savedSetupsError?: string
   onSelectSavedSetup?: (id: string) => void
@@ -117,7 +112,11 @@ export function RunHavenSidebar({
               <SidebarMenu>
                 {runTerminals.map((terminal, index) => {
                   const id = terminal.runId ?? terminal.sessionId
-                  const label = terminalLabel(terminal, index, runTerminals)
+                  const label = terminalSidebarLabel(
+                    terminal,
+                    index,
+                    runTerminals,
+                  )
                   return (
                     <DestinationRow
                       key={terminal.sessionId}
@@ -183,7 +182,7 @@ export function RunHavenSidebar({
                 ))}
               </SidebarMenu>
               {savedSetupsError ? (
-                <p role="alert" className="px-2 py-1 text-xs text-destructive">
+                <p role="alert" className="px-2 py-1 text-xs text-error-text">
                   {savedSetupsError}
                 </p>
               ) : null}
@@ -199,33 +198,6 @@ export function RunHavenSidebar({
       </SidebarFooter>
     </Sidebar>
   )
-}
-
-function terminalLabel(
-  terminal: RunningTerminalRow,
-  index: number,
-  terminals: RunningTerminalRow[],
-): string {
-  const label = terminalLabelCandidate(terminal)
-  const occurrence =
-    terminals
-      .slice(0, index)
-      .filter((candidate) => terminalLabelCandidate(candidate) === label).length + 1
-  return occurrence > 1 ? `${label} (${occurrence})` : label
-}
-
-function terminalLabelCandidate(terminal: RunningTerminalRow): string {
-  const plan = terminal.request?.plan
-  const base =
-    terminal.label ?? (plan ? `${agentLabel(plan.agent)} · Starting` : "Session starting")
-  const started = terminal.startedAt
-    ? ` · ${new Intl.DateTimeFormat(undefined, {
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit",
-      }).format(new Date(terminal.startedAt))}`
-    : ""
-  return `${base}${started}`
 }
 
 function DestinationRow({

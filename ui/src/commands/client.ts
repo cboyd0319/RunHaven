@@ -63,6 +63,7 @@ import type {
   RunStatusResponse,
   StopManagedSessionResponse,
   StopRunResponse,
+  SupportReportResponse,
   WriteSessionInputResponse
 } from "./types";
 import type {
@@ -117,6 +118,10 @@ export async function performSetupRecovery(
       detail: "Open RunHaven on your Mac to repair setup."
     })
   );
+}
+
+export async function createSupportReport(): Promise<SupportReportResponse | null> {
+  return call("create_support_report", {}, () => null);
 }
 
 export async function getImageStatus(agent: string): Promise<ImageStatusResponse> {

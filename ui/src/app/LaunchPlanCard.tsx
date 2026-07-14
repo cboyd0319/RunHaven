@@ -5,10 +5,9 @@ import {
   type ImageStatusResponse,
   type RunPlanRequest,
 } from "@/commands/runhaven"
-import { CircleAlert, FolderOpen } from "lucide-react"
+import { CheckCircle2, CircleAlert, FolderOpen } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ActivityIndicator } from "@/components/ui/activity-indicator"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -29,10 +28,13 @@ import {
 import { AgentSignIn } from "./AgentSignIn"
 import {
   ApiKeyBrokerField,
+  AssistantPreparation,
   AuthScopePicker,
   ImageReadiness,
 } from "./LaunchAccess"
+import { LaunchReview } from "./LaunchReview"
 import { networkLabels } from "./labels"
+import { projectName } from "./launchSummary"
 import { ResourceLimitsFields } from "./ResourceLimitsFields"
 import { agentLabel, orderProductAgents } from "./sessionIdentity"
 import { networkHelp } from "./types"
@@ -91,7 +93,7 @@ export function LaunchPlanCard({
     ? null
     : request.networkMode === "internal"
       ? null
-    : supportsApiKeyBroker(selectedAgent)
+      : supportsApiKeyBroker(selectedAgent)
         ? "RunHaven can’t share your saved sign-in with this network choice. The assistant may ask you to sign in again."
         : null
   const offlineAgentNotice =
@@ -116,17 +118,24 @@ export function LaunchPlanCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle role="heading" aria-level={2}>
+        <CardTitle
+          className="text-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          role="heading" aria-level={2} tabIndex={-1}
+        >
           {step === "agent"
             ? "Choose assistant"
-            : "Choose project"}
+            : step === "project"
+              ? "Choose project"
+              : "Review and start"}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-base">
           {step === "agent"
             ? "Pick the coding assistant you want to use."
-            : selectedAgent
-              ? `Pick the project folder ${agentLabel(selectedAgent.name)} can use.`
-              : "Pick the project folder this assistant can use."}
+            : step === "project"
+              ? selectedAgent
+                ? `Pick the project folder ${agentLabel(selectedAgent.name)} can use.`
+                : "Pick the project folder this assistant can use."
+              : "Check what the assistant can access before it starts."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -134,16 +143,16 @@ export function LaunchPlanCard({
           className="flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault()
-            if (step === "agent") {
-              onContinue()
-            } else {
+            if (step === "review") {
               void onStartSession()
+            } else {
+              onContinue()
             }
           }}
         >
           {step === "agent" ? (
             <>
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
+              <label className="flex flex-col gap-1.5 text-base font-medium">
                 Assistant
                 <Select value={request.agent} onValueChange={onAgentChange}>
                   <SelectTrigger>
@@ -173,18 +182,29 @@ export function LaunchPlanCard({
                 }
               />
               {selectedReadiness ? (
-                <div className="flex flex-col gap-2 rounded-lg border p-3 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span>Sign-in</span>
-                    <Badge variant={needsSignIn(selectedReadiness) ? "warning" : "success"}>
+                <div className="flex items-start gap-2 text-base text-muted-foreground">
+                  {needsSignIn(selectedReadiness) ? (
+                    <CircleAlert
+                      className="mt-0.5 size-4 shrink-0 text-warning"
+                      aria-hidden
+                    />
+                  ) : (
+                    <CheckCircle2
+                      className="mt-0.5 size-4 shrink-0 text-success"
+                      aria-hidden
+                    />
+                  )}
+                  <div className="grid gap-1">
+                    <span className="text-foreground">
                       {selectedReadiness.label}
-                    </Badge>
+                    </span>
+                    {selectedReadiness.category === "sign-in-saved" ? (
+                      <p>
+                        The assistant may ask you to sign in again if it
+                        expired.
+                      </p>
+                    ) : null}
                   </div>
-                  {selectedReadiness.category === "sign-in-saved" ? (
-                    <p className="text-muted-foreground">
-                      The assistant may ask you to sign in again if it expired.
-                    </p>
-                  ) : null}
                 </div>
               ) : null}
               {needsSignIn(selectedReadiness) ? (
@@ -196,28 +216,25 @@ export function LaunchPlanCard({
           {step === "project" ? (
             <>
               {selectedAgentNeedsPreparation ? (
-                <div className="flex flex-col gap-3">
-                  <ImageReadiness
-                    imageLoading={imageLoading}
-                    imageStatus={selectedImageStatus}
-                    imageError={imageError}
-                    installing={imageInstalling}
-                    onInstall={
-                      selectedImageStatus && !selectedImageStatus.image.ready
-                        ? onInstallImage
-                        : undefined
-                    }
-                  />
-                  {selectedAgentNeedsSignIn ? (
-                    <AgentSignIn agent={selectedAgent} onSignedIn={onSignedIn} />
-                  ) : null}
-                </div>
+                <AssistantPreparation
+                  agent={selectedAgent}
+                  imageLoading={imageLoading}
+                  imageStatus={selectedImageStatus}
+                  imageError={imageError}
+                  installing={imageInstalling}
+                  onInstall={onInstallImage}
+                  needsSignIn={selectedAgentNeedsSignIn}
+                  onSignedIn={onSignedIn}
+                />
               ) : null}
-              <div className="rounded-lg border p-4">
+              <div className="rounded-lg bg-muted/50 p-4">
                 <div className="flex flex-wrap items-center gap-3">
-                  <FolderOpen className="size-5 text-muted-foreground" aria-hidden />
+                  <FolderOpen
+                    className="size-5 text-muted-foreground"
+                    aria-hidden
+                  />
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium">
+                    <div className="text-base font-medium">
                       {request.workspacePath
                         ? projectName(request.workspacePath)
                         : "No project selected"}
@@ -239,37 +256,47 @@ export function LaunchPlanCard({
                 </div>
               </div>
 
-              <details className="rounded-lg border p-3">
+              <details className="border-t pt-3">
                 <summary className="cursor-pointer text-sm font-medium">
                   Advanced options
                 </summary>
-                <div className="mt-3 flex flex-col gap-4">
-                  <fieldset className="rounded-lg border p-3">
-                    <legend className="px-1 text-sm font-medium">Project access</legend>
+                <div className="mt-3 flex flex-col gap-5">
+                  <fieldset className="grid gap-2 border-0 p-0">
+                    <legend className="mb-2 text-sm font-medium">
+                      Project access
+                    </legend>
                     <div className="grid gap-2">
-                      {([
-                        {
-                          value: "protected",
-                          label: "Protected copy (recommended)",
-                          detail: "Keep changes separate until you review them.",
-                          patch: { worktree: true, readOnlyWorkspace: false },
-                        },
-                        {
-                          value: "read-only",
-                          label: "Read-only original folder",
-                          detail: "The assistant can view your files but can’t change them.",
-                          patch: { worktree: false, readOnlyWorkspace: true },
-                        },
-                        {
-                          value: "original",
-                          label: "Original folder with changes (less safe)",
-                          detail: "The assistant changes your original files directly.",
-                          patch: { worktree: false, readOnlyWorkspace: false },
-                        },
-                      ] as const).map((choice) => (
+                      {(
+                        [
+                          {
+                            value: "protected",
+                            label: "Protected copy (recommended)",
+                            detail:
+                              "Keep changes separate until you review them.",
+                            patch: { worktree: true, readOnlyWorkspace: false },
+                          },
+                          {
+                            value: "read-only",
+                            label: "Read-only original folder",
+                            detail:
+                              "The assistant can view your files but can’t change them.",
+                            patch: { worktree: false, readOnlyWorkspace: true },
+                          },
+                          {
+                            value: "original",
+                            label: "Original folder with changes (less safe)",
+                            detail:
+                              "The assistant changes your original files directly.",
+                            patch: {
+                              worktree: false,
+                              readOnlyWorkspace: false,
+                            },
+                          },
+                        ] as const
+                      ).map((choice) => (
                         <label
                           key={choice.value}
-                          className="flex items-start gap-2 rounded-lg border p-3 text-sm"
+                          className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-sm"
                         >
                           <input
                             type="radio"
@@ -278,8 +305,12 @@ export function LaunchPlanCard({
                             onChange={() => onRequestChange(choice.patch)}
                           />
                           <span>
-                            <span className="block font-medium">{choice.label}</span>
-                            <span className="text-muted-foreground">{choice.detail}</span>
+                            <span className="block font-medium">
+                              {choice.label}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {choice.detail}
+                            </span>
                           </span>
                         </label>
                       ))}
@@ -291,43 +322,51 @@ export function LaunchPlanCard({
                     onChange={(authScope) => onRequestChange({ authScope })}
                   />
 
-                  <fieldset className="@container rounded-lg border p-3">
-                    <legend className="px-1 text-sm font-medium">Network access</legend>
+                  <fieldset className="@container grid gap-2 border-0 p-0">
+                    <legend className="mb-2 text-sm font-medium">
+                      Network access
+                    </legend>
                     <div className="grid gap-2 @[42rem]:grid-cols-3">
-                      {(["provider", "internal", "internet"] as const).map((mode) => (
-                        <label
-                          key={mode}
-                          className="flex items-start gap-2 rounded-lg border p-3 text-sm"
-                        >
-                          <input
-                            type="radio"
-                            name="network"
-                            checked={request.networkMode === mode}
-                            onChange={() => onNetworkChange(mode)}
-                          />
-                          <span>
-                            <span className="block font-medium">
-                              {networkLabels[mode]}
+                      {(["provider", "internal", "internet"] as const).map(
+                        (mode) => (
+                          <label
+                            key={mode}
+                            className="flex items-start gap-2 rounded-lg bg-muted/50 p-3 text-sm"
+                          >
+                            <input
+                              type="radio"
+                              name="network"
+                              checked={request.networkMode === mode}
+                              onChange={() => onNetworkChange(mode)}
+                            />
+                            <span>
+                              <span className="block font-medium">
+                                {networkLabels[mode]}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {networkHelp(mode)}
+                              </span>
                             </span>
-                            <span className="text-muted-foreground">
-                              {networkHelp(mode)}
-                            </span>
-                          </span>
-                        </label>
-                      ))}
+                          </label>
+                        ),
+                      )}
                     </div>
                     {offlineAgentNotice ? (
                       <Alert variant="warning" className="mt-3">
                         <CircleAlert />
                         <AlertTitle>This assistant will be offline</AlertTitle>
-                        <AlertDescription>{offlineAgentNotice}</AlertDescription>
+                        <AlertDescription>
+                          {offlineAgentNotice}
+                        </AlertDescription>
                       </Alert>
                     ) : null}
                     {brokerBypassNotice ? (
                       <Alert className="mt-3">
                         <CircleAlert />
                         <AlertTitle>Sign-in method changes</AlertTitle>
-                        <AlertDescription>{brokerBypassNotice}</AlertDescription>
+                        <AlertDescription>
+                          {brokerBypassNotice}
+                        </AlertDescription>
                       </Alert>
                     ) : null}
                   </fieldset>
@@ -345,16 +384,33 @@ export function LaunchPlanCard({
                       onRequestChange({ apiKeyBrokerEnv })
                     }
                   />
-
                 </div>
               </details>
+            </>
+          ) : null}
+
+          {step === "review" ? (
+            <>
+              {selectedAgentNeedsPreparation ? (
+                <AssistantPreparation
+                  agent={selectedAgent}
+                  imageLoading={imageLoading}
+                  imageStatus={selectedImageStatus}
+                  imageError={imageError}
+                  installing={imageInstalling}
+                  onInstall={onInstallImage}
+                  needsSignIn={selectedAgentNeedsSignIn}
+                  onSignedIn={onSignedIn}
+                />
+              ) : null}
+              <LaunchReview request={request} selectedAgent={selectedAgent} />
             </>
           ) : null}
 
           <div
             className={`flex gap-3 ${step === "agent" ? "justify-end" : "justify-between"}`}
           >
-            {step === "project" ? (
+            {step !== "agent" ? (
               <Button type="button" variant="outline" onClick={onBack}>
                 Back
               </Button>
@@ -362,21 +418,24 @@ export function LaunchPlanCard({
             <Button
               type="submit"
               disabled={
-                step === "project"
+                step !== "agent"
                   ? !request.workspacePath ||
                     planning ||
+                    selectedAgentNeedsPreparation
+                  : !request.agent ||
+                    !setupOk ||
                     imageLoading ||
-                    (selectedImageStatus !== null && !selectedImageReady) ||
-                    selectedAgentNeedsSignIn
-                  : !request.agent || !setupOk || imageLoading || !selectedImageReady
+                    !selectedImageReady
               }
             >
-              {step === "project" && planning ? <ActivityIndicator /> : null}
+              {step === "review" && planning ? <ActivityIndicator /> : null}
               {step === "agent"
                 ? "Continue"
-                : planning
-                  ? "Preparing…"
-                  : "Start session…"}
+                : step === "project"
+                  ? "Continue"
+                  : planning
+                    ? "Preparing…"
+                    : "Start session…"}
             </Button>
           </div>
         </form>
@@ -387,9 +446,4 @@ export function LaunchPlanCard({
 
 function needsSignIn(readiness: AgentReadiness | undefined): boolean {
   return readiness?.category === "needs-sign-in"
-}
-
-function projectName(path: string): string {
-  const parts = path.split(/[\\/]/).filter(Boolean)
-  return parts.at(-1) ?? path
 }

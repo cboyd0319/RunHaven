@@ -9,8 +9,8 @@ scripts/cli_surface_check.sh                                 # breadth: every co
 scripts/apple_container_smoke.sh --with-provider --with-ssh  # depth: provider egress denial + SSH fail-closed
 ```
 
-Last full run on macOS 27.0 (build 26A5368g), Apple `container` 1.0.0 (commit
-ee848e3): `cli_surface_check.sh` 2026-07-01 (39/39 surfaces passed; the
+Last full run on macOS 27.0 (build 26A5368g), Apple `container` 1.1.0:
+`cli_surface_check.sh` 2026-07-13 (40/40 surfaces passed; the
 session-volume reset path runs with `--auth-scope project` so it is exercised
 under the `--auth-scope agent` default used for shared logins).
 `apple_container_smoke.sh --with-provider --with-ssh`: 2026-07-01 passed.
@@ -21,6 +21,7 @@ under the `--auth-scope agent` default used for shared logins).
 | --- | --- | --- |
 | `agents` | surface check | lists the six bundled profiles with their support tiers (sign-in path, default network, API-key broker) |
 | `doctor` | surface check + smoke | host prerequisites green on macOS 27.0 |
+| `support` | surface check | creates one private text report in an isolated home; does not upload or open another app |
 | `setup` | surface check | first-run guidance |
 | `plan` | surface check + smoke | provider/internet defaults and security notices |
 | `run` | smoke (internal and provider) | full launch and run-record lifecycle |

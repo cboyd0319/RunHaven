@@ -16,7 +16,7 @@ vi.mock("@tauri-apps/plugin-log", () => ({
 
 const { invoke } = await import("@tauri-apps/api/core");
 const log = await import("@tauri-apps/plugin-log");
-const { call, performSetupRecovery } = await import("../commands/client");
+const { call, createSupportReport, performSetupRecovery } = await import("../commands/client");
 
 const invokeMock = vi.mocked(invoke);
 
@@ -39,6 +39,18 @@ afterEach(() => {
 });
 
 describe("call invoke tracing", () => {
+  it("creates support through one argument-free Rust-owned command", async () => {
+    invokeMock.mockResolvedValueOnce({
+      fileName: "RunHaven-0.7.0-support.txt",
+      issueOpened: true,
+      finderRevealed: true
+    });
+
+    await createSupportReport();
+
+    expect(invokeMock).toHaveBeenCalledWith("create_support_report", {});
+  });
+
   it("sends only the opaque setup recovery action id", async () => {
     invokeMock.mockResolvedValueOnce({
       actionId: "start-container-system",

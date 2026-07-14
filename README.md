@@ -226,6 +226,7 @@ Use the smallest doc that matches the question:
 | Need | Start here |
 | --- | --- |
 | Install and run | [Installation](docs/INSTALLATION.md), [Capabilities](docs/CAPABILITIES.md), [Usage](docs/USAGE.md) |
+| Get help with a problem | [Support](SUPPORT.md) |
 | Sign-in and credentials | [Auth broker](docs/AUTH_BROKER.md), [Provider endpoints](docs/PROVIDER_ENDPOINTS.md) |
 | Security and runtime boundary | [Security model](docs/SECURITY_MODEL.md), [Apple Container gap analysis](docs/APPLE_CONTAINER_GAP_ANALYSIS.md) |
 | Architecture and research | [Architecture](docs/ARCHITECTURE.md), [Research](docs/RESEARCH.md) |

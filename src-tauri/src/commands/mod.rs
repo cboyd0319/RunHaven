@@ -46,6 +46,7 @@ pub(crate) mod session_diagnostics;
 pub(crate) mod session_worktree;
 pub(crate) mod sessions;
 pub(crate) mod setup_recovery;
+pub(crate) mod support_report;
 mod validation;
 mod warnings;
 
@@ -314,7 +315,7 @@ fn collect_dashboard_status() -> DashboardStatus {
     }
 }
 
-fn desktop_app_version() -> String {
+pub(crate) fn desktop_app_version() -> String {
     let version = env!("CARGO_PKG_VERSION");
     if cfg!(debug_assertions) {
         let build = option_env!("RUNHAVEN_BUILD_ID").unwrap_or("local");

@@ -47,19 +47,26 @@ fn menu_bar_has_only_the_standard_and_contextual_menus_in_order() {
 }
 
 #[test]
-fn help_menu_has_one_global_enabled_command_without_a_shortcut() {
+fn help_menu_has_help_and_support_commands_without_shortcuts() {
     let entries = MENU_BAR
         .iter()
         .find_map(|(label, entries)| (*label == "Help").then_some(*entries))
         .expect("Help menu");
-    let [Entry::Command(spec)] = entries else {
-        panic!("Help menu must contain exactly one command");
+    let [
+        Entry::Command(help),
+        Entry::Separator,
+        Entry::Command(support),
+    ] = entries
+    else {
+        panic!("Help menu must contain Help, a separator, and Get Support");
     };
-    assert_eq!(spec.id, "show-help");
-    assert_eq!(spec.label, "RunHaven Help");
-    assert!(spec.enabled);
-    assert_eq!(spec.accelerator, None);
-    assert!(!is_dynamic_menu_id(spec.id));
+    assert_eq!((help.id, help.label), ("show-help", "RunHaven Help"));
+    assert_eq!((support.id, support.label), ("get-support", "Get Support…"));
+    for spec in [help, support] {
+        assert!(spec.enabled);
+        assert_eq!(spec.accelerator, None);
+        assert!(!is_dynamic_menu_id(spec.id));
+    }
 }
 
 #[test]
@@ -92,6 +99,7 @@ fn command_ids_are_stable_unique_and_kebab_case() {
             "hard-stop-session",
             "cleanup-session",
             "show-help",
+            "get-support",
         ]
     );
 }

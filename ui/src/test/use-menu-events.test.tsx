@@ -42,6 +42,7 @@ function actions(patch: Partial<MenuActions> = {}): MenuActions {
     launchFlow: { setOpen: vi.fn() },
     navigate: vi.fn(),
     runControl: vi.fn().mockResolvedValue(undefined),
+    supportReport: { create: vi.fn().mockResolvedValue(undefined) },
     ...patch,
   }
 }
@@ -78,6 +79,12 @@ describe("handleMenuCommand", () => {
       kind: "help",
       returnTo: { kind: "new-session" },
     })
+  })
+
+  it("runs Get Support through the shared support controller", () => {
+    const app = actions()
+    handleMenuCommand("get-support", app)
+    expect(app.supportReport.create).toHaveBeenCalledTimes(1)
   })
 
   it("runs selected-session menu controls through the trusted command path", () => {
@@ -216,6 +223,7 @@ describe("menu contract tripwires", () => {
     const handledIds = [
       "new-run",
       "show-help",
+      "get-support",
       "toggle-sidebar",
       "increase-text-size",
       "decrease-text-size",

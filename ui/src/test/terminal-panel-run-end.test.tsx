@@ -103,7 +103,7 @@ describe("TerminalPanel run end", () => {
     expect(endTerminalSession).toHaveBeenCalledWith(panel.launch.sessionId)
     expect(onClose).not.toHaveBeenCalled()
     expect(
-      panel.container.querySelector('[aria-label="Session terminal"]'),
+      panel.container.querySelector('[aria-label="Claude · project terminal"]'),
     ).not.toBeNull()
     await act(async () => panel.root.unmount())
     panel.container.remove()

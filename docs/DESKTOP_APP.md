@@ -96,20 +96,21 @@ The finished DMG still needs a clean supported-Mac install test before sharing.
 
 ## First look: New session
 
-The app always opens on **New session**. Choose Claude, Codex, Antigravity, or
-Copilot, then choose the project folder for that session. You can leave without
-starting anything. Open **Help > RunHaven Help** if you are not sure which
-assistant to choose. Run history and setup details live in **History** and
-**System**, where there is room to explain what happened and what to do next.
+The app always opens on **New session**. It leads you through **Choose
+assistant**, **Choose project**, and **Review and start** in one guided
+workspace. You can leave without starting anything. Open **Help > RunHaven Help**
+if you are not sure which assistant to choose. Run history and setup details live
+in **History** and **System**.
 
 Help returns you to the screen you were using. For example, if you open Help
 while choosing a project, choose **Back to New session** to continue with the
 same choices.
 
-After you choose an assistant, **New session** checks whether your Mac and that
-assistant are ready. If something needs work, it shows one problem, a plain
-explanation, and the safest available fix. You can also open **System** for
-every setup check.
+Before assistant choices appear, **New session** checks the base setup on your
+Mac. After you choose an assistant, it checks that assistant's own setup and
+sign-in. If something needs work, RunHaven shows one problem, a plain
+explanation, and the safest available fix. You can open **System** for every
+setup check.
 
 RunHaven repeats the supported macOS and Apple `container` checks immediately
 before every real run. If the service stopped or a reviewed runtime changed,
@@ -191,30 +192,31 @@ under **Advanced options**. The safer protected copy is automatic. Advanced
 users can explicitly choose to work in the original folder after reading its
 warning.
 
-Choose **Start session** when the project page is right. RunHaven then shows the
-assistant, project, file access, and network access in a native Mac dialog before
-anything starts. There is no separate Review page or second confirmation
-checkbox in the app. If a choice is less safe than the default, such as full
-internet access, its specific warning still requires explicit acknowledgement.
-The normal confirmation stays short. If you chose advanced host access, it
-lists the exact extra sites, Mac environment names, API-key source name, or
-custom image so the trusted Mac dialog cannot hide what the session requested.
-It never shows an environment value. The dialog also says that the selected
-assistant uses generative AI and can make mistakes. It explains that the
-assistant may send your messages and project content it reads to its provider,
-and that storage or training depends on your account settings and the
-provider's terms.
+Choose **Continue** when the project page is right. **Review and start** then
+summarizes the assistant, project name, project access, network, sign-in sharing,
+and Mac API-key access if you selected it. It never shows the full folder path.
+Use **Edit assistant** or **Edit project** to change a completed choice.
 
-Choose **Back** to return to assistant selection. Nothing starts until you
-choose **Start session** and confirm the Mac dialog. When you confirm, the app
-takes you straight to the new session.
+Choose **Start session** from Review. RunHaven plans the run, then shows the
+assistant, project, file access, and network access in a native Mac dialog. If a
+choice is less safe than the default, such as full internet access, its warning
+still requires explicit acknowledgement. Advanced host access lists the exact
+extra sites, Mac environment names, API-key source name, or custom image without
+showing an environment value. The dialog also explains that the assistant uses
+generative AI, can make mistakes, may send read content to its provider, and is
+subject to the provider's storage or training terms.
+
+**Back** moves to the previous step. Canceling the Mac dialog returns to Review
+with your choices intact. Nothing starts until you choose **Start session** and
+confirm the Mac dialog.
 
 Some assistants are interactive: they work as a chat in their own terminal, so there
 is no separate box to type your task into. When you start one of these (Claude
-Code today), RunHaven opens the run
-in a full terminal that fills the main area of the window, the same place a
-session opens. You type your task in the terminal the same way you would in your
-own. The native confirm step runs as the terminal opens, so nothing starts
+Code today), the setup workspace becomes a full terminal in the same main area.
+There is no intermediate page or extra button. The window title changes to the
+assistant and project so you know which terminal is active. You type your task
+there the same way you would in your own terminal. The native confirm step runs as
+the terminal opens, so nothing starts
 until you approve it,
 and the run uses the same sandbox rules as any other run: the same restricted
 user, the same network setting, and your saved Claude sign-in added only to the
@@ -234,7 +236,7 @@ ending it is normal and never marked as an error.
 Starting another interactive assistant does not end an existing terminal.
 Each live terminal stays mounted while you use another page or terminal. The
 sidebar lists every live terminal under **Running** with its assistant, project,
-and start time. Choose that row to return to the exact terminal.
+and start time. Choose that row to show the exact terminal in the same workspace.
 
 Under **Advanced options** on the Project step, people can change project access,
 sign-in sharing, network access, CPU, memory, and supported API-key behavior.
@@ -283,12 +285,12 @@ Open other runs from History. If the run you are viewing is removed, the app
 moves to the nearest available run or New session. It never switches views on
 its own for any other reason.
 
-After choosing an assistant and project, choose **Save setup** to pin that
-combination in the sidebar. A saved setup remembers only the assistant and
-project folder. Selecting it starts a fresh New session with safe defaults. It
-does not restore network, folder-access, sign-in-sharing, resource, or API-key
-choices. If the folder was moved or removed, RunHaven marks the setup
-unavailable. Choose the folder again or choose **Unpin setup**.
+On **Review and start**, choose the secondary **Save setup** action to pin the
+assistant and project in the sidebar with recommended access. It does not save
+network, folder-access, sign-in-sharing, resource, or API-key choices. Selecting
+the setup starts a fresh New session with those safe defaults. If the folder was
+moved or removed, RunHaven marks the setup unavailable. Choose the folder again
+or choose **Unpin setup**.
 
 ## Menu bar and keyboard shortcuts
 
@@ -504,24 +506,32 @@ When setup is not ready, System details does not ask the stopped container
 service for image or network details. The setup checks still show the problem
 and its next step.
 
-## Debug logs
+## Get support
 
-The desktop app writes a local log file while it runs. If something looks
-wrong, share this file instead of a screenshot:
+Choose **Help > Get Support…** for any RunHaven problem. Read the macOS
+confirmation, then choose **Create report**. RunHaven creates one private text
+report, opens its public GitHub support form, and selects the file in Finder.
+Review the file before you drag it into the form. RunHaven does not upload or
+submit anything. GitHub uploads the file when you attach it, before you submit
+the public issue.
+
+The report includes allowlisted versions, setup results, image status, session
+outcomes, and normalized RunHaven action outcomes. It excludes raw logs,
+terminal output, prompts, project information, environment values, credentials,
+account identifiers, request details, and browser data. See
+[RunHaven Support](../SUPPORT.md) for the exact privacy boundary and the
+`runhaven support` fallback.
+
+The desktop app also keeps a rotating local debug log. This is a
+contributor-only debugging tool, not a file to attach to a public issue:
 
 Development log: `~/Library/Logs/dev.runhaven.desktop.debug/runhaven.log`
 
 Release log: `~/Library/Logs/dev.runhaven.desktop/runhaven.log`
 
-The log records app events, errors, and the name and timing of each action.
-It does not record what you see or type in the live terminal, request bodies,
-or tokens: the log level is capped below the point where the network layer
-would print raw request bytes, so a token or a request body cannot reach the
-file. The file rotates at 5 MiB and the app keeps the five most recent older
-files, so it stays small.
-
-Before sharing a log, you can double-check it with `scripts/scan-dev-log.sh`,
-which fails if any token-shaped text ever appears.
+Contributors can check a local reproduction log with
+`scripts/scan-dev-log.sh`. The support report never copies this raw log. It
+recognizes a small set of safe event patterns and omits all other lines.
 
 ## Cleanup and repair
 

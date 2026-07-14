@@ -137,6 +137,9 @@ printf 'runhaven cli surface check\n' >"$WORK/input.txt"
 step "informational surfaces"
 grep_ok "agents lists bundled profiles" "shell" "$RUNHAVEN_BIN" agents
 ok "doctor reports prerequisites" "$RUNHAVEN_BIN" doctor
+mkdir -p "$TMP_ROOT/support-home"
+grep_ok "support creates a private report without uploading" "Nothing was uploaded or submitted" \
+  env HOME="$TMP_ROOT/support-home" "$RUNHAVEN_BIN" support
 grep_ok "setup guides first run" "RunHaven setup" "$RUNHAVEN_BIN" setup --agent claude
 grep_ok "plan claude defaults to provider" "provider allowlist" \
   "$RUNHAVEN_BIN" plan claude --workspace "$WORK" --no-interactive --tty never

@@ -38,7 +38,7 @@ export function helpReturnLabel(destination: HelpReturnDestination): string {
     case "diagnostics":
       return "System"
     case "run-terminal":
-      return "Session terminal"
+      return "Terminal workspace"
   }
 }
 

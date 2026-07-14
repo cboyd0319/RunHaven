@@ -1,6 +1,6 @@
 # Current State
 
-Last updated: 2026-07-13 UTC
+Last updated: 2026-07-14 UTC
 
 ## Current Direction
 
@@ -96,7 +96,7 @@ paths without a designed and tested RunHaven boundary.
 
 Design direction: follow system appearance; stay restrained and native-feeling;
 use blue actions, green ready states, amber warnings, and red only for blocked
-or destructive states. `docs/assets/app-icon.png` is the only RunHaven identity
+or destructive states. The brighter `docs/assets/app-icon.png` is the only RunHaven identity
 master; derived WebView and Tauri assets live under `ui/src/assets/` and
 `src-tauri/icons/`. The retired logo and obsolete concept, QA, spike, source,
 skill, and terminal-mascot assets were deleted; the deferred Cubby source
@@ -105,7 +105,9 @@ voice, component, and implementation contract is
 `docs/design/runhaven-design-spec.md`. Deep specialist and independent
 adversarial reviews close with no blocker, high, or medium defect. Fixed sidebar
 and identity geometry leave at least 520 pixels for the main task at 200-percent
-text. Release and migration gaps stay explicit in the spec and current UI audit.
+text. Calm Control Room is the approved native-frame, opaque-work-surface, and
+restrained-signal north star. The WebView header remains a Tauri exception.
+Release and migration gaps stay explicit in the spec and current UI audit.
 
 Refresh, polling, and status updates must keep the current workspace stable.
 Session views should update panels in place without full-page blink/remounts,
@@ -308,9 +310,14 @@ Branch: `docs/native-gui-wireframe`.
 The latest 2026-07-13 desktop pass supersedes the older navigation shape
 recorded below. Current desktop information architecture is New session,
 History, System, a dynamic Running group, and Saved setups. Every launch opens
-New session. Setup and assistant repair appear after an assistant is chosen.
-History owns Needs attention and the remaining chronological runs. Internal
-sign-in and shell records are excluded from user history and menu state.
+New session. Base Mac setup leads when blocked; assistant repair follows its
+selection. History owns Needs attention and the remaining runs. Internal sign-in
+and shell records are excluded from user history and menu state.
+
+New session is the empty and preflight state of one terminal workspace. It uses Assistant, Project, then Review; only the current step is grouped. Continue does not plan. Typed Review
+owns Start session; Cancel returns focused Review. Wide windows pair progress with the task;
+narrow and 200-percent text stack them. Semantic 15/13/17 type doubles with text sizing, and
+raised navy, sidebar, grouped-surface, and control layers keep dark mode visibly blue.
 
 Agents, Cleanup, dedicated run filters, raw whole-app Trust Checks, Recent
 Activity wording, Secure Boundary summary, auxiliary session windows, and
@@ -320,10 +327,11 @@ Session-specific allow/deny reasons remain under Show details. Output has one
 Show output action only while Rust reports process-memory output available.
 Finished and failed sessions have no message composer or terminal.
 
-Multiple interactive terminals remain mounted independently. Rust returns the
-managed run ID plus a sanitized, path-free sidebar label. Starting one terminal
-does not stop another. The sidebar shows every live terminal under Running, and
-History offers Return to terminal only when that exact terminal is still live.
+Multiple interactive terminals remain mounted independently. Rust returns the managed run ID
+plus a sanitized, path-free label. Starting one does not stop another. After confirmation, setup
+becomes the terminal in the same pane with assistant/project identity. Running switches that
+workspace; React destinations are not the product model. History offers Return to terminal only
+while that exact terminal is live. Exact package fingerprint `cd08fd51e7fdccbc801f16998b57112cc8bb0a406aa1c0c1307b9a01264e97af` passed live design review at normal and 200-percent text with no blocker, high, or medium finding; terminal launch remains source- and Playwright-backed because the review did not start an assistant.
 Natural nonzero exits are Failed; an explicit RunHaven close is Ended.
 
 Saved setups persist assistant plus canonical project folder in a private,
@@ -429,14 +437,13 @@ Only address-in-use bind failures are retried. No existing local service is
 reused, stopped, or treated as RunHaven. Browser Import and bookmarklets do not
 exist in this repository. They do not justify a Settings surface.
 
-Release preflight and staging tests pass under Xcode 27.0 beta build 27A5218g.
-Distribution remains fail-closed without an exact `v0.7.0` tag, Developer ID
-identity, provisioning profile, and notary profile. Human QA still covers
-assistive technologies, visual accessibility settings, localization, multiple
-displays, nontechnical coworker use, and clean-Mac distribution.
+Get Support covers every desktop problem and has a `runhaven support` fallback. It creates one private, bounded report, opens the exact GitHub form, and selects the file in Finder.
+It never copies raw logs, archives metadata, uploads, or submits. Tests cover poison, symlinks,
+collisions, permissions, timeouts, exact arguments, and partial failures. Final review also bounds
+inherited probe pipes, omits WebView action text, coalesces duplicate requests, and keeps error text and live
+regions accessible. Fresh workspace, structure, docs, 383-test UI, 15-test Playwright,
+web, Tauri, 40/40 live CLI, and packaged no-upload gates pass. `SUPPORT.md` owns the contract.
 
 ## Next Step
 
-Choose one bounded design migration from the canonical spec, starting with the
-sidebar Unpin action or nested launch groups. Keep TUI deferred and distribution
-gated on legal clearance, human accessibility, Developer ID, and clean-Mac QA.
+Continue functional runtime defect testing. TUI remains deferred; distribution remains externally gated.

@@ -158,6 +158,16 @@ fn parse_local_images(stdout: &[u8]) -> Result<Vec<LocalImage>> {
         .collect())
 }
 
+pub(crate) fn profile_image_statuses_from_list_json(
+    stdout: &[u8],
+) -> Result<Vec<ProfileImageStatus>> {
+    let local_images = parse_local_images(stdout)?;
+    crate::runtime::profiles::agent_profiles()
+        .iter()
+        .map(|profile| profile_image_status(profile, &local_images))
+        .collect()
+}
+
 fn image_names(item: &Value) -> BTreeSet<String> {
     let mut names = BTreeSet::new();
     if let Some(name) = item.pointer("/configuration/name").and_then(Value::as_str) {

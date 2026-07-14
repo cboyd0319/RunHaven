@@ -17,6 +17,8 @@ product voice, component defaults, and design-to-code contract. Use it with:
 
 - `native-gui-uiux-audit.md`, which records the current shipped surface and the
   Apple Human Interface Guidelines (HIG) topic checked for each part.
+- `runhaven-visual-benchmark-research.md`, which records the current award and
+  Liquid Glass evidence behind the approved Calm Control Room direction.
 - `docs/SECURITY_MODEL.md`, which owns the product trust boundary.
 - `docs/DESKTOP_APP.md`, which owns current user-facing behavior.
 - `current-state.md`, which resolves historical implementation plans.
@@ -71,7 +73,7 @@ confirmation, or reviewable changes.
 ### Meaning of the selected mark
 
 The selected master is `docs/assets/app-icon.png`. It contains a clear cube over
-three luminous layers on a deep blue field.
+three luminous layers on a bright cobalt-blue field.
 
 | Visual element | Meaning | Product expression |
 | --- | --- | --- |
@@ -80,7 +82,7 @@ three luminous layers on a deep blue field.
 | Light through the cube | Capability without a black box | Show status, access, and consequences in plain language |
 | Upward composition | Progress and agency | Keep the next useful action obvious |
 | Blue-to-teal light | Calm technical confidence | Use a restrained blue accent and rare teal brand highlights |
-| Deep navy field | Focus and stability | Let content remain quiet around important actions and state |
+| Cobalt-blue field | Focus and clarity | Keep the identity legible at small sizes and content quiet around important actions |
 
 The cube and layers are metaphors, not a literal diagram of the security model.
 Do not claim that the three visible layers correspond to three technical
@@ -114,16 +116,16 @@ surface review remain open release work.
 
 ### Asset provenance and release clearance
 
-The canonical master was generated during RunHaven app-icon concept work with
-OpenAI image generation on 2026-07-13, then selected by the maintainer. The
-repository master preserves its RGB pixels and adds only an opaque alpha
-channel. It contains no known provider mark. The generation prompt, reference-
-input rights record, account type, and applicable service terms are not recorded
-in this repository. Before public release, record that evidence, complete word-
-mark and design-mark searches plus broader web and reverse-image similarity
-searches, obtain appropriate legal review, and retain the decision with release
-evidence. Until then, this is approved product art, not legally cleared brand
-art.
+The canonical master was generated during RunHaven app-icon concept work with OpenAI image generation on 2026-07-13, then selected by the maintainer. The
+selected 1254-pixel output (SHA-256 `aaeace652e11015381bc20bb25fdca8bc3d162860843b7552c1258fa0eca2363`)
+was resized once to 1024 pixels, converted to opaque sRGBA, and stripped of
+metadata without changing its composition. It contains no known provider mark.
+The reference-input rights record, account type, and applicable service terms
+are not recorded in this repository. Before public release, record that
+evidence, complete wordmark and design-mark searches plus broader web and
+reverse-image similarity searches, obtain appropriate legal review, and retain
+the decision with release evidence. Until then, this is approved product art,
+not legally cleared brand art.
 
 ### Placement
 
@@ -250,14 +252,14 @@ reference swatches for brand artwork:
 
 | Reference color | Value | Use |
 | --- | --- | --- |
-| Deep harbor | `#011833` | Deepest artwork shadow and dark brand field |
-| Harbor navy | `#012455` | Dominant icon background |
-| Run blue | `#0751A2` | Mid-blue layer and brand field |
-| Core blue | `#0E6BCD` | Strong brand accent |
-| Signal blue | `#1C99E2` | Bright blue highlight |
-| Glass cyan | `#2CB2C7` | Secondary light and depth |
-| Layer teal | `#3CE0CD` | Rare high-energy brand highlight |
-| Ice | `#A4CEEF` | Glass edge and highlight |
+| Deep harbor | `#023564` | Deepest artwork shadow and dark brand field |
+| Harbor blue | `#0C59A7` | Dominant icon background |
+| Run blue | `#1472CE` | Mid-blue layer and brand field |
+| Core blue | `#2091E6` | Strong brand accent |
+| Signal blue | `#5AADF3` | Bright blue highlight |
+| Glass cyan | `#61D8F8` | Secondary light and depth |
+| Layer teal | `#16B2C0` | Rare high-energy brand highlight |
+| Ice | `#CBE8FB` | Glass edge and highlight |
 
 Do not paste these values directly into component code. Interface colors use
 semantic tokens that adapt to appearance, contrast, transparency, selection,
@@ -275,7 +277,7 @@ and window state.
 | Brand teal | Illustration or rare identity detail | No general component role |
 | Success | Completed, ready, or verified positive state | `--success` plus text or icon |
 | Warning | A correctable condition that needs attention | `--warning` for fill or icon; `--warning-text` for standalone adaptive text |
-| Error | Failure or blocked state | `--destructive` plus recovery text |
+| Error | Failure or blocked state | Adaptive `--error-text` plus recovery text |
 | Destructive | An action that causes loss | Destructive control style and explicit verb |
 | Neutral | Ordinary state and secondary information | Foreground, muted, and separator roles |
 
@@ -289,13 +291,17 @@ Rules:
 - Red means failure, blocked state, or destructive action.
 - Pair every state color with a label, symbol, shape, or position.
 - Follow system appearance. Do not add an app-specific light or dark setting.
-- Supply and test light, dark, and increased-contrast variants for every custom
-  semantic color.
+- Dark appearance keeps navy visibly blue and separates sidebar, work surface, and grouped content without near-black planes.
+- Test light, dark, increased contrast, and reduced transparency for every custom semantic color.
 
 ### Materials and depth
 
 The icon uses glass to show a clear boundary. The interface uses material to
-show structure.
+show structure. Calm Control Room has three layers: the macOS frame and Tauri's
+native sidebar effect own structural material; an opaque, quiet work surface
+keeps task content legible; and a restrained blue RunHaven signal marks the next
+action. Status colors keep their meaning and blue-to-teal light remains rare.
+The WebView header is a documented exception, not a system-owned toolbar.
 
 - Keep translucent material at the top functional layer, such as the sidebar
   and overlay header.
@@ -327,10 +333,10 @@ precise central boundary.
 ### Typography
 
 - Use the system stack already defined in `ui/src/index.css`.
-- Use 13-point-equivalent body text as the normal Mac reading size and do not go
-  below the 10-point platform minimum. RunHaven's ordinary product floor is 11.
-- Keep the current compact hierarchy: 11 for captions, 13 for body and controls,
-  15 for section titles, and 17 for view titles.
+- Use 15-point-equivalent body text for the primary New session task. Use 13 for
+  supporting or compact text. RunHaven's ordinary product floor is 11.
+- Keep the hierarchy: 11 for captions, 13 for support, 15 for task body and
+  section labels, and 17 for task and view titles.
 - Use Regular, Medium, Semibold, or Bold. Avoid light weights.
 - Use monospaced type only for terminal content, commands, code, identifiers, or
   values that benefit from alignment.
@@ -396,7 +402,7 @@ decorative code rain belongs in the core product.
 | Assistant | One of four supported product choices | New session and sign-in | Rust catalog and readiness contracts |
 | Project | User-chosen folder, shown by safe display name | New session and saved setup | Native folder picker and Rust validation |
 | Session | Backend-owned run identity with lifecycle state | Running, History, session detail | Rust session model |
-| Live terminal | One mounted PTY channel for one exact run | Running destination | Rust registry plus xterm view |
+| Live terminal | One mounted PTY channel for one exact run | Terminal workspace, selected from Running | Rust registry plus xterm view |
 | Protected copy | Optional RunHaven-owned review and recovery copy | Session detail and History | Rust worktree lifecycle |
 | Saved setup | Assistant plus canonical project folder and secure defaults | Saved setups and New session | Private app-data record |
 | System condition | Secret-free readiness or recovery state | System | Rust diagnostics contracts |
@@ -407,9 +413,9 @@ remains backend-owned.
 
 ### Main window
 
-**Observed:** RunHaven uses one primary resizable window, initially 1080 by 720
-and usable down to 800 by 560. It has native traffic lights, overlay chrome, a
-leading sidebar, a header, and one content pane.
+**Observed:** RunHaven uses one resizable 1080 by 720 window, usable down to 800
+by 560, with native traffic lights, overlay chrome, Tauri's native sidebar
+effect, a custom WebView header, and an opaque pane. It has no native toolbar.
 
 **RunHaven decision:** Preserve this two-region structure. It supports durable
 navigation and several sessions without creating a dashboard or third-pane
@@ -418,7 +424,7 @@ inspector by default.
 - Sidebar: top-level destinations and dynamic collections only.
 - Header: sidebar control, current view title, current status, and at most one
   frequent contextual action.
-- Content: the current task, list, session, or terminal.
+- Content: one terminal workspace in setup or live-terminal state, or the selected History, session, System, or Help task.
 - Sheets and native dialogs: bounded input or trusted consequential decisions.
 - No persistent right sidebar. Add an inspector only if a real selection owns
   persistent properties that must remain visible.
@@ -433,21 +439,34 @@ The current navigation contract is:
 - Running, only when live terminals exist
 - Saved setups, only when saved setups exist
 
-These labels remain stable. A dynamic row must have backend-owned identity and a
-path back to its live or recoverable state. Navigation never kills a session or
-discards a draft.
+These labels remain stable. New session and each Running row select one terminal workspace state.
+Dynamic rows have backend-owned identity and a path to their live state. Navigation never kills a session or discards a draft.
+
+### Terminal workspace
+
+- New session is the empty and preflight state: Choose assistant, Choose project, then Review and start, with progress beside the task in wide windows.
+- Use a semantic ordered list. Only the current step owns a grouped surface.
+- Completed steps become unboxed summaries with **Complete** and a specific Edit
+  action. Keep choices, quiet readiness, and advanced access under Project.
+- Derive Review from the typed request: assistant, project display name, access,
+  network, sign-in sharing, and optional Mac API key. Hide the full host path.
+- **Continue** only changes steps. **Start session** plans the run, then the
+  Rust-owned native confirmation remains the authoritative launch gate.
+- After confirmation, replace setup with the live terminal in the same pane, using the Rust-owned assistant and project label as its title.
+- Cancel returns to Review and failures stay local. Explicit actions move focus;
+  refresh does not. Summaries and actions stack at 200 percent text.
+- **Save setup** is secondary and never stores advanced choices.
 
 ### Core surface state matrix
 
 | Surface | Required states | Primary result |
 | --- | --- | --- |
-| New session | Setup blocked, assistant unavailable, signed out, ready, project missing, protected-copy unavailable, preparing, confirmation canceled, launch failed, launched | A reviewed session starts or the person's choices remain available |
+| Terminal workspace | Setup blocked, assistant unavailable, signed out, ready, project missing, protected-copy unavailable, preparing, confirmation canceled, launch failed, opening, live, background-hidden, ending, ended, open failed | A reviewed session becomes a reachable live terminal in place, or the person's choices remain available |
 | History | Empty, ordinary history, verified attention, failed, clean protected copy, changed protected copy, unreadable protected copy, output available, output unavailable | The person understands what happened and has one truthful next action |
 | Session detail | Loading, live, waiting for input, stopping, ended, failed, diagnostics loading or failed, changes clean or ready, recovery complete | Status, evidence, input, review, and recovery remain attached to one session |
-| Running terminal | Opening, sign-in, live, background-hidden, ending, ended, open failed | The exact terminal remains reachable without navigation ending its session |
 | Saved setup | Available, folder missing, repairing, repair failed, selected, unpinned | A repeated secure setup starts quickly or explains how to repair it |
 | System | Checking, ready, actionable failure, advanced details, repair progress, repair failed, repair complete | The person fixes the smallest product-owned blocker |
-| Help | Ordinary, reached from a task, returning to preserved context | The person learns the next task without losing work |
+| Help | Ordinary, reached from a task, returning to preserved context, support report creating, canceled, created, Finder failure, GitHub failure, both open actions failed | The person learns the next task without losing work, or creates and reviews a local report with truthful recovery |
 
 Add a state only when the product can enter it. Do not use placeholder states to
 imply planned capability.
@@ -459,6 +478,8 @@ imply planned capability.
 - Preserve New session choices when Help temporarily replaces the content view.
 - Keep every live terminal mounted while it runs, even when another destination
   is visible.
+- Treat React destinations as an implementation detail. Preserve the setup and
+  live-terminal state contract so a future SwiftUI or AppKit shell can reuse it.
 - Closing the main window hides and preserves the same WebView. App activation
   restores it. App exit owns teardown.
 - Persist only bounded preferences and user-created saved setups. Do not persist
@@ -469,7 +490,7 @@ imply planned capability.
 ### Window adaptation
 
 - Preserve the primary task at the minimum size.
-- Let forms use a readable column instead of stretching to fill a wide window.
+- Let guided forms pair context with work, then stack before either gets cramped.
 - Let history tables, terminal content, and file review use available width.
 - Wrap or reflow secondary controls before truncating an action or consequence.
 - Keep visual, keyboard, and accessibility order aligned.
@@ -691,8 +712,8 @@ Visual simplicity cannot weaken the product boundary.
 
 **Observed:** Tauri v2 owns the macOS window, native menus, trusted dialogs,
 effects, and typed command boundary. React, shadcn/ui, Tailwind CSS, and Lucide
-render semantic HTML inside WKWebView. Keep this framework unless a measured
-native-behavior gap justifies a narrow AppKit or SwiftUI bridge.
+render semantic HTML inside WKWebView. The terminal-workspace state contract is
+framework-neutral; a future native rewrite must not inherit WebView route names.
 
 ### Token ownership
 
@@ -750,19 +771,13 @@ not scale with the root text-size multiplier.
 
 ### Current migration priorities
 
-1. Keep structural sidebar and shell geometry usable when text reaches 200
-   percent at the minimum window size.
-2. Flatten remaining nested card stacks into grouped session and form regions.
-3. Move the one-shot Unpin setup command out of the navigation list to a
-   discoverable contextual or detail action.
-4. Audit every component against the semantic color-role table, especially teal
-   versus green and interactive blue versus informational state.
-5. Review wide-window composition so whitespace protects the task without
-   turning into a dashboard or decorative panel.
-6. Review the custom WebView header in narrow, inactive, full-screen, and
-   increased-contrast states while keeping its Tauri exception explicit.
-7. Complete the live accessibility and appearance checks recorded in
-   `native-gui-uiux-audit.md`.
+1. Complete packaged accessibility review of the three-step New session.
+2. Flatten nested cards and move **Unpin setup** out of navigation.
+3. Audit semantic colors across the remaining product surfaces.
+4. Review the WebView header in narrow, inactive, full-screen, contrast, and
+   reduced-transparency states while keeping its Tauri exception explicit.
+5. Defer the boundary transition until the trusted launch lifecycle has a
+   bounded interaction and reduced-motion contract.
 
 These are design migrations, not authorization for new backend commands,
 dependencies, settings, windows, or security behavior.

@@ -1,0 +1,92 @@
+name: RunHaven support
+description: Report any RunHaven problem with an optional locally generated support report.
+title: "[Support]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a problem.
+
+        If RunHaven may have exposed credentials, escaped its container boundary, or run an unexpected host command, stop here and [report it privately](https://github.com/cboyd0319/RunHaven/security/advisories/new). Do not post security or privacy details in a public issue.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where did the problem happen?
+      options:
+        - Starting or using a session
+        - Assistant sign-in
+        - Session output or messages
+        - History or change review
+        - Apple container or setup
+        - RunHaven window or controls
+        - Installing or opening RunHaven
+        - Somewhere else
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Tell us what you saw and what you expected instead. Do not paste terminal output, prompts, project files, or credentials.
+      placeholder: RunHaven showed... I expected...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: What were you doing?
+      description: List the RunHaven buttons or menu items you used. Leave out project names and private content.
+      placeholder: |
+        1. I opened...
+        2. I chose...
+        3. RunHaven...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: RunHaven version
+      description: This is included in a RunHaven support report. If you do not have a report, copy the version shown at the bottom of the sidebar.
+      placeholder: 0.7.0
+    validations:
+      required: false
+
+  - type: upload
+    id: support-report
+    attributes:
+      label: Support report
+      description: Review the selected RunHaven .txt report first. GitHub uploads it as soon as you select it, before you submit this issue. Drag it here or click to choose it. A report is helpful but not required.
+    validations:
+      required: false
+      accept: ".txt"
+
+  - type: input
+    id: no-report
+    attributes:
+      label: If you did not attach a report, what stopped you?
+      description: Leave this blank if you attached a report.
+      placeholder: The report button did not work, RunHaven would not open, or another reason.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: privacy-review
+    attributes:
+      label: Privacy check
+      options:
+        - label: I reviewed every file I attached and removed anything I do not want to share publicly.
+          required: true
+        - label: I did not attach terminal output, prompts, project files, environment values, credentials, or browser data.
+          required: true
+
+  - type: checkboxes
+    id: current-build
+    attributes:
+      label: Current build
+      options:
+        - label: I checked that I am using the latest available RunHaven build, or I explained why I cannot update.
+          required: true

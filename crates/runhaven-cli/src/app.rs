@@ -55,6 +55,7 @@ fn dispatch(cli: Cli, agent_args: Vec<String>) -> Result<i32> {
     match command {
         TopCommand::Agents => list_agents(),
         TopCommand::Doctor => doctor(),
+        TopCommand::Support => crate::support::support(),
         TopCommand::Setup { agent } => setup(&agent),
         TopCommand::Plan(args) => run_plan::plan_run(&args, agent_args),
         TopCommand::Run(command) => {

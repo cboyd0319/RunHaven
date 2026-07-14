@@ -7,6 +7,7 @@ import { AppHeader } from "./AppHeader"
 import { AppMainContent } from "./AppMainContent"
 import { RunHavenSidebar } from "./RunHavenSidebar"
 import { userSessions } from "./sessionList"
+import { terminalWorkspacePageTitle } from "./terminalWorkspace"
 import { sidebarDefaultOpen } from "./uiStatePersistence"
 import { useAppController } from "./useAppController"
 import { useMenuEvents } from "./useMenuEvents"
@@ -30,6 +31,14 @@ export default function App() {
     app.navigation,
     sidebarOpen,
   )
+  const pageTitle =
+    app.navigation.kind === "session"
+      ? (app.selectedSession?.title ?? app.pageTitle)
+      : terminalWorkspacePageTitle(
+          app.navigation,
+          app.launchFlow.runTerminals,
+          app.pageTitle,
+        )
   return (
     <TooltipProvider>
       <SidebarProvider
@@ -56,11 +65,7 @@ export default function App() {
         />
         <SidebarInset className="h-screen overflow-hidden">
           <AppHeader
-            title={
-              app.navigation.kind === "session"
-                  ? (app.selectedSession?.title ?? app.pageTitle)
-                  : app.pageTitle
-            }
+            title={pageTitle}
             session={
               app.navigation.kind === "session" ? app.selectedSession : null
             }
@@ -100,6 +105,7 @@ export default function App() {
               onWorktreeResolved={app.refreshAfterWorktree}
               launchFlow={app.launchFlow}
               savedSetups={app.savedSetups}
+              supportReport={app.supportReport}
               selectedAgent={app.selectedAgent}
               imageLoading={app.imageLoading}
               imageStatus={app.imageStatus}

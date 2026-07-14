@@ -142,10 +142,12 @@ pub fn run() {
         .manage(tail_status::ImageBuildStatusRegistry::default())
         .manage(background_jobs::BackgroundJobRegistry::default())
         .manage(commands::setup_recovery::SetupRecoveryGate::default())
+        .manage(commands::support_report::SupportReportGate::default())
         .manage(read_guard::ReadGuards::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_dashboard_status,
             commands::setup_recovery::perform_setup_recovery,
+            commands::support_report::create_support_report,
             commands::image_status::get_image_status,
             commands::image_build_status::get_image_build_status,
             commands::network::get_network_prune_preview,

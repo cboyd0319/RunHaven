@@ -62,6 +62,19 @@ in-sandbox sign-in. If a check fails, the agent does not start and RunHaven
 tells you to run `runhaven doctor`. Planning and `--dry-run` do not run these
 checks.
 
+## Create a Support Report
+
+```bash
+runhaven support
+```
+
+Creates one private `.txt` report under RunHaven's Application Support folder
+and prints its path plus the fixed GitHub support-form address. The report uses
+allowlisted diagnostic facts and excludes raw logs, terminal output, project
+information, credentials, and browser data. The command does not open another
+app, upload the report, or submit an issue. Review the file before attaching it.
+See [RunHaven Support](../SUPPORT.md) for the complete privacy boundary.
+
 ## Build an Agent Image
 
 ```bash
