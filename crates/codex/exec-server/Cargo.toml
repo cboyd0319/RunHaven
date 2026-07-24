@@ -67,7 +67,7 @@ windows-sys = { version = "=0.52.0", features = [
 ] }
 
 [dev-dependencies]
-anyhow = { version = "=1.0.102" }
+anyhow = { version = "=1.0.103" }
 ctor = { version = "=0.6.3" }
 http = { version = "=1.4.0" }
 opentelemetry = { version = "=0.31.0" }

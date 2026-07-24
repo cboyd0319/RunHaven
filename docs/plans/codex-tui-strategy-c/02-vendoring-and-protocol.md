@@ -126,7 +126,7 @@ slice. With the vendor-first assumption, classify them instead of omitting them:
 | `codex-file-search`, `codex-git-utils`, `codex-message-history` | Vendor where it avoids rewrites. Activate only within RunHaven workspace and record boundaries. |
 | `codex-model-provider`, `codex-model-provider-info`, `codex-models-manager` | Keep dormant unless RunHaven adds model/provider selection distinct from agent profiles. |
 | `codex-feedback`, `codex-otel`, `codex-install-context` | Vendor for compilation/reference only. Activate only after RunHaven has consent, redaction, and telemetry policy. |
-| `codex-sandboxing`, `codex-windows-sandbox` | Vendor as source reference. RunHaven's macOS container boundary remains authoritative. |
+| `codex-sandboxing` | Vendor as source reference. RunHaven's macOS container boundary remains authoritative. |
 | `codex-arg0` | Needed only if RunHaven preserves Codex-style binary dispatch or remote app-server startup paths. |
 
 Current low-coupling support crates already vendored under original names for
@@ -204,9 +204,8 @@ Likely additions for full TUI source activation:
 Platform-specific:
 
 - `libc` is already present on Unix.
-- `windows-sys`, `which`, and `winsplit` only matter if RunHaven keeps Windows
-  compile support for copied Codex modules. RunHaven product runtime is macOS
-  26+ only, but copied code may still need conditional stubs to compile.
+- `which` matters only where command discovery uses it for copied Codex
+  modules.
 - `arboard` is needed only if RunHaven activates native clipboard support.
 
 Dev/test additions from Codex TUI worth preserving for source-close tests:

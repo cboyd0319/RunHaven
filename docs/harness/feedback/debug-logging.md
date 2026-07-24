@@ -7,10 +7,12 @@ do not grant the untrusted WebView permission to append arbitrary strings. The
 user-facing "Debug logs" section lives in
 `docs/DESKTOP_APP.md`; this note is the maintainer-facing detail.
 
-Run the app with `npm --prefix ui run tauri:dev:log`
+Run the app with `npm run tauri:dev:log`
 (`scripts/dev-with-logs.sh`): it tees the whole session to a rotated
 `~/Library/Logs/RunHaven/dev.log`, and secret-scans every log on exit (Ctrl-C
-included) via `scripts/scan-dev-log.sh`, so no session ends unscanned.
+included) via `scripts/scan-dev-log.sh`. The wrapper preserves application and
+pipeline failures, and a detected token-shaped value makes the session fail
+without reproducing matched log content in terminal output.
 The launcher binds the UI to an operating-system-assigned `127.0.0.1` port,
 prints that exact address, and passes the already-running server to Tauri. It
 never reuses or stops another service merely because a familiar port is busy.

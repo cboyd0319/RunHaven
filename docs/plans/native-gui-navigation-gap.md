@@ -5,7 +5,7 @@ Last updated: 2026-07-01 UTC
 > Historical implementation tracker, superseded 2026-07-13. It explains the
 > earlier navigation build but is not the current product target. The current
 > simplified surface is documented in `docs/DESKTOP_APP.md` and
-> `current-state.md`.
+> `PROGRESS.md`.
 > Read-only session monitor windows described below were removed on
 > 2026-07-13 because the extra window and capability surface did not earn its
 > place in the simplified product.

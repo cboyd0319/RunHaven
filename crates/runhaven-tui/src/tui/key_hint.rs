@@ -199,19 +199,7 @@ fn key_hint_style() -> Style {
 }
 
 pub(crate) fn has_ctrl_or_alt(mods: KeyModifiers) -> bool {
-    (mods.contains(KeyModifiers::CONTROL) || mods.contains(KeyModifiers::ALT)) && !is_altgr(mods)
-}
-
-#[cfg(windows)]
-#[inline]
-pub(crate) fn is_altgr(mods: KeyModifiers) -> bool {
-    mods.contains(KeyModifiers::ALT) && mods.contains(KeyModifiers::CONTROL)
-}
-
-#[cfg(not(windows))]
-#[inline]
-pub(crate) fn is_altgr(_mods: KeyModifiers) -> bool {
-    false
+    mods.contains(KeyModifiers::CONTROL) || mods.contains(KeyModifiers::ALT)
 }
 
 #[cfg(test)]
@@ -373,9 +361,6 @@ mod tests {
         assert!(has_ctrl_or_alt(KeyModifiers::CONTROL));
         assert!(has_ctrl_or_alt(KeyModifiers::ALT));
 
-        #[cfg(windows)]
-        assert!(!has_ctrl_or_alt(KeyModifiers::CONTROL | KeyModifiers::ALT));
-        #[cfg(not(windows))]
         assert!(has_ctrl_or_alt(KeyModifiers::CONTROL | KeyModifiers::ALT));
     }
 }

@@ -1,0 +1,10 @@
+{
+  "id": "runhaven-image-common",
+  "purpose": "Shared pinned Debian configuration and non-root user setup for bundled images",
+  "public_files": [
+    "apt-snapshot.conf",
+    "create-agent-user.sh",
+    "debian-packages.txt",
+    "debian.sources"
+  ]
+}

@@ -22,7 +22,7 @@ the roadmap. On 2026-06-27, the terminal UI was pulled forward as the reference
 TUI for sibling projects, and its build plan is complete in this checkout. The
 v1 desktop gap rows below stay valid for the later desktop phase; they are
 re-sequenced, not removed, and the desktop release version label is no longer
-locked to `v1.0.0`. The sequence of record is `current-state.md` and
+locked to `v1.0.0`. The sequence of record is `PROGRESS.md` and
 `docs/ROADMAP.md`.
 
 Above all else, the secure path must be the easy path. Secure defaults should
@@ -37,19 +37,19 @@ warned rather than blocked solely because they are less secure.
 
 Observed from live repo state, last refreshed on 2026-06-27:
 
-- `feature_list.json` and `current-state.md`.
+- `feature_list.json` and `PROGRESS.md`.
 - `README.md`, `docs/ROADMAP.md`, `docs/V1_RELEASE_PLAN.md`,
   `docs/NON_UI_BACKLOG.md`, `docs/SECURITY_MODEL.md`,
   `docs/ARCHITECTURE.md`, `docs/TAURI_UI_GUARDRAILS.md`, and
   `docs/TAURI_UI_RESEARCH_PLAN.md`.
-- `cargo run --locked --bin runhaven -- --help`.
-- `cargo run --locked --bin runhaven -- runs --help`.
-- `cargo run --locked --bin runhaven -- image --help`.
-- `cargo run --locked --bin runhaven -- network --help`.
-- `cargo run --locked --bin runhaven -- state --help`.
-- `cargo run --locked --bin runhaven -- egress --help`.
-- `cargo run --locked --bin runhaven -- auth --help`.
-- `cargo run --locked --bin runhaven -- why --help`.
+- `scripts/cargo.sh run --locked --bin runhaven -- --help`.
+- `scripts/cargo.sh run --locked --bin runhaven -- runs --help`.
+- `scripts/cargo.sh run --locked --bin runhaven -- image --help`.
+- `scripts/cargo.sh run --locked --bin runhaven -- network --help`.
+- `scripts/cargo.sh run --locked --bin runhaven -- state --help`.
+- `scripts/cargo.sh run --locked --bin runhaven -- egress --help`.
+- `scripts/cargo.sh run --locked --bin runhaven -- auth --help`.
+- `scripts/cargo.sh run --locked --bin runhaven -- why --help`.
 - Tauri command and capability scan over `src-tauri/` and `ui/src/`.
 - File-size scan over Rust, Tauri, frontend, and TUI source files.
 
@@ -95,8 +95,8 @@ Observed maintainability pressure:
 
 - The old custom TUI size list was superseded by the Codex vendor reset and the
   workspace crate split.
-- Current source-size and crate-boundary guidance lives in
-  `docs/harness/state/modularization-plan.md`.
+- Current source-size and crate-boundary enforcement lives in
+  `scripts/check-repo-structure.sh` and `docs/ARCHITECTURE.md`.
 
 Vendored Codex TUI files are allowed to exceed the local soft size guard while
 the baseline is being integrated, but culling or splitting decisions must be
@@ -142,14 +142,14 @@ release notes are deferred to the release-readiness cut.
 
 | ID | Gap | Current State | Done When | Verification |
 | --- | --- | --- | --- | --- |
-| V05-G1 | CLI command contract audit | Command families exist, but the release contract has not been signed off against help text and docs. | Every CLI command family is checked against `docs/USAGE.md`, `docs/CAPABILITIES.md`, `README.md`, and help output; missing docs or stale examples are fixed. | `cargo run --locked --bin runhaven -- <command> --help` for each family; docs link check; `git diff --check`. |
+| V05-G1 | CLI command contract audit | Command families exist, but the release contract has not been signed off against help text and docs. | Every CLI command family is checked against `docs/USAGE.md`, `docs/CAPABILITIES.md`, `README.md`, and help output; missing docs or stale examples are fixed. | `scripts/cargo.sh run --locked --bin runhaven -- <command> --help` for each family; docs link check; `git diff --check`. |
 | V05-G2 | JSON and local data contract decision | `runs.jsonl`, `egress-policy.jsonl`, and `auth-broker.jsonl` exist; release docs note missing explicit schema versions. | Stable JSON surfaces are either schema-versioned or explicitly documented as best-effort/pre-stable. Local record retention and privacy behavior are documented. | Focused tests for any schema changes; JSON validation; docs check. |
 | V05-G3 | Profile support matrix | Bundled images and provider metadata exist, but support claims are not yet split into tiers. | Each profile states bundled image availability, basic CLI start, provider mode source backing, interactive auth path, headless broker availability, and known limits. | Image dry-runs or builds; `image doctor`; source-backed provider review; disposable credential smokes only where claimed. |
 | V05-G4 | Runtime evidence refresh | Prior Apple `container` smokes exist, but release evidence must be current for the tag. | `doctor`, default runtime smoke, provider smoke, and SSH fail-closed smoke are current for the release candidate. Cleanup evidence is recorded. | `runhaven doctor`; `scripts/apple_container_smoke.sh`; `scripts/apple_container_smoke.sh --with-provider`; `scripts/apple_container_smoke.sh --with-ssh`; cleanup commands. |
 | V05-G5 | SSH fail-closed release posture | `--ssh` is blocked because non-root Apple `container` forwarding is not proven. | Docs, CLI behavior, tests, and release notes all say SSH forwarding is unavailable until no-secret non-root proof exists. | Planner/run tests; `scripts/apple_container_smoke.sh --with-ssh`; docs scan for raw-key workaround language. |
 | V05-G6 | Secure-easy CLI review | Closed: the default network mode is profile-aware (provider where the agent's hosts are bundled, otherwise internet), and `plan`/`run` print plain-language security notices for every lower-security choice. | CLI docs and help make the safe path clear; supported lower-security choices are visible, warned, and explicit. Hard-boundary violations still fail closed. | CLI help/docs audit; focused validation tests for sensitive workspace, env, root, provider host, and SSH paths. |
 | V05-G7 | CLI maintainability gate | No major CLI file is far beyond the size guard, but provider egress and auth broker are near it. | Touched CLI/runtime/auth files remain cohesive; no known large-file or duplication debt is intentionally deferred into v1 desktop work. | File-size scan; focused module review; Rust checks. |
-| V05-G8 | Release documentation and state closure | Release ladder exists, but v0.5-specific release notes and final state are not cut. | `README.md`, roadmap, `feature_list.json`, `current-state.md`, and release notes agree on alpha/pre-release status and v0.5 CLI-complete scope. | Docs link check; stale wording scan; JSON validation. |
+| V05-G8 | Release documentation and state closure | Release ladder exists, but v0.5-specific release notes and final state are not cut. | `README.md`, roadmap, `feature_list.json`, `PROGRESS.md`, and release notes agree on alpha/pre-release status and v0.5 CLI-complete scope. | Docs link check; stale wording scan; JSON validation. |
 
 ### Important But Deferrable From v0.5.0
 
@@ -184,13 +184,14 @@ release notes are deferred to the release-readiness cut.
    - Verification: image dry-runs, `image doctor`, provider/source review.
 
 4. Runtime evidence refresh.
-   - Files: `docs/harness/evidence/evidence-log.md`, `current-state.md`.
+   - Files: `docs/harness/evidence/evidence-log.md`, `PROGRESS.md`.
    - Expected result: Apple `container` evidence is current for the release
      candidate.
    - Verification: `runhaven doctor`, Apple container smokes, cleanup checks.
 
 5. Maintainability closeout.
-   - Files: touched source modules and `docs/harness/state/modularization-plan.md`.
+   - Files: touched source modules, `docs/ARCHITECTURE.md`, and the repository
+     structure gate.
    - Expected result: no CLI large-file, duplication, or crate-organization
      debt is knowingly deferred into v1.
    - Verification: file-size scan, Rust checks, maintainability note in state.
@@ -223,8 +224,8 @@ Linux-only GTK lockfile entries outside RunHaven's supported runtime.
 | V1-G9 | Accessibility and responsive UI | Semantic controls, focus return, keyboard terminal escape, reduced motion, system appearance, 800x560 coverage, and automated WCAG 2/2.1/2.2 AA scans cover Home, New run, Agents, System Check, Settings, access review and warnings, run details, Cleanup, worktree review, Run history, and the browser terminal fallback. The scans caught and corrected primary-button, muted-text, alert, and badge contrast. Manual native WKWebView VoiceOver verification remains. | Keyboard, VoiceOver, contrast, zoom/reflow, minimum-window, and non-color status checks pass. | Playwright plus axe-core, keyboard and VoiceOver review. |
 | V1-G10 | Desktop maintainability before feature expansion | React, command, contract, and Tauri modules are split by ownership and enforced by the repository structure gate. | The structure gate, focused tests, and duplication review stay clean. | Structure scan and focused frontend/Tauri tests. |
 | V1-G11 | Data/history performance | Append-only JSONL records are currently read into memory. | Long-term run, egress, and auth history can be listed or tailed without unbounded frontend or CLI memory assumptions, or limits are explicitly documented. | Focused tests or documented limits; performance smoke with generated records if implemented. |
-| V1-G12 | Packaging and release trust | The fail-closed release wrapper now requires a clean exact tag, full Xcode, matching Developer ID identity/profile, notarization, stapling, Gatekeeper assessment, exact mounted-DMG layout, copied-app signature/ticket/metadata/architecture verification, checksums, CycloneDX SBOMs, and provenance. No signed artifact has been produced on this host because its signing identity, profile, notary credentials, and full Xcode are absent. | Run the wrapper with the project credentials, then install and exercise its DMG on a clean supported Mac. | `npm --prefix ui run tauri:build`, `npm --prefix ui run tauri:bundle`, published notarization receipts/checksums/SBOMs/provenance, clean-Mac smoke record. |
-| V1-G13 | Runtime release evidence | Current: scoped CLI/desktop gates, doctor, five bundled images (base plus four agents), default/provider/SSH smokes, Tauri launch/control, isolated worktree, and cleanup pass on macOS 27 with Apple container 1.1.0. The four-agent native OAuth/reuse matrix remains. | Add disposable credentialed agent proof without exposing secrets; full public release additionally requires the intentionally broader `./init.sh` gate. | Coworker-test gate in `docs/harness/feedback/verification-matrix.md`; full release commands in `V1_RELEASE_PLAN.md`. |
+| V1-G12 | Packaging and release trust | The fail-closed release wrapper now requires a clean exact tag, full Xcode, matching Developer ID identity/profile, notarization, stapling, Gatekeeper assessment, exact mounted-DMG layout, copied-app signature/ticket/metadata/architecture verification, checksums, CycloneDX SBOMs, and provenance. No signed artifact has been produced on this host because its signing identity, profile, notary credentials, and full Xcode are absent. | Run the wrapper with the project credentials, then install and exercise its DMG on a clean supported Mac. | `npm run tauri:build`, `npm run tauri:bundle`, published notarization receipts/checksums/SBOMs/provenance, clean-Mac smoke record. |
+| V1-G13 | Runtime release evidence | Current: scoped CLI/desktop gates, doctor, five bundled images (base plus four agents), default/provider/SSH smokes, Tauri launch/control, isolated worktree, and cleanup pass on macOS 27 with Apple container 1.1.0. The four-agent native OAuth/reuse matrix remains. | Add disposable credentialed agent proof without exposing secrets; full public release additionally requires `scripts/verify-all.sh`. | Coworker-test gate in `docs/harness/feedback/verification-matrix.md`; full release commands in `V1_RELEASE_PLAN.md`. |
 | V1-G14 | Public docs alpha-to-release transition | Docs identify `v0.7.0` as a limited coworker-test candidate and keep signing/notarization and external proof gaps explicit. | User docs replace alpha warnings with precise stable/unsupported/known-limited surfaces only when v1 gates pass. | Docs stale scan, link check, release notes review. |
 
 ### v1.x Follow-Ups, Not v1.0.0 Blockers
@@ -238,7 +239,7 @@ Linux-only GTK lockfile entries outside RunHaven's supported runtime.
 | Automatic Apple `container` install, update, downgrade, or removal | RunHaven may open the exact pinned signed package and start a stopped service after confirmation. Performing administrator installation or changing/removing system-tool data needs a separate user-consent and security design. |
 | Managed Apple `container machine` integration | Not required for v1.0.0. User-managed machine workflows should not be blocked solely for a lower-security posture, but any RunHaven integration needs warning, explicit intent, target validation, and deletion approval. |
 | MCP, extension, plugin marketplace, or host socket support | Deny-by-default policy exists; implementation is larger product work. |
-| Windows, Linux, Intel Mac, hosted CI runtime support | Outside the project support boundary. |
+| Linux, Intel Mac, and hosted-runner runtime support | Outside the project support boundary. |
 
 ### v1.0.0 Milestones
 
@@ -281,7 +282,7 @@ Linux-only GTK lockfile entries outside RunHaven's supported runtime.
 ## Cross-Release Rules
 
 - Keep startup state compact. Update `feature_list.json` and
-  `current-state.md` when release scope or active state changes.
+  `PROGRESS.md` when release scope or active state changes.
 - Do not add new broad dependencies, plugins, config, or harness surfaces
   unless they remove real complexity.
 - Use standard library, native macOS or Apple `container` behavior, and already

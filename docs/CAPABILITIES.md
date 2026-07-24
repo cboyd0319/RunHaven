@@ -4,13 +4,14 @@ RunHaven runs AI coding agents inside Apple `container` with local-Mac safety
 defaults. This page is the product overview: what RunHaven can do, what it
 protects by default, and where the current limits are.
 
-RunHaven only supports macOS 26+ on Apple silicon. Windows and Linux are not
-supported runtimes or contributor verification targets.
+RunHaven runtime and contributor verification require macOS 26+ on Apple
+silicon.
 
 RunHaven is alpha/pre-release. `v0.5.0` was the CLI-only release; `v0.7.0` is
 the current CLI plus desktop coworker-test candidate. The desktop app is the
-primary easy path for nontechnical users. The terminal UI and vendored Codex
-source are archived outside the active workspace and are not shipped.
+primary easy path for nontechnical users. The comprehensive terminal UI remains
+a product surface; its pinned Codex dependency graph is outside the default
+release workspace and is not in current release artifacts.
 
 For command walkthroughs, use [Usage](USAGE.md). For the full security boundary,
 use [Security model](SECURITY_MODEL.md).
@@ -123,7 +124,7 @@ each active one. Hard-boundary violations still fail closed.
 | `--provider-host HOST` | Widens the provider allowlist with one reviewed fully qualified host. | bundled hosts only |
 | `--allow-sensitive-workspace` | Permits mounting broad or credential-bearing host paths at `/workspace`. Sensitive paths fail closed without it. | rejected |
 | `--image IMAGE` | Runs a custom image that may not follow the bundled non-root, read-only-root hardening. | bundled profile image |
-| `--ssh` | Would forward the SSH agent socket. Currently fails closed; see the [security model](SECURITY_MODEL.md). | disabled |
+| `--ssh` | Explicitly forwards only the SSH-agent socket, never raw keys, and prints a lower-security warning; unusable private sockets fail safely. See the [security model](SECURITY_MODEL.md). | disabled |
 
 The notices clear when you run with secure defaults. `runhaven why network MODE`,
 `why workspace PATH`, and `why host HOST` explain each decision in more detail.
@@ -164,7 +165,7 @@ default.
 | `runhaven auth status` / `runhaven auth explain AGENT` | Explains current broker boundaries without reading or printing secrets. |
 
 Pass a single reviewed host variable with `--env NAME`, or forward SSH with
-`--ssh` (currently fails closed). Both are lower-security choices that print a
+`--ssh`. Both are lower-security choices that print a
 security notice; see [Lower-security overrides](#lower-security-overrides).
 
 ## Sessions And State

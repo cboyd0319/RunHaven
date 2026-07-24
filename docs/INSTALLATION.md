@@ -1,12 +1,12 @@
 # Installation
 
 RunHaven is a macOS-only app. It requires macOS 26 or newer on Apple silicon
-and Apple `container` 1.1.0. Windows, Linux, and Intel Macs are not supported.
+and Apple `container` 1.1.0.
 
 RunHaven is alpha/pre-release. `v0.5.0` was the CLI-only release; `v0.7.0` is a
 limited CLI plus desktop coworker-test candidate. Coworkers should use the
 signed and notarized disk image. Rust, Git, Xcode, and Terminal are not needed
-for that path. The archived TUI is not installed.
+for that path. The terminal interface is not included in that desktop artifact.
 
 ## Install the coworker-test app
 
@@ -76,7 +76,7 @@ CLI from this checkout:
 
 ```bash
 container system start
-cargo install --path crates/runhaven --locked
+scripts/cargo.sh install --path crates/runhaven --locked
 ```
 
 Cargo installs the `runhaven` command into `~/.cargo/bin`. If your terminal
@@ -91,7 +91,7 @@ source ~/.zshrc
 For development without installing, run the binary through Cargo:
 
 ```bash
-cargo run --locked --bin runhaven -- plan shell
+scripts/cargo.sh run --locked --bin runhaven -- plan shell
 ```
 
 Development tools and dependencies are exact-pinned in `rust-toolchain.toml`,
@@ -148,9 +148,9 @@ want that broader scope and have reviewed `runhaven plan`.
 Use focused checks for narrow changes:
 
 ```bash
-cargo fmt --check
-cargo test --locked
-cargo run --locked --bin runhaven-check-pins
+scripts/cargo.sh fmt --check
+scripts/cargo.sh test --locked
+scripts/cargo.sh run --locked --bin runhaven-check-pins
 git diff --check
 ```
 

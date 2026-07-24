@@ -30,7 +30,7 @@ tungstenite = { git = "https://github.com/openai-oss-forks/tungstenite-rs", rev 
 url = { version = "=2.5.8" }
 
 [dev-dependencies]
-anyhow = { version = "=1.0.102" }
+anyhow = { version = "=1.0.103" }
 assert_matches = { version = "=1.5.0" }
 pretty_assertions = { version = "=1.4.1" }
 reqwest = { version = "=0.12.28" }

@@ -89,7 +89,7 @@ Package and tool evidence from local commands at research time on 2026-06-16:
 
 At scaffold time and later pin-refresh passes, version checks were re-run and
 exact stable versions were hard-pinned in `ui/package.json`,
-`ui/package-lock.json`, `src-tauri/Cargo.toml`, and the workspace
+root `package-lock.json`, `src-tauri/Cargo.toml`, and the workspace
 `Cargo.lock`.
 Treat the table above as historical research evidence. Current dependency
 truth lives in the manifests and lockfiles, with source evidence routed through
@@ -402,7 +402,7 @@ The scaffold used the then-current stable equivalent of:
 
 ```bash
 npm create vite@latest ui -- --template svelte-ts
-npm --prefix ui install --save-exact
+npm install --save-exact --workspace runhaven-ui
 ```
 
 Tauri was added manually so the repo keeps the planned `ui/` plus

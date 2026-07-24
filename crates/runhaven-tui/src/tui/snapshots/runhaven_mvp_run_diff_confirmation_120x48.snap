@@ -3,7 +3,7 @@ source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
 expression: rendered
 ---
 
-  RunHaven v0.5.0  Run review
+  RunHaven v0.7.0  Run review
   Run ID  run-20260629-002  Profile  codex
   Git         Git: changed=true before=1234567 after=89abcde files=3
   Fallback    runhaven runs show run-20260629-002

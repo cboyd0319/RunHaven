@@ -33,7 +33,7 @@ login is never read or mounted.
 | Surface | Status | Use it for |
 | --- | --- | --- |
 | CLI | `v0.7.0` candidate; the `v0.5.0` command contract remains complete | Automation, explicit commands, recovery, diagnostics, and the stable backend for every UI. |
-| Terminal UI | Archived, not shipped | Source is parked outside the release workspace until this surface is explicitly reopened and re-audited. |
+| Terminal UI | Active workspace surface, not yet linked into the release binary | Comprehensive terminal workflows over the shared core, with the exact vendored Codex dependency graph isolated behind `runhaven-tui`. |
 | Desktop app | `v0.7.0` coworker-test candidate, primary easy path | Guided setup and recovery, in-app sign-in, secure launch, filtered run history, bounded logs and input, run control, worktree review, image repair, cleanup, and System Check. See the [desktop app guide](docs/DESKTOP_APP.md). |
 
 ## Why RunHaven
@@ -78,7 +78,7 @@ Contributors can instead start Apple `container` and install from this checkout:
 
 ```bash
 container system start
-cargo install --path crates/runhaven --locked
+scripts/cargo.sh install --path crates/runhaven --locked
 ```
 
 Run the non-mutating setup guide:
@@ -102,8 +102,9 @@ runhaven plan claude
 runhaven run claude
 ```
 
-Running `runhaven` without a subcommand prints CLI help. The archived terminal
-UI is not linked into release binaries.
+Running `runhaven` without a subcommand currently prints CLI help. The
+comprehensive terminal interface is an active workspace unit in
+`crates/runhaven-tui`; it is not yet linked into the default release binary.
 
 Use the smallest project directory the agent needs. RunHaven mounts that
 directory at `/workspace`, not your whole home directory. See
@@ -184,16 +185,17 @@ erase a saved sign-in.
 
 RunHaven is alpha/pre-release. `v0.5.0` was the CLI-only release; `v0.7.0` is
 the current CLI plus desktop coworker-test candidate.
-This checkout keeps the Codex-derived TUI source as an archived reference, but
-it is outside the release workspace and binaries. The Tauri/React desktop shell is
-alpha and is now the primary easy path: it covers guided setup recovery,
+This checkout keeps the comprehensive Codex-derived TUI as a product surface,
+with its pinned dependency graph isolated behind the `runhaven-tui` workspace
+unit. The Tauri/React desktop shell is alpha and is now the primary easy
+path: it covers guided setup recovery,
 sign-in, reviewed launch, filtered run history, sanitized live status, bounded
 output and input, stop, hard stop, repair, worktree review, image repair,
 network cleanup, and secret-free System Check. Saved-state reset remains
 CLI-only.
 
-The roadmap now treats the CLI as the complete technical surface, the archived
-TUI as future work requiring a fresh audit, and the desktop app as the easiest path
+The roadmap treats the CLI, TUI, and desktop app as distinct product surfaces,
+with the desktop app as the easiest current path
 (full detail in [ROADMAP.md](docs/ROADMAP.md) and the
 [release plan](docs/V1_RELEASE_PLAN.md)):
 
@@ -203,8 +205,8 @@ TUI as future work requiring a fresh audit, and the desktop app as the easiest p
 - **Runtime and security hardening:** completed slices are recorded in the
   roadmap and state files; keep runtime evidence current when the boundary is
   touched.
-- **Archived terminal UI:** its source remains for future work, but it is not a
-  workspace member or release dependency and `runhaven` does not launch it.
+- **Terminal UI:** its comprehensive source and focused test suite are active in
+  the workspace; `runhaven` does not yet launch it from the default binary.
 - **Remaining non-UI scope and CLI public release:** promote one design-first
   item at a time without weakening CLI semantics or default safety.
 - **`v0.7.0` coworker-test candidate:** the native macOS app is the easiest
@@ -238,29 +240,34 @@ Use the smallest doc that matches the question:
 ## Development
 
 Agent-assisted work starts from three files only: [AGENTS.md](AGENTS.md),
-[feature_list.json](feature_list.json), and
-[current-state.md](current-state.md). Load the harness docs only when a task
-touches that surface.
+[PROGRESS.md](PROGRESS.md), and [feature_list.json](feature_list.json), in that
+order. Load the harness docs only when a task touches that surface.
 
 Use the smallest relevant check for a change:
 
 ```bash
-cargo fmt --check
-cargo test --locked
-cargo clippy --all-targets -- -D warnings
-cargo run --locked --bin runhaven-check-pins
-npm --prefix ui run check
-npm --prefix ui test
-npm --prefix ui run test:e2e
+scripts/python.sh scripts/check_harness_state.py
+scripts/python.sh scripts/test_harness_state.py
+scripts/python.sh scripts/test_file_limits.py
+scripts/check-repo-structure.sh
+scripts/cargo.sh fmt --check
+scripts/cargo.sh test --workspace --locked
+scripts/cargo.sh clippy --workspace --all-targets --locked -- -D warnings
+scripts/cargo.sh run --locked --bin runhaven-check-pins
+npm run check
+npm test
+npm run test:e2e
 git diff --check
 ```
 
-Full local harness verification is `./init.sh`. Opt-in Apple `container` runtime
+The session baseline is `./init.sh`; full local verification is
+`scripts/verify-all.sh`. Opt-in Apple `container` runtime
 smokes are `scripts/apple_container_smoke.sh` (add `--with-provider` for the
 egress checks). Docs-only changes use the docs checks from
 [the verification matrix](docs/harness/feedback/verification-matrix.md); runtime,
 security-boundary, image, or install-flow changes need focused tests plus the
-relevant Apple `container` smokes.
+relevant Apple `container` smokes. This private pre-alpha project has no CI or
+GitHub Actions workload.
 
 ## License
 

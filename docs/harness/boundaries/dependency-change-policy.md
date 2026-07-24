@@ -6,13 +6,12 @@ Status: live
 
 Default to the latest stable or supported release. Do not guess. Verify the
 current date and a current primary source before changing package, CLI, vendor
-API, workflow action, Rust, Cargo crate, Node, npm, or security-tool versions.
+API, Rust, Cargo crate, Node, npm, or security-tool versions.
 
-Use exact pins for direct package dependencies and immutable commit SHAs for
-external GitHub Actions. If the newest stable release has a known reachable
+Use exact pins for direct package dependencies. If the newest stable release has a known reachable
 security issue, pin the newest supported clean release and record the reason.
-Use `pins.toml` for reviewed pin rationale when a dependency, image base, or
-Action reference is governed by the project pin ledger.
+Use `pins.toml` for reviewed pin rationale when a dependency or image base is
+governed by the project pin ledger.
 
 ## Decision Order
 
@@ -32,16 +31,5 @@ Record:
 - Pin or lockfile update.
 - Focused test, build, audit, or smoke command.
 - Rust 1.97.0, Cargo lockfile, and macOS 26+ runtime impact.
-- macOS 26+ contributor-check impact. Do not add Windows or Linux dependency,
-  CI, script, or command-construction surfaces.
-
-## GitHub Actions
-
-External Actions must use full-length commit SHAs plus version comments:
-
-```yaml
-uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-```
-
-Refresh pins only after verifying the upstream tag or release from the action
-repository.
+- macOS 26+ contributor-check impact. Keep dependency, script, and command
+  construction surfaces on the supported host target.

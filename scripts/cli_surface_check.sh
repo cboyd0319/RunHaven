@@ -125,7 +125,7 @@ case "$(uname -s)" in Darwin) ;; *) fail_hard "requires macOS" ;; esac
 case "$(uname -m)" in arm64) ;; *) fail_hard "requires Apple silicon" ;; esac
 
 step "build CLI"
-cargo build --locked
+"$REPO_ROOT/scripts/cargo.sh" build --locked
 [ -x "$RUNHAVEN_BIN" ] || fail_hard "runhaven binary not found at $RUNHAVEN_BIN"
 
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/runhaven-cli-surface.XXXXXX")"

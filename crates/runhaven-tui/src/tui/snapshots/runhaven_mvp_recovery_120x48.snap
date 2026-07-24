@@ -3,7 +3,7 @@ source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
 expression: rendered
 ---
 
-  RunHaven v0.5.0  Run finished
+  RunHaven v0.7.0  Run finished
   The terminal is back in RunHaven.
 
   Agent       codex

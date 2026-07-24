@@ -3,7 +3,7 @@ source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
 expression: rendered
 ---
 
-  RunHaven v0.5.0  Step 4/4: Confirm launch
+  RunHaven v0.7.0  Step 4/4: Confirm launch
   Final check before launch.
 
   Agent       shell

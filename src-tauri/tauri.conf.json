@@ -4,7 +4,7 @@
   "version": "0.7.0",
   "identifier": "dev.runhaven.desktop",
   "build": {
-    "beforeBuildCommand": "npm --prefix ../ui run build",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../ui/dist"
   },
   "app": {

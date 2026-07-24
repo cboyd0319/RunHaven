@@ -7,7 +7,7 @@ publish = false
 readme = "README.md"
 
 [dependencies]
-anyhow = { version = "=1.0.102" }
+anyhow = { version = "=1.0.103" }
 chrono = { version = "=0.4.45", features = ["serde"] }
 codex-file-system = { path = "../file-system" }
 codex-protocol = { path = "../protocol" }

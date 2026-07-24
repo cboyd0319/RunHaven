@@ -118,7 +118,7 @@ Update only the files needed for the changed pin surface:
 - `docs/PINNING.md`, `README.md`, `docs/INSTALLATION.md`, and other product
   docs with explicit old version text.
 - `docs/harness/evidence/evidence-log.md`: compact evidence row for the update.
-- `current-state.md`: latest verified work, trusted verification, blockers, and
+- `PROGRESS.md`: latest verified work, trusted verification, blockers, and
   next step.
 
 If the update changes default security posture, also review:
@@ -133,32 +133,33 @@ If the update changes default security posture, also review:
 Run the smallest focused checks first, then the release-level checks:
 
 ```bash
-cargo fmt --check
-cargo test --locked
-cargo clippy --all-targets -- -D warnings
-cargo run --locked --bin runhaven-check-pins
-cargo build --locked
+scripts/cargo.sh fmt --check
+scripts/cargo.sh test --locked
+scripts/cargo.sh clippy --all-targets -- -D warnings
+scripts/cargo.sh run --locked --bin runhaven-check-pins
+scripts/cargo.sh build --locked
 ```
 
 Then run the live Apple `container` checks on macOS 26+ Apple silicon:
 
 ```bash
-cargo run --locked --bin runhaven -- doctor
+scripts/cargo.sh run --locked --bin runhaven -- doctor
 scripts/apple_container_smoke.sh
 scripts/apple_container_smoke.sh --with-provider
 scripts/apple_container_smoke.sh --with-ssh
 ```
 
-`--with-ssh` currently proves the fail-closed guard. Re-enable SSH forwarding
-only after a no-secret smoke proves that a non-root guest can reach a
-disposable empty agent and `ssh-add -l` returns the no-identities status.
-Do not treat a version bump by itself as SSH evidence.
+`--with-ssh` proves the explicit socket-forwarding path. The non-root guest must
+reach the default disposable empty agent and `ssh-add -l` must return the
+no-identities status. A private unusable socket must fail safely. Do not treat a
+version bump by itself as SSH evidence.
 
 For docs and harness updates, also run:
 
 ```bash
-python3 -m json.tool feature_list.json
-python3 -m json.tool docs/harness/manifest.json
+scripts/python.sh -m json.tool feature_list.json
+scripts/python.sh scripts/check_harness_state.py
+scripts/check-repo-structure.sh
 git diff --check
 ```
 
@@ -170,9 +171,9 @@ docs are ready.
 After every live smoke, verify local state:
 
 ```bash
-cargo run --locked --bin runhaven -- runs active
-cargo run --locked --bin runhaven -- state list
-cargo run --locked --bin runhaven -- network list
+scripts/cargo.sh run --locked --bin runhaven -- runs active
+scripts/cargo.sh run --locked --bin runhaven -- state list
+scripts/cargo.sh run --locked --bin runhaven -- network list
 container list
 container volume list
 container network list
@@ -189,8 +190,10 @@ If the new runtime fails verification or weakens the security boundary:
 
 1. Stop the update and keep the working tree or branch for diagnosis.
 2. Restore the last reviewed pins and docs with a reviewed revert commit.
-3. Re-run `cargo test --locked`, `cargo run --locked --bin runhaven-check-pins`,
-   `cargo run --locked --bin runhaven -- doctor`, and the relevant smoke script.
+3. Re-run `scripts/cargo.sh test --locked`,
+   `scripts/cargo.sh run --locked --bin runhaven-check-pins`,
+   `scripts/cargo.sh run --locked --bin runhaven -- doctor`, and the relevant
+   smoke script.
 4. Record the failed target version, observed failure, risk, and recovery action
    in `docs/harness/evidence/evidence-log.md`.
 5. If any artifact was published, get maintainer approval before yanking or

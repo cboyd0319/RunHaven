@@ -60,7 +60,7 @@ that touches one is not done until its proving check passes.
 | Provider egress deny | A provider run blocks a non-allowlisted host and explains the safe next step | Provider egress smoke (`scripts/apple_container_smoke.sh --with-provider`) |
 | Provider network cleanup | The managed internal network and host CONNECT proxy are torn down after the run, leaving no RunHaven network behind | `scripts/apple_container_smoke.sh --with-provider` cleanup assertion |
 | Worktree fail-closed | `run --worktree` on a dirty source repo refuses before creating a branch or worktree and prints recovery choices | Worktree planner/CLI tests |
-| SSH fail-closed | `--ssh` refuses before launch with no raw key mount and no root default user | Planner/CLI `--ssh` tests; `scripts/apple_container_smoke.sh --with-ssh` when changing the guard |
+| SSH-agent forwarding | Explicit warned `--ssh` forwards only the agent socket to the non-root guest; raw keys are never mounted and unusable private sockets fail safely | Planner/CLI `--ssh` tests; `scripts/apple_container_smoke.sh --with-ssh` when changing the boundary |
 | State volume lock | Concurrent runs cannot attach the same named agent-home volume | State lock tests |
 | WebView capability scope | Tauri capabilities grant only RunHaven `allow-*` command permissions plus vetted plugin permissions; no host bridge (`shell`, `fs`, `http`, `process`, `os`) | `capability_guard` test in `src-tauri` |
 
@@ -75,6 +75,5 @@ Apple `container` smoke that proves the claimed mount, user, network, or
 filesystem behavior.
 
 For changes to mounts, credentials, network egress, or Tauri capabilities, run
-an independent `evaluator-rubric.md` pass from clean context rather than
-self-review. Self-review on security-boundary changes tends to approve its own
-assumptions.
+a fresh-context adversarial review against the acceptance contract and runnable
+evidence. Do not use a composite score as proof.

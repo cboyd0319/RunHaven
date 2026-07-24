@@ -11,7 +11,6 @@
 //! recent killed span.
 
 use crate::key_hint::KeyBindingListExt;
-use crate::key_hint::is_altgr;
 use crate::keymap::EditorKeymap;
 use crate::keymap::RuntimeKeymap;
 use crate::keymap::VimNormalKeymap;
@@ -510,19 +509,6 @@ impl TextArea {
 
         if keymap.delete_backward_word.is_pressed(event) {
             self.delete_backward_word();
-            return;
-        }
-
-        // Windows AltGr generates ALT|CONTROL. Preserve typed characters for AltGr users
-        // unless a specific shortcut already matched above.
-        if let KeyEvent {
-            code: KeyCode::Char(c),
-            modifiers,
-            ..
-        } = event
-            && is_altgr(modifiers)
-        {
-            self.insert_str(&c.to_string());
             return;
         }
 
@@ -3198,18 +3184,6 @@ mod tests {
         t.input(KeyEvent::new(KeyCode::Char('h'), KeyModifiers::CONTROL));
         assert_eq!(t.text(), "124");
         assert_eq!(t.cursor(), 3);
-    }
-
-    #[cfg_attr(not(windows), ignore = "AltGr modifier only applies on Windows")]
-    #[test]
-    fn altgr_ctrl_alt_char_inserts_literal() {
-        let mut t = ta_with("");
-        t.input(KeyEvent::new(
-            KeyCode::Char('c'),
-            KeyModifiers::CONTROL | KeyModifiers::ALT,
-        ));
-        assert_eq!(t.text(), "c");
-        assert_eq!(t.cursor(), 1);
     }
 
     #[test]

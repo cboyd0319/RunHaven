@@ -3,7 +3,7 @@ source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
 expression: rendered
 ---
 
-  RunHaven v0.5.0  Step 1/4: Choose workspace
+  RunHaven v0.7.0  Step 1/4: Choose workspace
   Safety    /workspace only. Host home not mounted.
   Credentials not mounted by default
   Selected    Current directory

@@ -118,7 +118,7 @@ main() {
     cd "$root"
     RUNHAVEN_BUILD_ID="$build_id" \
       CARGO_TARGET_DIR="$root/target" \
-      "$root/ui/node_modules/.bin/tauri" build \
+      npm --prefix "$root" --workspace runhaven-ui run tauri -- build \
       --config src-tauri/tauri.conf.json \
       --config src-tauri/tauri.dev.conf.json \
       --debug \

@@ -3,13 +3,18 @@
   "version": "0.7.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "26.5.0",
+    "npm": "11.17.0"
+  },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "check": "tsc --noEmit",
+    "check": "tsc --build ../tsconfig.json",
     "test": "vitest run src/test",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --grep \"New session uses wide windows\"",
     "tauri": "tauri",
     "tauri:dev": "cd .. && ./scripts/dev-with-logs.sh",
     "tauri:dev:log": "cd .. && ./scripts/dev-with-logs.sh",

@@ -6,14 +6,10 @@ use rand::Rng;
 const ANNOUNCEMENT_TIP_URL: &str =
     "https://raw.githubusercontent.com/openai/codex/main/announcement_tip.toml";
 
-const IS_MACOS: bool = cfg!(target_os = "macos");
-const IS_WINDOWS: bool = cfg!(target_os = "windows");
-
 const APP_TOOLTIP: &str = "Try the **Codex App**. Run 'codex app' or visit https://chatgpt.com/codex?app-landing-page=true";
 const FAST_TOOLTIP: &str =
     "*New* Use **/fast** to enable our fastest inference with increased plan usage.";
 const OTHER_TOOLTIP: &str = "*New* Build faster with the **Codex App**. Run 'codex app' or visit https://chatgpt.com/codex?app-landing-page=true";
-const OTHER_TOOLTIP_NON_MAC: &str = "*New* Build faster with Codex.";
 const FREE_GO_TOOLTIP: &str =
     "*New* For a limited time, Codex is included in your plan for free – let’s build together.";
 
@@ -23,15 +19,7 @@ lazy_static! {
     static ref TOOLTIPS: Vec<&'static str> = RAW_TOOLTIPS
         .lines()
         .map(str::trim)
-        .filter(|line| {
-            if line.is_empty() || line.starts_with('#') {
-                return false;
-            }
-            if !IS_MACOS && !IS_WINDOWS && line.contains("codex app") {
-                return false;
-            }
-            true
-        })
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .collect();
     static ref ALL_TOOLTIPS: Vec<&'static str> = {
         let mut tips = Vec::new();
@@ -74,12 +62,7 @@ pub(crate) fn get_tooltip(plan: Option<PlanType>, fast_mode_enabled: bool) -> Op
                 return Some(FREE_GO_TOOLTIP.to_string());
             }
             _ => {
-                let tooltip = if IS_MACOS {
-                    OTHER_TOOLTIP
-                } else {
-                    OTHER_TOOLTIP_NON_MAC
-                };
-                return Some(tooltip.to_string());
+                return Some(OTHER_TOOLTIP.to_string());
             }
         }
     }
@@ -88,11 +71,7 @@ pub(crate) fn get_tooltip(plan: Option<PlanType>, fast_mode_enabled: bool) -> Op
 }
 
 fn paid_app_tooltip() -> Option<&'static str> {
-    if IS_MACOS || IS_WINDOWS {
-        Some(APP_TOOLTIP)
-    } else {
-        None
-    }
+    Some(APP_TOOLTIP)
 }
 
 /// Paid users spend most startup sessions in a dedicated promo slot rather than the
@@ -179,23 +158,14 @@ pub(crate) mod announcement {
     #[derive(Debug, Deserialize, Copy, Clone, PartialEq, Eq)]
     #[serde(rename_all = "lowercase")]
     enum TargetOs {
-        Linux,
         Macos,
-        Windows,
         #[serde(other)]
         Unknown,
     }
 
     impl TargetOs {
         const fn current() -> Self {
-            if cfg!(target_os = "macos") {
-                Self::Macos
-            } else if cfg!(target_os = "windows") {
-                Self::Windows
-            } else {
-                // Codex currently publishes CLI builds for macOS, Windows, and Linux.
-                Self::Linux
-            }
+            Self::Macos
         }
     }
 
@@ -456,7 +426,7 @@ from_date = "2000-01-01"
 # version_regex matches against the CLI version (env!("CARGO_PKG_VERSION")); omit to apply to all versions.
 # target_app specify which app should display the announcement (cli, vsce, ...).
 # target_plan_types optionally restricts the announcement to plan types like ["plus", "pro"].
-# target_oses optionally restricts the announcement to operating systems like ["macos", "windows"].
+# target_oses optionally restricts the announcement to macOS.
 
 [[announcements]]
 content = "Welcome to Codex! Check out the new onboarding flow."
@@ -529,27 +499,12 @@ target_plan_types = ["prp"]
     fn announcement_tip_toml_matches_target_os() {
         let toml = r#"
 [[announcements]]
-content = "linux announcement"
-target_oses = ["linux"]
-
-[[announcements]]
 content = "macos announcement"
 target_oses = ["macos"]
-
-[[announcements]]
-content = "windows announcement"
-target_oses = ["windows"]
         "#;
 
-        let expected = if cfg!(target_os = "macos") {
-            "macos announcement"
-        } else if cfg!(target_os = "windows") {
-            "windows announcement"
-        } else {
-            "linux announcement"
-        };
         assert_eq!(
-            Some(expected.to_string()),
+            Some("macos announcement".to_string()),
             parse_announcement_tip_toml(toml, /*plan*/ None)
         );
     }

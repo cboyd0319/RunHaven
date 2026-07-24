@@ -1,6 +1,6 @@
 # Harness Sources
 
-Reviewed: 2026-06-27
+Reviewed: 2026-07-14
 
 Refresh these sources before major harness redesigns because agent tooling,
 platform support, and packaging practice change over time.
@@ -11,8 +11,8 @@ platform support, and packaging practice change over time.
   <https://openai.com/index/harness-engineering/>
 - Walking Labs, Learn Harness Engineering:
   <https://walkinglabs.github.io/learn-harness-engineering/en/>
-- Local Learn Harness Engineering resource tree:
-  `Learn Harness Engineering public resources`
+- Walking Labs source repository:
+  <https://github.com/walkinglabs/learn-harness-engineering>
 - AGENTS.md open format:
   <https://agents.md/>
 - Project research ledger:
@@ -21,10 +21,11 @@ platform support, and packaging practice change over time.
 ## Local Adaptation
 
 - Keep the root instruction file short.
-- Keep startup context to `AGENTS.md`, `feature_list.json`, and
-  `current-state.md`.
+- Keep startup context to `AGENTS.md`, `PROGRESS.md`, and
+  `feature_list.json`.
 - Load harness docs on demand.
 - Track current feature status and handoff in compact files.
 - Keep verification commands explicit and runnable.
 - Map external templates onto existing RunHaven owners before adding files.
-- Treat structural scores as guidance, not proof of real task success.
+- Reject composite structural scores as proof of real task success. Use
+  deterministic contract checks and representative outcomes.

@@ -219,7 +219,6 @@ if env_bool_enabled RUNHAVEN_GUI_LIVE_REAL_AGENT; then
   validate_real_agent_config
 fi
 
-require_command cargo
 require_command container
 require_command env
 require_command grep
@@ -238,12 +237,12 @@ case "$(uname -m)" in
 esac
 
 step "build CLI"
-run_bounded "build CLI" cargo build --locked --bin runhaven
+run_bounded "build CLI" "$REPO_ROOT/scripts/cargo.sh" build --locked --bin runhaven
 [ -x "$RUNHAVEN_BIN" ] || fail "built runhaven binary not found; check RUNHAVEN_BIN or target/debug/runhaven"
 
 if [ "$SKIP_TAURI_BUILD" -eq 0 ]; then
   step "build Tauri debug shell"
-  run_bounded "build Tauri debug shell" npm --prefix ui run tauri:build
+  run_bounded "build Tauri debug shell" npm run tauri:build
 fi
 
 step "check container runtime and shell image"
@@ -280,7 +279,7 @@ else
 fi
 
 step "exercise live Tauri multi-session input path"
-run_bounded "live Tauri two-session shell smoke" cargo test -p runhaven-tauri --locked \
+run_bounded "live Tauri two-session shell smoke" "$REPO_ROOT/scripts/cargo.sh" test -p runhaven-tauri --locked \
   managed_session_live_smoke_isolates_two_sessions \
   -- --ignored --test-threads=1
 
@@ -291,7 +290,7 @@ if [ "$RUN_REAL_AGENT" -eq 1 ]; then
       RUNHAVEN_GUI_LIVE_REAL_AGENT=1 \
       RUNHAVEN_GUI_LIVE_AGENT="$LIVE_AGENT" \
       RUNHAVEN_GUI_LIVE_AGENT_API_KEY_ENV="$LIVE_AGENT_API_KEY_ENV" \
-      cargo test -p runhaven-tauri --locked \
+      "$REPO_ROOT/scripts/cargo.sh" test -p runhaven-tauri --locked \
       managed_session_live_smoke_launches_real_agent_profile \
       -- --ignored --test-threads=1
   REAL_AGENT_STATUS="passed for $LIVE_AGENT"

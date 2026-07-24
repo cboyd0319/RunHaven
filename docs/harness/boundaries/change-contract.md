@@ -1,7 +1,7 @@
 # Change Contract
 
 Use this for non-trivial work before editing. Keep one active objective unless
-`multi-agent-orchestration.md` names separate owners and files.
+the user explicitly authorizes isolated parallel ownership.
 
 ## Problem
 
@@ -19,7 +19,7 @@ In scope:
 Non-goals:
 
 - Unrelated cleanup, refactors, dependency changes, or workflow automation.
-- Unsupported Windows or Linux runtime/contributor verification.
+- Runtime or contributor verification outside macOS 26+ on Apple silicon.
 - Host home, raw SSH key, browser profile, cloud credential, or arbitrary env
   passthrough by default.
 - Credentialed vendor changes such as repository rename, release publishing,
@@ -102,7 +102,7 @@ or deletion in the same scope unless deferral is explicit, small, and recorded.
   focused docs.
 - File size, modularity, duplication, dependency use, and crate/component
   organization were considered for touched surfaces.
-- Relevant feature, current-state, evidence, and roadmap state agree.
+- Relevant feature, current progress, evidence, and roadmap state agree.
 
 ## Verification
 
@@ -134,13 +134,40 @@ Record the smallest safe rollback:
 - run the explicit RunHaven cleanup command for state, network, image, or
   worktree changes.
 
+### 2026-07-14 harness migration rollback record
+
+This migration is one atomic harness replacement, not a compatibility window.
+The old repository-local `.agents` skills, hosted workflow artifacts, hook
+installer, duplicated architecture facts, and unsupported platform projections
+are retired. `AGENTS.md`, `ARCHITECTURE.md`,
+`repository-structure-policy.json`, `PROGRESS.md`, and `feature_list.json` are
+the new owner map. `CLAUDE.md` and `.github/copilot-instructions.md` remain only
+thin loader projections. `scripts/python.sh` and `scripts/cargo.sh` are thin
+runtime-pin adapters over `.python-version` and `rust-toolchain.toml`.
+
+Do not partially restore an old entrypoint or mix old and new state owners. The
+focused rollback set is the eventual single migration commit: after an
+authorized checkpoint, revert that commit as a unit, rerun the prior documented
+baseline, and restore `PROGRESS.md` plus `feature_list.json` together. Before a
+checkpoint, preserve the dirty working tree and continue from the active
+`harness-final-canonical-review` state rather than destructively reverting user
+work.
+
+The checks that distinguish the new contract are
+`scripts/python.sh scripts/test_harness_state.py`,
+`scripts/python.sh scripts/test_file_limits.py`,
+`scripts/python.sh scripts/test_repo_layout.py`,
+`scripts/check-repo-structure.sh`, `./init.sh`, and
+`scripts/verify-all.sh`. A rollback is not complete until the selected baseline
+passes and current state records the resulting owner map and remaining gaps.
+
 ## Platform Impact
 
 Record whether the change affects Rust 1.97.0, Cargo dependency resolution,
-macOS 26+ runtime behavior, Apple silicon, Apple `container` 1.1.0, future
-hosted CI, or unsupported-platform guardrails.
+macOS 26+ runtime behavior, Apple silicon, Apple `container` 1.1.0, hosted
+automation, or unsupported-platform guardrails.
 
-Before changing platform floors, interpreter versions, future hosted-CI runner
-labels, Apple `container` assumptions, package pins, or image pins, record
+Before changing platform floors, interpreter versions, hosted-runner labels,
+Apple `container` assumptions, package pins, or image pins, record
 current primary-source evidence and the review date in `docs/RESEARCH.md` or
 `docs/harness/evidence/evidence-log.md`.

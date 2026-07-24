@@ -479,19 +479,6 @@ mod tests {
     }
 
     #[test]
-    fn test_center_truncate_truncates_long_windows_path() {
-        let sep = std::path::MAIN_SEPARATOR;
-        let path = format!(
-            "C:{sep}Users{sep}codex{sep}Projects{sep}super{sep}long{sep}windows{sep}path{sep}file.txt"
-        );
-        let truncated = center_truncate_path(&path, /*max_width*/ 36);
-
-        let expected = format!("C:{sep}Users{sep}codex{sep}…{sep}path{sep}file.txt");
-
-        assert_eq!(truncated, expected);
-    }
-
-    #[test]
     fn test_center_truncate_handles_long_segment() {
         let sep = std::path::MAIN_SEPARATOR;
         let path = format!("~{sep}supercalifragilisticexpialidocious");

@@ -2,7 +2,7 @@
 
 This roadmap records both completed foundation slices and remaining product
 direction. The live feature status and verification evidence are tracked in
-`feature_list.json`, `current-state.md`, and
+`feature_list.json`, `PROGRESS.md`, and
 `docs/harness/evidence/evidence-log.md`.
 
 RunHaven is alpha/pre-release. `v0.5.0` was the CLI-only release; `v0.7.0` is
@@ -32,7 +32,7 @@ The active release gap tracker lives in
 | `v0.5.0` | CLI-complete release: command set, docs, JSON/data decisions, runtime smokes, profile support tiers, diagnostics, cleanup, secure-easy defaults, and maintainable module boundaries are complete and verified. | Scope complete (`passing`); tag cut at release-readiness |
 | `v0.7.0` coworker candidate | CLI plus native desktop easy path with guided setup, reviewed launch, managed runs, recovery, cleanup, accessibility automation, and fail-closed release packaging. | Source candidate in final verification; signed/notarized artifact, clean-Mac, four-agent native OAuth, and manual VoiceOver proofs remain |
 | Runtime/security hardening | Re-verify the Apple `container` boundary whenever runs, provider egress, images, auth, records, or cleanup change. | Passing for completed local and live slices; keep evidence current when touched |
-| Terminal UI archive | Keep the TUI and vendored Codex source outside the active workspace and release binaries. | Archived; explicit product decision and fresh security review required to reopen |
+| Terminal UI integration | Preserve the comprehensive TUI as a product surface and integrate its pinned Codex graph without weakening shared runtime or security boundaries. | Source present; default-workspace dependency integration and focused macOS verification remain |
 | `v1.0.0` desktop release | Public first-class desktop release with signed/notarized artifacts, clean-Mac proof, current dependency/runtime evidence, and completed manual accessibility review. | Planned after the `v0.7.0` coworker-test cycle |
 
 Design rule for every phase: the secure path must be the easy path. Supported

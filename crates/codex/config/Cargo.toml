@@ -10,7 +10,7 @@ name = "generate-proto"
 path = "examples/generate-proto.rs"
 
 [dependencies]
-anyhow = { version = "=1.0.102" }
+anyhow = { version = "=1.0.103" }
 base64 = { version = "=0.22.1" }
 codex-execpolicy = { path = "../execpolicy" }
 codex-features = { path = "../features" }

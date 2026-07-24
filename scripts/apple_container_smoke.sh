@@ -80,7 +80,7 @@ case "$(uname -m)" in
 esac
 
 step "build CLI"
-cargo build --locked
+"$REPO_ROOT/scripts/cargo.sh" build --locked
 [ -x "$RUNHAVEN_BIN" ] || fail "runhaven binary not found at $RUNHAVEN_BIN"
 
 step "check container runtime and shell image"

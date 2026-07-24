@@ -7,7 +7,7 @@ vendoring strategy; the rendering patterns live in
 lives in [`ratatui-brand-graphics.md`](ratatui-brand-graphics.md). The Codex
 source capability map lives in
 [`codex-tui-capabilities.md`](codex-tui-capabilities.md). Durable decisions are
-logged in `current-state.md`; this doc is the working plan.
+logged in `PROGRESS.md`; this doc is the working plan.
 
 ## Purpose
 

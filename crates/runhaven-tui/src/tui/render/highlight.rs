@@ -882,8 +882,7 @@ mod tests {
 
     #[test]
     fn highlight_crlf_strips_carriage_return() {
-        // Windows-style \r\n line endings must not leave a trailing \r in
-        // span text — that would propagate into rendered code blocks.
+        // CRLF input must not leave a trailing carriage return in span text.
         let code = "fn main() {\r\n    println!(\"hi\");\r\n}\r\n";
         let lines = highlight_code_to_lines(code, "rust");
         for (i, line) in lines.iter().enumerate() {

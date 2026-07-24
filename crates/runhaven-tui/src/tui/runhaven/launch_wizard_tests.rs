@@ -126,7 +126,7 @@ fn plan(name: &str) -> LaunchPlanData {
             name: Some("runhaven-provider".to_string()),
             summary: "provider allowlist".to_string(),
             provider_allowed_hosts: vec!["example.com".to_string()],
-            claude_auth_source: None,
+            api_key_broker_env: None,
         },
         boundary: LaunchBoundaryData {
             mounted_workspace: "/tmp/project -> /workspace".to_string(),

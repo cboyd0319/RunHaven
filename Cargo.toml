@@ -3,9 +3,10 @@ members = [
     "crates/runhaven",
     "crates/runhaven-cli",
     "crates/runhaven-core",
+    "crates/runhaven-tui",
     "src-tauri",
 ]
-exclude = ["crates/codex/*", "crates/codex/*/*", "crates/runhaven-tui"]
+exclude = ["crates/codex"]
 resolver = "3"
 
 [workspace.package]

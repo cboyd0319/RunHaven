@@ -3,13 +3,13 @@
 Last updated: 2026-06-27
 
 Status: historical durable release ladder plus release-quality gates. Current
-sequence is owned by `current-state.md` and `docs/ROADMAP.md`.
+sequence is owned by `PROGRESS.md` and `docs/ROADMAP.md`.
 
 > Sequencing update: the 2026-06-26 directive deferred GUI/UI work behind
 > runtime/security hardening, remaining non-UI scope, and a CLI-based public
-> release. The former terminal UI checkpoint is now archived outside the release
-> workspace because it is not part of the CLI plus desktop product and carried a
-> large unaudited dependency graph. The desktop design content below remains the
+> release. The comprehensive terminal UI remains a product surface, while its
+> exact pinned Codex dependencies are isolated behind the active
+> `runhaven-tui` workspace boundary. The desktop design content below remains the
 > active first-class release direction; the
 > `v1.0.0` label is no longer locked to that desktop release. Already-shipped
 > desktop slices stay complete and verified.
@@ -62,7 +62,7 @@ The `v0.5.0` CLI surface is:
   merge, and discard;
 - guarded state-volume and managed-network cleanup;
 - provider egress logs, `why` diagnostics, auth status/explain/log, and the
-  Codex API-key broker prototype.
+  Claude and Codex host-side API-key brokers.
 
 `v1.0.0` should be a first-class desktop release with that stable CLI
 foundation.
@@ -105,8 +105,9 @@ In scope for v1.0.0:
 - A public desktop release boundary replacing the alpha contract in
   user-facing docs after `v0.5.0`.
 - A first-class Tauri desktop app for the safe workflow listed above.
-- Archived terminal UI and Codex source may be reopened only through a separate
-  audited product decision; it is not a v1 release dependency.
+- The comprehensive terminal UI remains an active workspace product surface;
+  linking it from the default release binary remains a separate audited product
+  decision.
 - A stable CLI that shares the same planner, validators, run records, provider
   policy, auth broker metadata, and cleanup rules as the desktop app.
 - Narrow Tauri capabilities for every privileged operation.
@@ -127,7 +128,7 @@ In scope for v1.0.0:
 
 Out of scope for v1.0.0:
 
-- Windows or Linux runtime or contributor verification.
+- Runtime or contributor verification outside macOS 26+ on Apple silicon.
 - Docker, Docker Desktop, Docker Compose, devcontainers as an execution
   backend, or Apple `container machine` as the default execution boundary.
 - Managed Apple `container machine` workflows are not required for v1.0.0. Do
@@ -183,7 +184,7 @@ These apply to every `v0.5.0` and `v1.0.0` slice.
   dead code, stale docs, and stale harness state introduced by the work.
 - If unsure, stop and surface the uncertainty, or research current official
   documentation before implementing.
-- Keep `feature_list.json`, `current-state.md`, and focused harness docs aligned
+- Keep `feature_list.json`, `PROGRESS.md`, and focused harness docs aligned
   when active state, verification routing, or release scope changes.
 
 ## Audiences
@@ -208,7 +209,7 @@ Secondary users:
 
 Unsupported or intentionally limited users:
 
-- Windows, Linux, Intel Mac, cloud VM, and hosted CI users.
+- Linux, Intel Mac, cloud VM, and hosted CI users.
 - Users who need host-home developer environments, remote editor VMs, or
   persistent `container machine` workflows as the default beginner-safe
   boundary.
@@ -356,9 +357,8 @@ Unsupported or intentionally limited users:
 - Tauri command code, the frontend command adapter, and `App.svelte` are among
   the largest maintained files. First-class desktop work should split them by
   domain before adding many more controls.
-- Hosted CI is disabled during alpha/pre-release. v1 must either re-enable a
-  pinned macOS verification path or explicitly rely on recorded local macOS 26+
-  Apple silicon release evidence.
+- Release evidence comes from recorded local macOS 26+ Apple silicon gates;
+  this private project has no hosted CI.
 
 ## Milestones
 
@@ -381,7 +381,7 @@ Unsupported or intentionally limited users:
 Verification:
 
 ```bash
-cargo run --locked --bin runhaven-check-pins
+scripts/cargo.sh run --locked --bin runhaven-check-pins
 git diff --check
 ```
 
@@ -404,11 +404,11 @@ Also run JSON validation and a local Markdown link check.
 Verification:
 
 ```bash
-cargo fmt --check
-cargo test --locked
-cargo clippy --all-targets --locked -- -D warnings
-cargo run --locked --bin runhaven-check-pins
-cargo build --locked
+scripts/cargo.sh fmt --check
+scripts/cargo.sh test --locked
+scripts/cargo.sh clippy --all-targets --locked -- -D warnings
+scripts/cargo.sh run --locked --bin runhaven-check-pins
+scripts/cargo.sh build --locked
 scripts/apple_container_smoke.sh
 scripts/apple_container_smoke.sh --with-provider
 scripts/apple_container_smoke.sh --with-ssh
@@ -435,13 +435,13 @@ only where the support matrix claims verified provider/auth behavior.
 Verification:
 
 ```bash
-cargo fmt --check
-cargo test --workspace --locked
-cargo clippy --workspace --all-targets --locked -- -D warnings
-npm --prefix ui run check
-npm --prefix ui test
-npm --prefix ui run test:e2e
-npm --prefix ui run build
+scripts/cargo.sh fmt --check
+scripts/cargo.sh test --workspace --locked
+scripts/cargo.sh clippy --workspace --all-targets --locked -- -D warnings
+npm run check
+npm test
+npm run test:e2e
+npm run build
 git diff --check
 ```
 
@@ -460,13 +460,13 @@ git diff --check
 Verification:
 
 ```bash
-cargo fmt --check
-cargo test --workspace --locked
-cargo clippy --workspace --all-targets --locked -- -D warnings
-npm --prefix ui run check
-npm --prefix ui test
-npm --prefix ui run test:e2e
-npm --prefix ui run build
+scripts/cargo.sh fmt --check
+scripts/cargo.sh test --workspace --locked
+scripts/cargo.sh clippy --workspace --all-targets --locked -- -D warnings
+npm run check
+npm test
+npm run test:e2e
+npm run build
 scripts/apple_container_smoke.sh
 git diff --check
 ```
@@ -485,10 +485,10 @@ git diff --check
 Verification:
 
 ```bash
-cargo test --locked worktree
-cargo test --workspace --locked
-npm --prefix ui test
-npm --prefix ui run test:e2e
+scripts/cargo.sh test --locked worktree
+scripts/cargo.sh test --workspace --locked
+npm test
+npm run test:e2e
 git diff --check
 ```
 
@@ -506,11 +506,11 @@ git diff --check
 Verification:
 
 ```bash
-cargo test --locked
-cargo test --workspace --locked
-npm --prefix ui run check
-npm --prefix ui test
-npm --prefix ui run test:e2e
+scripts/cargo.sh test --locked
+scripts/cargo.sh test --workspace --locked
+npm run check
+npm test
+npm run test:e2e
 git diff --check
 ```
 
@@ -530,13 +530,13 @@ git diff --check
 Verification:
 
 ```bash
-cargo run --locked --bin runhaven -- doctor
+scripts/cargo.sh run --locked --bin runhaven -- doctor
 scripts/apple_container_smoke.sh
 scripts/apple_container_smoke.sh --with-provider
 scripts/apple_container_smoke.sh --with-ssh
-cargo run --locked --bin runhaven -- runs active
-cargo run --locked --bin runhaven -- network list
-cargo run --locked --bin runhaven -- state list
+scripts/cargo.sh run --locked --bin runhaven -- runs active
+scripts/cargo.sh run --locked --bin runhaven -- network list
+scripts/cargo.sh run --locked --bin runhaven -- state list
 container list
 container volume list
 container network list
@@ -561,11 +561,11 @@ container network list
 Example verification:
 
 ```bash
-cargo run --locked --bin runhaven -- image build claude --dry-run
-cargo run --locked --bin runhaven -- image build codex --dry-run
-cargo run --locked --bin runhaven -- image build antigravity --dry-run
-cargo run --locked --bin runhaven -- image build copilot --dry-run
-cargo run --locked --bin runhaven -- image doctor
+scripts/cargo.sh run --locked --bin runhaven -- image build claude --dry-run
+scripts/cargo.sh run --locked --bin runhaven -- image build codex --dry-run
+scripts/cargo.sh run --locked --bin runhaven -- image build antigravity --dry-run
+scripts/cargo.sh run --locked --bin runhaven -- image build copilot --dry-run
+scripts/cargo.sh run --locked --bin runhaven -- image doctor
 ```
 
 Run live profile smokes only with disposable credentials and recorded scope.
@@ -585,8 +585,8 @@ Run live profile smokes only with disposable credentials and recorded scope.
 Focused verification:
 
 ```bash
-cargo test --locked
-cargo clippy --all-targets -- -D warnings
+scripts/cargo.sh test --locked
+scripts/cargo.sh clippy --all-targets -- -D warnings
 git diff --check
 ```
 
@@ -608,10 +608,10 @@ Verification:
 
 ```bash
 ./init.sh
-cargo run --locked --bin runhaven-check-pins
-cargo build --locked
-npm --prefix ui run tauri:build
-npm --prefix ui run tauri:bundle
+scripts/cargo.sh run --locked --bin runhaven-check-pins
+scripts/cargo.sh build --locked
+npm run tauri:build
+npm run tauri:bundle
 git status --short --branch
 git diff --check
 ```
@@ -638,7 +638,7 @@ bundle metadata, signature, stapled ticket, and Gatekeeper acceptance.
 - Run a representative real-agent task set before making product effectiveness
   claims. Keep claims limited to observed outcomes.
 - Record final evidence in `docs/harness/evidence/evidence-log.md`,
-  `feature_list.json`, and `current-state.md`.
+  `feature_list.json`, and `PROGRESS.md`.
 
 ## Release Gates
 
@@ -669,7 +669,7 @@ release notes with risk and follow-up:
 - Desktop app passes focused accessibility and minimum-window visual checks.
 - All changed JSON files validate.
 - Local Markdown link check passes.
-- `cargo run --locked --bin runhaven-check-pins` passes.
+- `scripts/cargo.sh run --locked --bin runhaven-check-pins` passes.
 - Direct dependencies, package manifests, runtime pins, and image package pins
   are exact-pinned to current stable versions from official sources, with
   transitive dependencies locked.

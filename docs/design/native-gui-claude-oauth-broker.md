@@ -437,7 +437,7 @@ to this item") binds only on a signed and notarized release build (Gate 0 F3): t
 `keychain-access-group` / `application-identifier` entitlement identity scopes the
 data-protection item, and an unsigned dev build lacks it, so notarizing the
 release is a security gate for that one claim. It is already tracked as a later
-release gate in `current-state.md`. Interim: the dev-build fallback (Section 1)
+release gate in `PROGRESS.md`. Interim: the dev-build fallback (Section 1)
 stands, with the isolation claim scoped to signed builds. The per-read
 user-presence gate (Hardening 1) does not depend on signing and applies on both.
 

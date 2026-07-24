@@ -46,8 +46,8 @@ notarized artifact and that artifact passes clean-Mac verification.
   blocks launch until the agent is ready.
 - Updated exact dependency pins and split active crate/UI ownership so the CLI,
   shared core, Tauri shell, and React frontend pass the repository structure
-  gates. The experimental TUI and vendored Codex source remain archived outside
-  the release workspace.
+  gates. The comprehensive TUI remains a product surface with a separately
+  pinned Codex dependency graph.
 - Updated the source-build toolchain to Rust 1.97.0, the current stable release.
 - Refreshed all five bundled images (one base plus four agents) and their
   `0.7.0` tags. The agent images pin
@@ -59,7 +59,7 @@ notarized artifact and that artifact passes clean-Mac verification.
 
 ### Current limitations
 
-- macOS 26+ on Apple silicon only. Windows and Linux are not supported.
+- macOS 26+ on Apple silicon is the supported host target.
 - The local Apple Development build passed its signing and launch checks. A
   shareable Developer ID build still requires paid signing and notarization.
   Gatekeeper, clean-Mac installation, four live native OAuth flows, and manual
@@ -103,9 +103,9 @@ way to run an agent is also the easy way.
 
 ### Notes and limitations
 
-- Pre-1.0, CLI only. The alpha desktop shell (`runhaven-tauri`) and a terminal UI
-  are deferred to a later phase.
-- macOS 26+ on Apple silicon only. Windows and Linux are not supported.
+- Pre-1.0 release artifacts currently center the CLI and alpha desktop shell;
+  the comprehensive terminal interface remains a separate product surface.
+- macOS 26+ on Apple silicon is the supported host target.
 - Bundled agent images are built locally with `runhaven image build <agent>`
   from the repo Containerfiles; there is no image registry. The CLI `0.5.0`
   bundles image templates tagged `0.1.0` (unchanged for this release).

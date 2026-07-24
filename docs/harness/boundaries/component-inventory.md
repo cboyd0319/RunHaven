@@ -1,7 +1,7 @@
 # Component Inventory
 
 Generated: 2026-06-16
-Reviewed: 2026-06-27
+Reviewed: 2026-07-14
 
 This file records the project boundaries the harness knows about. It is an
 inventory, not permission to mutate every nested surface.
@@ -17,7 +17,7 @@ For RunHaven, changing any of these changes effective agent behavior:
 - provider allowlists, proxy behavior, auth broker behavior, or SSH/env
   passthrough;
 - bundled image templates and image package locks;
-- verification entrypoints, future CI, pin checks, and harness sensors.
+- local verification entrypoints, pin checks, and harness sensors.
 
 Treat those changes as product changes with scope, verification, and rollback.
 
@@ -25,14 +25,15 @@ Treat those changes as product changes with scope, verification, and rollback.
 
 - Root Rust workspace: `Cargo.toml`.
 - Rust workspace members: `crates/runhaven`, `crates/runhaven-core`,
-  `crates/runhaven-cli`, `crates/runhaven-tui`, and `src-tauri`.
+  `crates/runhaven-cli`, `crates/runhaven-tui`, and `src-tauri`. The TUI's exact
+  pinned Codex dependencies are owned by an isolated nested vendored workspace.
 - Tauri desktop workspace member: `src-tauri/Cargo.toml`.
-- Svelte/Vite frontend package: `ui/package.json`.
+- React/Vite frontend package: `ui/package.json`.
 - Rust toolchain pin: `rust-toolchain.toml`.
 - Exact dependency and runtime pin ledger: `pins.toml`.
 - Rust workspace lockfile: `Cargo.lock`.
-- Frontend lockfile: `ui/package-lock.json`.
-- GitHub Actions CI disabled during alpha/pre-release; no active workflow files.
+- Frontend workspace lockfile: root `package-lock.json`.
+- No hosted CI or GitHub Actions workflows during private pre-alpha development.
 - Multiple nested image/package manifests under `images/`.
 - Harness operating layer under `docs/harness/`.
 
@@ -58,20 +59,20 @@ Treat those changes as product changes with scope, verification, and rollback.
 | Core runtime library | `crates/runhaven-core/src/` | Shared runtime truth for doctor checks, diagnostics, images, provider policy, records, runtime planning/control, support helpers, harness pin logic, and shared UI contracts. |
 | Terminal UI | `crates/runhaven-tui/src/tui/`, `docs/plans/tui-build-plan.md`, `docs/plans/tui-architecture.md`, `docs/plans/ratatui-brand-graphics.md` | First-class interactive terminal surface over shared core data. TUI widgets must not parse CLI prose or own policy/runtime truth; consume planner, records, diagnostics, doctor, provider, and active-run data modules. |
 | Desktop shell | `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `src-tauri/src/`, `src-tauri/capabilities/` | Tauri WebView is untrusted. Keep commands typed, capabilities explicit, and privileged behavior in Rust. No generic shell, filesystem, process, HTTP, or Apple `container` bridge. |
-| Frontend UI | `ui/package.json`, `ui/package-lock.json`, `ui/src/`, `ui/vite.config.ts` | Operational desktop UI. Keep secure defaults shortest, supported advanced choices warning-based, and command helpers typed. Frontend must not store secrets, raw logs, command lines, prompts, or workspace contents. |
+| Frontend UI | `ui/package.json`, `package-lock.json`, `ui/src/`, `ui/vite.config.ts` | Operational desktop UI. Keep secure defaults shortest, supported advanced choices warning-based, and command helpers typed. Frontend must not store secrets, raw logs, command lines, prompts, or workspace contents. |
 | Planning and validation | `crates/runhaven-core/src/runtime/plans/`, `crates/runhaven-core/src/support/validators.rs`, `crates/runhaven-core/src/support/project_checks.rs` | Security-sensitive command construction surface. Use exact subprocess argument lists and fail closed on unsafe inputs. |
 | Provider network runtime | `crates/runhaven-core/src/provider/egress.rs`, `crates/runhaven-core/src/provider/runtime.rs`, `crates/runhaven-core/src/provider/endpoints.rs`, `crates/runhaven-core/src/provider/observability.rs` | Provider egress is a core safety boundary. Changes need focused proxy/policy tests and, when behavior changes, Apple `container` smokes. |
-| Auth broker prototype | `crates/runhaven-core/src/provider/auth_broker.rs`, `crates/runhaven-core/src/provider/auth_broker/`, `crates/runhaven-core/src/provider/auth_profiles.rs`, `docs/AUTH_BROKER.md` | Secret-handling boundary. Do not read or persist raw credential values in diagnostics, plans, logs, or run records. |
+| Claude and Codex API-key brokers | `crates/runhaven-core/src/provider/auth_broker.rs`, `crates/runhaven-core/src/provider/auth_broker/`, `crates/runhaven-core/src/provider/auth_profiles.rs`, `docs/AUTH_BROKER.md` | Secret-handling boundary. Do not read or persist raw credential values in diagnostics, plans, logs, or run records. |
 | Secret-free diagnostics data | `crates/runhaven-core/src/diagnostics.rs`, `crates/runhaven-core/src/provider/observability.rs`, `crates/runhaven-core/src/provider/auth_profiles.rs` | Shared log readers/status payloads are presentation-neutral and must stay secret-free. CLI/Tauri/TUI renderers may adapt them but should not own the source data. |
 | Run launch, records, and active runs | `crates/runhaven-core/src/runtime/launch.rs`, `crates/runhaven-core/src/runtime/lock.rs`, `crates/runhaven-core/src/records/`, `crates/runhaven-core/src/runtime/active/`, `crates/runhaven-core/src/support/git.rs` | Launch behavior, state-volume locking, and observability must stay secret-free and avoid raw command lines, env values, prompts, request bodies, and token values. `records/` is the facade. |
 | Worktree lifecycle | `crates/runhaven-core/src/runtime/worktrees/` | Data-loss boundary. Keep source-checkout validation, RunHaven-owned branch checks, and explicit merge/discard recovery paths. |
 | Host readiness and repair UX | `crates/runhaven-core/src/doctor.rs`, `crates/runhaven-core/src/doctor/runtime_pins.rs`, `crates/runhaven-core/src/runtime/session_state.rs`, `crates/runhaven-core/src/runtime/state.rs`, `crates/runhaven-core/src/image/doctor.rs`, `crates/runhaven-core/src/runtime/network.rs`, `crates/runhaven-cli/src/setup.rs` | `doctor` is shared host-readiness data, not CLI presentation. Repair commands should preview before deletion, mutate only RunHaven-owned resources, and print exact next steps. |
 | Bundled images | `images/base/`, `images/claude/`, `images/codex/`, `images/antigravity/`, `images/copilot/`, `images/common/` | Keep image tags, npm packages, Debian snapshot inputs, non-root user setup, and source-digest labels pinned and reviewed. |
-| Pin policy | `crates/runhaven-core/src/harness/pins.rs`, `crates/runhaven/src/bin/runhaven-check-pins.rs`, `pins.toml`, `Cargo.toml`, `Cargo.lock`, `ui/package.json`, `ui/package-lock.json` | Pin checks are a release gate. Dependency changes and any future workflow or runner changes need primary-source evidence. |
-| Test suite | crate-local integration tests plus compiled module tests | Focused Rust tests cover CLI, plans, egress, images, state, worktrees, auth, Tauri commands, and repo policy. The Codex-vendored TUI contains dormant upstream test modules while their parent modules are staged; treat `cargo test -p runhaven-tui --locked -- --list` as the active TUI test registry. |
-| Harness operating layer | `AGENTS.md`, `.agents/skills/`, `feature_list.json`, `current-state.md`, `docs/harness/` | Keep the three startup files compact and load repo-local skills plus focused harness docs only on demand. |
+| Pin policy | `crates/runhaven-core/src/harness/pins.rs`, `crates/runhaven/src/bin/runhaven-check-pins.rs`, `pins.toml`, `Cargo.toml`, `Cargo.lock`, `ui/package.json`, `package-lock.json` | Pin checks are a release gate. Dependency changes need primary-source evidence. |
+| Test suite | crate-local integration tests plus compiled module tests | Focused Rust tests cover CLI, TUI, plans, egress, images, state, worktrees, auth, Tauri commands, and repo policy. The full Rust lane compiles and tests the TUI against its exact pinned vendored dependency graph. |
+| Harness operating layer | `AGENTS.md`, `PROGRESS.md`, `feature_list.json`, `init.sh`, `scripts/check_harness_state.py`, `scripts/check_file_limits.py`, `docs/harness/` | Keep the three startup files compact; load focused harness references only on demand; enforce state semantics and multidimensional file budgets locally. |
 | Human documentation | `README.md`, `SECURITY.md`, `CONTRIBUTING.md`, `docs/` | Docs are product surfaces. Keep macOS 26+ only support, Apple `container` 1.1.0, security boundaries, and command examples aligned with code. |
-| Project assets | `docs/assets/app-icon.png`, `ui/src/assets/app-icon.png`, `src-tauri/icons/`, `crates/runhaven-tui/assets/` | The selected full-square master owns public and in-app identity and produces the tracked Tauri desktop bundle assets. The WebView keeps one packaged copy. The deferred TUI's compile-time Cubby package stays with its crate owner. |
+| Project assets | `docs/assets/app-icon.png`, `ui/src/assets/app-icon.png`, `src-tauri/icons/`, `crates/runhaven-tui/assets/` | The selected full-square master owns public and in-app identity and produces the tracked Tauri desktop bundle assets. The WebView keeps one packaged copy. The TUI's compile-time Cubby package stays with its crate owner. |
 
 ## Routing Rules
 
@@ -87,8 +88,8 @@ Treat those changes as product changes with scope, verification, and rollback.
   is documented.
 - Product runtime and contributor verification support is macOS 26+ on Apple
   silicon with Rust 1.97.0 and Apple `container` 1.1.0.
-- Do not add Windows or Linux verification targets; unsupported platforms
-  should fail closed or be documented as unsupported.
+- Keep runtime and contributor verification on the macOS 26+ Apple-silicon
+  target.
 - Do not commit machine-local absolute paths, private checkout paths, secret
   values, raw Apple `container inspect` payloads, or long command output.
 

@@ -14,7 +14,7 @@ doctest = false
 workspace = true
 
 [dependencies]
-anyhow = { version = "=1.0.102" }
+anyhow = { version = "=1.0.103" }
 codex-config = { path = "../config" }
 codex-execpolicy = { path = "../execpolicy" }
 codex-model-provider-info = { path = "../model-provider-info" }

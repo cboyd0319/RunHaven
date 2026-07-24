@@ -1,0 +1,332 @@
+{
+  "schema_version": 1,
+  "source_limits": {
+    "counting": "physical_lines_including_blank_and_comment_lines",
+    "review_lines": 300,
+    "hard_lines": 500,
+    "review_bytes": 32768,
+    "hard_bytes": 65536
+  },
+  "included_extensions": [
+    ".cjs",
+    ".css",
+    ".hcl",
+    ".js",
+    ".json",
+    ".jsx",
+    ".mjs",
+    ".php",
+    ".py",
+    ".rs",
+    ".sh",
+    ".tf",
+    ".tfvars",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".yaml",
+    ".yml"
+  ],
+  "included_source_paths": [
+    "images/antigravity/Containerfile",
+    "images/antigravity/runhaven-antigravity-login",
+    "images/base/Containerfile",
+    "images/claude/Containerfile",
+    "images/claude/runhaven-claude-login",
+    "images/codex/Containerfile",
+    "images/copilot/Containerfile"
+  ],
+  "startup_context": {
+    "files": [
+      "AGENTS.md",
+      "PROGRESS.md",
+      "feature_list.json",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md"
+    ],
+    "state_reads": ["PROGRESS.md", "feature_list.json"],
+    "loading_hops": {
+      "AGENTS.md": 0,
+      "PROGRESS.md": 0,
+      "feature_list.json": 0,
+      "CLAUDE.md": 1,
+      ".github/copilot-instructions.md": 1
+    },
+    "warning_percent": 90,
+    "hard_lines": 700,
+    "hard_bytes": 49152
+  },
+  "modularization_review_file": "docs/harness/boundaries/modularization-reviews.json",
+  "structure": {
+    "allowed_source_roots": [
+      ".github",
+      "crates",
+      "docs",
+      "images",
+      "scripts",
+      "src-tauri",
+      "ui"
+    ],
+    "unitized_source_roots": [
+      "crates",
+      "images",
+      "src-tauri",
+      "ui"
+    ],
+    "allowed_root_source_files": [
+      "Cargo.toml",
+      "feature_list.json",
+      "init.sh",
+      "package.json",
+      "pins.toml",
+      "repository-structure-policy.json",
+      "rust-toolchain.toml",
+      "tsconfig.base.json",
+      "tsconfig.json"
+    ],
+    "forbidden_root_source_files": true,
+    "architecture_check": "scripts/python.sh scripts/check_repo_layout.py",
+    "source_limit_check": "scripts/python.sh scripts/check_file_limits.py",
+    "units": [
+      {
+        "id": "runhaven-core",
+        "kind": "reusable",
+        "root": "crates/runhaven-core",
+        "manifest": "crates/runhaven-core/Cargo.toml",
+        "public_entrypoints": ["crates/runhaven-core/src/lib.rs"],
+        "test_entrypoints": ["crates/runhaven-core/src/ui_contracts/tests/mod.rs"],
+        "documentation": ["crates/runhaven-core/README.md"],
+        "allowed_dependencies": []
+      },
+      {
+        "id": "runhaven-cli",
+        "kind": "reusable",
+        "root": "crates/runhaven-cli",
+        "manifest": "crates/runhaven-cli/Cargo.toml",
+        "public_entrypoints": ["crates/runhaven-cli/src/lib.rs"],
+        "test_entrypoints": ["crates/runhaven-cli/src/app/tests.rs"],
+        "documentation": ["crates/runhaven-cli/README.md"],
+        "allowed_dependencies": ["runhaven-core"]
+      },
+      {
+        "id": "runhaven",
+        "kind": "deployable",
+        "root": "crates/runhaven",
+        "manifest": "crates/runhaven/Cargo.toml",
+        "public_entrypoints": [
+          "crates/runhaven/src/main.rs",
+          "crates/runhaven/src/bin/runhaven-check-pins.rs"
+        ],
+        "test_entrypoints": ["crates/runhaven/tests/cli.rs"],
+        "documentation": ["crates/runhaven/README.md"],
+        "allowed_dependencies": ["runhaven-cli", "runhaven-core"]
+      },
+      {
+        "id": "runhaven-tui",
+        "kind": "reusable",
+        "root": "crates/runhaven-tui",
+        "manifest": "crates/runhaven-tui/Cargo.toml",
+        "public_entrypoints": ["crates/runhaven-tui/src/lib.rs"],
+        "test_entrypoints": ["crates/runhaven-tui/src/tui/runhaven/mvp_tests.rs"],
+        "documentation": ["crates/runhaven-tui/src/tui/README.md"],
+        "allowed_dependencies": ["runhaven-core"],
+        "allowed_vendored_dependencies": [
+          "codex-ansi-escape",
+          "codex-app-server-client",
+          "codex-app-server-protocol",
+          "codex-config",
+          "codex-connectors",
+          "codex-core-skills",
+          "codex-features",
+          "codex-feedback",
+          "codex-file-search",
+          "codex-git-utils",
+          "codex-models-manager",
+          "codex-otel",
+          "codex-plugin",
+          "codex-protocol",
+          "codex-shell-command",
+          "codex-terminal-detection",
+          "codex-utils-absolute-path",
+          "codex-utils-approval-presets",
+          "codex-utils-cli",
+          "codex-utils-elapsed",
+          "codex-utils-fuzzy-match",
+          "codex-utils-path-uri",
+          "codex-utils-plugins",
+          "codex-utils-sleep-inhibitor",
+          "codex-utils-string"
+        ]
+      },
+      {
+        "id": "runhaven-tauri",
+        "kind": "deployable",
+        "root": "src-tauri",
+        "manifest": "src-tauri/Cargo.toml",
+        "public_entrypoints": ["src-tauri/src/lib.rs", "src-tauri/src/main.rs", "src-tauri/tauri.conf.json"],
+        "test_entrypoints": ["src-tauri/src/commands/tests/mod.rs"],
+        "documentation": ["src-tauri/README.md"],
+        "allowed_dependencies": ["runhaven-core"]
+      },
+      {
+        "id": "runhaven-ui",
+        "kind": "deployable",
+        "root": "ui",
+        "manifest": "ui/package.json",
+        "public_entrypoints": ["ui/src/main.tsx"],
+        "test_entrypoints": ["ui/src/test/client.test.ts"],
+        "documentation": ["ui/README.md"],
+        "allowed_dependencies": []
+      },
+      {
+        "id": "runhaven-image-common",
+        "kind": "reusable",
+        "root": "images/common",
+        "manifest": "images/common/manifest.json",
+        "public_entrypoints": ["images/common/create-agent-user.sh"],
+        "test_entrypoints": ["images/common/contract.test.sh"],
+        "documentation": ["images/common/README.md"],
+        "allowed_dependencies": []
+      },
+      {
+        "id": "runhaven-image-base",
+        "kind": "image",
+        "root": "images/base",
+        "manifest": "images/base/Containerfile",
+        "public_entrypoints": ["images/base/Containerfile"],
+        "test_entrypoints": ["images/base/contract.test.sh"],
+        "documentation": ["images/base/README.md"],
+        "allowed_dependencies": ["runhaven-image-common"]
+      },
+      {
+        "id": "runhaven-image-antigravity",
+        "kind": "image",
+        "root": "images/antigravity",
+        "manifest": "images/antigravity/Containerfile",
+        "public_entrypoints": [
+          "images/antigravity/Containerfile",
+          "images/antigravity/runhaven-antigravity-login"
+        ],
+        "test_entrypoints": ["images/antigravity/contract.test.sh"],
+        "documentation": ["images/antigravity/README.md"],
+        "allowed_dependencies": ["runhaven-image-common"]
+      },
+      {
+        "id": "runhaven-claude-image",
+        "kind": "image",
+        "root": "images/claude",
+        "manifest": "images/claude/Containerfile",
+        "public_entrypoints": [
+          "images/claude/Containerfile",
+          "images/claude/runhaven-claude-login"
+        ],
+        "test_entrypoints": ["images/claude/contract.test.sh"],
+        "documentation": ["images/claude/README.md"],
+        "allowed_dependencies": ["runhaven-image-common"]
+      },
+      {
+        "id": "runhaven-codex-image",
+        "kind": "image",
+        "root": "images/codex",
+        "manifest": "images/codex/Containerfile",
+        "public_entrypoints": ["images/codex/Containerfile"],
+        "test_entrypoints": ["images/codex/contract.test.sh"],
+        "documentation": ["images/codex/README.md"],
+        "allowed_dependencies": ["runhaven-image-common"]
+      },
+      {
+        "id": "runhaven-copilot-image",
+        "kind": "image",
+        "root": "images/copilot",
+        "manifest": "images/copilot/Containerfile",
+        "public_entrypoints": ["images/copilot/Containerfile"],
+        "test_entrypoints": ["images/copilot/contract.test.sh"],
+        "documentation": ["images/copilot/README.md"],
+        "allowed_dependencies": ["runhaven-image-common"]
+      }
+    ]
+  },
+  "non_hand_authored_exclusions": [
+    {
+      "path": "Cargo.lock",
+      "category": "lock",
+      "owner": "root Cargo workspace",
+      "reason": "Cargo generates the workspace dependency lock"
+    },
+    {
+      "path": "package-lock.json",
+      "category": "lock",
+      "owner": "root npm workspace",
+      "reason": "npm generates the frontend workspace dependency lock"
+    },
+    {
+      "path": "images/claude/package-lock.json",
+      "category": "lock",
+      "owner": "Claude image context",
+      "reason": "npm generates the independent image dependency lock"
+    },
+    {
+      "path": "images/codex/package-lock.json",
+      "category": "lock",
+      "owner": "Codex image context",
+      "reason": "npm generates the independent image dependency lock"
+    },
+    {
+      "path": "images/copilot/package-lock.json",
+      "category": "lock",
+      "owner": "Copilot image context",
+      "reason": "npm generates the independent image dependency lock"
+    },
+    {
+      "path": "src-tauri/gen",
+      "category": "generated",
+      "owner": "Tauri build tooling",
+      "reason": "Tauri generates capability schemas"
+    },
+    {
+      "path": "src-tauri/permissions/autogenerated",
+      "category": "generated",
+      "owner": "Tauri build tooling",
+      "reason": "Tauri generates command permissions"
+    },
+    {
+      "path": "ui/dist",
+      "category": "generated",
+      "owner": "runhaven-ui",
+      "reason": "Vite generates the frontend distribution"
+    },
+    {
+      "path": "third_party",
+      "category": "vendored",
+      "owner": "RunHaven maintainers",
+      "reason": "Isolated third-party game source and artifacts"
+    },
+    {
+      "path": "crates/codex",
+      "category": "vendored",
+      "owner": "RunHaven maintainers",
+      "reason": "Isolated pinned upstream Codex source used by the terminal interface"
+    },
+    {
+      "path": "crates/runhaven-tui/src/tui",
+      "category": "vendored",
+      "owner": "RunHaven maintainers",
+      "reason": "Pinned upstream-derived terminal implementation; exact RunHaven-owned files and adapters are re-included below"
+    }
+  ],
+  "hand_authored_inclusions": [
+    "crates/runhaven-tui/src/tui/app_event_shared.rs",
+    "crates/runhaven-tui/src/tui/app_shell.rs",
+    "crates/runhaven-tui/src/tui/app_shell_tests",
+    "crates/runhaven-tui/src/tui/drift_tests",
+    "crates/runhaven-tui/src/tui/mod.rs",
+    "crates/runhaven-tui/src/tui/pets/bundled_custom.rs",
+    "crates/runhaven-tui/src/tui/runhaven"
+  ],
+  "retired_paths": [
+    ".agents",
+    ".github/workflows",
+    "ui/package-lock.json"
+  ],
+  "exceptions": []
+}

@@ -3,7 +3,7 @@
 ## Supported Scope
 
 This project targets macOS 26+ on Apple silicon with Rust 1.97.0 and Apple
-`container` 1.1.0. Windows and Linux are not supported.
+`container` 1.1.0.
 
 RunHaven remains alpha/pre-release. `v0.5.0` established the CLI contract;
 `v0.7.0` is a limited coworker-test candidate for the CLI plus desktop app.

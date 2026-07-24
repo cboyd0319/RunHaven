@@ -21,7 +21,7 @@ url = { version = "=2.5.8" }
 which = { version = "=8.0.0" }
 
 [dev-dependencies]
-anyhow = { version = "=1.0.102" }
+anyhow = { version = "=1.0.103" }
 pretty_assertions = { version = "=1.4.1" }
 
 [lib]

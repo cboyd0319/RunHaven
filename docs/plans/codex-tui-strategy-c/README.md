@@ -111,7 +111,7 @@ Primary sources checked:
 - `openai/codex:codex-rs/app-server-protocol/src/`
 - `openai/codex:codex-rs/app-server-client/src/lib.rs`
 - `AGENTS.md`
-- `current-state.md`
+- `PROGRESS.md`
 - `docs/plans/tui-build-plan.md`
 - `docs/plans/tui-architecture.md`
 - `crates/runhaven-tui/src/tui/`

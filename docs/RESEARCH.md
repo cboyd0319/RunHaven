@@ -356,7 +356,7 @@ Current reviewed pins are recorded in [`../pins.toml`](../pins.toml). The
 Rust dependency lock is recorded in [`../Cargo.lock`](../Cargo.lock). The
 enforced pin policy lives in
 [`../crates/runhaven-core/src/harness/pins.rs`](../crates/runhaven-core/src/harness/pins.rs)
-and is run with `cargo run --locked --bin runhaven-check-pins`.
+and is run with `scripts/cargo.sh run --locked --bin runhaven-check-pins`.
 
 ## Documentation Research Sources
 
@@ -501,18 +501,6 @@ the installed CLI, or the Apple source tree.
     contrasts it with shared-VM desktop container tools.
   - Notes ecosystem limitations such as Docker Compose and DevContainer gaps;
     verify current status before making roadmap or support claims.
-- The Register hands-on article:
-  <https://www.theregister.com/devops/2026/06/11/apple-gives-mac-devs-a-wsl-ish-thing-to-call-their-own/5254153>
-  - Secondary hands-on source. Reinforces that `container machine` is a
-    persistent Linux VM workflow, closer to WSL than RunHaven's task-scoped
-    agent runs.
-  - Reports that `container machine` defaults can mount the macOS home directory
-    read-write and that `--home-mount none` is the safer mode. This matches
-    RunHaven's decision to avoid `container machine` for beginner-safe agent
-    workloads.
-  - Reports that memory retained by a container machine may require restarting
-    the VM to release back to the host. This is noted as `container machine`
-    context only, not a verified `runhaven run` behavior.
 - HowToUseLinux article:
   <https://www.howtouselinux.com/post/apple-built-a-new-container-tool-for-macos-heres-why-it-actually-matters>
   - Secondary technical article. Repeats the isolated lightweight VM model,

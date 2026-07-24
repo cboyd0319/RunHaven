@@ -118,8 +118,6 @@ pub(crate) mod tooltips;
 #[allow(dead_code)]
 pub(crate) mod ui_consts;
 #[allow(dead_code)]
-pub(crate) mod update_action;
-#[allow(dead_code)]
 pub(crate) mod version;
 #[allow(dead_code)]
 pub(crate) mod width;
@@ -150,4 +148,5 @@ pub fn run() -> Result<i32> {
 }
 
 #[cfg(test)]
+#[path = "drift_tests/mod.rs"]
 mod drift_tests;

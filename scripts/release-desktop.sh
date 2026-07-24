@@ -166,7 +166,7 @@ source_worktree_added=1
   cd "$source_root"
   ./init.sh
   cargo audit
-  npm --prefix ui audit --audit-level=high
+  npm audit --workspace runhaven-ui --audit-level=high
   scripts/check-docs-local-paths.sh
   scripts/apple_container_smoke.sh
   scripts/gui_tauri_live_smoke.sh --skip-tauri-build
@@ -212,7 +212,7 @@ env \
   -u APPLE_TEAM_ID \
   CARGO_PROFILE_RELEASE_STRIP=none \
   CARGO_TARGET_DIR="$tmp/target" \
-  "$source_root/ui/node_modules/.bin/tauri" build \
+  npm --prefix "$source_root" --workspace runhaven-ui run tauri -- build \
     --ci \
     --target aarch64-apple-darwin \
     --bundles app \
@@ -357,9 +357,9 @@ node_version=$(node --version)
 npm_version=$(npm --version)
 xcode_version=$(xcodebuild -version | tr '\n' ' ')
 cargo_version=$(cargo --version)
-tauri_cli_version=$("$source_root/ui/node_modules/.bin/tauri" --version)
+tauri_cli_version=$(npm --prefix "$source_root" --workspace runhaven-ui run --silent tauri -- --version)
 cargo_lock_sha256=$(shasum -a 256 "$source_root/Cargo.lock" | awk '{print $1}')
-package_lock_sha256=$(shasum -a 256 "$source_root/ui/package-lock.json" | awk '{print $1}')
+package_lock_sha256=$(shasum -a 256 "$source_root/package-lock.json" | awk '{print $1}')
 PROVENANCE="$publish_tmp/provenance.json" VERSION="$version" TAG="$expected_tag" \
 COMMIT="$commit" TEAM_ID="$team_id" IDENTITY="$identity" SOURCE_EPOCH="$source_epoch" \
 BUILD_TIME="$build_time" MACOS_VERSION="$macos_version" RUST_VERSION="$rust_version" \
@@ -395,7 +395,7 @@ CARGO_LOCK_SHA256="$cargo_lock_sha256" PACKAGE_LOCK_SHA256="$package_lock_sha256
       cargoLockSHA256: process.env.CARGO_LOCK_SHA256,
       packageLockSHA256: process.env.PACKAGE_LOCK_SHA256
     },
-    releaseCommand: "npm --prefix ui run tauri:bundle"
+    releaseCommand: "npm run tauri:bundle"
   };
   fs.writeFileSync(process.env.PROVENANCE, JSON.stringify(data, null, 2) + "\n");
 '

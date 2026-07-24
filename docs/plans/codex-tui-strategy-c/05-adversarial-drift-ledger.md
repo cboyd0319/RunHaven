@@ -462,8 +462,7 @@ Verdict: **intact in compiled code; guarded latent risk remains.**
 - No `container` exec, host-home / `.ssh` / `.aws` / gcloud / browser-profile
   mount, arbitrary env passthrough, or boundary `fs::write` exists in the active
   surface. Subprocess hits are benign: env-gated handoff smoke (`printf`),
-  `#[cfg(test)]` git, and read-only terminal capability probes
-  (`tmux`/`zellij`/`cmd.exe`).
+  `#[cfg(test)]` git, and read-only terminal capability probes.
 - Launch is genuinely disabled: the confirm step renders "Confirmed. TUI launch
   is still disabled." (`app_shell.rs:987`).
 - All 13 unsupported families fail closed with a test matrix (F4).
@@ -515,7 +514,7 @@ Verdict: **intact in compiled code; guarded latent risk remains.**
   `runhaven/{protocol,service}.rs`, plus subagent reads of `app_shell.rs`,
   `launch_wizard.rs`, `app_server_client.rs`, `app_server_session.rs`,
   `terminal_handoff.rs`, and the modified vendored files.
-- State reconciliation: `feature_list.json`, `current-state.md`,
+- State reconciliation: `feature_list.json`, `PROGRESS.md`,
   `docs/plans/codex-tui-strategy-c/*` vs the pre-import draft.
 - Baseline verification: upstream Codex source matched the pinned commit.
 

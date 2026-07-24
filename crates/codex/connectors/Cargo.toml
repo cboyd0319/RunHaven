@@ -6,7 +6,7 @@ license = "Apache-2.0"
 publish = false
 
 [dependencies]
-anyhow = { version = "=1.0.102" }
+anyhow = { version = "=1.0.103" }
 codex-config = { path = "../config" }
 codex-plugin = { path = "../plugin" }
 indexmap = { version = "=2.14.0", features = ["serde"] }

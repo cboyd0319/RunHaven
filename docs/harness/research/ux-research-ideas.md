@@ -3,9 +3,8 @@
 Reviewed: 2026-06-15
 
 Scope: research around making RunHaven easier and more understandable without
-weakening its hard boundaries: macOS 26+ only, Apple `container` only,
-no Windows/Linux runtime support, no Docker fallback, no default host home
-mount, and no raw credential folder mounts.
+weakening its hard boundaries: macOS 26+ only, Apple `container` only, no Docker
+fallback, no default host home mount, and no raw credential folder mounts.
 
 This pass used manual web and source review. AGY/Antigravity was not used.
 

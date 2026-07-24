@@ -28,7 +28,7 @@ stop and ask the release owner for a new artifact. Do not bypass Gatekeeper.
 From the repo folder, run:
 
 ```bash
-npm --prefix ui run tauri:dev
+npm run tauri:dev
 ```
 
 This opens the app in a development window. The first build takes a few minutes.
@@ -44,7 +44,7 @@ test builds, and makes a stale Debug copy visible even when the source version
 is the same.
 
 To check that the production frontend and desktop executable build together, run
-`npm --prefix ui run tauri:build`. This developer check does not create a signed,
+`npm run tauri:build`. This developer check does not create a signed,
 shareable app bundle.
 
 To test an installed, development-signed build before release, use the local
@@ -59,7 +59,7 @@ and must then be refreshed. Run:
 ```bash
 export RUNHAVEN_DEVELOPMENT_SIGNING_IDENTITY='Apple Development: Example (TEAMID)'
 export RUNHAVEN_DEVELOPMENT_PROVISIONING_PROFILE="$HOME/path/to/RunHaven-Local.provisionprofile"
-npm --prefix ui run tauri:local-signed
+npm run tauri:local-signed
 ```
 
 The command validates the installed certificate, profile, application ID, and
@@ -74,7 +74,7 @@ for this signing test because it has no Apple development identity or profile.
 Apple documents [development profiles](https://developer.apple.com/help/account/provisioning-profiles/create-a-development-provisioning-profile)
 and [macOS provisioning entitlements](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles).
 
-`npm --prefix ui run tauri:bundle` is the shareable-release command. It refuses
+`npm run tauri:bundle` is the shareable-release command. It refuses
 to build from a dirty or untagged commit and requires full Xcode, a matching
 Developer ID Application identity and provisioning profile, and saved Apple
 notary credentials:
@@ -83,7 +83,7 @@ notary credentials:
 export RUNHAVEN_SIGNING_IDENTITY='Developer ID Application: Example (TEAMID)'
 export RUNHAVEN_PROVISIONING_PROFILE="$HOME/path/to/RunHaven.provisionprofile"
 export RUNHAVEN_NOTARY_PROFILE='runhaven-notary'
-npm --prefix ui run tauri:bundle
+npm run tauri:bundle
 ```
 
 The command validates the profile and certificate, builds an arm64 app with the

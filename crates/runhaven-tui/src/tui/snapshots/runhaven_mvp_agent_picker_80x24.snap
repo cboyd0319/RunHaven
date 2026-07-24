@@ -3,7 +3,7 @@ source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
 expression: rendered
 ---
 
-  RunHaven v0.5.0  Step 1/4: Choose agent
+  RunHaven v0.7.0  Step 1/4: Choose agent
   Pick the agent to run. You will review the plan before anything starts.
   Agent  antigravity  Network  Provider only
   Workspace   /selected-workspace

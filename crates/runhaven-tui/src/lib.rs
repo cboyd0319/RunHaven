@@ -56,7 +56,6 @@ pub(crate) use tui::test_support;
 pub(crate) use tui::text_formatting;
 pub(crate) use tui::tooltips;
 pub(crate) use tui::ui_consts;
-pub(crate) use tui::update_action;
 pub(crate) use tui::version;
 pub(crate) use tui::width;
 pub(crate) use tui::workspace_command;

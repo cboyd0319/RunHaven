@@ -9,12 +9,13 @@ cannot verify a boundary. Do not hide risk behind friendly wording.
 RunHaven remains alpha/pre-release. The CLI is the complete technical surface,
 and the Tauri desktop app is the primary easy path for nontechnical users. The
 `v0.7.0` source is a limited coworker-test candidate, not a public desktop
-release until signed, notarized, and clean-Mac tested. The terminal UI and
-vendored Codex source are archived outside the active workspace and must not be
-reopened without an explicit product decision and fresh security review.
+release until signed, notarized, and clean-Mac tested. The comprehensive
+terminal UI remains a product surface. Its pinned Codex dependency graph is
+isolated behind the `runhaven-tui` workspace boundary and remains covered by the
+focused and full Rust lanes.
 
-RunHaven only supports macOS 26+ on Apple silicon. Do not add Windows or Linux
-runtime or contributor-verification surfaces.
+RunHaven development and runtime verification require macOS 26+ on Apple
+silicon.
 
 ## Development Principles
 
@@ -46,16 +47,16 @@ Full local harness verification:
 Focused checks:
 
 ```bash
-cargo fmt --check
-cargo test --locked
-cargo run --locked --bin runhaven-check-pins
+scripts/cargo.sh fmt --check
+scripts/cargo.sh test --locked
+scripts/cargo.sh run --locked --bin runhaven-check-pins
 ```
 
 Additional Rust checks:
 
 ```bash
-cargo clippy --all-targets -- -D warnings
-cargo build --locked
+scripts/cargo.sh clippy --all-targets -- -D warnings
+scripts/cargo.sh build --locked
 ```
 
 ## Security Review Expectations

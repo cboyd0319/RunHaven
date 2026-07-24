@@ -98,10 +98,4 @@ mod tests {
             ]
         );
     }
-
-    #[test]
-    fn split_command_string_preserves_non_roundtrippable_windows_commands() {
-        let command = r#"C:\Program Files\Git\bin\bash.exe -lc "echo hi""#;
-        assert_eq!(split_command_string(command), vec![command.to_string()]);
-    }
 }

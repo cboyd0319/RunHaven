@@ -1,67 +1,71 @@
-# Verification Matrix
+# Verification matrix
 
-Use the smallest check set that can catch likely regressions. Use the scoped
-CLI plus desktop gate for the active coworker-test release. `./init.sh` covers
-the complete active workspace. The archived TUI/Codex source is intentionally
-outside the release workspace until that product surface is reopened.
+Choose the smallest commands that can catch likely regressions. `./init.sh` is
+the session baseline and representative Playwright smoke;
+`scripts/verify-all.sh` is the authoritative full local lane. The comprehensive
+TUI and its exact pinned Codex graph are included in the Rust workspace lane.
 
-## Common Checks
-
-| Change Type | Checks |
+| Change | Required focused checks |
 | --- | --- |
-| Harness docs, instructions, or state | `cargo run --locked --bin runhaven-check-pins`; `scripts/check-repo-structure.sh`; JSON validation for changed JSON; local Markdown link check when links changed; `scripts/check-docs-local-paths.sh`; `git diff --check` |
-| README or docs-only change | pin check; `scripts/check-repo-structure.sh`; local Markdown link check when links changed; platform wording scan when support wording changed; `scripts/check-docs-local-paths.sh`; `git diff --check` |
-| Rust code | `cargo fmt --check`; focused `cargo test` target; `cargo test --workspace --locked`; `cargo clippy --workspace --all-targets --locked -- -D warnings`; `scripts/check-repo-structure.sh`; maintainability check for touched modules and duplication |
-| Frontend UI | `npm --prefix ui run check`; `npm --prefix ui test`; `npm --prefix ui run test:e2e`; `npm --prefix ui run build`; relevant Tauri command tests; `scripts/check-repo-structure.sh`; maintainability check for touched components and adapters |
-| Tauri shell | Frontend checks plus `cargo fmt --check`; `cargo test --workspace --locked` (includes the `capability_guard` scope test); `cargo clippy --workspace --all-targets --locked -- -D warnings`; `scripts/check-repo-structure.sh`; capability review |
-| GUI visual or macOS design review | `scripts/review-gui.test.sh`; close every existing RunHaven app; `scripts/review-gui.sh`; give the reviewer its exact app path, bundle ID, PID/start time, build ID, executable hash, icon hash, and review fingerprint |
-| GUI/Tauri live managed-session path | `scripts/gui_tauri_live_smoke.sh` on macOS 26+ Apple silicon with Apple `container`; set `RUNHAVEN_GUI_LIVE_REAL_AGENT=1` plus `--with-agent codex` or another built real-agent profile and the fixed broker env for that profile when changing real-agent launch/session ownership. Confirms no-bundle Tauri build plus live selected-session bounded output, confirmed stop, multi-session isolation, and opt-in real-agent launch through typed Tauri commands. This is a brokered-launch smoke, not a TTY or OAuth/login parity check |
-| CLI command construction | Rust checks plus focused CLI and planning tests |
-| Full CLI surface confirmation | `scripts/cli_surface_check.sh` (breadth: every command family); `scripts/apple_container_smoke.sh --with-provider --with-ssh` (depth: provider egress denial and SSH fail-closed); coverage indexed in `docs/CLI_SURFACE_COVERAGE.md` |
-| Code organization or modularity | Focused tests for moved behavior; stale import/reference scan with `rg`; relevant Rust, Tauri, or frontend checks; verify duplicated logic was deleted or intentionally kept |
-| Apple `container` runtime boundary | Rust checks plus `runhaven doctor`, `runhaven plan`, and a focused runtime smoke proving the claimed mount, user, network, or filesystem behavior |
-| Provider egress or endpoint policy | Focused egress/provider tests; source review for endpoint changes; `scripts/apple_container_smoke.sh --with-provider` when behavior changes and the host is available |
-| SSH forwarding boundary | Planner and CLI tests proving `--ssh` fails closed; `scripts/apple_container_smoke.sh --with-ssh` only when changing that guard |
-| Auth or secrets | Focused auth/provider tests; confirm diagnostics and records do not expose secrets; confirm secure defaults stay easiest and lower-security choices are explicit and warned |
-| Support report or issue intake | focused core, CLI, Tauri, and frontend tests; `scripts/check-support-issue-form.sh`; isolated-home report smoke; inspect permissions and poison-value absence; confirm no automatic upload or submission |
-| Bundled image definitions | `cargo run --locked --bin runhaven-check-pins`; isolated `npm ci --ignore-scripts` plus audit for each npm image; build all six `0.7.0` images; `runhaven image doctor`; smoke every bundled CLI as the non-root agent with a read-only root and dropped capabilities; verify Node/npm versions where used |
-| Desktop installer and first setup | `scripts/release-desktop-common.test.sh`; `scripts/release-desktop-preflight.test.sh`; `scripts/local-sign-desktop.test.sh`; focused Tauri setup-recovery/capability tests; focused Agents/New Run frontend tests; pin check; build and mount the signed DMG; verify its exact drag-to-Applications layout, copied app signature, ticket, Gatekeeper result, bundle metadata, architecture, and clean-Mac Finder launch |
-| CLI plus desktop coworker-test prep | `cargo fmt --check`; tests and Clippy for `runhaven-core`, `runhaven-cli`, `runhaven-tauri`, and the `runhaven` CLI integration; frontend check, unit, E2E, and build; no-bundle Tauri build; `runhaven doctor`; relevant Apple container and GUI live smokes; pin/source and dependency audit; structure/docs/JSON/diff checks; signed/notarized app bundle plus clean-machine launch when distributing an artifact. Record TUI exclusion explicitly |
-| Release prep | `./init.sh`; `runhaven doctor`; relevant Apple container smokes; pin/source review; dirty-tree check |
+| Harness instructions, state, or policy | `scripts/python.sh scripts/check_harness_state.py`; applicable state, file, or layout fixture script; `scripts/check-repo-structure.sh`; `scripts/check-docs-local-paths.sh`; `git diff --check` |
+| Docs only | `scripts/check-repo-structure.sh`; `scripts/check-docs-local-paths.sh`; check changed Markdown links; `git diff --check` |
+| Rust | `scripts/cargo.sh fmt --check`; focused `scripts/cargo.sh test -p PACKAGE --locked FILTER`; `scripts/cargo.sh test --workspace --locked`; `scripts/cargo.sh clippy --workspace --all-targets --locked -- -D warnings`; structure gate |
+| React or TypeScript | `npm run check`; focused `npm test -- TEST`; `npm test`; `npm run build`; E2E when rendering or interaction changes; structure gate |
+| Tauri commands, permissions, or shell | Rust and frontend lanes; `scripts/cargo.sh test -p runhaven-tauri --locked capability_guard`; `npm run tauri:build`; capability review |
+| GUI visual, interaction, or macOS design | `scripts/review-gui.test.sh`; update `docs/design/native-gui-uiux-audit.md`; stop existing RunHaven processes; start only `scripts/review-gui.sh`; packaged live review |
+| CLI command construction | Focused CLI and core planning tests; Rust lane; `scripts/cli_surface_check.sh` for breadth |
+| Repository architecture | Focused moved-behavior tests; stale-reference `rg`; `scripts/check-repo-structure.sh`; applicable Rust, Tauri, or frontend lane |
+| Apple `container` boundary | Rust lane; `scripts/cargo.sh run --locked --bin runhaven -- doctor`; focused plan check; `scripts/apple_container_smoke.sh` |
+| Provider egress | Focused provider tests; current official endpoint source review; `scripts/apple_container_smoke.sh --with-provider` |
+| SSH-agent forwarding | Planner and CLI tests; `scripts/apple_container_smoke.sh --with-ssh`; confirm only the socket is forwarded and unusable private sockets fail safely |
+| Authentication, broker, or secrets | Focused auth and provider tests; `scripts/scan-dev-log.sh`; verify records and diagnostics omit secrets; confirm lower-security choices remain explicit and warned |
+| Support report or issue intake | Focused core, CLI, Tauri, and frontend tests; `scripts/check-support-issue-form.sh`; isolated-home smoke; no-upload review |
+| Bundled images | Unit-local `bash images/NAME/contract.test.sh`; pin check; isolated `npm ci --ignore-scripts` and audit for each npm-backed image; build the current base plus four agent images; image doctor; non-root read-only-root capability-dropped CLI smokes |
+| Desktop installer or first setup | Release shell fixture scripts; focused setup and capability tests; frontend setup tests; pin check; signed DMG, copied-app, Gatekeeper, metadata, architecture, and clean-Mac checks only when distribution is explicitly authorized |
+| Release preparation | Explicit authorization first; `scripts/verify-all.sh`; doctor; applicable runtime and GUI live smokes; pin and source review; signing and notarization evidence; clean tree |
 
-## Detected Commands
+Common exact commands:
 
 ```bash
-cargo fmt --check
-cargo test --workspace --locked
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo run --locked --bin runhaven-check-pins
-cargo build --workspace --locked
-npm --prefix ui run check
-npm --prefix ui test
-npm --prefix ui run test:e2e
-npm --prefix ui run build
-npm --prefix ui run tauri:build
-scripts/review-gui.test.sh
-scripts/review-gui.sh
-scripts/gui_tauri_live_smoke.sh
-scripts/check-docs-local-paths.sh
+scripts/python.sh scripts/check_harness_state.py
+scripts/python.sh scripts/test_environment.py
+scripts/python.sh scripts/test_harness_state.py
+scripts/python.sh scripts/test_file_limits.py
+scripts/python.sh scripts/test_repo_layout.py
 scripts/check-repo-structure.sh
-scripts/check-support-issue-form.sh
+scripts/check-docs-local-paths.sh
+scripts/cargo.sh fmt --check
+scripts/cargo.sh test --workspace --locked
+scripts/cargo.sh clippy --workspace --all-targets --locked -- -D warnings
+scripts/cargo.sh run --locked --bin runhaven-check-pins
+scripts/cargo.sh build --workspace --locked
+npm run check
+npm test
+npm run test:e2e
+npm run build
+npm run tauri:build
 git diff --check
+./init.sh
+scripts/verify-all.sh
 ```
 
-## When Checks Cannot Run
+When a command cannot run, record the exact command, reason, risk, best
+substitute that ran, and the trigger that will close the gap. A prose review or
+aggregate score never substitutes for runnable evidence.
 
-Record the skipped command, exact reason, risk, next best check that did run,
-and follow-up needed to close the gap.
+## Reliability ownership
 
-## Optional Structural Review
+The maintainer owns reliability routing through this matrix and the sensor
+registry. Log shape, levels, redaction, and rotation are owned by
+`debug-logging.md`. Golden journeys are the `./init.sh` frontend smoke, the
+default Apple container smoke, and the selected live Tauri smoke. Each owns its
+isolated temporary state and cleanup trap; rerun from a fresh process after a
+failure rather than reusing unknown runtime state.
 
-HarnessForge commands are optional owner tools. Use them only when available
-and relevant; do not treat their output as the source of truth unless a
-maintainer promotes a finding into repo-owned docs, tests, policy, or code.
-
-Manual maintainability review is not optional for non-trivial code. Before
-completion, report whether touched files, modules, crates, components,
-dependencies, and duplicated logic stayed within the project quality bar.
+`./init.sh` prints each stage duration and total time. Structure-gate latency is
+compared with the same checkout and host rather than given a hardware-dependent
+absolute score; investigate a repeatable increase above twice the reviewed
+known-good baseline before broadening the gate. The 2026-07-14 local baseline
+for 613 maintained source/config files was 0.23 seconds. Runtime benchmarks or
+consistency scanners must record their seed state, environment, target, result,
+and integrity result in the evidence log before they become required sensors.

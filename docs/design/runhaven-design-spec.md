@@ -21,7 +21,7 @@ product voice, component defaults, and design-to-code contract. Use it with:
   Liquid Glass evidence behind the approved Calm Control Room direction.
 - `docs/SECURITY_MODEL.md`, which owns the product trust boundary.
 - `docs/DESKTOP_APP.md`, which owns current user-facing behavior.
-- `current-state.md`, which resolves historical implementation plans.
+- `PROGRESS.md`, which resolves historical implementation plans.
 
 Historical wireframes and navigation documents explain prior decisions but do
 not override this spec, the current audit, or live product behavior.
@@ -188,7 +188,7 @@ or combine provider geometry with the RunHaven cube.
 
 The graphical identity does not require ANSI art, a splash screen, or color in
 the CLI. Commands and machine-readable output stay stable and plain. If terminal
-branding returns after the current TUI deferral, it must preserve no-color,
+terminal branding must preserve no-color,
 reduced-motion, line-mode, copy, logging, and small-terminal behavior and earn
 its place through a user task.
 
@@ -815,7 +815,7 @@ dead end, or loss of work blocks the release claim until corrected and retested.
 - The selected icon, product name, vocabulary, semantic role model, and security
   language are controlled assets. Change them through an explicit design review.
 - `runhaven-design-spec.md` owns target direction. `native-gui-uiux-audit.md`
-  owns current shipped truth. `current-state.md` owns active implementation
+  owns current shipped truth. `PROGRESS.md` owns active implementation
   status. Do not duplicate those roles in new root documents.
 - A new component must name its purpose, states, input behavior, accessibility
   contract, appearance behavior, framework owner, and focused verification.

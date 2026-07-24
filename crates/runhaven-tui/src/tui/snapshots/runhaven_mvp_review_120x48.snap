@@ -3,7 +3,7 @@ source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
 expression: rendered
 ---
 
-  RunHaven v0.5.0  Step 3/4: Review plan
+  RunHaven v0.7.0  Step 3/4: Review plan
   Check what RunHaven will share before launch.
 
   Agent       antigravity

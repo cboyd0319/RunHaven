@@ -1,8 +1,8 @@
 # Pinning Policy
 
 All package, image, and tool dependencies must be current stable and
-hard-pinned. While the project has no active GitHub Actions workflows, there
-are no active CI action dependencies to pin.
+hard-pinned. The private pre-alpha project has no GitHub Actions workflows or
+CI action dependencies.
 
 ## Required Pins
 
@@ -13,10 +13,8 @@ are no active CI action dependencies to pin.
 - Rust toolchain version is pinned in `rust-toolchain.toml` and `pins.toml`.
 - `Cargo.lock` is checked in for reproducible workspace builds, including the
   CLI, TUI, core library, and Tauri shell.
-- Frontend direct dependencies use exact versions in `ui/package.json`, and
-  `ui/package-lock.json` is checked in.
-- If GitHub Actions workflows are reintroduced, actions must use immutable
-  commit SHAs, with the release tag in a comment.
+- Frontend direct dependencies use exact versions in `ui/package.json`, and the
+  root `package-lock.json` owns the npm workspace lock.
 - Container base images use versioned tags plus `sha256` digests.
 - Debian packages installed in images use exact package versions in
   `images/common/debian-packages.txt`, including the observed install closure
@@ -32,16 +30,14 @@ are no active CI action dependencies to pin.
 ## Disallowed
 
 - `latest` image or package tags
-- major-only GitHub Action refs such as `actions/checkout@v6`, if workflows
-  are reintroduced
 - loose dependency ranges such as `>=`, `~=`, or wildcard package pins
 - unversioned installer scripts inside images
-- unpinned `apt-get install`, `npm install`, or `cargo add`
+- unpinned `apt-get install`, `npm install`, or `scripts/cargo.sh add`
 
 Run the policy check:
 
 ```bash
-cargo run --locked --bin runhaven-check-pins
+scripts/cargo.sh run --locked --bin runhaven-check-pins
 ```
 
 The current reviewed pins are recorded in [`pins.toml`](../pins.toml).
@@ -55,7 +51,7 @@ The source record for current-version checks is
   GTK backend (`glib 0.18` &larr; `gtk 0.18.2` &larr;
   `webkit2gtk`/`wry`/`tao`/`muda` &larr; `tauri-runtime-wry 2.11.3`) and is
   absent from the macOS `aarch64-apple-darwin` build graph
-  (`cargo tree --locked -p runhaven-tauri --target aarch64-apple-darwin -i glib`
+  (`scripts/cargo.sh tree --locked -p runhaven-tauri --target aarch64-apple-darwin -i glib`
   prints nothing on the host target), so no macOS build or shipped artifact compiles the
   vulnerable code. It is capped at 0.18.x by `gtk 0.18.2`; the patched 0.20.0
   needs a newer gtk-rs generation Tauri does not yet use. The Dependabot alert

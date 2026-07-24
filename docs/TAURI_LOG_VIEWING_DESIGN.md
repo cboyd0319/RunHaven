@@ -165,7 +165,7 @@ Implementation constraints:
    - Show truncation state and refresh behavior without automatic polling.
 
 4. Docs and harness state
-   - Update `feature_list.json`, `current-state.md`,
+   - Update `feature_list.json`, `PROGRESS.md`,
      `docs/TAURI_UI_GUARDRAILS.md`, and `docs/ROADMAP.md` when their current
      contracts change.
    - Record evidence in `docs/harness/evidence/evidence-log.md`.
@@ -175,22 +175,22 @@ Implementation constraints:
 Focused red checks before implementation:
 
 ```bash
-cargo test --workspace --locked log_snapshot -- --nocapture
-npm --prefix ui test -- --run
+scripts/cargo.sh test --workspace --locked log_snapshot -- --nocapture
+npm test -- --run
 ```
 
 Required green checks for implementation:
 
 ```bash
 scripts/apple_container_smoke.sh
-cargo fmt --check
-cargo test --workspace --locked log_snapshot -- --nocapture
-cargo test --workspace --locked
-cargo clippy --workspace --all-targets --locked -- -D warnings
-npm --prefix ui test -- --run
-npm --prefix ui run check
-npm --prefix ui run test:e2e
-npm --prefix ui run build
+scripts/cargo.sh fmt --check
+scripts/cargo.sh test --workspace --locked log_snapshot -- --nocapture
+scripts/cargo.sh test --workspace --locked
+scripts/cargo.sh clippy --workspace --all-targets --locked -- -D warnings
+npm test -- --run
+npm run check
+npm run test:e2e
+npm run build
 python3 -m json.tool feature_list.json >/dev/null
 python3 -m json.tool src-tauri/capabilities/main-read.json >/dev/null
 git diff --check

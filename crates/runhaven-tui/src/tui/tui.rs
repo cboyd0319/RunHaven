@@ -23,8 +23,6 @@ use crossterm::event::EnableFocusChange;
 use crossterm::event::KeyEvent;
 use crossterm::terminal::EnterAlternateScreen;
 use crossterm::terminal::LeaveAlternateScreen;
-#[cfg(not(unix))]
-use crossterm::terminal::supports_keyboard_enhancement;
 use ratatui::backend::Backend;
 use ratatui::backend::CrosstermBackend;
 use ratatui::crossterm::execute;
@@ -342,9 +340,7 @@ pub fn set_modes() -> Result<()> {
     // Enable keyboard enhancement flags so modifiers for keys like Enter are disambiguated.
     // chat_composer.rs is using a keyboard event listener to enter for any modified keys
     // to create a new line that require this.
-    // Some terminals (notably legacy Windows consoles) do not support
-    // keyboard enhancement flags. Attempt to enable them, but continue
-    // gracefully if unsupported.
+    // Attempt keyboard enhancement, but continue if the terminal does not support it.
     keyboard_modes::enable_keyboard_enhancement();
 
     let _ = execute!(stdout(), EnableFocusChange);
@@ -358,18 +354,6 @@ impl Command for EnableAlternateScroll {
     fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
         write!(f, "\x1b[?1007h")
     }
-
-    #[cfg(windows)]
-    fn execute_winapi(&self) -> Result<()> {
-        Err(std::io::Error::other(
-            "tried to execute EnableAlternateScroll using WinAPI; use ANSI instead",
-        ))
-    }
-
-    #[cfg(windows)]
-    fn is_ansi_code_supported(&self) -> bool {
-        true
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -378,18 +362,6 @@ struct DisableAlternateScroll;
 impl Command for DisableAlternateScroll {
     fn write_ansi(&self, f: &mut impl fmt::Write) -> fmt::Result {
         write!(f, "\x1b[?1007l")
-    }
-
-    #[cfg(windows)]
-    fn execute_winapi(&self) -> Result<()> {
-        Err(std::io::Error::other(
-            "tried to execute DisableAlternateScroll using WinAPI; use ANSI instead",
-        ))
-    }
-
-    #[cfg(windows)]
-    fn is_ansi_code_supported(&self) -> bool {
-        true
     }
 }
 
@@ -617,31 +589,6 @@ fn flush_terminal_input_buffer() {
 
 /// Flush the underlying stdin buffer to clear any input that may be buffered at the terminal level.
 /// For example, clears any user input that occurred while the crossterm EventStream was dropped.
-#[cfg(windows)]
-fn flush_terminal_input_buffer() {
-    use windows_sys::Win32::Foundation::GetLastError;
-    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
-    use windows_sys::Win32::System::Console::FlushConsoleInputBuffer;
-    use windows_sys::Win32::System::Console::GetStdHandle;
-    use windows_sys::Win32::System::Console::STD_INPUT_HANDLE;
-
-    let handle = unsafe { GetStdHandle(STD_INPUT_HANDLE) };
-    if handle == INVALID_HANDLE_VALUE || handle == 0 {
-        let err = unsafe { GetLastError() };
-        tracing::warn!("failed to get stdin handle for flush: error {err}");
-        return;
-    }
-
-    let result = unsafe { FlushConsoleInputBuffer(handle) };
-    if result == 0 {
-        let err = unsafe { GetLastError() };
-        tracing::warn!("failed to flush stdin buffer: error {err}");
-    }
-}
-
-#[cfg(not(any(unix, windows)))]
-pub(crate) fn flush_terminal_input_buffer() {}
-
 /// Initialize the terminal (inline viewport; history stays in normal scrollback)
 pub(crate) fn init() -> Result<InitializedTerminal> {
     if !stdin().is_terminal() {
@@ -656,10 +603,8 @@ pub(crate) fn init() -> Result<InitializedTerminal> {
 
     set_panic_hook();
 
-    #[cfg(unix)]
     let backend = CrosstermBackend::new(stdout());
 
-    #[cfg(unix)]
     let startup_probe = {
         use crate::terminal_probe::StartupKeyboardEnhancementProbe;
 
@@ -695,10 +640,8 @@ pub(crate) fn init() -> Result<InitializedTerminal> {
         }
     };
 
-    #[cfg(unix)]
     crate::terminal_palette::set_default_colors_from_startup_probe(startup_probe.default_colors);
 
-    #[cfg(unix)]
     let cursor_pos = match startup_probe.cursor_position {
         Some(pos) => pos,
         None => {
@@ -707,23 +650,9 @@ pub(crate) fn init() -> Result<InitializedTerminal> {
         }
     };
 
-    #[cfg(unix)]
     let enhanced_keys_supported = startup_probe
         .keyboard_enhancement_supported
         .unwrap_or(/*default*/ false);
-
-    #[cfg(not(unix))]
-    let mut backend = CrosstermBackend::new(stdout());
-
-    #[cfg(not(unix))]
-    let cursor_pos = cursor_position_with_crossterm(&mut backend);
-
-    #[cfg(not(unix))]
-    let enhanced_keys_supported =
-        !keyboard_modes::keyboard_enhancement_disabled() && detect_keyboard_enhancement_supported();
-
-    #[cfg(windows)]
-    probe_windows_default_colors();
 
     let tui = CustomTerminal::with_options_and_cursor_position(backend, cursor_pos)?;
     let stderr_guard = terminal_stderr::TerminalStderrGuard::install()?;
@@ -732,43 +661,6 @@ pub(crate) fn init() -> Result<InitializedTerminal> {
         enhanced_keys_supported,
         stderr_guard,
     })
-}
-
-#[cfg(not(unix))]
-fn cursor_position_with_crossterm(backend: &mut CrosstermBackend<Stdout>) -> Position {
-    backend.get_cursor_position().unwrap_or_else(|err| {
-        tracing::warn!("failed to read initial cursor position; defaulting to origin: {err}");
-        Position { x: 0, y: 0 }
-    })
-}
-
-#[cfg(not(unix))]
-fn detect_keyboard_enhancement_supported() -> bool {
-    // Non-Unix startup keeps the existing crossterm keyboard probe path because it already knows
-    // how to interpret platform-specific event sources.
-    supports_keyboard_enhancement().unwrap_or(/*default*/ false)
-}
-
-#[cfg(windows)]
-fn probe_windows_default_colors() {
-    let started_at = std::time::Instant::now();
-    match crate::terminal_probe::default_colors(crate::terminal_probe::DEFAULT_TIMEOUT) {
-        Ok(colors) => {
-            tracing::info!(
-                duration_ms = %started_at.elapsed().as_millis(),
-                default_colors = colors.is_some(),
-                "terminal default color probe completed"
-            );
-            crate::terminal_palette::set_default_colors_from_startup_probe(colors);
-        }
-        Err(err) => {
-            tracing::warn!(
-                duration_ms = %started_at.elapsed().as_millis(),
-                "terminal default color probe failed: {err}"
-            );
-            crate::terminal_palette::set_default_colors_from_startup_probe(/*colors*/ None);
-        }
-    }
 }
 
 fn set_panic_hook() {
@@ -1351,50 +1243,6 @@ impl Tui {
     }
 }
 
-#[cfg(windows)]
-fn ensure_virtual_terminal_processing() -> Result<()> {
-    use windows_sys::Win32::Foundation::HANDLE;
-    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
-    use windows_sys::Win32::System::Console::ENABLE_PROCESSED_OUTPUT;
-    use windows_sys::Win32::System::Console::ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    use windows_sys::Win32::System::Console::GetConsoleMode;
-    use windows_sys::Win32::System::Console::GetStdHandle;
-    use windows_sys::Win32::System::Console::STD_ERROR_HANDLE;
-    use windows_sys::Win32::System::Console::STD_OUTPUT_HANDLE;
-    use windows_sys::Win32::System::Console::SetConsoleMode;
-
-    fn enable_for_handle(handle: HANDLE) -> Result<()> {
-        if handle == INVALID_HANDLE_VALUE || handle == 0 {
-            return Ok(());
-        }
-
-        let mut mode = 0;
-        if unsafe { GetConsoleMode(handle, &mut mode) } == 0 {
-            return Ok(());
-        }
-
-        let requested = ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-        if mode & requested == requested {
-            return Ok(());
-        }
-
-        if unsafe { SetConsoleMode(handle, mode | requested) } == 0 {
-            return Err(std::io::Error::last_os_error());
-        }
-
-        Ok(())
-    }
-
-    let stdout_handle = unsafe { GetStdHandle(STD_OUTPUT_HANDLE) };
-    enable_for_handle(stdout_handle)?;
-
-    let stderr_handle = unsafe { GetStdHandle(STD_ERROR_HANDLE) };
-    enable_for_handle(stderr_handle)?;
-
-    Ok(())
-}
-
-#[cfg(not(windows))]
 fn ensure_virtual_terminal_processing() -> Result<()> {
     Ok(())
 }

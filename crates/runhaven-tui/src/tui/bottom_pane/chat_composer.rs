@@ -6,8 +6,8 @@
 //! - Routing keys to the active popup (slash commands, file search, skill/apps mentions).
 //! - Promoting typed slash commands into atomic elements when the command name is completed.
 //! - Handling submit vs newline on Enter.
-//! - Turning raw key streams into explicit paste operations on platforms where terminals
-//!   don't provide reliable bracketed paste (notably Windows).
+//! - Turning raw key streams into explicit paste operations when a terminal does not provide
+//!   reliable bracketed paste.
 //!
 //! # Key Event Routing
 //!
@@ -91,7 +91,7 @@
 //!
 //! # Non-bracketed Paste Bursts
 //!
-//! On some terminals (especially on Windows), pastes arrive as a rapid sequence of
+//! On some terminals, pastes arrive as a rapid sequence of
 //! `KeyCode::Char` and `KeyCode::Enter` key events instead of a single paste event.
 //!
 //! To avoid misinterpreting these bursts as real typing (and to prevent transient UI effects like
@@ -379,7 +379,6 @@ pub(crate) struct ChatComposer {
     mentions_v2_enabled: bool,
     goal_command_enabled: bool,
     personality_command_enabled: bool,
-    windows_degraded_sandbox_active: bool,
     side_conversation_active: bool,
     history_search: Option<HistorySearchSession>,
     submit_keys: Vec<KeyBinding>,
@@ -446,7 +445,6 @@ impl ChatComposer {
             service_tier_commands_enabled: self.service_tier_commands_enabled,
             goal_command_enabled: self.goal_command_enabled,
             personality_command_enabled: self.personality_command_enabled,
-            allow_elevate_sandbox: self.windows_degraded_sandbox_active,
             side_conversation_active: self.side_conversation_active,
         }
     }
@@ -543,7 +541,6 @@ impl ChatComposer {
             mentions_v2_enabled: false,
             goal_command_enabled: false,
             personality_command_enabled: false,
-            windows_degraded_sandbox_active: false,
             side_conversation_active: false,
             history_search: None,
             submit_keys: vec![key_hint::plain(KeyCode::Enter)],
@@ -708,10 +705,6 @@ impl ChatComposer {
 
     fn image_paste_enabled(&self) -> bool {
         self.config.image_paste_enabled
-    }
-    #[cfg(target_os = "windows")]
-    pub fn set_windows_degraded_sandbox_active(&mut self, enabled: bool) {
-        self.windows_degraded_sandbox_active = enabled;
     }
     fn layout_areas(&self, area: Rect) -> [Rect; 4] {
         self.layout_areas_with_textarea_right_reserve(area, /*textarea_right_reserve*/ 0)
@@ -894,8 +887,7 @@ impl ChatComposer {
             return false;
         };
 
-        // normalize_pasted_path already handles Windows → WSL path conversion,
-        // so we can directly try to read the image dimensions.
+        // The macOS path normalizer has already removed shell quoting.
         match image::image_dimensions(&path_buf) {
             Ok((width, height)) => {
                 tracing::info!("OK: {pasted}");
@@ -3415,17 +3407,6 @@ impl ChatComposer {
 
     fn footer_props(&self) -> FooterProps {
         let mode = self.footer_mode();
-        let is_wsl = {
-            #[cfg(target_os = "linux")]
-            {
-                mode == FooterMode::ShortcutOverlay && crate::clipboard_paste::is_probably_wsl()
-            }
-            #[cfg(not(target_os = "linux"))]
-            {
-                false
-            }
-        };
-
         FooterProps {
             mode,
             esc_backtrack_hint: self.footer.esc_backtrack_hint,
@@ -3434,7 +3415,6 @@ impl ChatComposer {
             queue_submissions: self.queue_submissions,
             quit_shortcut_key: self.footer.quit_shortcut_key,
             collaboration_modes_enabled: self.collaboration_modes_enabled,
-            is_wsl,
             status_line_value: self.footer.status_line_value.clone(),
             status_line_enabled: self.footer.status_line_enabled,
             key_hints: FooterKeyHints {

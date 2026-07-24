@@ -10,7 +10,7 @@ type WorkerFixtures = {
   runhavenServer: Awaited<ReturnType<typeof startLoopbackVite>>
 }
 
-const test = base.extend<Record<string, never>, WorkerFixtures>({
+const test = base.extend<{}, WorkerFixtures>({
   runhavenServer: [
     async ({}, use) => {
       const server = await startLoopbackVite({

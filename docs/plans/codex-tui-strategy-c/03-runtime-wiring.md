@@ -196,7 +196,6 @@ to the RunHaven service.
 | `environment/add` | Disabled. |
 | `account/login/*`, `account/logout` | Do not use Codex account login. RunHaven login is per agent through `runhaven login <agent>`. |
 | `feedback/upload` | Disabled unless RunHaven has its own consent and redaction design. |
-| `windowsSandbox/*` | Not relevant. RunHaven is macOS 26+ only. |
 | Codex external-agent import | Disabled. RunHaven already manages external agent profiles. |
 
 ## Notification Mapping

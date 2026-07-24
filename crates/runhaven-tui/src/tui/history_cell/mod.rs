@@ -47,7 +47,6 @@ use crate::text_formatting::format_and_truncate_tool_result;
 use crate::text_formatting::truncate_text;
 use crate::tooltips;
 use crate::ui_consts::LIVE_PREFIX_COLS;
-use crate::update_action::UpdateAction;
 use crate::version::CODEX_CLI_VERSION;
 use crate::wrapping::RtOptions;
 use crate::wrapping::adaptive_wrap_line;
@@ -139,9 +138,6 @@ pub(crate) use request_user_input::*;
 pub(crate) use search::*;
 pub(crate) use separators::*;
 pub(crate) use session::*;
-
-#[cfg(any())]
-mod tests;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum HistoryRenderMode {

@@ -10,21 +10,11 @@ use crate::launch_status::LaunchStatusRegistry;
 use crate::session_input::SessionInputRegistry;
 use crate::session_output::SessionOutputRegistry;
 
-#[cfg(unix)]
 fn stdin_wait_command() -> Vec<String> {
     vec![
         "sh".to_string(),
         "-c".to_string(),
         "IFS= read -r _line".to_string(),
-    ]
-}
-
-#[cfg(windows)]
-fn stdin_wait_command() -> Vec<String> {
-    vec![
-        "cmd".to_string(),
-        "/C".to_string(),
-        "set /p line=".to_string(),
     ]
 }
 
@@ -52,7 +42,7 @@ fn test_plan(workspace: &std::path::Path) -> AgentRunPlan {
     }
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "macos")]
 fn process_is_alive(pid: u32) -> bool {
     Command::new("kill")
         .args(["-0", &pid.to_string()])
@@ -62,7 +52,7 @@ fn process_is_alive(pid: u32) -> bool {
         .is_ok_and(|status| status.success())
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "macos")]
 fn kill_process(pid: u32) {
     let _ = Command::new("kill")
         .args(["-KILL", &pid.to_string()])
@@ -71,7 +61,7 @@ fn kill_process(pid: u32) {
         .status();
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "macos")]
 #[test]
 fn mark_running_failure_reaps_child_joins_output_and_unregisters_input() {
     let workspace = tempfile::tempdir().expect("workspace");

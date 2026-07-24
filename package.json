@@ -1,0 +1,26 @@
+{
+  "name": "runhaven-workspace",
+  "version": "0.7.0",
+  "private": true,
+  "packageManager": "npm@11.17.0",
+  "workspaces": [
+    "ui"
+  ],
+  "engines": {
+    "node": "26.5.0",
+    "npm": "11.17.0"
+  },
+  "scripts": {
+    "build": "npm --workspace runhaven-ui run build",
+    "check": "npm --workspace runhaven-ui run check",
+    "dev": "npm --workspace runhaven-ui run dev",
+    "tauri:build": "npm --workspace runhaven-ui run tauri:build",
+    "tauri:bundle": "npm --workspace runhaven-ui run tauri:bundle",
+    "tauri:dev": "npm --workspace runhaven-ui run tauri:dev",
+    "tauri:dev:log": "npm --workspace runhaven-ui run tauri:dev:log",
+    "tauri:local-signed": "npm --workspace runhaven-ui run tauri:local-signed",
+    "test": "npm --workspace runhaven-ui test",
+    "test:e2e": "npm --workspace runhaven-ui run test:e2e",
+    "test:e2e:smoke": "npm --workspace runhaven-ui run test:e2e:smoke"
+  }
+}

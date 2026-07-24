@@ -19,11 +19,9 @@ Capability facts below (crate versions, terminal support) were verified on
 2026-06-26 and are point-in-time. Re-verify against current sources before any
 implementation, and treat the support matrix as volatile.
 
-RunHaven runs only on macOS 26+ on Apple silicon (`AGENTS.md`: no Windows or
-Linux runtime targets), so its TUI only ever runs in a macOS terminal. Unlike a
-cross-platform tool, Windows terminal support is out of scope; the target set is
-macOS Terminal.app, iTerm2, Ghostty, Kitty, WezTerm, Alacritty, and Rio, plus
-tmux, Zellij, and SSH sessions from those.
+RunHaven runs only on macOS 26+ on Apple silicon, so its TUI runs in a macOS
+terminal. The target set is macOS Terminal.app, iTerm2, Ghostty, Kitty, WezTerm,
+Alacritty, and Rio, plus tmux, Zellij, and SSH sessions from those.
 
 ## What the TUI Answers at a Glance
 

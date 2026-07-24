@@ -3,7 +3,7 @@
 # Tees the whole tauri:dev output to a rotated dev.log, and secret-scans every
 # log (dev.log + the structured runhaven.log) when the session ends, so no
 # session is ever shared unscanned. Stop the app with Ctrl-C as usual.
-set -u
+set -uo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 teelog="$HOME/Library/Logs/RunHaven/dev.log"
@@ -20,16 +20,27 @@ fi
 # Secret-scan on exit (including Ctrl-C), so a leak like a wire-dumped token is
 # caught automatically instead of only when someone remembers to look.
 scan_on_exit() {
+  session_status=$?
+  trap - EXIT INT TERM
   echo
   echo "===== scanning diagnostic logs for secrets ====="
-  if "$root/scripts/scan-dev-log.sh"; then
-    :
-  else
-    echo "!!! SECRET SCAN FAILED: the logs above contain token-shaped text."
-    echo "!!! Do not share them; investigate before the next run."
+  "$root/scripts/scan-dev-log.sh"
+  scan_status=$?
+  if [ "$scan_status" -ne 0 ]; then
+    echo "SECRET SCAN FAILED: a local diagnostic log contains token-shaped text."
+    echo "Do not share the log; investigate before the next run."
   fi
+  if [ "$session_status" -ne 0 ]; then
+    printf 'desktop development session failed with exit %s\n' "$session_status"
+  fi
+  if [ "$scan_status" -ne 0 ]; then
+    exit "$scan_status"
+  fi
+  exit "$session_status"
 }
-trap scan_on_exit EXIT INT TERM
+trap scan_on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 {
   echo "===== tauri:dev session $(date -u +%Y-%m-%dT%H:%M:%SZ) ====="

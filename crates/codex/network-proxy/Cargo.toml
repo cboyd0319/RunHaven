@@ -11,7 +11,7 @@ doctest = false
 
 
 [dependencies]
-anyhow = { version = "=1.0.102" }
+anyhow = { version = "=1.0.103" }
 base64 = { version = "=0.22.1" }
 clap = { version = "=4.6.1", features = ["derive"] }
 chrono = { version = "=0.4.45", features = ["serde"] }
@@ -28,12 +28,15 @@ tokio = { version = "=1.52.3", features = ["full"] }
 tracing = { version = "=0.1.44" }
 url = { version = "=2.5.8" }
 rama-core = { version = "=0.3.0-alpha.4" }
+rama-error = { version = "=0.3.0-alpha.4" }
 rama-http = { version = "=0.3.0-alpha.4" }
 rama-http-backend = { version = "=0.3.0-alpha.4", features = ["tls"] }
+rama-macros = { version = "=0.3.0-alpha.4" }
 rama-net = { version = "=0.3.0-alpha.4", features = ["http", "tls"] }
 rama-socks5 = { version = "=0.3.0-alpha.4" }
 rama-tcp = { version = "=0.3.0-alpha.4", features = ["http"] }
 rama-tls-rustls = { version = "=0.3.0-alpha.4", features = ["http"] }
+rama-utils = { version = "=0.3.0-alpha.4" }
 rustls-native-certs = { version = "=0.8.3" }
 sha2 = { version = "=0.10.9" }
 

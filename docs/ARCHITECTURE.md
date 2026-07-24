@@ -1,12 +1,13 @@
 # Architecture
 
-`runhaven` is a Rust CLI around Apple `container`, with an alpha Tauri/React
-desktop app. It does
-not try to replace the agent CLIs. Its job is to make the safe container
-boundary easy to choose and hard to accidentally widen.
+`runhaven` is a Rust application around Apple `container`, with CLI, terminal,
+and Tauri/React desktop interfaces. It does not try to replace the agent CLIs.
+Its job is to make the safe container boundary easy to choose and hard to
+accidentally widen.
 
-The former TUI and Codex source are archived outside the release workspace.
-They are not linked into RunHaven binaries. A bare `runhaven` prints CLI help.
+The comprehensive Codex-derived TUI source remains a RunHaven product surface.
+Its pinned Codex dependency graph is isolated from the current default release
+workspace; a bare `runhaven` currently prints CLI help.
 
 The Tauri scaffold lives under `src-tauri/` and `ui/`. The Tauri crate is a
 workspace member, depends on `runhaven-core`, and exposes typed commands for setup, dashboard,
@@ -31,7 +32,8 @@ Rust source is split by ownership boundary across workspace crates:
 | `crates/runhaven/` | Binary entrypoints: `runhaven` and `runhaven-check-pins`. It does not contain shared library truth. |
 | `crates/runhaven-core/` | Runtime, provider egress, auth broker metadata, records, image handling, doctor checks, diagnostics, support helpers, pin-policy logic, and shared UI contracts. |
 | `crates/runhaven-cli/` | Clap schema, command dispatch, CLI text rendering, setup guide, and human presentation. It depends on core data instead of owning runtime, policy, or persistence truth. |
-| `crates/runhaven-tui/`, `crates/codex/` | Archived terminal source outside the active workspace and release graph. |
+| `crates/runhaven-tui/` | Comprehensive terminal interface and RunHaven TUI adapters over shared core contracts. |
+| `crates/codex/` | Isolated pinned upstream source used by the terminal interface. It does not own RunHaven policy or runtime truth. |
 | `src-tauri/` | Desktop Rust shell. It depends on `runhaven-core` and exposes narrow typed commands to the untrusted WebView. |
 | `ui/` | React frontend for the desktop shell. |
 

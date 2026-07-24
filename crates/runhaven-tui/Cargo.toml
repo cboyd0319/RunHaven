@@ -51,7 +51,6 @@ codex-feedback = { path = "../codex/feedback" }
 codex-features = { path = "../codex/features" }
 codex-file-search = { path = "../codex/file-search" }
 codex-git-utils = { path = "../codex/git-utils" }
-codex-install-context = { path = "../codex/install-context" }
 codex-models-manager = { path = "../codex/models-manager" }
 codex-otel = { path = "../codex/otel" }
 codex-plugin = { path = "../codex/plugin" }
@@ -98,19 +97,8 @@ vt100.workspace = true
 [target.'cfg(unix)'.dependencies]
 libc = "=0.2.186"
 
-[target.'cfg(not(target_os = "android"))'.dependencies]
+[target.'cfg(target_os = "macos")'.dependencies]
 arboard.workspace = true
-
-[target.'cfg(windows)'.dependencies]
-windows-sys = { version = "=0.52.0", features = [
-    "Win32_Foundation",
-    "Win32_Security",
-    "Win32_Storage_FileSystem",
-    "Win32_System_Console",
-    "Win32_System_IO",
-    "Win32_System_Pipes",
-    "Win32_System_Threading",
-] }
 
 [dev-dependencies]
 chrono = { version = "=0.4.45", default-features = false, features = ["clock", "std"] }

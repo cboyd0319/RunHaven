@@ -11,7 +11,7 @@ Checks:
   - bundled shell image readiness
   - internal read-only /workspace run, active status, logs, stop, and record
   - provider plan guidance plus allowlist/direct-egress denial when requested
-  - SSH fail-closed guidance plus run refusal when requested
+  - explicit SSH-agent socket forwarding plus safe failure for unusable sockets
 
 Cleanup is limited to this script's temporary workspace, state, and networks.
 EOF

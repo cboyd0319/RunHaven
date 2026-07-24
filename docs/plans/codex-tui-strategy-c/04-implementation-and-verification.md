@@ -29,8 +29,8 @@ scripts/compare-codex-tui.sh --list-missing >/tmp/runhaven-codex-tui-missing.txt
 cargo run --locked --bin runhaven-check-pins --quiet
 jq empty feature_list.json
 python3 -m json.tool feature_list.json >/dev/null
-! rg -n "[[:blank:]]$" scripts/compare-codex-tui.sh crates/runhaven-tui/src/tui/README.md docs/plans/codex-tui-strategy-c/*.md current-state.md feature_list.json
-! LC_ALL=C rg -n "[^ -~]" scripts/compare-codex-tui.sh crates/runhaven-tui/src/tui/README.md docs/plans/codex-tui-strategy-c/*.md current-state.md feature_list.json
+! rg -n "[[:blank:]]$" scripts/compare-codex-tui.sh crates/runhaven-tui/src/tui/README.md docs/plans/codex-tui-strategy-c/*.md PROGRESS.md feature_list.json
+! LC_ALL=C rg -n "[^ -~]" scripts/compare-codex-tui.sh crates/runhaven-tui/src/tui/README.md docs/plans/codex-tui-strategy-c/*.md PROGRESS.md feature_list.json
 git diff --check
 ```
 
@@ -103,7 +103,6 @@ a typed unsupported error:
 - `account/login/*`
 - `account/logout`
 - `feedback/upload`
-- `windowsSandbox/*`
 - Codex external-agent import
 
 When a disabled family becomes visible in the UI, add a UI-level test that it is

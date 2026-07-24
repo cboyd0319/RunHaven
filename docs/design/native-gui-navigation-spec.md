@@ -8,7 +8,7 @@ Last updated: 2026-07-01 UTC
 > Running group, and Saved setups. Every app launch opens New session.
 > Agents, Diagnostics, Maintenance, duplicate run filters, launch/settings
 > modals, and placeholder menu commands did not earn permanent surfaces. See
-> `docs/DESKTOP_APP.md` and `current-state.md` for the current contract.
+> `docs/DESKTOP_APP.md` and `PROGRESS.md` for the current contract.
 > The auxiliary session-window experiment described below was removed on
 > 2026-07-13 because it duplicated History without adding an essential task.
 
@@ -464,4 +464,4 @@ component pages), `sidebars`, `toolbars`, `windows`, `the-menu-bar`,
 Repo grounding: `docs/design/runhaven-design-spec.md` (visual and dialog
 rules), `docs/plans/native-gui-wireframe.md` (prior wireframe),
 `docs/DESKTOP_APP.md` (current user-facing behavior), `docs/SECURITY_MODEL.md`
-(boundary), `current-state.md` (product laws cited as "repo law").
+(boundary), `PROGRESS.md` (product laws cited as "repo law").

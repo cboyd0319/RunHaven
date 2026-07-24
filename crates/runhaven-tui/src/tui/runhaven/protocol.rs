@@ -108,7 +108,6 @@ pub(crate) enum UnsupportedFamily {
     AccountLogin,
     AccountLogout,
     Feedback,
-    WindowsSandbox,
     ExternalAgentImport,
 }
 
@@ -126,7 +125,6 @@ pub(crate) enum UnsupportedMethod {
     AccountLoginStart,
     AccountLogout,
     FeedbackUpload,
-    WindowsSandboxStatus,
     ExternalAgentConfigImport,
 }
 
@@ -143,7 +141,6 @@ impl UnsupportedMethod {
         Self::AccountLoginStart,
         Self::AccountLogout,
         Self::FeedbackUpload,
-        Self::WindowsSandboxStatus,
         Self::ExternalAgentConfigImport,
     ];
 
@@ -160,7 +157,6 @@ impl UnsupportedMethod {
             Self::AccountLoginStart => "account/login/start",
             Self::AccountLogout => "account/logout",
             Self::FeedbackUpload => "feedback/upload",
-            Self::WindowsSandboxStatus => "windowsSandbox/status",
             Self::ExternalAgentConfigImport => "externalAgentConfig/import",
         }
     }
@@ -178,7 +174,6 @@ impl UnsupportedMethod {
             Self::AccountLoginStart => UnsupportedFamily::AccountLogin,
             Self::AccountLogout => UnsupportedFamily::AccountLogout,
             Self::FeedbackUpload => UnsupportedFamily::Feedback,
-            Self::WindowsSandboxStatus => UnsupportedFamily::WindowsSandbox,
             Self::ExternalAgentConfigImport => UnsupportedFamily::ExternalAgentImport,
         }
     }

@@ -3,7 +3,7 @@ source: crates/runhaven-tui/src/tui/runhaven/mvp_snapshots.rs
 expression: rendered
 ---
 
-  RunHaven v0.5.0  Stop run
+  RunHaven v0.7.0  Stop run
   1 Launch  2 Runs  3 Diagnostics  h History
   This action only targets the selected RunHaven-owned container.
 

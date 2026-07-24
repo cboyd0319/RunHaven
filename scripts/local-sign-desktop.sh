@@ -68,7 +68,7 @@ fi
 for command in cmp codesign cp lipo npm open rg xcrun; do
   need "$command"
 done
-[ -x "$ROOT/ui/node_modules/.bin/tauri" ] || fail "install the pinned UI dependencies before local signing"
+[ -x "$ROOT/ui/node_modules/.bin/tauri" ] || fail "install the pinned root npm workspace before local signing"
 
 entitlements="$tmp/RunHaven-Local.entitlements"
 ENTITLEMENTS="$entitlements" TEAM_ID="$MACOS_SIGNING_TEAM_ID" \
@@ -105,7 +105,7 @@ env \
   -u APPLE_TEAM_ID \
   CARGO_PROFILE_RELEASE_STRIP=none \
   CARGO_TARGET_DIR="$target" \
-  "$ROOT/ui/node_modules/.bin/tauri" build \
+  npm --prefix "$ROOT" --workspace runhaven-ui run tauri -- build \
     --ci \
     --target aarch64-apple-darwin \
     --bundles app \

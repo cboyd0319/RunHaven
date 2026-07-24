@@ -152,7 +152,7 @@ Keep these copied files dormant or fail-closed until there is a RunHaven design:
 - `startup_hooks_review.rs`
 - `model_migration.rs`
 - `theme_picker.rs` until RunHaven has theme settings
-- `windows_sandbox.rs`
+- unsupported-platform sandbox modules
 - remote filesystem behavior in `app_server_session/fs.rs`
 
 Do not rip these out only because they are not active yet. First wire the

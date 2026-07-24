@@ -200,5 +200,5 @@ Each Tauri command needs:
 - UI command tests prove denied-by-default behavior before each new mutating
   operation is wired. The current `launch_run` command has confirmation tests
   and its own `launch-run` capability.
-- Local Apple `container` smoke remains the runtime evidence source while
-  hosted CI is disabled.
+- Local Apple `container` smoke remains the runtime evidence source; no hosted
+  CI exists.

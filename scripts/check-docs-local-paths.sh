@@ -8,13 +8,20 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 FILES_LIST="$(mktemp "${TMPDIR:-/tmp}/runhaven-doc-paths.XXXXXX")"
 trap 'rm -f "$FILES_LIST"' EXIT
 
-git ls-files -z -- \
-  AGENTS.md \
-  README.md \
-  current-state.md \
-  feature_list.json \
-  .agents \
-  docs > "$FILES_LIST"
+while IFS= read -r -d '' file; do
+  if [ -f "$file" ] && [ ! -L "$file" ]; then
+    printf '%s\0' "$file" >> "$FILES_LIST"
+  fi
+done < <(
+  git ls-files -z --cached --others --exclude-standard -- \
+    AGENTS.md \
+    CLAUDE.md \
+    README.md \
+    PROGRESS.md \
+    feature_list.json \
+    .github/copilot-instructions.md \
+    docs
+)
 
 if [ ! -s "$FILES_LIST" ]; then
   exit 0
@@ -24,6 +31,7 @@ patterns=(
   '(/Users/|[A-Za-z]:\\Users\\)'
   '<[A-Za-z0-9._-]*(checkout|external-draft|external-source|local-source|codex-home)[A-Za-z0-9._/-]*>'
   'local (Codex|Apple container|Learn Harness|reference|source) checkout'
+  '(current-state\.md|session-handoff\.md|claude-progress\.md)'
 )
 
 matches=""
@@ -39,13 +47,16 @@ done
 
 if [ -n "$matches" ]; then
   cat >&2 <<'EOF'
-Found machine-local references in docs or instruction surfaces.
+Found a forbidden local or retired reference in docs or instruction surfaces.
 
 Do not commit local home-directory paths, download folders, sibling checkout
 paths, local workspace roots, or symbolic placeholders for local external
 files. Use repo-relative paths or public URLs. Cite upstream source with a
 public repository plus pinned commit. If a local external document is needed,
 import or summarize it into docs/ first and cite the repo copy.
+
+The only current continuity files are PROGRESS.md and feature_list.json. Do not
+reference retired progress or handoff filenames.
 
 Matches:
 EOF

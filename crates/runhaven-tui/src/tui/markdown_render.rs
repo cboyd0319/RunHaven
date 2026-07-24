@@ -1994,18 +1994,12 @@ fn is_local_path_like_link(dest_url: &str) -> bool {
         || dest_url.starts_with("~/")
         || dest_url.starts_with("./")
         || dest_url.starts_with("../")
-        || dest_url.starts_with("\\\\")
-        || matches!(
-            dest_url.as_bytes(),
-            [drive, b':', separator, ..]
-                if drive.is_ascii_alphabetic() && matches!(separator, b'/' | b'\\')
-        )
 }
 
 /// Parse a local link target into normalized path text plus an optional location suffix.
 ///
-/// This accepts the path shapes Codex emits today: `file://` URLs, absolute and relative paths,
-/// `~/...`, Windows paths, and `#L..C..` or `:line:col` suffixes.
+/// This accepts `file://` URLs, absolute and relative macOS paths, home-relative paths, and line
+/// or column suffixes.
 fn render_local_link_target(dest_url: &str, cwd: Option<&Path>) -> Option<String> {
     let (path_text, location_suffix) = parse_local_link_target(dest_url)?;
     let mut rendered = display_local_link_path(&path_text, cwd);
@@ -2076,7 +2070,7 @@ fn normalize_hash_location_suffix_fragment(fragment: &str) -> Option<String> {
 /// Extract a trailing `:line`, `:line:col`, or range suffix from a plain path-like string.
 ///
 /// The suffix must occur at the end of the input; embedded colons elsewhere in the path are left
-/// alone. This is what keeps Windows drive letters like `C:/...` from being misread as locations.
+/// alone.
 fn extract_colon_location_suffix(path_text: &str) -> Option<String> {
     COLON_LOCATION_SUFFIX_RE
         .find(path_text)
@@ -2102,66 +2096,30 @@ fn expand_local_link_path(path_text: &str) -> String {
 
 /// Convert a `file://` URL into the normalized local-path text used for transcript rendering.
 ///
-/// This prefers `Url::to_file_path()` for standard file URLs. When that rejects Windows-oriented
-/// encodings, we reconstruct a display path from the host/path parts so UNC paths and drive-letter
-/// URLs still render sensibly.
+/// Only standard local file URLs accepted by the host are rendered as paths.
 fn file_url_to_local_path_text(url: &Url) -> Option<String> {
-    if let Ok(path) = url.to_file_path() {
-        return Some(normalize_local_link_path_text(&path.to_string_lossy()));
-    }
-
-    // Fall back to string reconstruction for cases `to_file_path()` rejects, especially UNC-style
-    // hosts and Windows drive paths encoded in URL form.
-    let mut path_text = url.path().to_string();
-    if let Some(host) = url.host_str()
-        && !host.is_empty()
-        && host != "localhost"
-    {
-        path_text = format!("//{host}{path_text}");
-    } else if matches!(
-        path_text.as_bytes(),
-        [b'/', drive, b':', b'/', ..] if drive.is_ascii_alphabetic()
-    ) {
-        path_text.remove(0);
-    }
-
-    Some(normalize_local_link_path_text(&path_text))
+    url.to_file_path()
+        .ok()
+        .map(|path| normalize_local_link_path_text(&path.to_string_lossy()))
 }
 
 /// Normalize local-path text into the transcript display form.
 ///
 /// Display normalization is intentionally lexical: it does not touch the filesystem, resolve
-/// symlinks, or collapse `.` / `..`. It only converts separators to forward slashes and rewrites
-/// UNC-style `\\\\server\\share` inputs into `//server/share` so later prefix checks operate on a
-/// stable representation.
+/// symlinks, or collapse `.` / `..`.
 fn normalize_local_link_path_text(path_text: &str) -> String {
-    // Render all local link paths with forward slashes so display and prefix stripping are stable
-    // across mixed Windows and Unix-style inputs.
-    if let Some(rest) = path_text.strip_prefix("\\\\") {
-        format!("//{}", rest.replace('\\', "/").trim_start_matches('/'))
-    } else {
-        path_text.replace('\\', "/")
-    }
+    path_text.to_string()
 }
 
 fn is_absolute_local_link_path(path_text: &str) -> bool {
     path_text.starts_with('/')
-        || path_text.starts_with("//")
-        || matches!(
-            path_text.as_bytes(),
-            [drive, b':', b'/', ..] if drive.is_ascii_alphabetic()
-        )
 }
 
 /// Remove trailing separators from a local path without destroying root semantics.
 ///
-/// Roots like `/`, `//`, and `C:/` stay intact so callers can still distinguish "the root itself"
-/// from "a path under the root".
+/// The `/` root stays intact so callers can distinguish it from a path under the root.
 fn trim_trailing_local_path_separator(path_text: &str) -> &str {
-    if path_text == "/" || path_text == "//" {
-        return path_text;
-    }
-    if matches!(path_text.as_bytes(), [drive, b':', b'/'] if drive.is_ascii_alphabetic()) {
+    if path_text == "/" {
         return path_text;
     }
     path_text.trim_end_matches('/')
@@ -2181,7 +2139,7 @@ fn strip_local_path_prefix<'a>(path_text: &'a str, cwd_text: &str) -> Option<&'a
 
     // Treat filesystem roots specially so `/tmp/x` under `/` becomes `tmp/x` instead of being
     // left unchanged by the generic prefix-stripping branch.
-    if cwd_text == "/" || cwd_text == "//" {
+    if cwd_text == "/" {
         return path_text.strip_prefix('/');
     }
 

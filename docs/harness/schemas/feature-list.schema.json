@@ -1,92 +1,172 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Repo Harness Feature List",
+  "$id": "feature-list.schema.json",
+  "title": "RunHaven feature registry",
   "type": "object",
+  "additionalProperties": false,
   "required": [
+    "$schema",
+    "schema_version",
+    "project",
+    "last_updated",
+    "status_legend",
+    "rules",
     "features"
   ],
   "properties": {
     "$schema": {
-      "type": "string"
+      "const": "docs/harness/schemas/feature-list.schema.json"
+    },
+    "schema_version": {
+      "const": 1
     },
     "project": {
-      "type": "string"
+      "const": "RunHaven"
     },
     "last_updated": {
-      "type": "string"
-    },
-    "rules": {
-      "type": "object"
+      "type": "string",
+      "format": "date"
     },
     "status_legend": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "not_started",
+        "active",
+        "blocked",
+        "passing"
+      ],
+      "properties": {
+        "not_started": { "type": "string", "minLength": 1 },
+        "active": { "type": "string", "minLength": 1 },
+        "blocked": { "type": "string", "minLength": 1 },
+        "passing": { "type": "string", "minLength": 1 }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "active_count",
+        "passing_is_irreversible",
+        "evidence_is_external"
+      ],
+      "properties": {
+        "active_count": { "const": 1 },
+        "passing_is_irreversible": { "const": true },
+        "evidence_is_external": { "const": true }
+      }
     },
     "features": {
       "type": "array",
+      "minItems": 1,
       "items": {
-        "type": "object",
-        "required": [
-          "id",
-          "priority",
-          "area",
-          "title",
-          "user_visible_behavior",
-          "status",
-          "verification",
-          "evidence"
-        ],
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "priority": {
-            "type": "integer"
-          },
-          "area": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "user_visible_behavior": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "not_started",
-              "planned",
-              "active",
-              "blocked",
-              "passing",
-              "done"
-            ]
-          },
-          "dependencies": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "verification": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "evidence": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "notes": {
-            "type": "string"
-          }
-        },
-        "additionalProperties": true
+        "$ref": "#/$defs/feature"
       }
     }
   },
-  "additionalProperties": true
+  "$defs": {
+    "feature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "priority",
+        "area",
+        "title",
+        "user_visible_behavior",
+        "status",
+        "dependencies",
+        "verification",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "area": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "user_visible_behavior": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "not_started",
+            "active",
+            "blocked",
+            "passing"
+          ]
+        },
+        "dependencies": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+          }
+        },
+        "verification": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "blocker": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_trigger": {
+          "type": "string",
+          "minLength": 1
+        },
+        "superseded_by": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[.-][a-z0-9]+)*$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "passing" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": { "evidence": { "minItems": 1 } }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "const": "blocked" } },
+            "required": ["status"]
+          },
+          "then": {
+            "required": ["blocker", "next_trigger"]
+          }
+        }
+      ]
+    }
+  }
 }

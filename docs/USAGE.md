@@ -6,16 +6,17 @@ Install RunHaven and Apple `container` first:
 [Installation](INSTALLATION.md).
 
 RunHaven development and runtime verification require macOS 26+ on Apple
-silicon. Windows and Linux are not supported.
+silicon.
 
 RunHaven is a pre-1.0 pre-release. The commands below describe the current CLI
 surface; behavior may still change before `v1.0.0`.
 
 ## Terminal UI
 
-The terminal UI source is archived outside the release workspace. It is not
-linked into RunHaven binaries. Running `runhaven` without a subcommand prints
-CLI help. Use the desktop app for the guided experience or CLI subcommands for
+The comprehensive terminal UI source remains under `crates/runhaven-tui`. Its
+pinned dependency graph is not yet linked into the default release binaries.
+Running `runhaven` without a subcommand currently prints CLI help. Use the
+desktop app for the guided experience or CLI subcommands for
 automation and diagnostics.
 
 ## Guided Setup

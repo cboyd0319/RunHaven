@@ -102,7 +102,6 @@ The terminal layer handles many edge cases that are easy to miss in custom TUIs:
 - Panic hook restoration so the shell is not left broken.
 - Inline viewport mode and alternate screen mode.
 - Cursor position and default color probing.
-- Windows virtual terminal handling and stdin flush.
 - Unix job-control support for suspend/resume.
 - A shared event broker that can pause and recreate the crossterm event stream, which avoids stealing stdin from spawned editors or other subprocesses.
 - Frame requester and frame-rate limiting.
@@ -233,7 +232,7 @@ The composer can:
 - Open reverse history search with `Ctrl+R`.
 - Rehydrate local image paths and remote image URLs from history.
 - Represent large pastes with placeholders.
-- Detect non-bracketed paste bursts, especially on Windows.
+- Detect non-bracketed paste bursts in supported terminals.
 - Support remote image rows that can be selected and deleted.
 - Temporarily disable input while retaining UI state.
 
@@ -613,13 +612,11 @@ References:
 
 The TUI has robust local terminal utilities:
 
-- Text copy through native clipboard, WSL PowerShell, tmux, or OSC 52.
+- Text copy through the native clipboard, tmux, or OSC 52.
 - SSH-aware clipboard routing so copies reach the local terminal emulator.
 - OSC 52 payload size cap.
 - Clipboard image paste to PNG.
-- WSL image-paste fallback.
 - External editor launch via `VISUAL` or `EDITOR`.
-- Windows command parsing and `.cmd`/`.bat` resolution.
 - Temporary markdown file editing.
 - Terminal title setup.
 - Status line setup.
@@ -804,7 +801,6 @@ These are valuable but coupled:
 - Plugins, apps/connectors, skills, hooks, MCP: strong product surfaces, but tied to Codex workspace crates and app-server RPCs.
 - Auth/onboarding: mostly Codex-specific.
 - Status/usage/rate-limit/account surfaces: mostly Codex-specific.
-- Windows sandbox and permission compatibility: useful reference, but coupled to Codex permission models.
 
 ## Adoption Strategies
 

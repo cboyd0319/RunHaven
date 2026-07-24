@@ -304,6 +304,7 @@ fn active_run() -> ActiveRunSummaryData {
         profile: "codex".to_string(),
         network: "provider".to_string(),
         status: "running".to_string(),
+        auth_scope: "agent".to_string(),
         timestamp: "2026-06-29T17:44:00Z".to_string(),
         state_volume: "runhaven-codex-shared-home".to_string(),
         session: "none".to_string(),

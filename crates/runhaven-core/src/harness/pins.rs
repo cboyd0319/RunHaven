@@ -2,12 +2,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Result, bail};
-use serde_json::Value as JsonValue;
 use toml::Value;
 
+mod frontend;
 mod image_pins;
 mod script_descriptions;
 
+use frontend::check_frontend_package;
 use image_pins::check_image_pins;
 use script_descriptions::check_script_descriptions;
 
@@ -19,8 +20,7 @@ pub fn check_pins() -> Result<()> {
     failures.extend(check_apple_container_constants(&pins));
     failures.extend(check_cargo_against_ledger(&root, &pins));
     failures.extend(check_tauri_cargo_against_ledger(&root, &pins));
-    failures.extend(check_frontend_package_against_ledger(&root, &pins));
-    failures.extend(check_ci_against_ledger(&root, &pins));
+    failures.extend(check_frontend_package(&root, &pins));
     failures.extend(check_text_policy(&root));
     failures.extend(check_image_pins(&root, &pins));
     failures.extend(check_script_descriptions(&root));
@@ -196,76 +196,6 @@ fn dependency_version_from_member(
     dependency_version(dependency)
 }
 
-fn check_frontend_package_against_ledger(root: &Path, pins: &Value) -> Vec<String> {
-    let package_json = root.join("ui/package.json");
-    if !package_json.exists() {
-        return Vec::new();
-    }
-    let mut failures = Vec::new();
-    if !root.join("ui/package-lock.json").is_file() {
-        failures.push("ui/package-lock.json: missing".to_string());
-    }
-    let Ok(text) = fs::read_to_string(&package_json) else {
-        return vec!["ui/package.json: unreadable".to_string()];
-    };
-    let Ok(json) = serde_json::from_str::<JsonValue>(&text) else {
-        return vec!["ui/package.json: invalid JSON".to_string()];
-    };
-    let release_version = toml_path(pins, &["runhaven", "version"])
-        .and_then(Value::as_str)
-        .unwrap_or("");
-    if json.get("version").and_then(JsonValue::as_str) != Some(release_version) {
-        failures.push("ui/package.json: package version does not match pins.toml".to_string());
-    }
-    match fs::read_to_string(root.join("ui/package-lock.json"))
-        .ok()
-        .and_then(|text| serde_json::from_str::<JsonValue>(&text).ok())
-    {
-        Some(lock)
-            if lock.get("version").and_then(JsonValue::as_str) == Some(release_version)
-                && lock
-                    .pointer("/packages/")
-                    .and_then(|package| package.get("version"))
-                    .and_then(JsonValue::as_str)
-                    == Some(release_version) => {}
-        Some(_) => failures
-            .push("ui/package-lock.json: package version does not match pins.toml".to_string()),
-        None => failures.push("ui/package-lock.json: invalid JSON".to_string()),
-    }
-    let Some(frontend_pins) = pins.get("frontend").and_then(Value::as_table) else {
-        return vec!["pins.toml: missing [frontend] dependency pins".to_string()];
-    };
-    let mut seen = Vec::new();
-    for section in ["dependencies", "devDependencies", "optionalDependencies"] {
-        let Some(object) = json.get(section).and_then(JsonValue::as_object) else {
-            continue;
-        };
-        for (name, version) in object {
-            seen.push(name.as_str());
-            let Some(version) = version.as_str() else {
-                failures.push(format!("ui/package.json: {section}.{name} is not a string"));
-                continue;
-            };
-            if !is_exact_npm_version(version) {
-                failures.push(format!(
-                    "ui/package.json: {section}.{name} is not exact-pinned"
-                ));
-            }
-            if frontend_pins.get(name).and_then(Value::as_str) != Some(version) {
-                failures.push(format!(
-                    "ui/package.json: {section}.{name} does not match pins.toml"
-                ));
-            }
-        }
-    }
-    for name in frontend_pins.keys() {
-        if !seen.contains(&name.as_str()) {
-            failures.push(format!("ui/package.json: missing pinned dependency {name}"));
-        }
-    }
-    failures
-}
-
 fn dependency_version(value: &Value) -> Option<String> {
     match value {
         Value::String(value) => Some(value.clone()),
@@ -277,76 +207,9 @@ fn dependency_version(value: &Value) -> Option<String> {
     }
 }
 
-fn check_ci_against_ledger(root: &Path, pins: &Value) -> Vec<String> {
-    let mut failures = Vec::new();
-    let workflow_files = workflow_files(root);
-    if workflow_files.is_empty() {
-        return failures;
-    }
-    let macos = toml_path(pins, &["github_runners", "macos"])
-        .and_then(Value::as_str)
-        .unwrap_or("");
-    let toolchain = toml_path(pins, &["rust", "toolchain"])
-        .and_then(Value::as_str)
-        .unwrap_or("");
-    let sha = regex::Regex::new(r"^[0-9a-f]{40}$").unwrap();
-    let action_ref = regex::Regex::new(r"uses:\s*[\w./-]+@([^\s#]+)").unwrap();
-    for path in workflow_files {
-        let relative = path
-            .strip_prefix(root)
-            .unwrap_or(&path)
-            .display()
-            .to_string();
-        let Ok(text) = fs::read_to_string(&path) else {
-            failures.push(format!("{relative}: unreadable workflow file"));
-            continue;
-        };
-        if macos.is_empty() {
-            failures.push(format!(
-                "{relative}: active workflow requires pins.toml [github_runners].macos"
-            ));
-        } else if !text.contains(macos) {
-            failures.push(format!("{relative}: macOS runner does not match pins.toml"));
-        }
-        let lower = text.to_ascii_lowercase();
-        if lower.contains("ubuntu") || lower.contains("windows") {
-            failures.push(format!("{relative}: CI must run only on macOS 26+"));
-        }
-        if toolchain.is_empty() || !text.contains(toolchain) {
-            failures.push(format!(
-                "{relative}: Rust toolchain does not match pins.toml"
-            ));
-        }
-        for capture in action_ref.captures_iter(&text) {
-            if !sha.is_match(&capture[1]) {
-                failures.push(format!(
-                    "{relative}: GitHub Action ref is not an immutable SHA"
-                ));
-            }
-        }
-    }
-    failures
-}
-
-fn workflow_files(root: &Path) -> Vec<PathBuf> {
-    let workflows = root.join(".github/workflows");
-    let Ok(entries) = fs::read_dir(workflows) else {
-        return Vec::new();
-    };
-    entries
-        .flatten()
-        .map(|entry| entry.path())
-        .filter(|path| {
-            path.extension()
-                .and_then(|extension| extension.to_str())
-                .is_some_and(|extension| matches!(extension, "yml" | "yaml"))
-        })
-        .collect()
-}
-
 fn check_text_policy(root: &Path) -> Vec<String> {
     let mut failures = Vec::new();
-    let mut files = [
+    let files = [
         root.join("Cargo.toml"),
         root.join("src-tauri/Cargo.toml"),
         root.join("ui/package.json"),
@@ -355,7 +218,6 @@ fn check_text_policy(root: &Path) -> Vec<String> {
     ]
     .into_iter()
     .collect::<Vec<_>>();
-    files.extend(workflow_files(root));
     for path in files {
         let relative = path
             .strip_prefix(root)

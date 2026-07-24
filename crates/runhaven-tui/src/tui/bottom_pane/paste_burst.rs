@@ -1,6 +1,6 @@
 //! Paste-burst detection for terminals without bracketed paste.
 //!
-//! On some platforms (notably Windows), pastes often arrive as a rapid stream of
+//! On some terminals, pastes arrive as a rapid stream of
 //! `KeyCode::Char` and `KeyCode::Enter` key events rather than as a single "paste" event.
 //! In that mode, the composer needs to:
 //!
@@ -158,11 +158,7 @@ const PASTE_ENTER_SUPPRESS_WINDOW: Duration = Duration::from_millis(120);
 const PASTE_BURST_CHAR_INTERVAL: Duration = Duration::from_millis(8);
 
 // Idle timeout before flushing buffered paste content.
-// Slower paste bursts have been observed in Windows environments.
-#[cfg(not(windows))]
 const PASTE_BURST_ACTIVE_IDLE_TIMEOUT: Duration = Duration::from_millis(8);
-#[cfg(windows)]
-const PASTE_BURST_ACTIVE_IDLE_TIMEOUT: Duration = Duration::from_millis(60);
 
 #[derive(Default)]
 pub(crate) struct PasteBurst {

@@ -359,7 +359,7 @@ fn launch_preview_for_workspace(
             name: executable.network_name.clone(),
             summary: network_summary.to_string(),
             provider_allowed_hosts,
-            claude_auth_source: None,
+            api_key_broker_env: None,
         },
         boundary: LaunchBoundaryData {
             mounted_workspace: format!("{workspace} -> /workspace"),

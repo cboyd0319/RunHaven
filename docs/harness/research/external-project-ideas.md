@@ -9,9 +9,8 @@ clearer egress boundaries, safer workspace handling, and better recovery.
 This pass used manual web and source review. AGY/Antigravity was not used.
 
 RunHaven remains macOS 26+ only and Apple `container` only. Projects that use
-Docker, Linux-only primitives, Windows support, cloud sandboxes, or
-`sandbox-exec` are still useful as idea sources, but they are not runtime
-targets for RunHaven.
+Docker, other host primitives, cloud sandboxes, or `sandbox-exec` are still
+useful as idea sources, but they are not runtime targets for RunHaven.
 
 ## Reviewed Projects
 
@@ -371,8 +370,8 @@ RunHaven direction:
 3. Empty-allowlist regression tests for every network policy mode. Implemented
    2026-06-15.
 4. Host-side provider credential broker design, tied to provider endpoint
-   matrix entries. The Codex API-key broker prototype and secret-free broker
-   diagnostics are implemented; broader provider brokers remain future work.
+   matrix entries. Claude and Codex brokers plus secret-free diagnostics are
+   implemented; additional provider brokers remain future work.
 5. Worktree plus run-record feature set: create, list, log, diff, attach, stop,
    merge, keep, discard, recover. Implemented for current run-record,
    active-run, and worktree review flows on 2026-06-15.

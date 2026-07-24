@@ -20,7 +20,7 @@ name = "codex-command-runner"
 path = "src/bin/command_runner/main.rs"
 
 [dependencies]
-anyhow = { version = "=1.0.102" }
+anyhow = { version = "=1.0.103" }
 base64 = { version = "=0.22.1" }
 chrono = { version = "=0.4.45", default-features = false, features = [
     "clock",

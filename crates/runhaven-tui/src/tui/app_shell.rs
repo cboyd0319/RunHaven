@@ -405,7 +405,6 @@ impl ShellState {
             is_task_running: false,
             queue_submissions: false,
             collaboration_modes_enabled: false,
-            is_wsl: false,
             quit_shortcut_key: key_hint::plain(KeyCode::Char('q')),
             status_line_value: self.bottom_pane.active_view_footer_status_line(),
             status_line_enabled: true,
@@ -477,5 +476,5 @@ fn render_buffer(area: Rect, buf: &mut Buffer, state: &mut ShellState) -> Option
 }
 
 #[cfg(test)]
-#[path = "app_shell_tests.rs"]
+#[path = "app_shell_tests/mod.rs"]
 mod tests;

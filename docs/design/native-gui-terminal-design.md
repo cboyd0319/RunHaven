@@ -12,8 +12,8 @@ Tauri/AppKit convention, [J] product judgment.
 
 - Tauri v2 (`tauri` 2.11.3) desktop shell in `src-tauri/`, React + shadcn/ui
   WebView in `ui/`, over typed commands into `runhaven-core`.
-- macOS 26+ on Apple silicon only. No Windows/Linux runtime target, so a
-  Unix-only PTY path is acceptable.
+- macOS 26+ on Apple silicon only, so a native Unix PTY path is the product
+  contract.
 - Runtime is Apple `container` 1.1.0. Interactive model is
   `container exec -i -t <id> <shell>` (new process in a running container) or
   `container run -i -t ...` (fresh container). There is no docker-style attach
