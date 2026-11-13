@@ -81,3 +81,7 @@ container-logs/
 *.orig
 *.rej
 *.snap.new
+
+# Claude Code local-only files (approved commands can embed secrets)
+**/.claude/*settings.local.json*
+*CLAUDE.local.md*
