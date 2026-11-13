@@ -25,6 +25,10 @@ are no active CI action dependencies to pin.
   package pins do not depend on moving mirrors.
 - npm packages installed in images use exact package versions.
 - npm packages used by the desktop UI use exact package versions.
+- Dependency versions younger than 7 days are not adopted; exceptions for
+  security fixes need the owner's approval. Each npm package directory's
+  `.npmrc` sets `min-release-age=7` and `save-exact=true`; `npm ci` does not
+  age-check versions already in a lockfile.
 - Direct binary downloads use exact versioned URLs plus checksum verification.
 - Apple `container` install evidence records the release version, commit,
   installer SHA-256, signing team ID, and observed runtime helper versions.
@@ -37,6 +41,20 @@ are no active CI action dependencies to pin.
 - loose dependency ranges such as `>=`, `~=`, or wildcard package pins
 - unversioned installer scripts inside images
 - unpinned `apt-get install`, `npm install`, or `cargo add`
+
+Cargo age gate (noted 2026-11-13): Rust 1.100.0 (released 2026-11-12)
+stabilizes a minimum publish age. Enable it after 2026-11-20, with the
+toolchain move to 1.100, in `.cargo/config.toml`:
+
+```toml
+[registry]
+global-min-publish-age = "8 days"
+
+[resolver]
+incompatible-publish-age = "deny"
+```
+
+Cargo keeps versions already in `Cargo.lock` without an age check.
 
 Run the policy check:
 
